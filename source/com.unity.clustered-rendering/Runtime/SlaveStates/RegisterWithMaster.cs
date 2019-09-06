@@ -23,7 +23,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => Execute(m_Cancellation.Token), m_Cancellation.Token);
+            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
         protected override BaseState DoFrame( bool frameAdvance)
@@ -38,7 +38,9 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             return this;
         }
 
-        private void Execute(CancellationToken ctk)
+        public override bool ReadyToProceed => false;
+
+        private void ProcessMessages(CancellationToken ctk)
         {
             try
             {
@@ -76,6 +78,8 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                                     return;
                                 }
                             }
+                            else
+                                ProcessUnhandledMessage(header);
                         }
                     }
                 }
@@ -87,7 +91,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             catch (Exception e)
             {
                 var err = new FatalError() { Message = e.Message};
-                m_AsyncError = err;
+                m_AsyncStateChange = err;
             }
         }
 
