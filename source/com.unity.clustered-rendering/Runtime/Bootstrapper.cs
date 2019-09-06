@@ -15,14 +15,19 @@ namespace Unity.ClusterRendering
     public class Bootstrapper : MonoBehaviour
     {
         public bool m_Debugging;
-        private bool m_Terminate;
 
         [NonSerialized]
         public bool m_ClusterLogicEnabled = false;
 
-        [NonSerialized] private Bootstrapper m_Instance;
+        [NonSerialized] private static Bootstrapper m_Instance;
 
-        public Bootstrapper Instance
+        public UInt64 FrameCount { get; private set; }
+
+        public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
+
+        public static bool Terminated { get; private set; }
+
+        public static Bootstrapper Instance
         {
             get => m_Instance;
             private set
@@ -38,8 +43,30 @@ namespace Unity.ClusterRendering
 #endif
         [NonSerialized] private List<BaseNode> m_LocalNodes = new List<BaseNode>();
 
+        public void ShutdownAllClusterNodes()
+        {
+            m_LocalNodes[0].BroadcastShutdownRequest(); // matters not who triggers it
+        }
+
+        public byte ConfiguredLocalNodeId
+        {
+            get
+            {
+                if(m_ClusterLogicEnabled)
+                    return m_LocalNodes[m_LocalNodes.Count-1].NodeID;
+                else
+                {
+                    throw new Exception("Cluster Rendering not active. No local node present");
+                }
+            }
+        }
+
+        public byte DynamicLocalNodeId => ConfiguredLocalNodeId;
+
         private void OnEnable()
         {
+            Terminated = false;
+
             m_ClusterLogicEnabled = false;
             Instance = this;
             BaseState.Debugging = m_Debugging;
@@ -49,7 +76,7 @@ namespace Unity.ClusterRendering
 #if UNITY_EDITOR
             args = m_EditorCmdLine.Split(' ').ToList();
 #endif
-            var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-slaveNode");
+            var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
             m_ClusterLogicEnabled = startIndex > -1;
 
             if (!m_ClusterLogicEnabled)
@@ -94,23 +121,11 @@ namespace Unity.ClusterRendering
             if (!m_ClusterLogicEnabled)
                 return;
 
-            if (m_Terminate)
+            if (Terminated)
             {
-                m_Terminate = false;
                 this.enabled = false;
                 m_ClusterLogicEnabled = false;
                 return;
-            }
-
-            if (m_Debugging)
-            {
-                // Check that we are in player loop
-                var playerLoop = PlayerLoop.GetCurrentPlayerLoop();
-                Assert.IsTrue(playerLoop.subSystemList != null && playerLoop.subSystemList.Length > 0);
-
-                var initList = playerLoop.subSystemList[0].subSystemList.ToList();
-                var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
-                Assert.IsTrue(entryToDel != -1, "Can't find ClusterRendering system entry in player loop");
             }
         }
 
@@ -142,6 +157,7 @@ namespace Unity.ClusterRendering
 
         private bool ProcessCommandLine( List<string> args )
         {
+            Debug.LogError("hello world " + args.Count);
             try
             {
                 // Process server logic
@@ -192,30 +208,50 @@ namespace Unity.ClusterRendering
 
         private void SystemUpdate()
         {
-            bool frameAdvance = true;
-            int nodesBusy;
-            do
+            FrameCount++;
+            try
             {
-                nodesBusy = m_LocalNodes.Count == 1 ? 1 : 3; // Start with assumption that everyone is busy
+                bool frameAdvance = true;
+                int nodesBusy;
 
                 for (var i = 0; i < m_LocalNodes.Count; i++)
-                {
-                    if (!m_LocalNodes[i].DoFrame(frameAdvance))
-                    {
-                        // Game Over!
-                        for (var j = 0; j < m_LocalNodes.Count; j++)
-                            m_LocalNodes[j].Exit();
+                    m_LocalNodes[i].NewFrameStarting();
 
-                        m_Terminate = true;
-                        return;
+                do
+                {
+                    nodesBusy = m_LocalNodes.Count == 1 ? 1 : 3; // Start with assumption that everyone is busy
+
+                    for (var i = 0; i < m_LocalNodes.Count; i++)
+                    {
+                        if (!m_LocalNodes[i].DoFrame(frameAdvance))
+                        {
+                            // Game Over!
+                            for (var j = 0; j < m_LocalNodes.Count; j++)
+                                m_LocalNodes[j].Exit();
+
+                            Terminated = true;
+                            return;
+                        }
+
+                        if (m_LocalNodes[i].ReadyToProceed)
+                            nodesBusy &= ~(1 << i); // Remove node from list of busy nodes
                     }
 
-                    if (m_LocalNodes[i].ReadyToProceed)
-                        nodesBusy &= ~(1 << i);  // Remove node from list of busy nodes
-                }
-                frameAdvance = false;
+                    frameAdvance = false;
 
-            } while (nodesBusy != 0);
+                } while (nodesBusy != 0);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+
+                // Game Over!
+                for (var j = 0; j < m_LocalNodes.Count; j++)
+                    m_LocalNodes[j].Exit();
+
+                Terminated = true;
+                return;
+            }
         }
     }
 }

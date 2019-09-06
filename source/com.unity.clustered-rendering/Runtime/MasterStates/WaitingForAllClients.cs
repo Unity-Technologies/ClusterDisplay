@@ -8,7 +8,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
 
     internal class WaitingForAllClients : MasterState
     {
-        public override bool ReadyToProceed => m_Node.m_RemoteNodes.Count == m_Node.TotalExpectedRemoteNodesCount;
+        public override bool ReadyToProceed => false;
 
         public WaitingForAllClients(MasterNode node) : base(node)
         {
@@ -17,7 +17,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => Execute(m_Cancellation.Token), m_Cancellation.Token);
+            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
         protected override BaseState DoFrame(bool frameAdvance)
@@ -31,7 +31,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             return this;
         }
 
-        private void Execute(CancellationToken ctk)
+        private void ProcessMessages(CancellationToken ctk)
         {
             try
             {
@@ -48,16 +48,20 @@ namespace Unity.ClusterRendering.MasterStateMachine
                                 RegisterNewSlaveNode(header);
                                 SendResponse(header);
                             }
+                            else
+                            {
+                                ProcessUnhandledMessage(header);
+                            }
                         }
                     }
 
-                } while (!ReadyToProceed && !ctk.IsCancellationRequested);
+                } while ( (m_Node.m_RemoteNodes.Count < m_Node.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
                 var err = new FatalError() {Message = e.Message};
-                m_AsyncError = err;
+                m_AsyncStateChange = err;
             }
         }
 

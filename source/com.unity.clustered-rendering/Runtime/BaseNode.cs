@@ -12,6 +12,8 @@ namespace Unity.ClusterRendering
         public byte NodeID => m_UDPAgent.LocalNodeID;
         public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
+        public UInt64 CurrentFrameID { get; private set; }
+
         protected BaseNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
@@ -43,7 +45,11 @@ namespace Unity.ClusterRendering
         public bool DoFrame(bool frameAdvance)
         {
             m_CurrentState = m_CurrentState?.ProcessFrame(frameAdvance);
-            return m_CurrentState.GetType() != typeof(FatalError) && m_CurrentState.GetType() != typeof(Shutdown);
+
+            if (m_CurrentState.GetType() == typeof(Shutdown))
+                return !m_UDPAgent.IsTxQueueEmpty;
+            else
+                return m_CurrentState.GetType() != typeof(FatalError);
         }
 
         public void Exit()
@@ -53,7 +59,23 @@ namespace Unity.ClusterRendering
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
-        
+
+        public void NewFrameStarting()
+        {
+            CurrentFrameID++;
+        }
+
+        public void BroadcastShutdownRequest()
+        {
+            var msgHdr = new MessageHeader()
+            {
+                MessageType = EMessageType.GlobalShutdownRequest,
+                Flags = MessageHeader.EFlag.LoopBackToSender | MessageHeader.EFlag.Broadcast,
+                OffsetToPayload = 0
+            };
+
+            UdpAgent.PublishMessage(msgHdr);
+        }
     }
 
 }

@@ -56,6 +56,8 @@ namespace Unity.ClusterRendering
 
         public AutoResetEvent RxWait { get; private set; }
 
+        public bool IsTxQueueEmpty => m_TxQueue.Count == 0;
+
         public UDPAgent(byte localNodeID, string ip, int rxPort, int txPort, int timeOut)
         {
             RxWait = new AutoResetEvent(false);
@@ -72,10 +74,15 @@ namespace Unity.ClusterRendering
             try
             {
                 m_Clock.Start();
-                var conn = new UdpClient(m_RxPort, AddressFamily.InterNetwork) { Ttl = 1 };
-                conn.JoinMulticastGroup(m_MulticastAddress);
                 m_TxEndPoint = new IPEndPoint(m_MulticastAddress, m_TxPort);
-                m_RxEndPoint = new IPEndPoint(m_MulticastAddress, m_RxPort);
+                m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
+
+                var conn = new UdpClient();
+                conn.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
+                conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
+                conn.Client.Bind(m_RxEndPoint);
+
+                conn.JoinMulticastGroup(m_MulticastAddress);
                 m_Connection = conn;
 
                 m_Connection.BeginReceive(ReceiveMessage, null);
@@ -84,7 +91,7 @@ namespace Unity.ClusterRendering
             }
             catch (Exception e)
             {
-                Debug.Log(e.Message);
+                Debug.LogException(e);
                 return false;
             }
 
@@ -196,6 +203,13 @@ namespace Unity.ClusterRendering
                 };
 
                 m_TxQueue.Add(msg);
+
+                if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
+                {
+                    var rxmsg = new Message() { header = msgHeader, payload = msg.payload };
+                    m_RxQueue.Enqueue(rxmsg);
+                    RxWait.Set();
+                }
             }
             catch (Exception e)
             {
@@ -251,6 +265,7 @@ namespace Unity.ClusterRendering
             catch (Exception e)
             {
                 // Trigger some sort of error
+                Debug.LogException(e);
             }
         }
 
