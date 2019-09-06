@@ -89,12 +89,16 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             m_CurrentFrameID++;
         }
 
-        private unsafe void RestoreStates()
+        private void RestoreStates()
         {
             try
             {
                 // Read the state from the server
                 var msgHdr = MessageHeader.FromByteArray(m_MsgFromMaster);
+                var mixedStateFormat = msgHdr.Flags.HasFlag(MessageHeader.EFlag.SentFromEditorProcess) != Application.isEditor;
+
+                if(mixedStateFormat)
+                    Debug.LogError("Partial data synch due to mixed state format (editor vs player)");
 
                 // restore states
                 unsafe
@@ -122,19 +126,22 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                         if (id == AdvanceFrame.ClusterInputStateID)
                         {
-                            ClusterInput.RestoreState(stateData);
+                            if (!mixedStateFormat)
+                                ClusterInput.RestoreState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreInputStateID)
                         {
-                            InputManager.RestoreState(stateData);
+                            if (!mixedStateFormat)
+                                InputManager.RestoreState(stateData);
+                        }
+                        else if (id == AdvanceFrame.CoreTimeStateID)
+                        {
+                            if (!mixedStateFormat)
+                                TimeManager.RestoreState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreRandomStateID)
                         {
                             RestoreRndGeneratorState(stateData);
-                        }
-                        else if (id == AdvanceFrame.CoreTimeStateID)
-                        {
-                            TimeManager.RestoreState(stateData);
                         }
                         else
                         {

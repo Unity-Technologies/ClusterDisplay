@@ -35,7 +35,8 @@ namespace Unity.ClusterRendering
             DoesNotRequireAck = 1 << 0,
             Broadcast = 1 << 1,
             Resending = 1 << 2,
-            LoopBackToSender =  1 << 3
+            LoopBackToSender =  1 << 3,
+            SentFromEditorProcess = 1 << 4,
         }
 
         public const byte CurrentVersion = 1;
@@ -144,15 +145,6 @@ namespace Unity.ClusterRendering
             Marshal.Copy(arr, offset, (IntPtr)ptr, len);
 
             return msg;
-        }
-
-        public static unsafe AdvanceFrame FromByteArray(NativeArray<byte> arr, int offset)
-        {
-            AdvanceFrame header = default;
-            var len = Marshal.SizeOf<AdvanceFrame>();
-            var ptr = &header;
-            UnsafeUtility.MemCpy(ptr, (byte*)arr.GetUnsafePtr() + offset, len);
-            return header;
         }
     }
 

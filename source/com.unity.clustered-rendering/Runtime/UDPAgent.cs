@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering
@@ -54,6 +55,8 @@ namespace Unity.ClusterRendering
         private TimeSpan m_AcceptedAckDelay = new TimeSpan(0,0,0,0,4);
         private TimeSpan m_MessageAckTimeout;
 
+        private MessageHeader.EFlag m_ExtraHdrFlags = MessageHeader.EFlag.None;
+
         public AutoResetEvent RxWait { get; private set; }
 
         public bool IsTxQueueEmpty => m_TxQueue.Count == 0;
@@ -73,6 +76,9 @@ namespace Unity.ClusterRendering
         {
             try
             {
+                if (Application.isEditor)
+                    m_ExtraHdrFlags = MessageHeader.EFlag.SentFromEditorProcess;
+
                 m_Clock.Start();
                 m_TxEndPoint = new IPEndPoint(m_MulticastAddress, m_TxPort);
                 m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
@@ -100,12 +106,17 @@ namespace Unity.ClusterRendering
 
         public void Stop()
         {
-            m_CTS.Cancel();
-            m_TxQueue.CompleteAdding();
-            m_Connection.Close();
-            m_Connection.Dispose();
-
-            m_TxQueue.Dispose();
+            try
+            {
+                m_CTS.Cancel();
+                m_TxQueue.CompleteAdding();
+                m_Connection.Close();
+                m_Connection.Dispose();
+                m_TxQueue.Dispose();
+            }
+            catch
+            {
+            }
         }
 
         public UInt64 NewNodeNotification(byte newNodeId)
@@ -143,6 +154,7 @@ namespace Unity.ClusterRendering
                 msgHeader.OriginID = LocalNodeID;
                 msgHeader.SequenceID = m_NextMessageId++;
                 msgHeader.OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>();
+                msgHeader.Flags |= m_ExtraHdrFlags;
 
                 if (msgHeader.DestinationIDs == 0)
                 {
@@ -182,6 +194,7 @@ namespace Unity.ClusterRendering
                 msgHeader.OriginID = LocalNodeID;
                 msgHeader.SequenceID = m_NextMessageId++;
                 msgHeader.OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>();
+                msgHeader.Flags |= m_ExtraHdrFlags;
 
                 if (msgHeader.DestinationIDs == 0)
                 {
@@ -227,7 +240,7 @@ namespace Unity.ClusterRendering
                 var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
 
                 var header = MessageHeader.FromByteArray(receiveBytes);
-                if(header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
+                if (header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
                 {
                     if (header.MessageType == EMessageType.AckMsgRx)
                     {
@@ -240,7 +253,7 @@ namespace Unity.ClusterRendering
                                     var pendingAck = m_TxQueuePendingAcks[i];
                                     pendingAck.m_MissingAcks &= ~((UInt64) 1 << header.OriginID);
 
-                                    if(pendingAck.m_MissingAcks != 0)
+                                    if (pendingAck.m_MissingAcks != 0)
                                         m_TxQueuePendingAcks[i] = pendingAck;
                                     else
                                         m_TxQueuePendingAcks.RemoveAt(i);
@@ -259,8 +272,12 @@ namespace Unity.ClusterRendering
                     }
                 }
 
-                if( !m_CTS.IsCancellationRequested )
+                if (!m_CTS.IsCancellationRequested)
                     m_Connection.BeginReceive(ReceiveMessage, null);
+            }
+            catch (ObjectDisposedException)
+            {
+
             }
             catch (Exception e)
             {
@@ -279,7 +296,7 @@ namespace Unity.ClusterRendering
                 SequenceID = rxHeader.SequenceID,
                 PayloadSize = 0,
                 m_Version = MessageHeader.CurrentVersion,
-                Flags = MessageHeader.EFlag.DoesNotRequireAck,
+                Flags = MessageHeader.EFlag.DoesNotRequireAck | m_ExtraHdrFlags,
                 OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>()
             };
 
@@ -367,10 +384,12 @@ namespace Unity.ClusterRendering
 
                 Thread.Sleep(1);
             }
+            catch (ObjectDisposedException)
+            {
+            }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                throw;
             }
         }
     }

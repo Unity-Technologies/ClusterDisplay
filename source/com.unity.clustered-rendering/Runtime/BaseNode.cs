@@ -47,9 +47,15 @@ namespace Unity.ClusterRendering
             m_CurrentState = m_CurrentState?.ProcessFrame(frameAdvance);
 
             if (m_CurrentState.GetType() == typeof(Shutdown))
-                return !m_UDPAgent.IsTxQueueEmpty;
-            else
-                return m_CurrentState.GetType() != typeof(FatalError);
+            {
+                if (m_UDPAgent.IsTxQueueEmpty)
+                {
+                    m_UDPAgent.Stop();
+                    return false;
+                }
+            }
+
+            return m_CurrentState.GetType() != typeof(FatalError);
         }
 
         public void Exit()

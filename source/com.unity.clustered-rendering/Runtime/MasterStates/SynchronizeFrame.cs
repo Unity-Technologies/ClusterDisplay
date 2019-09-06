@@ -121,11 +121,9 @@ namespace Unity.ClusterRendering.MasterStateMachine
                                 if (respMsg.FrameNumber == m_CurrentFrameID)
                                 {
                                     m_WaitingOnNodes &= ~((UInt64) 1 << msgHdr.OriginID);
-                                    Debug.Log("Msg from slave: Frame Done");
                                 }
                                 else
-                                    Debug.Log(
-                                        $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {m_CurrentFrameID}");
+                                    Debug.Log( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {m_CurrentFrameID}");
                                 break;
                             }
 
@@ -225,7 +223,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             var guidLen = Marshal.SizeOf<Guid>();
 
             int bytesWritten;
-            int sizePos = endPos;
+            int startingPos = endPos;
             endPos += Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.ClusterInputStateID, guidLen);
 
@@ -234,9 +232,14 @@ namespace Unity.ClusterRendering.MasterStateMachine
             if (bytesWritten < 0)
                 return false;
 
-            endPos += bytesWritten;
+            if (bytesWritten > 0)
+            {
+                endPos += bytesWritten;
+                *((int*) ((byte*) buffer.GetUnsafePtr() + startingPos)) = bytesWritten;
+            }
+            else
+                endPos = startingPos;
 
-            *((int*) ((byte*) buffer.GetUnsafePtr() + sizePos)) = bytesWritten;
             return true;
         }
 
