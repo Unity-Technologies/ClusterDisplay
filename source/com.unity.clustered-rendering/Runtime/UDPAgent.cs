@@ -33,6 +33,8 @@ namespace Unity.ClusterRendering
         private int m_RxPort;
         private int m_TxPort;
         private int m_Timeout;
+        private int m_TotalResendCount = 0;
+        private int m_TotalSentCount = 0;
 
         private UInt64 m_NextMessageId = 0;
 
@@ -56,6 +58,28 @@ namespace Unity.ClusterRendering
         private TimeSpan m_MessageAckTimeout;
 
         private MessageHeader.EFlag m_ExtraHdrFlags = MessageHeader.EFlag.None;
+
+        public NetworkingStats CurrentNetworkStats
+        {
+            get
+            {
+                lock (m_TxQueuePendingAcks)
+                {
+                    var stats = new NetworkingStats()
+                    {
+                        rxQueueSize = m_RxQueue.Count,
+                        txQueueSize = m_TxQueue.Count,
+                        pendingAckQueueSize = m_TxQueuePendingAcks.Count,
+                        failedMsgs = m_DeadMessages.Count,
+                        totalResends = m_TotalResendCount,
+                        msgsSent = m_TotalSentCount,
+                    };
+                    return stats;
+                }
+
+            }
+        }
+
 
         public AutoResetEvent RxWait { get; private set; }
 
@@ -176,6 +200,7 @@ namespace Unity.ClusterRendering
                 };
 
                 m_TxQueue.Add(msg);
+                m_TotalSentCount++;
             }
             catch (Exception e)
             {
@@ -216,6 +241,8 @@ namespace Unity.ClusterRendering
                 };
 
                 m_TxQueue.Add(msg);
+                m_TotalSentCount++;
+
 
                 if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
                 {
@@ -372,12 +399,14 @@ namespace Unity.ClusterRendering
                         if (tsNow - expiredAck.message.ts > m_MessageAckTimeout)
                         {
                             m_DeadMessages.Enqueue(expiredAck.message.header);
+                            Debug.LogError( $"Msg could not be delivered: {expiredAck.message.header.MessageType}, destinations: {expiredAck.message.header.DestinationIDs}");
                         }
                         else
                         {
                             expiredAck.message.header.Flags |= MessageHeader.EFlag.Resending;
                             expiredAck.ts = m_Clock.Elapsed;
                             m_TxQueue.Add(expiredAck.message, ctk);
+                            m_TotalResendCount++;
                         }
                     }
                 }

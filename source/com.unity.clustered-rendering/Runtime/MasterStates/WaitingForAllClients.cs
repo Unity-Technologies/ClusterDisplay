@@ -10,21 +10,17 @@ namespace Unity.ClusterRendering.MasterStateMachine
     {
         public override bool ReadyToProceed => false;
 
-        public WaitingForAllClients(MasterNode node) : base(node)
-        {
-        }
-
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override BaseState DoFrame(bool frameAdvance)
+        protected override NodeState DoFrame(bool frameAdvance)
         {
-            if (m_Node.m_RemoteNodes.Count == m_Node.TotalExpectedRemoteNodesCount)
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount)
             {
-                var newState = new SynchronizeFrame(m_Node);
+                var newState = new SynchronizeFrame();
                 return newState.EnterState(this);
             }
 
@@ -38,10 +34,10 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 do
                 {
                     // Wait for a client to announce itself
-                    if (m_Node.UdpAgent.RxWait.WaitOne(1000))
+                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
                     {
                         // Consume messages
-                        while (m_Node.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                         {
                             if (header.MessageType == EMessageType.HelloMaster)
                             {
@@ -55,7 +51,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                         }
                     }
 
-                } while ( (m_Node.m_RemoteNodes.Count < m_Node.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
+                } while ( (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
             }
             catch (Exception e)
             {
@@ -74,7 +70,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 ID = header.OriginID,
                 Role = header.NodeRole,
             };
-            m_Node.RegisterNode(commCtx);
+            LocalNode.RegisterNode(commCtx);
         }
 
         private void SendResponse(MessageHeader rxHeader)
@@ -86,8 +82,14 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 NodeRole = ENodeRole.Master,
             };
 
-            m_Node.UdpAgent.PublishMessage(response);
+            LocalNode.UdpAgent.PublishMessage(response);
         }
+
+        public override string GetDebugString()
+        {
+            return $"{base.GetDebugString()} : {LocalNode.m_RemoteNodes.Count}";
+        }
+
     }
 
 }

@@ -15,13 +15,14 @@ namespace Unity.ClusterRendering
     public class ClusterSynch : MonoBehaviour
     {
         public bool m_Debugging;
+        private bool m_NewFrame = true;
 
         [NonSerialized]
         public bool m_ClusterLogicEnabled = false;
 
         [NonSerialized] private static ClusterSynch m_Instance;
 
-        public UInt64 FrameCount { get; private set; }
+        public UInt64 FrameCount => LocalNode.CurrentFrameID;
 
         public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
 
@@ -41,11 +42,13 @@ namespace Unity.ClusterRendering
 #if UNITY_EDITOR
         public string m_EditorCmdLine = "";
 #endif
-        [NonSerialized] private BaseNode m_LocalNode;
+        internal ClusterNode LocalNode { get; set; }
+
+        public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
         public void ShutdownAllClusterNodes()
         {
-            m_LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
+            LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
         }
 
         public byte ConfiguredLocalNodeId
@@ -53,7 +56,7 @@ namespace Unity.ClusterRendering
             get
             {
                 if(m_ClusterLogicEnabled)
-                    return m_LocalNode.NodeID;
+                    return LocalNode.NodeID;
                 else
                 {
                     throw new Exception("Cluster Rendering not active. No local node present");
@@ -63,13 +66,18 @@ namespace Unity.ClusterRendering
 
         public byte DynamicLocalNodeId => ConfiguredLocalNodeId;
 
+        public string GetDebugString()
+        {
+            return LocalNode.GetDebugString();
+        }
+
         private void OnEnable()
         {
             Terminated = false;
 
             m_ClusterLogicEnabled = false;
             Instance = this;
-            BaseState.Debugging = m_Debugging;
+            NodeState.Debugging = m_Debugging;
 
             // Grab command line args related to cluster config
             var args = System.Environment.GetCommandLineArgs().ToList();
@@ -99,14 +107,13 @@ namespace Unity.ClusterRendering
             if (!m_ClusterLogicEnabled)
                 return;
 
-            m_LocalNode.Exit();
+            LocalNode.Exit();
 
             var newLoop = PlayerLoop.GetCurrentPlayerLoop();
             Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
 
             var initList = newLoop.subSystemList[0].subSystemList.ToList();
             var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
-            Assert.IsTrue(entryToDel != -1, "Can't find ClusterRendering system entry in player loop");
 
             initList.RemoveAt(entryToDel);
 
@@ -156,9 +163,6 @@ namespace Unity.ClusterRendering
 
         private bool ProcessCommandLine( List<string> args )
         {
-            if( m_Debugging )
-                Debug.LogError("hello world " + args.Count);
-
             try
             {
                 // Process server logic
@@ -177,13 +181,14 @@ namespace Unity.ClusterRendering
                     var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut );
                     if (!master.Start())
                         return false;
-                    m_LocalNode = master;
+                    LocalNode = master;
                 }
 
                 startIndex = args.FindIndex(x => x == "-node");
                 if (startIndex >= 0)
                 {
-                    Debug.Assert(m_LocalNode == null);
+                    Debug.Assert(LocalNode == null, "Dual roles not allowed.");
+
                     // slave command line format: -node id ip:rxport,txport timeOut
                     var id = byte.Parse(args[startIndex + 1]);
                     var ip = args[startIndex+2].Substring(0, args[startIndex+2].IndexOf(":"));
@@ -195,7 +200,7 @@ namespace Unity.ClusterRendering
                     var slave = new SlavedNode(id, ip, rxport, txport, timeOut );
                     if (!slave.Start())
                         return false;
-                    m_LocalNode = slave;
+                    LocalNode = slave;
                 }
 
                 return true;
@@ -210,21 +215,32 @@ namespace Unity.ClusterRendering
 
         private void SystemUpdate()
         {
-            FrameCount++;
             try
             {
-                var frameAdvance = true;
-                m_LocalNode.NewFrameStarting();
-                do
+                if (m_Debugging)
                 {
-                    if (!m_LocalNode.DoFrame(frameAdvance))
+                    if (!LocalNode.DoFrame(m_NewFrame))
                     {
                         // Game Over!
                         Terminated = true;
                     }
 
-                    frameAdvance = false;
-                } while ( !m_LocalNode.ReadyToProceed && !Terminated);
+                    m_NewFrame = LocalNode.ReadyToProceed;
+                }
+                else
+                {
+                    var newFrame = true;
+                    do
+                    {
+                        if (!LocalNode.DoFrame(newFrame))
+                        {
+                            // Game Over!
+                            Terminated = true;
+                        }
+
+                        newFrame = false;
+                    } while (!LocalNode.ReadyToProceed && !Terminated);
+                }
             }
             catch (Exception e)
             {
@@ -234,8 +250,10 @@ namespace Unity.ClusterRendering
             finally
             {
                 if (Terminated)
-                    m_LocalNode.Exit();
+                    LocalNode.Exit();
             }
         }
+
+
     }
 }

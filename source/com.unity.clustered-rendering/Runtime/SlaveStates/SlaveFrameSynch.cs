@@ -17,24 +17,30 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             ReadyToProcessFrame,
         }
 
-        private UInt64 m_CurrentFrameID;
         private EStage m_Stage;
         private NativeArray<byte> m_MsgFromMaster;
 
-        public SynchronizeFrame(SlavedNode node) : base(node)
+        // For debugging 
+        private UInt64 m_LastReportedFrameDone = 0;
+        private UInt64 m_LastRxFrameStart = 0;
+        private UInt64 m_RxCount = 0;
+        private UInt64 m_TxCount = 0;
+        //-----------------------
+
+        public override string GetDebugString()
         {
+            return $"{base.GetDebugString()} / {m_Stage} : {LocalNode.CurrentFrameID}, {m_LastReportedFrameDone}, {m_LastRxFrameStart}, {m_RxCount}, {m_TxCount}";
         }
 
         public override void InitState()
         {
-            m_CurrentFrameID = 0;
             m_Stage = EStage.WaitingOnGoFromMaster;
 
             m_Cancellation = new CancellationTokenSource();
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override BaseState DoFrame(bool frameAdvance)
+        protected override NodeState DoFrame(bool newFrame)
         {
             switch (m_Stage)
             {
@@ -46,7 +52,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                 case EStage.MsgFromServerAvailable:
                 {
-                    Debug.Assert(m_MsgFromMaster != default);
+                    Debug.Assert(m_MsgFromMaster != default, "m_MsgFromMaster is empty but slave at stage: MsgFromServerAvailable");
                     if (m_MsgFromMaster != default)
                     {
                         RestoreStates();
@@ -56,11 +62,8 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                 }
                 case EStage.ReadyToProcessFrame:
                 {
-                    if (frameAdvance)
-                    {
+                    if (newFrame)
                         SignalFrameDone();
-                        m_Stage = EStage.WaitingOnGoFromMaster;
-                    }
                     break;
                 }
             }
@@ -74,19 +77,25 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             var msgHdr = new MessageHeader()
             {
                 MessageType = EMessageType.FrameDone,
-                DestinationIDs = m_Node.MasterNodeIdMask,
+                DestinationIDs = LocalNode.MasterNodeIdMask,
             };
 
             var outBuffer = new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>()];
             var msg = new FrameDone()
             {
-                FrameNumber = m_CurrentFrameID
+                FrameNumber = LocalNode.CurrentFrameID
             };
+            m_LastReportedFrameDone = LocalNode.CurrentFrameID;
             msg.StoreInBuffer(outBuffer, Marshal.SizeOf<MessageHeader>());
 
-            m_Node.UdpAgent.PublishMessage(msgHdr, outBuffer);
+            m_Stage = EStage.WaitingOnGoFromMaster;
 
-            m_CurrentFrameID++;
+            LocalNode.CurrentFrameID++;
+
+            LocalNode.UdpAgent.PublishMessage(msgHdr, outBuffer);
+            m_TxCount++;
+            //Debug.LogError("Slave send 'frame done' " + msg.FrameNumber);
+
         }
 
         private void RestoreStates()
@@ -105,7 +114,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                 {
                     var bufferPos = msgHdr.OffsetToPayload + Marshal.SizeOf<AdvanceFrame>();
                     var buffer = (byte*) m_MsgFromMaster.GetUnsafePtr();
-                    Debug.Assert(buffer != null);
+                    Debug.Assert(buffer != null, "msg buffer is null");
                     do
                     {
                         // Read size of state buffer
@@ -162,7 +171,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             UnityEngine.Random.State rndState = default;
             var rawData = (byte*)&rndState;
 
-            Debug.Assert(*((UInt64*)stateData.GetUnsafePtr() + 0) != 0 && *((UInt64*)stateData.GetUnsafePtr() + 0) != 0);
+            Debug.Assert(*((UInt64*)stateData.GetUnsafePtr() + 0) != 0 && *((UInt64*)stateData.GetUnsafePtr() + 0) != 0, "invalid rnd state being restored." );
 
             UnsafeUtility.MemCpy( rawData, (byte*)stateData.GetUnsafePtr(), Marshal.SizeOf<UnityEngine.Random.State>());
 
@@ -176,25 +185,27 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             {
                 while (!ctk.IsCancellationRequested)
                 {
-                    while (m_Node.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
                     {
+                        m_RxCount++;
+
                         if (msgHdr.MessageType == EMessageType.StartFrame)
                         {
-                            Debug.Assert( msgHdr.PayloadSize > 0 );
+                            //Debug.Assert( msgHdr.PayloadSize > 0, "Slave received a StartFrame with no payload.");
                             if (msgHdr.PayloadSize > 0)
                             {
-                                Debug.Assert(m_Stage == EStage.WaitingOnGoFromMaster);
-                                Debug.Assert(m_MsgFromMaster == default );
+                                Debug.Assert(m_Stage == EStage.WaitingOnGoFromMaster, "Slave received a 'StartFrame' cmd, but while in stage " + m_Stage);
                                 var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-                                if (respMsg.FrameNumber == m_CurrentFrameID)
+                                //Debug.LogError("Slave, Go a head frame: " + respMsg.FrameNumber);
+                                m_LastRxFrameStart = respMsg.FrameNumber;
+                                if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
                                 {
-                                    Debug.Assert(m_Stage == EStage.WaitingOnGoFromMaster);
-                                    Debug.Assert(outBuffer.Length > 0);
+                                    Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
                                     m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
                                     m_Stage = EStage.MsgFromServerAvailable;
                                 }
                                 else
-                                    Debug.Log( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {m_CurrentFrameID}");
+                                    Debug.LogError( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
                             }
                         }
                         else
@@ -203,13 +214,13 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                         }
                     }
 
-                    m_Node.UdpAgent.RxWait.WaitOne(500);
+                    LocalNode.UdpAgent.RxWait.WaitOne(500);
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                Debug.LogException(e);
+                m_AsyncStateChange = new FatalError() { Message = "Salve generated an exception while processing a message" };
             }
         }
 

@@ -13,7 +13,7 @@ namespace Unity.ClusterRendering
 
     }
 
-    internal class MasterNode : BaseNode
+    internal class MasterNode : ClusterNode
     {
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
 
@@ -30,7 +30,7 @@ namespace Unity.ClusterRendering
             if (!base.Start())
                 return false;
 
-            m_CurrentState = new WaitingForAllClients(this);
+            m_CurrentState = new WaitingForAllClients();
             m_CurrentState.EnterState(null);
 
             return true;

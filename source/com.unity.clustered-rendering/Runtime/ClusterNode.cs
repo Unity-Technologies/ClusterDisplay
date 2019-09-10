@@ -2,19 +2,18 @@
 
 namespace Unity.ClusterRendering
 {
-    internal abstract class BaseNode
+    internal abstract class ClusterNode
     {
-        protected BaseState m_CurrentState;
+        protected NodeState m_CurrentState;
         protected UDPAgent m_UDPAgent;
-        public UInt64 OutSequenceId { get; set; }
         public UDPAgent UdpAgent => m_UDPAgent;
 
         public byte NodeID => m_UDPAgent.LocalNodeID;
         public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
-        public UInt64 CurrentFrameID { get; private set; }
+        public UInt64 CurrentFrameID { get; set; }
 
-        protected BaseNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut)
+        protected ClusterNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
@@ -42,9 +41,9 @@ namespace Unity.ClusterRendering
             }
         }
 
-        public bool DoFrame(bool frameAdvance)
+        public bool DoFrame(bool newFrame)
         {
-            m_CurrentState = m_CurrentState?.ProcessFrame(frameAdvance);
+            m_CurrentState = m_CurrentState?.ProcessFrame(newFrame);
 
             if (m_CurrentState.GetType() == typeof(Shutdown))
             {
@@ -66,11 +65,6 @@ namespace Unity.ClusterRendering
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
 
-        public void NewFrameStarting()
-        {
-            CurrentFrameID++;
-        }
-
         public void BroadcastShutdownRequest()
         {
             var msgHdr = new MessageHeader()
@@ -81,6 +75,14 @@ namespace Unity.ClusterRendering
             };
 
             UdpAgent.PublishMessage(msgHdr);
+        }
+
+        public virtual string GetDebugString()
+        {
+            var stats = ClusterSynch.Instance.CurrentNetworkStats;
+            return $"Node {ClusterSynch.Instance.DynamicLocalNodeId} at {ClusterSynch.Instance.FrameCount}\r\n" +
+                   $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
+                   $"State: { m_CurrentState.GetDebugString() }";
         }
     }
 

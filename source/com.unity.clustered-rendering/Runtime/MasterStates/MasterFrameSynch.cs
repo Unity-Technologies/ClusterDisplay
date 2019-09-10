@@ -17,48 +17,53 @@ namespace Unity.ClusterRendering.MasterStateMachine
             ProcessFrame,
         }
 
-        private UInt64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
-        private UInt64 m_CurrentFrameID;
-        private EStage m_Stage;
+        private Int64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
+        private int m_Stage;
         private TimeSpan m_TsOfStage;
 
-        public override bool ReadyToProceed => m_Stage == EStage.ProcessFrame;
+        public override bool ReadyToProceed => m_Stage == (int)EStage.ProcessFrame;
 
-        public SynchronizeFrame(MasterNode node) : base(node)
+        public override string GetDebugString()
         {
+            return $"{base.GetDebugString()} / {(EStage)m_Stage} : {m_WaitingOnNodes}";
         }
+
 
         public override void InitState()
         {
-            m_Stage = EStage.ReadyToSignalStartNewFrame;
+            m_Stage = (int)EStage.ReadyToSignalStartNewFrame;
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
-            m_CurrentFrameID = UInt64.MaxValue;
-            for (int i = 0; i < m_Node.m_RemoteNodes.Count; i++)
+            for (int i = 0; i < LocalNode.m_RemoteNodes.Count; i++)
             {
-                m_Node.m_RemoteNodes[i].readyToProcessFrameID = 0;
+                LocalNode.m_RemoteNodes[i].readyToProcessFrameID = 0;
             }
 
             m_Cancellation = new CancellationTokenSource();
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
         
-        protected override BaseState DoFrame(bool frameAdvance)
+        protected override NodeState DoFrame(bool newFrame)
         {
-            switch (m_Stage)
+            switch ((EStage)m_Stage)
             {
                 case EStage.ReadyToSignalStartNewFrame:
                 {
                     var stateBuffer = GatherFrameState();
                     if (stateBuffer != default)
                         PublishCurrentState(stateBuffer);
+                    else 
+                        Debug.LogError( "State buffer is empty!" );
+
                     break;
                 }
 
                 case EStage.ProcessFrame:
                 {
-                    m_Stage = EStage.WaitingOnFramesDoneMsgs;
-                    m_TsOfStage = m_Time.Elapsed;
+                    Debug.Assert(newFrame, "this should always be on a new frame.");
+                    Interlocked.CompareExchange(ref m_Stage, (int)EStage.WaitingOnFramesDoneMsgs, (int)EStage.ProcessFrame);
+                    if(m_Stage == (int)EStage.WaitingOnFramesDoneMsgs)
+                        m_TsOfStage = m_Time.Elapsed;
                     break;
                 }
 
@@ -66,9 +71,10 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 {
                     if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
                     {
-                        Debug.Assert(m_WaitingOnNodes != 0);
+                        Debug.Assert(m_WaitingOnNodes != 0, "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
                         // One or more clients failed to respond in time!
                         Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
+                        m_TsOfStage = m_TsOfStage.Add(new TimeSpan(0, 0, 5));
                     }
 
                     break;
@@ -84,7 +90,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             {
                 var msgBuffer = new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + stateBuffer.Length];
 
-                var msg = new AdvanceFrame() {FrameNumber = ++m_CurrentFrameID};
+                var msg = new AdvanceFrame() {FrameNumber = LocalNode.CurrentFrameID };
                 msg.StoreInBuffer(msgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
                 Marshal.Copy((IntPtr) stateBuffer.GetUnsafePtr(), msgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), stateBuffer.Length);
@@ -96,10 +102,10 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     PayloadSize = (UInt16)stateBuffer.Length
                 };
 
-                m_WaitingOnNodes = m_Node.UdpAgent.AllNodesMask & ~m_Node.NodeIDMask;
-                m_Stage = EStage.ProcessFrame;
+                m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
+                m_Stage = (int)EStage.ProcessFrame;
 
-                m_Node.UdpAgent.PublishMessage(msgHdr, msgBuffer);
+                LocalNode.UdpAgent.PublishMessage(msgHdr, msgBuffer);
             }
         }
 
@@ -109,21 +115,31 @@ namespace Unity.ClusterRendering.MasterStateMachine
             {
                 while (!ctk.IsCancellationRequested)
                 {
-                    while (m_Node.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
                     {
                         switch (msgHdr.MessageType)
                         {
                             case EMessageType.FrameDone:
                             {
-                                Debug.Assert(m_Stage != EStage.ReadyToSignalStartNewFrame);
+                                Debug.Assert(m_Stage != (int) EStage.ReadyToSignalStartNewFrame,
+                                    "Master: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
 
                                 var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-                                if (respMsg.FrameNumber == m_CurrentFrameID)
+
+                                if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
                                 {
-                                    m_WaitingOnNodes &= ~((UInt64) 1 << msgHdr.OriginID);
+                                    var maskOut = ~((Int64)1 << msgHdr.OriginID);
+                                    do
+                                    {
+                                        var orgMask = m_WaitingOnNodes;
+                                        Interlocked.CompareExchange(ref m_WaitingOnNodes, orgMask & maskOut, orgMask);
+                                    } while ((m_WaitingOnNodes & ((Int64)1 << msgHdr.OriginID)) != 0);
+
+//                                    Debug.LogError($"Slave {msgHdr.OriginID} sent 'frame done' {respMsg.FrameNumber}, currently waiting on: {m_WaitingOnNodes}");
                                 }
                                 else
-                                    Debug.Log( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {m_CurrentFrameID}");
+                                    Debug.LogError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID}");
+
                                 break;
                             }
 
@@ -135,13 +151,16 @@ namespace Unity.ClusterRendering.MasterStateMachine
                         }
                     }
 
-                    if (m_WaitingOnNodes == 0 && m_Stage != EStage.ReadyToSignalStartNewFrame)
+                    var currentState = m_Stage;
+                    if (m_WaitingOnNodes == 0 && currentState != (int)EStage.ReadyToSignalStartNewFrame)
                     {
-                        m_Stage = EStage.ReadyToSignalStartNewFrame;
+                        LocalNode.CurrentFrameID++;
+                        Interlocked.CompareExchange( ref m_Stage, (int)EStage.ReadyToSignalStartNewFrame, currentState);
+                        Debug.Assert( m_Stage == (int)EStage.ReadyToSignalStartNewFrame, "failed to set stage");
                         m_TsOfStage = m_Time.Elapsed;
                     }
 
-                    m_Node.UdpAgent.RxWait.WaitOne(500);
+                    LocalNode.UdpAgent.RxWait.WaitOne(500);
                 }
             }
             catch (Exception e)
@@ -188,7 +207,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreInputStateID, guidLen);
 
             InputManager.SaveState(buffer, endPos, out bytesWritten);
-            Debug.Assert(bytesWritten >= 0);
+            Debug.Assert(bytesWritten >= 0, "Buffer to small! Input not stored.");
             if (bytesWritten < 0)
                 return false;
 
@@ -208,7 +227,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreTimeStateID, guidLen);
 
             UnityEngine.TimeManager.SaveState(buffer, endPos, out bytesWritten);
-            Debug.Assert(bytesWritten >= 0);
+            Debug.Assert(bytesWritten >= 0, "Buffer to small! Time state not stored.");
             if (bytesWritten < 0)
                 return false;
 
@@ -228,7 +247,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.ClusterInputStateID, guidLen);
 
             ClusterInput.SaveState(buffer, endPos, out bytesWritten);
-            Debug.Assert(bytesWritten >= 0);
+            Debug.Assert(bytesWritten >= 0, "Buffer to small. ClusterInput not stored.");
             if (bytesWritten < 0)
                 return false;
 
@@ -245,7 +264,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
 
         private static unsafe bool MarkStatesEnd(NativeArray<byte> buffer, ref int endPos)
         {
-            Debug.Assert(endPos < buffer.Length);
+            Debug.Assert(endPos < buffer.Length, "Buffer to small to store end marker");
             if (endPos >= buffer.Length)
                 return false;
 

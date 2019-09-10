@@ -7,22 +7,18 @@ using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering
 {
-    internal abstract class BaseState
+    internal abstract class NodeState
     {
         protected Stopwatch m_Time;
         protected CancellationTokenSource m_Cancellation;
         protected Task m_Task;
-        protected BaseState m_AsyncStateChange;
+        protected NodeState m_AsyncStateChange;
         public static bool Debugging { get; set; }
-        public static int MaxTimeOut = 1000 * 60 * 1;
+        public static int MaxTimeOut = 1000 * 60 * 5;
 
         public virtual bool ReadyToProceed => true;
 
-        protected BaseState()
-        {
-        }
-
-        public BaseState EnterState(BaseState oldState)
+        public NodeState EnterState(NodeState oldState)
         {
             if (oldState != this)
             {
@@ -40,20 +36,20 @@ namespace Unity.ClusterRendering
             
         }
 
-        protected virtual BaseState DoFrame( bool frameAdvance )
+        protected virtual NodeState DoFrame( bool newFrame)
         {
             return this;
         }
 
-        public BaseState ProcessFrame( bool frameAdvance )
+        public NodeState ProcessFrame( bool newFrame)
         {
-            var res = DoFrame(frameAdvance);
+            var res = DoFrame(newFrame);
             if (res != this)
                 return res;
 
             if (Debugging)
             {
-                if( frameAdvance )
+                if(newFrame)
                     m_Time.Restart();
 
                 if (m_Time.ElapsedMilliseconds > MaxTimeOut)
@@ -92,7 +88,7 @@ namespace Unity.ClusterRendering
             }
         }
 
-        protected virtual void ExitState(BaseState newState)
+        protected virtual void ExitState(NodeState newState)
         {
             Debug.Log("Exiting State:" + GetType().Name);
 
@@ -113,15 +109,32 @@ namespace Unity.ClusterRendering
                 }
             }
         }
+
+        public virtual string GetDebugString()
+        {
+            return GetType().Name;
+        }
+    }
+
+    // SlaveState state -------------------------------------------------------- 
+    internal abstract class SlaveState : NodeState
+    {
+        protected SlavedNode LocalNode => (SlavedNode)ClusterSynch.Instance.LocalNode;
+    }
+
+    // MasterState state -------------------------------------------------------- 
+    internal abstract class MasterState : NodeState
+    {
+        protected MasterNode LocalNode => (MasterNode)ClusterSynch.Instance.LocalNode;
     }
 
     // Shutdown state -------------------------------------------------------- 
-    internal class Shutdown : BaseState
+    internal class Shutdown : NodeState
     {
     }
 
     // FatalError state -------------------------------------------------------- 
-    internal class FatalError : BaseState
+    internal class FatalError : NodeState
     {
         public string Message { get; set; }
     }

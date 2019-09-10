@@ -25,6 +25,16 @@ namespace Unity.ClusterRendering
         Dead
     }
 
+    public struct NetworkingStats
+    {
+        public int rxQueueSize;
+        public int txQueueSize;
+        public int pendingAckQueueSize;
+        public int failedMsgs;
+        public int totalResends;
+        public int msgsSent;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct MessageHeader
     {
