@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -41,7 +42,9 @@ namespace Unity.ClusterRendering.MasterStateMachine
                         {
                             if (header.MessageType == EMessageType.HelloMaster)
                             {
-                                RegisterNewSlaveNode(header);
+                                var roleInfo = RolePublication.FromByteArray(payload, header.OffsetToPayload);
+
+                                RegisterRemoteNode(header, roleInfo);
                                 SendResponse(header);
                             }
                             else
@@ -56,19 +59,19 @@ namespace Unity.ClusterRendering.MasterStateMachine
             catch (Exception e)
             {
                 Debug.LogException(e);
-                var err = new FatalError() {Message = e.Message};
-                m_AsyncStateChange = err;
+                var err = new FatalError( $"Error occured while processing nodes discovery: {e.Message}");
+                PendingStateChange = err;
             }
         }
 
-        private void RegisterNewSlaveNode(MessageHeader header)
+        private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo )
         {
-            Debug.Log("Slave node saying hello: " + header.OriginID);
+            Debug.Log("Discovered remote node: " + header.OriginID );
 
             var commCtx = new RemoteNodeComContext
             {
                 ID = header.OriginID,
-                Role = header.NodeRole,
+                Role = roleInfo.NodeRole,
             };
             LocalNode.RegisterNode(commCtx);
         }
@@ -79,7 +82,6 @@ namespace Unity.ClusterRendering.MasterStateMachine
             {
                 MessageType = EMessageType.WelcomeSlave,
                 DestinationIDs = (UInt64)1 << rxHeader.OriginID,
-                NodeRole = ENodeRole.Master,
             };
 
             LocalNode.UdpAgent.PublishMessage(response);

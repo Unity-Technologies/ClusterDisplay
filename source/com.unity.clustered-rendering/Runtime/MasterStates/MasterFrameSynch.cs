@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -18,40 +17,44 @@ namespace Unity.ClusterRendering.MasterStateMachine
         }
 
         private Int64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
-        private int m_Stage;
+        private EStage m_Stage;
         private TimeSpan m_TsOfStage;
 
-        public override bool ReadyToProceed => m_Stage == (int)EStage.ProcessFrame;
+        private NativeArray<byte> m_RawStateData;
+
+        public override bool ReadyToProceed => m_Stage == EStage.ProcessFrame;
 
         public override string GetDebugString()
         {
             return $"{base.GetDebugString()} / {(EStage)m_Stage} : {m_WaitingOnNodes}";
         }
 
-
         public override void InitState()
         {
+            base.InitState();
             m_Stage = (int)EStage.ReadyToSignalStartNewFrame;
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
-            for (int i = 0; i < LocalNode.m_RemoteNodes.Count; i++)
-            {
-                LocalNode.m_RemoteNodes[i].readyToProcessFrameID = 0;
-            }
-
-            m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
         
         protected override NodeState DoFrame(bool newFrame)
         {
+            if( newFrame )
+                 GatherFrameState();
+
             switch ((EStage)m_Stage)
             {
                 case EStage.ReadyToSignalStartNewFrame:
                 {
-                    var stateBuffer = GatherFrameState();
-                    if (stateBuffer != default)
-                        PublishCurrentState(stateBuffer);
+                    if(m_RawStateData == default) // 1st frame only
+                        GatherFrameState();
+
+                    if (m_RawStateData != default)
+                    {
+                        PublishCurrentState(m_RawStateData);
+                        m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
+                        m_Stage = EStage.ProcessFrame;
+                    }
                     else 
                         Debug.LogError( "State buffer is empty!" );
 
@@ -61,14 +64,15 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 case EStage.ProcessFrame:
                 {
                     Debug.Assert(newFrame, "this should always be on a new frame.");
-                    Interlocked.CompareExchange(ref m_Stage, (int)EStage.WaitingOnFramesDoneMsgs, (int)EStage.ProcessFrame);
-                    if(m_Stage == (int)EStage.WaitingOnFramesDoneMsgs)
-                        m_TsOfStage = m_Time.Elapsed;
+                    m_Stage = EStage.WaitingOnFramesDoneMsgs;
+                    m_TsOfStage = m_Time.Elapsed;
                     break;
                 }
 
                 case EStage.WaitingOnFramesDoneMsgs:
                 {
+                    PumpMessages();
+
                     if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
                     {
                         Debug.Assert(m_WaitingOnNodes != 0, "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
@@ -102,98 +106,72 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     PayloadSize = (UInt16)stateBuffer.Length
                 };
 
-                m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
-                m_Stage = (int)EStage.ProcessFrame;
-
                 LocalNode.UdpAgent.PublishMessage(msgHdr, msgBuffer);
             }
         }
 
-        private void ProcessMessages(CancellationToken ctk)
+        private void PumpMessages()
         {
-            try
+            while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
             {
-                while (!ctk.IsCancellationRequested)
+                switch (msgHdr.MessageType)
                 {
-                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
+                    case EMessageType.FrameDone:
                     {
-                        switch (msgHdr.MessageType)
+                        Debug.Assert(m_Stage != (int) EStage.ReadyToSignalStartNewFrame,
+                            "Master: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
+
+                        var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+
+                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
                         {
-                            case EMessageType.FrameDone:
+                            var maskOut = ~((Int64) 1 << msgHdr.OriginID);
+                            do
                             {
-                                Debug.Assert(m_Stage != (int) EStage.ReadyToSignalStartNewFrame,
-                                    "Master: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
-
-                                var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-
-                                if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
-                                {
-                                    var maskOut = ~((Int64)1 << msgHdr.OriginID);
-                                    do
-                                    {
-                                        var orgMask = m_WaitingOnNodes;
-                                        Interlocked.CompareExchange(ref m_WaitingOnNodes, orgMask & maskOut, orgMask);
-                                    } while ((m_WaitingOnNodes & ((Int64)1 << msgHdr.OriginID)) != 0);
-
-//                                    Debug.LogError($"Slave {msgHdr.OriginID} sent 'frame done' {respMsg.FrameNumber}, currently waiting on: {m_WaitingOnNodes}");
-                                }
-                                else
-                                    Debug.LogError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID}");
-
-                                break;
-                            }
-
-                            default:
-                            {
-                                ProcessUnhandledMessage(msgHdr);
-                                break;
-                            }
+                                var orgMask = m_WaitingOnNodes;
+                                Interlocked.CompareExchange(ref m_WaitingOnNodes, orgMask & maskOut, orgMask);
+                            } while ((m_WaitingOnNodes & ((Int64) 1 << msgHdr.OriginID)) != 0);
                         }
+                        else
+                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID}" );
+
+                        break;
                     }
 
-                    var currentState = m_Stage;
-                    if (m_WaitingOnNodes == 0 && currentState != (int)EStage.ReadyToSignalStartNewFrame)
+                    default:
                     {
-                        LocalNode.CurrentFrameID++;
-                        Interlocked.CompareExchange( ref m_Stage, (int)EStage.ReadyToSignalStartNewFrame, currentState);
-                        Debug.Assert( m_Stage == (int)EStage.ReadyToSignalStartNewFrame, "failed to set stage");
-                        m_TsOfStage = m_Time.Elapsed;
+                        ProcessUnhandledMessage(msgHdr);
+                        break;
                     }
-
-                    LocalNode.UdpAgent.RxWait.WaitOne(500);
                 }
             }
-            catch (Exception e)
+
+            if (m_WaitingOnNodes == 0)
             {
-                Debug.LogException(e);
-                m_AsyncStateChange = new FatalError() {Message = "Oups. " + e};
-                throw;
+                LocalNode.CurrentFrameID++;
+                m_Stage = (int) EStage.ReadyToSignalStartNewFrame;
+                m_TsOfStage = m_Time.Elapsed;
             }
         }
 
-        private NativeArray<byte> GatherFrameState()
+        private void GatherFrameState()
         {
             var endPos = 0;
             using (var buffer = new NativeArray<byte>(16 * 1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
             {
-                if (!StoreInputState(buffer, ref endPos))
-                    return new NativeArray<byte>();
-
-                if (!StoreTimeState(buffer, ref endPos))
-                    return new NativeArray<byte>();
-
-                if (!StoreClusterInputState(buffer, ref endPos))
-                    return default;
-
-                if (!StoreRndGeneratorState(buffer, ref endPos))
-                    return default;
-
-                if ( !MarkStatesEnd(buffer, ref endPos) )
-                    return default;
-
-                var subArray = buffer.GetSubArray(0, endPos);
-
-                return new NativeArray<byte>(subArray, Allocator.Temp);
+                if (
+                    StoreInputState(buffer, ref endPos) &&
+                    StoreTimeState(buffer, ref endPos) &&
+                    StoreClusterInputState(buffer, ref endPos) &&
+                    StoreRndGeneratorState(buffer, ref endPos) &&
+                    MarkStatesEnd(buffer, ref endPos))
+                {
+                    m_RawStateData = new NativeArray<byte>(buffer.GetSubArray(0, endPos), Allocator.Temp);
+                }
+                else
+                {
+                    m_RawStateData = default;
+                }
             }
         }
         

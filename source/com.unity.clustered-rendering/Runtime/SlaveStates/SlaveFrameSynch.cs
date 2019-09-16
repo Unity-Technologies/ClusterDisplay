@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering.SlaveStateMachine
 {
@@ -13,31 +13,33 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         enum EStage
         {
             WaitingOnGoFromMaster,
-            MsgFromServerAvailable,
             ReadyToProcessFrame,
         }
 
         private EStage m_Stage;
         private NativeArray<byte> m_MsgFromMaster;
 
-        // For debugging 
+        // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
         private UInt64 m_LastRxFrameStart = 0;
         private UInt64 m_RxCount = 0;
         private UInt64 m_TxCount = 0;
-        //-----------------------
+        private bool m_MixModeReported = false;
+
+        private DebugPerf m_NetworkingOverhead = new DebugPerf();
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} / {m_Stage} : {LocalNode.CurrentFrameID}, {m_LastReportedFrameDone}, {m_LastRxFrameStart}, {m_RxCount}, {m_TxCount}";
+            return $"{base.GetDebugString()} / {m_Stage} : {LocalNode.CurrentFrameID}, {m_LastReportedFrameDone}, {m_LastRxFrameStart}, {m_RxCount}, {m_TxCount}" +
+            $"\r\nNetwork: {m_NetworkingOverhead.Average * 1000:000.0}";
         }
+        //-------------------------------------------------
 
         public override void InitState()
         {
             m_Stage = EStage.WaitingOnGoFromMaster;
 
             m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
         protected override NodeState DoFrame(bool newFrame)
@@ -46,20 +48,14 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             {
                 case EStage.WaitingOnGoFromMaster:
                 {
-                    // As a slave node, we will wait forever
+                    PumpMsg();
+
+                    // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
+                    // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
+                    // We will have actually processed a frame and be ready to inform master and wait for next frame start.
                     break;
                 }
 
-                case EStage.MsgFromServerAvailable:
-                {
-                    Debug.Assert(m_MsgFromMaster != default, "m_MsgFromMaster is empty but slave at stage: MsgFromServerAvailable");
-                    if (m_MsgFromMaster != default)
-                    {
-                        RestoreStates();
-                        m_Stage = EStage.ReadyToProcessFrame;
-                    }
-                    break;
-                }
                 case EStage.ReadyToProcessFrame:
                 {
                     if (newFrame)
@@ -69,6 +65,42 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             }
 
             return this;
+        }
+
+        private void PumpMsg()
+        {
+            while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
+            {
+                m_RxCount++;
+
+                if (msgHdr.MessageType == EMessageType.StartFrame)
+                {
+                    m_NetworkingOverhead.SampleNow();
+                    if (msgHdr.PayloadSize > 0)
+                    {
+                        var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+                        m_LastRxFrameStart = respMsg.FrameNumber;
+                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                        {
+                            Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
+                            m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
+
+                            RestoreStates();
+
+                            m_Stage = EStage.ReadyToProcessFrame;
+                        }
+                        else
+                        {
+                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    base.ProcessUnhandledMessage(msgHdr);
+                }
+            }
         }
 
         private void SignalFrameDone()
@@ -89,13 +121,12 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             msg.StoreInBuffer(outBuffer, Marshal.SizeOf<MessageHeader>());
 
             m_Stage = EStage.WaitingOnGoFromMaster;
+            m_NetworkingOverhead.RefPoint();
 
             LocalNode.CurrentFrameID++;
 
             LocalNode.UdpAgent.PublishMessage(msgHdr, outBuffer);
             m_TxCount++;
-            //Debug.LogError("Slave send 'frame done' " + msg.FrameNumber);
-
         }
 
         private void RestoreStates()
@@ -106,8 +137,11 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                 var msgHdr = MessageHeader.FromByteArray(m_MsgFromMaster);
                 var mixedStateFormat = msgHdr.Flags.HasFlag(MessageHeader.EFlag.SentFromEditorProcess) != Application.isEditor;
 
-                if(mixedStateFormat)
+                if (mixedStateFormat && !m_MixModeReported)
+                {
+                    m_MixModeReported = true;
                     Debug.LogError("Partial data synch due to mixed state format (editor vs player)");
+                }
 
                 // restore states
                 unsafe
@@ -177,51 +211,6 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
             UnityEngine.Random.state = rndState;
             return true;
-        }
-
-        private void ProcessMessages(CancellationToken ctk)
-        {
-            try
-            {
-                while (!ctk.IsCancellationRequested)
-                {
-                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
-                    {
-                        m_RxCount++;
-
-                        if (msgHdr.MessageType == EMessageType.StartFrame)
-                        {
-                            //Debug.Assert( msgHdr.PayloadSize > 0, "Slave received a StartFrame with no payload.");
-                            if (msgHdr.PayloadSize > 0)
-                            {
-                                Debug.Assert(m_Stage == EStage.WaitingOnGoFromMaster, "Slave received a 'StartFrame' cmd, but while in stage " + m_Stage);
-                                var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-                                //Debug.LogError("Slave, Go a head frame: " + respMsg.FrameNumber);
-                                m_LastRxFrameStart = respMsg.FrameNumber;
-                                if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
-                                {
-                                    Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
-                                    m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
-                                    m_Stage = EStage.MsgFromServerAvailable;
-                                }
-                                else
-                                    Debug.LogError( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
-                            }
-                        }
-                        else
-                        {
-                            base.ProcessUnhandledMessage(msgHdr);
-                        }
-                    }
-
-                    LocalNode.UdpAgent.RxWait.WaitOne(500);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                m_AsyncStateChange = new FatalError() { Message = "Salve generated an exception while processing a message" };
-            }
         }
 
         public override bool ReadyToProceed => m_Stage == EStage.ReadyToProcessFrame;

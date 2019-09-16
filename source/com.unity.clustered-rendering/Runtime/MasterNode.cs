@@ -9,8 +9,6 @@ namespace Unity.ClusterRendering
     {
         public byte ID { get; set; }
         public ENodeRole Role { get; set; }
-        public UInt64 readyToProcessFrameID { get; set; }
-
     }
 
     internal class MasterNode : ClusterNode
@@ -19,7 +17,6 @@ namespace Unity.ClusterRendering
 
         public int TotalExpectedRemoteNodesCount { get; private set; }
 
-        //Allowed IP's for multi casting: 224.0.1.0 to 239.255.255.255.
         public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut) : base(nodeId, ip, rxport, txport, timeOut)
         {
             TotalExpectedRemoteNodesCount = slaveCount;

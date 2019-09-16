@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Unity.ClusterRendering
 {
@@ -18,6 +19,7 @@ namespace Unity.ClusterRendering
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
             m_UDPAgent = new UDPAgent(nodeID, ip, rxPort, txPort, timeOut);
+            Stopwatch.StartNew();
         }
 
         public virtual bool Start()
@@ -26,16 +28,18 @@ namespace Unity.ClusterRendering
             {
                 if (!m_UDPAgent.Start())
                 {
-                    m_CurrentState = new FatalError() { Message = "Failed to start UDP Agent" };
+                    m_CurrentState = new FatalError("Failed to start UDP Agent");
                     m_CurrentState.EnterState(null);
                     return false;
                 }
+
+                m_UDPAgent.OnError += OnNetworkingError;
 
                 return true;
             }
             catch (Exception e)
             {
-                m_CurrentState = new FatalError() { Message = "Failed to start UDP Agent: " + e.Message };
+                m_CurrentState = new FatalError( "Failed to start UDP Agent: " + e.Message );
                 m_CurrentState.EnterState(null);
                 return false;
             }
@@ -83,6 +87,11 @@ namespace Unity.ClusterRendering
             return $"Node {ClusterSynch.Instance.DynamicLocalNodeId} at {ClusterSynch.Instance.FrameCount}\r\n" +
                    $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
                    $"State: { m_CurrentState.GetDebugString() }";
+        }
+
+        protected void OnNetworkingError( string message )
+        {
+            m_CurrentState.PendingStateChange = new FatalError($"Networking error: {message}");
         }
     }
 

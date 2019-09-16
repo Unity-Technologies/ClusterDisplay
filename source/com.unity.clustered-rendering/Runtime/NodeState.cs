@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering
@@ -12,7 +11,7 @@ namespace Unity.ClusterRendering
         protected Stopwatch m_Time;
         protected CancellationTokenSource m_Cancellation;
         protected Task m_Task;
-        protected NodeState m_AsyncStateChange;
+        public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
         public static int MaxTimeOut = 1000 * 60 * 5;
 
@@ -33,7 +32,7 @@ namespace Unity.ClusterRendering
 
         public virtual void InitState()
         {
-            
+            m_Cancellation = new CancellationTokenSource();
         }
 
         protected virtual NodeState DoFrame( bool newFrame)
@@ -59,8 +58,8 @@ namespace Unity.ClusterRendering
                 }
             }
             
-            if (m_AsyncStateChange != null)
-                return m_AsyncStateChange.EnterState(this);
+            if (PendingStateChange != null)
+                return PendingStateChange.EnterState(this);
 
             return this;
         }
@@ -71,7 +70,7 @@ namespace Unity.ClusterRendering
             {
                 case EMessageType.GlobalShutdownRequest:
                 {
-                    m_AsyncStateChange = new Shutdown();
+                    PendingStateChange = new Shutdown();
                     break;
                 }
 
@@ -136,7 +135,11 @@ namespace Unity.ClusterRendering
     // FatalError state -------------------------------------------------------- 
     internal class FatalError : NodeState
     {
-        public string Message { get; set; }
+        public FatalError(string msg)
+        {
+            Message = msg;
+        }
+        public string Message { get;  }
     }
 
 }

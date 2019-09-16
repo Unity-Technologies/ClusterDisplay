@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
@@ -51,10 +52,14 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                         {
                             MessageType = EMessageType.HelloMaster,
                             DestinationIDs = UInt64.MaxValue, // Shout it out! make sure to also use DoesNotRequireAck
-                            NodeRole = ENodeRole.Slave,
                             Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                         };
-                        LocalNode.UdpAgent.PublishMessage(header);
+
+                        var roleInfo = new RolePublication { NodeRole = ENodeRole.Slave };
+                        var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
+                        roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
+
+                        LocalNode.UdpAgent.PublishMessage(header, payload);
 
                         m_LastSend = m_Timer.Elapsed;
                     }
@@ -69,7 +74,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                             {
                                 if ((header.DestinationIDs & LocalNode.NodeIDMask) == LocalNode.NodeIDMask)
                                 {
-                                    Debug.Log("Accepted by server");
+                                    Debug.Log("Accepted by master: " + header.OriginID);
                                     m_MasterFound = true;
                                     LocalNode.MasterNodeId = header.OriginID;
                                     LocalNode.UdpAgent.NewNodeNotification(LocalNode.MasterNodeId);
@@ -88,8 +93,8 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             }
             catch (Exception e)
             {
-                var err = new FatalError() { Message = e.Message};
-                m_AsyncStateChange = err;
+                var err = new FatalError( $"Error occured while registering with master node: {e.Message}");
+                PendingStateChange = err;
             }
         }
 

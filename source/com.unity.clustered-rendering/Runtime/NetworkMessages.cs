@@ -35,6 +35,15 @@ namespace Unity.ClusterRendering
         public int msgsSent;
     }
 
+    internal class NetworkingHelpers
+    {
+        public static byte[] AllocateMessageWithPayload<T>() where T : struct
+        {
+            return new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<T>()];
+        }
+
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct MessageHeader
     {
@@ -53,7 +62,6 @@ namespace Unity.ClusterRendering
 
         public byte m_Version;
         private byte m_MessageType; // see EMessageType
-        private byte m_NodeRole; // see ENodeRole
         public byte OriginID;
         public UInt64 DestinationIDs; // bit field
         public UInt64 SequenceID;
@@ -71,12 +79,6 @@ namespace Unity.ClusterRendering
         {
             get => (EMessageType)m_MessageType;
             set => m_MessageType = (byte)value;
-        }
-
-        public ENodeRole NodeRole
-        {
-            get => (ENodeRole)m_NodeRole;
-            set => m_NodeRole = (byte)value;
         }
 
         // Output array will be sized to contain payload also, but payload is not yet stored in output array.
@@ -157,6 +159,39 @@ namespace Unity.ClusterRendering
             return msg;
         }
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct RolePublication
+    {
+        private byte m_NodeRole; // see ENodeRole
+        public ENodeRole NodeRole
+        {
+            get => (ENodeRole)m_NodeRole;
+            set => m_NodeRole = (byte)value;
+        }
+
+        public unsafe void StoreInBuffer(byte[] dest, int offset)
+        {
+            var len = Marshal.SizeOf<RolePublication>();
+
+            fixed (RolePublication* msgPtr = &this)
+            {
+                var ptr = (byte*)msgPtr;
+                Marshal.Copy((IntPtr)ptr, dest, offset, len);
+            }
+        }
+
+        public static unsafe RolePublication FromByteArray(byte[] arr, int offset)
+        {
+            RolePublication msg = default;
+            var len = Marshal.SizeOf<RolePublication>();
+            var ptr = &msg;
+            Marshal.Copy(arr, offset, (IntPtr)ptr, len);
+
+            return msg;
+        }
+    }
+
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct FrameDone

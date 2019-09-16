@@ -11,6 +11,8 @@ namespace Unity.ClusterRendering
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
     /// node logic each frame by injecting a call back in the player loop.
+    /// 
+    /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
     public class ClusterSynch : MonoBehaviour
     {
@@ -22,7 +24,11 @@ namespace Unity.ClusterRendering
 
         [NonSerialized] private static ClusterSynch m_Instance;
 
+        private DebugPerf m_FrameRatePerf = new DebugPerf();
+
         public UInt64 FrameCount => LocalNode.CurrentFrameID;
+
+        private DebugPerf m_DelayMonitor = new DebugPerf();
 
         public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
 
@@ -68,7 +74,7 @@ namespace Unity.ClusterRendering
 
         public string GetDebugString()
         {
-            return LocalNode.GetDebugString();
+            return LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
         }
 
         private void OnEnable()
@@ -97,7 +103,7 @@ namespace Unity.ClusterRendering
                 m_ClusterLogicEnabled = false;
 
             if(m_ClusterLogicEnabled)
-                EditPlayerLoop();
+                InjectSynchPointInPlayerLoop();
         }
 
         private void OnDisable()
@@ -109,17 +115,7 @@ namespace Unity.ClusterRendering
 
             LocalNode.Exit();
 
-            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
-            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
-
-            var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
-
-            initList.RemoveAt(entryToDel);
-
-            newLoop.subSystemList[0].subSystemList = initList.ToArray();
-
-            PlayerLoop.SetPlayerLoop(newLoop);
+            RemoveSynchPointFromPlayerLoop();
         }
 
         void Update()
@@ -135,7 +131,7 @@ namespace Unity.ClusterRendering
             }
         }
 
-        private void EditPlayerLoop()
+        private void InjectSynchPointInPlayerLoop()
         {
             // Inject into player loop
             var newLoop = PlayerLoop.GetCurrentPlayerLoop();
@@ -161,6 +157,21 @@ namespace Unity.ClusterRendering
 
         }
 
+        private void RemoveSynchPointFromPlayerLoop()
+        {
+            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
+            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
+
+            var initList = newLoop.subSystemList[0].subSystemList.ToList();
+            var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
+
+            initList.RemoveAt(entryToDel);
+
+            newLoop.subSystemList[0].subSystemList = initList.ToArray();
+
+            PlayerLoop.SetPlayerLoop(newLoop);
+        }
+
         private bool ProcessCommandLine( List<string> args )
         {
             try
@@ -177,6 +188,8 @@ namespace Unity.ClusterRendering
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',')+1));
                     var timeOut = int.Parse(args[startIndex+4]);
+                    if (args.Count > (startIndex + 5))
+                        m_Debugging = args[startIndex + 5] == "debug";
 
                     var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut );
                     if (!master.Start())
@@ -196,6 +209,8 @@ namespace Unity.ClusterRendering
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',') + 1));
                     var timeOut = int.Parse(args[startIndex+3]);
+                    if (args.Count > (startIndex + 4))
+                        m_Debugging = args[startIndex + 4] == "debug";
 
                     var slave = new SlavedNode(id, ip, rxport, txport, timeOut );
                     if (!slave.Start())
@@ -219,6 +234,9 @@ namespace Unity.ClusterRendering
             {
                 if (m_Debugging)
                 {
+                    if (m_NewFrame)
+                        m_FrameRatePerf.SampleNow();
+
                     if (!LocalNode.DoFrame(m_NewFrame))
                     {
                         // Game Over!
@@ -226,12 +244,22 @@ namespace Unity.ClusterRendering
                     }
 
                     m_NewFrame = LocalNode.ReadyToProceed;
+                    if (m_NewFrame)
+                    {
+                        m_DelayMonitor.SampleNow();
+                        m_DelayMonitor.RefPoint();
+                    }
                 }
                 else
                 {
+                    m_FrameRatePerf.SampleNow();
+                    m_FrameRatePerf.RefPoint();
+
                     var newFrame = true;
+                    m_DelayMonitor.RefPoint();
                     do
                     {
+
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!
@@ -240,6 +268,7 @@ namespace Unity.ClusterRendering
 
                         newFrame = false;
                     } while (!LocalNode.ReadyToProceed && !Terminated);
+                    m_DelayMonitor.SampleNow();
                 }
             }
             catch (Exception e)
@@ -253,7 +282,5 @@ namespace Unity.ClusterRendering
                     LocalNode.Exit();
             }
         }
-
-
     }
 }

@@ -16,6 +16,8 @@ namespace Unity.ClusterRendering
     {
         public static int MaxSupportedNodeCount {get => 64;}
 
+        private bool m_ExtensiveLogging = false;
+
         private struct Message
         {
             public MessageHeader header;
@@ -32,11 +34,10 @@ namespace Unity.ClusterRendering
         private IPAddress m_MulticastAddress;
         private int m_RxPort;
         private int m_TxPort;
-        private int m_Timeout;
-        private int m_TotalResendCount = 0;
-        private int m_TotalSentCount = 0;
+        private int m_TotalResendCount;
+        private int m_TotalSentCount;
 
-        private UInt64 m_NextMessageId = 0;
+        private UInt64 m_NextMessageId;
 
         public UInt64 AllNodesMask { get; private set; }
         public byte LocalNodeID { get; private set; }
@@ -54,10 +55,12 @@ namespace Unity.ClusterRendering
         private ConcurrentQueue<MessageHeader> m_DeadMessages = new ConcurrentQueue<MessageHeader>();
 
         private Stopwatch m_Clock = new Stopwatch();
-        private TimeSpan m_AcceptedAckDelay = new TimeSpan(0,0,0,0,4);
+        private TimeSpan m_AcceptedAckDelay = new TimeSpan(0,0,0,1,000);
         private TimeSpan m_MessageAckTimeout;
 
         private MessageHeader.EFlag m_ExtraHdrFlags = MessageHeader.EFlag.None;
+
+        public Action<string> OnError { get; set; }
 
         public NetworkingStats CurrentNetworkStats
         {
@@ -89,7 +92,6 @@ namespace Unity.ClusterRendering
         {
             RxWait = new AutoResetEvent(false);
             LocalNodeID = localNodeID;
-            m_Timeout = timeOut;
             m_RxPort = rxPort;
             m_TxPort = txPort;
             m_MulticastAddress = IPAddress.Parse(ip);
@@ -108,6 +110,7 @@ namespace Unity.ClusterRendering
                 m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
 
                 var conn = new UdpClient();
+                conn.Client.DontFragment = false;
                 conn.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
                 conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
                 conn.Client.Bind(m_RxEndPoint);
@@ -116,7 +119,6 @@ namespace Unity.ClusterRendering
                 m_Connection = conn;
 
                 m_Connection.BeginReceive(ReceiveMessage, null);
-                Task.Run( () => SendMessages(m_CTS.Token), m_CTS.Token);
                 Task.Run( () => ResendDroppedMsgs(m_CTS.Token), m_CTS.Token);
             }
             catch (Exception e)
@@ -145,10 +147,12 @@ namespace Unity.ClusterRendering
 
         public UInt64 NewNodeNotification(byte newNodeId)
         {
-            if(newNodeId+1 > MaxSupportedNodeCount)
-                throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{MaxSupportedNodeCount-1}]");
-
-            AllNodesMask |= (UInt64)1 << newNodeId;
+            if (newNodeId + 1 > MaxSupportedNodeCount)
+            {
+                OnError( $"Node id must be in the range of [0,{MaxSupportedNodeCount - 1}]");
+            }
+            else
+                 AllNodesMask |= (UInt64)1 << newNodeId;
 
             return AllNodesMask;
         }
@@ -186,7 +190,7 @@ namespace Unity.ClusterRendering
                         msgHeader.DestinationIDs = AllNodesMask;
                     else
                     {
-                        Debug.LogError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
+                        OnError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
                         return false;
                     }
                 }
@@ -199,8 +203,7 @@ namespace Unity.ClusterRendering
                     payload = msgRaw
                 };
 
-                m_TxQueue.Add(msg);
-                m_TotalSentCount++;
+                SendMessage(ref msg);
             }
             catch (Exception e)
             {
@@ -227,7 +230,7 @@ namespace Unity.ClusterRendering
                         msgHeader.DestinationIDs = AllNodesMask;
                     else
                     {
-                        Debug.LogError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
+                        OnError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
                         return false;
                     }
                 }
@@ -240,9 +243,7 @@ namespace Unity.ClusterRendering
                     payload = rawMsg,
                 };
 
-                m_TxQueue.Add(msg);
-                m_TotalSentCount++;
-
+                SendMessage(ref msg);
 
                 if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
                 {
@@ -269,6 +270,8 @@ namespace Unity.ClusterRendering
                 var header = MessageHeader.FromByteArray(receiveBytes);
                 if (header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
                 {
+                    if(m_ExtensiveLogging)
+                        Debug.Log("Rx msg: " + header.MessageType);
                     if (header.MessageType == EMessageType.AckMsgRx)
                     {
                         lock (m_TxQueuePendingAcks)
@@ -310,6 +313,7 @@ namespace Unity.ClusterRendering
             {
                 // Trigger some sort of error
                 Debug.LogException(e);
+                OnError($"Async RxMessage failed with: {e.Message}");
             }
         }
 
@@ -335,56 +339,53 @@ namespace Unity.ClusterRendering
                 payload = buffer
             };
 
-            m_TxQueue.Add(ackMsg);
+            SendMessage(ref ackMsg);
         }
 
-        private void SendMessages( CancellationToken ctk )
+        private void SendMessage(ref Message msg)
         {
-            try
+            if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck) &&
+                !msg.header.Flags.HasFlag(MessageHeader.EFlag.Resending))
             {
-                foreach (var msg in m_TxQueue.GetConsumingEnumerable())
+                var pendingAck = new PendingAck
                 {
-                    if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck))
-                    {
-                        var pendingAck = new PendingAck()
-                        {
-                            message = msg,
-                            ts = m_Clock.Elapsed
-                        };
+                    message = msg,
+                    ts = m_Clock.Elapsed,
+                    m_MissingAcks = (msg.header.DestinationIDs & AllNodesMask) & ~LocalNodeIDMask
+                };
 
-                        if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.Resending))
-                            pendingAck.m_MissingAcks = (msg.header.DestinationIDs & AllNodesMask) & ~LocalNodeIDMask;
-
-                        lock (m_TxQueuePendingAcks)
-                            m_TxQueuePendingAcks.Add(pendingAck);
-                    }
-
-                    m_Connection.SendAsync(msg.payload, msg.payload.Length, m_TxEndPoint);
-                }
+                lock (m_TxQueuePendingAcks)
+                    m_TxQueuePendingAcks.Add(pendingAck);
             }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
+
+            m_Connection.SendAsync(msg.payload, msg.payload.Length, m_TxEndPoint);
+            Interlocked.Increment(ref m_TotalSentCount);
+
+            if (m_ExtensiveLogging)
+                Debug.Log("Tx msg: " + msg.header.MessageType);
         }
 
         private void ResendDroppedMsgs(CancellationToken ctk)
         {
             try
             {
-                PendingAck[] expired = new PendingAck[1000];
-                int expiredCount = 0;
-                var tsNow = m_Clock.Elapsed;
+                int[] expired = new int[1000];
                 while (!ctk.IsCancellationRequested)
                 {
+                    int expiredCount = 0;
+                    var tsNow = m_Clock.Elapsed;
                     lock (m_TxQueuePendingAcks)
                     {
                         for (var i = 0; i < m_TxQueuePendingAcks.Count; i++)
                         {
                             if ((tsNow - m_TxQueuePendingAcks[i].ts) >= m_AcceptedAckDelay)
                             {
-                                expired[expiredCount++] = m_TxQueuePendingAcks[i];
-                                m_TxQueuePendingAcks.RemoveAt(i--);
+                                if(expiredCount == expired.Length)
+                                    Debug.LogError("To many pending acks timing out!!!");
+                                else
+                                {
+                                    expired[expiredCount++] = i;
+                                }
                             }
                         }
                     }
@@ -392,21 +393,26 @@ namespace Unity.ClusterRendering
                     // These acks are late in coming, so re-sending messages
                     for (var i = 0; i < expiredCount; i++)
                     {
-                        var expiredAck = expired[i];
+                        PendingAck expiredAck;
+                        lock(m_TxQueuePendingAcks)
+                            expiredAck = m_TxQueuePendingAcks[expired[i]]; 
+
                         expiredAck.message.header.DestinationIDs = expiredAck.m_MissingAcks;
-                        expiredAck.message.header.StoreInBuffer(expiredAck.message.payload);
 
                         if (tsNow - expiredAck.message.ts > m_MessageAckTimeout)
                         {
-                            m_DeadMessages.Enqueue(expiredAck.message.header);
-                            Debug.LogError( $"Msg could not be delivered: {expiredAck.message.header.MessageType}, destinations: {expiredAck.message.header.DestinationIDs}");
+                            OnError( $"Msg could not be delivered: {expiredAck.message.header.MessageType}, destinations: {expiredAck.message.header.DestinationIDs}");
+                            lock(m_TxQueuePendingAcks)
+                                m_TxQueuePendingAcks.RemoveAt(expired[i]);
                         }
                         else
                         {
                             expiredAck.message.header.Flags |= MessageHeader.EFlag.Resending;
+                            expiredAck.message.header.StoreInBuffer(expiredAck.message.payload);
                             expiredAck.ts = m_Clock.Elapsed;
-                            m_TxQueue.Add(expiredAck.message, ctk);
                             m_TotalResendCount++;
+                            m_TxQueuePendingAcks[expired[i]] = expiredAck; // updates entry (struct)
+                            SendMessage(ref expiredAck.message);
                         }
                     }
                 }
