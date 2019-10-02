@@ -170,17 +170,23 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                         if (id == AdvanceFrame.ClusterInputStateID)
                         {
                             if (!mixedStateFormat)
-                                ClusterInput.RestoreState(stateData);
+                            {
+                                ClusterSerialization.RestoreClusterInputState(stateData);
+                            }
                         }
                         else if (id == AdvanceFrame.CoreInputStateID)
                         {
                             if (!mixedStateFormat)
-                                InputManager.RestoreState(stateData);
+                            {
+                                ClusterSerialization.RestoreInputManagerState(stateData);
+                            }
                         }
                         else if (id == AdvanceFrame.CoreTimeStateID)
                         {
                             if (!mixedStateFormat)
-                                TimeManager.RestoreState(stateData);
+                            {
+                                ClusterSerialization.RestoreTimeManagerState(stateData);
+                            }
                         }
                         else if (id == AdvanceFrame.CoreRandomStateID)
                         {
