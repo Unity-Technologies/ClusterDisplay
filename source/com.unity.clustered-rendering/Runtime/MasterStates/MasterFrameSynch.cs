@@ -178,13 +178,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
         private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref int endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
-
-            int bytesWritten;
+            
             int sizePos = endPos;
             endPos += Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreInputStateID, guidLen);
 
-            InputManager.SaveState(buffer, endPos, out bytesWritten);
+            var bytesWritten = ClusterSerialization.SaveInputManagerState(buffer.GetSubArray(endPos, buffer.Length - endPos));
             Debug.Assert(bytesWritten >= 0, "Buffer to small! Input not stored.");
             if (bytesWritten < 0)
                 return false;
@@ -198,13 +197,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
         private static unsafe bool StoreTimeState(NativeArray<byte> buffer, ref int endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
-
-            int bytesWritten;
+            
             int sizePos = endPos;
             endPos += Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreTimeStateID, guidLen);
 
-            UnityEngine.TimeManager.SaveState(buffer, endPos, out bytesWritten);
+            var bytesWritten = ClusterSerialization.SaveTimeManagerState(buffer.GetSubArray(endPos, buffer.Length - endPos));
             Debug.Assert(bytesWritten >= 0, "Buffer to small! Time state not stored.");
             if (bytesWritten < 0)
                 return false;
@@ -218,13 +216,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
         private static unsafe bool StoreClusterInputState(NativeArray<byte> buffer, ref int endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
-
-            int bytesWritten;
+            
             int startingPos = endPos;
             endPos += Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.ClusterInputStateID, guidLen);
 
-            ClusterInput.SaveState(buffer, endPos, out bytesWritten);
+            var bytesWritten = ClusterSerialization.SaveClusterInputState(buffer.GetSubArray(endPos, buffer.Length - endPos));
             Debug.Assert(bytesWritten >= 0, "Buffer to small. ClusterInput not stored.");
             if (bytesWritten < 0)
                 return false;
