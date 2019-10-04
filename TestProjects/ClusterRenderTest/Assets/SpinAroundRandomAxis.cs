@@ -12,9 +12,10 @@ namespace DefaultNamespace
         private void Update()
         {
             numFrames++;
-            if (numFrames > 10)
+            if (numFrames > 50)
             {
                 axis = new Vector3(Random.value, Random.value, Random.value);
+                numFrames = 0;
             }
             
             gameObject.transform.localRotation *= Quaternion.AngleAxis(3,axis); 
