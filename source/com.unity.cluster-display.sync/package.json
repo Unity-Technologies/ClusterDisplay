@@ -1,8 +1,8 @@
 {
-    "name": "com.unity.clustered-rendering",
-    "displayName": "Unity Clustered Rendering",
+    "name": "com.unity.cluster-display.sync",
+    "displayName": "Cluster Display Sync",
     "version": "0.0.1",
-    "unity": "2019.3",
+    "unity": "2020.1",
     "dependencies": {
     },
     "description": "Allows unity to output to display arrays.",
