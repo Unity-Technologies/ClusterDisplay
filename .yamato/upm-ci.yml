@@ -55,7 +55,9 @@ test_trigger:
   triggers:
     branches:
       only:
-      - "/.*/"
+        - "/.*/"
+      except:
+        - master
   artifacts:
     logs:
       paths:
