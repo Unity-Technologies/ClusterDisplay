@@ -1,5 +1,6 @@
 test_editors:
 - version: 2020.1
+- version: trunk
 test_platforms:
 - name: win
   type: Unity::VM
