@@ -1,0 +1,13 @@
+{
+    "name": "com.unity.cluster-display.utils",
+    "displayName": "Cluster Display Utils",
+    "version": "0.0.1",
+    "unity": "2020.1",
+    "dependencies": {
+    "com.unity.cluster-display.sync" : "0.0.1"
+    },
+    "description": "Allows unity to output to display arrays.",
+    "keywords": [
+      "unity"
+    ]
+}
