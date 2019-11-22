@@ -1,5 +1,5 @@
 {
-    "name": "Unity.ClusterRendering.Runtime",
+    "name": "Unity.ClusterDisplay.Sync.Runtime",
     "references": [],
     "includePlatforms": [
         "Editor",
