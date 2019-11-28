@@ -1,0 +1,10 @@
+{
+ "base_destination": "c:/Cluster_Rendering/",
+ "servers": [
+	"yul-cr-master",
+	"yul-cr-node1",
+	"yul-cr-node2",
+	"yul-cr-node3"
+  ],
+  "extra_args" : "-adapterName Cluster_Sync"
+ }

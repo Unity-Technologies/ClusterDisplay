@@ -12,7 +12,7 @@ namespace DefaultNamespace
         private void Update()
         {
             numFrames++;
-            if (numFrames > 50)
+            if (numFrames > 1000)
             {
                 axis = new Vector3(Random.value, Random.value, Random.value);
                 numFrames = 0;

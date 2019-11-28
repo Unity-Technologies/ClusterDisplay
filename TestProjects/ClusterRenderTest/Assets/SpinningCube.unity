@@ -43,7 +43,7 @@ RenderSettings:
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 11
+  serializedVersion: 12
   m_GIWorkflowMode: 1
   m_GISettings:
     serializedVersion: 2
@@ -98,7 +98,8 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_UseShadowmask: 1
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 02585cf8ae5005a4cbcda3e30a7785a4,
+    type: 2}
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -332,6 +333,7 @@ GameObject:
   - component: {fileID: 549376946}
   - component: {fileID: 549376945}
   - component: {fileID: 549376944}
+  - component: {fileID: 549376941}
   m_Layer: 0
   m_Name: ClusterController
   m_TagString: Untagged
@@ -339,6 +341,18 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &549376941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549376940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70539b651c9d45fb9c7a314d5fba5e01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &549376944
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -364,7 +378,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numTilesX: 2
-  numTilesY: 1
+  numTilesY: 2
 --- !u!114 &549376946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -496,7 +510,7 @@ PrefabInstance:
     - target: {fileID: 7495078219182836263, guid: 7c87b593a6474bb44800a96bb532bf89,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7495078219182836267, guid: 7c87b593a6474bb44800a96bb532bf89,
         type: 3}
