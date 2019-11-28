@@ -3,12 +3,7 @@
     "references": [
         "Unity.ClusterDisplay.Sync.Runtime"
     ],
-    "includePlatforms": [
-        "Editor",
-        "LinuxStandalone64",
-        "macOSStandalone",
-        "WindowsStandalone64"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
     "overrideReferences": false,
