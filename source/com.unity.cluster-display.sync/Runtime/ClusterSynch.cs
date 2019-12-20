@@ -176,8 +176,15 @@ namespace Unity.ClusterRendering
         {
             try
             {
+                var adapterName = "";
+                var startIndex = args.FindIndex(x => x == "-adapterName");
+                if (startIndex >= 0)
+                {
+                    adapterName = args[startIndex+1];
+                }
+
                 // Process server logic
-                var startIndex = args.FindIndex(x => x == "-masterNode");
+                startIndex = args.FindIndex(x => x == "-masterNode");
                 if (startIndex >= 0)
                 {
                     // Master command line format: -masterNode nodeId nodeCount ip:rxport,txport timeOut
@@ -191,7 +198,7 @@ namespace Unity.ClusterRendering
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut );
+                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut, adapterName );
                     if (!master.Start())
                         return false;
                     LocalNode = master;
@@ -212,7 +219,7 @@ namespace Unity.ClusterRendering
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    var slave = new SlavedNode(id, ip, rxport, txport, timeOut );
+                    var slave = new SlavedNode(id, ip, rxport, txport, timeOut, adapterName );
                     if (!slave.Start())
                         return false;
                     LocalNode = slave;

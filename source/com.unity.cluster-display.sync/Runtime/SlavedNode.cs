@@ -8,8 +8,8 @@ namespace Unity.ClusterRendering
         public byte MasterNodeId { get; set; }
         public UInt64 MasterNodeIdMask => (UInt64) 1 << MasterNodeId;
 
-        public SlavedNode(byte nodeId, string ip, int rxport, int txport, int timeOut)
-            : base(nodeId, ip, rxport, txport, timeOut )
+        public SlavedNode(byte nodeId, string ip, int rxport, int txport, int timeOut, string adapterName)
+            : base(nodeId, ip, rxport, txport, timeOut, adapterName )
         {
         }
 
