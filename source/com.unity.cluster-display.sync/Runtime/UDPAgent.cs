@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -36,6 +37,7 @@ namespace Unity.ClusterRendering
         private int m_TxPort;
         private int m_TotalResendCount;
         private int m_TotalSentCount;
+        string m_AdapterName;
 
         private UInt64 m_NextMessageId;
 
@@ -88,7 +90,16 @@ namespace Unity.ClusterRendering
 
         public bool IsTxQueueEmpty => m_TxQueue.Count == 0;
 
-        public UDPAgent(byte localNodeID, string ip, int rxPort, int txPort, int timeOut)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="localNodeID"></param>
+        /// <param name="ip"></param>
+        /// <param name="rxPort"></param>
+        /// <param name="txPort"></param>
+        /// <param name="timeOut"></param>
+        /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
+        public UDPAgent(byte localNodeID, string ip, int rxPort, int txPort, int timeOut, string adapterName)
         {
             RxWait = new AutoResetEvent(false);
             LocalNodeID = localNodeID;
@@ -96,6 +107,7 @@ namespace Unity.ClusterRendering
             m_TxPort = txPort;
             m_MulticastAddress = IPAddress.Parse(ip);
             m_MessageAckTimeout = new TimeSpan(0, 0, 0, timeOut);
+            m_AdapterName = adapterName;
         }
 
         public bool Start()
@@ -110,6 +122,28 @@ namespace Unity.ClusterRendering
                 m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
 
                 var conn = new UdpClient();
+
+                // Bind a particular NIC
+                if (!string.IsNullOrEmpty(m_AdapterName))
+                {
+                    for (var index = 0; index < NetworkInterface.GetAllNetworkInterfaces().Length; index++)
+                    {
+                        var nic = NetworkInterface.GetAllNetworkInterfaces()[index];
+                        if (nic.OperationalStatus != OperationalStatus.Up || nic.Name != m_AdapterName)
+                            continue;
+                        foreach (var ip in nic.GetIPProperties().UnicastAddresses)
+                        {
+                            if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                            {
+                                conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface,
+                                    ip.Address.GetAddressBytes());
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
                 conn.Client.DontFragment = false;
                 conn.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
                 conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);

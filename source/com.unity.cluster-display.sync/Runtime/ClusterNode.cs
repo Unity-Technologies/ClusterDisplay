@@ -14,11 +14,11 @@ namespace Unity.ClusterRendering
 
         public UInt64 CurrentFrameID { get; set; }
 
-        protected ClusterNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut)
+        protected ClusterNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut, string adapterName)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
-            m_UDPAgent = new UDPAgent(nodeID, ip, rxPort, txPort, timeOut);
+            m_UDPAgent = new UDPAgent(nodeID, ip, rxPort, txPort, timeOut, adapterName);
             Stopwatch.StartNew();
         }
 
