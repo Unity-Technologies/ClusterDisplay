@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering.SlaveStateMachine
@@ -27,6 +29,10 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         private bool m_MixModeReported = false;
 
         private DebugPerf m_NetworkingOverhead = new DebugPerf();
+        ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
+        ProfilerMarker m_MarkerWaitingOnGoFromMaster = new ProfilerMarker("WaitingOnGoFromMaster");
+        ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
+        ProfilerMarker m_MarkerReceivedGoFromMaster = new ProfilerMarker("ReceivedGoFromMaster");
 
         public override string GetDebugString()
         {
@@ -44,27 +50,39 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
         protected override NodeState DoFrame(bool newFrame)
         {
-            switch (m_Stage)
+            using (m_MarkerDoFrame.Auto())
             {
-                case EStage.WaitingOnGoFromMaster:
+                switch (m_Stage)
                 {
-                    PumpMsg();
+                    case EStage.WaitingOnGoFromMaster:
+                    {
+                        using (m_MarkerWaitingOnGoFromMaster.Auto())
+                        {
 
-                    // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
-                    // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
-                    // We will have actually processed a frame and be ready to inform master and wait for next frame start.
-                    break;
-                }
 
-                case EStage.ReadyToProcessFrame:
-                {
-                    if (newFrame)
-                        SignalFrameDone();
-                    break;
+                            PumpMsg();
+
+                            // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
+                            // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
+                            // We will have actually processed a frame and be ready to inform master and wait for next frame start.
+                            break;
+                        }
+                    }
+
+                    case EStage.ReadyToProcessFrame:
+                    {
+                        if (newFrame)
+                        {
+                            using (m_MarkerReadyToProcessFrame.Auto())
+                            {
+                                SignalFrameDone();
+                            }
+                        }
+                        break;
+                    }
                 }
+                return this;
             }
-
-            return this;
         }
 
         private void PumpMsg()
@@ -75,24 +93,29 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                 if (msgHdr.MessageType == EMessageType.StartFrame)
                 {
-                    m_NetworkingOverhead.SampleNow();
-                    if (msgHdr.PayloadSize > 0)
+                    using (m_MarkerReceivedGoFromMaster.Auto())
                     {
-                        var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-                        m_LastRxFrameStart = respMsg.FrameNumber;
-                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                        m_NetworkingOverhead.SampleNow();
+                        if (msgHdr.PayloadSize > 0)
                         {
-                            Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
-                            m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
+                            var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+                            m_LastRxFrameStart = respMsg.FrameNumber;
+                            if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                            {
+                                Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
+                                m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
 
-                            RestoreStates();
+                                RestoreStates();
 
-                            m_Stage = EStage.ReadyToProcessFrame;
-                        }
-                        else
-                        {
-                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
-                            break;
+                                m_Stage = EStage.ReadyToProcessFrame;
+                            }
+                            else
+                            {
+                                PendingStateChange =
+                                    new FatalError(
+                                        $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
+                                break;
+                            }
                         }
                     }
                 }

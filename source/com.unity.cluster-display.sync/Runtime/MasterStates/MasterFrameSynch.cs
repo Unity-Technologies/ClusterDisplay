@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace Unity.ClusterRendering.MasterStateMachine
@@ -23,6 +24,11 @@ namespace Unity.ClusterRendering.MasterStateMachine
         private NativeArray<byte> m_RawStateData;
 
         public override bool ReadyToProceed => m_Stage == EStage.ProcessFrame;
+        ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
+        ProfilerMarker m_MarkerReadyToSignalStartNewFrame = new ProfilerMarker("ReadyToSignalStartNewFrame");
+        ProfilerMarker m_MarkerWaitingOnFramesDoneMsgs = new ProfilerMarker("WaitingOnFramesDoneMsgs");
+        ProfilerMarker m_MarkerProcessFrame = new ProfilerMarker("ProcessFrame");
+        ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
 
         public override string GetDebugString()
         {
@@ -39,53 +45,70 @@ namespace Unity.ClusterRendering.MasterStateMachine
         
         protected override NodeState DoFrame(bool newFrame)
         {
-            if( newFrame )
-                 GatherFrameState();
-
-            switch ((EStage)m_Stage)
+            using (m_MarkerDoFrame.Auto())
             {
-                case EStage.ReadyToSignalStartNewFrame:
-                {
-                    if(m_RawStateData == default) // 1st frame only
-                        GatherFrameState();
+                if (newFrame)
+                    GatherFrameState();
 
-                    if (m_RawStateData != default)
+                switch ((EStage) m_Stage)
+                {
+                    case EStage.ReadyToSignalStartNewFrame:
                     {
-                        PublishCurrentState(m_RawStateData);
-                        m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
-                        m_Stage = EStage.ProcessFrame;
-                    }
-                    else 
-                        Debug.LogError( "State buffer is empty!" );
+                        using (m_MarkerReadyToSignalStartNewFrame.Auto())
+                        {
+                            if (m_RawStateData == default) // 1st frame only
+                                GatherFrameState();
 
-                    break;
-                }
+                            if (m_RawStateData != default)
+                            {
+                                using (m_MarkerPublishState.Auto())
+                                {
+                                    PublishCurrentState(m_RawStateData);
+                                }
 
-                case EStage.ProcessFrame:
-                {
-                    Debug.Assert(newFrame, "this should always be on a new frame.");
-                    m_Stage = EStage.WaitingOnFramesDoneMsgs;
-                    m_TsOfStage = m_Time.Elapsed;
-                    break;
-                }
+                                m_WaitingOnNodes = (Int64) (LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
+                                m_Stage = EStage.ProcessFrame;
+                            }
+                            else
+                                Debug.LogError("State buffer is empty!");
 
-                case EStage.WaitingOnFramesDoneMsgs:
-                {
-                    PumpMessages();
-
-                    if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
-                    {
-                        Debug.Assert(m_WaitingOnNodes != 0, "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
-                        // One or more clients failed to respond in time!
-                        Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
-                        m_TsOfStage = m_TsOfStage.Add(new TimeSpan(0, 0, 5));
+                            break;
+                        }
                     }
 
-                    break;
+                    case EStage.ProcessFrame:
+                    {
+                        using (m_MarkerProcessFrame.Auto())
+                        {
+                            Debug.Assert(newFrame, "this should always be on a new frame.");
+                            m_Stage = EStage.WaitingOnFramesDoneMsgs;
+                            m_TsOfStage = m_Time.Elapsed;
+                            break;
+                        }
+                    }
+
+                    case EStage.WaitingOnFramesDoneMsgs:
+                    {
+                        using (m_MarkerWaitingOnFramesDoneMsgs.Auto())
+                        {
+                            PumpMessages();
+
+                            if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
+                            {
+                                Debug.Assert(m_WaitingOnNodes != 0,
+                                    "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
+                                // One or more clients failed to respond in time!
+                                Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
+                                m_TsOfStage = m_TsOfStage.Add(new TimeSpan(0, 0, 5));
+                            }
+
+                            break;
+                        }
+                    }
                 }
+
+                return this;
             }
-
-            return this;
         }
 
         private unsafe void PublishCurrentState(NativeArray<byte> stateBuffer)
