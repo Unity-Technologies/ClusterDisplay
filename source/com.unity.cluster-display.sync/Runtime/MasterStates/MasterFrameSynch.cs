@@ -22,6 +22,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
         private TimeSpan m_TsOfStage;
 
         private NativeArray<byte> m_RawStateData;
+        private byte[] m_MsgBuffer = new byte[0];
 
         public override bool ReadyToProceed => m_Stage == EStage.ProcessFrame;
         ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
@@ -115,12 +116,16 @@ namespace Unity.ClusterRendering.MasterStateMachine
         {
             using (stateBuffer)
             {
-                var msgBuffer = new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + stateBuffer.Length];
+                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + stateBuffer.Length;
+                if (m_MsgBuffer.Length != len)
+                {
+                    m_MsgBuffer = new byte[len];
+                }
 
                 var msg = new AdvanceFrame() {FrameNumber = LocalNode.CurrentFrameID };
-                msg.StoreInBuffer(msgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
+                msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
-                Marshal.Copy((IntPtr) stateBuffer.GetUnsafePtr(), msgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), stateBuffer.Length);
+                Marshal.Copy((IntPtr) stateBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), stateBuffer.Length);
 
                 var msgHdr = new MessageHeader()
                 {
@@ -129,7 +134,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     PayloadSize = (UInt16)stateBuffer.Length
                 };
 
-                LocalNode.UdpAgent.PublishMessage(msgHdr, msgBuffer);
+                LocalNode.UdpAgent.PublishMessage(msgHdr, m_MsgBuffer);
             }
         }
 

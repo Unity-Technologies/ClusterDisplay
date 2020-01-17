@@ -20,6 +20,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
         private EStage m_Stage;
         private NativeArray<byte> m_MsgFromMaster;
+        private byte[] m_OutBuffer = new byte[0];
 
         // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
@@ -135,20 +136,25 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                 DestinationIDs = LocalNode.MasterNodeIdMask,
             };
 
-            var outBuffer = new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>()];
+            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>();
+            if (m_OutBuffer.Length != len)
+            {
+                m_OutBuffer = new byte[len];
+            }
+
             var msg = new FrameDone()
             {
                 FrameNumber = LocalNode.CurrentFrameID
             };
             m_LastReportedFrameDone = LocalNode.CurrentFrameID;
-            msg.StoreInBuffer(outBuffer, Marshal.SizeOf<MessageHeader>());
+            msg.StoreInBuffer(m_OutBuffer, Marshal.SizeOf<MessageHeader>());
 
             m_Stage = EStage.WaitingOnGoFromMaster;
             m_NetworkingOverhead.RefPoint();
 
             LocalNode.CurrentFrameID++;
 
-            LocalNode.UdpAgent.PublishMessage(msgHdr, outBuffer);
+            LocalNode.UdpAgent.PublishMessage(msgHdr, m_OutBuffer);
             m_TxCount++;
         }
 
