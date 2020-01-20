@@ -138,13 +138,13 @@ namespace Unity.ClusterRendering
             Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
 
             var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            var indexOfTimeSlice = initList.FindIndex((x) =>
-                x.type == typeof(UnityEngine.PlayerLoop.Initialization.AsyncUploadTimeSlicedUpdate));
+            var indexOfPlayerUpdateTime = initList.FindIndex((x) =>
+                x.type == typeof(UnityEngine.PlayerLoop.Initialization.PlayerUpdateTime));
 
             Assert.IsFalse(initList.Any((x) => x.type == this.GetType()), "Player loop already has a ClusterRendering system entry registered.");
-            Assert.IsTrue(indexOfTimeSlice != -1, "Can't find insertion point in player loop for ClusterRendering system");
+            Assert.IsTrue(indexOfPlayerUpdateTime != -1, "Can't find insertion point in player loop for ClusterRendering system");
 
-            initList.Insert(indexOfTimeSlice + 1, new PlayerLoopSystem()
+            initList.Insert(indexOfPlayerUpdateTime + 1, new PlayerLoopSystem()
             {
                 type = this.GetType(),
                 updateDelegate = SystemUpdate
