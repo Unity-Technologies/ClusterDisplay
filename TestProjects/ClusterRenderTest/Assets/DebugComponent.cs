@@ -1,13 +1,15 @@
 ﻿using Unity.ClusterRendering;
 using UnityEngine;
+using UnityEngine.Playables;
 
 [RequireComponent(typeof(UnityEngine.UI.Text))]
 public class DebugComponent : MonoBehaviour
 {
-
+    private int frmaes;
     // Start is called before the first frame update
     void Start()
     {
+        frmaes = 0;
         var text = this.GetComponent<UnityEngine.UI.Text>();
         if (ClusterSynch.Active)
         {
@@ -21,13 +23,21 @@ public class DebugComponent : MonoBehaviour
 
     void Update()
     {
+        frmaes++;
         var text = this.GetComponent<UnityEngine.UI.Text>();
         if (ClusterSynch.Active)
         {
-            text.text = ClusterSynch.Instance.GetDebugString();
+            //if (frmaes % 60 == 0)
+            {
+                text.text = ClusterSynch.Instance.GetDebugString();
+                text.text += $"\r\n Time.time:{Time.time:00.0}";
+                text.text += $"\r\n Time.Dt{Time.deltaTime}";
+                text.text += $"\r\n Time.uDt{Time.unscaledDeltaTime}";
+            }
 
             if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
                 ClusterSynch.Instance.ShutdownAllClusterNodes();
+            
         }
         else
         {
