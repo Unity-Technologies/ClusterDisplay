@@ -18,7 +18,7 @@ namespace DefaultNamespace
                 numFrames = 0;
             }
             
-            gameObject.transform.localRotation *= Quaternion.AngleAxis(3,axis); 
+            gameObject.transform.localRotation *= Quaternion.AngleAxis(60 * Time.deltaTime,axis); 
         }
     }
 }
