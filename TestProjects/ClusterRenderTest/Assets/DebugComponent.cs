@@ -30,9 +30,6 @@ public class DebugComponent : MonoBehaviour
             //if (frmaes % 60 == 0)
             {
                 text.text = ClusterSynch.Instance.GetDebugString();
-                text.text += $"\r\n Time.time:{Time.time:00.0}";
-                text.text += $"\r\n Time.Dt{Time.deltaTime}";
-                text.text += $"\r\n Time.uDt{Time.unscaledDeltaTime}";
             }
 
             if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
