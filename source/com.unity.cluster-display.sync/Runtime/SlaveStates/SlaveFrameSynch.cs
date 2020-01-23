@@ -27,7 +27,6 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         private UInt64 m_LastRxFrameStart = 0;
         private UInt64 m_RxCount = 0;
         private UInt64 m_TxCount = 0;
-        private bool m_MixModeReported = false;
 
         private DebugPerf m_NetworkingOverhead = new DebugPerf();
         ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
@@ -164,13 +163,6 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             {
                 // Read the state from the server
                 var msgHdr = MessageHeader.FromByteArray(m_MsgFromMaster);
-                var mixedStateFormat = msgHdr.Flags.HasFlag(MessageHeader.EFlag.SentFromEditorProcess) != Application.isEditor;
-
-                if (mixedStateFormat && !m_MixModeReported)
-                {
-                    m_MixModeReported = true;
-                    Debug.LogError("Partial data synch due to mixed state format (editor vs player)");
-                }
 
                 // restore states
                 unsafe
@@ -198,24 +190,15 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                         if (id == AdvanceFrame.ClusterInputStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreClusterInputState(stateData);
-                            }
+                            ClusterSerialization.RestoreClusterInputState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreInputStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreInputManagerState(stateData);
-                            }
+                            ClusterSerialization.RestoreInputManagerState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreTimeStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreTimeManagerState(stateData);
-                            }
+                            ClusterSerialization.RestoreTimeManagerState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreRandomStateID)
                         {
