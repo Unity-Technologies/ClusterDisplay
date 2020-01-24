@@ -188,11 +188,11 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                         var stateData = m_MsgFromMaster.GetSubArray(bufferPos, stateSize);
                         bufferPos += stateSize;
 
-                        if (id == AdvanceFrame.ClusterInputStateID)
+                        /*if (id == AdvanceFrame.ClusterInputStateID)
                         {
                             ClusterSerialization.RestoreClusterInputState(stateData);
                         }
-                        else if (id == AdvanceFrame.CoreInputStateID)
+                        else*/ if (id == AdvanceFrame.CoreInputStateID)
                         {
                             ClusterSerialization.RestoreInputManagerState(stateData);
                         }
