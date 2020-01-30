@@ -190,7 +190,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 if (
                     StoreInputState(buffer, ref endPos) &&
                     StoreTimeState(buffer, ref endPos) &&
-                    //StoreClusterInputState(buffer, ref endPos) &&
+                    StoreClusterInputState(buffer, ref endPos) &&
                     StoreRndGeneratorState(buffer, ref endPos) &&
                     MarkStatesEnd(buffer, ref endPos))
                 {
