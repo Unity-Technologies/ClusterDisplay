@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterRendering.SlaveStateMachine
@@ -18,15 +20,19 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
         private EStage m_Stage;
         private NativeArray<byte> m_MsgFromMaster;
+        private byte[] m_OutBuffer = new byte[0];
 
         // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
         private UInt64 m_LastRxFrameStart = 0;
         private UInt64 m_RxCount = 0;
         private UInt64 m_TxCount = 0;
-        private bool m_MixModeReported = false;
 
         private DebugPerf m_NetworkingOverhead = new DebugPerf();
+        ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
+        ProfilerMarker m_MarkerWaitingOnGoFromMaster = new ProfilerMarker("WaitingOnGoFromMaster");
+        ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
+        ProfilerMarker m_MarkerReceivedGoFromMaster = new ProfilerMarker("ReceivedGoFromMaster");
 
         public override string GetDebugString()
         {
@@ -44,27 +50,39 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
         protected override NodeState DoFrame(bool newFrame)
         {
-            switch (m_Stage)
+            using (m_MarkerDoFrame.Auto())
             {
-                case EStage.WaitingOnGoFromMaster:
+                switch (m_Stage)
                 {
-                    PumpMsg();
+                    case EStage.WaitingOnGoFromMaster:
+                    {
+                        using (m_MarkerWaitingOnGoFromMaster.Auto())
+                        {
 
-                    // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
-                    // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
-                    // We will have actually processed a frame and be ready to inform master and wait for next frame start.
-                    break;
-                }
 
-                case EStage.ReadyToProcessFrame:
-                {
-                    if (newFrame)
-                        SignalFrameDone();
-                    break;
+                            PumpMsg();
+
+                            // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
+                            // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
+                            // We will have actually processed a frame and be ready to inform master and wait for next frame start.
+                            break;
+                        }
+                    }
+
+                    case EStage.ReadyToProcessFrame:
+                    {
+                        if (newFrame)
+                        {
+                            using (m_MarkerReadyToProcessFrame.Auto())
+                            {
+                                SignalFrameDone();
+                            }
+                        }
+                        break;
+                    }
                 }
+                return this;
             }
-
-            return this;
         }
 
         private void PumpMsg()
@@ -75,24 +93,29 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                 if (msgHdr.MessageType == EMessageType.StartFrame)
                 {
-                    m_NetworkingOverhead.SampleNow();
-                    if (msgHdr.PayloadSize > 0)
+                    using (m_MarkerReceivedGoFromMaster.Auto())
                     {
-                        var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-                        m_LastRxFrameStart = respMsg.FrameNumber;
-                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                        m_NetworkingOverhead.SampleNow();
+                        if (msgHdr.PayloadSize > 0)
                         {
-                            Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
-                            m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
+                            var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+                            m_LastRxFrameStart = respMsg.FrameNumber;
+                            if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                            {
+                                Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
+                                m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
 
-                            RestoreStates();
+                                RestoreStates();
 
-                            m_Stage = EStage.ReadyToProcessFrame;
-                        }
-                        else
-                        {
-                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
-                            break;
+                                m_Stage = EStage.ReadyToProcessFrame;
+                            }
+                            else
+                            {
+                                PendingStateChange =
+                                    new FatalError(
+                                        $"Received a message from node {msgHdr.OriginID} about a starting frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
+                                break;
+                            }
                         }
                     }
                 }
@@ -112,20 +135,25 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                 DestinationIDs = LocalNode.MasterNodeIdMask,
             };
 
-            var outBuffer = new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>()];
+            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>();
+            if (m_OutBuffer.Length != len)
+            {
+                m_OutBuffer = new byte[len];
+            }
+
             var msg = new FrameDone()
             {
                 FrameNumber = LocalNode.CurrentFrameID
             };
             m_LastReportedFrameDone = LocalNode.CurrentFrameID;
-            msg.StoreInBuffer(outBuffer, Marshal.SizeOf<MessageHeader>());
+            msg.StoreInBuffer(m_OutBuffer, Marshal.SizeOf<MessageHeader>());
 
             m_Stage = EStage.WaitingOnGoFromMaster;
             m_NetworkingOverhead.RefPoint();
 
             LocalNode.CurrentFrameID++;
 
-            LocalNode.UdpAgent.PublishMessage(msgHdr, outBuffer);
+            LocalNode.UdpAgent.PublishMessage(msgHdr, m_OutBuffer);
             m_TxCount++;
         }
 
@@ -135,13 +163,6 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             {
                 // Read the state from the server
                 var msgHdr = MessageHeader.FromByteArray(m_MsgFromMaster);
-                var mixedStateFormat = msgHdr.Flags.HasFlag(MessageHeader.EFlag.SentFromEditorProcess) != Application.isEditor;
-
-                if (mixedStateFormat && !m_MixModeReported)
-                {
-                    m_MixModeReported = true;
-                    Debug.LogError("Partial data synch due to mixed state format (editor vs player)");
-                }
 
                 // restore states
                 unsafe
@@ -169,24 +190,15 @@ namespace Unity.ClusterRendering.SlaveStateMachine
 
                         if (id == AdvanceFrame.ClusterInputStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreClusterInputState(stateData);
-                            }
+                            ClusterSerialization.RestoreClusterInputState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreInputStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreInputManagerState(stateData);
-                            }
+                            ClusterSerialization.RestoreInputManagerState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreTimeStateID)
                         {
-                            if (!mixedStateFormat)
-                            {
-                                ClusterSerialization.RestoreTimeManagerState(stateData);
-                            }
+                            ClusterSerialization.RestoreTimeManagerState(stateData);
                         }
                         else if (id == AdvanceFrame.CoreRandomStateID)
                         {
