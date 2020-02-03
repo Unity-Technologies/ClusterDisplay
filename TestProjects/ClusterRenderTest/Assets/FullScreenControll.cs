@@ -7,8 +7,9 @@ public class FullScreenControll : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Screen.SetResolution(1920/2,1080/2,FullScreenMode.Windowed);
+        //Screen.SetResolution(1920,1080,FullScreenMode.FullScreenWindow);
         QualitySettings.vSyncCount = 1;
+        QualitySettings.maxQueuedFrames = 1;
     }
 
     // Update is called once per frame

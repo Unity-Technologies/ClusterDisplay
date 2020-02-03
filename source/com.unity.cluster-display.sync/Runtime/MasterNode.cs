@@ -17,7 +17,7 @@ namespace Unity.ClusterRendering
 
         public int TotalExpectedRemoteNodesCount { get; private set; }
 
-        public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut) : base(nodeId, ip, rxport, txport, timeOut)
+        public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)
         {
             TotalExpectedRemoteNodesCount = slaveCount;
         }
