@@ -1,0 +1,15 @@
+{
+    "name": "Unity.ClusterDisplay.Utils.Runtime",
+    "references": [
+        "Unity.ClusterDisplay.Sync.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
