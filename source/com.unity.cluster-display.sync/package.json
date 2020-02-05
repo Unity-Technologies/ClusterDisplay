@@ -1,0 +1,12 @@
+{
+    "name": "com.unity.cluster-display.sync",
+    "displayName": "Cluster Display Sync",
+    "version": "0.0.1-preview",
+    "unity": "2020.1",
+    "dependencies": {
+    },
+    "description": "Cluster Display is a suite of packages that allows multiple unity instances to output to display arrays. This package synchronizes the internal state of unity from one instance and implements the necessary synchronization callbacks.",
+    "keywords": [
+      "unity"
+    ]
+}
