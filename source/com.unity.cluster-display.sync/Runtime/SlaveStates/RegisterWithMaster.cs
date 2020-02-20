@@ -85,6 +85,11 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                                 ProcessUnhandledMessage(header);
                         }
                     }
+
+                    if (m_Timer.Elapsed > MaxTimeOut)
+                    {
+                        throw new Exception($"Master not found after {MaxTimeOut.TotalMilliseconds}ms.");
+                    }
                 }
             }
             catch (OperationCanceledException)
