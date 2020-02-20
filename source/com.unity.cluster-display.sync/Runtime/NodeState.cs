@@ -140,6 +140,12 @@ namespace Unity.ClusterRendering
         {
             Message = msg;
         }
+
+        protected override void ExitState(NodeState newState)
+        {
+            Debug.LogError(Message);
+        }
+
         public string Message { get;  }
     }
 
