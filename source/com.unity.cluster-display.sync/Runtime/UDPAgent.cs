@@ -41,7 +41,7 @@ namespace Unity.ClusterRendering
 
         private UInt64 m_NextMessageId;
 
-        public UInt64 AllNodesMask { get; private set; }
+        public UInt64 AllNodesMask { get; set; }
         public byte LocalNodeID { get; private set; }
         public UInt64 LocalNodeIDMask => (UInt64) 1 << LocalNodeID;
 

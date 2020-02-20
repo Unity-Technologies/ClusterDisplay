@@ -94,6 +94,14 @@ namespace Unity.ClusterRendering.MasterStateMachine
                         {
                             PumpMessages();
 
+                            if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
+                            {
+                                Debug.LogError( $"The following slaves are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
+                                LocalNode.UdpAgent.AllNodesMask = LocalNode.UdpAgent.AllNodesMask & ~(UInt64)m_WaitingOnNodes;
+                                m_WaitingOnNodes = 0;
+                                BecomeReadyToSignalStartNewFrame();
+                            }
+
                             if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
                             {
                                 Debug.Assert(m_WaitingOnNodes != 0,
@@ -173,7 +181,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     }
                 }
             }
+            
+            BecomeReadyToSignalStartNewFrame();
+        }
 
+        private void BecomeReadyToSignalStartNewFrame()
+        {
             if (m_WaitingOnNodes == 0)
             {
                 LocalNode.CurrentFrameID++;
