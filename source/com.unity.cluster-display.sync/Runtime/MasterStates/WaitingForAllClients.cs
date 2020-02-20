@@ -25,7 +25,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.Milliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
