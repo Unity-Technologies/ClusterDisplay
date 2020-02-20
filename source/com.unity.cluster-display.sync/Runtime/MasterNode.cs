@@ -15,7 +15,7 @@ namespace Unity.ClusterRendering
     {
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
 
-        public int TotalExpectedRemoteNodesCount { get; private set; }
+        public int TotalExpectedRemoteNodesCount { get; set; }
 
         public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)
         {
@@ -27,7 +27,7 @@ namespace Unity.ClusterRendering
             if (!base.Start())
                 return false;
 
-            m_CurrentState = new WaitingForAllClients();
+            m_CurrentState = new WaitingForAllClients{MaxTimeOut = new TimeSpan(0,0,30)};// 15 sec waiting for clients
             m_CurrentState.EnterState(null);
 
             return true;
