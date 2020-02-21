@@ -22,6 +22,8 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         private NativeArray<byte> m_MsgFromMaster;
         private byte[] m_OutBuffer = new byte[0];
 
+        TimeSpan m_TsOfStage;
+        
         // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
         private UInt64 m_LastRxFrameStart = 0;
@@ -44,7 +46,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         public override void InitState()
         {
             m_Stage = EStage.WaitingOnGoFromMaster;
-
+            m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
         }
 
@@ -58,9 +60,15 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                     {
                         using (m_MarkerWaitingOnGoFromMaster.Auto())
                         {
-
-
                             PumpMsg();
+                            
+                            if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
+                            {
+                                PendingStateChange =
+                                    new FatalError(
+                                        $"Have not received GO from Master after {MaxTimeOut.TotalMilliseconds}ms.");
+
+                            }
 
                             // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
                             // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
@@ -108,6 +116,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                                 RestoreStates();
 
                                 m_Stage = EStage.ReadyToProcessFrame;
+                                m_TsOfStage = m_Time.Elapsed;
                             }
                             else
                             {
@@ -149,6 +158,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
             msg.StoreInBuffer(m_OutBuffer, Marshal.SizeOf<MessageHeader>());
 
             m_Stage = EStage.WaitingOnGoFromMaster;
+            m_TsOfStage = m_Time.Elapsed;
             m_NetworkingOverhead.RefPoint();
 
             LocalNode.CurrentFrameID++;
