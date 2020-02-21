@@ -27,7 +27,7 @@ namespace Unity.ClusterRendering
             if (!base.Start())
                 return false;
 
-            m_CurrentState = new WaitingForAllClients{MaxTimeOut = new TimeSpan(0,0,30)};// 15 sec waiting for clients
+            m_CurrentState = new WaitingForAllClients{MaxTimeOut = ClusterParams.RegisterTimeout};// 15 sec waiting for clients
             m_CurrentState.EnterState(null);
 
             return true;
