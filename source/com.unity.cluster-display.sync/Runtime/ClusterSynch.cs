@@ -210,6 +210,20 @@ namespace Unity.ClusterRendering
                 {
                     adapterName = args[startIndex+1];
                 }
+                
+                startIndex = args.FindIndex(x => x == "-handshakeTimeout");
+                if (startIndex >= 0)
+                {
+                    var timeOut = int.Parse(args[startIndex + 1]);
+                    ClusterParams.RegisterTimeout = TimeSpan.FromMilliseconds(timeOut);
+                }
+
+                startIndex = args.FindIndex(x => x == "-communicationTimeout");
+                if (startIndex >= 0)
+                {
+                    var timeOut = int.Parse(args[startIndex + 1]);
+                    ClusterParams.CommunicationTimeout = TimeSpan.FromMilliseconds(timeOut);
+                }
 
                 // Process server logic
                 startIndex = args.FindIndex(x => x == "-masterNode");
@@ -222,15 +236,16 @@ namespace Unity.ClusterRendering
                     var ports = args[startIndex+3].Substring(args[startIndex+3].IndexOf(":")+1);
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',')+1));
-                    var timeOut = int.Parse(args[startIndex+4]);
+                    //var timeOut = int.Parse(args[startIndex+4]);
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut, adapterName );
+                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
                     if (!master.Start())
                         return false;
                     LocalNode = master;
                 }
+                
 
                 startIndex = args.FindIndex(x => x == "-node");
                 if (startIndex >= 0)
@@ -243,15 +258,17 @@ namespace Unity.ClusterRendering
                     var ports = args[startIndex + 2].Substring(args[startIndex + 2].IndexOf(":") + 1);
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',') + 1));
-                    var timeOut = int.Parse(args[startIndex+3]);
+                   // var timeOut = int.Parse(args[startIndex+3]);
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    var slave = new SlavedNode(id, ip, rxport, txport, timeOut, adapterName );
+                    var slave = new SlavedNode(id, ip, rxport, txport, 30, adapterName );
                     if (!slave.Start())
                         return false;
                     LocalNode = slave;
                 }
+
+
 
                 return true;
             }

@@ -29,7 +29,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
-                var newState = new SynchronizeFrame {MaxTimeOut = new TimeSpan(0, 0, 5)};
+                var newState = new SynchronizeFrame {MaxTimeOut = ClusterParams.CommunicationTimeout};
                 return newState.EnterState(this);
             }
             
