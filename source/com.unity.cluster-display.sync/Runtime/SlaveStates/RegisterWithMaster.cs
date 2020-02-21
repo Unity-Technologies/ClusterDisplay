@@ -29,7 +29,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         {
             if (m_MasterFound)
             {
-                var nextState = new SynchronizeFrame{MaxTimeOut = new TimeSpan(0,0,0,10)};
+                var nextState = new SynchronizeFrame{MaxTimeOut = ClusterParams.CommunicationTimeout};
                 nextState.EnterState(this);
                 return nextState;
             }
