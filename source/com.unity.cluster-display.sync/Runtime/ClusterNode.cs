@@ -65,6 +65,7 @@ namespace Unity.ClusterRendering
         {
             if(m_CurrentState.GetType() != typeof(Shutdown))
                 m_CurrentState = (new Shutdown()).EnterState(m_CurrentState);
+            m_UDPAgent.Stop();
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
