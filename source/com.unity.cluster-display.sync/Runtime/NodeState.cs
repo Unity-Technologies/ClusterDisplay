@@ -143,6 +143,7 @@ namespace Unity.ClusterRendering
 
         protected override void ExitState(NodeState newState)
         {
+            base.ExitState(newState);
             Debug.LogError(Message);
         }
 
