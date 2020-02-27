@@ -2,7 +2,7 @@ using NUnit.Framework;
 
 namespace Unity.ClusterDisplay.EditorTest
 {
-    public class ClusterSyncEditorTests
+    class ClusterSyncEditorTests
     {
         [Test]
         public void NoopTest()
