@@ -102,9 +102,7 @@ namespace Unity.ClusterRendering.MasterStateMachine
 
                             if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
                             {
-                                Debug.LogError( $"The following slaves are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
-                                LocalNode.UdpAgent.AllNodesMask = LocalNode.UdpAgent.AllNodesMask & ~(UInt64)m_WaitingOnNodes;
-                                m_WaitingOnNodes = 0;
+                                KickLateClients();
                                 BecomeReadyToSignalStartNewFrame();
                             }
 
@@ -114,7 +112,6 @@ namespace Unity.ClusterRendering.MasterStateMachine
                                     "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
                                 // One or more clients failed to respond in time!
                                 Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
-                                m_TsOfStage = m_TsOfStage.Add(new TimeSpan(0, 0, 5));
                             }
 
                             break;
@@ -199,6 +196,22 @@ namespace Unity.ClusterRendering.MasterStateMachine
                 m_Stage = (int) EStage.ReadyToSignalStartNewFrame;
                 m_TsOfStage = m_Time.Elapsed;
             }
+        }
+
+        private void KickLateClients()
+        {
+            Debug.LogError(
+                $"The following slaves are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
+            for (byte id = 0; id < sizeof(UInt64); ++id)
+            {
+                if ((1 << id & m_WaitingOnNodes) != 0)
+                {
+                    Debug.LogError($"Unregistering node {id}");
+                    LocalNode.UnRegisterNode(id);
+                }
+            }
+
+            m_WaitingOnNodes = 0;
         }
 
         private void GatherFrameState()
