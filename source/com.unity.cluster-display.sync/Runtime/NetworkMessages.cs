@@ -16,16 +16,25 @@ namespace Unity.ClusterRendering
         GlobalShutdownRequest
     }
 
+    /// <summary>
+    /// Enum containing the Cluster node roles.
+    /// </summary>
     public enum ENodeRole
     {
-        Unassigned,
+        //Unassigned,
+        /// <summary>
+        /// The source node that broadcasts synchronization data.
+        /// </summary>
         Master,
+        /// <summary>
+        /// The client nodes that receive synchronization data.
+        /// </summary>
         Slave,
-        HotStandby,
-        Dead
+        //HotStandby,
+        //Dead
     }
 
-    public struct NetworkingStats
+    struct NetworkingStats
     {
         public int rxQueueSize;
         public int txQueueSize;
@@ -35,7 +44,7 @@ namespace Unity.ClusterRendering
         public int msgsSent;
     }
 
-    internal class NetworkingHelpers
+    class NetworkingHelpers
     {
         public static byte[] AllocateMessageWithPayload<T>() where T : struct
         {
@@ -45,7 +54,7 @@ namespace Unity.ClusterRendering
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct MessageHeader
+    struct MessageHeader
     {
         [Flags]
         public enum EFlag
