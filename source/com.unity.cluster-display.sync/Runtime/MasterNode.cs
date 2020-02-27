@@ -61,5 +61,20 @@ namespace Unity.ClusterRendering
             // in both cases we just ignore it.
             Debug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {m_RemoteNodes[nodeIndex].Role}.");
         }
+
+        public void UnRegisterNode(byte NodeId)
+        {
+            for (var i = 0;i<m_RemoteNodes.Count;++i)
+            {
+                var node = m_RemoteNodes[i];
+                if (node.ID == NodeId)
+                {
+                    m_RemoteNodes.RemoveAt(i);
+                    UdpAgent.AllNodesMask = UdpAgent.AllNodesMask & ~(UInt64) (1<<NodeId);
+                    TotalExpectedRemoteNodesCount--;
+                    break; //No Duplicates
+                }
+            }
+        }
     }
 }
