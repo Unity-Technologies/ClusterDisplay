@@ -16,24 +16,40 @@ namespace Unity.ClusterRendering
     /// </summary>
     public class ClusterSynch : MonoBehaviour
     {
-        public bool m_Debugging;
+        [HideInInspector]
+        bool m_Debugging;
         private bool m_NewFrame = true;
 
-        [NonSerialized]
-        public bool m_ClusterLogicEnabled = false;
+        /// <summary>
+        /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
+        /// </summary>
+        [NonSerialized] bool m_ClusterLogicEnabled = false;
 
         [NonSerialized] private static ClusterSynch m_Instance;
 
         private DebugPerf m_FrameRatePerf = new DebugPerf();
 
+        /// <summary>
+        /// Returns the number of frames rendered by the Cluster Display.
+        /// </summary>
         public UInt64 FrameCount => LocalNode.CurrentFrameID;
 
         private DebugPerf m_DelayMonitor = new DebugPerf();
 
+        /// <summary>
+        /// Getter that returns if there exists a ClusterSync instance and the synchronization has been enabled.
+        /// </summary>
         public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
 
+        /// <summary>
+        /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
+        /// </summary>
         public static bool Terminated { get; private set; }
 
+        /// <summary>
+        /// Returns the instance of the ClusterSync singleton.
+        /// </summary>
+        /// <exception cref="Exception">Throws an exception if there are 2 instances present.</exception>
         public static ClusterSynch Instance
         {
             get => m_Instance;
@@ -50,14 +66,18 @@ namespace Unity.ClusterRendering
 #endif
         internal ClusterNode LocalNode { get; set; }
 
-        public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
+        internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
+        /// <summary>
+        /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
+        /// </summary>
         public void ShutdownAllClusterNodes()
         {
             LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
         }
 
-        public byte ConfiguredLocalNodeId
+
+        internal byte ConfiguredLocalNodeId
         {
             get
             {
@@ -70,8 +90,16 @@ namespace Unity.ClusterRendering
             }
         }
 
+        /// <summary>
+        /// The Local Cluster Node Id.
+        /// </summary>
+        /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
         public byte DynamicLocalNodeId => ConfiguredLocalNodeId;
 
+        /// <summary>
+        /// Debug info.
+        /// </summary>
+        /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
         public string GetDebugString()
         {
             return LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
