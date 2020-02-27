@@ -46,6 +46,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
         
         protected override NodeState DoFrame(bool newFrame)
         {
+            if (LocalNode.TotalExpectedRemoteNodesCount == 0)
+            {
+                PendingStateChange = new FatalError("No Clients found. Exiting Cluster.");
+                return this;
+            }
+
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
