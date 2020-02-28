@@ -29,7 +29,7 @@ namespace Unity.ClusterRendering.SlaveStateMachine
         {
             if (m_MasterFound)
             {
-                var nextState = new SynchronizeFrame();
+                var nextState = new SynchronizeFrame{MaxTimeOut = ClusterParams.CommunicationTimeout};
                 nextState.EnterState(this);
                 return nextState;
             }
@@ -84,6 +84,11 @@ namespace Unity.ClusterRendering.SlaveStateMachine
                             else
                                 ProcessUnhandledMessage(header);
                         }
+                    }
+
+                    if (m_Timer.Elapsed > MaxTimeOut)
+                    {
+                        throw new Exception($"Master not found after {MaxTimeOut.TotalMilliseconds}ms.");
                     }
                 }
             }
