@@ -13,7 +13,7 @@ namespace Unity.ClusterRendering
         protected Task m_Task;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
-        public static int MaxTimeOut = 1000 * 60 * 5;
+        public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,0,1000 * 60 * 5);
 
         public virtual bool ReadyToProceed => true;
 
@@ -46,12 +46,13 @@ namespace Unity.ClusterRendering
             if (res != this)
                 return res;
 
+            // RemoveMe
             if (Debugging)
             {
                 if(newFrame)
                     m_Time.Restart();
 
-                if (m_Time.ElapsedMilliseconds > MaxTimeOut)
+                if (m_Time.ElapsedMilliseconds > MaxTimeOut.Milliseconds)
                 {
                     var shutdown = new Shutdown();
                     return shutdown.EnterState(this);
@@ -139,6 +140,13 @@ namespace Unity.ClusterRendering
         {
             Message = msg;
         }
+
+        protected override void ExitState(NodeState newState)
+        {
+            base.ExitState(newState);
+            Debug.LogError(Message);
+        }
+
         public string Message { get;  }
     }
 

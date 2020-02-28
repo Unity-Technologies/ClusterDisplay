@@ -46,6 +46,12 @@ namespace Unity.ClusterRendering.MasterStateMachine
         
         protected override NodeState DoFrame(bool newFrame)
         {
+            if (LocalNode.TotalExpectedRemoteNodesCount == 0)
+            {
+                PendingStateChange = new FatalError("No Clients found. Exiting Cluster.");
+                return this;
+            }
+
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
@@ -94,13 +100,18 @@ namespace Unity.ClusterRendering.MasterStateMachine
                         {
                             PumpMessages();
 
+                            if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
+                            {
+                                KickLateClients();
+                                BecomeReadyToSignalStartNewFrame();
+                            }
+
                             if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
                             {
                                 Debug.Assert(m_WaitingOnNodes != 0,
                                     "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
                                 // One or more clients failed to respond in time!
                                 Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
-                                m_TsOfStage = m_TsOfStage.Add(new TimeSpan(0, 0, 5));
                             }
 
                             break;
@@ -173,13 +184,34 @@ namespace Unity.ClusterRendering.MasterStateMachine
                     }
                 }
             }
+            
+            BecomeReadyToSignalStartNewFrame();
+        }
 
+        private void BecomeReadyToSignalStartNewFrame()
+        {
             if (m_WaitingOnNodes == 0)
             {
                 LocalNode.CurrentFrameID++;
                 m_Stage = (int) EStage.ReadyToSignalStartNewFrame;
                 m_TsOfStage = m_Time.Elapsed;
             }
+        }
+
+        private void KickLateClients()
+        {
+            Debug.LogError(
+                $"The following slaves are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
+            for (byte id = 0; id < sizeof(UInt64); ++id)
+            {
+                if ((1 << id & m_WaitingOnNodes) != 0)
+                {
+                    Debug.LogError($"Unregistering node {id}");
+                    LocalNode.UnRegisterNode(id);
+                }
+            }
+
+            m_WaitingOnNodes = 0;
         }
 
         private void GatherFrameState()

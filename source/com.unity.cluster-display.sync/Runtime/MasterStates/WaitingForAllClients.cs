@@ -19,12 +19,20 @@ namespace Unity.ClusterRendering.MasterStateMachine
 
         protected override NodeState DoFrame(bool frameAdvance)
         {
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount)
+            bool timeOut = m_Time.Elapsed > MaxTimeOut;
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut )
             {
-                var newState = new SynchronizeFrame();
+                // OnTimeout continue with the current set of nodes
+                if (timeOut)
+                {
+                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
+                }
+
+                var newState = new SynchronizeFrame {MaxTimeOut = ClusterParams.CommunicationTimeout};
                 return newState.EnterState(this);
             }
-
+            
             return this;
         }
 
