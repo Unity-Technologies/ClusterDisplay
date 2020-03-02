@@ -18,7 +18,7 @@ namespace Unity.ClusterRendering
             if (!base.Start())
                 return false;
 
-            m_CurrentState = new RegisterWithMaster(this);
+            m_CurrentState = new RegisterWithMaster(this) {MaxTimeOut = ClusterParams.RegisterTimeout};
             m_CurrentState.EnterState(null);
 
             return true;

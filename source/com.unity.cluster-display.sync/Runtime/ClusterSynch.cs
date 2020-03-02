@@ -16,24 +16,40 @@ namespace Unity.ClusterRendering
     /// </summary>
     public class ClusterSynch : MonoBehaviour
     {
-        public bool m_Debugging;
+        [HideInInspector]
+        bool m_Debugging;
         private bool m_NewFrame = true;
 
-        [NonSerialized]
-        public bool m_ClusterLogicEnabled = false;
+        /// <summary>
+        /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
+        /// </summary>
+        [NonSerialized] bool m_ClusterLogicEnabled = false;
 
         [NonSerialized] private static ClusterSynch m_Instance;
 
         private DebugPerf m_FrameRatePerf = new DebugPerf();
 
+        /// <summary>
+        /// Returns the number of frames rendered by the Cluster Display.
+        /// </summary>
         public UInt64 FrameCount => LocalNode.CurrentFrameID;
 
         private DebugPerf m_DelayMonitor = new DebugPerf();
 
+        /// <summary>
+        /// Getter that returns if there exists a ClusterSync instance and the synchronization has been enabled.
+        /// </summary>
         public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
 
+        /// <summary>
+        /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
+        /// </summary>
         public static bool Terminated { get; private set; }
 
+        /// <summary>
+        /// Returns the instance of the ClusterSync singleton.
+        /// </summary>
+        /// <exception cref="Exception">Throws an exception if there are 2 instances present.</exception>
         public static ClusterSynch Instance
         {
             get => m_Instance;
@@ -50,14 +66,18 @@ namespace Unity.ClusterRendering
 #endif
         internal ClusterNode LocalNode { get; set; }
 
-        public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
+        internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
+        /// <summary>
+        /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
+        /// </summary>
         public void ShutdownAllClusterNodes()
         {
             LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
         }
 
-        public byte ConfiguredLocalNodeId
+
+        internal byte ConfiguredLocalNodeId
         {
             get
             {
@@ -70,8 +90,16 @@ namespace Unity.ClusterRendering
             }
         }
 
+        /// <summary>
+        /// The Local Cluster Node Id.
+        /// </summary>
+        /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
         public byte DynamicLocalNodeId => ConfiguredLocalNodeId;
 
+        /// <summary>
+        /// Debug info.
+        /// </summary>
+        /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
         public string GetDebugString()
         {
             return LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
@@ -182,6 +210,20 @@ namespace Unity.ClusterRendering
                 {
                     adapterName = args[startIndex+1];
                 }
+                
+                startIndex = args.FindIndex(x => x == "-handshakeTimeout");
+                if (startIndex >= 0)
+                {
+                    var timeOut = int.Parse(args[startIndex + 1]);
+                    ClusterParams.RegisterTimeout = TimeSpan.FromMilliseconds(timeOut);
+                }
+
+                startIndex = args.FindIndex(x => x == "-communicationTimeout");
+                if (startIndex >= 0)
+                {
+                    var timeOut = int.Parse(args[startIndex + 1]);
+                    ClusterParams.CommunicationTimeout = TimeSpan.FromMilliseconds(timeOut);
+                }
 
                 // Process server logic
                 startIndex = args.FindIndex(x => x == "-masterNode");
@@ -194,15 +236,16 @@ namespace Unity.ClusterRendering
                     var ports = args[startIndex+3].Substring(args[startIndex+3].IndexOf(":")+1);
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',')+1));
-                    var timeOut = int.Parse(args[startIndex+4]);
+                    //var timeOut = int.Parse(args[startIndex+4]);
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, timeOut, adapterName );
+                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
                     if (!master.Start())
                         return false;
                     LocalNode = master;
                 }
+                
 
                 startIndex = args.FindIndex(x => x == "-node");
                 if (startIndex >= 0)
@@ -215,15 +258,17 @@ namespace Unity.ClusterRendering
                     var ports = args[startIndex + 2].Substring(args[startIndex + 2].IndexOf(":") + 1);
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
                     var txport = int.Parse(ports.Substring(ports.IndexOf(',') + 1));
-                    var timeOut = int.Parse(args[startIndex+3]);
+                   // var timeOut = int.Parse(args[startIndex+3]);
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    var slave = new SlavedNode(id, ip, rxport, txport, timeOut, adapterName );
+                    var slave = new SlavedNode(id, ip, rxport, txport, 30, adapterName );
                     if (!slave.Start())
                         return false;
                     LocalNode = slave;
                 }
+
+
 
                 return true;
             }

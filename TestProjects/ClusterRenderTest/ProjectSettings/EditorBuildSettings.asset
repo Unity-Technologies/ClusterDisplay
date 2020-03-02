@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/PhysicsCamera.unity
     guid: 2847ff689f5f1e64c861844308cde4ad
+  - enabled: 0
+    path: Assets/TimeManager.unity
+    guid: 3f4377b8a280d1c4bb87204b77f8cfcc
   m_configObjects: {}
