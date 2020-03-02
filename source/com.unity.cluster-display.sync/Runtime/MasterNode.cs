@@ -15,7 +15,7 @@ namespace Unity.ClusterRendering
     {
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
 
-        public int TotalExpectedRemoteNodesCount { get; private set; }
+        public int TotalExpectedRemoteNodesCount { get; set; }
 
         public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)
         {
@@ -27,7 +27,7 @@ namespace Unity.ClusterRendering
             if (!base.Start())
                 return false;
 
-            m_CurrentState = new WaitingForAllClients();
+            m_CurrentState = new WaitingForAllClients{MaxTimeOut = ClusterParams.RegisterTimeout};// 15 sec waiting for clients
             m_CurrentState.EnterState(null);
 
             return true;
@@ -60,6 +60,21 @@ namespace Unity.ClusterRendering
             // but it's also possible that a node crashed and is rebooting.
             // in both cases we just ignore it.
             Debug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {m_RemoteNodes[nodeIndex].Role}.");
+        }
+
+        public void UnRegisterNode(byte NodeId)
+        {
+            for (var i = 0;i<m_RemoteNodes.Count;++i)
+            {
+                var node = m_RemoteNodes[i];
+                if (node.ID == NodeId)
+                {
+                    m_RemoteNodes.RemoveAt(i);
+                    UdpAgent.AllNodesMask = UdpAgent.AllNodesMask & ~(UInt64) (1<<NodeId);
+                    TotalExpectedRemoteNodesCount--;
+                    break; //No Duplicates
+                }
+            }
         }
     }
 }
