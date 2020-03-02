@@ -57,10 +57,10 @@ def main():
         print("Starting...")
         path = getExe(config)[args.startCluster]
 
-        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][0]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log0.txt -useClusterRendering -masterNode 0 3 224.0.1.0:25689,25690 30')
-        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][1]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log1.txt -useClusterRendering -node 1 224.0.1.0:25690,25689 30')
-        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][2]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log2.txt -useClusterRendering -node 2 224.0.1.0:25690,25689 30')
-        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][3]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log3.txt -useClusterRendering -node 3 224.0.1.0:25690,25689 30')
+        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][0]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log0.txt -handshakeTimeout 30000 -communicationTimeout 5000 -masterNode 0 3 224.0.1.0:25689,25690')
+        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][1]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log1.txt -handshakeTimeout 30000 -communicationTimeout 6000 -node 1 224.0.1.0:25690,25689')
+        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][2]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log2.txt -handshakeTimeout 30000 -communicationTimeout 6000 -node 2 224.0.1.0:25690,25689')
+        subprocess.Popen('c:\\PSTools\\PsExec.exe \\\\' + config['servers'][3]['name'] + ' -i -s ' + path + ' -logFile c:/Cluster_Rendering/log3.txt -handshakeTimeout 30000 -communicationTimeout 6000  -node 3 224.0.1.0:25690,25689')
 
     if args.kill is not None:
         print("Killing...")
