@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using USD.NET;
 
 public class ChangeAlbedo : MonoBehaviour
 {
