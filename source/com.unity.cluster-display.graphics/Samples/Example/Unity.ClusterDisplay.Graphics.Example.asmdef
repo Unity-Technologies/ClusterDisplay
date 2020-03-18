@@ -1,0 +1,16 @@
+﻿{
+	"name": "Unity.ClusterDisplay.Graphics.Example",
+    "references": [
+        "Unity.ClusterDisplay.Graphics",
+        "Unity.ClusterDisplay.Sync.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

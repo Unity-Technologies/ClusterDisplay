@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ProjectTestSettings>
+	<Attributes>
+		<Category />
+		<!--<KnownFailure />-->
+	</Attributes>
+	<!--<ExcludePlatform>
+		<TestingPlatform reason="Bug" message="FogBugz 424242">MetroPlayer</TestingPlatform>
+	</ExcludePlatform>-->
+	<!--<IncludePlatform>
+		<TestingPlatform scriptingBackend="Il2Cpp">MetroPlayer</TestingPlatform>
+	</IncludePlatform>-->
+	
+	<!-- By default all scenes in the project will have tests executed in them. If only some of the scenes
+	     in your project contain tests - e.g. because you're testing something that involves additive scene
+	     loading - then you can specify the project-relative paths to the scenes that DO contain tests here. -->
+	<!--
+	 <SceneFilePaths>
+		<Path>Assets/MySceneWithTests.unity</Path>
+	 </SceneFilePaths>
+	 -->
+</ProjectTestSettings>
