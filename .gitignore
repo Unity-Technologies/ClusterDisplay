@@ -1,8 +1,9 @@
 *.sln
 *.swp
-TestProjects/ClusterRenderTest/Library
-TestProjects/ClusterRenderTest/Logs
-TestProjects/ClusterRenderTest/Temp
-TestProjects/ClusterRenderTest/.idea
 *.csproj
-TestProjects/ClusterRenderTest/obj
+.DS_Store
+TestProjects/*/obj
+TestProjects/*/Library
+TestProjects/*/Logs
+TestProjects/*/Temp
+TestProjects/*/.idea
