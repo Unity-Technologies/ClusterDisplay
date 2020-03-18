@@ -13,17 +13,7 @@ MonoBehaviour:
   m_Name: VFXUI
   m_EditorClassIdentifier: 
   groupInfos: []
-  stickyNoteInfos:
-  - title: Title
-    position:
-      serializedVersion: 2
-      x: 674
-      y: 576
-      width: 100
-      height: 100
-    contents: type something here
-    theme: Classic
-    textSize: Small
+  stickyNoteInfos: []
   systemInfos: []
   categories: []
   uiBounds:
