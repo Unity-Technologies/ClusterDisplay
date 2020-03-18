@@ -11,6 +11,11 @@ public class CameraRotationController : MonoBehaviour
     Vector3 m_RotationEuler;
 
     const float k_HalfRange = 15;
+
+    void OnGUI()
+    {
+        GUILayout.Label("Use arrows to move the camera.");
+    }
     
     void OnEnable()
     {
