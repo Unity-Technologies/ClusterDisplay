@@ -8,15 +8,15 @@ namespace ClusterRendering.Runtime.Utils
     {
         private void Update()
         {
-            if (ClusterSynch.Active)
+            if (ClusterSync.Active)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                    ClusterSynch.Instance.ShutdownAllClusterNodes();
+                    ClusterSync.Instance.ShutdownAllClusterNodes();
 
             }
             else
             {
-                if (ClusterSynch.Terminated)
+                if (ClusterSync.Terminated)
                     Application.Quit(0);
             }
         }

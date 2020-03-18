@@ -84,8 +84,8 @@ namespace Unity.ClusterRendering
 
         public virtual string GetDebugString()
         {
-            var stats = ClusterSynch.Instance.CurrentNetworkStats;
-            return $"Node {ClusterSynch.Instance.DynamicLocalNodeId} at {ClusterSynch.Instance.FrameCount}\r\n" +
+            var stats = ClusterSync.Instance.CurrentNetworkStats;
+            return $"Node {ClusterSync.Instance.DynamicLocalNodeId} at {ClusterSync.Instance.FrameCount}\r\n" +
                    $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
                    $"State: { m_CurrentState.GetDebugString() }";
         }

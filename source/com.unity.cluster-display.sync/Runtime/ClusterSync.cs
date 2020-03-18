@@ -14,7 +14,7 @@ namespace Unity.ClusterRendering
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    public class ClusterSynch : MonoBehaviour
+    public class ClusterSync : MonoBehaviour
     {
         [HideInInspector]
         bool m_Debugging;
@@ -25,7 +25,7 @@ namespace Unity.ClusterRendering
         /// </summary>
         [NonSerialized] bool m_ClusterLogicEnabled = false;
 
-        [NonSerialized] private static ClusterSynch m_Instance;
+        [NonSerialized] private static ClusterSync m_Instance;
 
         private DebugPerf m_FrameRatePerf = new DebugPerf();
 
@@ -50,7 +50,7 @@ namespace Unity.ClusterRendering
         /// Returns the instance of the ClusterSync singleton.
         /// </summary>
         /// <exception cref="Exception">Throws an exception if there are 2 instances present.</exception>
-        public static ClusterSynch Instance
+        public static ClusterSync Instance
         {
             get => m_Instance;
             private set

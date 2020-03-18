@@ -119,13 +119,13 @@ namespace Unity.ClusterRendering
     // SlaveState state -------------------------------------------------------- 
     internal abstract class SlaveState : NodeState
     {
-        protected SlavedNode LocalNode => (SlavedNode)ClusterSynch.Instance.LocalNode;
+        protected SlavedNode LocalNode => (SlavedNode)ClusterSync.Instance.LocalNode;
     }
 
     // MasterState state -------------------------------------------------------- 
     internal abstract class MasterState : NodeState
     {
-        protected MasterNode LocalNode => (MasterNode)ClusterSynch.Instance.LocalNode;
+        protected MasterNode LocalNode => (MasterNode)ClusterSync.Instance.LocalNode;
     }
 
     // Shutdown state -------------------------------------------------------- 
