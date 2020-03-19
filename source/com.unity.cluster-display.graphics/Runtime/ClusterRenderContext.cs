@@ -54,9 +54,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get
             {
-                if (m_Debug || !ClusterSynch.Active)
+                if (m_Debug || !ClusterSync.Active)
                     return m_DebugSettings.TileIndexOverride;
-                return ClusterSynch.Instance.DynamicLocalNodeId;
+                return ClusterSync.Instance.DynamicLocalNodeId;
             }
         }
         
