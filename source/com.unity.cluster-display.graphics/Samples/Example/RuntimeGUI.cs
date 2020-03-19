@@ -44,7 +44,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_FpsMovingAverage = sum / m_FpsBuffer.Length;
             }
 
-            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.H))
+            if (Input.GetKeyDown(KeyCode.H))
                 m_Show = !m_Show;
         }
 
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             if (GUILayout.Button("Exit GUI"))
                 m_Show = false;
             
-            GUILayout.Label($"Use <b>[LeftCtrl + H]</b> to show/hide GUI");
+            GUILayout.Label($"Press <b>H</b> to show/hide GUI");
         }
 
         void DrawStats()
