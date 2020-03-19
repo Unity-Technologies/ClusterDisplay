@@ -23,7 +23,7 @@ public class AdditiveSceneManager : MonoBehaviour
     {
         StopAllCoroutines();
         if (m_Loaded) 
-            SceneManager.UnloadSceneAsync(m_SceneName);
+            SceneManager.UnloadSceneAsync(m_SceneName, UnloadSceneOptions.UnloadAllEmbeddedSceneObjects);
     }
 
     IEnumerator LoadScene()
