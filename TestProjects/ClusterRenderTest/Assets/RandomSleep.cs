@@ -13,7 +13,7 @@ namespace DefaultNamespace
             frame++;
             if (frame % 100 == 0)
             {
-                var rnd = new System.Random(ClusterSynch.Instance.DynamicLocalNodeId + Time.frameCount);
+                var rnd = new System.Random(ClusterSync.Instance.DynamicLocalNodeId + Time.frameCount);
                 var sleept = rnd.Next(1, 20);
                 Thread.Sleep(sleept);
             }

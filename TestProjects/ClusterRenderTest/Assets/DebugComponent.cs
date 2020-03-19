@@ -11,9 +11,9 @@ public class DebugComponent : MonoBehaviour
     {
         frmaes = 0;
         var text = this.GetComponent<UnityEngine.UI.Text>();
-        if (ClusterSynch.Active)
+        if (ClusterSync.Active)
         {
-            text.text = $"Node {ClusterSynch.Instance.DynamicLocalNodeId}";
+            text.text = $"Node {ClusterSync.Instance.DynamicLocalNodeId}";
         }
         else
         {
@@ -25,20 +25,20 @@ public class DebugComponent : MonoBehaviour
     {
         frmaes++;
         var text = this.GetComponent<UnityEngine.UI.Text>();
-        if (ClusterSynch.Active)
+        if (ClusterSync.Active)
         {
             //if (frmaes % 60 == 0)
             {
-                text.text = ClusterSynch.Instance.GetDebugString();
+                text.text = ClusterSync.Instance.GetDebugString();
             }
 
             if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                ClusterSynch.Instance.ShutdownAllClusterNodes();
+                ClusterSync.Instance.ShutdownAllClusterNodes();
             
         }
         else
         {
-            if (ClusterSynch.Terminated)
+            if (ClusterSync.Terminated)
                 Application.Quit(0);
 
             text.text = "Cluster Rendering inactive";
