@@ -11,8 +11,8 @@ public class Cruncher : MonoBehaviour
     void Update()
     {
         // if cluster is active and we are master
-        if (ClusterSynch.Active && 
-            ClusterSynch.Instance.DynamicLocalNodeId == 0 &&
+        if (ClusterSync.Active && 
+            ClusterSync.Instance.DynamicLocalNodeId == 0 &&
             Input.GetKey(KeyCode.Space))
         {
             var sum = 0f;
