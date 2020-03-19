@@ -1,0 +1,11 @@
+{
+    "name": "Unity.ClusterDisplay.Graphics.Tests",
+    "references": [
+        "Unity.ClusterDisplay.Graphics"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

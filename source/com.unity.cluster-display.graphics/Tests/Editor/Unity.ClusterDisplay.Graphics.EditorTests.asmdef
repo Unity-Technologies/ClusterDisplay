@@ -1,0 +1,14 @@
+{
+    "name": "Unity.ClusterDisplay.Graphics.EditorTests",
+    "references": [
+        "Unity.ClusterDisplay.Graphics.Editor",
+        "Unity.ClusterDisplay.Graphics."
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
