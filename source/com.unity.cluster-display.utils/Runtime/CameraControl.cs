@@ -23,12 +23,12 @@ namespace ClusterRendering.Runtime.Utils
 
         void LateUpdate()
         {
-            if (!ClusterSynch.Active)
+            if (!ClusterSync.Active)
             {
                 return;
             }
 
-            var localTile = ClusterSynch.Active ? ClusterSynch.Instance.DynamicLocalNodeId : 0;
+            var localTile = ClusterSync.Active ? ClusterSync.Instance.DynamicLocalNodeId : 0;
             if (localTile > numTilesX * numTilesY - 1)
                 return;
    
