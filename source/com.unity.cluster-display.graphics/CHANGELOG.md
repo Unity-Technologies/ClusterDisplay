@@ -1,4 +1,4 @@
-# Changes in Cluster Display Sync
+# Changes in Cluster Display Graphics
 ## [0.0.2-preview] - 2020-03-19
 ### Changes
 - Added bezel support
