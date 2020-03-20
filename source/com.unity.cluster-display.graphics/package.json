@@ -18,6 +18,6 @@
   },
   "dependencies": {
     "com.unity.render-pipelines.high-definition": "7.0.1",
-    "com.unity.cluster-display.sync": "0.0.1-preview"
+    "com.unity.cluster-display.sync": "0.0.2-preview"
   }
 }
