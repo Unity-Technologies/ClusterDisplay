@@ -2,26 +2,31 @@
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-// simplistic camera controller, demonstrate interactivity
 public class CameraRotationController : MonoBehaviour
 {
+    [Tooltip("Transform the camera looks at.")]
     [SerializeField]
     Transform m_LookAt;
    
+    [Tooltip("Speed of the camera motion in response to arrow controls.")]
     [SerializeField]
     float m_RotationSpeed;
 
+    [Tooltip("Distance between the camera and the target it is looking at.")]
     [SerializeField]
     float m_DistanceToTarget;
 
+    [Tooltip("Timeout beyond which the controller animates the camera automatically in absence of user input.")]
     [SerializeField]
     float m_SwitchToAutomaticTimeout;
     
+    [Tooltip("Delay between jumps in automatic mode.")]
     [SerializeField]
-    float m_JumpTimeout;
+    float m_AutomaticJumpDelay;
     
+    [Tooltip("Amount of motion in automatic mode.")]
     [SerializeField]
-    float m_PerlinScrollSpeed;
+    float m_AutomaticMotionFactor;
 
     float m_Yaw;
     float m_Pitch;
@@ -70,11 +75,11 @@ public class CameraRotationController : MonoBehaviour
         else if (Time.time - m_LastInputTimestamp > m_SwitchToAutomaticTimeout)
         {
             // Auto: move along the sphere using Perlin noise.
-            dYaw = (Mathf.PerlinNoise(Time.time * m_PerlinScrollSpeed, 0) - 0.5f) * 2;
-            dPitch = (Mathf.PerlinNoise(Time.time * m_PerlinScrollSpeed, m_PitchPerlinOffset) - 0.5f) * 2;
+            dYaw = (Mathf.PerlinNoise(Time.time * m_AutomaticMotionFactor, 0) - 0.5f) * 2;
+            dPitch = (Mathf.PerlinNoise(Time.time * m_AutomaticMotionFactor, m_PitchPerlinOffset) - 0.5f) * 2;
             // Increment automatic mode time.
             m_AutoTime += Time.deltaTime;
-            jump |= m_AutoTime - m_LastJumpTimestamp > m_JumpTimeout;
+            jump |= m_AutoTime - m_LastJumpTimestamp > m_AutomaticJumpDelay;
         }
 
         // Jump to try out camera cuts.
