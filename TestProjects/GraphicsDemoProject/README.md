@@ -27,6 +27,6 @@ This controller responds to user input, and will otherwise animate the camera au
 * **Look At**: the **Transform** the camera will look at.
 * **Rotation Speed**: speed at which the camera rotates around the target.
 * **Distance To Target**: distance between the camera and its target.
-* **Switch To Automatic Timeout**: Timeout beyond which the controller switches to automatic mode if no input is detected.
-* **Automatic Jump Delay**: Delay between automatically triggered jumps.
-* **Automatic Motion Factor**: In automatic mode, arrows input is simulated. This factor allows to control the amount of camera movement.
+* **Switch To Automatic Timeout**: timeout beyond which the controller switches to automatic mode if no input is detected.
+* **Automatic Jump Delay**: delay between automatically triggered jumps.
+* **Automatic Motion Factor**: in automatic mode, arrows input is simulated. This factor allows to control the amount of camera movement.
