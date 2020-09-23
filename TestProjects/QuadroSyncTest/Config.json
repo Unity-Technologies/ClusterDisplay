@@ -1,0 +1,23 @@
+{
+ "base_destination": "c:/Cluster_Rendering/ClusterRenderTestNewTimeouts/",
+ "username": "unity",
+  "servers": [
+    {
+      "name": "yul-cr-master",
+      "command": "-server 3 10.1.40.129:20045 10000 --gridsize 2x2"
+    },
+    {
+      "name": "yul-cr-node1",
+      "command": "-client 0 10.1.40.129:20045 10.1.40.130:20046 10000 --gridsize 2x2"
+    },
+    {
+      "name": "yul-cr-node2",
+      "command": "-client 1 10.1.40.129:20045 10.1.40.131:20047 10000 --gridsize 2x2"
+	},
+	{
+      "name": "yul-cr-node3",
+      "command": "-client 2 10.1.40.129:20045 10.1.40.132:20048 10000 --gridsize 2x2"
+	}
+  ],
+  "extra_args" : "-adapterName Cluster_Sync"
+ }
