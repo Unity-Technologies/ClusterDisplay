@@ -1,4 +1,4 @@
-# Changes in Cluster Display Sync
+# Changes in Cluster Display
 
 ## [0.0.3-preview] - 2020-09-22
 
