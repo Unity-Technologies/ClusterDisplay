@@ -1,8 +1,7 @@
 {
   "dependencies": {
     "com.unity.cluster-display.graphics": "file:../../../source/com.unity.cluster-display.graphics",
-    "com.unity.cluster-display.sync": "file:../../../source/com.unity.cluster-display.sync",
-    "com.unity.cluster-display.utils": "file:../../../source/com.unity.cluster-display.utils",
+    "com.unity.cluster-display.sync": "file:../../../source/com.unity.cluster-display",
     "com.unity.ide.rider": "1.1.4",
     "com.unity.ide.visualstudio": "1.0.11",
     "com.unity.ide.vscode": "1.1.3",
