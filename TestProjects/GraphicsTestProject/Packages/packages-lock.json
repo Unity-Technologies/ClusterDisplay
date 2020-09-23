@@ -1,12 +1,18 @@
 {
   "dependencies": {
+    "com.unity.cluster-display": {
+      "version": "file:../../../source/com.unity.cluster-display",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.cluster-display.graphics": {
       "version": "file:../../../source/com.unity.cluster-display.graphics",
       "depth": 0,
       "source": "local",
       "dependencies": {
         "com.unity.render-pipelines.high-definition": "7.0.1",
-        "com.unity.cluster-display.sync": "0.0.2-preview"
+        "com.unity.cluster-display": "0.0.2-preview"
       }
     },
     "com.unity.ext.nunit": {
@@ -39,6 +45,49 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.render-pipelines.core": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.render-pipelines.core",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0"
+      }
+    },
+    "com.unity.render-pipelines.high-definition": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.render-pipelines.high-definition",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.render-pipelines.core": "8.0.0",
+        "com.unity.shadergraph": "8.0.0",
+        "com.unity.visualeffectgraph": "8.0.0",
+        "com.unity.render-pipelines.high-definition-config": "8.0.0"
+      }
+    },
+    "com.unity.render-pipelines.high-definition-config": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.render-pipelines.high-definition-config",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.render-pipelines.core": "8.0.0"
+      }
+    },
+    "com.unity.searcher": {
+      "version": "4.0.9",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.shadergraph": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.shadergraph",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.render-pipelines.core": "8.0.0",
+        "com.unity.searcher": "4.0.9"
+      }
+    },
     "com.unity.test-framework": {
       "version": "1.1.5",
       "depth": 0,
@@ -50,6 +99,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.testframework.graphics": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.testframework.graphics",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.ugui": {
       "version": "1.0.0",
       "depth": 0,
@@ -57,6 +112,14 @@
       "dependencies": {
         "com.unity.modules.ui": "1.0.0",
         "com.unity.modules.imgui": "1.0.0"
+      }
+    },
+    "com.unity.visualeffectgraph": {
+      "version": "file:../../../../ScriptableRenderPipeline/com.unity.visualeffectgraph",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.shadergraph": "8.0.0"
       }
     },
     "com.unity.xr.legacyinputhelpers": {

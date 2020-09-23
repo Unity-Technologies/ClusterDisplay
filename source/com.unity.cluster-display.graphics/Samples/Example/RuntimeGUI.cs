@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using Unity.ClusterRendering;
+using Unity.ClusterDisplay;
 
 namespace Unity.ClusterDisplay.Graphics.Example
 {
@@ -10,9 +10,11 @@ namespace Unity.ClusterDisplay.Graphics.Example
     [ExecuteAlways]
     public class RuntimeGUI : MonoBehaviour
     {
+#pragma warning disable 649
         [Tooltip("ClusterRenderer component whose settings are to be displayed/edited.")]
         [SerializeField]
-        ClusterRenderer m_ClusterRenderer; 
+        ClusterRenderer m_ClusterRenderer;
+#pragma warning restore 649
         
         [Tooltip("Show/Hide GUI.")]
         [SerializeField]

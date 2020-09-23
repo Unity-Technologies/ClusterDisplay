@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterRendering.SlaveStateMachine
+namespace Unity.ClusterDisplay.SlaveStateMachine
 {
     internal class RegisterWithMaster : SlaveState
     {

@@ -6,7 +6,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 
-namespace Unity.ClusterRendering.MasterStateMachine
+namespace Unity.ClusterDisplay.MasterStateMachine
 {
     internal class SynchronizeFrame : MasterState
     {

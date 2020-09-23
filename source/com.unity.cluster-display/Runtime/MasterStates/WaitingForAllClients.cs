@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Unity.ClusterRendering.MasterStateMachine
+namespace Unity.ClusterDisplay.MasterStateMachine
 {
-
     internal class WaitingForAllClients : MasterState
     {
         public override bool ReadyToProceed => false;

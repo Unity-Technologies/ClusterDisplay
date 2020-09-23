@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     internal abstract class NodeState
     {

@@ -3,7 +3,15 @@
   "displayName": "Cluster Display",
   "version": "0.0.2-preview",
   "unity": "2020.1",
+  "keywords": [
+    "cluster rendering",
+    "distributed rendering",
+    "cluster"
+  ],
   "description": "Cluster Display is a suite of packages that allows multiple unity instances to output to display arrays. This package synchronizes the internal state of unity from one instance and implements the necessary synchronization callbacks.",
+  "author": {
+    "name": "Unity"
+  },
   "keywords": [
     "unity"
   ]

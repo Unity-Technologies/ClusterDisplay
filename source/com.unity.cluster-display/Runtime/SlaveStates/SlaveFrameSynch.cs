@@ -5,10 +5,9 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterRendering.SlaveStateMachine
+namespace Unity.ClusterDisplay.SlaveStateMachine
 {
     internal class SynchronizeFrame : SlaveState
     {

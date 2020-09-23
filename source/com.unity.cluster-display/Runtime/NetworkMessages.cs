@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
 
     internal enum EMessageType

@@ -1,13 +1,12 @@
 {
-    "name": "Unity.ClusterDisplay.Graphics.EditorTests",
+    "name": "Unity.ClusterDisplay.Editor.Tests",
     "references": [
-        "Unity.ClusterDisplay.Graphics.Editor",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
-        "Unity.ClusterDisplay.Graphics"
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
-        "Editor"
+        "Editor",
+        "WindowsStandalone64"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

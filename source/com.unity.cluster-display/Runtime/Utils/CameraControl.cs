@@ -1,8 +1,8 @@
 using System;
-using Unity.ClusterRendering;
+using Unity.ClusterDisplay;
 using UnityEngine;
 
-namespace ClusterRendering.Runtime
+namespace ClusterDisplay.Utils
 {
     //[ExecuteInEditMode]
     [Serializable]

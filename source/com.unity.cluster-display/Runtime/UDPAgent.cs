@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     internal class UDPAgent
     {

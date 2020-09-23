@@ -1,6 +1,6 @@
 using System;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     static class ClusterParams
     {

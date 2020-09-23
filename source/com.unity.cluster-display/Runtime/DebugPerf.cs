@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     internal class DebugPerf
     {

@@ -1,4 +1,4 @@
-﻿using Unity.ClusterRendering;
+﻿using Unity.ClusterDisplay;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics

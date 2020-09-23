@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.unity.cluster-display.sync": {
+    "com.unity.cluster-display": {
       "version": "file:../../../source/com.unity.cluster-display",
       "depth": 0,
       "source": "local",

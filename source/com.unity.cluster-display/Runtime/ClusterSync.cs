@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.LowLevel;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     /// <summary>
     /// Need one and only one instance of this class in the scene.

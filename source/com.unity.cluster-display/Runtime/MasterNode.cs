@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.ClusterDisplay.MasterStateMachine;
 using UnityEngine;
-using Unity.ClusterRendering.MasterStateMachine;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     internal class RemoteNodeComContext
     {

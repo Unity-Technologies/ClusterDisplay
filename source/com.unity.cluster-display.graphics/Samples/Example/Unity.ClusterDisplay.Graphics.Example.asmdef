@@ -1,8 +1,8 @@
-﻿{
-	"name": "Unity.ClusterDisplay.Graphics.Example",
+{
+    "name": "Unity.ClusterDisplay.Graphics.Example",
     "references": [
         "Unity.ClusterDisplay.Graphics",
-        "Unity.ClusterDisplay.Sync.Runtime"
+        "Unity.ClusterDisplay.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,7 +1,7 @@
 ﻿using System;
-using Unity.ClusterRendering.SlaveStateMachine;
+using Unity.ClusterDisplay.SlaveStateMachine;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     internal class SlavedNode : ClusterNode
     {
