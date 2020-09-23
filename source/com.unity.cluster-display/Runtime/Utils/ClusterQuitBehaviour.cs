@@ -2,7 +2,7 @@ using System;
 using Unity.ClusterRendering;
 using UnityEngine;
 
-namespace ClusterRendering.Runtime.Utils
+namespace ClusterRendering.Runtime
 {
     public class ClusterQuitBehaviour : MonoBehaviour
     {
