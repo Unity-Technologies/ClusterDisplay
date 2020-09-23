@@ -19,7 +19,7 @@
       "source": "local",
       "dependencies": {
         "com.unity.render-pipelines.high-definition": "7.0.1",
-        "com.unity.cluster-display": "0.0.2-preview"
+        "com.unity.cluster-display": "0.0.3-preview"
       }
     },
     "com.unity.ext.nunit": {
