@@ -1,0 +1,1 @@
+Use the script 'build.cmd' to generate the Quadro Sync DLLs.

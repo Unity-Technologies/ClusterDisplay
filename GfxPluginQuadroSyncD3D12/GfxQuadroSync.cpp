@@ -13,7 +13,8 @@ namespace GfxQuadroSync
 {
     static PluginCSwapGroupClient s_SwapGroupClient;
     static IUnityInterfaces* s_UnityInterfaces = NULL;
-    static IUnityGraphicsD3D12v6* s_UnityGraphics = NULL;
+    static IUnityGraphicsD3D12v6* s_UnityGraphicsD3D12 = NULL;
+    static IUnityGraphics* s_UnityGraphics = NULL;
     static ID3D12Device* s_D3D12Device = NULL;
     static IDXGISwapChain* s_SwapChain = NULL;
     static bool s_Initialized = false;
@@ -26,18 +27,18 @@ namespace GfxQuadroSync
         {
             s_UnityInterfaces = unityInterfaces;
 
-            const auto unityGraphics = s_UnityInterfaces->Get<IUnityGraphics>();
-            if (unityGraphics)
+            s_UnityGraphics = s_UnityInterfaces->Get<IUnityGraphics>();
+            if (s_UnityGraphics)
             {
-                s_UnityGraphics = unityInterfaces->Get<IUnityGraphicsD3D12v6>();
-                unityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+                s_UnityGraphicsD3D12 = unityInterfaces->Get<IUnityGraphicsD3D12v6>();
+                s_UnityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
             }
         }
     }
 
     // Freely defined function to pass a callback to plugin-specific scripts
     extern "C" UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
-        GetRenderEventFunc()
+        GetRenderEventFuncD3D12()
     {
         return OnRenderEvent;
     }
@@ -53,8 +54,8 @@ namespace GfxQuadroSync
         return (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
             ? s_SwapGroupClient.Render(s_D3D12Device,
                 s_SwapChain,
-                s_UnityGraphics->GetSyncIntervalImpl(),
-                s_UnityGraphics->GetPresentFlagsImpl())
+                s_UnityGraphicsD3D12->GetSyncIntervalImpl(),
+                s_UnityGraphicsD3D12->GetPresentFlagsImpl())
             : false;
     }
 
@@ -111,11 +112,14 @@ namespace GfxQuadroSync
     // Verify if the D3D11 Device and the Swap Chain are valid
     bool IsContextValid()
     {
+        if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D12)
+            return false;
+
         if (s_D3D12Device == nullptr)
-            s_D3D12Device = s_UnityGraphics->GetDevice();
+            s_D3D12Device = s_UnityGraphicsD3D12->GetDevice();
 
         if (s_SwapChain == nullptr)
-            s_SwapChain = s_UnityGraphics->GetSwapChain();
+            s_SwapChain = s_UnityGraphicsD3D12->GetSwapChain();
 
         return (s_D3D12Device != nullptr && s_SwapChain != nullptr);
     }
@@ -194,5 +198,4 @@ namespace GfxQuadroSync
 
         s_SwapGroupClient.EnableSyncCounter(value);
     }
-
 }

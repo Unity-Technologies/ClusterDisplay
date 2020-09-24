@@ -11,7 +11,8 @@ namespace GfxQuadroSync
 {
 static PluginCSwapGroupClient s_SwapGroupClient;
 static IUnityInterfaces* s_UnityInterfaces = NULL;
-static IUnityGraphicsD3D11* s_UnityGraphics = NULL;
+static IUnityGraphicsD3D11* s_UnityGraphicsD3D11 = NULL;
+static IUnityGraphics* s_UnityGraphics = NULL;
 static ID3D11Device* s_D3D11Device = NULL;
 static IDXGISwapChain* s_D3D11SwapChain = NULL;
 static bool s_Initialized = false;
@@ -23,21 +24,20 @@ UnityPluginLoad(IUnityInterfaces * unityInterfaces)
     if (unityInterfaces)
     {
         s_UnityInterfaces = unityInterfaces;
-
-        const auto unityGraphics = s_UnityInterfaces->Get<IUnityGraphics>();
-        if (unityGraphics)
+        s_UnityGraphics = s_UnityInterfaces->Get<IUnityGraphics>();
+        if (s_UnityGraphics)
         {
-            s_UnityGraphics = unityInterfaces->Get<IUnityGraphicsD3D11>();
-            s_D3D11Device = s_UnityGraphics->GetDevice();
-            s_D3D11SwapChain = s_UnityGraphics->GetSwapChain();
-            unityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+            s_UnityGraphicsD3D11 = unityInterfaces->Get<IUnityGraphicsD3D11>();
+            s_D3D11Device = s_UnityGraphicsD3D11->GetDevice();
+            s_D3D11SwapChain = s_UnityGraphicsD3D11->GetSwapChain();
+            s_UnityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
         }
     }
 }
 
 // Freely defined function to pass a callback to plugin-specific scripts
 extern "C" UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
-GetRenderEventFunc()
+GetRenderEventFuncD3D11()
 {
     return OnRenderEvent;
 }
@@ -53,8 +53,8 @@ UnityRenderingExtQuery(UnityRenderingExtQueryType query)
     return (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
         ? s_SwapGroupClient.Render(s_D3D11Device,
                                    s_D3D11SwapChain,
-                                   s_UnityGraphics->GetSyncIntervalImpl(),
-                                   s_UnityGraphics->GetPresentFlagsImpl())
+                                   s_UnityGraphicsD3D11->GetSyncIntervalImpl(),
+                                   s_UnityGraphicsD3D11->GetPresentFlagsImpl())
         : false;
 }
 
@@ -110,11 +110,14 @@ OnRenderEvent(int eventID, void* data)
 // Verify if the D3D11 Device and the Swap Chain are valid
 bool IsContextValid()
 {
+    if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11)
+        return false;
+	
     if (s_D3D11Device == nullptr)
-        s_D3D11Device = s_UnityGraphics->GetDevice();
+        s_D3D11Device = s_UnityGraphicsD3D11->GetDevice();
 
     if (s_D3D11SwapChain == nullptr)
-        s_D3D11SwapChain = s_UnityGraphics->GetSwapChain();
+        s_D3D11SwapChain = s_UnityGraphicsD3D11->GetSwapChain();
 
     return (s_D3D11Device != nullptr && s_D3D11SwapChain != nullptr);
 }

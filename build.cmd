@@ -10,7 +10,7 @@ echo ************************************
 
 REM Log OS x86 or x64
 wmic os get osarchitecture
-SET INSTALLDIR=%cd%\\TestProjects\\QuadroSyncTest\\Assets\\Plugins\\x86_64
+SET INSTALLDIR=%cd%\\source\\com.unity.cluster-display.sync\\Runtime\\Plugins\\x86_64
 echo Install dir is:
 echo %INSTALLDIR%
 
@@ -69,7 +69,7 @@ echo ************************************
 
 REM Log OS x86 or x64
 wmic os get osarchitecture
-SET INSTALLDIR=%cd%\\TestProjects\\QuadroSyncTest\\Assets\\Plugins\\x86_64
+SET INSTALLDIR=%cd%\\source\\com.unity.cluster-display.sync\\Runtime\\Plugins\\x86_64
 echo Install dir is:
 echo %INSTALLDIR%
 

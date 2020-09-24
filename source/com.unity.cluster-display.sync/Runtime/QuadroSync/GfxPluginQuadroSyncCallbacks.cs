@@ -3,15 +3,29 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class GfxPluginQuadroSyncCallbacks : MonoBehaviour
+namespace Unity.ClusterRendering
 {
-    void OnEnable()
+    using static GfxPluginQuadroSyncSystem;
+    public class GfxPluginQuadroSyncCallbacks : MonoBehaviour
     {
-        GfxPluginQuadroSync.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSync.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-    }
+        bool m_Initialized = false;
 
-    void OnDisable()
-    {        
-        GfxPluginQuadroSync.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSync.EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
+        void OnEnable()
+        {
+            if (!m_Initialized)
+            {
+                GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
+                m_Initialized = true;
+            }
+        }
+
+        void OnDisable()
+        {
+            if (m_Initialized)
+            {
+                GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
+                m_Initialized = false;
+            }
+        }
     }
 }

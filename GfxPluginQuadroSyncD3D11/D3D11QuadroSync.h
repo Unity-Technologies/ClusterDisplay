@@ -1,6 +1,8 @@
 #pragma once
 
-#include "External/NvAPI/nvapi.h"
+#define DEBUG_LOG_QUADRO_SYNC
+
+#include "../External/NvAPI/nvapi.h"
 
 class ID3D11Device;
 class IDXGISwapChain;
@@ -17,10 +19,10 @@ public:
     bool Initialize(ID3D11Device* pDevice, IDXGISwapChain* pSwapChain);
     void Dispose(ID3D11Device* pDevice, IDXGISwapChain* pSwapChain);
 
-    void SetupWorkStation() const;
-    void DisposeWorkStation() const;
+    void SetupWorkStation();
+    void DisposeWorkStation();
 
-    bool Render(ID3D11Device* pDevice, IDXGISwapChain* pSwapChain, int pVsync = 1, int pFlags = 0) const;
+    bool Render(ID3D11Device* pDevice, IDXGISwapChain* pSwapChain, int pVsync = 1, int pFlags = 0);
     void ResetFrameCount(ID3D11Device* pDevice);
     NvU32 QueryFrameCount(ID3D11Device* pDevice);
 

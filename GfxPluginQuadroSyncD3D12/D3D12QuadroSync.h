@@ -2,7 +2,7 @@
 
 #define DEBUG_LOG_QUADRO_SYNC
 
-#include "External/NvAPI/nvapi.h"
+#include "../External/NvAPI/nvapi.h"
 
 class ID3D12Device;
 class TD3D12DXGISwapChain;

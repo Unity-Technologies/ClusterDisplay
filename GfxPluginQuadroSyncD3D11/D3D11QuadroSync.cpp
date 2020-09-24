@@ -71,7 +71,7 @@ void PluginCSwapGroupClient::Prepare()
 #endif
 }
 
-void PluginCSwapGroupClient::SetupWorkStation() const
+void PluginCSwapGroupClient::SetupWorkStation()
 {
     // Register our request to use workstation SwapGroup resources in the driver
     NvU32 gpuCount;
@@ -94,7 +94,7 @@ void PluginCSwapGroupClient::SetupWorkStation() const
     }
 }
 
-void PluginCSwapGroupClient::DisposeWorkStation() const
+void PluginCSwapGroupClient::DisposeWorkStation()
 {
     // Unregister our request to use workstation SwapGroup resources in the driver
     NvAPI_Status status;
@@ -320,7 +320,7 @@ void PluginCSwapGroupClient::ResetFrameCount(ID3D11Device* const pDevice)
 bool PluginCSwapGroupClient::Render(ID3D11Device* const pDevice,
                                     IDXGISwapChain* const pSwapChain,
                                     const int pVsync,
-                                    const int pFlags) const
+                                    const int pFlags)
 {
     const auto result = NvAPI_D3D1x_Present(pDevice, pSwapChain, pVsync, pFlags);
 
