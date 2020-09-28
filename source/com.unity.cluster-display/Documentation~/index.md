@@ -74,7 +74,7 @@ When using VFX Graph particles effects in HDRP, make sure the **Reseed on play**
 
 State synchronization and lockstep rendering are provided by the **ClusterSync** component.
 
-![img](images/cluster-sync-component)
+![Cluster Sync Component](images/cluster-sync-component.png)
 
 Note that **ClusterSync** requires specific command line arguments to function. Those command line arguments are detailed in the [**Launching the cluster**](https://docs.google.com/document/d/1vllT04xXonsaCjpbpwIzPjgzz9nzVTu-lyYiB6mmdFs/edit#heading=h.n1qu0pguhgyc) section.
 
@@ -86,11 +86,11 @@ Typically, each rendering node maps its ID to a subsection of the global camera 
 
 The Utils folder contains the **CameraControl** component, a sample script that implements the asymmetric frustum projection used in typical LED wall applications. 
 
-![img](images/camera-control-component)
+![Camera Control Component](images/camera-control-component.png)
 
 This script alters the main camera’s projection matrix to match the desired frustum. The parameters are the number of tiles along X and Y (2 x 2 by default). The tiles are ordered in increasing order from left to right and top to bottom.
 
-![Cluster Display Getting Started](images/cluster-sections.jpg)
+![Display Sections](images/cluster-sections.png)
 
 An extensive HDRP-specific solution to domain decomposition can be found in the [Cluster Display Graphics package](https://github.com/Unity-Technologies/ClusterDisplay/tree/stable/source/com.unity.cluster-display.graphics).
 
@@ -102,7 +102,7 @@ The **Cluster.Display-Utils** package implements the **ClusterQuitBehaviour** co
 
 **IL2CPP**
 
-We strongly recommend building with **IL2CPP backend** (**ProjectSettings->Player->OtherSettings->ScriptingBackend***)* 
+We strongly recommend building with **IL2CPP backend** (**ProjectSettings->Player->OtherSettings->ScriptingBackend**) 
 
 **V Sync**
 
@@ -136,7 +136,7 @@ A Node in the cluster consists of a workstation and a display output. Each works
 - We recommend using the Master Machine as a rendering node
 - The solution is Windows 10 only
 
-![img](images/server-diagram.jpg)
+![Server Diagram](images/server-diagram.png)
 
 ### Adding Metric on Network interface used by Cluster
 
@@ -144,11 +144,14 @@ If the servers you are using in the Cluster have multiple Network Interface Cont
 
 1. Open the Control Panel
 2. Right-click on the network interface being used for Cluster messaging
-3. Click **Properties** in the context menu![img](images/network-setup-1.jpg)
+3. Click **Properties** in the context menu
+
+![Network Setup 1](images/network-setup-1.png)
+
 4. Once the Properties window is open, select **Internet Protocol Version 4** and click **Properties**
 5. Select **Advanced** on the bottom right. In the **Advanced TCP/IP Setting**, enter “1” in the **Interface metric** field.
 
-![img](images/network-setup-2.jpg)
+![Network Setup 2](images/network-setup-2.png)
 
 # Unity Cluster Display under the hood
 
@@ -329,7 +332,7 @@ Every server is connected to two NICs (Network Interface Controller):
 
 - For the ethernet sync connection, Nvidia recommends the following connection diagram:
 
-![img](images/connection-diagram.jpg)
+![Connection Diagram](images/connection-diagram.png)
 
 
 
@@ -342,7 +345,7 @@ Every server is connected to two NICs (Network Interface Controller):
 
 Since both the Multiviewer and Nvidia Quadro Sync have reference input capability, we are using a tri-level sync generator from Black Magic to feed the reference signal to both the Multiviewer and Sync card. The tri-level sync is set to 59.94Hz.
 
-![img](images/multiviewer-settings)
+![Multiviewer Settigns](images/multiviewer-settings.png)
 
 **Note that to initialize the sync, or reinitialize after a reboot, all clients MUST be rebooted BEFORE the master sync server**
 
