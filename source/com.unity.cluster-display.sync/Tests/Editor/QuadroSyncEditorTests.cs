@@ -1,4 +1,4 @@
-#if UNITY_EDITOR_64
+#if UNITY_EDITOR_WIN
 
 using System.Collections;
 using NUnit.Framework;
