@@ -64,7 +64,7 @@ For debugging purposes, you can run the Unity Editor as a cluster node. To do so
 
 The **Camera Control** component is responsible for managing domain decomposition in projects that don’t use HDRP.
 
-Typically, in that case, each rendering node maps its ID to a subsection of the global camera frustum. The Camera Control component is a script that implements the asymmetric frustum projection used in typical LED wall applications.
+Typically, in that case, each rendering node maps its ID to a subsection of the global camera frustum. The **Camera Control** component is a script that implements the asymmetric frustum projection used in typical LED wall applications.
 
 ![](images/component-camera-control.png)
 
@@ -83,12 +83,6 @@ When you have this component in your project:
 -   You can press **Q** and **K** at the same time on the keyboard connected to the master when you need to manually quit the whole cluster.
 
 -   The nodes can automatically quit the cluster if the [cluster communication times out](#communication-phases-and-timeouts).
-
-### Cluster Renderer
-
-The **Cluster Renderer** component (available through the [Cluster Display Graphics](https://github.com/Unity-Technologies/ClusterDisplay/tree/stable/source/com.unity.cluster-display.graphics) package) is responsible for managing domain decomposition in the specific case of projects that use High Definition Render Pipeline (HDRP).
-
-See the [Cluster Display Graphics documentation](https://github.com/Unity-Technologies/ClusterDisplay/blob/stable/source/com.unity.cluster-display.graphics/Documentation~/index.md) for more details.
 
 ## Tested Hardware
 
@@ -139,7 +133,7 @@ Every server is connected to two NICs (Network Interface Controller):
 
 **Graphics Card**
 
--   Nvidia driver: 431.94
+-   Nvidia driver: 451.77
 
 -   Resolution set to 1080p60.
 
