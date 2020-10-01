@@ -8,8 +8,8 @@ Two separate packages are available in this shell repository.
 
 | Package/documentation | Description |
 |---------|----------------------|
-| [Cluster Display](https://github.com/Unity-Technologies/ClusterDisplay/tree/stable/source/com.unity.cluster-display) | This package is **always required** for any Cluster Display setup. |
-| [Cluster Display Graphics](https://github.com/Unity-Technologies/ClusterDisplay/tree/stable/source/com.unity.cluster-display.graphics) | Use this additional package only if your Unity project is using High Definition Render Pipeline (**HDRP**). |
+| [Cluster Display](source/com.unity.cluster-display/Documentation~/index.md) | This package is **always required** for any Cluster Display setup. |
+| [Cluster Display Graphics](source/com.unity.cluster-display.graphics/Documentation~/index.md) | Use this additional package only if your Unity project is using High Definition Render Pipeline (**HDRP**). |
 
 ## Installation
 
