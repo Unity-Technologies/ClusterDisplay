@@ -4,7 +4,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine.TestTools;
 using UnityEngine;
-using Unity.ClusterRendering;
+using Unity.ClusterDisplay;
 using System;
 
 namespace Unity.ClusterDisplay.EditorTest

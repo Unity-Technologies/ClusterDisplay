@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "com.unity.cluster-display.sync": "file:../../../source/com.unity.cluster-display.sync",
-    "com.unity.cluster-display.utils": "file:../../../source/com.unity.cluster-display.utils",
+    "com.unity.cluster-display": "file:../../../source/com.unity.cluster-display",
     "com.unity.collab-proxy": "1.3.9",
     "com.unity.ext.nunit": "1.0.0",
     "com.unity.ide.rider": "2.0.5",
