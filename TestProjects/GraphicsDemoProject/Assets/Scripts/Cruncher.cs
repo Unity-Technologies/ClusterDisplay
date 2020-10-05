@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.ClusterRendering;
+using Unity.ClusterDisplay;
 using UnityEngine;
 using Random = UnityEngine.Random;
 

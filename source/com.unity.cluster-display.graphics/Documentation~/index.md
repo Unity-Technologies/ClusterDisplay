@@ -1,5 +1,5 @@
 # About Unity.ClusterDisplay.Graphics
-See the core [Cluster Display package](https://github.com/Unity-Technologies/ClusterDisplay/) for general information, installation, and usage of Cluster Display.
+See the core [Cluster Display package](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display/Documenation~/index.md) for general information, installation, and usage of Cluster Display.
 
 ## Package status
 This package is available as a preview, and is actively being developed, so it is not ready for production use. The features and documentation in this package might change before release.
@@ -11,8 +11,6 @@ The following table describes the package folder structure:
 |---|---|
 |*Documentation~*|Contains package documentation.|
 |*Runtime*|contains cluster display graphics components and utilities|
-|*Runtime/ClustererRenderer*|ClusterRenderer component, acts as a public interface to cluster display graphics features.|
-|*Runtime/ClustererRendererSettings*|ClusterRenderer settings, `scriptableObject`.|
 |*Editor*|contains ClusterRenderer custom inspector.|
 
 ## Installation
@@ -26,7 +24,7 @@ We suggest using [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submo
 ## Requirements
 This package depends on a [custom branch of HDRP](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/hdrp-xr-public-layout-api-cluster-display). The changes in the custom branch are not available through the Package Manager and must checked out and referenced locally in the project's `manifest.json` file.
 
-This package also has a dependency on [com.unity.cluster-display.sync](https://github.com/Unity-Technologies/ClusterDisplay) for the core Cluster Display functionality.
+This package also has a dependency on [com.unity.cluster-display](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display) for the core Cluster Display functionality.
 
 ## Cluster Display Graphics Concepts
 
@@ -35,7 +33,7 @@ We describe the target pixel surface as a **grid** of displays, with the size ex
 
 #### Asymmetric Projection
 
-We subdivide the viewport into tiles, based on the grid size. We index those tiles row by row, starting at the top left corner of the grid (tile index 0). The tile index is inferred from the Cluster Display state (see [com.unity.cluster-display.sync](https://github.com/Unity-Technologies/ClusterDisplay)). Note that it is possible to manually take control of the tile index and the viewport subsection for debugging purposes. 
+We subdivide the viewport into tiles, based on the grid size. We index those tiles row by row, starting at the top left corner of the grid (tile index 0). The tile index is inferred from the Cluster Display state (see [com.unity.cluster-display](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display)). Note that it is possible to manually take control of the tile index and the viewport subsection for debugging purposes. 
 
 In the figure below, we visualize a camera frustum sliced as a 2x2 grid; the frustum of the `tileIndex = 0` slice is highlighted in blue.
 
@@ -43,7 +41,7 @@ In the figure below, we visualize a camera frustum sliced as a 2x2 grid; the fru
 
 #### Overscan
 
-Many effects compute a pixel's value based on its neighbors (think of blur for example). To allow for seamless tiling, we slightly expand the frustum/viewport, so that each pixel of the original viewport has access to its neighbors. Those additionnal pixels are cropped out of the final output after effects have been computed.
+Many effects compute a pixel's value based on its neighbors (think of blur for example). To allow for seamless tiling, we slightly expand the frustum/viewport, so that each pixel of the original viewport has access to its neighbors. Those additional pixels are cropped out of the final output after effects have been computed.
 
 ![Overscan Figure](images/Overscan.png)
 
@@ -132,7 +130,7 @@ Users can take control of the viewport subsection rendered by the machine. In th
 
 #### Command Line Arguments
 
-Some parameters may be passed as command line arguments to a Unity application using this package, in which case they override the projects's settings.
+Some parameters may be passed as command line arguments to a Unity application using this package, in which case they override the project's settings.
 We support the following arguments:
 
 * `--debug` start the cluster renderer in debug mode
@@ -147,7 +145,7 @@ Cluster Display shading features are enabled using a keyword managed by the `Clu
 
 * `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES(xy)`: converts Normalized Device Coordinates to Normalized Cluster Coordinates. Think of normalized cluster coordinates as normalized device coordinates if the whole cluster display grid was one big display.
 * `CLUSTER_TO_DEVICE_NORMALIZED_COORDINATES(xy)`: invert of `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES`.
-* `DEVICE_TO_CLUSTER_FULLSCREEN_UV(xy)`: converts fullscreen UV coordinates to cluster space. Built on top of `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES` and meant as a shorthand when working with fullscreen passes.
+* `DEVICE_TO_CLUSTER_FULLSCREEN_UV(xy)`: converts full screen UV coordinates to cluster space. Built on top of `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES` and meant as a shorthand when working with full screen passes.
 * `CLUSTER_TO_DEVICE_FULLSCREEN_UV(xy)`: invert of `DEVICE_TO_CLUSTER_FULLSCREEN_UV`.
 * `CLUSTER_GRID_SIZE`: grid size.
 * `CLUSTER_SCREEN_SIZE`: size of the pixel surface formed by the grid of displays.
@@ -166,4 +164,4 @@ hdCam.colorPyramidHistoryIsValid = false;
 
 #### Operating System Overlays
 
-Whenever you have operating system managed overlays (toolbar, window) on top of your fullscreen Unity application, a one frame delay may be introduced causing cluster synchronisation artefacts.
+Whenever you have operating system managed overlays (toolbar, window) on top of your full screen Unity application, a one frame delay may be introduced causing cluster synchronization artefacts.
