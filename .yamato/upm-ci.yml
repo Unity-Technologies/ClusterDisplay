@@ -40,7 +40,7 @@ build_win:
   artifacts:
     quadrosync_plugin:
       paths:
-        - "source/com.unity.cluster-display.sync/Runtime/Plugins/x86_64/**/*"
+        - "source/com.unity.cluster-display/Runtime/Plugins/x86_64/**/*"
 
   {% for editor in test_editors %}
   {% for platform in test_platforms %}
