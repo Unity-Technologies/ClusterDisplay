@@ -1,7 +1,7 @@
 {
   "name": "com.unity.cluster-display",
   "displayName": "Cluster Display",
-  "version": "0.0.3-preview",
+  "version": "0.0.4-preview",
   "unity": "2020.1",
   "keywords": [
     "cluster rendering",
