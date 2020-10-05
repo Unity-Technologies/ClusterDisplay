@@ -3,9 +3,12 @@
     "references": [
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.ClusterDisplay.Sync.Runtime"
+        "Unity.ClusterDisplay.Runtime"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor",
+        "WindowsStandalone64"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
