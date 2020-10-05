@@ -1,6 +1,5 @@
-﻿using Unity.ClusterRendering;
+﻿using Unity.ClusterDisplay;
 using UnityEngine;
-using UnityEngine.Playables;
 
 [RequireComponent(typeof(UnityEngine.UI.Text))]
 public class DebugComponent : MonoBehaviour

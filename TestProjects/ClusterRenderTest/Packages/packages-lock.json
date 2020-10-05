@@ -1,18 +1,10 @@
 {
   "dependencies": {
-    "com.unity.cluster-display.sync": {
-      "version": "file:../../../source/com.unity.cluster-display.sync",
+    "com.unity.cluster-display": {
+      "version": "file:../../../source/com.unity.cluster-display",
       "depth": 0,
       "source": "local",
       "dependencies": {}
-    },
-    "com.unity.cluster-display.utils": {
-      "version": "file:../../../source/com.unity.cluster-display.utils",
-      "depth": 0,
-      "source": "local",
-      "dependencies": {
-        "com.unity.cluster-display.sync": "0.0.1"
-      }
     },
     "com.unity.collab-proxy": {
       "version": "1.3.9",
@@ -29,7 +21,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.rider": {
-      "version": "2.0.5",
+      "version": "1.2.1",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -95,7 +87,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.xr.management": {
-      "version": "3.2.10",
+      "version": "3.2.13",
       "depth": 0,
       "source": "registry",
       "dependencies": {
