@@ -112,3 +112,14 @@ To set up and build a Unity project in order to use it for Cluster Display, you 
 
 To do so, you can reference them in the user project's Packages/manifest.json file using a relative path such as, for example:
 <br />`com.unity.cluster-display.cluster-display": "file:../../Packages/com.unity.cluster-display.cluster-display`
+
+### Quadro Sync
+
+Through Quadro Sync, NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized for a large number of displays. 
+
+Limitations:
+
+-   Swap features are only supported on Windows Vista and higher. 
+-   They are also only supported on 11 and 12 (for the moment).
+-   You must have one or multiple Quadro Sync boards connected to your selected NVIDIA Quadro GPUs.
+-   You must use Unity 2020.2 (see [NVIDIA Quadro Sync II](../../../README.md))
