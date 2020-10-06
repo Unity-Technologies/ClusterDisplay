@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-namespace Unity.ClusterRendering
+namespace Unity.ClusterDisplay
 {
     using static GfxPluginQuadroSyncSystem;
     public class GfxPluginQuadroSyncCallbacks : MonoBehaviour
