@@ -42,7 +42,7 @@ It is recommended to use [Git Submodules](https://git-scm.com/book/en/v2/Git-Too
 
 ### NVIDIA Quadro Sync Swap Barrier support
 
-Through Quadro Sync, NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
+NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
 
 Swap Barrier support is still experimental and relies on a custom Unity build. There are two separate builds depending on the desired graphics API:
 
