@@ -14,9 +14,9 @@ If using **Swap Barriers**:
 
 * Build and install one of the Unity versions below in the [NVIDIA Quadro Sync Swap Barrer Support section](#nvidia-quadro-sync-swap-barrier-support) section.
 * Only supported on Windows Vista and higher.
-* Only supported on DirectX 11 or DirectX 12
-* Requires an NVIDIA GPU 
-* Requires one or more NVIDIA Quadro Sync II
+* Only supported on DirectX 11 or DirectX 12.
+* Requires an [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/).
+* Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
 
 ### Hardware
 Required hardware is detailed in the [Cluster Display documentation](source/com.unity.cluster-display/Documentation~/index.md) in the 
@@ -46,8 +46,8 @@ Through Quadro Sync, NvAPI provides the capability to synchronize the buffer swa
 
 Swap Barrier support is still experimental and relies on a custom Unity build. There are two separate builds depending on the desired graphics API:
 
-* [**Direct3D11**](https://ono.unity3d.com/unity/unity/pull-request/113317/_/feat/quadro-sync-d3d11) or 
-* [**Direct3D12**](https://ono.unity3d.com/unity/unity/pull-request/113690/_/graphics/expose-plugin-callbacks-swapchain-d3d12)
+* Unity [**Direct3D11**](https://ono.unity3d.com/unity/unity/pull-request/113317/_/feat/quadro-sync-d3d11) Build Ono PR
+* Unity [**Direct3D12**](https://ono.unity3d.com/unity/unity/pull-request/113690/_/graphics/expose-plugin-callbacks-swapchain-d3d12) Build Ono PR
 
 To install the Quadro Sync feature, generate 2 DLLs by running `build.cmd`. They must be generated in the folder: `source/com.unity.cluster-display/Runtime/Plugins/x86-64`.
 
