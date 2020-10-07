@@ -51,4 +51,4 @@ Swap Barrier support is still experimental and relies on a custom Unity build. T
 
 To install the Quadro Sync feature, generate 2 DLLs by running `build.cmd`. They must be generated in the folder: `source/com.unity.cluster-display/Runtime/Plugins/x86-64`.
 
-To use the Quadro Sync features, you can take the script [GfxPluginQuadroSyncCallbacks](source/com.unity.cluster-display/Runtime/QuadroSync/GfxPluginQuadroSyncCallbacks.cs) as a reference.
+See the [GfxPluginQuadroSyncCallbacks.cs](source/com.unity.cluster-display/Runtime/QuadroSync/GfxPluginQuadroSyncCallbacks.cs) script for an example of usage.
