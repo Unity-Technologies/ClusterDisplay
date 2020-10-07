@@ -33,8 +33,8 @@ This repository contains in-development packages, tests and test projects, as we
 | GfxPluginQuadroSyncD3D11 | Project containing the files to build the Quadro Sync D3D11 DLL. |
 | GfxPluginQuadroSyncD3D12 | Project containing the files to build the Quadro Sync D3D12 DLL. |
 | TestProjects/ClusterRenderTest | Test project built based on the legacy renderer used to test synchronization. |
-| TestProjects/GraphicsDemoProject | Test project with a simple demo scene to demonstrate some HDRP features in a cluster environment. |
-| TestProjects/GraphicsTestProject | Test project to render multiple frames with different settings and compare the results against each other. |
+| [TestProjects/GraphicsDemoProject](TestProjects/GraphicsDemoProject/README.md) | Test project with a simple demo scene to demonstrate some HDRP features in a cluster environment. |
+| [TestProjects/GraphicsTestProject](TestProjects/GraphicsTestProject/README.md) | Test project to render multiple frames with different settings and compare the results against each other. |
 | TestProjects/QuadroSyncTest | Test project to validate NVIDIA Swap Barrier support. |
 
 ## Installation
