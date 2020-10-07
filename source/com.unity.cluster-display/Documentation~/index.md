@@ -64,7 +64,11 @@ The packages required to set up Unity Cluster Display are currently available as
 
 This version of Unity Cluster Display is compatible with the following versions of the Unity Editor:
 
--   2020.1 and later (recommended)
+- Unity 2020.1 or higher (if not using Swap Barriers)
+
+When installing add **Windows Build Support (IL2CPP)**.
+
+`Note: to use NVIDIA Swap Barriers, a custom build of the Unity Editor is required. There are also some additional requirements detailed below in the Swap Barriers section.`
 
 #### Operating system
 
@@ -108,18 +112,13 @@ As such:
 
 ### Installation
 
-To set up and build a Unity project in order to use it for Cluster Display, you must install some specific packages according to your needs. These packages are currently [experimental](#experimental-packages), and as such, are not publicly available through Unity's Package Manager. Therefore, you must get them from GitHub and install them manually.
+This package is currently experimental and not publicly available through Unity's Package Manager. [See the documentation for installing a package from a local folder](https://docs.unity3d.com/Manual/upm-ui-local.html).
 
-To do so, you can reference them in the user project's Packages/manifest.json file using a relative path such as, for example:
-<br />`com.unity.cluster-display.cluster-display": "file:../../Packages/com.unity.cluster-display.cluster-display`
+### Swap Barriers
 
-### Quadro Sync
+Swap Barriers provide the the ability to acheive Frame Lock + Genlock across nodes and displays when using NVIDIA Quadro Sync II boards alongisde a Quadro GPU. There are several prerequisites for leverage Swap Barriers.
 
-Through Quadro Sync, NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized for a large number of displays. 
-
-Limitations:
-
--   Swap features are only supported on Windows Vista and higher. 
--   They are also only supported on 11 and 12 (for the moment).
--   You must have one or multiple Quadro Sync boards connected to your selected NVIDIA Quadro GPUs.
--   You must use Unity 2020.2 (see [NVIDIA Quadro Sync II](../../../README.md))
+- Custom Unity Editor build
+- Only supported on DirectX 11 or DirectX 12.
+- Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
+- Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
