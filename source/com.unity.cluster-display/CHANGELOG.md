@@ -1,5 +1,11 @@
 # Changes in Cluster Display
 
+## [0.0.4-preview] - 2020-09-30
+
+### Changes
+
+- Added QuadroSync native plugin
+
 ## [0.0.3-preview] - 2020-09-22
 
 ### Added

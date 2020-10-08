@@ -7,3 +7,4 @@ TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
 TestProjects/*/.idea
+*.dll

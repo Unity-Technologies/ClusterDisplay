@@ -26,6 +26,21 @@ pack:
     packages:
       paths:
       - "upm-ci~/packages/**/*"
+  dependencies:
+      - .yamato/upm-ci.yml#build_win
+
+build_win:
+  name: Build native Quadro Symc
+  agent:
+    type: Unity::VM
+    image: package-ci/win10:stable
+    flavor: b1.large
+  commands:
+    - build.cmd
+  artifacts:
+    quadrosync_plugin:
+      paths:
+        - "source/com.unity.cluster-display/Runtime/Plugins/x86_64/**/*"
 
   {% for editor in test_editors %}
   {% for platform in test_platforms %}

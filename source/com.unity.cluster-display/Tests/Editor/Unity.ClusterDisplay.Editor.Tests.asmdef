@@ -2,7 +2,8 @@
     "name": "Unity.ClusterDisplay.Editor.Tests",
     "references": [
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.ClusterDisplay.Runtime"
     ],
     "includePlatforms": [
         "Editor"
