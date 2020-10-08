@@ -1,5 +1,7 @@
-# Unity Cluster Display Graphics Toolkit
+# Unity Cluster Display Graphics
 
-Cluster Display lets creators author content for very large pixel surfaces with Unity. It allows multiple machines to run a Unity application synchronously, usually with each one rendering only a subsection of the total viewport. Relevant use cases could be Immersive Experiences, Virtual Sets, Video Walls, CAVEs, ...
+## Prerequisites
+* Dependency on the core Cluster Display package.
+* Requires a [custom branch of HDRP](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/hdrp-xr-public-layout-api-cluster-display).
 
-* [Documentation](Documentation~/index.md)
+For more information, see the [package documentation](Documentation~/index.md)
