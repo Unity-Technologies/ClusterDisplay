@@ -7,58 +7,58 @@ using UnityEngine.Rendering;
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor.Tests")]
 namespace Unity.ClusterDisplay
 {
-	/// <summary>
+    /// <summary>
     /// This class is responsible for controlling the QuadroSync technology.
     /// </summary>
     public class GfxPluginQuadroSyncSystem
     {
-		/// <summary>
-        /// Define the various QuadroSync states and the use of the SwapGroup and Swapbarrier system.
+        /// <summary>
+        ///  Parameters to define the various QuadroSync states and the use of the SwapGroup and SwapBarrier system.
         /// </summary>
         public enum EQuadroSyncRenderEvent
         {
-			/// <summary>
-			/// Enable the Workstation SwapGroup and the use of
-			/// the Swap Group and the Swap Barrier systems (NvAPI).
-			/// </summary>
+            /// <summary>
+            /// Enables the Workstation SwapGroup and the use of
+            /// the Swap Group and the Swap Barrier systems (NvAPI).
+            /// </summary>
             QuadroSyncInitialize = 0,
-			
-			/// <summary>
-			/// Query the actual frame count in Runtime for the Master Sync system
-			/// or for the custom frame count system.
-			/// </summary>
+
+            /// <summary>
+            /// Queries the actual frame count in Runtime for the Master Sync system
+            /// or for the custom frame count system.
+            /// </summary>
             QuadroSyncQueryFrameCount,
-			
-			/// <summary>
-			/// Reset the frame count for the Master Sync system (NvAPI) or
-			/// for the custom frame count system.
-			/// </summary>
+
+            /// <summary>
+            /// Resets the frame count for the Master Sync system (NvAPI) or
+            /// for the custom frame count system.
+            /// </summary>
             QuadroSyncResetFrameCount,
-			
-			/// <summary>
-			/// Disable the use of the Swap Group and the Swap Barrier systems
-			/// and disable the Workstation SwapGroup (NvAPI)
-			/// </summary>
+
+            /// <summary>
+            /// Disables the use of the Swap Group and the Swap Barrier systems
+            /// and disables the Workstation SwapGroup (NvAPI)
+            /// </summary>
             QuadroSyncDispose,
-			
-			/// <summary>
-			/// Enable or disable the use of the Swap Group and the Swap Barrier systems (NvAPI).
-			/// </summary>
+
+            /// <summary>
+            /// Enables or disables the use of the Swap Group and the Swap Barrier systems (NvAPI).
+            /// </summary>
             QuadroSyncEnableSystem,
-			
-			/// <summary>
-			/// Enable or disable the use of the Swap Group system (NvAPI).
-			/// </summary>
+
+            /// <summary>
+            /// Enables or disables the use of the Swap Group system (NvAPI).
+            /// </summary>
             QuadroSyncEnableSwapGroup,
-			
-			/// <summary>
-			/// Enable or disable the use of the Swap Barrier system (NvAPI).
-			/// </summary>
+
+            /// <summary>
+            /// Enables or disables the use of the Swap Barrier system (NvAPI).
+            /// </summary>
             QuadroSyncEnableSwapBarrier,
-			
-			/// <summary>
-			/// Enable or disable the use of the Master sync counter system (NvAPI).
-			/// </summary>
+
+            /// <summary>
+            /// Enables or disables the use of the Master sync counter system (NvAPI).
+            /// </summary>
             QuadroSyncEnableSyncCounter
         };
 
@@ -75,8 +75,8 @@ namespace Unity.ClusterDisplay
             public static extern IntPtr GetRenderEventFuncD3D12();
         }
 
-		/// <summary>
-        /// Unique instance of the class (Singleton). 
+        /// <summary>
+        /// Gets the unique instance of the class (Singleton). 
         /// </summary>
         public static GfxPluginQuadroSyncSystem Instance
         {
@@ -92,11 +92,11 @@ namespace Unity.ClusterDisplay
         {
         }
 
-		/// <summary>
-        /// Execute a CommandBuffer related to the EQuadroSyncRenderEvent.
+        /// <summary>
+        /// Executes a CommandBuffer related to the EQuadroSyncRenderEvent.
         /// </summary>
-		 /// <param name="id"> QuadroSync command to execute.</param>
-		 /// <param name="data"> Data bound to the executed command.</param>
+        /// <param name="id"> QuadroSync command to execute.</param>
+        /// <param name="data"> Data bound to the executed command.</param>
         public void ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent id, IntPtr data)
         {
             var cmdBuffer = new CommandBuffer();
