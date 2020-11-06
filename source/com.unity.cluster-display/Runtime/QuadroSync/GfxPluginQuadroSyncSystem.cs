@@ -24,12 +24,12 @@ namespace Unity.ClusterDisplay
         internal static class GfxPluginQuadroSyncUtilities
         {
 #if (UNITY_64 || UNITY_EDITOR_64 || PLATFORM_ARCH_64)
-            [DllImport("Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D11.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            [DllImport("GfxPluginQuadroSyncD3D11.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
 #endif
             public static extern IntPtr GetRenderEventFuncD3D11();
 
 #if (UNITY_64 || UNITY_EDITOR_64 || PLATFORM_ARCH_64)
-            [DllImport("Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D12.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            [DllImport("GfxPluginQuadroSyncD3D12.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
 #endif
             public static extern IntPtr GetRenderEventFuncD3D12();
         }
