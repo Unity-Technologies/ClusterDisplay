@@ -27,11 +27,11 @@ namespace Unity.ClusterDisplay
             internal const string LibD3D11 = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D11.dll";
             internal const string LibD3D12 = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D12.dll";
 #elif UNITY_STANDALONE
-        internal const string LibD3D11 = "GfxPluginQuadroSyncD3D11";
-        internal const string LibD3D12 = "GfxPluginQuadroSyncD3D12";
+            internal const string LibD3D11 = "GfxPluginQuadroSyncD3D11";
+            internal const string LibD3D12 = "GfxPluginQuadroSyncD3D12";
 #else
-        internal const string LibD3D11 = "";
-        internal const string LibD3D12 = ""
+            internal const string LibD3D11 = "";
+            internal const string LibD3D12 = ""
 #error "System not implemented"
 #endif
 
