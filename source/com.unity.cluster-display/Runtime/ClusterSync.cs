@@ -167,8 +167,11 @@ namespace Unity.ClusterDisplay
 
             var initList = newLoop.subSystemList[0].subSystemList.ToList();
             var indexOfPlayerUpdateTime = initList.FindIndex((x) =>
+#if UNITY_2020_2_OR_NEWER
+                x.type == typeof(UnityEngine.PlayerLoop.TimeUpdate.WaitForLastPresentationAndUpdateTime));
+#else
                 x.type == typeof(UnityEngine.PlayerLoop.Initialization.PlayerUpdateTime));
-
+#endif
             Assert.IsFalse(initList.Any((x) => x.type == this.GetType()), "Player loop already has a ClusterRendering system entry registered.");
             Assert.IsTrue(indexOfPlayerUpdateTime != -1, "Can't find insertion point in player loop for ClusterRendering system");
 
