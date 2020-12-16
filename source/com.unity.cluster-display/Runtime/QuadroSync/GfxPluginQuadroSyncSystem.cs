@@ -23,14 +23,22 @@ namespace Unity.ClusterDisplay
 
         internal static class GfxPluginQuadroSyncUtilities
         {
-#if (UNITY_64 || UNITY_EDITOR_64 || PLATFORM_ARCH_64)
-            [DllImport("Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D11.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+#if UNITY_EDITOR_WIN
+            internal const string LibD3D11 = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D11.dll";
+            internal const string LibD3D12 = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D12.dll";
+#elif UNITY_STANDALONE
+            internal const string LibD3D11 = "GfxPluginQuadroSyncD3D11";
+            internal const string LibD3D12 = "GfxPluginQuadroSyncD3D12";
+#else
+            internal const string LibD3D11 = "";
+            internal const string LibD3D12 = ""
+#error "System not implemented"
 #endif
+
+            [DllImport(LibD3D11, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFuncD3D11();
 
-#if (UNITY_64 || UNITY_EDITOR_64 || PLATFORM_ARCH_64)
-            [DllImport("Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSyncD3D12.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
-#endif
+            [DllImport(LibD3D12, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFuncD3D12();
         }
 
