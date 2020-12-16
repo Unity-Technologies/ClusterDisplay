@@ -60,13 +60,13 @@ struct UnityGraphicsD3D12PhysicalVideoMemoryControlValues // all values in bytes
 };
 
 // Should only be used on the rendering/submission thread.
-UNITY_DECLARE_INTERFACE(IUnityGraphicsD3D12v6)
+UNITY_DECLARE_INTERFACE(IUnityGraphicsD3D12v7)
 {
     ID3D12Device* (UNITY_INTERFACE_API * GetDevice)();
 
     IDXGISwapChain* (UNITY_INTERFACE_API * GetSwapChain)();
-    UINT32(UNITY_INTERFACE_API * GetSyncIntervalImpl)();
-    UINT(UNITY_INTERFACE_API * GetPresentFlagsImpl)();
+    UINT32(UNITY_INTERFACE_API * GetSyncInterval)();
+    UINT(UNITY_INTERFACE_API * GetPresentFlags)();
 
     ID3D12Fence* (UNITY_INTERFACE_API * GetFrameFence)();
     // Returns the value set on the frame fence once the current frame completes or the GPU is flushed
@@ -81,7 +81,36 @@ UNITY_DECLARE_INTERFACE(IUnityGraphicsD3D12v6)
 
     ID3D12CommandQueue* (UNITY_INTERFACE_API * GetCommandQueue)();
 
-    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromRenderBuffer)(UnityRenderBuffer * rb);
+    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromRenderBuffer)(UnityRenderBuffer rb);
+    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromNativeTexture)(UnityTextureID texture);
+
+    // Change the precondition for a specific user-defined event
+    // Should be called during initialization
+    void(UNITY_INTERFACE_API * ConfigureEvent)(int eventID, const UnityD3D12PluginEventConfig * pluginEventConfig);
+
+    bool(UNITY_INTERFACE_API * CommandRecordingState)(UnityGraphicsD3D12RecordingState * outCommandRecordingState);
+};
+UNITY_REGISTER_INTERFACE_GUID(0xA396DCE58CAC4D78ULL, 0xAFDD9B281F20B840ULL, IUnityGraphicsD3D12v7)
+
+// Should only be used on the rendering/submission thread.
+UNITY_DECLARE_INTERFACE(IUnityGraphicsD3D12v6)
+{
+    ID3D12Device* (UNITY_INTERFACE_API * GetDevice)();
+
+    ID3D12Fence* (UNITY_INTERFACE_API * GetFrameFence)();
+    // Returns the value set on the frame fence once the current frame completes or the GPU is flushed
+    UINT64(UNITY_INTERFACE_API * GetNextFrameFenceValue)();
+
+    //     Executes a given command list on a worker thread.
+    //    [Optional] Declares expected and post-execution resource states.
+    //     Returns the fence value.
+    UINT64(UNITY_INTERFACE_API * ExecuteCommandList)(ID3D12GraphicsCommandList * commandList, int stateCount, UnityGraphicsD3D12ResourceState * states);
+
+    void(UNITY_INTERFACE_API * SetPhysicalVideoMemoryControlValues)(const UnityGraphicsD3D12PhysicalVideoMemoryControlValues * memInfo);
+
+    ID3D12CommandQueue* (UNITY_INTERFACE_API * GetCommandQueue)();
+
+    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromRenderBuffer)(UnityRenderBuffer rb);
     ID3D12Resource* (UNITY_INTERFACE_API * TextureFromNativeTexture)(UnityTextureID texture);
 
     // Change the precondition for a specific user-defined event
@@ -110,7 +139,7 @@ UNITY_DECLARE_INTERFACE(IUnityGraphicsD3D12v5)
 
     ID3D12CommandQueue* (UNITY_INTERFACE_API * GetCommandQueue)();
 
-    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromRenderBuffer)(UnityRenderBuffer * rb);
+    ID3D12Resource* (UNITY_INTERFACE_API * TextureFromRenderBuffer)(UnityRenderBuffer rb);
 };
 UNITY_REGISTER_INTERFACE_GUID(0xF5C8D8A37D37BC42ULL, 0xB02DFE93B5064A27ULL, IUnityGraphicsD3D12v5)
 
