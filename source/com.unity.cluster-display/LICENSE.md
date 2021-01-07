@@ -1,4 +1,4 @@
-Cluster Display copyright © 2020 Unity Technologies
+Cluster Display copyright © 2020 Unity Technologies ApS
 
 Source code of the package is licensed under the Unity Companion License (see https://unity3d.com/legal/licenses/unity_companion_license); otherwise licensed under the Unity Package Distribution License (see https://unity3d.com/legal/licenses/Unity_Package_Distribution_License ).
 
