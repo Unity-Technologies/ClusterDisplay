@@ -7,6 +7,7 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /*
     class StitcherLayoutBuilder : ILayoutBuilder
     {
         struct MirrorParams
@@ -163,4 +164,5 @@ namespace Unity.ClusterDisplay.Graphics
             HDUtils.BlitQuad(cmd, parms.target, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
         }
     }
+    */
 }

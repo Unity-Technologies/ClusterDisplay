@@ -15,9 +15,9 @@ namespace Unity.ClusterDisplay.Graphics
     [DisallowMultipleComponent]
     public class ClusterRenderer : MonoBehaviour
     {
-        ILayoutBuilder m_TileLayoutBuilder = new TileLayoutBuilder();
-        ILayoutBuilder m_StitcherLayoutBuilder = new StitcherLayoutBuilder();
-        ILayoutBuilder m_LayoutBuilder = null;
+        // ILayoutBuilder m_TileLayoutBuilder = new TileLayoutBuilder();
+        // ILayoutBuilder m_StitcherLayoutBuilder = new StitcherLayoutBuilder();
+        // ILayoutBuilder m_LayoutBuilder = null;
         
         [SerializeField]
         ClusterRendererSettings m_Settings;
@@ -107,16 +107,16 @@ namespace Unity.ClusterDisplay.Graphics
             m_UsesStitcher = false;
             EnableKeyword = true;
             
-            SetLayoutBuilder(m_TileLayoutBuilder);
-            XRSystem.SetCustomLayout(BuildLayout);
+            // SetLayoutBuilder(m_TileLayoutBuilder);
+            // XRSystem.SetCustomLayout(BuildLayout);
         }
 
         void OnDisable()
         {
-            XRSystem.SetCustomLayout(null);
+            // XRSystem.SetCustomLayout(null);
             EnableKeyword = false;
-            m_LayoutBuilder.Dispose();
-            m_LayoutBuilder = null;
+            // m_LayoutBuilder.Dispose();
+            // m_LayoutBuilder = null;
         }
 
         void Update()
@@ -133,10 +133,13 @@ namespace Unity.ClusterDisplay.Graphics
             // switch layout builder depending on debug params
             if (m_UsesStitcher != m_DebugSettings.EnableStitcher)
             {
+                /*
                 if (m_DebugSettings.EnableStitcher)
                     SetLayoutBuilder(m_StitcherLayoutBuilder);
                 else 
                     SetLayoutBuilder(m_TileLayoutBuilder);
+                */
+                UnityEngine.Debug.LogError("Un-implemented stitcher!");
                 m_UsesStitcher = m_DebugSettings.EnableStitcher;
             }
             
@@ -146,6 +149,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_Context.GridSize, m_Context.TileIndex);
         }
 
+        /*
         void SetLayoutBuilder(ILayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
@@ -156,7 +160,9 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_LayoutBuilder != null)
                 m_LayoutBuilder.Initialize();
         }
+        */
 
+        /*
         bool BuildLayout(XRLayout layout)
         {
             var camera = layout.camera;
@@ -169,5 +175,6 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
             return m_LayoutBuilder.BuildLayout(layout, m_Context, cullingParams);
         }
+        */
     }
 }

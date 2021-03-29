@@ -5,6 +5,7 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /*
     class TileLayoutBuilder : ILayoutBuilder
     {
         static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
@@ -90,4 +91,5 @@ namespace Unity.ClusterDisplay.Graphics
             HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
     }
+    */
 }
