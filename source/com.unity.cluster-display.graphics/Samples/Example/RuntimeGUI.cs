@@ -7,13 +7,15 @@ namespace Unity.ClusterDisplay.Graphics.Example
     /// Here is an example of a simple runtime GUI displaying useful cluster display related data,
     /// for debugging/monitoring purposes
     /// </summary>
+    [RequireComponent(typeof(ClusterRenderer))]
     [ExecuteAlways]
     public class RuntimeGUI : MonoBehaviour
     {
 #pragma warning disable 649
         [Tooltip("ClusterRenderer component whose settings are to be displayed/edited.")]
         [SerializeField]
-        ClusterRenderer m_ClusterRenderer;
+        [HideInInspector] 
+        private ClusterRenderer m_ClusterRenderer;
 #pragma warning restore 649
         
         [Tooltip("Show/Hide GUI.")]
@@ -30,6 +32,11 @@ namespace Unity.ClusterDisplay.Graphics.Example
         
         float[] m_FpsBuffer = new float[k_FpsBufferSize];
         float m_FpsMovingAverage;
+
+        private void OnValidate()
+        {
+            m_ClusterRenderer = GetComponent<ClusterRenderer>();
+        }
 
         void Update()
         {

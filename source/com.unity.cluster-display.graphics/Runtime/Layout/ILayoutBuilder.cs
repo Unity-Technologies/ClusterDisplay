@@ -1,17 +1,22 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.Rendering;
+
+#if CLUSTER_DISPLAY_XR
 using UnityEngine.Rendering.HighDefinition;
+#endif
+
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    // Interface to be implemented by ClusterRenderer's custom layouts. 
-    /*
-    interface ILayoutBuilder
+    public interface ILayoutBuilder
     {
-        bool BuildLayout(XRLayout layout, ClusterRenderContext context, ScriptableCullingParameters cullingParams);
-        void Initialize();
-        void Dispose();
+        bool BuildLayout();
     }
-    */
+
+    // Interface to be implemented by ClusterRenderer's custom layouts. 
+    public interface IXRLayoutBuilder
+    {
+        bool BuildLayout(XRLayout layout);
+    }
 }
