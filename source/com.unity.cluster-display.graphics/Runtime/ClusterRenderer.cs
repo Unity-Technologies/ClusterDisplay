@@ -2,6 +2,10 @@
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 namespace Unity.ClusterDisplay.Graphics
 {
     /// <summary>
@@ -11,14 +15,78 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// We typically expect at most one instance active at a given time.
     /// </remarks>
-    [ExecuteInEditMode]
+    [ExecuteAlways]
     [DisallowMultipleComponent]
-    public class ClusterRenderer : MonoBehaviour
+    [RequireComponent(typeof(ClusterCameraController))]
+    public class ClusterRenderer : MonoBehaviour, LayoutBuilder.IClusterRenderer
     {
-        // ILayoutBuilder m_TileLayoutBuilder = new TileLayoutBuilder();
-        // ILayoutBuilder m_StitcherLayoutBuilder = new StitcherLayoutBuilder();
-        // ILayoutBuilder m_LayoutBuilder = null;
-        
+        public enum LayoutMode
+        {
+            None,
+
+            StandardTile,
+            StandardStitcher,
+
+#if CLUSTER_DISPLAY_XR
+            XRTile,
+            XRStitcher
+#endif
+        }
+
+        IXRLayoutBuilder m_TileLayoutBuilder = null;
+        IXRLayoutBuilder m_XRStitcherLayoutBuilder = null;
+        LayoutBuilder m_LayoutBuilder = null;
+
+        private LayoutMode m_CurrentLayoutMode = LayoutMode.XRTile;
+        public LayoutMode CurrentLayoutMode
+        {
+            get => m_CurrentLayoutMode;
+            set
+            {
+                if (value == m_CurrentLayoutMode)
+                    return;
+
+                if (value == LayoutMode.None)
+                {
+                    m_CurrentLayoutMode = value;
+                    SetLayoutBuilder(null);
+                    return;
+                }
+
+                LayoutBuilder newLayoutBuilder = null;
+
+                switch (value)
+                {
+                    case LayoutMode.StandardTile:
+                        newLayoutBuilder = new StandardTileLayoutBuilder(this);
+                        break;
+
+                    case LayoutMode.StandardStitcher:
+                        newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
+                        break;
+
+                    #if CLUSTER_DISPLAY_XR
+                    case LayoutMode.XRTile:
+                        newLayoutBuilder = new XRTileLayoutBuilder(this);
+                        break;
+
+                    case LayoutMode.XRStitcher:
+                        newLayoutBuilder = new XRStitcherLayoutBuilder(this);
+                        break;
+                    #endif
+
+                    default:
+                        throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{value}\".");
+                }
+
+                m_CurrentLayoutMode = value;
+                SetLayoutBuilder(newLayoutBuilder);
+            }
+        }
+
+        private ClusterCameraController m_ClusterCameraController;
+        public ClusterCameraController CameraController => m_ClusterCameraController;
+
         [SerializeField]
         ClusterRendererSettings m_Settings;
         /// <summary>
@@ -47,15 +115,15 @@ namespace Unity.ClusterDisplay.Graphics
         public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
        
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
+
         /// <summary>
         /// Camera projection before its slicing to an asymmetric projection.
         /// </summary>
-        public Matrix4x4 OriginalProjectionMatrix
-        {
-            get { return m_OriginalProjectionMatrix; }
-        }
-        
+        public Matrix4x4 OriginalProjectionMatrix => m_OriginalProjectionMatrix;
+
         ClusterRenderContext m_Context = new ClusterRenderContext();
+        public ClusterRenderContext Context => m_Context;
+
         bool m_UsesStitcher;
         
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
@@ -71,8 +139,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (enabled)
                 m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
         }
+
+        private void OnValidate() => m_ClusterCameraController = GetComponent<ClusterCameraController>();
 #endif
-        
+
         /// <summary>
         /// Controls activation of Cluster Display specific shader features.
         /// </summary>
@@ -93,6 +163,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         void Awake()
         {
+            m_TileLayoutBuilder = new XRTileLayoutBuilder(this);
+            m_XRStitcherLayoutBuilder = new XRStitcherLayoutBuilder(this);
+            m_LayoutBuilder = null;
+
             m_DebugSettings.Reset();
         }
 
@@ -106,40 +180,46 @@ namespace Unity.ClusterDisplay.Graphics
             
             m_UsesStitcher = false;
             EnableKeyword = true;
-            
-            // SetLayoutBuilder(m_TileLayoutBuilder);
-            // XRSystem.SetCustomLayout(BuildLayout);
+
+            CurrentLayoutMode = LayoutMode.XRTile;
         }
 
         void OnDisable()
         {
-            // XRSystem.SetCustomLayout(null);
+            CurrentLayoutMode = LayoutMode.None;
             EnableKeyword = false;
-            // m_LayoutBuilder.Dispose();
-            // m_LayoutBuilder = null;
         }
 
-        void Update()
+        private void LateUpdate()
         {
+            if (m_ClusterCameraController == null)
+            {
+                m_ClusterCameraController = GetComponent<ClusterCameraController>();
+                if (m_ClusterCameraController == null)
+                {
+                    enabled = false;
+                    return;
+                }
+            }
+
+            m_ClusterCameraController.SetupCameraBeforeRender();
+            if (m_ClusterCameraController.CurrentCamera == null || m_ClusterCameraController.CurrentCameraIsSceneViewCamera)
+                return;
+
             // Update aspect ratio
-            var camera = Camera.main;
-            if (camera != null)
-                camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
+            var camera = m_ClusterCameraController.CurrentCamera;
+            camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
 
             m_Context.Debug = m_Debug;
-
             EnableKeyword = m_DebugSettings.EnableKeyword;
             
             // switch layout builder depending on debug params
             if (m_UsesStitcher != m_DebugSettings.EnableStitcher)
             {
-                /*
                 if (m_DebugSettings.EnableStitcher)
-                    SetLayoutBuilder(m_StitcherLayoutBuilder);
-                else 
-                    SetLayoutBuilder(m_TileLayoutBuilder);
-                */
-                UnityEngine.Debug.LogError("Un-implemented stitcher!");
+                    CurrentLayoutMode = LayoutMode.XRStitcher;
+                else CurrentLayoutMode = LayoutMode.XRTile;
+
                 m_UsesStitcher = m_DebugSettings.EnableStitcher;
             }
             
@@ -149,32 +229,37 @@ namespace Unity.ClusterDisplay.Graphics
                     m_Context.GridSize, m_Context.TileIndex);
         }
 
-        /*
-        void SetLayoutBuilder(ILayoutBuilder builder)
+        void SetLayoutBuilder(LayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
                 m_LayoutBuilder.Dispose();
-            
             m_LayoutBuilder = builder;
-            
-            if (m_LayoutBuilder != null)
-                m_LayoutBuilder.Initialize();
-        }
-        */
 
-        /*
-        bool BuildLayout(XRLayout layout)
+            #if CLUSTER_DISPLAY_XR
+            if (m_LayoutBuilder is IXRLayoutBuilder)
+            {
+                if (m_LayoutBuilder == null)
+                {
+                    XRSystem.SetCustomLayout(null);
+                    return;
+                }
+
+                XRSystem.SetCustomLayout((m_LayoutBuilder as IXRLayoutBuilder).BuildLayout);
+            }
+
+            else
+            {
+
+            }
+            #else
+            #endif
+        }
+
+        public void OnBuildLayout(Camera camera)
         {
-            var camera = layout.camera;
-            if (!(camera != null && camera.cameraType == CameraType.Game && camera.TryGetCullingParameters(false, out var cullingParams)))
-                return false;
-
-#if UNITY_EDITOR
-            // update matrix used for drawing gizmos
+            #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
-#endif
-            return m_LayoutBuilder.BuildLayout(layout, m_Context, cullingParams);
+            #endif
         }
-        */
     }
 }
