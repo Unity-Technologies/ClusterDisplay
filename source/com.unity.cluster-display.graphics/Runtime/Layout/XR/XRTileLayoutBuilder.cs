@@ -62,6 +62,9 @@ namespace Unity.ClusterDisplay.Graphics
                 textureArraySlice = -1
             };
 
+            cullingParams.stereoProjectionMatrix = projMatrix;
+            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
+
             passInfo.multipassId = 0;
             XRPass pass = layout.CreatePass(passInfo);
             layout.AddViewToPass(viewInfo, pass);

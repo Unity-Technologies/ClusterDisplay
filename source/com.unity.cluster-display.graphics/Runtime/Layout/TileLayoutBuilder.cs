@@ -39,8 +39,6 @@ namespace Unity.ClusterDisplay.Graphics
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, m_ClusterRenderer.Context.OverscanInPixels);
 
             projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
-            cullingParameters.stereoProjectionMatrix = projectionMatrix;
-            cullingParameters.stereoViewMatrix = camera.worldToCameraMatrix;
             
             if (m_OverscannedTarget == null)
                 m_OverscannedTarget = RTHandles.Alloc(Vector2.one, 1, dimension: TextureXR.dimension, useDynamicScale: true, autoGenerateMips: false, name: "Overscanned Target");
