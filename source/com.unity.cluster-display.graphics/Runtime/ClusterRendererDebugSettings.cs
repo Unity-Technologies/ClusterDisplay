@@ -7,6 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// Those are both meant to debug the ClusterRenderer itself,
     /// and external graphics related ClusterDisplay code.
     /// </summary>
+    [System.Serializable]
     public class ClusterRendererDebugSettings
     {
         public interface IDebugSettingsReceiver
@@ -30,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             debugSettingsReceiver.ToggleClusterDisplayShaderKeywords(m_EnableKeyword);
         }
 
-        int m_TileIndexOverride;
+        [SerializeField] int m_TileIndexOverride;
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).
         /// </summary>
@@ -40,7 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
             set { m_TileIndexOverride = value; }
         }
 
-        ClusterRenderer.LayoutMode m_LayoutMode;
+        [SerializeField] ClusterRenderer.LayoutMode m_LayoutMode;
         public ClusterRenderer.LayoutMode CurrentLayoutMode
         {
             get => m_LayoutMode;
@@ -60,7 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// meant to compare original and ported-to-cluster-display shaders,
         /// in order to observe cluster-display specific artefacts.
         /// </summary>
-        bool m_EnableKeyword;
+        [SerializeField] bool m_EnableKeyword;
         public bool EnableKeyword
         {
             get => m_EnableKeyword;
@@ -78,7 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Allows direct control of the viewport subsection.
         /// </summary>
-        Rect m_ViewportSubsection;
+        [SerializeField] Rect m_ViewportSubsection;
         public Rect ViewportSubsection
         {
             get => m_ViewportSubsection;
@@ -89,14 +90,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// Allows the viewport subsection to be directly controlled from the inspector,
         /// instead of being inferred from tile index and grid size.
         /// </summary>
-        bool m_UseDebugViewportSubsection;
+        [SerializeField] bool m_UseDebugViewportSubsection;
         public bool UseDebugViewportSubsection
         {
             set { m_UseDebugViewportSubsection = value; }
             get { return m_UseDebugViewportSubsection; }
         }
 
-        Vector2 m_ScaleBiasTexOffset;
+        [SerializeField] Vector2 m_ScaleBiasTexOffset;
         /// <summary>
         /// Allows visualization of overscanned pixels in the final render.
         /// </summary>

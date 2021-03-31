@@ -79,7 +79,11 @@ namespace Unity.ClusterDisplay.Graphics
             var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
             if (numTiles <= 0)
                 return false;
-            
+
+            var camera = layout.camera;
+            if (camera == null || camera.cameraType != CameraType.Game || !camera.TryGetCullingParameters(false, out var cullingParams))
+                return false;
+
             // Whenever we build a new layout we expect previously submitted mirror params to have been consumed.
             Assert.IsTrue(m_MirrorParams.Count == 0);
             Assert.IsTrue(m_HasClearedMirrorView);
@@ -106,10 +110,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_OverscannedRect = new Rect(0, 0, 
                 Screen.width + 2 * m_ClusterRenderer.Context.OverscanInPixels, 
                 Screen.height + 2 * m_ClusterRenderer.Context.OverscanInPixels);
-
-            var camera = layout.camera;
-            if (!(camera != null && camera.cameraType == CameraType.Game && camera.TryGetCullingParameters(false, out var cullingParams)))
-                return false;
             
             for (var i = 0; i != numTiles; ++i)
             {

@@ -76,8 +76,9 @@ namespace Unity.ClusterDisplay.Graphics
         private LayoutBuilder m_LayoutBuilder = null;
 
         [SerializeField] ClusterRendererSettings m_Settings = new ClusterRendererSettings();
+        [SerializeField] ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
+
         ClusterCameraController m_ClusterCameraController;
-        ClusterRendererDebugSettings m_DebugSettings;
         ClusterRenderContext m_Context;
 
         public ClusterCameraController CameraController => m_ClusterCameraController;
@@ -139,14 +140,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            m_ClusterCameraController = new ClusterCameraController();
-            RegisterLateUpdateReciever(m_ClusterCameraController);
+            m_LayoutBuilder = null;
 
-            m_DebugSettings = new ClusterRendererDebugSettings();
+            m_ClusterCameraController = new ClusterCameraController();
             m_Context = new ClusterRenderContext();
 
-            m_LayoutBuilder = null;
-            m_DebugSettings.Reset();
+            RegisterLateUpdateReciever(m_ClusterCameraController);
             m_DebugSettings.RegisterDebugSettingsReceiver(this);
 
             m_Context.Settings = m_Settings;
@@ -188,11 +187,11 @@ namespace Unity.ClusterDisplay.Graphics
         {
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
-            if (m_ClusterCameraController.CameraContext == null || m_ClusterCameraController.CameraContextIsSceneViewCamera)
-                return;
-
             if (onPreLateUpdate != null)
                 onPreLateUpdate();
+
+            if (m_ClusterCameraController.CameraContext == null || m_ClusterCameraController.CameraContextIsSceneViewCamera)
+                return;
 
             // Update aspect ratio
             var camera = m_ClusterCameraController.CameraContext;

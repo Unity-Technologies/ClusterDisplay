@@ -21,6 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
+            Shader.SetGlobalMatrix("_ClusterDisplayParams", camera.projectionMatrix);
 
             return true;
         }

@@ -40,11 +40,9 @@ namespace Unity.ClusterDisplay.Graphics
         public bool BuildLayout(XRLayout layout)
         {
             var camera = layout.camera;
+
             if (!SetupLayout(camera, out var cullingParams, out var projMatrix, out var viewportSubsection))
                 return false;
-
-            cullingParams.stereoProjectionMatrix = projMatrix;
-            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
 
             var passInfo = new XRPassCreateInfo
             {
@@ -70,6 +68,7 @@ namespace Unity.ClusterDisplay.Graphics
             layout.AddViewToPass(viewInfo, pass);
 
             onReceiveLayout(camera);
+
             return true;
         }
     }
