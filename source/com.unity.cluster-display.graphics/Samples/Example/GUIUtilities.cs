@@ -64,7 +64,22 @@ namespace Unity.ClusterDisplay.Graphics.Example
         {
             settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
             settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
-            settings.EnableStitcher = GUILayout.Toggle(settings.EnableStitcher, "Enable Stitcher");
+
+            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.CurrentLayoutMode);
+            string[] layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
+            GUILayout.Label("Layout Modes");
+            for (int i = 0; i < layoutModes.Length; i++)
+            {
+                if (layoutModes[i] == currentLayoutMode)
+                {
+                    if (GUILayout.Button($"{currentLayoutMode} (Active)")) {}
+                    continue;
+                }
+
+                if (GUILayout.Button(layoutModes[i]))
+                    settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+            }
+
             settings.UseDebugViewportSubsection = GUILayout.Toggle(settings.UseDebugViewportSubsection, "Debug Viewport Section");
 
             if (settings.UseDebugViewportSubsection)
