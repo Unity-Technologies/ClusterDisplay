@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Assertions;
+using UnityEngine.Rendering;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -115,6 +116,7 @@ namespace Unity.ClusterDisplay.Graphics
         public ClusterRenderContext Context => m_Context;
 
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
+        private bool m_ShaderKeywordState = false;
         
 #if UNITY_EDITOR
         // we need a clip-to-world space conversion for gizmo
@@ -150,40 +152,70 @@ namespace Unity.ClusterDisplay.Graphics
             m_Context.Settings = m_Settings;
             m_Context.DebugSettings = m_DebugSettings;
 
-            StartWaitForEndOfFrameCoroutine();
+            // StartWaitForEndOfFrameCoroutine();
+
+            RenderPipelineManager.beginCameraRendering += OnPreRenderCamera;
+            RenderPipelineManager.endCameraRendering += OnPostRenderCamera;
+        }
+
+        private void OnDisable()
+        {
+            RenderPipelineManager.beginCameraRendering -= OnPreRenderCamera;
+            RenderPipelineManager.endCameraRendering -= OnPostRenderCamera;
+        }
+
+        private void OnPreRenderCamera (ScriptableRenderContext context, Camera camera)
+        {
+            if (camera.cameraType != CameraType.Game)
+            {
+                ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
+                return;
+            }
+
+            ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
+        }
+
+        private void OnPostRenderCamera (ScriptableRenderContext context, Camera camera)
+        {
+            if (camera != m_ClusterCameraController.CameraContext)
+                return;
+
+            if (onEndOfFrame != null)
+                onEndOfFrame();
         }
 
         private void LateUpdate()
         {
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
+            if (m_ClusterCameraController.CameraContext == null || m_ClusterCameraController.CameraContextIsSceneViewCamera)
+                return;
+
             if (onPreLateUpdate != null)
                 onPreLateUpdate();
 
-            if (m_ClusterCameraController.CameraContext != null && !m_ClusterCameraController.CameraContextIsSceneViewCamera)
+            // Update aspect ratio
+            var camera = m_ClusterCameraController.CameraContext;
+            camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
+
+            m_Context.Debug = m_Debug;
+            
+            // Reset debug viewport subsection
+            if (m_Debug && !m_DebugSettings.UseDebugViewportSubsection)
+                m_DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
+                    m_Context.GridSize, m_Context.TileIndex);
+
+            if (!LayoutModeIsXR(m_DebugSettings.CurrentLayoutMode))
             {
-                // Update aspect ratio
-                var camera = m_ClusterCameraController.CameraContext;
-                camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
-
-                m_Context.Debug = m_Debug;
-                
-                // Reset debug viewport subsection
-                if (m_Debug && !m_DebugSettings.UseDebugViewportSubsection)
-                    m_DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
-                        m_Context.GridSize, m_Context.TileIndex);
-
-                if (!LayoutModeIsXR(m_DebugSettings.CurrentLayoutMode))
-                {
-                    var standardLayoutBuilder = m_LayoutBuilder as ILayoutBuilder;
-                    standardLayoutBuilder.BuildLayout();
-                }
+                var standardLayoutBuilder = m_LayoutBuilder as ILayoutBuilder;
+                standardLayoutBuilder.BuildLayout();
             }
 
             if (onPostLateUpdate != null)
                 onPostLateUpdate();
         }
 
+        /*
         private Coroutine m_WaitForEndOfFrameCoroutine;
         private void StartWaitForEndOfFrameCoroutine()
         {
@@ -198,11 +230,14 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 var wait = new WaitForEndOfFrame();
                 yield return wait;
-
-                if (onEndOfFrame != null)
-                    onEndOfFrame();
+                OnEndFrame();
             }
         }
+
+        private void OnEndFrame ()
+        {
+        }
+        */
 
         void SetLayoutBuilder(LayoutBuilder builder)
         {
@@ -274,9 +309,14 @@ namespace Unity.ClusterDisplay.Graphics
             SetLayoutBuilder(newLayoutBuilder);
         }
 
-        public void OnEnableKeywords(bool keywordsEnabled)
+        public void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (keywordsEnabled)
+            if (keywordEnabled == m_ShaderKeywordState)
+                return;
+
+            m_ShaderKeywordState = keywordEnabled;
+
+            if (keywordEnabled)
                 Shader.EnableKeyword(k_ShaderKeyword);
             else Shader.DisableKeyword(k_ShaderKeyword);
         }
