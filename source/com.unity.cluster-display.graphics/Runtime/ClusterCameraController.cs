@@ -13,7 +13,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         private Camera m_ContextCamera;
         private Matrix4x4 m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.identity;
-        private Matrix4x4 m_CachedNonClusterDisplayCullingMatrix = Matrix4x4.identity;
 
         private Camera m_PreviousContextCamera;
 
@@ -76,7 +75,6 @@ namespace Unity.ClusterDisplay.Graphics
                 m_ContextCamera = camera;
 
                 m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
-                m_CachedNonClusterDisplayCullingMatrix = m_ContextCamera.cullingMatrix;
 
                 if (onCameraChange != null)
                     onCameraChange(m_PreviousContextCamera, m_ContextCamera);

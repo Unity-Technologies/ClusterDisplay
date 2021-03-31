@@ -43,6 +43,9 @@ namespace Unity.ClusterDisplay.Graphics
             if (!SetupLayout(camera, out var cullingParams, out var projMatrix, out var viewportSubsection))
                 return false;
 
+            cullingParams.stereoProjectionMatrix = projMatrix;
+            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
+
             var passInfo = new XRPassCreateInfo
             {
                 multipassId = 0,
@@ -61,9 +64,6 @@ namespace Unity.ClusterDisplay.Graphics
                     viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize),
                 textureArraySlice = -1
             };
-
-            cullingParams.stereoProjectionMatrix = projMatrix;
-            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
 
             passInfo.multipassId = 0;
             XRPass pass = layout.CreatePass(passInfo);
