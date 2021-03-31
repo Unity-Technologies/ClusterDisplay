@@ -8,7 +8,7 @@ using UnityEngine.Rendering.HighDefinition;
 namespace Unity.ClusterDisplay.Graphics
 {
 #if CLUSTER_DISPLAY_XR
-    class XRStitcherLayoutBuilder : XRLayoutBuilder, IXRLayoutBuilder
+    class XRStitcherLayoutBuilder : StitcherLayoutBuilder, IXRLayoutBuilder
     {
         struct MirrorParams
         {
@@ -25,6 +25,8 @@ namespace Unity.ClusterDisplay.Graphics
         RTHandle[] m_Targets;
         bool m_HasClearedMirrorView = true;
         Rect m_OverscannedRect;
+
+        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRStitcher;
 
         public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         
@@ -47,7 +49,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Targets = null;
         }
         
-        void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
+        public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
         {
             Assert.IsFalse(m_MirrorParams.Count == 0);
 
@@ -164,7 +166,7 @@ namespace Unity.ClusterDisplay.Graphics
                 });
             }
 
-            m_ClusterRenderer.OnBuildLayout(camera);
+            onReceiveLayout(camera);
             return true;
         }
     }

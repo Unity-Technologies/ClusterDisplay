@@ -9,6 +9,27 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class ClusterRendererDebugSettings
     {
+        public interface IDebugSettingsReceiver
+        {
+            void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
+            void OnEnableKeywords(bool keywordsEnabled);
+        }
+
+        public delegate void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
+        public delegate void OnEnableKeywords(bool keywordsEnabled);
+
+        private OnChangeLayoutMode onChangeLayoutMode;
+        private OnEnableKeywords onEnableKeywords;
+
+        public void RegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
+        {
+            onChangeLayoutMode += debugSettingsReceiver.OnChangeLayoutMode;
+            onEnableKeywords += debugSettingsReceiver.OnEnableKeywords;
+
+            debugSettingsReceiver.OnChangeLayoutMode(m_LayoutMode);
+            debugSettingsReceiver.OnEnableKeywords(m_EnableKeyword);
+        }
+
         int m_TileIndexOverride;
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).
@@ -19,19 +40,21 @@ namespace Unity.ClusterDisplay.Graphics
             set { m_TileIndexOverride = value; }
         }
 
-        bool m_EnableStitcher;
-        /// <summary>
-        /// Enables the Stitcher, a custom layout providing a local preview of the total cluster output.
-        /// </summary>
-        /// <remarks>
-        /// As the Stitcher will render all tiles and compose them, a significant performance cost can be expected.
-        /// </remarks>
-        public bool EnableStitcher
+        ClusterRenderer.LayoutMode m_LayoutMode;
+        public ClusterRenderer.LayoutMode CurrentLayoutMode
         {
-            get => m_EnableStitcher;
-            set { m_EnableStitcher = value; }
+            get => m_LayoutMode;
+            set
+            {
+                if (value == m_LayoutMode)
+                    return;
+
+                m_LayoutMode = value;
+                if (onChangeLayoutMode != null)
+                    onChangeLayoutMode(m_LayoutMode);
+            }
         }
-        
+
         /// <summary>
         /// Enable/Disable ClusterDisplay shader features, such as Global Screen Space,
         /// meant to compare original and ported-to-cluster-display shaders,
@@ -41,7 +64,15 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword
         {
             get => m_EnableKeyword;
-            set { m_EnableKeyword = value; }
+            set
+            {
+                if (value == m_EnableKeyword)
+                    return;
+
+                m_EnableKeyword = value;
+                if (onEnableKeywords != null)
+                    onEnableKeywords(m_EnableKeyword);
+            }
         }
         
         /// <summary>
@@ -80,7 +111,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Reset()
         {
             m_TileIndexOverride = 0;
-            m_EnableStitcher = false;
+            CurrentLayoutMode = ClusterRenderer.LayoutMode.XRTile;
             m_EnableKeyword = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;
