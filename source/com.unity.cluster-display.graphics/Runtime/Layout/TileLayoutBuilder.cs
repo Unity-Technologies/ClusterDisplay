@@ -20,12 +20,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected bool SetupLayout (Camera camera, out ScriptableCullingParameters cullingParameters, out Matrix4x4 projectionMatrix, out Rect viewportSubsection)
         {
-            cullingParameters = default(ScriptableCullingParameters);
-            projectionMatrix = Matrix4x4.identity;
-            viewportSubsection = Rect.zero;
-
             if (camera.cameraType != CameraType.Game || !camera.TryGetCullingParameters(false, out cullingParameters))
+            {
+                cullingParameters = default(ScriptableCullingParameters);
+                projectionMatrix = Matrix4x4.identity;
+                viewportSubsection = Rect.zero;
                 return false;
+            }
 
             m_DebugScaleBiasTexOffset = m_ClusterRenderer.Context.DebugScaleBiasTexOffset;
             m_OverscanInPixels = m_ClusterRenderer.Context.OverscanInPixels;
@@ -42,6 +43,9 @@ namespace Unity.ClusterDisplay.Graphics
             
             if (m_OverscannedTarget == null)
                 m_OverscannedTarget = RTHandles.Alloc(Vector2.one, 1, dimension: TextureXR.dimension, useDynamicScale: true, autoGenerateMips: false, name: "Overscanned Target");
+
+            cullingParameters.stereoProjectionMatrix = projectionMatrix;
+            cullingParameters.stereoViewMatrix = camera.worldToCameraMatrix;
 
             return true;
         }
