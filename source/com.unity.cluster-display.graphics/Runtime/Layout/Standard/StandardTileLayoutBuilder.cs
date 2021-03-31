@@ -8,14 +8,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
-        RTHandle m_OverscannedTarget;
-        Rect m_OverscannedRect;
-        int m_OverscanInPixels;
-
-        // Allow overscanned pixels visualization for debugging purposes.
-        Vector2 m_DebugScaleBiasTexOffset;
-
-
         public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
@@ -26,7 +18,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!SetupLayout(camera, out var cullingParams, out var projMatrix, out var viewportSubsection))
                 return false;
+
             camera.projectionMatrix = projMatrix;
+            camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
             return true;
         }
