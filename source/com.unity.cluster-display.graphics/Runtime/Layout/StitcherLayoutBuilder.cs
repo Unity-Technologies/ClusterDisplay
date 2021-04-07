@@ -19,36 +19,62 @@ namespace Unity.ClusterDisplay.Graphics
                     m_Targets[i] = null;
                 }
             }
+
             m_Targets = null;
         }
 
-        protected Matrix4x4 SetupMatrices (Camera camera, Rect viewportSubsection) => GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
-        protected bool SetupLayout(
+        protected void PollRTs ()
+        {
+            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
+            if (numTiles <= 0)
+                return;
+
+            if (m_Targets != null && m_Targets.Length == numTiles)
+                return;
+            m_Targets = new RTHandle[numTiles];
+        }
+
+        protected void PollRT (int i, Rect m_OverscannedRect)
+        {
+            bool resized = m_Targets[i] != null && 
+                (m_Targets[i].rt.width != (int)m_OverscannedRect.x || 
+                m_Targets[i].rt.height != (int)m_OverscannedRect.y);
+
+            if (m_Targets[i] == null || resized)
+            {
+                if (m_Targets[i] != null)
+                    RTHandles.Release(m_Targets[i]);
+
+                m_Targets[i] = RTHandles.Alloc(
+                    width: (int)m_OverscannedRect.width,
+                    height: (int)m_OverscannedRect.height,
+                    slices: 1,
+                    dimension: TextureXR.dimension,
+                    useDynamicScale: false,
+                    autoGenerateMips: false,
+                    enableRandomWrite: true,
+                    name: $"Tile Target {i}");
+            }
+        }
+
+        protected Matrix4x4 CalculateProjectionMatrix (Camera camera, Rect viewportSubsection) => GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+        protected void CalculateStitcherLayout(
             Camera camera,
             int i,
-            out Rect overscannedRect,
-            out Rect viewportSubsection)
+            ref ScriptableCullingParameters cullingParams,
+            out Rect percentageViewportSubsection,
+            out Rect viewportSubsection,
+            out Matrix4x4 projectionMatrix)
         {
-            if (!camera.TryGetCullingParameters(false, out var cullingParams))
-            {
-                overscannedRect = Rect.zero;
-                viewportSubsection = Rect.zero;
-                return false;
-            }
-
-            overscannedRect = new Rect(0, 0, 
-                Screen.width + 2 * m_ClusterRenderer.Context.OverscanInPixels, 
-                Screen.height + 2 * m_ClusterRenderer.Context.OverscanInPixels);
-
-            var originalViewportSubsection = m_ClusterRenderer.Context.GetViewportSubsection(i);
-            viewportSubsection = originalViewportSubsection;
+            percentageViewportSubsection = m_ClusterRenderer.Context.GetViewportSubsection(i);
+            viewportSubsection = percentageViewportSubsection;
             if (m_ClusterRenderer.Context.PhysicalScreenSize != Vector2Int.zero && m_ClusterRenderer.Context.Bezel != Vector2Int.zero)
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, m_ClusterRenderer.Context.PhysicalScreenSize, m_ClusterRenderer.Context.Bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, m_ClusterRenderer.Context.OverscanInPixels);
 
-            var croppedSize = new Vector2(m_OverscannedRect.width - 2 * m_ClusterRenderer.Context.OverscanInPixels, m_OverscannedRect.height - 2 * m_ClusterRenderer.Context.OverscanInPixels);
-            var targetSize = new Vector2(m_OverscannedRect.width, m_OverscannedRect.height);
-            return true;
+            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+            cullingParams.stereoProjectionMatrix = projectionMatrix;
+            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
         }
     }
 }

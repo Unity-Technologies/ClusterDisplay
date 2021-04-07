@@ -12,23 +12,34 @@ namespace Unity.ClusterDisplay.Graphics
         public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         public override void Dispose() {}
 
+        private RTHandle m_OverscannedTarget;
+        private Rect m_OverscannedRect;
+
         private RTHandle m_PresentTarget;
+
         public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
 
-            if (!SetupLayout(camera, out var cullingParams, out var projMatrix, out var viewportSubsection))
+            if (!SetupTiledLayout(
+                camera, 
+                ref m_OverscannedTarget,
+                out var _, 
+                out var projMatrix, 
+                out var _,
+                out m_OverscannedRect))
                 return;
 
             m_ClusterRenderer.CameraController.CameraContext.enabled = false;
+
+            Shader.SetGlobalMatrix("_ClusterDisplayParams", projMatrix);
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
+
             m_ClusterRenderer.CameraController.CameraContextRenderTexture = m_OverscannedTarget;
 
-            Shader.SetGlobalMatrix("_ClusterDisplayParams", camera.projectionMatrix);
-
-            CalculateParameters(out var croppedSize, out var overscannedSize, out var scaleBias);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
             bool resized = m_PresentTarget != null && (m_PresentTarget.rt.width != (int)croppedSize.x || m_PresentTarget.rt.height != (int)croppedSize.y);
             if (m_PresentTarget == null || resized)
             {
@@ -57,7 +68,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEndRender(ScriptableRenderContext context, Camera camera)
         {
-            CalculateParameters(out var croppedSize, out var overscannedSize, out var scaleBias);
+            var scaleBias = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset); ;
 
             var cmd = CommandBufferPool.Get("BlitFinal");
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
@@ -65,7 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetRenderTarget(m_PresentTarget);
             cmd.ClearRenderTarget(true, true, Color.black);
 
-            HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBias, new Vector4(1, 1, 0, 0), 0, true);
+            HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBias, k_ScaleBiasRT, 0, true);
             context.ExecuteCommandBuffer(cmd);
         }
     }

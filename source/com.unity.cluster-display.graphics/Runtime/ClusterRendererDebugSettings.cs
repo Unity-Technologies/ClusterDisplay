@@ -118,7 +118,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Reset()
         {
             m_TileIndexOverride = 0;
-            CurrentLayoutMode = ClusterRenderer.LayoutMode.XRTile;
+            CurrentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
             m_EnableKeyword = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;

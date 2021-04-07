@@ -19,13 +19,14 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // Assumes one mirror view callback execution per pass.
-        Queue<MirrorParams> m_MirrorParams = new Queue<MirrorParams>();
-        bool m_HasClearedMirrorView = true;
+        private Queue<MirrorParams> m_MirrorParams = new Queue<MirrorParams>();
+        private bool m_HasClearedMirrorView = true;
+        private Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRStitcher;
-
         public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
         {
+            m_HasClearedMirrorView = true;
         }
         
         public override void Dispose()
@@ -71,42 +72,22 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Whenever we build a new layout we expect previously submitted mirror params to have been consumed.
             Assert.IsTrue(m_MirrorParams.Count == 0);
-            Assert.IsTrue(m_HasClearedMirrorView);
+            // Assert.IsTrue(m_HasClearedMirrorView);
             m_HasClearedMirrorView = false;
-            
-            // Generate/re-generate targets if needed.
-            if (m_Targets == null || m_Targets.Length != numTiles)
-            {
-                ReleaseTargets();
-                m_Targets = new RTHandle[numTiles];
-                
-                for (var i = 0; i != numTiles; ++i)
-                {
-                    m_Targets[i] = RTHandles.Alloc(
-                        Vector2.one, 1, 
-                        dimension: TextureXR.dimension, 
-                        useDynamicScale: false, 
-                        autoGenerateMips: false,                     
-                        enableRandomWrite: true,
-                        name: $"Tile Target {i}");
-                }
-            }
-            
-            m_OverscannedRect = new Rect(0, 0, 
-                Screen.width + 2 * m_ClusterRenderer.Context.OverscanInPixels, 
-                Screen.height + 2 * m_ClusterRenderer.Context.OverscanInPixels);
+
+            PollRTs();
+            m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             
             for (var i = 0; i != numTiles; ++i)
             {
-                var originalViewportSubsection = m_ClusterRenderer.Context.GetViewportSubsection(i);
-                var viewportSubsection = originalViewportSubsection;
-                if (m_ClusterRenderer.Context.PhysicalScreenSize != Vector2Int.zero && m_ClusterRenderer.Context.Bezel != Vector2Int.zero)
-                    viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, m_ClusterRenderer.Context.PhysicalScreenSize, m_ClusterRenderer.Context.Bezel);
-                viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, m_ClusterRenderer.Context.OverscanInPixels);
-
-                var projMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
-                cullingParams.stereoProjectionMatrix = projMatrix;
-                cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
+                PollRT(i, m_OverscannedRect);
+                CalculateStitcherLayout(
+                    camera, 
+                    i, 
+                    ref cullingParams, 
+                    out var percentageViewportSubsection, 
+                    out var viewportSubsection, 
+                    out var projectionMatrix);
                
                 var passInfo = new XRPassCreateInfo
                 {
@@ -120,24 +101,21 @@ namespace Unity.ClusterDisplay.Graphics
                 var viewInfo = new XRViewCreateInfo
                 {
                     viewMatrix = camera.worldToCameraMatrix,
-                    projMatrix = projMatrix,
+                    projMatrix = projectionMatrix,
                     viewport = m_OverscannedRect,
                     clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
-                        viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize),
+                        viewportSubsection, 
+                        m_ClusterRenderer.Context.GlobalScreenSize, 
+                        m_ClusterRenderer.Context.GridSize),
                     textureArraySlice = -1
                 };
                 
                 XRPass pass = layout.CreatePass(passInfo);
                 layout.AddViewToPass(viewInfo, pass);
 
-                // Blit so that overscanned pixels are cropped out.
-                var croppedSize = new Vector2(m_OverscannedRect.width - 2 * m_ClusterRenderer.Context.OverscanInPixels, m_OverscannedRect.height - 2 * m_ClusterRenderer.Context.OverscanInPixels);
-                var targetSize = new Vector2(m_Targets[i].rt.width, m_Targets[i].rt.height);
-                var scaleBiasTex = new Vector4(
-                    croppedSize.x / targetSize.x, croppedSize.y / targetSize.y, // scale
-                    m_ClusterRenderer.Context.OverscanInPixels / targetSize.x, m_ClusterRenderer.Context.OverscanInPixels / targetSize.y); // offset
+                var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+                var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
                 
-                // Account for bezel when compositing
                 var scaleBiasRT = new Vector4(
                     1 - (m_ClusterRenderer.Context.Bezel.x * 2) / croppedSize.x, 1 - (m_ClusterRenderer.Context.Bezel.y * 2) / croppedSize.y, // scale
                     m_ClusterRenderer.Context.Bezel.x / croppedSize.x, m_ClusterRenderer.Context.Bezel.y / croppedSize.y); // offset
@@ -146,12 +124,11 @@ namespace Unity.ClusterDisplay.Graphics
                 {
                     scaleBiasTex = scaleBiasTex,
                     scaleBiasRT = scaleBiasRT,
-                    viewportSubsection = originalViewportSubsection,
+                    viewportSubsection = percentageViewportSubsection,
                     target = m_Targets[i]
                 });
             }
 
-            onReceiveLayout(camera);
             return true;
         }
 
@@ -163,13 +140,12 @@ namespace Unity.ClusterDisplay.Graphics
             camera.targetTexture = null;
         }
 
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
-        {
-        }
+        public override void OnEndRender(ScriptableRenderContext context, Camera camera) {}
 
         public override void LateUpdate()
         {
-            m_ClusterRenderer.CameraController.CameraContext.enabled = true;
+            if (m_ClusterRenderer.CameraController.CameraContext != null)
+                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
         }
     }
 #endif

@@ -12,9 +12,10 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Dispose() {}
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
-        private RTHandle m_PresentTarget;
 
-        private Vector3[] targetScaleBias;
+        private RTHandle m_PresentTarget;
+        private Vector3[] m_TargetScaleBias = null;
+        private Rect m_OverscannedRect;
 
         public override void LateUpdate ()
         {
@@ -29,55 +30,33 @@ namespace Unity.ClusterDisplay.Graphics
             if (numTiles <= 0)
                 return;
 
-            if (m_Targets == null || m_Targets.Length != numTiles)
-            {
-                m_Targets = new RTHandle[numTiles];
-                targetScaleBias = new Vector3[numTiles];
-            }
+            if (!camera.TryGetCullingParameters(false, out var cullingParams))
+                return;
+
+            PollRTs();
+            if (m_TargetScaleBias == null || m_TargetScaleBias.Length != numTiles)
+                m_TargetScaleBias = new Vector3[numTiles];
+
+            m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
 
             for (var i = 0; i != numTiles; ++i)
             {
-                SetupLayout(camera, i, out var overscannedSize, out var viewportSubsection);
+                CalculateStitcherLayout(
+                    camera, 
+                    i, 
+                    ref cullingParams, 
+                    out var _, 
+                    out var _, 
+                    out var projectionMatrix);
 
-                bool resized = m_Targets[i] != null && (m_Targets[i].rt.width != (int)overscannedSize.x || m_Targets[i].rt.height != (int)overscannedSize.y);
-                if (m_Targets[i] == null || resized)
-                {
-                    if (m_Targets[i] != null)
-                        RTHandles.Release(m_Targets[i]);
+                PollRT(i, m_OverscannedRect);
 
-                    targetScaleBias[i] = k_ScaleBiasRT;
-                    m_Targets[i] = RTHandles.Alloc(
-                        width: (int)overscannedSize.width,
-                        height: (int)overscannedSize.height,
-                        slices: 1,
-                        dimension: TextureXR.dimension,
-                        useDynamicScale: false,
-                        autoGenerateMips: false,
-                        enableRandomWrite: true,
-                        name: $"Tile Target {i}");
-                }
-            }
+                if (m_Targets[i] != null)
+                    camera.targetTexture = m_Targets[i];
 
-            for (var i = 0; i != numTiles; ++i)
-            {
-                var target = m_Targets[i];
-                if (target != null)
-                    camera.targetTexture = target;
+                Shader.SetGlobalMatrix("_ClusterDisplayParams", projectionMatrix);
 
-                SetupLayout(camera, i, out var overscannedRect, out var viewportSubsection);
-
-                var overscanInPixels = m_ClusterRenderer.Context.OverscanInPixels;
-                var croppedSize = new Vector2(overscannedRect.width - 2 * overscanInPixels, overscannedRect.height - 2 * overscanInPixels);
-                var overscannedSize = new Vector2(overscannedRect.width, overscannedRect.height);
-                var scaleBias = new Vector4(
-                    croppedSize.x / overscannedSize.x, croppedSize.y / overscannedSize.y, // scale
-                    overscanInPixels / overscannedSize.x, overscanInPixels / overscannedSize.y); // offset
-                scaleBias.z += m_DebugScaleBiasTexOffset.x;
-                scaleBias.w += m_DebugScaleBiasTexOffset.y;
-
-                targetScaleBias[i] = scaleBias;
-
-                var projectionMatrix = SetupMatrices(camera, viewportSubsection);
+                m_TargetScaleBias[i] = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
@@ -124,27 +103,28 @@ namespace Unity.ClusterDisplay.Graphics
             if (numTiles <= 0)
                 return;
 
-            CalculateParameters(out var croppedSize, out var overscannedSize, out var scaleBias);
+            CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
             var cmd = CommandBufferPool.Get("BlitFinal");
 
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
             cmd.SetRenderTarget(m_PresentTarget);
-            // var viewport = new Rect(0, 0, croppedSize.x, croppedSize.y);
-            // cmd.SetViewport(viewport);
             cmd.ClearRenderTarget(true, true, Color.yellow);
 
             for (var i = 0; i != numTiles; ++i)
             {
-                Rect viewport = GraphicsUtil.TileIndexToViewportSection(m_ClusterRenderer.Context.GridSize, i);
+                if (m_Targets[i] == null)
+                    continue;
 
-                viewport.x *= Screen.width;
-                viewport.y *= Screen.height;
-                viewport.width *= Screen.width;
-                viewport.height *= Screen.height;
+                Rect croppedViewport = GraphicsUtil.TileIndexToViewportSection(m_ClusterRenderer.Context.GridSize, i);
 
-                SetupLayout(camera, i, out var overscannedRect, out var viewportSubsection);
-                cmd.SetViewport(viewport);
-                HDUtils.BlitQuad(cmd, m_Targets[i], targetScaleBias[i], new Vector4(1, 1, 0, 0), 0, true);
+                croppedViewport.x *= croppedSize.x;
+                croppedViewport.y *= croppedSize.y;
+                croppedViewport.width *= croppedSize.x;
+                croppedViewport.height *= croppedSize.y;
+
+                cmd.SetViewport(croppedViewport);
+                HDUtils.BlitQuad(cmd, m_Targets[i], m_TargetScaleBias[i], k_ScaleBiasRT, 0, true);
             }
 
             context.ExecuteCommandBuffer(cmd);
