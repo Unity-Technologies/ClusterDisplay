@@ -10,7 +10,9 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRTile;
 
-        public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
+        {
+        }
 
         public override void Dispose()
         {
@@ -23,17 +25,8 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetRenderTarget(rt);
             cmd.SetViewport(viewport);
             cmd.ClearRenderTarget(true, true, Color.yellow);
-            
-            // Blit so that overscanned pixels are cropped out.
-            var croppedSize = new Vector2(m_OverscannedRect.width - 2 * m_OverscanInPixels, m_OverscannedRect.height - 2 * m_OverscanInPixels);
-            var overscannedSize = new Vector2(m_OverscannedTarget.rt.width, m_OverscannedTarget.rt.height);
-            var scaleBiasTex = new Vector4(
-                croppedSize.x / overscannedSize.x, croppedSize.y / overscannedSize.y, // scale
-                m_OverscanInPixels / overscannedSize.x, m_OverscanInPixels / overscannedSize.y); // offset
-            // Debug: allow visualization of overscanned pixels.
-            scaleBiasTex.z += m_DebugScaleBiasTexOffset.x;
-            scaleBiasTex.w += m_DebugScaleBiasTexOffset.y;
-            
+
+            CalculateParameters(out var croppedSize, out var overscannedSize, out var scaleBiasTex);
             HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
@@ -52,14 +45,18 @@ namespace Unity.ClusterDisplay.Graphics
                 renderTarget = m_OverscannedTarget,
                 customMirrorView = BuildMirrorView
             };
-            
+
+            var clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
+                viewportSubsection, 
+                m_ClusterRenderer.Context.GlobalScreenSize, 
+                m_ClusterRenderer.Context.GridSize);
+
             var viewInfo = new XRViewCreateInfo
             {
                 viewMatrix = camera.worldToCameraMatrix,
                 projMatrix = projMatrix,
                 viewport = m_OverscannedRect,
-                clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
-                    viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize),
+                clusterDisplayParams = clusterDisplayParams,
                 textureArraySlice = -1
             };
 
@@ -70,6 +67,22 @@ namespace Unity.ClusterDisplay.Graphics
             onReceiveLayout(camera);
 
             return true;
+        }
+
+        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
+        {
+            if (camera != m_ClusterRenderer.CameraController.CameraContext)
+                return;
+            camera.targetTexture = null;
+        }
+
+        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
+        {
+        }
+
+        public override void LateUpdate()
+        {
+            m_ClusterRenderer.CameraController.CameraContext.enabled = true;
         }
     }
 #endif

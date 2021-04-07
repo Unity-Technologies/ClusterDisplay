@@ -7,14 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
-        protected static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
-
         protected RTHandle m_OverscannedTarget;
-        protected Rect m_OverscannedRect;
-        protected int m_OverscanInPixels;
-
-        // Allow overscanned pixels visualization for debugging purposes.
-        protected Vector2 m_DebugScaleBiasTexOffset;
 
         protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
@@ -41,8 +34,25 @@ namespace Unity.ClusterDisplay.Graphics
 
             projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
             
-            if (m_OverscannedTarget == null)
-                m_OverscannedTarget = RTHandles.Alloc(Vector2.one, 1, dimension: TextureXR.dimension, useDynamicScale: true, autoGenerateMips: false, name: "Overscanned Target");
+            bool resized = m_OverscannedTarget != null && (m_OverscannedTarget.rt.width != (int)m_OverscannedRect.width || m_OverscannedTarget.rt.height != (int)m_OverscannedRect.height);
+            if (m_OverscannedTarget == null || resized)
+            {
+                if (m_OverscannedTarget != null)
+                {
+                    if (camera.targetTexture != null && camera.targetTexture == m_OverscannedTarget)
+                        camera.targetTexture = null;
+                    RTHandles.Release(m_OverscannedTarget);
+                }
+
+                m_OverscannedTarget = RTHandles.Alloc(
+                    width: (int)m_OverscannedRect.width, 
+                    height: (int)m_OverscannedRect.height, 
+                    slices: 1, 
+                    dimension: TextureXR.dimension, 
+                    useDynamicScale: true, 
+                    autoGenerateMips: false, 
+                    name: "Overscanned Target");
+            }
 
             cullingParameters.stereoProjectionMatrix = projectionMatrix;
             cullingParameters.stereoViewMatrix = camera.worldToCameraMatrix;

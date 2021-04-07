@@ -18,17 +18,15 @@ namespace Unity.ClusterDisplay.Graphics
             public Rect viewportSubsection;
         }
 
-        static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
-
         // Assumes one mirror view callback execution per pass.
         Queue<MirrorParams> m_MirrorParams = new Queue<MirrorParams>();
-        RTHandle[] m_Targets;
         bool m_HasClearedMirrorView = true;
-        Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRStitcher;
 
-        public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
+        {
+        }
         
         public override void Dispose()
         {
@@ -36,19 +34,6 @@ namespace Unity.ClusterDisplay.Graphics
             ReleaseTargets();
         }
 
-        void ReleaseTargets()
-        {
-            if (m_Targets != null)
-            {
-                for (var i = 0; i != m_Targets.Length; ++i)
-                {
-                    RTHandles.Release(m_Targets[i]);
-                    m_Targets[i] = null;
-                }
-            }
-            m_Targets = null;
-        }
-        
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
         {
             Assert.IsFalse(m_MirrorParams.Count == 0);
@@ -168,6 +153,23 @@ namespace Unity.ClusterDisplay.Graphics
 
             onReceiveLayout(camera);
             return true;
+        }
+
+        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
+        {
+            if (camera != m_ClusterRenderer.CameraController.CameraContext)
+                return;
+
+            camera.targetTexture = null;
+        }
+
+        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
+        {
+        }
+
+        public override void LateUpdate()
+        {
+            m_ClusterRenderer.CameraController.CameraContext.enabled = true;
         }
     }
 #endif

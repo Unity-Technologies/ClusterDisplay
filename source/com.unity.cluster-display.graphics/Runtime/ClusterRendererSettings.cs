@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
     public sealed class ClusterRendererSettings
     {
         [SerializeField]
-        Vector2Int m_GridSize;
+        Vector2Int m_GridSize = new Vector2Int(2, 2);
         
         /// <summary>
         /// Cluster Grid size expressed in tiles.

@@ -10,10 +10,16 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    public interface ICameraEventReceiver
+    {
+        void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
+    }
+
+    [System.Serializable]
     public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
     {
         private Camera m_ContextCamera;
-        private Matrix4x4 m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.identity;
+        [HideInInspector][SerializeField] private Matrix4x4 m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.identity;
 
         private Camera m_PreviousContextCamera;
 
@@ -23,52 +29,46 @@ namespace Unity.ClusterDisplay.Graphics
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
 
-        public delegate void OnChangeCameraProjectionMatrix(Camera camera, Matrix4x4 newProjectionMatrix);
-        private OnChangeCameraProjectionMatrix onChangeCameraProjectionMatrix;
-
-        public delegate void OnResizedRT(RenderTexture renderTexture);
-        private OnResizedRT onResizedRT;
-
-        [SerializeField] private RenderTexture m_RenderTexture;
-
-        public ClusterCameraController ()
+        private Presenter m_Presenter;
+        public Presenter Presenter
         {
-            m_RenderTexture = new RenderTexture(Screen.width, Screen.height, 8);
-            m_RenderTexture.name = "Pre-PresentBlitRT";
-
-            onCameraChange += (Camera previousCamera, Camera nextCamera) =>
+            get => m_Presenter;
+            set
             {
-                if (nextCamera == null)
-                    return;
+                if (m_Presenter != null)
+                {
+                    UnRegisterCameraEventReceiver(m_Presenter);
+                    m_Presenter.Dispose();
+                }
 
-            };
-
-            onResizedRT += (RenderTexture renderTexture) =>
-            {
-            };
-
-            onResizedRT(m_RenderTexture);
-        }
-
-        public bool CameraIsSceneViewCamera (Camera camera)
-        {
-             return camera != null && SceneView.sceneViews.ToArray()
-                .Select(sceneView => (sceneView as SceneView).camera)
-                .Any(sceneViewCamera => sceneViewCamera == camera);
-        }
-
-        private void SetupCameraBeforeRender ()
-        {
-            Camera camera = Camera.current;
-            if (camera == null)
-            {
-                camera = Camera.main;
-                if (camera == null)
-                    return;
+                m_Presenter = value;
+                if (m_Presenter != null)
+                    RegisterCameraEventReceiver(m_Presenter);
             }
+        }
 
+        [SerializeField] private RTHandle m_RT;
+        public RTHandle CameraContextRenderTexture
+        {
+            get => m_RT;
+            set => m_Presenter.TargetRT = value;
+        }
+
+        public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
+        public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+
+        public void OnBeginRender (ScriptableRenderContext context, Camera camera)
+        {
             if (camera.cameraType != CameraType.Game)
                 return;
+
+            if (m_ContextCamera != null)
+            {
+                m_ContextCamera.projectionMatrix = m_CachedNonClusterDisplayProjectionMatrix;
+                m_ContextCamera.cullingMatrix = m_ContextCamera.projectionMatrix * m_ContextCamera.worldToCameraMatrix;
+            }
+
+            m_Presenter.PollCamera(m_ContextCamera);
 
             if (camera != m_ContextCamera)
             {
@@ -84,33 +84,26 @@ namespace Unity.ClusterDisplay.Graphics
             else
             {
                 if (m_CachedNonClusterDisplayProjectionMatrix != m_ContextCamera.projectionMatrix)
-                {
                     m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
-                    if (onChangeCameraProjectionMatrix != null)
-                        onChangeCameraProjectionMatrix(m_ContextCamera, m_ContextCamera.projectionMatrix);
-                }
             }
         }
 
-        public void OnPreLateUpdate()
+        public bool CameraIsSceneViewCamera (Camera camera)
         {
-            SetupCameraBeforeRender();
-            if (CameraContext != null)
-            {
-            }
+             return camera != null && SceneView.sceneViews.ToArray()
+                .Select(sceneView => (sceneView as SceneView).camera)
+                .Any(sceneViewCamera => sceneViewCamera == camera);
         }
 
-        public void OnPostLateUpdate()
+        public void OnEndRender(ScriptableRenderContext context, Camera camera)
         {
-        }
-
-        public void OnEndOfFrame()
-        {
-            if (m_ContextCamera == null)
+            if (m_ContextCamera == null || camera != m_ContextCamera)
                 return;
 
+            /*
             m_ContextCamera.projectionMatrix = m_CachedNonClusterDisplayProjectionMatrix;
             m_ContextCamera.cullingMatrix = m_ContextCamera.projectionMatrix * m_ContextCamera.worldToCameraMatrix;
+            */
         }
     }
 }
