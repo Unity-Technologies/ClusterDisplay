@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
                 if (m_Targets[i] != null)
                     camera.targetTexture = m_Targets[i];
 
-                Shader.SetGlobalMatrix("_ClusterDisplayParams", projectionMatrix);
+                UploadClusterDisplayParams(projectionMatrix);
 
                 m_TargetScaleBias[i] = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
                 camera.projectionMatrix = projectionMatrix;

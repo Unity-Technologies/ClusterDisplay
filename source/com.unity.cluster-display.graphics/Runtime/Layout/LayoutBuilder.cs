@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
     public abstract class LayoutBuilder : ClusterRenderer.IClusterRendererEventReceiver
     {
         public static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
+        public static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
         protected readonly IClusterRenderer m_ClusterRenderer;
 
         public abstract ClusterRenderer.LayoutMode LayoutMode { get; }
@@ -21,6 +22,7 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void Dispose();
 
         protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;
+        public void UploadClusterDisplayParams (Matrix4x4 projectionMatrix) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, projectionMatrix);
 
         protected Rect CalculateOverscannedRect (int width, int height)
         {
