@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
 
 #if UNITY_EDITOR
 using System.Linq;
@@ -22,6 +23,8 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private Matrix4x4 m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.identity;
 
         private Camera m_PreviousContextCamera;
+        private bool previousAsymmetricProjectionSetting;
+        private bool previousCustomFrameSettingsToggled;
 
         public Camera CameraContext => m_ContextCamera;
         public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(CameraContext);
@@ -54,13 +57,37 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_Presenter.TargetRT = value;
         }
 
+
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
         public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+
+        private void PollFrameSettings ()
+        {
+            HDAdditionalCameraData additionalCameraData;
+            if (m_PreviousContextCamera != null && m_PreviousContextCamera.TryGetComponent(out additionalCameraData))
+            {
+                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = previousAsymmetricProjectionSetting;
+                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, previousAsymmetricProjectionSetting);
+                additionalCameraData.customRenderingSettings = previousCustomFrameSettingsToggled;
+            }
+
+            if (m_ContextCamera != null && m_ContextCamera.TryGetComponent(out additionalCameraData))
+            {
+                previousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
+                previousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
+
+                additionalCameraData.customRenderingSettings = true;
+                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
+                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
+            }
+        }
 
         public void OnBeginRender (ScriptableRenderContext context, Camera camera)
         {
             if (camera.cameraType != CameraType.Game)
                 return;
+
+            PollFrameSettings();
 
             if (m_ContextCamera != null)
             {
