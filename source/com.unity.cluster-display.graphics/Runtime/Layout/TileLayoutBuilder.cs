@@ -15,7 +15,9 @@ namespace Unity.ClusterDisplay.Graphics
             out Rect viewportSubsection,
             out Rect overscannedRect)
         {
-            if (camera.cameraType != CameraType.Game || !camera.TryGetCullingParameters(false, out cullingParameters))
+            if (!ValidGridSize(out var numTiles) || 
+                camera.cameraType != CameraType.Game || 
+                !camera.TryGetCullingParameters(false, out cullingParameters))
             {
                 cullingParameters = default(ScriptableCullingParameters);
                 targetRT = null;

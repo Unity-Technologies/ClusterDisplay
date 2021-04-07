@@ -25,8 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected void PollRTs ()
         {
-            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
-            if (numTiles <= 0)
+            if (!ValidGridSize(out var numTiles))
                 return;
 
             if (m_Targets != null && m_Targets.Length == numTiles)

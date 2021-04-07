@@ -20,6 +20,8 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void OnEndRender(ScriptableRenderContext context, Camera camera);
         public abstract void Dispose();
 
+        protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;
+
         protected Rect CalculateOverscannedRect (int width, int height)
         {
             return new Rect(0, 0, 

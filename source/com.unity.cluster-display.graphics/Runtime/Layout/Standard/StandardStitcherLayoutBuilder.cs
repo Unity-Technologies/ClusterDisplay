@@ -26,8 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.enabled)
                 camera.enabled = false;
 
-            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
-            if (numTiles <= 0)
+            if (!ValidGridSize(out var numTiles))
                 return;
 
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
@@ -69,8 +68,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
 
-            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
-            if (numTiles <= 0)
+            if (!ValidGridSize(out var numTiles))
                 return;
 
             {
@@ -99,8 +97,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
 
-            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
-            if (numTiles <= 0)
+            if (!ValidGridSize(out var numTiles))
                 return;
 
             CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
