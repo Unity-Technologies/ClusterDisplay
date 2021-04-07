@@ -11,8 +11,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public interface ILayoutBuilder
     {
-        bool BuildLayout();
-        void BuildMirrorView();
     }
 
     // Interface to be implemented by ClusterRenderer's custom layouts. 

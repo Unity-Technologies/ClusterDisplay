@@ -27,15 +27,13 @@ namespace Unity.ClusterDisplay.Graphics
         LayoutBuilder.ILayoutReceiver, 
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
-        public delegate void OnPreLateUpdate();
-        public delegate void OnPostLateUpdate();
-        public delegate void OnEndOfFrame();
+        public delegate void OnBeginRender(ScriptableRenderContext context, Camera camera);
+        public delegate void OnEndRender(ScriptableRenderContext context, Camera camera);
 
         public interface IClusterRendererEventReceiver
         {
-            void OnPreLateUpdate();
-            void OnPostLateUpdate();
-            void OnEndOfFrame();
+            void OnBeginRender(ScriptableRenderContext context, Camera camera);
+            void OnEndRender(ScriptableRenderContext context, Camera camera);
         }
 
         public enum LayoutMode
@@ -69,43 +67,27 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        private OnPreLateUpdate onPreLateUpdate;
-        private OnPostLateUpdate onPostLateUpdate;
-        private OnEndOfFrame onEndOfFrame;
+        private OnBeginRender onBeginRender;
+        private OnEndRender onEndRender;
+
+        public long frameIndex = 0;
 
         private LayoutBuilder m_LayoutBuilder = null;
 
-        [SerializeField] ClusterRendererSettings m_Settings = new ClusterRendererSettings();
-        [SerializeField] ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
-
-        ClusterCameraController m_ClusterCameraController;
-        ClusterRenderContext m_Context;
+        [SerializeField] ClusterRenderContext m_Context = new ClusterRenderContext();
+        ClusterCameraController m_ClusterCameraController = new ClusterCameraController();
 
         public ClusterCameraController CameraController => m_ClusterCameraController;
 
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
-        public ClusterRendererSettings Settings
-        {
-            get => m_Settings;
-            set => m_Settings = value;
-        }
-        
-        bool m_Debug = false;
-        /// <summary>
-        /// Enable Debug mode.
-        /// </summary>
-        public bool Debug
-        {
-            set { m_Debug = value; }
-            get { return m_Debug; }
-        }
+        public ClusterRendererSettings Settings => m_Context.Settings;
 
         /// <summary>
         /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
         /// </summary>
-        public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
+        public ClusterRendererDebugSettings DebugSettings => m_Context.DebugSettings;
        
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
 
@@ -131,27 +113,24 @@ namespace Unity.ClusterDisplay.Graphics
         }
 #endif
 
-        private void RegisterLateUpdateReciever (IClusterRendererEventReceiver clusterRendererEventReceiver)
+        private void RegisterRendererEvents (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
-            onPreLateUpdate += clusterRendererEventReceiver.OnPreLateUpdate;
-            onPostLateUpdate += clusterRendererEventReceiver.OnPostLateUpdate;
-            onEndOfFrame += clusterRendererEventReceiver.OnEndOfFrame;
+            onBeginRender += clusterRendererEventReceiver.OnBeginRender;
+            onEndRender += clusterRendererEventReceiver.OnEndRender;
+        }
+
+        private void UnRegisterLateUpdateReciever (IClusterRendererEventReceiver clusterRendererEventReceiver)
+        {
+            onBeginRender -= clusterRendererEventReceiver.OnBeginRender;
+            onEndRender -= clusterRendererEventReceiver.OnEndRender;
         }
 
         void OnEnable()
         {
             m_LayoutBuilder = null;
 
-            m_ClusterCameraController = new ClusterCameraController();
-            m_Context = new ClusterRenderContext();
-
-            RegisterLateUpdateReciever(m_ClusterCameraController);
-            m_DebugSettings.RegisterDebugSettingsReceiver(this);
-
-            m_Context.Settings = m_Settings;
-            m_Context.DebugSettings = m_DebugSettings;
-
-            // StartWaitForEndOfFrameCoroutine();
+            RegisterRendererEvents(m_ClusterCameraController);
+            m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginCameraRendering += OnPreRenderCamera;
             RenderPipelineManager.endCameraRendering += OnPostRenderCamera;
@@ -159,6 +138,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnDisable()
         {
+            UnRegisterLateUpdateReciever(m_ClusterCameraController);
+            m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
+
             RenderPipelineManager.beginCameraRendering -= OnPreRenderCamera;
             RenderPipelineManager.endCameraRendering -= OnPostRenderCamera;
         }
@@ -172,6 +154,21 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
+
+            onBeginRender(context, camera);
+            if (camera != m_ClusterCameraController.CameraContext)
+                return;
+
+            Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
+
+            // Update aspect ratio
+            camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
+
+            // Reset debug viewport subsection
+            if (m_Context.Debug && !m_Context.DebugSettings.UseDebugViewportSubsection)
+                m_Context.DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
+                    m_Context.GridSize, m_Context.TileIndex);
+            // m_LayoutBuilder.OnBeginRender(context, camera);
         }
 
         private void OnPostRenderCamera (ScriptableRenderContext context, Camera camera)
@@ -179,77 +176,31 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera != m_ClusterCameraController.CameraContext)
                 return;
 
-            if (onEndOfFrame != null)
-                onEndOfFrame();
+            if (onEndRender != null)
+                onEndRender(context, camera);
+
+            frameIndex++;
         }
 
-        private void LateUpdate()
-        {
-            Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
-
-            if (onPreLateUpdate != null)
-                onPreLateUpdate();
-
-            if (m_ClusterCameraController.CameraContext == null || m_ClusterCameraController.CameraContextIsSceneViewCamera)
-                return;
-
-            // Update aspect ratio
-            var camera = m_ClusterCameraController.CameraContext;
-            camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
-
-            m_Context.Debug = m_Debug;
-            
-            // Reset debug viewport subsection
-            if (m_Debug && !m_DebugSettings.UseDebugViewportSubsection)
-                m_DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
-                    m_Context.GridSize, m_Context.TileIndex);
-
-            if (!LayoutModeIsXR(m_DebugSettings.CurrentLayoutMode))
-            {
-                var standardLayoutBuilder = m_LayoutBuilder as ILayoutBuilder;
-                standardLayoutBuilder.BuildLayout();
-            }
-
-            if (onPostLateUpdate != null)
-                onPostLateUpdate();
-        }
-
-        /*
-        private Coroutine m_WaitForEndOfFrameCoroutine;
-        private void StartWaitForEndOfFrameCoroutine()
-        {
-            if (m_WaitForEndOfFrameCoroutine != null)
-                StopCoroutine(m_WaitForEndOfFrameCoroutine);
-            m_WaitForEndOfFrameCoroutine = StartCoroutine(WaitForEndOfFrameCoroutine());
-        }
-
-        private IEnumerator WaitForEndOfFrameCoroutine ()
-        {
-            while (Application.isPlaying)
-            {
-                var wait = new WaitForEndOfFrame();
-                yield return wait;
-                OnEndFrame();
-            }
-        }
-
-        private void OnEndFrame ()
-        {
-        }
-        */
-
+        private void LateUpdate() => m_LayoutBuilder.LateUpdate();
         void SetLayoutBuilder(LayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
+            {
+                UnRegisterLateUpdateReciever(m_LayoutBuilder);
                 m_LayoutBuilder.Dispose();
+            }
+
             m_LayoutBuilder = builder;
 
             if (m_LayoutBuilder != null)
             {
+                RegisterRendererEvents(m_LayoutBuilder);
                 m_LayoutBuilder.RegisterOnReceiveLayout(this);
+                // onBeginRender -= m_LayoutBuilder.OnBeginRender;
 
 #if CLUSTER_DISPLAY_XR
-                if (LayoutModeIsXR(m_DebugSettings.CurrentLayoutMode))
+                if (LayoutModeIsXR(m_Context.DebugSettings.CurrentLayoutMode))
                     XRSystem.SetCustomLayout((m_LayoutBuilder as IXRLayoutBuilder).BuildLayout);
 
                 else
@@ -285,19 +236,23 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 case LayoutMode.StandardTile:
                     newLayoutBuilder = new StandardTileLayoutBuilder(this);
+                    CameraController.Presenter = new StandardHDRPPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
                     newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
+                    CameraController.Presenter = new StandardHDRPPresenter();
                     break;
 
                 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
+                    CameraController.Presenter = new XRHHDRPPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
+                    CameraController.Presenter = new XRHHDRPPresenter();
                     break;
                 #endif
 

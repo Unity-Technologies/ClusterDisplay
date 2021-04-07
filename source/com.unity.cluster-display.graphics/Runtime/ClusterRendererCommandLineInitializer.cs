@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_ClusterRenderer = GetComponent<ClusterRenderer>();
                 
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
-                m_ClusterRenderer.Debug = true;
+                m_ClusterRenderer.Context.Debug = true;
 
             Vector2Int gridSize;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out gridSize))

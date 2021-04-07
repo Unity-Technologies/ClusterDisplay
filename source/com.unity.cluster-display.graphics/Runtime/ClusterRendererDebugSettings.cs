@@ -31,6 +31,12 @@ namespace Unity.ClusterDisplay.Graphics
             debugSettingsReceiver.ToggleClusterDisplayShaderKeywords(m_EnableKeyword);
         }
 
+        public void UnRegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
+        {
+            onChangeLayoutMode -= debugSettingsReceiver.OnChangeLayoutMode;
+            onEnableKeywords -= debugSettingsReceiver.ToggleClusterDisplayShaderKeywords;
+        }
+
         [SerializeField] int m_TileIndexOverride;
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).

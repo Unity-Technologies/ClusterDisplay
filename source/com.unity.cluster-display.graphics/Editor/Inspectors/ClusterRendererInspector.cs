@@ -19,9 +19,9 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 settings.Bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.Bezel);
                 settings.OverscanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.OverscanInPixels, 0, 256);
 
-                adapter.Debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.Debug);
+                adapter.Context.Debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.Context.Debug);
                 
-                if (adapter.Debug)
+                if (adapter.Context.Debug)
                     EditDebugSettings(adapter.DebugSettings);
                 
                 if (check.changed)
