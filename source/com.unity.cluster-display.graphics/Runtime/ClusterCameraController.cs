@@ -87,7 +87,8 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.cameraType != CameraType.Game)
                 return;
 
-            PollFrameSettings();
+            if (!camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
+                return;
 
             if (m_ContextCamera != null)
             {
@@ -101,6 +102,8 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 m_PreviousContextCamera = m_ContextCamera;
                 m_ContextCamera = camera;
+
+                PollFrameSettings();
 
                 m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
 
