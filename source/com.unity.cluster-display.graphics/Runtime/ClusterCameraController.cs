@@ -87,9 +87,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.cameraType != CameraType.Game)
                 return;
 
-            if (!camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
-                return;
-
             if (m_ContextCamera != null)
             {
                 m_ContextCamera.projectionMatrix = m_CachedNonClusterDisplayProjectionMatrix;
@@ -100,15 +97,20 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (camera != m_ContextCamera)
             {
-                m_PreviousContextCamera = m_ContextCamera;
-                m_ContextCamera = camera;
+                if (camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
+                {
+                    m_PreviousContextCamera = m_ContextCamera;
+                    m_ContextCamera = camera;
 
-                PollFrameSettings();
+                    PollFrameSettings();
 
-                m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
+                    m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
 
-                if (onCameraChange != null)
-                    onCameraChange(m_PreviousContextCamera, m_ContextCamera);
+                    if (onCameraChange != null)
+                        onCameraChange(m_PreviousContextCamera, m_ContextCamera);
+                }
+
+                else Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
             }
 
             else
