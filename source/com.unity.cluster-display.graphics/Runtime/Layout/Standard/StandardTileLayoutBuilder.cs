@@ -31,8 +31,6 @@ namespace Unity.ClusterDisplay.Graphics
                 out m_OverscannedRect))
                 return;
 
-            m_ClusterRenderer.CameraController.CameraContext.enabled = false;
-
             UploadClusterDisplayParams(projMatrix);
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
@@ -62,6 +60,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_ClusterRenderer.CameraController.CameraContext == null)
                 return;
+
+            if (m_ClusterRenderer.CameraController.CameraContext.enabled)
+                m_ClusterRenderer.CameraController.CameraContext.enabled = false;
 
             m_ClusterRenderer.CameraController.CameraContext.Render();
         }

@@ -19,12 +19,13 @@ namespace Unity.ClusterDisplay.Graphics
     [System.Serializable]
     public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
     {
-        private Camera m_ContextCamera;
+        [HideInInspector][SerializeField] private Camera m_ContextCamera;
         [HideInInspector][SerializeField] private Matrix4x4 m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.identity;
 
-        private Camera m_PreviousContextCamera;
-        private bool previousAsymmetricProjectionSetting;
-        private bool previousCustomFrameSettingsToggled;
+        [HideInInspector][SerializeField] private Camera m_PreviousContextCamera;
+
+        [HideInInspector][SerializeField] private bool previousAsymmetricProjectionSetting;
+        [HideInInspector][SerializeField] private bool previousCustomFrameSettingsToggled;
 
         public Camera CameraContext => m_ContextCamera;
         public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(CameraContext);
@@ -122,20 +123,27 @@ namespace Unity.ClusterDisplay.Graphics
 
         public bool CameraIsSceneViewCamera (Camera camera)
         {
-             return camera != null && SceneView.sceneViews.ToArray()
+#if UNITY_EDITOR
+            return camera != null && SceneView.sceneViews.ToArray()
                 .Select(sceneView => (sceneView as SceneView).camera)
                 .Any(sceneViewCamera => sceneViewCamera == camera);
+#else
+        return false;
+#endif
         }
 
-        public void OnEndRender(ScriptableRenderContext context, Camera camera)
-        {
-            if (m_ContextCamera == null || camera != m_ContextCamera)
-                return;
+        public void OnEndRender(ScriptableRenderContext context, Camera camera) {}
 
-            /*
-            m_ContextCamera.projectionMatrix = m_CachedNonClusterDisplayProjectionMatrix;
-            m_ContextCamera.cullingMatrix = m_ContextCamera.projectionMatrix * m_ContextCamera.worldToCameraMatrix;
-            */
+        public void OnSetup()
+        {
+            if (m_ContextCamera != null)
+            {
+                m_ContextCamera.enabled = true;
+            }
+        }
+
+        public void OnTearDown()
+        {
         }
     }
 }
