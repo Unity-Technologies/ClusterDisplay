@@ -38,7 +38,12 @@ namespace Unity.ClusterDisplay.Graphics
             m_ClusterRenderer.CameraController.CameraContextRenderTexture = m_OverscannedTarget;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
-            bool resized = m_PresentTarget != null && (m_PresentTarget.rt.width != (int)croppedSize.x || m_PresentTarget.rt.height != (int)croppedSize.y);
+
+            bool resized = 
+                m_PresentTarget != null && 
+                (m_PresentTarget.rt.width != (int)croppedSize.x || 
+                m_PresentTarget.rt.height != (int)croppedSize.y);
+
             if (m_PresentTarget == null || resized)
             {
                 if (m_PresentTarget != null)

@@ -133,10 +133,10 @@ namespace Unity.ClusterDisplay.Graphics
             onEndRender -= clusterRendererEventReceiver.OnEndRender;
         }
 
-        private bool setup = false;
+        private bool m_Setup = false;
         private void Setup ()
         {
-            if (setup)
+            if (m_Setup)
                 return;
 
             m_LayoutBuilder = null;
@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (onSetup != null)
                 onSetup();
 
-            setup = true;
+            m_Setup = true;
         }
 
         private void TearDown ()
@@ -163,6 +163,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (onTearDown != null)
                 onTearDown();
+
+            m_Setup = false;
         }
 
         private void Awake() => Setup();
