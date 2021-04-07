@@ -62,8 +62,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public bool BuildLayout(XRLayout layout)
         {
-            var numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y;
-            if (numTiles <= 0)
+            if (!ValidGridSize(out var numTiles))
                 return false;
 
             var camera = layout.camera;
