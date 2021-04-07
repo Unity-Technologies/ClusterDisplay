@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_ClusterRenderer.CameraController.CameraContext.enabled = false;
 
-            Shader.SetGlobalMatrix("_ClusterDisplayParams", projMatrix);
+            UploadClusterDisplayParams(projMatrix);
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
