@@ -40,9 +40,3 @@ This repository contains in-development packages, tests and test projects, as we
 The Cluster Display packages are currently experimental and must be installed manually. [See the documentation for installing a package from a local folder](https://docs.unity3d.com/Manual/upm-ui-local.html).
 
 It is recommended to use [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for development.
-
-### NVIDIA Quadro Sync Swap Barrier support
-
-NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
-
-See [GfxPluginQuadroSyncCallbacks.cs](source/com.unity.cluster-display/Runtime/QuadroSync/GfxPluginQuadroSyncCallbacks.cs) for example usage.
