@@ -24,7 +24,6 @@ namespace Unity.ClusterDisplay.Graphics
     public class ClusterRenderer : 
         MonoBehaviour, 
         IClusterRenderer, 
-        LayoutBuilder.ILayoutReceiver, 
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
         public delegate void OnBeginRender(ScriptableRenderContext context, Camera camera);
@@ -58,9 +57,11 @@ namespace Unity.ClusterDisplay.Graphics
                 case LayoutMode.StandardStitcher:
                     return false;
 
+#if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                 case LayoutMode.XRStitcher:
                     return true;
+#endif
 
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
@@ -180,9 +181,19 @@ namespace Unity.ClusterDisplay.Graphics
                 onEndRender(context, camera);
 
             frameIndex++;
+#if UNITY_EDITOR
+            m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
+#endif
         }
 
-        private void LateUpdate() => m_LayoutBuilder.LateUpdate();
+        private void LateUpdate()
+        {
+            if (m_LayoutBuilder == null)
+                return;
+
+            m_LayoutBuilder.LateUpdate();
+        }
+
         void SetLayoutBuilder(LayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
@@ -192,34 +203,20 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             m_LayoutBuilder = builder;
-
             if (m_LayoutBuilder != null)
             {
                 RegisterRendererEvents(m_LayoutBuilder);
-                m_LayoutBuilder.RegisterOnReceiveLayout(this);
-                // onBeginRender -= m_LayoutBuilder.OnBeginRender;
-
-#if CLUSTER_DISPLAY_XR
+#if !CLUSTER_DISPLAY_XR
+            }
+#else
                 if (LayoutModeIsXR(m_Context.DebugSettings.CurrentLayoutMode))
                     XRSystem.SetCustomLayout((m_LayoutBuilder as IXRLayoutBuilder).BuildLayout);
-
-                else
-                {
-                    XRSystem.SetCustomLayout(null);
-                }
-#else
-#endif
+                else XRSystem.SetCustomLayout(null);
                 return;
             }
 
             XRSystem.SetCustomLayout(null);
-        }
-
-        public void OnBuildLayout(Camera camera)
-        {
-            #if UNITY_EDITOR
-            m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
-            #endif
+#endif
         }
 
         public void OnChangeLayoutMode(LayoutMode newLayoutMode)
@@ -244,7 +241,7 @@ namespace Unity.ClusterDisplay.Graphics
                     CameraController.Presenter = new StandardHDRPPresenter();
                     break;
 
-                #if CLUSTER_DISPLAY_XR
+#if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
                     CameraController.Presenter = new XRHHDRPPresenter();
@@ -254,7 +251,7 @@ namespace Unity.ClusterDisplay.Graphics
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
                     CameraController.Presenter = new XRHHDRPPresenter();
                     break;
-                #endif
+#endif
 
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");

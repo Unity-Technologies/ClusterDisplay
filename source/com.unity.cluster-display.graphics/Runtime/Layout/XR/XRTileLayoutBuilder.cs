@@ -10,9 +10,10 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRTile;
 
-        public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
-        {
-        }
+        private RTHandle m_OverscannedTarget;
+        private Rect m_OverscannedRect;
+
+        public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
         public override void Dispose()
         {
@@ -26,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetViewport(viewport);
             cmd.ClearRenderTarget(true, true, Color.yellow);
 
-            CalculateParameters(out var croppedSize, out var overscannedSize, out var scaleBiasTex);
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
             HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
@@ -34,8 +35,17 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var camera = layout.camera;
 
-            if (!SetupLayout(camera, out var cullingParams, out var projMatrix, out var viewportSubsection))
+            if (!SetupTiledLayout(
+                camera, 
+                ref m_OverscannedTarget,
+                out var cullingParams, 
+                out var projMatrix, 
+                out var viewportSubsection,
+                out m_OverscannedRect))
                 return false;
+
+            cullingParams.stereoProjectionMatrix = projMatrix;
+            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
 
             var passInfo = new XRPassCreateInfo
             {
@@ -64,25 +74,19 @@ namespace Unity.ClusterDisplay.Graphics
             XRPass pass = layout.CreatePass(passInfo);
             layout.AddViewToPass(viewInfo, pass);
 
-            onReceiveLayout(camera);
-
             return true;
         }
 
-        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
-        {
-            if (camera != m_ClusterRenderer.CameraController.CameraContext)
-                return;
-            camera.targetTexture = null;
-        }
-
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
-        {
-        }
+        public override void OnBeginRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndRender(ScriptableRenderContext context, Camera camera) {}
 
         public override void LateUpdate()
         {
-            m_ClusterRenderer.CameraController.CameraContext.enabled = true;
+            if (m_ClusterRenderer.CameraController.CameraContext != null)
+            {
+                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
+                m_ClusterRenderer.CameraController.CameraContext.targetTexture = null;
+            }
         }
     }
 #endif
