@@ -100,11 +100,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ValidGridSize(out var numTiles))
                 return;
 
-            CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
-            var cmd = CommandBufferPool.Get("BlitFinal");
-
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
+
+            var cmd = CommandBufferPool.Get("BlitFinal");
             cmd.SetRenderTarget(m_PresentTarget);
             cmd.ClearRenderTarget(true, true, Color.yellow);
 

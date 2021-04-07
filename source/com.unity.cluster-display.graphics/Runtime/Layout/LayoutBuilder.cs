@@ -46,5 +46,13 @@ namespace Unity.ClusterDisplay.Graphics
 
             return scaleBias;
         }
+
+        public void OnSetup()
+        {
+        }
+
+        public void OnTearDown()
+        {
+        }
     }
 }
