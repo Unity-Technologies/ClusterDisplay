@@ -24,8 +24,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         [HideInInspector][SerializeField] private Camera m_PreviousContextCamera;
 
-        [HideInInspector][SerializeField] private bool previousAsymmetricProjectionSetting;
-        [HideInInspector][SerializeField] private bool previousCustomFrameSettingsToggled;
+        [HideInInspector][SerializeField] private bool m_PreviousAsymmetricProjectionSetting;
+        [HideInInspector][SerializeField] private bool m_PreviousCustomFrameSettingsToggled;
+        [HideInInspector][SerializeField] private HDAdditionalCameraData.AntialiasingMode m_PreviousAntiAliasingMode;
 
         public Camera CameraContext => m_ContextCamera;
         public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(CameraContext);
@@ -58,32 +59,61 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_Presenter.TargetRT = value;
         }
 
+        public bool CameraIsSceneViewCamera (Camera camera)
+        {
+#if UNITY_EDITOR
+            return camera != null && SceneView.sceneViews.ToArray()
+                .Select(sceneView => (sceneView as SceneView).camera)
+                .Any(sceneViewCamera => sceneViewCamera == camera);
+#else
+        return false;
+#endif
+        }
 
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
         public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+
+        public void OnSetup()
+        {
+            if (m_ContextCamera != null)
+            {
+                m_ContextCamera.enabled = true;
+            }
+        }
+
+        public void OnTearDown()
+        {
+        }
 
         private void PollFrameSettings ()
         {
             HDAdditionalCameraData additionalCameraData;
             if (m_PreviousContextCamera != null && m_PreviousContextCamera.TryGetComponent(out additionalCameraData))
             {
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = previousAsymmetricProjectionSetting;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, previousAsymmetricProjectionSetting);
-                additionalCameraData.customRenderingSettings = previousCustomFrameSettingsToggled;
+                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
+                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
+                additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
             }
 
             if (m_ContextCamera != null && m_ContextCamera.TryGetComponent(out additionalCameraData))
             {
-                previousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
-                previousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
+                m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
+                m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
+                m_PreviousAntiAliasingMode = additionalCameraData.antialiasing;
 
                 additionalCameraData.customRenderingSettings = true;
                 additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
                 additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
+                additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
             }
+
         }
 
-        public void OnBeginRender (ScriptableRenderContext context, Camera camera)
+        public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
+        {
+        }
+
+        public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (camera.cameraType != CameraType.Game)
                 return;
@@ -121,29 +151,8 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public bool CameraIsSceneViewCamera (Camera camera)
-        {
-#if UNITY_EDITOR
-            return camera != null && SceneView.sceneViews.ToArray()
-                .Select(sceneView => (sceneView as SceneView).camera)
-                .Any(sceneViewCamera => sceneViewCamera == camera);
-#else
-        return false;
-#endif
-        }
+        public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
-        public void OnEndRender(ScriptableRenderContext context, Camera camera) {}
-
-        public void OnSetup()
-        {
-            if (m_ContextCamera != null)
-            {
-                m_ContextCamera.enabled = true;
-            }
-        }
-
-        public void OnTearDown()
-        {
-        }
+        public void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 }

@@ -21,6 +21,15 @@ namespace Unity.ClusterDisplay.Graphics
             m_OverscannedTarget = null;
         }
 
+        public override void LateUpdate()
+        {
+            if (m_ClusterRenderer.CameraController.CameraContext != null)
+            {
+                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
+                m_ClusterRenderer.CameraController.CameraContext.targetTexture = null;
+            }
+        }
+
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
         {
             cmd.SetRenderTarget(rt);
@@ -77,17 +86,10 @@ namespace Unity.ClusterDisplay.Graphics
             return true;
         }
 
-        public override void OnBeginRender(ScriptableRenderContext context, Camera camera) {}
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera) {}
-
-        public override void LateUpdate()
-        {
-            if (m_ClusterRenderer.CameraController.CameraContext != null)
-            {
-                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
-                m_ClusterRenderer.CameraController.CameraContext.targetTexture = null;
-            }
-        }
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 #endif
 }

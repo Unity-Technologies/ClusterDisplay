@@ -8,6 +8,16 @@ namespace Unity.ClusterDisplay.Graphics
     public abstract class StitcherLayoutBuilder : LayoutBuilder
     {
         protected RTHandle[] m_Targets;
+        protected struct StitcherParameters
+        {
+            public RTHandle target;
+            public Vector4 scaleBiasTex;
+            public Vector4 scaleBiasRT;
+            public Rect percentageViewportSubsection;
+        }
+
+        protected Queue<StitcherParameters> m_QueuedStitcherParameters = new Queue<StitcherParameters>();
+
         protected StitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         protected void ReleaseTargets()
         {
@@ -52,8 +62,29 @@ namespace Unity.ClusterDisplay.Graphics
                     useDynamicScale: false,
                     autoGenerateMips: false,
                     enableRandomWrite: true,
+                    filterMode: FilterMode.Trilinear,
+                    anisoLevel: 8,
+                    // msaaSamples: MSAASamples.MSAA8x,
                     name: $"Tile Target {i}");
             }
+        }
+
+        protected void CalculcateAndQueueStitcherParameters (int tileIndex, Rect m_OverscannedRect, Rect percentageViewportSubsection)
+        {
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
+            
+            var scaleBiasRT = new Vector4(
+                1 - (m_ClusterRenderer.Context.Bezel.x * 2) / croppedSize.x, 1 - (m_ClusterRenderer.Context.Bezel.y * 2) / croppedSize.y, // scale
+                m_ClusterRenderer.Context.Bezel.x / croppedSize.x, m_ClusterRenderer.Context.Bezel.y / croppedSize.y); // offset
+
+            m_QueuedStitcherParameters.Enqueue(new StitcherParameters
+            {
+                scaleBiasTex = scaleBiasTex,
+                scaleBiasRT = scaleBiasRT,
+                percentageViewportSubsection = percentageViewportSubsection,
+                target = m_Targets[tileIndex]
+            });
         }
 
         protected Matrix4x4 CalculateProjectionMatrix (Camera camera, Rect viewportSubsection) => GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);

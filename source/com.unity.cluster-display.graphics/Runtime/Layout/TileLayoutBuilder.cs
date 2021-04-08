@@ -5,7 +5,9 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
-        protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) 
+        {
+        }
 
         protected bool SetupTiledLayout (
             Camera camera, 
@@ -52,6 +54,9 @@ namespace Unity.ClusterDisplay.Graphics
                     dimension: TextureXR.dimension, 
                     useDynamicScale: true, 
                     autoGenerateMips: false, 
+                    filterMode: FilterMode.Trilinear,
+                    anisoLevel: 8,
+                    // msaaSamples: MSAASamples.MSAA8x,
                     name: "Overscanned Target");
             }
 

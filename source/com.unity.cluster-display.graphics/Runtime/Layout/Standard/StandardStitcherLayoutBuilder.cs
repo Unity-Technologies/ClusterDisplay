@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
@@ -14,8 +15,25 @@ namespace Unity.ClusterDisplay.Graphics
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
 
         private RTHandle m_PresentTarget;
-        private Vector3[] m_TargetScaleBias = null;
         private Rect m_OverscannedRect;
+
+        private void PollPresentRT ()
+        {
+            bool resized = m_PresentTarget != null && (m_PresentTarget.rt.width != Screen.width || m_PresentTarget.rt.height != Screen.height);
+            if (m_PresentTarget == null || resized)
+            {
+                if (m_PresentTarget != null)
+                    RTHandles.Release(m_PresentTarget);
+
+                m_PresentTarget = RTHandles.Alloc(
+                    width: Screen.width, 
+                    height: Screen.height,
+                    slices: 1,
+                    useDynamicScale: true,
+                    autoGenerateMips: false,
+                    name: "Present Target");
+            }
+        }
 
         public override void LateUpdate ()
         {
@@ -29,41 +47,44 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ValidGridSize(out var numTiles))
                 return;
 
+            Assert.IsTrue(m_QueuedStitcherParameters.Count == 0);
+
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
                 return;
 
+            PollPresentRT();
             PollRTs();
-            if (m_TargetScaleBias == null || m_TargetScaleBias.Length != numTiles)
-                m_TargetScaleBias = new Vector3[numTiles];
 
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
 
-            for (var i = 0; i != numTiles; ++i)
+            for (var i = 0; i < numTiles; i++)
             {
                 CalculateStitcherLayout(
                     camera, 
                     i, 
                     ref cullingParams, 
-                    out var _, 
+                    out var percentageViewportSubsection, 
                     out var _, 
                     out var projectionMatrix);
 
                 PollRT(i, m_OverscannedRect);
+                CalculcateAndQueueStitcherParameters(i, m_OverscannedRect, percentageViewportSubsection);
 
                 if (m_Targets[i] != null)
                     camera.targetTexture = m_Targets[i];
 
-                UploadClusterDisplayParams(projectionMatrix);
-
-                m_TargetScaleBias[i] = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
+                UploadClusterDisplayParams(projectionMatrix);
                 camera.Render();
             }
         }
 
-        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
+
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
@@ -71,33 +92,8 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ValidGridSize(out var numTiles))
                 return;
 
-            {
-                Vector2 croppedSize = new Vector2(Screen.width, Screen.height);
-                bool resized = m_PresentTarget != null && (m_PresentTarget.rt.width != (int)croppedSize.x || m_PresentTarget.rt.height != (int)croppedSize.y);
-                if (m_PresentTarget == null || resized)
-                {
-                    if (m_PresentTarget != null)
-                        RTHandles.Release(m_PresentTarget);
-
-                    m_PresentTarget = RTHandles.Alloc(
-                        width: (int)croppedSize.x, 
-                        height: (int)croppedSize.y,
-                        slices: 1,
-                        useDynamicScale: true,
-                        autoGenerateMips: false,
-                        name: "Present Target");
-                }
-            }
-
-            camera.enabled = false;
-        }
-
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
-        {
-            if (camera != m_ClusterRenderer.CameraController.CameraContext)
-                return;
-
-            if (!ValidGridSize(out var numTiles))
+            // Once the queue reaches the number of tiles, then we perform the blit copy.
+            if (m_QueuedStitcherParameters.Count < numTiles)
                 return;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
@@ -105,7 +101,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var cmd = CommandBufferPool.Get("BlitFinal");
             cmd.SetRenderTarget(m_PresentTarget);
-            cmd.ClearRenderTarget(true, true, Color.yellow);
+            cmd.ClearRenderTarget(true, true, Color.black);
 
             for (var i = 0; i != numTiles; ++i)
             {
@@ -113,6 +109,7 @@ namespace Unity.ClusterDisplay.Graphics
                     continue;
 
                 Rect croppedViewport = GraphicsUtil.TileIndexToViewportSection(m_ClusterRenderer.Context.GridSize, i);
+                var stitcherParameters = m_QueuedStitcherParameters.Dequeue();
 
                 croppedViewport.x *= croppedSize.x;
                 croppedViewport.y *= croppedSize.y;
@@ -120,10 +117,12 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.height *= croppedSize.y;
 
                 cmd.SetViewport(croppedViewport);
-                HDUtils.BlitQuad(cmd, m_Targets[i], m_TargetScaleBias[i], k_ScaleBiasRT, 0, true);
+                HDUtils.BlitQuad(cmd, stitcherParameters.target, stitcherParameters.scaleBiasTex, stitcherParameters.scaleBiasRT, 0, true);
             }
 
             context.ExecuteCommandBuffer(cmd);
         }
+
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 }
