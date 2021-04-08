@@ -17,8 +17,10 @@ namespace Unity.ClusterDisplay.Graphics
         public LayoutBuilder (IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
         ~LayoutBuilder () => Dispose();
         public abstract void LateUpdate();
-        public abstract void OnBeginRender(ScriptableRenderContext context, Camera camera);
-        public abstract void OnEndRender(ScriptableRenderContext context, Camera camera);
+        public abstract void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
+        public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
+        public abstract void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
+        public abstract void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void Dispose();
 
         protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;

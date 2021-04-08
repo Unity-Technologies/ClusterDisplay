@@ -10,16 +10,6 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_XR
     class XRStitcherLayoutBuilder : StitcherLayoutBuilder, IXRLayoutBuilder
     {
-        struct MirrorParams
-        {
-            public RTHandle target;
-            public Vector4 scaleBiasTex;
-            public Vector4 scaleBiasRT;
-            public Rect viewportSubsection;
-        }
-
-        // Assumes one mirror view callback execution per pass.
-        private Queue<MirrorParams> m_MirrorParams = new Queue<MirrorParams>();
         private bool m_HasClearedMirrorView = true;
         private Rect m_OverscannedRect;
 
@@ -31,21 +21,26 @@ namespace Unity.ClusterDisplay.Graphics
         
         public override void Dispose()
         {
-            m_MirrorParams.Clear();
+            m_QueuedStitcherParameters.Clear();
             ReleaseTargets();
+        }
+
+        public override void LateUpdate()
+        {
+            if (m_ClusterRenderer.CameraController.CameraContext != null)
+                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
         {
-            Assert.IsFalse(m_MirrorParams.Count == 0);
-
-            var parms = m_MirrorParams.Dequeue();
+            Assert.IsFalse(m_QueuedStitcherParameters.Count == 0);
+            var parms = m_QueuedStitcherParameters.Dequeue();
     
             var tileViewport = new Rect(
-                viewport.x + viewport.width * parms.viewportSubsection.x,
-                viewport.y + viewport.height * parms.viewportSubsection.y,
-                viewport.width * parms.viewportSubsection.width,
-                viewport.height * parms.viewportSubsection.height);
+                viewport.x + viewport.width * parms.percentageViewportSubsection.x,
+                viewport.y + viewport.height * parms.percentageViewportSubsection.y,
+                viewport.width * parms.percentageViewportSubsection.width,
+                viewport.height * parms.percentageViewportSubsection.height);
 
             cmd.SetRenderTarget(rt);
             
@@ -70,7 +65,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
 
             // Whenever we build a new layout we expect previously submitted mirror params to have been consumed.
-            Assert.IsTrue(m_MirrorParams.Count == 0);
+            Assert.IsTrue(m_QueuedStitcherParameters.Count == 0);
             // Assert.IsTrue(m_HasClearedMirrorView);
             m_HasClearedMirrorView = false;
 
@@ -109,29 +104,17 @@ namespace Unity.ClusterDisplay.Graphics
                     textureArraySlice = -1
                 };
                 
+                CalculcateAndQueueStitcherParameters(i, m_OverscannedRect, percentageViewportSubsection);
+
                 XRPass pass = layout.CreatePass(passInfo);
                 layout.AddViewToPass(viewInfo, pass);
-
-                var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
-                var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
-                
-                var scaleBiasRT = new Vector4(
-                    1 - (m_ClusterRenderer.Context.Bezel.x * 2) / croppedSize.x, 1 - (m_ClusterRenderer.Context.Bezel.y * 2) / croppedSize.y, // scale
-                    m_ClusterRenderer.Context.Bezel.x / croppedSize.x, m_ClusterRenderer.Context.Bezel.y / croppedSize.y); // offset
-                
-                m_MirrorParams.Enqueue(new MirrorParams
-                {
-                    scaleBiasTex = scaleBiasTex,
-                    scaleBiasRT = scaleBiasRT,
-                    viewportSubsection = percentageViewportSubsection,
-                    target = m_Targets[i]
-                });
             }
 
             return true;
         }
 
-        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
@@ -139,13 +122,8 @@ namespace Unity.ClusterDisplay.Graphics
             camera.targetTexture = null;
         }
 
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera) {}
-
-        public override void LateUpdate()
-        {
-            if (m_ClusterRenderer.CameraController.CameraContext != null)
-                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
-        }
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 #endif
 }

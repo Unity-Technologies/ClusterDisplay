@@ -28,15 +28,19 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public delegate void OnSetup();
         public delegate void OnTearDown();
-        public delegate void OnBeginRender(ScriptableRenderContext context, Camera camera);
-        public delegate void OnEndRender(ScriptableRenderContext context, Camera camera);
+        public delegate void OnBeginCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
+        public delegate void OnEndCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
+        public delegate void OnBeginFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
+        public delegate void OnEndFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
 
         public interface IClusterRendererEventReceiver
         {
             void OnSetup();
             void OnTearDown();
-            void OnBeginRender(ScriptableRenderContext context, Camera camera);
-            void OnEndRender(ScriptableRenderContext context, Camera camera);
+            void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
+            void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
+            void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
+            void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
         }
 
         public enum LayoutMode
@@ -75,8 +79,11 @@ namespace Unity.ClusterDisplay.Graphics
         private OnSetup onSetup;
         private OnTearDown onTearDown;
 
-        private OnBeginRender onBeginRender;
-        private OnEndRender onEndRender;
+        private OnBeginCameraRenderDelegate onBeginCameraRender;
+        private OnEndCameraRenderDelegate onEndCameraRender;
+
+        private OnBeginFrameRenderDelegate onBeginFrameRender;
+        private OnEndFrameRenderDelegate onEndFrameRender;
 
         public long frameIndex = 0;
 
@@ -123,14 +130,23 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void RegisterRendererEvents (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
-            onBeginRender += clusterRendererEventReceiver.OnBeginRender;
-            onEndRender += clusterRendererEventReceiver.OnEndRender;
+            onBeginFrameRender += clusterRendererEventReceiver.OnBeginFrameRender;
+            onBeginCameraRender += clusterRendererEventReceiver.OnBeginCameraRender;
+            onEndCameraRender += clusterRendererEventReceiver.OnEndCameraRender;
+            onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
+            onSetup += clusterRendererEventReceiver.OnSetup;
+            onTearDown += clusterRendererEventReceiver.OnTearDown;
         }
 
         private void UnRegisterLateUpdateReciever (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
-            onBeginRender -= clusterRendererEventReceiver.OnBeginRender;
-            onEndRender -= clusterRendererEventReceiver.OnEndRender;
+            onBeginFrameRender -= clusterRendererEventReceiver.OnBeginFrameRender;
+            onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
+            onEndCameraRender -= clusterRendererEventReceiver.OnEndCameraRender;
+            onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
+
+            onSetup -= clusterRendererEventReceiver.OnSetup;
+            onTearDown -= clusterRendererEventReceiver.OnTearDown;
         }
 
         private bool m_Setup = false;
@@ -144,8 +160,12 @@ namespace Unity.ClusterDisplay.Graphics
             RegisterRendererEvents(m_ClusterCameraController);
             m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
-            RenderPipelineManager.beginCameraRendering += OnPreRenderCamera;
-            RenderPipelineManager.endCameraRendering += OnPostRenderCamera;
+            RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
+            RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
+            RenderPipelineManager.endCameraRendering += OnEndCameraRender;
+            RenderPipelineManager.endFrameRendering += OnEndFrameRender;
+
+            RTHandles.Initialize(Screen.width, Screen.height, true, MSAASamples.MSAA8x);
 
             if (onSetup != null)
                 onSetup();
@@ -155,11 +175,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void TearDown ()
         {
+            if (!m_Setup)
+                return;
+
             UnRegisterLateUpdateReciever(m_ClusterCameraController);
             m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
-            RenderPipelineManager.beginCameraRendering -= OnPreRenderCamera;
-            RenderPipelineManager.endCameraRendering -= OnPostRenderCamera;
+            RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
+            RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
+            RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
+            RenderPipelineManager.endFrameRendering -= OnEndFrameRender;
 
             if (onTearDown != null)
                 onTearDown();
@@ -172,7 +197,11 @@ namespace Unity.ClusterDisplay.Graphics
         private void OnDisable() => TearDown();
         private void OnDestroy() => TearDown();
 
-        private void OnPreRenderCamera (ScriptableRenderContext context, Camera camera)
+        private void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras)
+        {
+        }
+
+        private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (camera.cameraType != CameraType.Game)
             {
@@ -181,7 +210,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
-            onBeginRender(context, camera);
+            onBeginCameraRender(context, camera);
 
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
@@ -194,18 +223,22 @@ namespace Unity.ClusterDisplay.Graphics
                     m_Context.GridSize, m_Context.TileIndex);
         }
 
-        private void OnPostRenderCamera (ScriptableRenderContext context, Camera camera)
+        private void OnEndCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterCameraController.CameraContext)
                 return;
 
-            if (onEndRender != null)
-                onEndRender(context, camera);
+            if (onEndCameraRender != null)
+                onEndCameraRender(context, camera);
 
             frameIndex++;
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
 #endif
+        }
+
+        private void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras)
+        {
         }
 
         private void LateUpdate()

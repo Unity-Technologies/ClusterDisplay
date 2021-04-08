@@ -10,6 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
         public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+
         public override void Dispose() {}
 
         private RTHandle m_OverscannedTarget;
@@ -17,7 +18,24 @@ namespace Unity.ClusterDisplay.Graphics
 
         private RTHandle m_PresentTarget;
 
-        public override void OnBeginRender(ScriptableRenderContext context, Camera camera)
+        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
+
+        public override void LateUpdate()
+        {
+            if (m_ClusterRenderer.CameraController.CameraContext == null)
+                return;
+
+            if (m_ClusterRenderer.CameraController.CameraContext.enabled)
+                m_ClusterRenderer.CameraController.CameraContext.enabled = false;
+
+            m_ClusterRenderer.CameraController.CameraContext.Render();
+        }
+
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
+        {
+        }
+
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
                 return;
@@ -55,35 +73,29 @@ namespace Unity.ClusterDisplay.Graphics
                     slices: 1,
                     useDynamicScale: true,
                     autoGenerateMips: false,
+                    filterMode: FilterMode.Trilinear,
+                    anisoLevel: 8,
                     name: "Present Target");
             }
         }
 
-        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
-
-        public override void LateUpdate()
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (m_ClusterRenderer.CameraController.CameraContext == null)
+            if (m_ClusterRenderer.CameraController.CameraContext != camera)
                 return;
 
-            if (m_ClusterRenderer.CameraController.CameraContext.enabled)
-                m_ClusterRenderer.CameraController.CameraContext.enabled = false;
-
-            m_ClusterRenderer.CameraController.CameraContext.Render();
-        }
-
-        public override void OnEndRender(ScriptableRenderContext context, Camera camera)
-        {
             var scaleBias = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset); ;
 
             var cmd = CommandBufferPool.Get("BlitFinal");
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
 
             cmd.SetRenderTarget(m_PresentTarget);
-            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.ClearRenderTarget(true, true, Color.yellow);
 
             HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBias, k_ScaleBiasRT, 0, true);
             context.ExecuteCommandBuffer(cmd);
         }
+
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 }
