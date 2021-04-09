@@ -31,10 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_ClusterRenderer.CameraController.CameraContext.Render();
         }
 
-        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
-        {
-        }
-
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
