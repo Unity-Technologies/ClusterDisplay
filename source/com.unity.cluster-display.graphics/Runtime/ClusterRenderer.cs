@@ -88,7 +88,11 @@ namespace Unity.ClusterDisplay.Graphics
         private LayoutBuilder m_LayoutBuilder = null;
 
         [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
+#if CLUSTER_DISPLAY_HDRP
+        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
+#else
         [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new ClusterCameraController();
+#endif
 
         public ClusterCameraController CameraController => m_ClusterCameraController;
 
