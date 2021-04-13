@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 

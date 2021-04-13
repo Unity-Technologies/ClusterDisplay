@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 
 #if UNITY_EDITOR
 using System.Linq;
@@ -24,11 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         [HideInInspector][SerializeField] private Camera m_PreviousContextCamera;
 
-        [HideInInspector][SerializeField] private bool m_PreviousAsymmetricProjectionSetting;
-        [HideInInspector][SerializeField] private bool m_PreviousCustomFrameSettingsToggled;
-        [HideInInspector][SerializeField] private HDAdditionalCameraData.AntialiasingMode m_PreviousAntiAliasingMode;
-
         public Camera CameraContext => m_ContextCamera;
+        public Camera PreviousCameraContext => m_PreviousContextCamera;
         public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(CameraContext);
 
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
@@ -85,28 +79,10 @@ namespace Unity.ClusterDisplay.Graphics
         {
         }
 
-        private void PollFrameSettings ()
+        protected virtual void OnPollFrameSettings (Camera camera) {}
+        private void PollFrameSettings (Camera camera)
         {
-            HDAdditionalCameraData additionalCameraData;
-            if (m_PreviousContextCamera != null && m_PreviousContextCamera.TryGetComponent(out additionalCameraData))
-            {
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
-                additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
-            }
-
-            if (m_ContextCamera != null && m_ContextCamera.TryGetComponent(out additionalCameraData))
-            {
-                m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
-                m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
-                m_PreviousAntiAliasingMode = additionalCameraData.antialiasing;
-
-                additionalCameraData.customRenderingSettings = true;
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
-                additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
-            }
-
+            PollFrameSettings(camera);
         }
 
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
@@ -128,20 +104,15 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (camera != m_ContextCamera)
             {
-                if (camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
-                {
-                    m_PreviousContextCamera = m_ContextCamera;
-                    m_ContextCamera = camera;
+                m_PreviousContextCamera = m_ContextCamera;
+                m_ContextCamera = camera;
 
-                    PollFrameSettings();
+                m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
 
-                    m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
+                PollFrameSettings(camera);
 
-                    if (onCameraChange != null)
-                        onCameraChange(m_PreviousContextCamera, m_ContextCamera);
-                }
-
-                else Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
+                if (onCameraChange != null)
+                    onCameraChange(m_PreviousContextCamera, m_ContextCamera);
             }
 
             else

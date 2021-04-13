@@ -1,9 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
-using UnityEngine.UI;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -38,40 +34,20 @@ namespace Unity.ClusterDisplay.Graphics
             } 
         }
 
-        // private ClusterCustomPassVolume m_ClusterCustomPassVolume;
         private ClusterCanvas m_ClusterCanvas;
 
         protected override void InitializeCamera(Camera camera)
         {
-            /*
-            if (!ClusterCustomPassVolume.TryGetInstance(out var clusterCustomPassVolume, displayError: false))
-                m_ClusterCustomPassVolume = new GameObject("CustomPassVolume").AddComponent<ClusterCustomPassVolume>();
-            else m_ClusterCustomPassVolume = clusterCustomPassVolume.GetComponent<ClusterCustomPassVolume>();
-            */
-
             if (!ClusterCanvas.TryGetInstance(out var clusterCanvas, displayError: false))
                 m_ClusterCanvas = new GameObject("ClusterCanvas").AddComponent<ClusterCanvas>();
             else m_ClusterCanvas = clusterCanvas.GetComponent<ClusterCanvas>();
 
             if (Application.isPlaying)
                 Object.DontDestroyOnLoad(m_ClusterCanvas.gameObject);
-            /*
-            if (Application.isPlaying)
-                Object.DontDestroyOnLoad(m_ClusterCustomPassVolume.gameObject);
-            */
         }
 
         protected override void DeinitializeCamera(Camera camera)
         {
-            /*
-            if (m_ClusterCustomPassVolume != null)
-            {
-                if (Application.isPlaying)
-                    Object.Destroy(m_ClusterCustomPassVolume.gameObject);
-                else Object.DestroyImmediate(m_ClusterCustomPassVolume.gameObject);
-            }
-            */
-
             if (m_ClusterCanvas != null)
             {
                 if (Application.isPlaying)

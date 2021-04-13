@@ -1,6 +1,4 @@
-﻿using Unity.ClusterDisplay;
-using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
+﻿using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -46,14 +44,6 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get { return m_Debug ? m_DebugSettings.ScaleBiasTexOffset : Vector2.zero; }
         }
-
-        [SerializeField] private HDAdditionalCameraData.AntialiasingMode m_AntiAliasingMode;
-        public HDAdditionalCameraData.AntialiasingMode AntiAliasingMode
-        {
-            get => m_AntiAliasingMode;
-            set => m_AntiAliasingMode = value;
-        }
-
 
         public int TileIndex
         {
