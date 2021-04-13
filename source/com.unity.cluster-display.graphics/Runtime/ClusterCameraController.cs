@@ -80,10 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         protected virtual void OnPollFrameSettings (Camera camera) {}
-        private void PollFrameSettings (Camera camera)
-        {
-            PollFrameSettings(camera);
-        }
+        private void PollFrameSettings (Camera camera) => OnPollFrameSettings(camera); 
 
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
