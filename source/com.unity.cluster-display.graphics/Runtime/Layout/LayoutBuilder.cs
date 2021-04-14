@@ -12,7 +12,6 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract ClusterRenderer.LayoutMode LayoutMode { get; }
 
         public LayoutBuilder (IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
-        ~LayoutBuilder () => Dispose();
         public abstract void LateUpdate();
         public abstract void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
@@ -52,6 +51,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnTearDown()
         {
+        }
+
+        private static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
+        protected void Blit (CommandBuffer cmd, RenderTexture presentRT, RenderTexture target, Vector4 texBias, Vector4 rtBias)
+        {
+            s_PropertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
+            s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
+            s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
+            s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
+            cmd.DrawProcedural(Matrix4x4.identity, m_ClusterRenderer.Settings.Resources.BlitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
     }
 }

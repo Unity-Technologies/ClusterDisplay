@@ -5,23 +5,8 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class StandardHDRPPresenter : HDRPPresenter
     {
-        public override RTHandle TargetRT
-        {
-            get => m_RT;
-            set
-            {
-                m_RT = value;
-                if (m_Camera != m_RT)
-                {
-                    if (m_RT == null)
-                        m_Camera.targetTexture = null;
-                    else m_Camera.targetTexture = m_RT;
-                }
-            }
-        }
-
-        private RTHandle m_PresentRT;
-        public override RTHandle PresentRT 
+        private RenderTexture m_PresentRT;
+        public override RenderTexture PresentRT 
         { 
             get => m_PresentRT;
             set
