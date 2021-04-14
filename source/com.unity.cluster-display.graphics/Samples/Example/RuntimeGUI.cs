@@ -53,8 +53,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_FpsMovingAverage = sum / m_FpsBuffer.Length;
             }
 
+            /*
             if (Input.GetKeyDown(KeyCode.H))
                 m_Show = !m_Show;
+            */
         }
 
         /// <summary>

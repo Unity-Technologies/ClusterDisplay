@@ -83,9 +83,8 @@ namespace Unity.ClusterDisplay.Graphics
         private OnBeginFrameRenderDelegate onBeginFrameRender;
         private OnEndFrameRenderDelegate onEndFrameRender;
 
-        public long frameIndex = 0;
-
         private LayoutBuilder m_LayoutBuilder = null;
+
 
         [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
 #if CLUSTER_DISPLAY_HDRP
@@ -127,6 +126,19 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (enabled)
                 m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
+        }
+
+        private void OnValidate()
+        {
+            if (Settings.Resources == null)
+            {
+                var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
+                if (assets.Length == 0)
+                    throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
+                Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
+                EditorUtility.SetDirty(this);
+            }
         }
 #endif
 
@@ -230,7 +242,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (onEndCameraRender != null)
                 onEndCameraRender(context, camera);
 
-            frameIndex++;
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
 #endif
@@ -284,12 +295,20 @@ namespace Unity.ClusterDisplay.Graphics
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
-                    newLayoutBuilder = new StandardTileLayoutBuilder(this);
+#if CLUSTER_DISPLAY_HDRP
+                    newLayoutBuilder = new HDRPStandardTileLayoutBuilder(this);
+#else
+                    newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
+#endif
                     CameraController.Presenter = new StandardHDRPPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
-                    newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
+#if CLUSTER_DISPLAY_HDRP
+                    newLayoutBuilder = new HDRPStandardStitcherLayoutBuilder(this);
+#else
+                    newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
+#endif
                     CameraController.Presenter = new StandardHDRPPresenter();
                     break;
 

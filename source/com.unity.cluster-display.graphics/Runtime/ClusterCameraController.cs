@@ -80,8 +80,6 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         protected virtual void OnPollFrameSettings (Camera camera) {}
-        private void PollFrameSettings (Camera camera) => OnPollFrameSettings(camera); 
-
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
         }
@@ -106,7 +104,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
 
-                PollFrameSettings(camera);
+                OnPollFrameSettings(m_ContextCamera);
 
                 if (onCameraChange != null)
                     onCameraChange(m_PreviousContextCamera, m_ContextCamera);
@@ -114,7 +112,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             else
             {
-                if (m_CachedNonClusterDisplayProjectionMatrix != m_ContextCamera.projectionMatrix)
+                if (m_CachedNonClusterDisplayProjectionMatrix == Matrix4x4.identity)
+                    m_CachedNonClusterDisplayProjectionMatrix = Matrix4x4.Perspective(60.0f, m_ContextCamera.aspect, m_ContextCamera.nearClipPlane, m_ContextCamera.farClipPlane);
+                else if (m_CachedNonClusterDisplayProjectionMatrix != m_ContextCamera.projectionMatrix)
                     m_CachedNonClusterDisplayProjectionMatrix = m_ContextCamera.projectionMatrix;
             }
         }

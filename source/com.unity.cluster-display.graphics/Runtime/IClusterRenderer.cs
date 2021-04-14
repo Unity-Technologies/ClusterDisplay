@@ -7,6 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         ClusterRenderContext Context { get; }
         ClusterCameraController CameraController { get; }
+        ClusterRendererSettings Settings { get; }
     }
 
 }

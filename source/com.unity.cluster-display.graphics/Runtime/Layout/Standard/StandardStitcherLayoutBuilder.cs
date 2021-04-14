@@ -1,9 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -14,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
 
-        private RTHandle m_PresentTarget;
+        protected RTHandle m_PresentTarget;
         private Rect m_OverscannedRect;
 
         private void PollPresentRT ()
@@ -84,6 +81,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
 
+        public virtual void Blit(CommandBuffer cmd, RTHandle target, Vector4 texBias, Vector4 rtBias) {}
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (camera != m_ClusterRenderer.CameraController.CameraContext)
@@ -99,11 +97,11 @@ namespace Unity.ClusterDisplay.Graphics
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
 
-            var cmd = CommandBufferPool.Get("BlitFinal");
+            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
             cmd.SetRenderTarget(m_PresentTarget);
             cmd.ClearRenderTarget(true, true, Color.black);
 
-            for (var i = 0; i != numTiles; ++i)
+            for (var i = 0; i < numTiles; i++)
             {
                 if (m_Targets[i] == null)
                     continue;
@@ -117,10 +115,10 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.height *= croppedSize.y;
 
                 cmd.SetViewport(croppedViewport);
-                HDUtils.BlitQuad(cmd, stitcherParameters.target, stitcherParameters.scaleBiasTex, stitcherParameters.scaleBiasRT, 0, true);
+                Blit(cmd, stitcherParameters.target, stitcherParameters.scaleBiasTex, stitcherParameters.scaleBiasRT);
             }
 
-            context.ExecuteCommandBuffer(cmd);
+            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
