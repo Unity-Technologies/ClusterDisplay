@@ -12,7 +12,17 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private Canvas m_Canvas;
         [HideInInspector][SerializeField] private RawImage m_RawImage;
 
-        public RTHandle RawImageTexture { set => m_RawImage.texture = value; }
+        public RawImage FullScreenRawImage
+        {
+            get
+            {
+                if (m_RawImage == null)
+                    m_RawImage = GetComponentInChildren<RawImage>();
+                return m_RawImage;
+            }
+        }
+
+        public RenderTexture RawImageTexture { set => FullScreenRawImage.texture = value; }
 
         private void Awake()
         {

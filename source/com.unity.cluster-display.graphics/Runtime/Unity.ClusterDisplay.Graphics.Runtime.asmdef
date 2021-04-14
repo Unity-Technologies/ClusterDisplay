@@ -1,8 +1,9 @@
 {
     "name": "Unity.ClusterDisplay.Graphics",
     "references": [
-        "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
         "Unity.ClusterDisplay.Runtime"
     ],
     "includePlatforms": [

@@ -5,13 +5,22 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
+#if CLUSTER_DISPLAY_XR
+        protected TileRTManager m_RTManager = new XRTileRTManager();
+#else
+        protected TileRTManager m_RTManager = new StandardTileRTManager();
+#endif
+
         protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) 
+        {
+        }
+
+        protected void PollRT (Camera camera, ref RenderTexture targetRT, int width, int height)
         {
         }
 
         protected bool SetupTiledLayout (
             Camera camera, 
-            ref RTHandle targetRT,
             out ScriptableCullingParameters cullingParameters, 
             out Matrix4x4 projectionMatrix,
             out Rect viewportSubsection,
@@ -22,7 +31,6 @@ namespace Unity.ClusterDisplay.Graphics
                 !camera.TryGetCullingParameters(false, out cullingParameters))
             {
                 cullingParameters = default(ScriptableCullingParameters);
-                targetRT = null;
                 projectionMatrix = Matrix4x4.identity;
                 viewportSubsection = Rect.zero;
                 overscannedRect = Rect.zero;
@@ -37,29 +45,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
             
-            bool resized = targetRT != null && (targetRT.rt.width != (int)overscannedRect.width || targetRT.rt.height != (int)overscannedRect.height);
-            if (targetRT == null || resized)
-            {
-                if (targetRT != null)
-                {
-                    if (camera.targetTexture != null && camera.targetTexture == targetRT)
-                        camera.targetTexture = null;
-                    RTHandles.Release(targetRT);
-                }
-
-                targetRT = RTHandles.Alloc(
-                    width: (int)overscannedRect.width, 
-                    height: (int)overscannedRect.height, 
-                    slices: 1, 
-                    dimension: TextureXR.dimension, 
-                    useDynamicScale: true, 
-                    autoGenerateMips: false, 
-                    filterMode: FilterMode.Trilinear,
-                    anisoLevel: 8,
-                    // msaaSamples: MSAASamples.MSAA8x,
-                    name: "Overscanned Target");
-            }
-
             return true;
         }
     }

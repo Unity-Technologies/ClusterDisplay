@@ -7,69 +7,25 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class StitcherLayoutBuilder : LayoutBuilder
     {
-        protected RTHandle[] m_Targets;
         protected struct StitcherParameters
         {
-            public RTHandle target;
+            public object targetRT;
             public Vector4 scaleBiasTex;
             public Vector4 scaleBiasRT;
             public Rect percentageViewportSubsection;
         }
 
+#if CLUSTER_DISPLAY_XR
+        protected StitcherRTManager m_RTManager = new XRStitcherRTManager();
+#else
+        protected StitcherRTManager m_RTManager = new StandardStitcherRTManager();
+#endif
+
         protected Queue<StitcherParameters> m_QueuedStitcherParameters = new Queue<StitcherParameters>();
 
         protected StitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
-        protected void ReleaseTargets()
-        {
-            if (m_Targets != null)
-            {
-                for (var i = 0; i != m_Targets.Length; ++i)
-                {
-                    RTHandles.Release(m_Targets[i]);
-                    m_Targets[i] = null;
-                }
-            }
 
-            m_Targets = null;
-        }
-
-        protected void PollRTs ()
-        {
-            if (!ValidGridSize(out var numTiles))
-                return;
-
-            if (m_Targets != null && m_Targets.Length == numTiles)
-                return;
-            m_Targets = new RTHandle[numTiles];
-        }
-
-        protected void PollRT (int i, Rect m_OverscannedRect)
-        {
-            bool resized = m_Targets[i] != null && 
-                (m_Targets[i].rt.width != (int)m_OverscannedRect.x || 
-                m_Targets[i].rt.height != (int)m_OverscannedRect.y);
-
-            if (m_Targets[i] == null || resized)
-            {
-                if (m_Targets[i] != null)
-                    RTHandles.Release(m_Targets[i]);
-
-                m_Targets[i] = RTHandles.Alloc(
-                    width: (int)m_OverscannedRect.width,
-                    height: (int)m_OverscannedRect.height,
-                    slices: 1,
-                    dimension: TextureXR.dimension,
-                    useDynamicScale: false,
-                    autoGenerateMips: false,
-                    enableRandomWrite: true,
-                    filterMode: FilterMode.Trilinear,
-                    anisoLevel: 8,
-                    // msaaSamples: MSAASamples.MSAA8x,
-                    name: $"Tile Target {i}");
-            }
-        }
-
-        protected void CalculcateAndQueueStitcherParameters (int tileIndex, Rect m_OverscannedRect, Rect percentageViewportSubsection)
+        protected void CalculcateAndQueueStitcherParameters (object targetRT, Rect m_OverscannedRect, Rect percentageViewportSubsection)
         {
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
@@ -83,7 +39,7 @@ namespace Unity.ClusterDisplay.Graphics
                 scaleBiasTex = scaleBiasTex,
                 scaleBiasRT = scaleBiasRT,
                 percentageViewportSubsection = percentageViewportSubsection,
-                target = m_Targets[tileIndex]
+                targetRT = targetRT,
             });
         }
 
