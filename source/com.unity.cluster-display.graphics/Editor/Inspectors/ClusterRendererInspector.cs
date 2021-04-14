@@ -14,6 +14,7 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 var adapter = target as ClusterRenderer;
              
                 var settings = adapter.Settings;
+                settings.Resources = (ClusterDisplayResources)EditorGUILayout.ObjectField(settings.Resources, typeof(ClusterDisplayResources), false);
                 settings.GridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.GridSize);
                 settings.PhysicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.PhysicalScreenSize);
                 settings.Bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.Bezel);

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if CLUSTER_DISPLAY_HDRP && CLUSTER_DISPLAY_XR
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -7,7 +8,6 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-#if CLUSTER_DISPLAY_XR
     class XRStitcherLayoutBuilder : StitcherLayoutBuilder, IXRLayoutBuilder
     {
         private bool m_HasClearedMirrorView = true;
@@ -125,5 +125,5 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
-#endif
 }
+#endif

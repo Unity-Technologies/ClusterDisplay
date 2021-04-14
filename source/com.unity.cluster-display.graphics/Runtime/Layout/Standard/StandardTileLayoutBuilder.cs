@@ -1,9 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
-using UnityEngine.UI;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -16,7 +12,7 @@ namespace Unity.ClusterDisplay.Graphics
         private RTHandle m_OverscannedTarget;
         private Rect m_OverscannedRect;
 
-        private RTHandle m_PresentTarget;
+        protected RTHandle m_PresentTarget;
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
 
@@ -76,6 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
+        public virtual void Blit(CommandBuffer cmd, RTHandle target, Vector4 texBias, Vector4 rtBias) {}
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (m_ClusterRenderer.CameraController.CameraContext != camera)
@@ -83,14 +80,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             var scaleBias = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset); ;
 
-            var cmd = CommandBufferPool.Get("BlitFinal");
+            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
             m_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentTarget;
 
             cmd.SetRenderTarget(m_PresentTarget);
             cmd.ClearRenderTarget(true, true, Color.yellow);
 
-            HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBias, k_ScaleBiasRT, 0, true);
-            context.ExecuteCommandBuffer(cmd);
+            Blit(cmd, m_OverscannedTarget, scaleBias, k_ScaleBiasRT);
+            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

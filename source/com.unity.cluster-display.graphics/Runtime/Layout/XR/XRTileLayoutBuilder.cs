@@ -1,11 +1,11 @@
-﻿using System;
+﻿#if CLUSTER_DISPLAY_HDRP && CLUSTER_DISPLAY_XR
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-#if CLUSTER_DISPLAY_XR
     class XRTileLayoutBuilder : TileLayoutBuilder, IXRLayoutBuilder
     {
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRTile;
@@ -91,5 +91,5 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
-#endif
 }
+#endif
