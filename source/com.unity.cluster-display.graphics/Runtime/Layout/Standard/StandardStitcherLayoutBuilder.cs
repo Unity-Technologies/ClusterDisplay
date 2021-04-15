@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate ()
         {
-            var camera = m_ClusterRenderer.CameraController.CameraContext;
+            var camera = m_ClusterRenderer.CameraController.ContextCamera;
             if (camera == null)
                 return;
 

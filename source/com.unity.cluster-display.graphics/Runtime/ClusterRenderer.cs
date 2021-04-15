@@ -216,7 +216,7 @@ namespace Unity.ClusterDisplay.Graphics
         private void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras) {}
         private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (camera.cameraType != CameraType.Game)
+            if (!CameraContextRegistery.CanChangeContextTo(camera))
             {
                 ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
                 return;
@@ -238,7 +238,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnEndCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (camera != m_ClusterCameraController.CameraContext)
+            if (!CameraController.CameraIsInContext(camera))
                 return;
 
             if (onEndCameraRender != null)
