@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 using Unity.ClusterDisplay;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics.Example
 {
@@ -53,10 +56,13 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_FpsMovingAverage = sum / m_FpsBuffer.Length;
             }
 
-            /*
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current.hKey.wasPressedThisFrame)
+                m_Show = !m_Show;
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.H))
                 m_Show = !m_Show;
-            */
+#endif
         }
 
         /// <summary>

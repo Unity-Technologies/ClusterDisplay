@@ -60,6 +60,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
 
             return m_FocusedCameraContextTarget;
         }
+
         set
         {
             if (value == m_FocusedCameraContextTarget)
