@@ -25,7 +25,7 @@ public class StandardTileRTManager : TileRTManager
             }
 
             m_BlitRT = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm);
-            m_BlitRT.name = $"TileLayoutRT-({m_BlitRT.width}X{m_BlitRT.height})";
+            m_BlitRT.name = $"Tile-RT-({m_BlitRT.width}X{m_BlitRT.height})";
         }
 
         return m_BlitRT;
@@ -44,7 +44,7 @@ public class StandardTileRTManager : TileRTManager
                 m_PresentRT.Release();
 
             m_PresentRT = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB);
-            m_PresentRT.name = $"PresentRT-({m_PresentRT.width}X{m_PresentRT.height})";
+            m_PresentRT.name = $"Present-RT-({m_PresentRT.width}X{m_PresentRT.height})";
         }
 
         return m_PresentRT;
