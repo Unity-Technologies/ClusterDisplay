@@ -1,6 +1,10 @@
 ﻿using System;
 using UnityEngine;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 namespace Unity.ClusterDisplay.Graphics.Example
 {
     static class GUIUtilities
@@ -108,6 +112,18 @@ namespace Unity.ClusterDisplay.Graphics.Example
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
         public static void KeyboardControls(ClusterRendererSettings settings)
         {
+            #if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current.oKey.isPressed)
+            {
+                var overscan = settings.OverscanInPixels;
+                if (Keyboard.current.rightArrowKey.isPressed)
+                    ++overscan;
+                else if (Keyboard.current.leftArrowKey.isPressed)
+                    --overscan;
+                settings.OverscanInPixels = Mathf.Clamp(overscan, 0, 256);
+            }
+
+            #elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.O))
             {
                 var overscan = settings.OverscanInPixels;
@@ -117,6 +133,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                     --overscan;
                 settings.OverscanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
+            #endif
         }
     }
 }
