@@ -29,7 +29,7 @@ public class StandardStitcherRTManager : StitcherRTManager
                 m_BlitRTs[tileIndex].Release();
 
             m_BlitRTs[tileIndex] = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm);
-            m_BlitRTs[tileIndex].name = $"TileLayoutRT-({m_BlitRTs[tileIndex].width}X{m_BlitRTs[tileIndex].height})";
+            m_BlitRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_BlitRTs[tileIndex].width}X{m_BlitRTs[tileIndex].height})";
         }
 
         return m_BlitRTs[tileIndex];

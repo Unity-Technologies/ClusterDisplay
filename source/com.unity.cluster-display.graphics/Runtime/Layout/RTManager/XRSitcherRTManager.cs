@@ -41,7 +41,7 @@ public class XRSitcherRTManager : StitcherRTManager
                 filterMode: FilterMode.Trilinear,
                 anisoLevel: 8,
                 // msaaSamples: MSAASamples.MSAA8x,
-                name: $"Tile Target {tileIndex}");
+                name: $"Tile-{tileIndex}-RT-({width}X{height})");
         }
 
         return m_Targets[tileIndex];
@@ -68,7 +68,7 @@ public class XRSitcherRTManager : StitcherRTManager
                 enableRandomWrite: true,
                 filterMode: FilterMode.Trilinear,
                 anisoLevel: 8,
-                name: "Present Target");
+                name: $"Present-RT-({width}X{height})");
         }
 
         return m_PresentTarget;
