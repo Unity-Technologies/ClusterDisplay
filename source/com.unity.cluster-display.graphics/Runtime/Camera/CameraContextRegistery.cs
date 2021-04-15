@@ -46,27 +46,14 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
                     var first = m_CameraContextTargets.FirstOrDefault();
                     FocusedCameraContextTarget = first.Value;
                 }
+
                 else
                 {
-                    var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
-                    if (cameraContextTargets.Length == 0)
-                        return null;
-
-                    bool set = false;
-                    for (int i = 0; i < cameraContextTargets.Length; i++)
+                    PollCameraTargets();
+                    if (m_CameraContextTargets.Count > 0)
                     {
-                        if (!cameraContextTargets[i].TryGetCamera(out var camera))
-                            continue;
-
-                        if (!CanChangeContextTo(camera))
-                            continue;
-
-                        Register(camera);
-                        if (set)
-                            continue;
-
-                        FocusedCameraContextTarget = cameraContextTargets[i];
-                        set = true;
+                        var first = m_CameraContextTargets.FirstOrDefault();
+                        FocusedCameraContextTarget = first.Value;
                     }
                 }
             }
@@ -115,6 +102,26 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
         cameraContextTarget = Register(camera);
         return cameraContextTarget;
     }
+
+    private void PollCameraTargets ()
+    {
+        var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
+        if (cameraContextTargets.Length == 0)
+            return;
+
+        for (int i = 0; i < cameraContextTargets.Length; i++)
+        {
+            if (!cameraContextTargets[i].TryGetCamera(out var camera))
+                continue;
+
+            if (m_CameraContextTargets.ContainsKey(camera))
+                continue;
+
+            Register(camera);
+        }
+    }
+
+    private void OnLevelWasLoaded(int level) => PollCameraTargets();
 
     public CameraContextTarget Register (Camera camera)
     {
