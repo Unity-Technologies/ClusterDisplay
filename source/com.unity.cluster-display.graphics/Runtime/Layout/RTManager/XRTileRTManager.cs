@@ -18,11 +18,7 @@ public class XRTileRTManager : TileRTManager
         if (m_BlitRT == null || resized)
         {
             if (m_BlitRT != null)
-            {
-                // if (camera.targetTexture != null && camera.targetTexture == m_BlitRT)
-                //     camera.targetTexture = null;
                 RTHandles.Release(m_BlitRT);
-            }
 
             m_BlitRT = RTHandles.Alloc(
                 width: (int)width, 
