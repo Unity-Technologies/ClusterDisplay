@@ -17,13 +17,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.CameraContext == null)
+            if (m_ClusterRenderer.CameraController.ContextCamera == null)
                 return;
 
-            if (m_ClusterRenderer.CameraController.CameraContext.enabled)
-                m_ClusterRenderer.CameraController.CameraContext.enabled = false;
+            if (m_ClusterRenderer.CameraController.ContextCamera.enabled)
+                m_ClusterRenderer.CameraController.ContextCamera.enabled = false;
 
-            var camera = m_ClusterRenderer.CameraController.CameraContext;
+            var camera = m_ClusterRenderer.CameraController.ContextCamera;
 
             if (!SetupTiledLayout(
                 camera, 

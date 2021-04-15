@@ -16,18 +16,54 @@ namespace Unity.ClusterDisplay.Graphics
     [System.Serializable]
     public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
     {
-        [SerializeField] private Camera m_ContextCamera;
-        [SerializeField] private Camera m_PreviousContextCamera;
-
         // Matrix4x4 does not serialize so we need to serialize to Vector4s.
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC1 = Vector4.zero;
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC2 = Vector4.zero;
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
-        public Camera CameraContext => m_ContextCamera;
-        public Camera PreviousCameraContext => m_PreviousContextCamera;
-        public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(CameraContext);
+        public Camera ContextCamera
+        {
+            get
+            {
+                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                    return null;
+
+                if (cameraContextRegistry.FocusedCameraContextTarget == null)
+                    return null;
+
+                if (!cameraContextRegistry.FocusedCameraContextTarget.TryGetCamera(out var camera))
+                {
+                    cameraContextRegistry.UnRegister(cameraContextRegistry.FocusedCameraContextTarget, destroy: true);
+                    return null;
+                }
+
+                return camera;
+            }
+        }
+
+        public Camera PreviousContextCamera
+        {
+            get
+            {
+                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                    return null;
+
+                if (cameraContextRegistry.PreviousFocusedCameraContextTarget == null)
+                    return null;
+
+                if (!cameraContextRegistry.PreviousFocusedCameraContextTarget.TryGetCamera(out var camera))
+                {
+                    cameraContextRegistry.UnRegister(cameraContextRegistry.PreviousFocusedCameraContextTarget, destroy: true);
+                    return null;
+                }
+
+                return camera;
+            }
+        }
+
+
+        public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(ContextCamera);
 
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
@@ -50,7 +86,11 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public bool CameraIsInContext(Camera camera) => m_ContextCamera != null && m_ContextCamera == camera;
+        public bool CameraIsInContext(Camera camera)
+        {
+            var contextCamera = ContextCamera;
+            return contextCamera != null && contextCamera == camera;
+        }
 
         public bool CameraIsSceneViewCamera (Camera camera)
         {
@@ -68,8 +108,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnSetup()
         {
-            if (m_ContextCamera != null)
-                m_ContextCamera.enabled = true;
+            var contextCamera = ContextCamera;
+            if (contextCamera != null)
+                contextCamera.enabled = true;
         }
 
         public void OnTearDown() {}
@@ -79,35 +120,40 @@ namespace Unity.ClusterDisplay.Graphics
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
 
-        private void PollCameraContext (Camera camera)
-        {
-            // If we are beginning to render with our context camera, do nothing.
-            if (camera == m_ContextCamera)
-                return;
-
-            m_PreviousContextCamera = m_ContextCamera;
-            m_ContextCamera = camera;
-
-            OnPollFrameSettings(m_ContextCamera);
-
-            if (onCameraChange != null)
-                onCameraChange(m_PreviousContextCamera, m_ContextCamera);
-        }
-
         public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (camera.cameraType != CameraType.Game)
-                return;
 
-            PollCameraContext(camera);
-            m_Presenter.PollCamera(m_ContextCamera);
+            // If we are beginning to render with our context camera, do nothing.
+            if (camera == ContextCamera)
+            {
+                m_Presenter.PollCamera(ContextCamera);
+                return;
+            }
+
+            if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry) ||
+                !cameraContextRegistry.TryGetCameraContextTarget(camera, out var cameraContextTarget))
+            {
+                m_Presenter.PollCamera(ContextCamera);
+                return;
+            }
+
+            cameraContextRegistry.FocusedCameraContextTarget = cameraContextTarget;
+            OnPollFrameSettings(camera);
+
+            if (onCameraChange != null)
+                onCameraChange(PreviousContextCamera, ContextCamera);
+
+            m_Presenter.PollCamera(ContextCamera);
         }
 
         public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
         public void CacheContextProjectionMatrix ()
         {
-            var projectionMatrix = m_ContextCamera.projectionMatrix;
+            var contextCamera = ContextCamera;
+            if (contextCamera == null)
+                return;
+            var projectionMatrix = contextCamera.projectionMatrix;
             m_SerializedProjectionMatrixC1 = projectionMatrix.GetColumn(0);
             m_SerializedProjectionMatrixC2 = projectionMatrix.GetColumn(1);
             m_SerializedProjectionMatrixC3 = projectionMatrix.GetColumn(2);
@@ -116,6 +162,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void ApplyCachedProjectionMatrixToContext ()
         {
+            var contextCamera = ContextCamera;
+            if (contextCamera == null)
+                return;
+
             Matrix4x4 cachedProjectionMatrix = new Matrix4x4(
                 m_SerializedProjectionMatrixC1,
                 m_SerializedProjectionMatrixC2,
@@ -123,8 +173,8 @@ namespace Unity.ClusterDisplay.Graphics
                 m_SerializedProjectionMatrixC4
             );
 
-            m_ContextCamera.projectionMatrix = cachedProjectionMatrix;
-            m_ContextCamera.cullingMatrix = m_ContextCamera.projectionMatrix * m_ContextCamera.worldToCameraMatrix;
+            contextCamera.projectionMatrix = cachedProjectionMatrix;
+            contextCamera.cullingMatrix = contextCamera.projectionMatrix * contextCamera.worldToCameraMatrix;
         }
     }
 }
