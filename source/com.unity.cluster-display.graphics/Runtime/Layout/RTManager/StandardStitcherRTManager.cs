@@ -15,7 +15,6 @@ public class StandardStitcherRTManager : StitcherRTManager
         m_BlitRTs = new RenderTexture[tileCount];
     }
 
-
     protected override object BlitRT(int tileCount, int tileIndex, int width, int height)
     {
         PollRTs(tileCount);
@@ -46,11 +45,7 @@ public class StandardStitcherRTManager : StitcherRTManager
         if (m_PresentRT == null || resized)
         {
             if (m_PresentRT != null)
-            {
-                // if (camera.targetTexture != null && camera.targetTexture == m_PresentRT)
-                //     camera.targetTexture = null;
                 m_PresentRT.Release();
-            }
 
             m_PresentRT = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB);
             m_PresentRT.name = $"PresentRT-({m_PresentRT.width}X{m_PresentRT.height})";
