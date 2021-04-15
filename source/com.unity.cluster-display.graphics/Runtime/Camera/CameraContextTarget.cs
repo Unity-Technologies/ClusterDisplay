@@ -33,12 +33,7 @@ public class CameraContextTarget : MonoBehaviour
 
 #if UNITY_EDITOR
     private void OnValidate() => CacheCamera();
-    private void Awake()
-    {
-        CacheCamera();
-        if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
-            cameraContextRegistry.Register(m_TargetCamera);
-    }
+    private void Awake() => CacheCamera();
 #endif
 
     private void OnDestroy()
