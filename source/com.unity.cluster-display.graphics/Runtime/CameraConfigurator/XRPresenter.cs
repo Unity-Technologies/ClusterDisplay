@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class XRHHDRPPresenter : HDRPPresenter
+    public class XRPresenter : Presenter
     {
         public override RenderTexture PresentRT { get; set; }
 

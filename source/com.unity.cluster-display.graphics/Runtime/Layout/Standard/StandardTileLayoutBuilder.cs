@@ -71,6 +71,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             Blit(cmd, presentRT, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+
+            #if UNITY_EDITOR
+            UnityEditor.SceneView.RepaintAll();
+            #endif
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

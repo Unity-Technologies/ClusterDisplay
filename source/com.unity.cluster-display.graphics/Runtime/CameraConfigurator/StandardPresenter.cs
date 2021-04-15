@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class StandardHDRPPresenter : HDRPPresenter
+    public class StandardPresenter : Presenter
     {
         private RenderTexture m_PresentRT;
         public override RenderTexture PresentRT 

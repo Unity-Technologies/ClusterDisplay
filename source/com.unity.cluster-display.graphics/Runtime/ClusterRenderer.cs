@@ -179,12 +179,14 @@ namespace Unity.ClusterDisplay.Graphics
             RenderPipelineManager.endCameraRendering += OnEndCameraRender;
             RenderPipelineManager.endFrameRendering += OnEndFrameRender;
 
-            RTHandles.Initialize(Screen.width, Screen.height, true, MSAASamples.MSAA8x);
-
             if (onSetup != null)
                 onSetup();
 
             m_Setup = true;
+
+            #if UNITY_EDITOR
+            UnityEditor.SceneView.RepaintAll();
+            #endif
         }
 
         private void TearDown ()
@@ -300,7 +302,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
 #endif
-                    CameraController.Presenter = new StandardHDRPPresenter();
+                    CameraController.Presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
@@ -309,7 +311,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
 #endif
-                    CameraController.Presenter = new StandardHDRPPresenter();
+                    CameraController.Presenter = new StandardPresenter();
                     break;
 
 #if CLUSTER_DISPLAY_XR
