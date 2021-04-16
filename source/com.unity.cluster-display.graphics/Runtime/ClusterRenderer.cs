@@ -317,12 +317,12 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    CameraController.Presenter = new XRHHDRPPresenter();
+                    CameraController.Presenter = new XRPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    CameraController.Presenter = new XRHHDRPPresenter();
+                    CameraController.Presenter = new XRPresenter();
                     break;
 #endif
 
