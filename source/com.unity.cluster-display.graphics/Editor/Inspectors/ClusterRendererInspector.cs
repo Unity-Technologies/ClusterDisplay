@@ -35,8 +35,11 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
             //settings.TileIndexOverride = EditorGUILayout.IntField("Tile Index Override", settings.TileIndexOverride);
             settings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), settings.TileIndexOverride);
             settings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), settings.EnableKeyword);
-            settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.Stitcher), settings.CurrentLayoutMode);
+            settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), settings.CurrentLayoutMode);
             settings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), settings.UseDebugViewportSubsection);
+
+            if (ClusterRenderer.LayoutModeIsStitcher(settings.CurrentLayoutMode))
+                settings.BezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), settings.BezelColor);
 
             // Let user manipulate viewport directly instead of inferring it from tile index.
             if (settings.UseDebugViewportSubsection)

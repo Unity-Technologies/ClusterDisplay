@@ -2,17 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class URPClusterRenderer : MonoBehaviour
+namespace Unity.ClusterDisplay.Graphics
 {
-    // Start is called before the first frame update
-    void Start()
+    public class URPClusterRendererModule : ClusterRenderer.IClusterRendererModule
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        public void OnSetCustomLayout(LayoutBuilder layoutBuilder)
+        {
+        }
     }
 }

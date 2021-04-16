@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_ClusterRenderer.CameraController.Presenter.PresentRT = presentRT;
 
             cmd.SetRenderTarget(presentRT);
-            cmd.ClearRenderTarget(true, true, Color.yellow);
+            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
 
             Blit(cmd, presentRT, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);

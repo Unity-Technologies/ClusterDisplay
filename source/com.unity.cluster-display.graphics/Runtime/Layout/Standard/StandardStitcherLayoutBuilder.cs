@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
             cmd.SetRenderTarget(m_ClusterRenderer.CameraController.Presenter.PresentRT);
-            cmd.ClearRenderTarget(true, true, Color.yellow);
+            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
 
             for (var i = 0; i < numTiles; i++)
             {
