@@ -22,13 +22,13 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Dispose()
         {
             m_QueuedStitcherParameters.Clear();
-            ReleaseTargets();
+            m_RTManager.Release();
         }
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.CameraContext != null)
-                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
+            if (m_ClusterRenderer.CameraController.ContextCamera != null)
+                m_ClusterRenderer.CameraController.ContextCamera.enabled = true;
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cmd.SetViewport(tileViewport);
             
-            HDUtils.BlitQuad(cmd, parms.target, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
+            HDUtils.BlitQuad(cmd, parms.targetRT as RTHandle, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)
@@ -69,12 +69,11 @@ namespace Unity.ClusterDisplay.Graphics
             // Assert.IsTrue(m_HasClearedMirrorView);
             m_HasClearedMirrorView = false;
 
-            PollRTs();
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             
             for (var i = 0; i != numTiles; ++i)
             {
-                PollRT(i, m_OverscannedRect);
+                var targetRT = m_RTManager.BlitRTHandle(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculateStitcherLayout(
                     camera, 
                     i, 
@@ -88,7 +87,7 @@ namespace Unity.ClusterDisplay.Graphics
                     multipassId = i,
                     cullingPassId = 0,
                     cullingParameters = cullingParams,
-                    renderTarget = m_Targets[i],
+                    renderTarget = targetRT,
                     customMirrorView = BuildMirrorView
                 };
                 
@@ -116,7 +115,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (camera != m_ClusterRenderer.CameraController.CameraContext)
+            if (camera != m_ClusterRenderer.CameraController.ContextCamera)
                 return;
 
             camera.targetTexture = null;

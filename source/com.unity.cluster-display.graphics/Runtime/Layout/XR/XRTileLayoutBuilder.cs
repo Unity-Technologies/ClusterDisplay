@@ -23,10 +23,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.CameraContext != null)
+            if (m_ClusterRenderer.CameraController.ContextCamera != null)
             {
-                m_ClusterRenderer.CameraController.CameraContext.enabled = true;
-                m_ClusterRenderer.CameraController.CameraContext.targetTexture = null;
+                m_ClusterRenderer.CameraController.ContextCamera.enabled = true;
+                m_ClusterRenderer.CameraController.ContextCamera.targetTexture = null;
             }
         }
 
@@ -46,7 +46,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!SetupTiledLayout(
                 camera, 
-                ref m_OverscannedTarget,
                 out var cullingParams, 
                 out var projMatrix, 
                 out var viewportSubsection,
