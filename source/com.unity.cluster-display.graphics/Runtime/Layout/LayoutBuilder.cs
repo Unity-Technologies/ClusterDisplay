@@ -45,14 +45,6 @@ namespace Unity.ClusterDisplay.Graphics
             return scaleBias;
         }
 
-        public void OnSetup()
-        {
-        }
-
-        public void OnTearDown()
-        {
-        }
-
         private static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
         protected void Blit (CommandBuffer cmd, RenderTexture presentRT, RenderTexture target, Vector4 texBias, Vector4 rtBias)
         {

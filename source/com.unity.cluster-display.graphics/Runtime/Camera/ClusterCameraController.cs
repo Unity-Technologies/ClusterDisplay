@@ -106,15 +106,6 @@ namespace Unity.ClusterDisplay.Graphics
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
         public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
 
-        public void OnSetup()
-        {
-            var contextCamera = ContextCamera;
-            if (contextCamera != null)
-                contextCamera.enabled = true;
-        }
-
-        public void OnTearDown() {}
-
         protected virtual void OnPollFrameSettings (Camera camera) {}
 
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

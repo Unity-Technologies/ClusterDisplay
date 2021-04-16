@@ -12,8 +12,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
 
+#if CLUSTER_DISPLAY_XR
+        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRTHandle(tileCount, tileIdnex, width, height);
+        private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
+#else
         private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRenderTexture(tileCount, tileIdnex, width, height);
-        private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height); 
+        private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
+#endif
         private Rect m_OverscannedRect;
 
         public override void LateUpdate ()
@@ -107,9 +112,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
 
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
-            #endif
+#endif
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
