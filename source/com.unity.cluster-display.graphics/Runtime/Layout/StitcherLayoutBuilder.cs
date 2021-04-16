@@ -15,12 +15,6 @@ namespace Unity.ClusterDisplay.Graphics
             public Rect percentageViewportSubsection;
         }
 
-#if CLUSTER_DISPLAY_XR
-        protected StitcherRTManager m_RTManager = new XRStitcherRTManager();
-#else
-        protected StitcherRTManager m_RTManager = new StandardStitcherRTManager();
-#endif
-
         protected Queue<StitcherParameters> m_QueuedStitcherParameters = new Queue<StitcherParameters>();
 
         protected StitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}

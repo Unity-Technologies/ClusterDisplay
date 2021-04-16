@@ -11,14 +11,9 @@ namespace Unity.ClusterDisplay.Graphics
 
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
-
-#if CLUSTER_DISPLAY_XR
-        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRTHandle(tileCount, tileIdnex, width, height);
-        private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
-#else
+        private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
         private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRenderTexture(tileCount, tileIdnex, width, height);
         private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
-#endif
         private Rect m_OverscannedRect;
 
         public override void LateUpdate ()
@@ -32,8 +27,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!ValidGridSize(out var numTiles))
                 return;
-
-            Assert.IsTrue(m_QueuedStitcherParameters.Count == 0);
 
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
                 return;
@@ -69,12 +62,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
-        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) 
         {
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
-                return;
-
             if (!ValidGridSize(out var numTiles))
                 return;
 
@@ -110,13 +101,12 @@ namespace Unity.ClusterDisplay.Graphics
                     stitcherParameters.scaleBiasRT);
             }
 
+            m_QueuedStitcherParameters.Clear();
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
 #endif
         }
-
-        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 }
