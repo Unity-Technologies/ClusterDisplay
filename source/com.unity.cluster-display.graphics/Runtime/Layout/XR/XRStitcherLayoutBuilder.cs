@@ -52,8 +52,15 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             cmd.SetViewport(tileViewport);
-            
-            HDUtils.BlitQuad(cmd, parms.targetRT as RTHandle, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
+
+            var target = parms.targetRT as RTHandle;
+            if (target == null)
+            {
+                Debug.LogError($"Invalid {nameof(RTHandle)}");
+                return;
+            }
+
+            HDUtils.BlitQuad(cmd, target, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)
@@ -104,7 +111,7 @@ namespace Unity.ClusterDisplay.Graphics
                     textureArraySlice = -1
                 };
                 
-                CalculcateAndQueueStitcherParameters(i, m_OverscannedRect, percentageViewportSubsection);
+                CalculcateAndQueueStitcherParameters(targetRT, m_OverscannedRect, percentageViewportSubsection);
 
                 XRPass pass = layout.CreatePass(passInfo);
                 layout.AddViewToPass(viewInfo, pass);

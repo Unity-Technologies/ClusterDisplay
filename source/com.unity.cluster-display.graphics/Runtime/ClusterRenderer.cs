@@ -168,6 +168,16 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
         }
 
+        private void RegisterModule (IClusterRendererModule module)
+        {
+            onSetCustomLayout += module.OnSetCustomLayout;
+        }
+
+        private void UnRegisterModule (IClusterRendererModule module)
+        {
+            onSetCustomLayout -= module.OnSetCustomLayout;
+        }
+
         private bool m_Setup = false;
         private void Setup ()
         {
@@ -177,6 +187,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_LayoutBuilder = null;
 
             RegisterRendererEvents(m_ClusterCameraController);
+            RegisterModule(m_ClusterRendererModule);
             m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
@@ -197,6 +208,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             UnRegisterLateUpdateReciever(m_ClusterCameraController);
+            UnRegisterModule(m_ClusterRendererModule);
             m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
