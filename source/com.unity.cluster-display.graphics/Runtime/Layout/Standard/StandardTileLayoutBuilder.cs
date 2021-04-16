@@ -9,8 +9,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Dispose() {}
 
+#if CLUSTER_DISPLAY_XR
+        public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRTHandle(width, height);
+        public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
+#else
         public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRenderTexture(width, height);
         public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
+#endif
         private Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
@@ -72,9 +77,9 @@ namespace Unity.ClusterDisplay.Graphics
             Blit(cmd, presentRT, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
 
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
-            #endif
+#endif
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

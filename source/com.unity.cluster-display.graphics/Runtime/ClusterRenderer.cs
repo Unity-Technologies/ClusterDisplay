@@ -24,21 +24,28 @@ namespace Unity.ClusterDisplay.Graphics
         IClusterRenderer, 
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
-        public delegate void OnSetup();
-        public delegate void OnTearDown();
+        // |---> IClusterRendererEventReceiver delegates for RenderPipelineManager.*
         public delegate void OnBeginCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
         public delegate void OnEndCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
         public delegate void OnBeginFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
         public delegate void OnEndFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
+        // <---|
+
+        // |---> IClusterRendererModule delegates.
+        public delegate void OnSetCustomLayout(LayoutBuilder layoutBuilder);
+        // <---|
 
         public interface IClusterRendererEventReceiver
         {
-            void OnSetup();
-            void OnTearDown();
             void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
             void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
             void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
             void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
+        }
+
+        public interface IClusterRendererModule
+        {
+            void OnSetCustomLayout(LayoutBuilder layoutBuilder);
         }
 
         public enum LayoutMode
@@ -54,7 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public bool LayoutModeIsXR (LayoutMode layoutMode)
+        public static bool LayoutModeIsXR (LayoutMode layoutMode)
         {
             switch (layoutMode)
             {
@@ -74,14 +81,16 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        private OnSetup onSetup;
-        private OnTearDown onTearDown;
-
+        // |---> IClusterRendererEventReceiver delegates instances.
         private OnBeginCameraRenderDelegate onBeginCameraRender;
         private OnEndCameraRenderDelegate onEndCameraRender;
-
         private OnBeginFrameRenderDelegate onBeginFrameRender;
         private OnEndFrameRenderDelegate onEndFrameRender;
+        // <---|
+
+        // |---> IClusterRendererModule delgate instances.
+        private OnSetCustomLayout onSetCustomLayout;
+        // <---|
 
         private LayoutBuilder m_LayoutBuilder = null;
 
@@ -89,6 +98,7 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
 #if CLUSTER_DISPLAY_HDRP
         [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
+        [HideInInspector][SerializeField] private HDRPClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
 #else
         [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
 #endif
@@ -148,8 +158,6 @@ namespace Unity.ClusterDisplay.Graphics
             onBeginCameraRender += clusterRendererEventReceiver.OnBeginCameraRender;
             onEndCameraRender += clusterRendererEventReceiver.OnEndCameraRender;
             onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
-            onSetup += clusterRendererEventReceiver.OnSetup;
-            onTearDown += clusterRendererEventReceiver.OnTearDown;
         }
 
         private void UnRegisterLateUpdateReciever (IClusterRendererEventReceiver clusterRendererEventReceiver)
@@ -158,9 +166,6 @@ namespace Unity.ClusterDisplay.Graphics
             onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
             onEndCameraRender -= clusterRendererEventReceiver.OnEndCameraRender;
             onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
-
-            onSetup -= clusterRendererEventReceiver.OnSetup;
-            onTearDown -= clusterRendererEventReceiver.OnTearDown;
         }
 
         private bool m_Setup = false;
@@ -178,9 +183,6 @@ namespace Unity.ClusterDisplay.Graphics
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
             RenderPipelineManager.endCameraRendering += OnEndCameraRender;
             RenderPipelineManager.endFrameRendering += OnEndFrameRender;
-
-            if (onSetup != null)
-                onSetup();
 
             m_Setup = true;
 
@@ -201,9 +203,6 @@ namespace Unity.ClusterDisplay.Graphics
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
             RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
             RenderPipelineManager.endFrameRendering -= OnEndFrameRender;
-
-            if (onTearDown != null)
-                onTearDown();
 
             m_Setup = false;
         }
@@ -269,19 +268,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_LayoutBuilder = builder;
             if (m_LayoutBuilder != null)
-            {
                 RegisterRendererEvents(m_LayoutBuilder);
-#if !CLUSTER_DISPLAY_XR
-            }
-#else
-                if (LayoutModeIsXR(m_Context.DebugSettings.CurrentLayoutMode))
-                    XRSystem.SetCustomLayout((m_LayoutBuilder as IXRLayoutBuilder).BuildLayout);
-                else XRSystem.SetCustomLayout(null);
-                return;
-            }
 
-            XRSystem.SetCustomLayout(null);
-#endif
+            if (onSetCustomLayout != null)
+                onSetCustomLayout(m_LayoutBuilder);
         }
 
         public void OnChangeLayoutMode(LayoutMode newLayoutMode)
