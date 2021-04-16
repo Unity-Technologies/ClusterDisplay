@@ -13,6 +13,7 @@ namespace Unity.ClusterDisplay.Graphics
         private bool m_HasClearedMirrorView = true;
         private Rect m_OverscannedRect;
 
+        private XRStitcherRTManager m_RTManager = new XRStitcherRTManager();
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRStitcher;
         public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
         {

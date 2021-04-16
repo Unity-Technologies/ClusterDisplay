@@ -212,7 +212,12 @@ namespace Unity.ClusterDisplay.Graphics
         private void OnDisable() => TearDown();
         private void OnDestroy() => TearDown();
 
-        private void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras) {}
+        private void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras) 
+        {
+            if (onBeginFrameRender != null)
+                onBeginFrameRender(context, cameras);
+        }
+
         private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (!CameraContextRegistery.CanChangeContextTo(camera))
@@ -248,7 +253,11 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        private void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras) {}
+        private void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras) 
+        {
+            if (onEndFrameRender != null)
+                onEndFrameRender(context, cameras);
+        }
 
         private void LateUpdate()
         {
