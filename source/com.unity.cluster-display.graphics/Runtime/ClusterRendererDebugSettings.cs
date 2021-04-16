@@ -112,6 +112,13 @@ namespace Unity.ClusterDisplay.Graphics
             get => m_ScaleBiasTexOffset;
             set => m_ScaleBiasTexOffset = value;
         }
+
+        [SerializeField] Color m_BezelColor;
+        public Color BezelColor
+        {
+            get => m_BezelColor;
+            set => m_BezelColor = value;
+        }
         
         public ClusterRendererDebugSettings() { Reset(); }
         

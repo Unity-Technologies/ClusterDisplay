@@ -20,30 +20,12 @@ namespace Unity.ClusterDisplay.Graphics
             set { m_Debug = value; }
         }
 
-        public int OverscanInPixels
-        {
-            get { return m_Settings.OverscanInPixels; }
-        }
-
-        public Vector2Int GridSize
-        {
-            get { return m_Settings.GridSize; }
-        }
-        
-        public Vector2 Bezel
-        {
-            get { return m_Settings.Bezel; }
-        }
-        
-        public Vector2 PhysicalScreenSize
-        {
-            get { return m_Settings.PhysicalScreenSize; }
-        }
-
-        public Vector2 DebugScaleBiasTexOffset
-        {
-            get { return m_Debug ? m_DebugSettings.ScaleBiasTexOffset : Vector2.zero; }
-        }
+        public int OverscanInPixels => m_Settings.OverscanInPixels;
+        public Vector2Int GridSize => m_Settings.GridSize;
+        public Vector2 Bezel => m_Settings.Bezel;
+        public Vector2 PhysicalScreenSize => m_Settings.PhysicalScreenSize;
+        public Vector2 DebugScaleBiasTexOffset => m_Debug ? m_DebugSettings.ScaleBiasTexOffset : Vector2.zero;
+        public Color BezelColor => m_DebugSettings.BezelColor;
 
         public int TileIndex
         {

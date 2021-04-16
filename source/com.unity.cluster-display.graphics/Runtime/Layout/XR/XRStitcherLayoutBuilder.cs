@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!m_HasClearedMirrorView)
             {
                 m_HasClearedMirrorView = true;
-                cmd.ClearRenderTarget(true, true, Color.black);
+                cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
             }
 
             cmd.SetViewport(tileViewport);

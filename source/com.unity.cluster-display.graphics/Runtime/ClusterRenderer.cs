@@ -81,6 +81,27 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
+        public static bool LayoutModeIsStitcher (LayoutMode layoutMode)
+        {
+            switch (layoutMode)
+            {
+                case LayoutMode.None:
+                case LayoutMode.StandardTile:
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRTile:
+#endif
+                    return false;
+                case LayoutMode.StandardStitcher:
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRStitcher:
+#endif
+                    return true;
+
+                default:
+                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
+            }
+        }
+
         // |---> IClusterRendererEventReceiver delegates instances.
         private OnBeginCameraRenderDelegate onBeginCameraRender;
         private OnEndCameraRenderDelegate onEndCameraRender;
@@ -98,9 +119,10 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
 #if CLUSTER_DISPLAY_HDRP
         [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
-        [HideInInspector][SerializeField] private HDRPClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
+        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
 #else
         [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
+        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
 #endif
 
         public ClusterCameraController CameraController => m_ClusterCameraController;

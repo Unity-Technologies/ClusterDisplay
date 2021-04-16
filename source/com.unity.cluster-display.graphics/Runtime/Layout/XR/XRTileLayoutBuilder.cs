@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             cmd.SetRenderTarget(rt);
             cmd.SetViewport(viewport);
-            cmd.ClearRenderTarget(true, true, Color.yellow);
+            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
 
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
             var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
