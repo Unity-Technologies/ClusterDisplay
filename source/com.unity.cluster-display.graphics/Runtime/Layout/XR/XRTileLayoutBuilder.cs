@@ -43,6 +43,8 @@ namespace Unity.ClusterDisplay.Graphics
         public bool BuildLayout(XRLayout layout)
         {
             var camera = layout.camera;
+            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+                return false;
 
             if (!SetupTiledLayout(
                 camera, 
