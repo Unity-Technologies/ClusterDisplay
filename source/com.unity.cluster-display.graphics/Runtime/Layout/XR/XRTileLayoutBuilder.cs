@@ -10,15 +10,14 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRTile;
 
-        private RTHandle m_OverscannedTarget;
+        private XRTileRTManager m_RTManager = new XRTileRTManager();
         private Rect m_OverscannedRect;
 
         public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
         public override void Dispose()
         {
-            RTHandles.Release(m_OverscannedTarget);
-            m_OverscannedTarget = null;
+            m_RTManager.Release();
         }
 
         public override void LateUpdate()
@@ -37,7 +36,8 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.ClearRenderTarget(true, true, Color.yellow);
 
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
-            HDUtils.BlitQuad(cmd, m_OverscannedTarget, scaleBiasTex, k_ScaleBiasRT, 0, true);
+            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            HDUtils.BlitQuad(cmd, target, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)
@@ -54,13 +54,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             cullingParams.stereoProjectionMatrix = projMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
+            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
             {
                 multipassId = 0,
                 cullingPassId = 0,
                 cullingParameters = cullingParams,
-                renderTarget = m_OverscannedTarget,
+                renderTarget = target,
                 customMirrorView = BuildMirrorView
             };
 
