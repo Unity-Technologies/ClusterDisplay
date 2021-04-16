@@ -69,7 +69,10 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
 
             var camera = layout.camera;
-            if (camera == null || camera.cameraType != CameraType.Game || !camera.TryGetCullingParameters(false, out var cullingParams))
+            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+                return false;
+
+            if (!camera.TryGetCullingParameters(false, out var cullingParams))
                 return false;
 
             // Whenever we build a new layout we expect previously submitted mirror params to have been consumed.
