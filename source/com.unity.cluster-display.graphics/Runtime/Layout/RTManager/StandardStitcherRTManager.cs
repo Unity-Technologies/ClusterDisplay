@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -17,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_BlitRTs = new RenderTexture[tileCount];
         }
 
-        protected override object BlitRT(int tileCount, int tileIndex, int width, int height)
+        protected override object BlitRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format)
         {
             PollRTs(tileCount);
 
@@ -25,31 +26,31 @@ namespace Unity.ClusterDisplay.Graphics
                 (m_BlitRTs[tileIndex].width != (int)width || 
                 m_BlitRTs[tileIndex].height != (int)height);
 
-            if (m_BlitRTs[tileIndex] == null || resized)
+            if (m_BlitRTs[tileIndex] == null || resized || m_BlitRTs[tileIndex].graphicsFormat != format)
             {
                 if (m_BlitRTs[tileIndex] != null)
                     m_BlitRTs[tileIndex].Release();
 
-                m_BlitRTs[tileIndex] = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm);
+                m_BlitRTs[tileIndex] = new RenderTexture(width, height, 1, format);
                 m_BlitRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_BlitRTs[tileIndex].width}X{m_BlitRTs[tileIndex].height})";
             }
 
             return m_BlitRTs[tileIndex];
         }
 
-        protected override object PresentRT(int width, int height)
+        protected override object PresentRT(int width, int height, GraphicsFormat format)
         {
             bool resized = 
                 m_PresentRT != null && 
                 (m_PresentRT.width != (int)width || 
                 m_PresentRT.height != (int)height);
 
-            if (m_PresentRT == null || resized)
+            if (m_PresentRT == null || resized || m_PresentRT.graphicsFormat != format)
             {
                 if (m_PresentRT != null)
                     m_PresentRT.Release();
 
-                m_PresentRT = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB);
+                m_PresentRT = new RenderTexture(width, height, 1, format);
                 m_PresentRT.name = $"PresentRT-({m_PresentRT.width}X{m_PresentRT.height})";
             }
 

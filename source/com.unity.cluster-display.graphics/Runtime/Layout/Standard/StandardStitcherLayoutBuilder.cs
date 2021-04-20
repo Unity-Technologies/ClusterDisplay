@@ -24,6 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (camera.enabled)
                 camera.enabled = false;
+            camera.usePhysicalProperties = true;
 
             if (!ValidGridSize(out var numTiles))
                 return;

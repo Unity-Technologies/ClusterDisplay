@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 public class XRTileRTManager : TileRTManager
 {
@@ -9,7 +10,7 @@ public class XRTileRTManager : TileRTManager
     private RTHandle m_BlitRT;
     private RTHandle m_PresentRT;
 
-    protected override object BlitRT(int width, int height)
+    protected override object BlitRT(int width, int height, GraphicsFormat format)
     {
         bool resized = 
             m_BlitRT != null && 
@@ -36,7 +37,7 @@ public class XRTileRTManager : TileRTManager
         return m_BlitRT;
     }
 
-    protected override object PresentRT(int width, int height)
+    protected override object PresentRT(int width, int height, GraphicsFormat format)
     {
             bool resized = 
                 m_PresentRT != null && 

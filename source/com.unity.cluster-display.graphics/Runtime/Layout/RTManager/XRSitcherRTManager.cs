@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -19,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Targets = new RTHandle[tileCount];
         }
 
-        protected override object BlitRT(int tileCount, int tileIndex, int width, int height)
+        protected override object BlitRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format)
         {
             PollRTs(tileCount);
 
@@ -49,7 +50,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_Targets[tileIndex];
         }
 
-        protected override object PresentRT(int width, int height)
+        protected override object PresentRT(int width, int height, GraphicsFormat format)
         {
             bool resized = 
                 m_PresentTarget != null && 
