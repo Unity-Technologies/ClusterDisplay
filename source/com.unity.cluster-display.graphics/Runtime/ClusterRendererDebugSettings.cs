@@ -13,7 +13,6 @@ namespace Unity.ClusterDisplay.Graphics
         public interface IDebugSettingsReceiver
         {
             void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
-            void ToggleClusterDisplayShaderKeywords(bool keywordsEnabled);
         }
 
         public delegate void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
@@ -25,16 +24,16 @@ namespace Unity.ClusterDisplay.Graphics
         public void RegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
         {
             onChangeLayoutMode += debugSettingsReceiver.OnChangeLayoutMode;
-            onEnableKeywords += debugSettingsReceiver.ToggleClusterDisplayShaderKeywords;
+            onEnableKeywords += ClusterRenderer.ToggleClusterDisplayShaderKeywords;
 
             debugSettingsReceiver.OnChangeLayoutMode(m_LayoutMode);
-            debugSettingsReceiver.ToggleClusterDisplayShaderKeywords(m_EnableKeyword);
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(m_EnableKeyword);
         }
 
         public void UnRegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
         {
             onChangeLayoutMode -= debugSettingsReceiver.OnChangeLayoutMode;
-            onEnableKeywords -= debugSettingsReceiver.ToggleClusterDisplayShaderKeywords;
+            onEnableKeywords -= ClusterRenderer.ToggleClusterDisplayShaderKeywords;
         }
 
         [SerializeField] int m_TileIndexOverride;

@@ -145,9 +145,7 @@ namespace Unity.ClusterDisplay.Graphics
         public Matrix4x4 OriginalProjectionMatrix => m_OriginalProjectionMatrix;
 
         public ClusterRenderContext Context => m_Context;
-
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        private bool m_ShaderKeywordState = false;
         
 #if UNITY_EDITOR
         // we need a clip-to-world space conversion for gizmo
@@ -255,12 +253,8 @@ namespace Unity.ClusterDisplay.Graphics
         private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (!CameraContextRegistery.CanChangeContextTo(camera))
-            {
-                ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
                 return;
-            }
 
-            ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
             onBeginCameraRender(context, camera);
 
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
@@ -366,12 +360,10 @@ namespace Unity.ClusterDisplay.Graphics
             SetLayoutBuilder(newLayoutBuilder);
         }
 
-        public void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
+        public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (keywordEnabled == m_ShaderKeywordState)
+            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled)
                 return;
-
-            m_ShaderKeywordState = keywordEnabled;
 
             if (keywordEnabled)
                 Shader.EnableKeyword(k_ShaderKeyword);

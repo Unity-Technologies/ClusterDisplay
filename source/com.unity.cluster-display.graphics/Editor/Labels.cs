@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Overscan:                return "Overscan in Pixels";
                 case Field.Debug:                   return "Debug";
                 case Field.TileIndexOverride:       return "Tile Index Override";
-                case Field.Keyword:                 return "Keyword";
+                case Field.Keyword:                 return "Postprocessing Shader Keyword";
                 case Field.LayoutMode:              return "Layout Mode";
                 case Field.DebugViewportSubsection: return "Debug Viewport Subsection";
                 case Field.ScaleBiasOffset:         return "Scale Bias Offset";

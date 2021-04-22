@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void Dispose();
 
         protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;
-        public void UploadClusterDisplayParams (Matrix4x4 projectionMatrix) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, projectionMatrix);
+        public void UploadClusterDisplayParams (Matrix4x4 projectionMatrix) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, /*GL.GetGPUProjectionMatrix(projectionMatrix, true)*/projectionMatrix);
 
         protected Rect CalculateOverscannedRect (int width, int height)
         {

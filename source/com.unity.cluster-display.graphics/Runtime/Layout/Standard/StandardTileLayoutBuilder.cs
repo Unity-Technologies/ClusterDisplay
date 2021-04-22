@@ -33,8 +33,8 @@ namespace Unity.ClusterDisplay.Graphics
             if (!SetupTiledLayout(
                 camera, 
                 out var _, 
-                out var projMatrix, 
-                out var _,
+                out var projectionMatrix, 
+                out var viewportSubsection,
                 out m_OverscannedRect))
                 return;
 
@@ -42,13 +42,12 @@ namespace Unity.ClusterDisplay.Graphics
             if (rt != camera.targetTexture)
                 camera.targetTexture = rt;
 
-            UploadClusterDisplayParams(projMatrix);
-
             m_ClusterRenderer.CameraController.CacheContextProjectionMatrix();
-            camera.projectionMatrix = projMatrix;
-            camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
+            camera.projectionMatrix = projectionMatrix;
+            camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
+            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize));
 
             camera.Render();
             m_ClusterRenderer.CameraController.ApplyCachedProjectionMatrixToContext();
@@ -62,6 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
                 return;
 
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
             var scaleBias = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset); ;
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");

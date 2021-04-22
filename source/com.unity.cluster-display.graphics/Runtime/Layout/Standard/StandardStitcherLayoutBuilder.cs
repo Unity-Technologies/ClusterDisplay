@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
-                    out var _, 
+                    out var viewportSubsection, 
                     out var projectionMatrix);
 
 
@@ -54,7 +54,8 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
-                UploadClusterDisplayParams(projectionMatrix);
+                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
+                UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize));
                 camera.Render();
 
                 m_ClusterRenderer.CameraController.ApplyCachedProjectionMatrixToContext();
@@ -74,6 +75,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_QueuedStitcherParameters.Count < numTiles)
                 return;
 
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             m_ClusterRenderer.CameraController.Presenter.PresentRT = presentRT;

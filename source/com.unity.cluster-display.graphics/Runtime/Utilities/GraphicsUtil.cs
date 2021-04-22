@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
-        public static Matrix4x4 GetHdrpClusterDisplayParams(Rect overscannedViewportSubsection, Vector2 globalScreenSize, Vector2Int gridSize)
+        public static Matrix4x4 GetClusterDisplayParams(Rect overscannedViewportSubsection, Vector2 globalScreenSize, Vector2Int gridSize)
         {
             var parms = new Matrix4x4();
 

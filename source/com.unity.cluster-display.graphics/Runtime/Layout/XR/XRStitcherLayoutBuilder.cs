@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.Graphics
                     viewMatrix = camera.worldToCameraMatrix,
                     projMatrix = projectionMatrix,
                     viewport = m_OverscannedRect,
-                    clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
+                    clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                         viewportSubsection, 
                         m_ClusterRenderer.Context.GlobalScreenSize, 
                         m_ClusterRenderer.Context.GridSize),
@@ -126,13 +126,20 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (camera != m_ClusterRenderer.CameraController.ContextCamera)
+            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
                 return;
 
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
             camera.targetTexture = null;
         }
 
-        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) 
+        {
+            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+                return;
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
+        }
+
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
     }
 }
