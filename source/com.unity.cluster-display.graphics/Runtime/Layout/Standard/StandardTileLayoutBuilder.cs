@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetRenderTarget(presentRT);
             cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
 
-            Blit(cmd, presentRT, blitRT, scaleBias, k_ScaleBiasRT);
+            Blit(cmd, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
 
 #if UNITY_EDITOR

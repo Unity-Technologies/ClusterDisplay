@@ -98,7 +98,6 @@ namespace Unity.ClusterDisplay.Graphics
 
                 Blit(
                     cmd, 
-                    m_ClusterRenderer.CameraController.Presenter.PresentRT, 
                     stitcherParameters.targetRT as RenderTexture, 
                     stitcherParameters.scaleBiasTex, 
                     stitcherParameters.scaleBiasRT);

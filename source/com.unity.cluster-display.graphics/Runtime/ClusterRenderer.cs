@@ -24,17 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
         IClusterRenderer, 
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
-        // |---> IClusterRendererEventReceiver delegates for RenderPipelineManager.*
-        public delegate void OnBeginCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
-        public delegate void OnEndCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
-        public delegate void OnBeginFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
-        public delegate void OnEndFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
-        // <---|
-
-        // |---> IClusterRendererModule delegates.
-        public delegate void OnSetCustomLayout(LayoutBuilder layoutBuilder);
-        // <---|
-
+        // Any class with this interface that is registered with ClusterRenderer will receive these callbacks.
         public interface IClusterRendererEventReceiver
         {
             void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
@@ -52,14 +42,98 @@ namespace Unity.ClusterDisplay.Graphics
         {
             None,
 
+            // These layout modes Camera.targetTexture and RenderTextures.
             StandardTile,
             StandardStitcher,
 
-#if CLUSTER_DISPLAY_XR
+             // XR Modes are only supported on the HDRP branch: cluster-display/backport-xr/v8.3.1
+            #if CLUSTER_DISPLAY_XR
             XRTile,
             XRStitcher
-#endif
+            #endif
         }
+
+        // IClusterRendererEventReceiver delegates for RenderPipelineManager.*
+        public delegate void OnBeginCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
+        public delegate void OnEndCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
+        public delegate void OnBeginFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
+        public delegate void OnEndFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
+
+        // IClusterRendererModule delegates.
+        public delegate void OnSetCustomLayout(LayoutBuilder layoutBuilder);
+
+        // IClusterRendererEventReceiver delegates instances.
+        private OnBeginCameraRenderDelegate onBeginCameraRender;
+        private OnEndCameraRenderDelegate onEndCameraRender;
+        private OnBeginFrameRenderDelegate onBeginFrameRender;
+        private OnEndFrameRenderDelegate onEndFrameRender;
+
+        // IClusterRendererModule delgate instances.
+        private OnSetCustomLayout onSetCustomLayout;
+
+        private LayoutBuilder m_LayoutBuilder = null;
+
+        [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
+
+        #if CLUSTER_DISPLAY_HDRP
+        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
+        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
+        #else
+        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
+        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
+        #endif
+
+        /// <summary>
+        /// Camera controller manages the handle to the camera and responds to camera context changes such as camera cuts.
+        /// </summary>
+        public ClusterCameraController CameraController => m_ClusterCameraController;
+
+        /// <summary>
+        /// User controlled settings, typically project specific.
+        /// </summary>
+        public ClusterRendererSettings Settings => m_Context.Settings;
+
+        /// <summary>
+        /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
+        /// </summary>
+        public ClusterRendererDebugSettings DebugSettings => m_Context.DebugSettings;
+
+        public ClusterRenderContext Context => m_Context;
+        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
+        
+        #if UNITY_EDITOR
+        // We need a clip-to-world space conversion for gizmo.
+        Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
+        private ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
+
+        void OnDrawGizmos()
+        {
+            if (enabled)
+                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
+        }
+
+        /// <summary>
+        /// If a reference to an instance of ClusterDisplayResources does not exist, this function will automatically
+        /// load the default instance of that scriptable object from the cluster display package.
+        /// </summary>
+        private void GetResources ()
+        {
+            if (Settings.Resources != null)
+                return;
+
+            // Search all assets by our desired type.
+            var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
+            if (assets.Length == 0)
+                throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
+
+            Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+            Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
+
+            EditorUtility.SetDirty(this);
+        }
+
+        private void OnValidate() => GetResources();
+        #endif
 
         public static bool LayoutModeIsXR (LayoutMode layoutMode)
         {
@@ -70,11 +144,12 @@ namespace Unity.ClusterDisplay.Graphics
                 case LayoutMode.StandardStitcher:
                     return false;
 
-#if CLUSTER_DISPLAY_XR
+             // XR Modes are only supported on the HDRP branch: cluster-display/backport-xr/v8.3.1
+            #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                 case LayoutMode.XRStitcher:
                     return true;
-#endif
+            #endif
 
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
@@ -87,14 +162,16 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 case LayoutMode.None:
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_XR
+
+                #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
-#endif
+                #endif
                     return false;
+
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_XR
+                #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRStitcher:
-#endif
+                #endif
                     return true;
 
                 default:
@@ -102,75 +179,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        // |---> IClusterRendererEventReceiver delegates instances.
-        private OnBeginCameraRenderDelegate onBeginCameraRender;
-        private OnEndCameraRenderDelegate onEndCameraRender;
-        private OnBeginFrameRenderDelegate onBeginFrameRender;
-        private OnEndFrameRenderDelegate onEndFrameRender;
-        // <---|
-
-        // |---> IClusterRendererModule delgate instances.
-        private OnSetCustomLayout onSetCustomLayout;
-        // <---|
-
-        private LayoutBuilder m_LayoutBuilder = null;
-
-
-        [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
-#if CLUSTER_DISPLAY_HDRP
-        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
-        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
-#else
-        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
-        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
-#endif
-
-        public ClusterCameraController CameraController => m_ClusterCameraController;
-
-        /// <summary>
-        /// User controlled settings, typically project specific.
-        /// </summary>
-        public ClusterRendererSettings Settings => m_Context.Settings;
-
-        /// <summary>
-        /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
-        /// </summary>
-        public ClusterRendererDebugSettings DebugSettings => m_Context.DebugSettings;
-       
-        Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
-
-        /// <summary>
-        /// Camera projection before its slicing to an asymmetric projection.
-        /// </summary>
-        public Matrix4x4 OriginalProjectionMatrix => m_OriginalProjectionMatrix;
-
-        public ClusterRenderContext Context => m_Context;
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        
-#if UNITY_EDITOR
-        // we need a clip-to-world space conversion for gizmo
-        Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
-        private ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
-
-        void OnDrawGizmos()
-        {
-            if (enabled)
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
-        }
-
-        private void OnValidate()
-        {
-            if (Settings.Resources == null)
-            {
-                var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
-                if (assets.Length == 0)
-                    throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
-                Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
-                EditorUtility.SetDirty(this);
-            }
-        }
-#endif
 
         private void RegisterRendererEvents (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
@@ -276,9 +284,9 @@ namespace Unity.ClusterDisplay.Graphics
             if (onEndCameraRender != null)
                 onEndCameraRender(context, camera);
 
-#if UNITY_EDITOR
+            #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
-#endif
+            #endif
         }
 
         private void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras) 
@@ -324,24 +332,29 @@ namespace Unity.ClusterDisplay.Graphics
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_HDRP
+
+                    #if CLUSTER_DISPLAY_HDRP
                     newLayoutBuilder = new HDRPStandardTileLayoutBuilder(this);
-#else
+                    #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
-#endif
+                    #endif
+
                     CameraController.Presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_HDRP
+
+                    #if CLUSTER_DISPLAY_HDRP
                     newLayoutBuilder = new HDRPStandardStitcherLayoutBuilder(this);
-#else
+                    #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
-#endif
+                    #endif
+
                     CameraController.Presenter = new StandardPresenter();
                     break;
 
-#if CLUSTER_DISPLAY_XR
+                 // XR Modes are only supported on the HDRP branch: cluster-display/backport-xr/v8.3.1
+                #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
                     CameraController.Presenter = new XRPresenter();
@@ -351,7 +364,7 @@ namespace Unity.ClusterDisplay.Graphics
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
                     CameraController.Presenter = new XRPresenter();
                     break;
-#endif
+                #endif
 
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");

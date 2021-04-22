@@ -6,6 +6,11 @@ using UnityEngine.UI;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// We don't want to use two cameras to render the scene (One to render the scene, and one to present the RT). Therefore, the only
+    /// way to perform a present to the screen without a camera is to use a full screen Canvas and this class gets initialized by
+    /// StandardPresenter next to an instance of Canvas.
+    /// </summary>
     [ExecuteAlways]
     public class ClusterCanvas : SingletonMonoBehaviour<ClusterCanvas>
     {
@@ -16,16 +21,26 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get
             {
+                // TODO: Even though this is an initial caching of the RawImage instance, this
+                // should probably be replaced with something more efficient.
                 if (m_RawImage == null)
                     m_RawImage = GetComponentInChildren<RawImage>();
                 return m_RawImage;
             }
         }
 
+        /// <summary>
+        /// When we create our present render texture in standard tile/XR layout, we apply it
+        /// to a RawImage here for presentation.
+        /// </summary>
         public RenderTexture RawImageTexture { set => FullScreenRawImage.texture = value; }
 
+        /// <summary>
+        /// Setup the canvas for presenting cluster display renders.
+        /// </summary>
         private void Awake()
         {
+            // We could probably replace this initialization code with an instantiation of a prefab.
             if (m_Canvas == null)
             {
                 m_Canvas = gameObject.AddComponent<Canvas>();
