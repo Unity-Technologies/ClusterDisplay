@@ -362,7 +362,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled)
+            bool isCurrentlyEnabled = Shader.IsKeywordEnabled(k_ShaderKeyword);
+            if (isCurrentlyEnabled == keywordEnabled)
                 return;
 
             if (keywordEnabled)

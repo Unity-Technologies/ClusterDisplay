@@ -58,6 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize));
                 camera.Render();
 
+                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
                 m_ClusterRenderer.CameraController.ApplyCachedProjectionMatrixToContext();
             }
         }
@@ -75,7 +76,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_QueuedStitcherParameters.Count < numTiles)
                 return;
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             m_ClusterRenderer.CameraController.Presenter.PresentRT = presentRT;
