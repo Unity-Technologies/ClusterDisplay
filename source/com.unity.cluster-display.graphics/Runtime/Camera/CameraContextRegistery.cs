@@ -6,213 +6,216 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegistery>, ISerializationCallbackReceiver
+namespace Unity.ClusterDisplay.Graphics
 {
-    #if UNITY_EDITOR
-    [CustomEditor(typeof(CameraContextRegistery))]
-    private class CameraContextRegistryEditor : Editor
+    public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegistery>, ISerializationCallbackReceiver
     {
-        public override void OnInspectorGUI()
+        #if UNITY_EDITOR
+        [CustomEditor(typeof(CameraContextRegistery))]
+        private class CameraContextRegistryEditor : Editor
         {
-            base.OnInspectorGUI();
-
-            var cameraContextRegistry = target as CameraContextRegistery;
-            if (cameraContextRegistry == null)
-                return;
-
-            if (GUILayout.Button("Flush Registry"))
-                cameraContextRegistry.Flush();
-
-            var cameraContextTargets = cameraContextRegistry.CameraContextTargets;
-            for (int i = 0; i < cameraContextTargets.Length; i++)
-                EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
-        }
-    }
-    #endif
-
-    private readonly Dictionary<Camera, CameraContextTarget> m_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
-    [HideInInspector][SerializeField] private CameraContextTarget[] m_SerializedCameraContextTargets;
-
-    [HideInInspector] [SerializeField] private CameraContextTarget m_FocusedCameraContextTarget;
-    [HideInInspector] [SerializeField] private CameraContextTarget m_PreviousFocusedCameraContextTarget;
-    public CameraContextTarget FocusedCameraContextTarget
-    {
-        get
-        {
-            if (m_FocusedCameraContextTarget == null)
+            public override void OnInspectorGUI()
             {
-                if (m_CameraContextTargets.Count != 0)
-                {
-                    var first = m_CameraContextTargets.FirstOrDefault();
-                    FocusedCameraContextTarget = first.Value;
-                }
+                base.OnInspectorGUI();
 
-                else
+                var cameraContextRegistry = target as CameraContextRegistery;
+                if (cameraContextRegistry == null)
+                    return;
+
+                if (GUILayout.Button("Flush Registry"))
+                    cameraContextRegistry.Flush();
+
+                var cameraContextTargets = cameraContextRegistry.CameraContextTargets;
+                for (int i = 0; i < cameraContextTargets.Length; i++)
+                    EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
+            }
+        }
+        #endif
+
+        private readonly Dictionary<Camera, CameraContextTarget> m_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
+        [HideInInspector][SerializeField] private CameraContextTarget[] m_SerializedCameraContextTargets;
+
+        [HideInInspector] [SerializeField] private CameraContextTarget m_FocusedCameraContextTarget;
+        [HideInInspector] [SerializeField] private CameraContextTarget m_PreviousFocusedCameraContextTarget;
+        public CameraContextTarget FocusedCameraContextTarget
+        {
+            get
+            {
+                if (m_FocusedCameraContextTarget == null)
                 {
-                    PollCameraTargets();
-                    if (m_CameraContextTargets.Count > 0)
+                    if (m_CameraContextTargets.Count != 0)
                     {
                         var first = m_CameraContextTargets.FirstOrDefault();
                         FocusedCameraContextTarget = first.Value;
                     }
+
+                    else
+                    {
+                        PollCameraTargets();
+                        if (m_CameraContextTargets.Count > 0)
+                        {
+                            var first = m_CameraContextTargets.FirstOrDefault();
+                            FocusedCameraContextTarget = first.Value;
+                        }
+                    }
                 }
+
+                return m_FocusedCameraContextTarget;
             }
 
-            return m_FocusedCameraContextTarget;
+            set
+            {
+                if (value == m_FocusedCameraContextTarget)
+                    return;
+
+                if (value != null)
+                    Debug.Log($"Changing camera context to: \"{value.gameObject.name}\".");
+                else Debug.Log($"Changing camera context to: \"NULL\".");
+
+                PreviousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
+                m_FocusedCameraContextTarget = value;
+            }
         }
 
-        set
+        public string m_TargetCameraTag = "MainCamera";
+        public static string TargetCameraTag
         {
-            if (value == m_FocusedCameraContextTarget)
+            get
+            {
+                if (!TryGetInstance(out var instance))
+                    return null;
+                return instance.m_TargetCameraTag;
+            }
+        }
+
+        public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == TargetCameraTag;
+
+        public CameraContextTarget PreviousFocusedCameraContextTarget
+        {
+            get => m_PreviousFocusedCameraContextTarget;
+            private set => m_PreviousFocusedCameraContextTarget = value;
+        }
+
+        private CameraContextTarget[] CameraContextTargets => m_CameraContextTargets.Values.ToArray();
+
+        public bool TryGetCameraContextTarget (Camera camera, out CameraContextTarget cameraContextTarget)
+        {
+            if (m_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
+                return true;
+            cameraContextTarget = Register(camera);
+            return cameraContextTarget;
+        }
+
+        private void PollCameraTargets ()
+        {
+            var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
+            if (cameraContextTargets.Length == 0)
                 return;
 
-            if (value != null)
-                Debug.Log($"Changing camera context to: \"{value.gameObject.name}\".");
-            else Debug.Log($"Changing camera context to: \"NULL\".");
+            for (int i = 0; i < cameraContextTargets.Length; i++)
+            {
+                if (!cameraContextTargets[i].TryGetCamera(out var camera))
+                    continue;
 
-            PreviousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
-            m_FocusedCameraContextTarget = value;
+                if (m_CameraContextTargets.ContainsKey(camera))
+                    continue;
+
+                Register(camera);
+            }
         }
-    }
 
-    public string m_TargetCameraTag = "MainCamera";
-    public static string TargetCameraTag
-    {
-        get
+        private void OnLevelWasLoaded(int level) => PollCameraTargets();
+
+        public CameraContextTarget Register (Camera camera)
         {
-            if (!TryGetInstance(out var instance))
-                return null;
-            return instance.m_TargetCameraTag;
-        }
-    }
-
-    public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == TargetCameraTag;
-
-    public CameraContextTarget PreviousFocusedCameraContextTarget
-    {
-        get => m_PreviousFocusedCameraContextTarget;
-        private set => m_PreviousFocusedCameraContextTarget = value;
-    }
-
-    private CameraContextTarget[] CameraContextTargets => m_CameraContextTargets.Values.ToArray();
-
-    public bool TryGetCameraContextTarget (Camera camera, out CameraContextTarget cameraContextTarget)
-    {
-        if (m_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
-            return true;
-        cameraContextTarget = Register(camera);
-        return cameraContextTarget;
-    }
-
-    private void PollCameraTargets ()
-    {
-        var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
-        if (cameraContextTargets.Length == 0)
-            return;
-
-        for (int i = 0; i < cameraContextTargets.Length; i++)
-        {
-            if (!cameraContextTargets[i].TryGetCamera(out var camera))
-                continue;
-
             if (m_CameraContextTargets.ContainsKey(camera))
-                continue;
+            {
+                Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
+                return null;
+            }
 
-            Register(camera);
-        }
-    }
-
-    private void OnLevelWasLoaded(int level) => PollCameraTargets();
-
-    public CameraContextTarget Register (Camera camera)
-    {
-        if (m_CameraContextTargets.ContainsKey(camera))
-        {
-            Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
-            return null;
+            CameraContextTarget cameraContextTarget = null;
+            if ((cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>()) == null)
+                cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
+            m_CameraContextTargets.Add(camera, cameraContextTarget);
+            return cameraContextTarget;
         }
 
-        CameraContextTarget cameraContextTarget = null;
-        if ((cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>()) == null)
-            cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
-        m_CameraContextTargets.Add(camera, cameraContextTarget);
-        return cameraContextTarget;
-    }
-
-    public void UnRegister (CameraContextTarget cameraContextTarget, bool destroy = false)
-    {
-        if (destroy || !cameraContextTarget.TryGetCamera(out var camera))
+        public void UnRegister (CameraContextTarget cameraContextTarget, bool destroy = false)
         {
-            DestroyCameraContextTarget(cameraContextTarget);
-            return;
+            if (destroy || !cameraContextTarget.TryGetCamera(out var camera))
+            {
+                DestroyCameraContextTarget(cameraContextTarget);
+                return;
+            }
+
+            if (!m_CameraContextTargets.ContainsKey(camera))
+            {
+                Debug.LogError($"Cannot unregister {nameof(CameraContextTarget)}: \"{cameraContextTarget.gameObject.name}\", it was never registered.");
+                return;
+            }
+
+            m_CameraContextTargets.Remove(camera);
         }
 
-        if (!m_CameraContextTargets.ContainsKey(camera))
+        public void OnAfterDeserialize()
         {
-            Debug.LogError($"Cannot unregister {nameof(CameraContextTarget)}: \"{cameraContextTarget.gameObject.name}\", it was never registered.");
-            return;
+            if (m_SerializedCameraContextTargets == null)
+                return;
+
+            for (int i = 0; i < m_SerializedCameraContextTargets.Length; i++)
+            {
+                if (m_SerializedCameraContextTargets[i] == null)
+                    continue;
+
+                if (!m_SerializedCameraContextTargets[i].CameraReferenceIsValid)
+                    continue;
+
+                m_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
+            }
         }
 
-        m_CameraContextTargets.Remove(camera);
-    }
-
-    public void OnAfterDeserialize()
-    {
-        if (m_SerializedCameraContextTargets == null)
-            return;
-
-        for (int i = 0; i < m_SerializedCameraContextTargets.Length; i++)
+        public void OnBeforeSerialize()
         {
-            if (m_SerializedCameraContextTargets[i] == null)
-                continue;
+            int validCameraContextCount = 0;
+            foreach (var cameraContextPair in m_CameraContextTargets)
+            {
+                if (cameraContextPair.Key == null || cameraContextPair.Value == null)
+                    continue;
+                validCameraContextCount++;
+            }
 
-            if (!m_SerializedCameraContextTargets[i].CameraReferenceIsValid)
-                continue;
+            if (validCameraContextCount == 0)
+            {
+                m_SerializedCameraContextTargets = null;
+                return;
+            }
 
-            m_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
-        }
-    }
+            m_SerializedCameraContextTargets = new CameraContextTarget[validCameraContextCount];
+            int cameraContextIndex = 0;
+            foreach (var cameraContextPair in m_CameraContextTargets)
+            {
+                if (cameraContextPair.Value == null)
+                    continue;
 
-    public void OnBeforeSerialize()
-    {
-        int validCameraContextCount = 0;
-        foreach (var cameraContextPair in m_CameraContextTargets)
-        {
-            if (cameraContextPair.Key == null || cameraContextPair.Value == null)
-                continue;
-            validCameraContextCount++;
+                m_SerializedCameraContextTargets[cameraContextIndex++] = cameraContextPair.Value;
+            }
         }
 
-        if (validCameraContextCount == 0)
+        private void DestroyCameraContextTarget (CameraContextTarget cameraContextTarget)
         {
+            if (!Application.isPlaying)
+                Object.DestroyImmediate(cameraContextTarget);
+            else Object.Destroy(cameraContextTarget);
+        }
+
+        private void Flush ()
+        {
+            m_CameraContextTargets.Clear();
             m_SerializedCameraContextTargets = null;
-            return;
+
+            m_FocusedCameraContextTarget = null;
+            m_PreviousFocusedCameraContextTarget = null;
         }
-
-        m_SerializedCameraContextTargets = new CameraContextTarget[validCameraContextCount];
-        int cameraContextIndex = 0;
-        foreach (var cameraContextPair in m_CameraContextTargets)
-        {
-            if (cameraContextPair.Value == null)
-                continue;
-
-            m_SerializedCameraContextTargets[cameraContextIndex++] = cameraContextPair.Value;
-        }
-    }
-
-    private void DestroyCameraContextTarget (CameraContextTarget cameraContextTarget)
-    {
-        if (!Application.isPlaying)
-            Object.DestroyImmediate(cameraContextTarget);
-        else Object.Destroy(cameraContextTarget);
-    }
-
-    private void Flush ()
-    {
-        m_CameraContextTargets.Clear();
-        m_SerializedCameraContextTargets = null;
-
-        m_FocusedCameraContextTarget = null;
-        m_PreviousFocusedCameraContextTarget = null;
     }
 }

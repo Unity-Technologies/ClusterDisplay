@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
+using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -13,8 +14,8 @@ namespace Unity.ClusterDisplay.Graphics
         public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRTHandle(width, height);
         public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
 #else
-        public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRenderTexture(width, height);
-        public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
+        public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
+        public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
 #endif
         private Rect m_OverscannedRect;
 

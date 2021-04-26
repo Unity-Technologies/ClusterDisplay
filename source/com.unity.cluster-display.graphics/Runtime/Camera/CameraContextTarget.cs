@@ -2,43 +2,46 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteAlways]
-[RequireComponent(typeof(Camera))]
-public class CameraContextTarget : MonoBehaviour
+namespace Unity.ClusterDisplay.Graphics
 {
-    [SerializeField] private Camera m_TargetCamera;
-    public Camera TargetCamera => m_TargetCamera;
-    public bool CameraReferenceIsValid => m_TargetCamera != null;
-
-    private void CacheCamera()
+    [ExecuteAlways]
+    [RequireComponent(typeof(Camera))]
+    public class CameraContextTarget : MonoBehaviour
     {
-        if (m_TargetCamera != null)
-            return;
+        [SerializeField] private Camera m_TargetCamera;
+        public Camera TargetCamera => m_TargetCamera;
+        public bool CameraReferenceIsValid => m_TargetCamera != null;
 
-        m_TargetCamera = GetComponent<Camera>();
-        if (m_TargetCamera == null)
+        private void CacheCamera()
         {
-            Debug.LogError($"Missing {nameof(Camera)} component attached to: \"{gameObject.name}\".");
-            return;
+            if (m_TargetCamera != null)
+                return;
+
+            m_TargetCamera = GetComponent<Camera>();
+            if (m_TargetCamera == null)
+            {
+                Debug.LogError($"Missing {nameof(Camera)} component attached to: \"{gameObject.name}\".");
+                return;
+            }
         }
-    }
 
-    public bool TryGetCamera (out Camera camera)
-    {
-        if (m_TargetCamera == null)
-            CacheCamera();
-        camera = m_TargetCamera;
-        return camera != null;
-    }
+        public bool TryGetCamera (out Camera camera)
+        {
+            if (m_TargetCamera == null)
+                CacheCamera();
+            camera = m_TargetCamera;
+            return camera != null;
+        }
 
-#if UNITY_EDITOR
-    private void OnValidate() => CacheCamera();
-    private void Awake() => CacheCamera();
-#endif
+    #if UNITY_EDITOR
+        private void OnValidate() => CacheCamera();
+        private void Awake() => CacheCamera();
+    #endif
 
-    private void OnDestroy()
-    {
-        if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
-            cameraContextRegistry.UnRegister(this);
+        private void OnDestroy()
+        {
+            if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                cameraContextRegistry.UnRegister(this);
+        }
     }
 }
