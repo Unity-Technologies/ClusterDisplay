@@ -16,11 +16,11 @@ namespace Unity.ClusterDisplay
 
     public partial class ComponentReflectionStream : MonoBehaviour, ISerializationCallbackReceiver, IPipeIDContainer, IDataWatcher
     {
-        [SerializeField] private PipeID _uuid;
+        [SerializeField] private PipeID _id;
 
-        public ushort UUID => _uuid;
-        public bool ValidUUID => _uuid.IsValid;
-        public void ApplyUUID(PipeID uuid) => _uuid = uuid;
+        public ushort ID => _id;
+        public bool ValidID => _id.IsValid;
+        public void ApplyID(PipeID uuid) => _id = uuid;
 
         private readonly TargetDict targets = new TargetDict();
         [HideInInspector] [SerializeField] private SerializedObjectBinding[] serializedTargets;
@@ -100,7 +100,7 @@ namespace Unity.ClusterDisplay
         {
             if (!ClusterSync.TryGetInstance(out var clusterSync, displayError: false))
                 return;
-            clusterSync.FrameDataManager.UnregisterWatcher(_uuid);
+            clusterSync.FrameDataManager.UnregisterWatcher(_id);
         }
 
         public void Reset()
@@ -108,8 +108,8 @@ namespace Unity.ClusterDisplay
             if (!ClusterSync.TryGetInstance(out var clusterSync))
                 return;
 
-            if (_uuid.IsValid)
-                clusterSync.FrameDataManager.UnregisterWatcher(this._uuid);
+            if (_id.IsValid)
+                clusterSync.FrameDataManager.UnregisterWatcher(this._id);
             clusterSync.FrameDataManager.RegisterWatcher(this);
         }
 

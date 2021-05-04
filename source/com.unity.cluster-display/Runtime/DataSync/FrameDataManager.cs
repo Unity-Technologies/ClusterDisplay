@@ -9,15 +9,15 @@ namespace Unity.ClusterDisplay
     [System.Serializable]
     public class FrameDataManager
     {
-        public PipeIDManager _pipeUUIDManager;
+        public PipeIDManager _pipeIDManager;
         private readonly IDataWatcher[] _watchers = new IDataWatcher[ushort.MaxValue];
 
         private readonly FrameDataAccumulator frameDataAccumulator = new FrameDataAccumulator();
         private readonly FrameDataDistributor _frameDataDistributor = new FrameDataDistributor();
 
-        public FrameDataManager (PipeIDManager pipeUUIDManager)
+        public FrameDataManager (PipeIDManager pipeIDManager)
         {
-            _pipeUUIDManager = pipeUUIDManager;
+            _pipeIDManager = pipeIDManager;
         }
 
         public void RegisterWatcher (IDataWatcher watcher)
@@ -25,24 +25,24 @@ namespace Unity.ClusterDisplay
             if (!(watcher is IPipeIDContainer))
                 return;
 
-            var uuidContainer = watcher as IPipeIDContainer;
-            if (!uuidContainer.ValidUUID)
+            var idContainer = watcher as IPipeIDContainer;
+            if (!idContainer.ValidID)
             {
-                var pipeUUID = _pipeUUIDManager.GenerateUUID();
-                uuidContainer.ApplyUUID(pipeUUID);
+                var pipeId = _pipeIDManager.GenerateID();
+                idContainer.ApplyID(pipeId);
             }
 
-            if (_watchers[uuidContainer.UUID] != null)
-                throw new System.Exception($"Unable to register watcher with UUID: {uuidContainer.UUID}, it has already been registered!");
+            if (_watchers[idContainer.ID] != null)
+                throw new System.Exception($"Unable to register watcher with UUID: {idContainer.ID}, it has already been registered!");
 
-            Debug.Log($"Registered watcher with UUID: \"{uuidContainer.UUID}\".");
-            _watchers[uuidContainer.UUID] = watcher;
+            Debug.Log($"Registered watcher with UUID: \"{idContainer.ID}\".");
+            _watchers[idContainer.ID] = watcher;
         }
 
-        public void UnregisterWatcher (PipeID uuid)
+        public void UnregisterWatcher (PipeID pipeId)
         {
-            Debug.Log($"Unregistered watcher with UUID: \"{uuid}\".");
-            _watchers[uuid] = null;
+            Debug.Log($"Unregistered watcher with UUID: \"{pipeId}\".");
+            _watchers[pipeId] = null;
         }
 
         public bool Accumulate (NativeArray<byte> buffer, ref int endPos)

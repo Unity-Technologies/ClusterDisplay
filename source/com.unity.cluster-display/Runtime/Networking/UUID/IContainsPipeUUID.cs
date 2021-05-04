@@ -4,7 +4,7 @@ using UnityEngine;
 
 public interface IPipeIDContainer
 {
-    ushort UUID { get; }
-    bool ValidUUID { get; }
-    void ApplyUUID(PipeID uuid);
+    ushort ID { get; }
+    bool ValidID { get; }
+    void ApplyID(PipeID uuid);
 }
