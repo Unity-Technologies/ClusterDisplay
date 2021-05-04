@@ -31,6 +31,8 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         ProfilerMarker m_MarkerProcessFrame = new ProfilerMarker("ProcessFrame");
         ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
 
+        public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
+
         public override string GetDebugString()
         {
             return $"{base.GetDebugString()} / {(EStage)m_Stage} : {m_WaitingOnNodes}";
@@ -224,6 +226,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                     StoreTimeState(buffer, ref endPos) &&
                     StoreClusterInputState(buffer, ref endPos) &&
                     StoreRndGeneratorState(buffer, ref endPos) &&
+                    m_AccumulateFrameDataDelegate != null ? m_AccumulateFrameDataDelegate(buffer, ref endPos) : true &&
                     MarkStatesEnd(buffer, ref endPos))
                 {
                     m_RawStateData = new NativeArray<byte>(buffer.GetSubArray(0, endPos), Allocator.Temp);

@@ -4,6 +4,9 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.LowLevel;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Unity.ClusterDisplay
 {
@@ -14,8 +17,9 @@ namespace Unity.ClusterDisplay
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    public class ClusterSync : MonoBehaviour
+    public class ClusterSync : SingletonMonoBehaviour<ClusterSync>
     {
+
         [HideInInspector]
         bool m_Debugging;
         private bool m_NewFrame = true;
@@ -46,20 +50,27 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public static bool Terminated { get; private set; }
 
-        /// <summary>
-        /// Returns the instance of the ClusterSync singleton.
-        /// </summary>
-        /// <exception cref="Exception">Throws an exception if there are 2 instances present.</exception>
-        public static ClusterSync Instance
+        [SerializeField] private ClusterDisplayResources _clusterDisplayResources;
+        public ClusterDisplayResources Resources => _clusterDisplayResources;
+
+        private FrameDataManager m_FrameDataManager;
+        public FrameDataManager FrameDataManager
         {
-            get => m_Instance;
-            private set
+            get
             {
-                if(m_Instance != null)
-                    throw new Exception("There is pre-existing instance of MasterController!");
-                m_Instance = value;
+                if (m_FrameDataManager == null)
+                {
+                    m_FrameDataManager = new FrameDataManager(Resources.IDManager);
+                    m_AccumulateFrameDataDelegate += m_FrameDataManager.Accumulate;
+                }
+
+                return m_FrameDataManager;
             }
         }
+
+        private AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
+        public AccumulateFrameDataDelegate AccumulateFrameData => m_AccumulateFrameDataDelegate;
+
 
 #if UNITY_EDITOR
         public string m_EditorCmdLine = "";
@@ -105,12 +116,31 @@ namespace Unity.ClusterDisplay
             return LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
         }
 
+#if UNITY_EDITOR
+        private void GetResources ()
+        {
+            if (Resources != null)
+                return;
+
+            // Search all assets by our desired type.
+            var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
+            if (assets.Length == 0)
+                throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
+
+            _clusterDisplayResources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+            Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{_clusterDisplayResources.name}\" to cluster display settings.");
+
+            EditorUtility.SetDirty(this);
+        }
+
+        private void OnValidate() => GetResources();
+#endif
+
         private void OnEnable()
         {
             Terminated = false;
 
             m_ClusterLogicEnabled = false;
-            Instance = this;
             NodeState.Debugging = m_Debugging;
 
             // Grab command line args related to cluster config
@@ -243,7 +273,7 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
+                    var master =  new MasterNode(m_AccumulateFrameDataDelegate, id, slaveCount, ip, rxport, txport, 30, adapterName );
                     if (!master.Start())
                         return false;
                     LocalNode = master;

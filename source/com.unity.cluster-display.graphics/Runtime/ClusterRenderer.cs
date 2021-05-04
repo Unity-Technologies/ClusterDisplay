@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         /// <summary>
-        /// If a reference to an instance of ClusterDisplayResources does not exist, this function will automatically
+        /// If a reference to an instance of ClusterDisplayGraphicsResources does not exist, this function will automatically
         /// load the default instance of that scriptable object from the cluster display package.
         /// </summary>
         private void GetResources ()
@@ -122,12 +122,12 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             // Search all assets by our desired type.
-            var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
+            var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayGraphicsResources)}");
             if (assets.Length == 0)
-                throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
+                throw new Exception($"No valid instances of: {nameof(ClusterDisplayGraphicsResources)} exist in the project.");
 
-            Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-            Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
+            Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayGraphicsResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+            Debug.Log($"Applied instance of: {nameof(ClusterDisplayGraphicsResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
 
             EditorUtility.SetDirty(this);
         }

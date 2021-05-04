@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
     internal class WaitingForAllClients : MasterState
     {
         public override bool ReadyToProceed => false;
+        public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
 
         public override void InitState()
         {
@@ -27,7 +28,10 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
-                var newState = new SynchronizeFrame {MaxTimeOut = ClusterParams.CommunicationTimeout};
+                var newState = new SynchronizeFrame {
+                    MaxTimeOut = ClusterParams.CommunicationTimeout,
+                    m_AccumulateFrameDataDelegate = m_AccumulateFrameDataDelegate
+                };
                 return newState.EnterState(this);
             }
             

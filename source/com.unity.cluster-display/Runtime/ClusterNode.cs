@@ -84,10 +84,15 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString()
         {
-            var stats = ClusterSync.Instance.CurrentNetworkStats;
-            return $"Node {ClusterSync.Instance.DynamicLocalNodeId} at {ClusterSync.Instance.FrameCount}\r\n" +
-                   $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
-                   $"State: { m_CurrentState.GetDebugString() }";
+            if (ClusterSync.TryGetInstance(out var clusterSync))
+            {
+                var stats = clusterSync.CurrentNetworkStats;
+                return $"Node {clusterSync.DynamicLocalNodeId} at {clusterSync.FrameCount}\r\n" +
+                       $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
+                       $"State: { m_CurrentState.GetDebugString() }";
+            }
+
+            return null;
         }
 
         protected void OnNetworkingError( string message )

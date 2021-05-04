@@ -1,0 +1,17 @@
+{
+    "name": "ILPostprocessors",
+    "references": [
+        "GUID:b43fac41fad43f5458043d6551bc571e"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

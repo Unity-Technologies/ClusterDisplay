@@ -15,7 +15,10 @@ namespace ClusterDisplay.Utils
             if (ClusterSync.Active)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                    ClusterSync.Instance.ShutdownAllClusterNodes();
+                {
+                    if (ClusterSync.TryGetInstance(out var clusterSync))
+                        clusterSync.ShutdownAllClusterNodes();
+                }
 
             }
             else

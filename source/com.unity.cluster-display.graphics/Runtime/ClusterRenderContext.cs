@@ -33,7 +33,9 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 if (m_Debug || !ClusterSync.Active)
                     return m_DebugSettings.TileIndexOverride;
-                return ClusterSync.Instance.DynamicLocalNodeId;
+                if (ClusterSync.TryGetInstance(out var clusterSync))
+                    return clusterSync.DynamicLocalNodeId;
+                return 0;
             }
         }
         

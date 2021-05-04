@@ -2,10 +2,13 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.Collections;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
+    public delegate bool AccumulateFrameDataDelegate(NativeArray<byte> buffer, ref int endPos);
+
     internal abstract class NodeState
     {
         protected Stopwatch m_Time;
@@ -119,13 +122,29 @@ namespace Unity.ClusterDisplay
     // SlaveState state -------------------------------------------------------- 
     internal abstract class SlaveState : NodeState
     {
-        protected SlavedNode LocalNode => (SlavedNode)ClusterSync.Instance.LocalNode;
+        protected SlavedNode LocalNode
+        {
+            get
+            {
+                if (ClusterSync.TryGetInstance(out var clusterSync))
+                    return (SlavedNode)clusterSync.LocalNode;
+                return null;
+            }
+        }
     }
 
     // MasterState state -------------------------------------------------------- 
     internal abstract class MasterState : NodeState
     {
-        protected MasterNode LocalNode => (MasterNode)ClusterSync.Instance.LocalNode;
+        protected MasterNode LocalNode
+        {
+            get
+            {
+                if (ClusterSync.TryGetInstance(out var clusterSync))
+                    return (MasterNode)clusterSync.LocalNode;
+                return null;
+            }
+        }
     }
 
     // Shutdown state -------------------------------------------------------- 

@@ -8,8 +8,8 @@ using UnityEngine;
 /// the cluster display package that automatically gets loaded when the ClusterRenderer
 /// class is initialized.
 /// </summary>
-[CreateAssetMenu(fileName = "Data", menuName = "Cluster Display/ClusterDisplayResources", order = 1)]
-public class ClusterDisplayResources : ScriptableObject
+[CreateAssetMenu(fileName = "Data", menuName = "Cluster Display/ClusterDisplayGraphicsResources", order = 1)]
+public class ClusterDisplayGraphicsResources : ScriptableObject
 {
     [SerializeField] private Material m_BlitMaterial;
 

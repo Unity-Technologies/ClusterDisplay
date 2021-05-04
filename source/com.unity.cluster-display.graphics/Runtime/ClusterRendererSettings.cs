@@ -9,9 +9,9 @@ namespace Unity.ClusterDisplay.Graphics
     public sealed class ClusterRendererSettings
     {
         [SerializeField]
-        ClusterDisplayResources m_Resources;
+        ClusterDisplayGraphicsResources m_Resources;
 
-        public ClusterDisplayResources Resources
+        public ClusterDisplayGraphicsResources Resources
         {
             get => m_Resources;
             set => m_Resources = value;
