@@ -1,18 +1,18 @@
 {
-    "name": "Unity.ClusterDisplay.Runtime",
+    "name": "Unity.ClusterDisplay.Networking.Editor",
     "references": [
         "GUID:d17cf94e78b26ac4db1dca31abae1b06",
-        "GUID:b43fac41fad43f5458043d6551bc571e"
+        "GUID:b43fac41fad43f5458043d6551bc571e",
+        "GUID:ebda382865f803841bb36f141d251db6"
     ],
     "includePlatforms": [
-        "Editor",
-        "WindowsStandalone64"
+        "Editor"
     ],
     "excludePlatforms": [],
-    "allowUnsafeCode": true,
+    "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
-    "autoReferenced": true,
+    "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false

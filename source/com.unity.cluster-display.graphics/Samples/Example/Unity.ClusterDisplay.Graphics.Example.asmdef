@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.Example",
     "references": [
+        "Unity.ClusterDisplay.Common",
         "Unity.ClusterDisplay.Graphics",
         "Unity.ClusterDisplay.Runtime",
         "Unity.InputSystem"

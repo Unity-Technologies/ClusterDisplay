@@ -12,24 +12,6 @@ namespace Unity.ClusterDisplay
 {
     public partial class RPCRegistry : ScriptableObject
     {
-        private readonly Dictionary<Assembly, bool> assemblyFoldout = new Dictionary<Assembly, bool>();
-        private readonly Dictionary<Type, bool> typeFoldout = new Dictionary<Type, bool>();
-        [SerializeField][HideInInspector] private bool showAllRegistered = false;
-
-        private readonly Dictionary<Assembly, Dictionary<Type, MethodInfo>> editorMethodLut = new Dictionary<Assembly, Dictionary<Type, MethodInfo>>();
-
-        private void ShowAllRegistered (bool show)
-        {
-            showAllRegistered = show;
-            var assemblyKeys = new List<Assembly>(assemblyFoldout.Keys);
-            foreach (var key in assemblyKeys)
-                assemblyFoldout[key] = showAllRegistered;
-
-            var typeKeys = new List<Type>(typeFoldout.Keys);
-            foreach (var key in typeKeys)
-                typeFoldout[key] = showAllRegistered;
-        }
-
         [CustomEditor(typeof(RPCRegistry))]
         private class RPCRegistryEditor : Editor
         {
@@ -46,35 +28,6 @@ namespace Unity.ClusterDisplay
             private Vector2 registeredMethodListPosition;
 
             private void HorizontalLine () => EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-            private bool AssemblyFoldout (Assembly assembly, string label)
-            {
-                var rpcRegistry = target as RPCRegistry;
-
-                if (!rpcRegistry.assemblyFoldout.TryGetValue(assembly, out var foldout))
-                    rpcRegistry.assemblyFoldout.Add(assembly, rpcRegistry.showAllRegistered);
-
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Space(10);
-                foldout = EditorGUILayout.Foldout(foldout, label, true);
-                rpcRegistry.assemblyFoldout[assembly] = foldout;
-                EditorGUILayout.EndHorizontal();
-
-                return foldout;
-            }
-
-            private bool TypeFoldout (Type type, string label)
-            {
-                var rpcRegistry = target as RPCRegistry;
-
-                if (!rpcRegistry.typeFoldout.TryGetValue(type, out var foldout))
-                    rpcRegistry.typeFoldout.Add(type, rpcRegistry.showAllRegistered);
-
-                foldout = EditorGUILayout.Foldout(foldout, label, true);
-                rpcRegistry.typeFoldout[type] = foldout;
-
-                return foldout;
-            }
 
             private void UpdateTypeSearch (string newClassSearchStr, bool forceUpdate = false)
             {
@@ -166,10 +119,7 @@ namespace Unity.ClusterDisplay
                     HorizontalLine();
                     EditorGUILayout.BeginHorizontal();
 
-
                     EditorGUILayout.LabelField("Registered Methods", EditorStyles.boldLabel);
-                    if (GUILayout.Button("Show All", GUILayout.Width(75)))
-                        rpcRegistry.ShowAllRegistered(!rpcRegistry.showAllRegistered);
 
                     if (GUILayout.Button("Clear", GUILayout.Width(60)))
                     {

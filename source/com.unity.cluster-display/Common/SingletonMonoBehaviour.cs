@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public class SingletonMonoBehaviour<T> : MonoBehaviour where T : SingletonMonoBehaviour<T>
+    public class SingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SingletonMonoBehaviour<T>
     {
         private static T instance;
         public static bool TryGetInstance (out T outInstance, bool displayError = true)
@@ -35,5 +35,22 @@ namespace Unity.ClusterDisplay
             outInstance = instance = instances[0];
             return true;
         }
+
+        protected virtual void OnDeserialize() {}
+        public void OnAfterDeserialize()
+        {
+            if (instance != null)
+            {
+                Debug.LogError($"Unable to cache instance to: \"{typeof(T).FullName}\", an instance has already cache!");
+                return;
+            }
+
+            Debug.Log($"Cached instance to singleton of type: \"{typeof(T).FullName}\".");
+            instance = this as T;
+            OnDeserialize();
+        }
+
+        protected virtual void OnSerialize() {}
+        public void OnBeforeSerialize() => OnSerialize();
     }
 }

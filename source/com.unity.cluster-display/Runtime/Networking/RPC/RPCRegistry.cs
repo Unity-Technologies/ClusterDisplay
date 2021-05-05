@@ -39,6 +39,8 @@ namespace Unity.ClusterDisplay
         [SerializeField][HideInInspector] private ushort[] serializedIds;
         [SerializeField][HideInInspector] private ushort currentId = 0;
 
+        [SerializeField] private IDManager<string> idManager = new IDManager<string>();
+
         private bool isDirty = false;
 
         private static string cachedRPCStubsPath = null;
