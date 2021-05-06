@@ -18,13 +18,22 @@ public abstract class SceneSingletonMonoBehaviour<T> : MonoBehaviour, ISerializa
     protected virtual void Disabled () {}
     private void OnDisable() => Disabled();
 
-    public static T CreateNewInstance (Scene scene)
+    public static bool TryCreateNewInstance (Scene scene, out T instance)
     {
+        instance = null;
+        if (!scene.IsValid() || string.IsNullOrEmpty(scene.path))
+        {
+            Debug.LogError($"Unable to create instance of: \"{typeof(T).Name}\", the save the scene first.");
+            return false;
+        }
+
         GameObject go = new GameObject("SceneObjectRegistry");
         SceneManager.SetActiveScene(scene);
-        var newInstance = go.AddComponent<T>();
-        Register(scene.path, newInstance);
-        return newInstance;
+
+        instance = go.AddComponent<T>();
+        Register(scene.path, instance);
+
+        return instance;
     }
 
     public static bool TryGetSceneInstance (string scenePath, out T instance, bool throwException = true)
@@ -33,9 +42,9 @@ public abstract class SceneSingletonMonoBehaviour<T> : MonoBehaviour, ISerializa
         {
             if (throwException)
                 throw new System.Exception($"There is no isntance of type: \"{typeof(T).FullName} in scene: \"{scenePath}\".");
-
             return false;
         }
+
         return true;
     }
 

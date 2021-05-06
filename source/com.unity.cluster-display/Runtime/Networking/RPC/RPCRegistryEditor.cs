@@ -27,24 +27,20 @@ namespace Unity.ClusterDisplay
 
             private Vector2 registeredMethodListPosition;
 
-            private void HorizontalLine () => EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
             private void UpdateTypeSearch (string newClassSearchStr, bool forceUpdate = false)
             {
                 if (!forceUpdate && newClassSearchStr == typeSearchStr)
                     return;
 
                 typeSearchStr = newClassSearchStr;
-                cachedTypes = ReflectionUtils.GetAllTypes(typeSearchStr, includeGenerics: false);
-            }
 
-            private void UpdateMethodSearch (string newMethodSearchStr, bool forceUpdate = false)
-            {
-                if (!forceUpdate && newMethodSearchStr == methodSearchStr)
+                if (!ReflectionUtils.TryGetDefaultAssembly(out var defaultUserAssembly))
+                {
+                    Debug.LogError($"Unable to find default user assembly with name: \"{ReflectionUtils.DefaultUserAssemblyName}\".");
                     return;
+                }
 
-                methodSearchStr = newMethodSearchStr;
-                cachedMethods = ReflectionUtils.GetAllMethodsFromType(targetType, methodSearchStr, includeGenerics: false);
+                cachedTypes = ReflectionUtils.GetAllTypes(typeSearchStr, defaultUserAssembly, includeGenerics: false);
             }
 
             private void ListTypes ()
@@ -52,7 +48,7 @@ namespace Unity.ClusterDisplay
                 if (cachedTypes == null)
                     UpdateTypeSearch(typeSearchStr, forceUpdate: true);
 
-                if (cachedTypes.Length > 0)
+                if (cachedTypes != null && cachedTypes.Length > 0)
                 {
                     EditorGUILayout.LabelField("Types", EditorStyles.boldLabel);
                     typeListScrollPosition = EditorGUILayout.BeginScrollView(typeListScrollPosition, GUILayout.Height(150));
@@ -63,7 +59,7 @@ namespace Unity.ClusterDisplay
                         if (GUILayout.Button("Target", GUILayout.Width(60)))
                         {
                             targetType = cachedTypes[i];
-                            UpdateMethodSearch(methodSearchStr, forceUpdate: true);
+                            OnChangeSearch(methodSearchStr);
                         }
 
                         EditorGUILayout.LabelField(cachedTypes[i].FullName);
@@ -75,32 +71,6 @@ namespace Unity.ClusterDisplay
                 else EditorGUILayout.LabelField($"No types found from search: \"{typeSearchStr}\".");
             }
 
-            private void ListMethods ()
-            {
-                if (cachedMethods == null)
-                    UpdateMethodSearch(methodSearchStr, forceUpdate: true);
-
-                if (cachedMethods.Length > 0)
-                {
-                    EditorGUILayout.LabelField("Methods", EditorStyles.boldLabel);
-                    methodListScrollPosition = EditorGUILayout.BeginScrollView(methodListScrollPosition, GUILayout.Height(150));
-                    for (int i = 0; i < cachedMethods.Length; i++)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-                        if (GUILayout.Button("Select", GUILayout.Width(60)))
-                        {
-                            targetMethod = cachedMethods[i];
-                            (target as RPCRegistry).TryRegisterMethod(targetType, targetMethod, out var _);
-                        }
-                        EditorGUILayout.LabelField(ReflectionUtils.GetMethodSignature(cachedMethods[i]));
-                        EditorGUILayout.EndHorizontal();
-                    }
-                    EditorGUILayout.EndScrollView();
-                }
-
-                else EditorGUILayout.LabelField($"No methods found from search: \"{methodSearchStr}\".");
-            }
-
             private void ListRegisteredMethods ()
             {
                 var rpcRegistry = target as RPCRegistry;
@@ -108,7 +78,7 @@ namespace Unity.ClusterDisplay
                 // Type methodTypeInRemoval = null;
                 RPCMethodInfo ? rpcMethodToRemove = null;
 
-                if (rpcRegistry.currentId > 0)
+                if (rpcRegistry.RPCCount > 0)
                 {
                     if (targetType != null && targetMethod != null)
                     {
@@ -116,7 +86,7 @@ namespace Unity.ClusterDisplay
                         EditorGUILayout.LabelField($"\"{ReflectionUtils.GetMethodSignature(targetMethod)}\" in type: \"{targetType.FullName}\".");
                     }
 
-                    HorizontalLine();
+                    RPCEditorGUICommon.HorizontalLine();
                     EditorGUILayout.BeginHorizontal();
 
                     EditorGUILayout.LabelField("Registered Methods", EditorStyles.boldLabel);
@@ -134,63 +104,94 @@ namespace Unity.ClusterDisplay
 
                     registeredMethodListPosition = EditorGUILayout.BeginScrollView(registeredMethodListPosition, GUILayout.Height(300));
 
-                    for (ushort i = 0; i < rpcRegistry.currentId; i++)
+                    for (ushort i = 0; i < rpcRegistry.RPCUpperBoundID; i++)
                     {
-                        if (!rpcRegistry.rpcs[i].IsValid)
+                        var rpcMethodInfo = rpcRegistry.GetRPCByIndex(i);
+                        if (!rpcMethodInfo.IsValid)
                             continue;
 
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
 
-                        if (GUILayout.Button("Select", GUILayout.Width(60)))
+                        if (GUILayout.Button("Select", GUILayout.Width(rpcMethodInfo.IsStatic ? 60 : 90 )))
                         {
-                            targetMethod = rpcRegistry.rpcs[i].methodInfo;
+                            targetMethod = rpcMethodInfo.methodInfo;
                             targetType = targetMethod.DeclaringType;
                         }
 
-                        if (GUILayout.Button("X", GUILayout.Width(25)))
+                        if (rpcMethodInfo.IsStatic && GUILayout.Button("X", GUILayout.Width(25)))
                         {
                             if (EditorUtility.DisplayDialog("Unregister Method?", "Are you sure you want to unregister this method?", "Yes", "Cancel"))
-                                rpcMethodToRemove = rpcRegistry.rpcs[i];
+                                rpcMethodToRemove = rpcMethodInfo;
                         }
 
-                        EditorGUILayout.LabelField($"RPC UUID: {rpcRegistry.rpcs[i].id}, Signature: \"{ReflectionUtils.GetMethodSignature(rpcRegistry.rpcs[i].methodInfo)}\"");
+                        EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignature(rpcMethodInfo.methodInfo)}\"");
                         EditorGUILayout.EndHorizontal();
                     }
 
                     EditorGUILayout.EndScrollView();
-                    HorizontalLine();
+                    RPCEditorGUICommon.HorizontalLine();
                 }
 
                 else EditorGUILayout.LabelField("No methods reigstered.");
 
                 if (rpcMethodToRemove != null)
-                    rpcRegistry.UnregisterMethod(rpcMethodToRemove ?? default(RPCMethodInfo));
+                    rpcRegistry.DeincrementMethodReference(rpcMethodToRemove.Value.rpcId);
+            }
+
+            private void OnChangeSearch (string newMethodSearchStr)
+            {
+                cachedMethods = ReflectionUtils.GetAllMethodsFromType(
+                    targetType, 
+                    newMethodSearchStr, 
+                    bindingFlags: BindingFlags.Public | BindingFlags.Static, 
+                    includeGenerics: false);
+
+                methodSearchStr = newMethodSearchStr;
+            }
+
+            private void OnSelectMethod (MethodInfo selectedMethodInfo)
+            {
+                var rpcRegistry = target as RPCRegistry;
+                rpcRegistry.TryIncrementMethodReference(targetType, selectedMethodInfo, out var rpcMethodInfo);
             }
 
             public override void OnInspectorGUI()
             {
                 base.OnInspectorGUI();
 
+                if (GUILayout.Button("Reset"))
+                    (target as RPCRegistry).Clear();
+
                 UpdateTypeSearch(EditorGUILayout.TextField(typeSearchStr));
-                HorizontalLine();
+                RPCEditorGUICommon.HorizontalLine();
                 ListTypes();
-                HorizontalLine();
+                RPCEditorGUICommon.HorizontalLine();
 
                 if (targetType != null)
                 {
                     EditorGUILayout.BeginHorizontal();
                     if (GUILayout.Button("X", GUILayout.Width(25)))
+                    {
                         targetType = null;
+                        EditorGUILayout.EndHorizontal();
+                    }
 
                     else
                     {
-                        EditorGUILayout.LabelField($"Search in: \"{targetType.FullName}\"");
+                        EditorGUILayout.LabelField($"Target Type: \"{targetType.FullName}\"", EditorStyles.boldLabel);
                         EditorGUILayout.EndHorizontal();
-                        UpdateMethodSearch(EditorGUILayout.TextField(methodSearchStr));
-                        HorizontalLine();
-                        ListMethods();
-                        HorizontalLine();
+                        RPCEditorGUICommon.HorizontalLine();
+
+                        RPCEditorGUICommon.ListMethods(
+                            "Static Methods:",
+                            cachedMethods,
+                            methodSearchStr,
+                            ref methodListScrollPosition,
+                            OnChangeSearch,
+                            OnSelectMethod);
+
+                        RPCEditorGUICommon.HorizontalLine();
                     }
                 }
 

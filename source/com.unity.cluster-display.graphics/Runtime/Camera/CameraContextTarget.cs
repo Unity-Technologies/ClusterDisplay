@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnDestroy()
         {
-            if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry, displayError: false))
+            if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry, throwException: false))
                 cameraContextRegistry.UnRegister(this);
         }
     }

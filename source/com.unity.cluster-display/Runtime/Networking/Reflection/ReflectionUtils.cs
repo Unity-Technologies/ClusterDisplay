@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay
 {
     public static class ReflectionUtils
     {
+        public const string DefaultUserAssemblyName = "Assembly-CSharp";
         public static System.Type GetTypeByString (string typeString)
         {
             string[] split = typeString.Split('.');
@@ -26,19 +27,21 @@ namespace Unity.ClusterDisplay
             return type;
         }
 
-        public static MethodInfo[] GetAllMethodsFromType (System.Type type, string filter, bool includeGenerics = true)
+        public static MethodInfo[] GetAllMethodsFromType (System.Type type, string filter, BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public, bool includeGenerics = true)
         {
-            return string.IsNullOrEmpty(filter) ?
-                type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Where(method => includeGenerics ? true : !method.IsGenericMethod)
-                .ToArray()
+            return
+                string.IsNullOrEmpty(filter) ?
 
-                :
+                    type.GetMethods(bindingFlags)
+                        .Where(method => includeGenerics ? true : !method.IsGenericMethod)
+                        .ToArray()
 
-                type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Where(method => GetMethodSignature(method).ToLower().Contains(filter.ToLower()))
-                .Where(method => includeGenerics ? true : !method.IsGenericMethod)
-                .ToArray();
+                    :
+
+                    type.GetMethods(bindingFlags)
+                        .Where(method => GetMethodSignature(method).ToLower().Contains(filter.ToLower()))
+                        .Where(method => includeGenerics ? true : !method.IsGenericMethod)
+                        .ToArray();
         }
 
         // From https://stackoverflow.com/a/1312321
@@ -102,7 +105,45 @@ namespace Unity.ClusterDisplay
             return (serializedFields.ToArray(), serializedProperties.ToArray());
         }
 
+        public static bool TryGetDefaultAssembly(out Assembly defaultAssembly) => (defaultAssembly = AppDomain.CurrentDomain.GetAssemblies().Where(assembly =>
+        {
+            return assembly.GetName().Name == DefaultUserAssemblyName;
+        }).FirstOrDefault()) != null;
+
         public static bool TryGetAssemblyByName (string assemblyName, out Assembly outAssembly) => (outAssembly = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => assembly.GetName().Name == assemblyName).FirstOrDefault()) != null;
+
+        public static Type[] GetAllTypes (string filter, Assembly targetAssembly, bool includeGenerics = true)
+        {
+            Type[] types = new Type[1] {
+                typeof(UnityEngine.Object)
+            };
+
+            string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
+            return filterLower == null ?
+
+                targetAssembly.GetTypes()
+                .Where(type =>
+                {
+                    bool found = false;
+                    for (int i = 0; i < types.Length; i++)
+                        found |= type.IsSubclassOf(types[i]);
+                    return found;
+                })
+                .Where(type => includeGenerics ? true : !type.IsGenericType)
+                .ToArray() :
+
+                targetAssembly.GetTypes()
+                .Where(type =>
+                {
+                    bool found = false;
+                    for (int i = 0; i < types.Length; i++)
+                        found |= type.IsSubclassOf(types[i]);
+                    return found;
+                })
+                .Where(type => type.FullName.ToLower().Contains(filterLower))
+                .Where(type => includeGenerics ? true : !type.IsGenericType)
+                .ToArray();
+        }
 
         public static Type[] GetAllTypes (string filter, bool includeGenerics = true)
         {

@@ -3,19 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-public class IDManager<T>
+public class IDManager
 {
     [SerializeField][HideInInspector] private ushort[] returnedIds = new ushort[ushort.MaxValue];
     [SerializeField][HideInInspector] private ushort returnedIdsIndex = 0;
 
-    [SerializeField]private ushort[] activeIds = new ushort[ushort.MaxValue];
-    [SerializeField]private T[] activeObjects = new T[ushort.MaxValue];
+    [SerializeField][HideInInspector] private ushort[] serializedIds = new ushort[ushort.MaxValue];
 
-    [SerializeField][HideInInspector] private ushort activeIdCount = 0;
+    [SerializeField][HideInInspector] private ushort serializedIdCount = 0;
+    public ushort SerializedIdCount => serializedIdCount;
 
     [SerializeField][HideInInspector] private ushort newIdIndex = 0;
+    public ushort UpperBoundID => newIdIndex;
 
-    public bool TryPop (out ushort id)
+    public bool HasSerializedData => serializedIdCount > 0;
+    public ushort this[ushort index] => serializedIds[index];
+
+    public bool TryPopId (out ushort id)
     {
         id = 0;
         if (returnedIdsIndex > 0)
@@ -29,21 +33,22 @@ public class IDManager<T>
             Debug.LogError($"All ids are in use.");
             return false;
         }
-            
-        activeIdCount++;
+
+        serializedIds[id] = id;
+        serializedIdCount++;
         return true;
     }
 
-    public void Push (ushort id)
+    public void PushId (ushort id)
     {
         returnedIds[returnedIdsIndex++] = id;
-        activeIdCount--;
+        serializedIdCount--;
     }
 
     public void Reset ()
     {
         returnedIdsIndex = 0;
-        activeIdCount = 0;
+        serializedIdCount = 0;
         newIdIndex = 0;
     }
 }

@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay
 
         public void OnDestroy()
         {
-            if (!ClusterSync.TryGetInstance(out var clusterSync, displayError: false))
+            if (!ClusterSync.TryGetInstance(out var clusterSync, throwException: false))
                 return;
             clusterSync.FrameDataManager.UnregisterWatcher(_id);
         }

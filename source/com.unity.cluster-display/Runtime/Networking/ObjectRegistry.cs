@@ -3,16 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "ObjectRegistry", menuName = "Cluster Display/Object Registry")]
-public partial class ObjectRegistry : ScriptableObject, ISerializationCallbackReceiver
+public partial class ObjectRegistry : ScriptableObject
 {
-    private readonly Dictionary<ushort, Object> objectLut = new Dictionary<ushort, Object>();
+    private readonly Object[] registeredObjects = new Object[ushort.MaxValue];
     private readonly Dictionary<Object, ushort> idLut = new Dictionary<Object, ushort>();
 
-    private readonly ushort[] rpcLUt = new ushort[ushort.MaxValue];
+    private readonly IDManager idManager = new IDManager();
 
     public void Register<T> (T obj) where T : Object
     {
+        if (obj == null)
+            throw new System.Exception($"Received NULL object to register.");
 
+        if (!idManager.TryPopId(out var pipeId))
+            throw new System.Exception("Cannot register any more objects, no more ids available.");
+
+        registeredObjects[pipeId] = obj;
+        idLut.Add(obj, pipeId);
     }
 
     public void Register (Object[] objects)
@@ -22,6 +29,11 @@ public partial class ObjectRegistry : ScriptableObject, ISerializationCallbackRe
 
         for (int i = 0; i < objects.Length; i++)
         {
+            if (!idManager.TryPopId(out var pipeId))
+                throw new System.Exception("Cannot register any more objects, no more ids available.");
+
+            registeredObjects[pipeId] = objects[i];
+            idLut.Add(objects[i], pipeId);
         }
     }
 
@@ -35,22 +47,31 @@ public partial class ObjectRegistry : ScriptableObject, ISerializationCallbackRe
             if (objects[i] == null)
                 continue;
 
-            if (!idLut.TryGetValue(objects[i], out var id))
+            if (!idLut.TryGetValue(objects[i], out var pipeId))
                 continue;
 
+            registeredObjects[pipeId] = null;
             idLut.Remove(objects[i]);
-            if (!objectLut.ContainsKey(id))
-                continue;
-
-            objectLut.Remove(id);
+            idManager.PushId(pipeId);
         }
     }
 
-    public void OnAfterDeserialize()
+    public void Unregister (Object obj)
     {
+        if (obj == null)
+            throw new System.Exception($"Received NULL object to un-register.");
+
+        if (!idLut.TryGetValue(obj, out var pipeId))
+            return;
+
+        registeredObjects[pipeId] = null;
+        idLut.Remove(obj);
+        idManager.PushId(pipeId);
     }
 
-    public void OnBeforeSerialize()
+    public void Reset ()
     {
+        idLut.Clear();
+        idManager.Reset();
     }
 }

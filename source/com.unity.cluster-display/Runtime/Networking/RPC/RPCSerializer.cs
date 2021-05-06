@@ -13,6 +13,9 @@ namespace Unity.ClusterDisplay
             private string sourceString;
             public string Source => sourceString;
 
+            private bool isStatic;
+            public bool IsStatic => isStatic;
+
             private string declaringAssemblyString;
             public string DeclaringAssemblyName => declaringAssemblyString;
 
@@ -75,16 +78,20 @@ namespace Unity.ClusterDisplay
                     goto failure;
 
                 var split = source.Split('|');
-                var declaringAssemblyAndTypeStr = split[0];
+
+                var instanceOrStatic = split[0];
+                isStatic = instanceOrStatic == "static";
+
+                var declaringAssemblyAndTypeStr = split[1];
 
                 if (!TryParseAssemblyAndType(ref declaringAssemblyAndTypeStr, out declaringAssemblyString, out declaringTypeString))
                     goto failure;
 
-                var returnAssemblyAndType = split[1];
+                var returnAssemblyAndType = split[2];
                 if (!TryParseAssemblyAndType(ref returnAssemblyAndType, out declaringReturnTypeAssemblyString, out returnTypeString))
                     goto failure;
 
-                methodNameString = split[2];
+                methodNameString = split[3];
 
                 if (string.IsNullOrEmpty(methodNameString))
                     goto failure;
@@ -93,7 +100,7 @@ namespace Unity.ClusterDisplay
                 var paramterTypeStringList = new List<string>();
                 var paramterNameStringList = new List<string>();
 
-                string parametersString = split[3];
+                string parametersString = split[4];
                 if (!string.IsNullOrEmpty(parametersString) && parametersString != "void")
                 {
                     var parameterSplit = parametersString.Split(',');
@@ -137,6 +144,7 @@ namespace Unity.ClusterDisplay
 
                 failure:
                 this.sourceString = null;
+                this.isStatic = false;
 
                 this.declaringAssemblyString = null;
                 this.declaringTypeString = null;
@@ -191,9 +199,10 @@ namespace Unity.ClusterDisplay
             }
 
             MethodInfo[] methods = null;
+
             if (!cachedTypeMethodInfos.TryGetValue(declaringType, out methods))
             {
-                methods = declaringType.GetMethods(BindingFlags.Instance | BindingFlags.Public);
+                methods = declaringType.GetMethods((rpcTokenizer.IsStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public);
                 cachedTypeMethodInfos.Add(declaringType, methods);
             }
 
@@ -289,14 +298,14 @@ namespace Unity.ClusterDisplay
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = $"{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|void|";
+                serializedRPCMethodInfo = $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|void|";
             }
 
             else
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = $"{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|{string.Join(",", rpcMethodInfo.methodInfo.GetParameters().Select(parameter => $"{parameter.ParameterType.Assembly.GetName().Name}-{parameter.ParameterType.FullName} {parameter.Name}"))}|";
+                serializedRPCMethodInfo = $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|{string.Join(",", rpcMethodInfo.methodInfo.GetParameters().Select(parameter => $"{parameter.ParameterType.Assembly.GetName().Name}-{parameter.ParameterType.FullName} {parameter.Name}"))}|";
             }
 
             return true;

@@ -6,61 +6,99 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    public class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
+    public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {
-        [SerializeField] private Object[] serializedObjects;
+        private readonly Dictionary<Object, List<ushort>> objects = new Dictionary<Object, List<ushort>>();
 
-        public void RegisterObject<T> (T sceneObject) where T : Object
+        [SerializeField] private Object[] serializedObjects;
+        [SerializeField] private ushort[] serializedRPCCounts;
+        [SerializeField] private ushort[] serializedRPCIds;
+
+        private bool objectsRegistered = false;
+
+        public void RegisterObject<T> (T sceneObject, ushort rpcId) where T : Object
         {
             if (Application.isPlaying)
-            {
-                goto log;
-            }
+                return;
 
-            if (serializedObjects != null)
-            {
-                if (serializedObjects.Contains(sceneObject))
-                    throw new System.Exception($"Registry already has already registered the instance of: \"{typeof(T).FullName}\".");
+            if (!objects.TryGetValue(sceneObject, out var listOfRPCIds))
+                objects.Add(sceneObject, new List<ushort>() { rpcId });
+            else listOfRPCIds.Add(rpcId);
 
-
-    #if UNITY_EDITOR
-                var copyOfSerializedObjects = new Object[serializedObjects.Length + 1];
-                System.Array.Copy(serializedObjects, copyOfSerializedObjects, serializedObjects.Length);
-                copyOfSerializedObjects[copyOfSerializedObjects.Length - 1] = sceneObject;
-                serializedObjects = copyOfSerializedObjects;
-    #endif
-            }
-
-            else
-            {
-    #if UNITY_EDITOR
-                serializedObjects = new Object[1];
-                serializedObjects[0] = sceneObject;
-    #endif
-            }
-
+            #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+            #endif
 
-            log:
             Debug.Log($"Registered scene object of type: \"{typeof(T).FullName}\".");
+        }
+
+        public void Unregister<T> (T sceneObject, ushort rpcId) where T : Object
+        {
+            if (!objects.TryGetValue(sceneObject, out var rpcIdList))
+                return;
+
+            rpcIdList.Remove(rpcId);
+            if (rpcIdList.Count == 0)
+                objects.Remove(sceneObject);
+
+            if (!ClusterDisplayNetworkManager.TryGetInstance(out var clusterDisplayNetworkManager, throwException: true))
+            {
+                Debug.LogError($"Unable to unregister instance of: \"{sceneObject.GetType().Name}\", there is no instance of: \"{nameof(ClusterDisplayNetworkManager)}\" in resources.");
+                return;
+            }
+
+            clusterDisplayNetworkManager.ObjectRegistry.Unregister(sceneObject);
+            clusterDisplayNetworkManager.RPCRegistry.DeincrementMethodReference(rpcId);
+
+            if (objects.Count == 0)
+            {
+                if (Application.isPlaying)
+                    Destroy(this.gameObject);
+                else DestroyImmediate(this.gameObject);
+            }
         }
 
         protected override void OnSerialize()
         {
+            if (objects.Count == 0)
+                return;
+
+            if (serializedObjects == null || serializedObjects.Length != objects.Count)
+            {
+                serializedObjects = new Object[objects.Count];
+                serializedRPCCounts = new ushort[objects.Count];
+            }
+
+            serializedObjects = objects.Keys.ToArray();
+
+            List<ushort> listOfRPCIds = new List<ushort>();
+            for (int i = 0; i < serializedObjects.Length; i++)
+            {
+                objects.TryGetValue(serializedObjects[i], out var list);
+                serializedRPCCounts[i] = (ushort)list.Count;
+                listOfRPCIds.AddRange(list);
+            }
+
+            serializedRPCIds = listOfRPCIds.ToArray();
+        }
+
+        protected override void OnDeserialize()
+        {
             if (serializedObjects == null)
                 return;
 
-            var objects = new List<Object>();
-
+            int startRPCIndexRange = 0;
             for (int i = 0; i < serializedObjects.Length; i++)
             {
-                if (serializedObjects[i] == null)
-                    continue;
+                int rpcCount = serializedRPCCounts[i];
 
-                objects.Add(serializedObjects[i]);
+                ushort[] array = new ushort[serializedRPCCounts[i]];
+                System.Array.Copy(serializedRPCIds, startRPCIndexRange, array, 0, rpcCount);
+
+                objects.Add(serializedObjects[i], array.ToList());
+
+                startRPCIndexRange += rpcCount;
             }
-
-            serializedObjects = objects.ToArray();
         }
 
         protected override void Destroying()
@@ -74,8 +112,11 @@ namespace Unity.ClusterDisplay
             clusterDisplayNetworkManager.ObjectRegistry.Unregister(serializedObjects);
         }
 
-        private void OnLevelWasLoaded(int level)
+        private void RegisterObjects ()
         {
+            if (objectsRegistered)
+                return;
+
             if (!Application.isPlaying)
                 return;
 
@@ -83,6 +124,10 @@ namespace Unity.ClusterDisplay
                 return;
 
             clusterDisplayNetworkManager.ObjectRegistry.Register(serializedObjects);
+            objectsRegistered = true;
         }
+
+        private void Awake() => RegisterObjects();
+        private void OnLevelWasLoaded(int level) => RegisterObjects();
     }
 }
