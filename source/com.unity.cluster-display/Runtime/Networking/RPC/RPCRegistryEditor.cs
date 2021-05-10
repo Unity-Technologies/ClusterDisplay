@@ -10,7 +10,7 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    public partial class RPCRegistry : ScriptableObject
+    public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
         [CustomEditor(typeof(RPCRegistry))]
         private class RPCRegistryEditor : Editor
@@ -144,6 +144,7 @@ namespace Unity.ClusterDisplay
                 cachedMethods = ReflectionUtils.GetAllMethodsFromType(
                     targetType, 
                     newMethodSearchStr, 
+                    valueTypeParametersOnly: true,
                     bindingFlags: BindingFlags.Public | BindingFlags.Static, 
                     includeGenerics: false);
 

@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "ObjectRegistry", menuName = "Cluster Display/Object Registry")]
-public partial class ObjectRegistry : ScriptableObject
+public partial class ObjectRegistry : SingletonScriptableObject<ObjectRegistry>
 {
     private readonly Object[] registeredObjects = new Object[ushort.MaxValue];
     private readonly Dictionary<Object, ushort> idLut = new Dictionary<Object, ushort>();
 
     private readonly IDManager idManager = new IDManager();
+
+    public bool TryGetPipeId(Object obj, out ushort pipeId) => idLut.TryGetValue(obj, out pipeId);
 
     public void Register<T> (T obj) where T : Object
     {

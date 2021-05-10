@@ -45,10 +45,16 @@ public class IDManager
         serializedIdCount--;
     }
 
+    protected virtual void OnReset () {}
     public void Reset ()
     {
+        returnedIds = new ushort[ushort.MaxValue];
+        serializedIds = new ushort[ushort.MaxValue];
+
         returnedIdsIndex = 0;
         serializedIdCount = 0;
         newIdIndex = 0;
+
+        OnReset();
     }
 }

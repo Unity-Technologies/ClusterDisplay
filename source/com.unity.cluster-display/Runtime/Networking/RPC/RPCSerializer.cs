@@ -13,6 +13,9 @@ namespace Unity.ClusterDisplay
             private string sourceString;
             public string Source => sourceString;
 
+            private ushort rpcId;
+            public ushort RPCId => rpcId;
+
             private bool isStatic;
             public bool IsStatic => isStatic;
 
@@ -57,7 +60,7 @@ namespace Unity.ClusterDisplay
                 if (string.IsNullOrEmpty(str))
                     return false;
 
-                var assemblyAndTypeSplit = str.Split('-');
+                var assemblyAndTypeSplit = str.Split(':');
                 if (assemblyAndTypeSplit.Length != 2)
                     return false;
 
@@ -79,19 +82,24 @@ namespace Unity.ClusterDisplay
 
                 var split = source.Split('|');
 
-                var instanceOrStatic = split[0];
+                var rpcIdStr = split[0];
+                rpcId = 0;
+                if (string.IsNullOrEmpty(rpcIdStr) && !ushort.TryParse(rpcIdStr, out rpcId))
+                    goto failure;
+
+                var instanceOrStatic = split[1];
                 isStatic = instanceOrStatic == "static";
 
-                var declaringAssemblyAndTypeStr = split[1];
+                var declaringAssemblyAndTypeStr = split[2];
 
                 if (!TryParseAssemblyAndType(ref declaringAssemblyAndTypeStr, out declaringAssemblyString, out declaringTypeString))
                     goto failure;
 
-                var returnAssemblyAndType = split[2];
+                var returnAssemblyAndType = split[3];
                 if (!TryParseAssemblyAndType(ref returnAssemblyAndType, out declaringReturnTypeAssemblyString, out returnTypeString))
                     goto failure;
 
-                methodNameString = split[3];
+                methodNameString = split[4];
 
                 if (string.IsNullOrEmpty(methodNameString))
                     goto failure;
@@ -100,7 +108,7 @@ namespace Unity.ClusterDisplay
                 var paramterTypeStringList = new List<string>();
                 var paramterNameStringList = new List<string>();
 
-                string parametersString = split[4];
+                string parametersString = split[5];
                 if (!string.IsNullOrEmpty(parametersString) && parametersString != "void")
                 {
                     var parameterSplit = parametersString.Split(',');
@@ -144,6 +152,7 @@ namespace Unity.ClusterDisplay
 
                 failure:
                 this.sourceString = null;
+                this.rpcId = 0;
                 this.isStatic = false;
 
                 this.declaringAssemblyString = null;
@@ -231,16 +240,18 @@ namespace Unity.ClusterDisplay
             return (outMethodInfo = filteredMethods.FirstOrDefault()) != null;
         }
 
-        public static bool TryReadSerailizedRPCStubs (string path, out string[] lines)
+        public static bool TryReadRPCStubs (string path, out string[] lines)
         {
             if (string.IsNullOrEmpty(path))
             {
+                Debug.LogError("Unable to read RPC stubs, the path is invalid.");
                 lines = null;
                 return false;
             }
 
             if (!System.IO.File.Exists(path))
             {
+                Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
                 lines = null;
                 return false;
             }
@@ -248,33 +259,39 @@ namespace Unity.ClusterDisplay
             try
             {
                 lines = System.IO.File.ReadAllLines(path);
+
             } catch (System.Exception exception)
             {
+                Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
                 lines = null;
                 return false;
             }
 
+            Debug.Log($"RPC Stubs was read from path: \"{path}\".");
             return true;
         }
 
-        public static bool TryDeserializeRPCStubs (string path, out MethodInfo[] methodInfos)
+        public static bool TryWriteRPCStubs (string path, string[] lines)
         {
-            List<MethodInfo> methodInfoList = new List<MethodInfo>();
-            if (!TryReadSerailizedRPCStubs(path, out var lines))
+            if (string.IsNullOrEmpty(path))
             {
-                methodInfos = null;
+                Debug.LogError("Unable to write RPC stubs, the path is invalid.");
                 return false;
             }
 
-            for (int i = 0; i < lines.Length; i++)
+            try
             {
-                if (!TryDeserializeMethodInfo(lines[i], out var methodInfo))
-                    continue;
-                methodInfoList.Add(methodInfo);
+                System.IO.File.WriteAllLines(path, lines);
+
+            } catch (System.Exception exception)
+            {
+                Debug.LogError($"Unable to write RPC stubs from path: \"{path}\", the following exception occurred.");
+                Debug.LogException(exception);
+                return false;
             }
 
-            methodInfos = methodInfoList.ToArray();
+            Debug.Log($"RPC Stubs was written to path: \"{path}\".");
             return true;
         }
 
@@ -298,14 +315,26 @@ namespace Unity.ClusterDisplay
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|void|";
+                serializedRPCMethodInfo = 
+                    $"{rpcMethodInfo.rpcId}|" +
+                    $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|" +
+                    $"{declaringAssemblystr}:{declaringTypeStr}|" +
+                    $"{returnTypeAssemblyName}:{returnType.FullName}|" +
+                    $"{rpcMethodInfo.methodInfo.Name}|" +
+                    $"void|";
             }
 
             else
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|{declaringAssemblystr}-{declaringTypeStr}|{returnTypeAssemblyName}-{returnType.FullName}|{rpcMethodInfo.methodInfo.Name}|{string.Join(",", rpcMethodInfo.methodInfo.GetParameters().Select(parameter => $"{parameter.ParameterType.Assembly.GetName().Name}-{parameter.ParameterType.FullName} {parameter.Name}"))}|";
+                serializedRPCMethodInfo = 
+                    $"{rpcMethodInfo.rpcId}|" +
+                    $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|" +
+                    $"{declaringAssemblystr}:{declaringTypeStr}|" +
+                    $"{returnTypeAssemblyName}:{returnType.FullName}|" +
+                    $"{rpcMethodInfo.methodInfo.Name}|" +
+                    $"{string.Join(",", rpcMethodInfo.methodInfo.GetParameters().Select(parameter => $"{parameter.ParameterType.Assembly.GetName().Name}:{parameter.ParameterType.FullName} {parameter.Name}"))}|";
             }
 
             return true;

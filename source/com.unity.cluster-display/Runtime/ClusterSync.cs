@@ -71,7 +71,6 @@ namespace Unity.ClusterDisplay
         private AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
         public AccumulateFrameDataDelegate AccumulateFrameData => m_AccumulateFrameDataDelegate;
 
-
 #if UNITY_EDITOR
         public string m_EditorCmdLine = "";
 #endif

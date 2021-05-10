@@ -17,11 +17,9 @@ namespace Unity.ClusterDisplay
                 var sceneObjectsRegistry = target as SceneObjectsRegistry;
                 var scene = sceneObjectsRegistry.gameObject.scene;
 
-                if (!ClusterDisplayNetworkManager.TryGetInstance(out var clusterDisplayNetworkManager, throwException: false))
-                {
-                    EditorGUILayout.LabelField($"Create instance of \"{nameof(ClusterDisplayNetworkManager)}\"");
+                if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
                     return;
-                }
+
 
                 Object objectToRemove = null;
                 ushort ? rpcToRemove = null;
@@ -43,7 +41,7 @@ namespace Unity.ClusterDisplay
                             rpcToRemove = rpcId;
                         }
 
-                        EditorGUILayout.LabelField(clusterDisplayNetworkManager.RPCRegistry[rpcId].methodInfo.Name);
+                        EditorGUILayout.LabelField(rpcRegistry[rpcId].methodInfo.Name);
                         EditorGUILayout.EndHorizontal();
                     }
                 }

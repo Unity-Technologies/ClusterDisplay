@@ -41,14 +41,11 @@ namespace Unity.ClusterDisplay
             if (rpcIdList.Count == 0)
                 objects.Remove(sceneObject);
 
-            if (!ClusterDisplayNetworkManager.TryGetInstance(out var clusterDisplayNetworkManager, throwException: true))
-            {
-                Debug.LogError($"Unable to unregister instance of: \"{sceneObject.GetType().Name}\", there is no instance of: \"{nameof(ClusterDisplayNetworkManager)}\" in resources.");
-                return;
-            }
+            if (ObjectRegistry.TryGetInstance(out var objectRegistry, throwException: true))
+                objectRegistry.Unregister(sceneObject);
 
-            clusterDisplayNetworkManager.ObjectRegistry.Unregister(sceneObject);
-            clusterDisplayNetworkManager.RPCRegistry.DeincrementMethodReference(rpcId);
+            if (RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: true))
+                rpcRegistry.DeincrementMethodReference(rpcId);
 
             if (objects.Count == 0)
             {
@@ -106,10 +103,8 @@ namespace Unity.ClusterDisplay
             if (!Application.isPlaying)
                 return;
 
-            if (!ClusterDisplayNetworkManager.TryGetInstance(out var clusterDisplayNetworkManager))
-                return;
-
-            clusterDisplayNetworkManager.ObjectRegistry.Unregister(serializedObjects);
+            if (ObjectRegistry.TryGetInstance(out var objectRegistry, throwException: true))
+                objectRegistry.Unregister(serializedObjects);
         }
 
         private void RegisterObjects ()
@@ -120,10 +115,9 @@ namespace Unity.ClusterDisplay
             if (!Application.isPlaying)
                 return;
 
-            if (!ClusterDisplayNetworkManager.TryGetInstance(out var clusterDisplayNetworkManager))
-                return;
+            if (ObjectRegistry.TryGetInstance(out var objectRegistry, throwException: true))
+                objectRegistry.Register(serializedObjects);
 
-            clusterDisplayNetworkManager.ObjectRegistry.Register(serializedObjects);
             objectsRegistered = true;
         }
 

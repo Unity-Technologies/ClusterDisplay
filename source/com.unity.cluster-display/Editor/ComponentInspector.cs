@@ -32,6 +32,7 @@ namespace Unity.ClusterDisplay
             cachedMethods = ReflectionUtils.GetAllMethodsFromType(
                 targetObjectType, 
                 newMethodSearchStr, 
+                valueTypeParametersOnly: true,
                 bindingFlags: BindingFlags.Public | BindingFlags.Instance,
                 includeGenerics: false);
 
@@ -61,8 +62,9 @@ namespace Unity.ClusterDisplay
 
                 if (sceneObjectsRegistry != null)
                 {
-                    if (objectReferenceContainer.RPCRegistry.TryIncrementMethodReference(targetObjectType, selectedMethodInfo, out var rpcMethodInfo))
-                        sceneObjectsRegistry.RegisterObject(targetObject as Object, rpcMethodInfo.rpcId);
+                    if (RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: true))
+                        if (rpcRegistry.TryIncrementMethodReference(targetObjectType, selectedMethodInfo, out var rpcMethodInfo))
+                            sceneObjectsRegistry.RegisterObject(targetObject as Object, rpcMethodInfo.rpcId);
                 }
             }
         }

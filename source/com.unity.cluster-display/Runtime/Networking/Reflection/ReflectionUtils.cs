@@ -27,21 +27,38 @@ namespace Unity.ClusterDisplay
             return type;
         }
 
-        public static MethodInfo[] GetAllMethodsFromType (System.Type type, string filter, BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public, bool includeGenerics = true)
+        public static MethodInfo[] GetAllMethodsFromType (
+            System.Type type, 
+            string filter, 
+            bool valueTypeParametersOnly = false,
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public, 
+            bool includeGenerics = true)
         {
             return
                 string.IsNullOrEmpty(filter) ?
 
                     type.GetMethods(bindingFlags)
-                        .Where(method => includeGenerics ? true : !method.IsGenericMethod)
+                        .Where(method =>
+                        {
+                            return
+                                (!includeGenerics ? !method.IsGenericMethod : true) &&
+                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
+
+                        })
                         .ToArray()
 
                     :
 
                     type.GetMethods(bindingFlags)
-                        .Where(method => GetMethodSignature(method).ToLower().Contains(filter.ToLower()))
-                        .Where(method => includeGenerics ? true : !method.IsGenericMethod)
-                        .ToArray();
+                        .Where(method =>
+                        {
+                            return
+                                (!includeGenerics ? !method.IsGenericMethod : true) &&
+                                (method.Name.Contains(filter)) &&
+                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
+
+                        }).ToArray();
+                        
         }
 
         // From https://stackoverflow.com/a/1312321

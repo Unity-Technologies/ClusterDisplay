@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-public partial class ObjectRegistry : ScriptableObject
+public partial class ObjectRegistry : SingletonScriptableObject<ObjectRegistry>
 {
 #if UNITY_EDITOR
     [CustomEditor(typeof(ObjectRegistry))]

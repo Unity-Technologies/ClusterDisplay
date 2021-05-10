@@ -1,7 +1,8 @@
 {
     "name": "ILPostprocessors",
     "references": [
-        "GUID:b43fac41fad43f5458043d6551bc571e"
+        "GUID:b43fac41fad43f5458043d6551bc571e",
+        "GUID:ebda382865f803841bb36f141d251db6"
     ],
     "includePlatforms": [
         "Editor"
