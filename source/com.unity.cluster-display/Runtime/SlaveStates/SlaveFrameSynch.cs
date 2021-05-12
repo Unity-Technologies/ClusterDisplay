@@ -213,6 +213,10 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                         {
                             RestoreRndGeneratorState(stateData);
                         }
+                        else if (id == AdvanceFrame.RPCStateID)
+                        {
+                            RestoreRPCState(stateData);
+                        }
                         else
                         {
                             // Send out to user provided handlers
@@ -225,6 +229,13 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                 m_MsgFromMaster.Dispose();
                 m_MsgFromMaster = default;
             }
+        }
+
+        private static unsafe bool RestoreRPCState (NativeArray<byte> stateData)
+        {
+            Debug.Log($"RPC Buffer Size: {stateData.Length}");
+            RPCEmitter.Unlatch(stateData);
+            return true;
         }
 
         private static unsafe bool RestoreRndGeneratorState(NativeArray<byte> stateData)

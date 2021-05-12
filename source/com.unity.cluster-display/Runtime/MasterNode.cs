@@ -16,12 +16,10 @@ namespace Unity.ClusterDisplay
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
 
         public int TotalExpectedRemoteNodesCount { get; set; }
-        private AccumulateFrameDataDelegate m_AccumulateFrameDataDel;
 
-        public MasterNode(AccumulateFrameDataDelegate accumulateFrameDataDel, byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)
+        public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)
         {
             TotalExpectedRemoteNodesCount = slaveCount;
-            m_AccumulateFrameDataDel = accumulateFrameDataDel;
         }
 
         public override bool Start()
@@ -30,8 +28,7 @@ namespace Unity.ClusterDisplay
                 return false;
 
             m_CurrentState = new WaitingForAllClients {
-                MaxTimeOut = ClusterParams.RegisterTimeout,
-                m_AccumulateFrameDataDelegate = m_AccumulateFrameDataDel};// 15 sec waiting for clients
+                MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
 
             m_CurrentState.EnterState(null);
 

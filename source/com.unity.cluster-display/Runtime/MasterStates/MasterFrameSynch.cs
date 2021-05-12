@@ -31,8 +31,6 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         ProfilerMarker m_MarkerProcessFrame = new ProfilerMarker("ProcessFrame");
         ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
 
-        public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
-
         public override string GetDebugString()
         {
             return $"{base.GetDebugString()} / {(EStage)m_Stage} : {m_WaitingOnNodes}";
@@ -226,7 +224,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                     StoreTimeState(buffer, ref endPos) &&
                     StoreClusterInputState(buffer, ref endPos) &&
                     StoreRndGeneratorState(buffer, ref endPos) &&
-                    m_AccumulateFrameDataDelegate != null ? m_AccumulateFrameDataDelegate(buffer, ref endPos) : true &&
+                    StoreRPCs(buffer, ref endPos) &&
                     MarkStatesEnd(buffer, ref endPos))
                 {
                     m_RawStateData = new NativeArray<byte>(buffer.GetSubArray(0, endPos), Allocator.Temp);
@@ -333,6 +331,17 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
             *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = Marshal.SizeOf<UnityEngine.Random.State>();
             return true;
+        }
+
+        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos)
+        {
+            *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPCEmitter.RPCBufferSize;
+            endPos += Marshal.SizeOf<int>();
+
+            Debug.Log($"RPC Buffer Size: {RPCEmitter.RPCBufferSize}");
+            endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
+
+            return RPCEmitter.Latch(buffer, ref endPos);
         }
 
         private static unsafe int StoreStateID(NativeArray<byte> buffer, int endPos, Guid id, int guidLen)

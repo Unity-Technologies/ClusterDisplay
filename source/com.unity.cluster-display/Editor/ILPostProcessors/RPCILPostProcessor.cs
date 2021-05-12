@@ -77,7 +77,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private bool TryGetMethodDefinition (TypeDefinition typeDefinition, ref RPCSerializer.RPCTokenizer inRPCTokenizer, out MethodDefinition methodDefinition)
+        private bool TryGetMethodDefinition (TypeDefinition typeDefinition, ref SerializedRPC inRPCTokenizer, out MethodDefinition methodDefinition)
         {
             var rpcTokenizer = inRPCTokenizer;
             return (methodDefinition = typeDefinition.Methods.Where(methodDef =>
@@ -86,8 +86,8 @@ namespace Unity.ClusterDisplay
                 bool allMatch = 
                     methodDef.HasParameters == rpcTokenizer.ParameterCount > 0 &&
                     methodDef.Parameters.Count == rpcTokenizer.ParameterCount &&
-                    methodDef.Name == rpcTokenizer.MethodName &&
-                    methodDef.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.DeclaringReturnTypeAssemblyName &&
+                    methodDef.Name == rpcTokenizer.methodName &&
+                    methodDef.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.declaringReturnTypeAssemblyName &&
                     methodDef.Parameters.All(parameterDefinition =>
                     {
                         if (rpcTokenizer.ParameterCount == 0)
@@ -135,37 +135,35 @@ namespace Unity.ClusterDisplay
             bool isStatic, 
             ushort rpcId, 
             MethodReference call, 
-            /*int sizeOfAllParameters,*/
-            out Instruction previousInstruction)
+            ushort sizeOfAllParameters,
+            out Instruction lastInstruction)
         {
             Instruction newInstruct = null;
             if (isStatic)
             {
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
                 il.InsertBefore(beforeInstruction, newInstruct);
-                previousInstruction = newInstruct;
+                lastInstruction = newInstruct;
             }
 
             else
             {
                 newInstruct = Instruction.Create(OpCodes.Ldarg_0);
                 il.InsertBefore(beforeInstruction, newInstruct);
-                previousInstruction = newInstruct;
+                lastInstruction = newInstruct;
 
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
-                il.InsertAfter(previousInstruction, newInstruct);
-                previousInstruction = newInstruct;
+                il.InsertAfter(lastInstruction, newInstruct);
+                lastInstruction = newInstruct;
             }
 
-            /*
             newInstruct = Instruction.Create(OpCodes.Ldc_I4, sizeOfAllParameters);
-            il.InsertAfter(previousInstruction, newInstruct);
-            previousInstruction = newInstruct;
-            */
+            il.InsertAfter(lastInstruction, newInstruct);
+            lastInstruction = newInstruct;
 
             newInstruct = Instruction.Create(OpCodes.Call, call);
-            il.InsertAfter(previousInstruction, newInstruct);
-            previousInstruction = newInstruct;
+            il.InsertAfter(lastInstruction, newInstruct);
+            lastInstruction = newInstruct;
         }
 
         private bool TryDetermineSizeOfPrimitive (string typeName, ref int size)
@@ -221,11 +219,11 @@ namespace Unity.ClusterDisplay
 
         private bool TryBridge (
             AssemblyDefinition assemblyDef, 
-            ILProcessor il, 
-            Instruction beforeInstruction, 
             ushort rpcId, 
             MethodDefinition targetMethod)
         {
+            var beforeInstruction = targetMethod.Body.Instructions.First();
+            var il = targetMethod.Body.GetILProcessor();
             var rpcEmitterType = typeof(RPCEmitter);
 
             var rpcEmitterTypeReference = assemblyDef.MainModule.ImportReference(rpcEmitterType);
@@ -238,8 +236,7 @@ namespace Unity.ClusterDisplay
             var copyValueToBufferMethodRef = assemblyDef.MainModule.ImportReference(rpcEmitterType.GetMethod("CopyValueToBuffer"));
 
             var parameters = targetMethod.Parameters;
-            /*
-            int sizeOfAllParameters = 0;
+            ushort sizeOfAllParameters = 0;
             foreach (var param in parameters)
             {
                 var typeReference = assemblyDef.MainModule.ImportReference(param.ParameterType);
@@ -248,9 +245,11 @@ namespace Unity.ClusterDisplay
                 if (!TryDetermineSizeOfType(typeReference.Resolve(), ref sizeOfType))
                     return false;
 
-                sizeOfAllParameters += sizeOfType;
+                if (sizeOfType > ushort.MaxValue || ((int)sizeOfAllParameters) + sizeOfType > ushort.MaxValue)
+                    return false;
+
+                sizeOfAllParameters += (ushort)sizeOfType;
             }
-            */
 
             Instruction newInstruction = null;
             Instruction previousInstruction = null;
@@ -261,7 +260,7 @@ namespace Unity.ClusterDisplay
                 targetMethod.IsStatic, 
                 rpcId, 
                 openRPCLatchMethodRef, 
-                /*sizeOfAllParameters,*/
+                sizeOfAllParameters,
                 out previousInstruction);
 
             int parameterIndex = 0;
@@ -290,9 +289,243 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private void InjectSwitchCase(
+            ModuleDefinition moduleDef,
+            ILProcessor il,
+            Instruction beforeInstruction,
+            MethodReference objectRegistryGetItemMethodRef,
+            MethodReference targetMethod,
+            out Instruction firstInstruction,
+            out Instruction lastInstruction)
+        {
+             // Load "objectRegistry" local variable.
+            firstInstruction = Instruction.Create(OpCodes.Ldloc_0);
+            il.InsertBefore(beforeInstruction, firstInstruction);
+            var afterInstruction = firstInstruction;
+
+             // Load pipeId parameter onto stack.
+            var newInstruction = Instruction.Create(OpCodes.Ldarg_1);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            // Call objectRegistry[pipeId].
+            newInstruction = Instruction.Create(OpCodes.Callvirt, objectRegistryGetItemMethodRef);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            if (!targetMethod.HasParameters)
+            {
+                // Call method on target object without any parameters.
+                newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod);
+                il.InsertAfter(afterInstruction, newInstruction);
+                afterInstruction = newInstruction;
+
+                newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+                il.InsertAfter(afterInstruction, newInstruction);
+                afterInstruction = newInstruction;
+
+                newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
+                il.InsertAfter(afterInstruction, newInstruction);
+                lastInstruction = newInstruction;
+                return;
+            }
+
+             // Get static ParseStructure method in RPCEmitter type.
+            var parseStructureMethod = typeof(RPCEmitter).GetMethod("ParseStructure");
+
+             // Import the ParseStructureMethod method.
+            var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
+
+             // Get the first parameter of the method we are editing.
+            var startPosParamDef = il.Body.Method.Parameters.Where(paramDef => paramDef.Name == "startPos").FirstOrDefault();
+
+            // Loop through all parameters of the method we want to call on our object.
+            foreach (var parameterReference in targetMethod.Parameters)
+            {
+                var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
+                genericInstanceMethod.GenericArguments.Add(parameterReference.ParameterType); // Add the generic argument of the parameter we want to convert from bytes.
+
+                newInstruction = Instruction.Create(OpCodes.Ldarg_S, startPosParamDef); // Load startPos onto stack as an argument.
+                il.InsertAfter(afterInstruction, newInstruction);
+                afterInstruction = newInstruction;
+
+                newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod); // Call generic method to convert bytes into our struct.
+                il.InsertAfter(afterInstruction, newInstruction);
+                afterInstruction = newInstruction;
+            }
+
+            newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod); // Call our method on the target object with all the parameters.
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
+            il.InsertAfter(afterInstruction, newInstruction);
+            lastInstruction = newInstruction;
+        }
+
+        private bool GetOnTryCallILProcessor (AssemblyDefinition assemblyDef, out TypeReference derrivedTypeRef, out ILProcessor il)
+        {
+            var rpcInstanceRegistryTypeDef = assemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry)).Resolve();
+            var derrivedTypes = assemblyDef.MainModule.GetTypes()
+                .Where(typeDef => 
+                    typeDef != null && 
+                    typeDef.BaseType != null && 
+                    typeDef.BaseType.FullName == rpcInstanceRegistryTypeDef.FullName).FirstOrDefault();
+
+            if (derrivedTypes == null)
+            {
+                derrivedTypeRef = null;
+                il = null;
+                return false;
+            }
+
+            var onTryCallMethodDef = derrivedTypes
+                .Methods.Where(methodDef => methodDef.Name == "OnTryCall")
+                .FirstOrDefault();
+
+            derrivedTypeRef = onTryCallMethodDef.DeclaringType;
+            il = onTryCallMethodDef.Body.GetILProcessor();
+            return true;
+        }
+
+        private bool TryImportTryGetSingletonObject<T> (
+            ModuleDefinition moduleDefinition,
+            out TypeReference typeRef,
+            out MethodReference tryGetInstanceMethodRef)
+        {
+            var type = typeof(T);
+            typeRef = moduleDefinition.ImportReference(type);
+
+            if (typeRef == null)
+            {
+                tryGetInstanceMethodRef = null;
+                return false;
+            }
+
+            var typeDef = typeRef.Resolve();
+            if (type.BaseType == null)
+            {
+                tryGetInstanceMethodRef = null;
+                return false;
+            }
+
+            var baseTypeRef = moduleDefinition.ImportReference(type.BaseType);
+            if (baseTypeRef == null)
+            {
+                tryGetInstanceMethodRef = null;
+                return false;
+            }
+
+            var baseGenericType = new GenericInstanceType(baseTypeRef);
+            baseGenericType.GenericArguments.Add(typeDef);
+            var baseGenericTypeDef = baseGenericType.Resolve();
+
+            tryGetInstanceMethodRef = moduleDefinition.ImportReference(baseGenericTypeDef.Methods.Where(method => method.Name == "TryGetInstance").FirstOrDefault());
+            /*
+            var tryGetInstanceGenericMethod = new GenericInstanceMethod(tryGetInstanceMethodRef);
+            tryGetInstanceGenericMethod.GenericArguments.Add(typeRef);
+            tryGetInstanceMethodRef = tryGetInstanceGenericMethod.Resolve();
+            */
+
+            return tryGetInstanceMethodRef != null;
+        }
+
+        private bool TryImportObjectRegistry (
+            ModuleDefinition moduleDefinition,
+            out TypeReference objectRegistryTypeRef,
+            out MethodReference objectRegistryTryGetInstanceMethodRef,
+            out MethodReference objectRegistryGetItemMethodRef)
+        {
+            if (!TryImportTryGetSingletonObject<ObjectRegistry>(moduleDefinition, out objectRegistryTypeRef, out objectRegistryTryGetInstanceMethodRef))
+            {
+                objectRegistryTypeRef = null;
+                objectRegistryTryGetInstanceMethodRef = null;
+                objectRegistryGetItemMethodRef = null;
+                return false;
+            }
+
+            var objectRegistryTypeDef = objectRegistryTypeRef.Resolve();
+            objectRegistryGetItemMethodRef = moduleDefinition.ImportReference(objectRegistryTypeDef.Methods.Where(method => method.Name == "get_Item").FirstOrDefault());
+
+            return objectRegistryTypeDef != null && objectRegistryTryGetInstanceMethodRef != null && objectRegistryGetItemMethodRef != null;
+        }
+
+        private void InjectSwitchJmp (
+            ILProcessor il,
+            Instruction afterInstruction,
+            ushort rpcId,
+            Instruction targetInstruction,
+            out Instruction lastInstruction)
+        {
+            var newInstruction = Instruction.Create(OpCodes.Ldarg_2);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Beq_S, targetInstruction);
+            il.InsertAfter(afterInstruction, newInstruction);
+            lastInstruction = newInstruction;
+        }
+
+        private void InjectObjectRegistryTryGet(
+            ModuleDefinition moduleDef,
+            ILProcessor onTryCallILProcessor,
+            TypeDefinition objectRegistryTypeDef,
+            MethodReference objectRegistryTryGetInstance,
+            Instruction afterInstruction,
+            out Instruction tryGetInstanceFailureInstruction,
+            out Instruction lastInstruction)
+        {
+            var objectRegistryLocalVariable = new VariableDefinition(objectRegistryTypeDef);
+
+            var variables = onTryCallILProcessor.Body.Variables.ToList();
+            variables.Insert(0, objectRegistryLocalVariable);
+
+            onTryCallILProcessor.Body.Variables.Clear();
+            foreach (var var in variables)
+            {
+                if (var == null)
+                    continue;
+                onTryCallILProcessor.Body.Variables.Add(new VariableDefinition(moduleDef.ImportReference(var.VariableType)));
+            }
+
+            var newInstruction = Instruction.Create(OpCodes.Ldloca_S, objectRegistryLocalVariable);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Call, objectRegistryTryGetInstance);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            tryGetInstanceFailureInstruction = Instruction.Create(OpCodes.Beq, onTryCallILProcessor.Body.Instructions[0]);
+            onTryCallILProcessor.InsertAfter(afterInstruction, tryGetInstanceFailureInstruction);
+            lastInstruction = tryGetInstanceFailureInstruction;
+
+            /*
+            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Ret);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            lastInstruction = newInstruction;
+            */
+        }
+
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
-            if (!RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out var serializedMethodStrings))
+            if (!RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out var serializedRPCs))
                 return null;
 
             if (compiledAssembly.Name != ReflectionUtils.DefaultUserAssemblyName)
@@ -301,32 +534,82 @@ namespace Unity.ClusterDisplay
             if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var assemblyDef))
                 return null;
 
-            foreach (var methodStr in serializedMethodStrings)
-            {
-                var rpcTokenizer = new RPCSerializer.RPCTokenizer(methodStr);
-                if (!rpcTokenizer.IsValid)
-                    continue;
+            if (serializedRPCs.Length == 0)
+                return null;
 
-                if (rpcTokenizer.DeclaringAssemblyName != compiledAssembly.Name)
+            if (!GetOnTryCallILProcessor(assemblyDef, out var rpcInterfacesTypeRef, out var onTryCallILProcessor))
+                return null;
+
+            onTryCallILProcessor.Body.Instructions.Clear();
+            Instruction firstInstruction = Instruction.Create(OpCodes.Nop);
+            onTryCallILProcessor.Append(firstInstruction);
+
+            var beginningOfFailureInstructions = Instruction.Create(OpCodes.Ldc_I4_0);
+            onTryCallILProcessor.Append(beginningOfFailureInstructions);
+            onTryCallILProcessor.Append(Instruction.Create(OpCodes.Ret));
+
+            var rpcInterfacesModule = rpcInterfacesTypeRef.Module;
+            if (!TryImportObjectRegistry(
+                rpcInterfacesModule,
+                out var objectRegistryTypeRef,
+                out var objectRegistryTryGetInstanceMethodRef,
+                out var objectRegistryTryGetItemMethodRef))
+                return null;
+
+            Instruction lastSwitchJmpInstruction = null;
+
+            InjectObjectRegistryTryGet(
+                rpcInterfacesModule,
+                onTryCallILProcessor,
+                objectRegistryTypeRef.Resolve(),
+                objectRegistryTryGetInstanceMethodRef,
+                afterInstruction: firstInstruction,
+                out var tryGetInstanceFailureInstruction,
+                lastInstruction: out lastSwitchJmpInstruction);
+
+            Instruction lastSwitchCaseInstruction = lastSwitchJmpInstruction;
+
+            foreach (var serializedRPC in serializedRPCs)
+            {
+                var rpc = serializedRPC;
+                if (rpc.declaringAssemblyName != compiledAssembly.Name)
                     continue;
 
                 Debug.Log($"Post processing compiled assembly: \"{compiledAssembly.Name}\".");
 
-                var typeDefinition = assemblyDef.MainModule.GetType(rpcTokenizer.DeclaringTypeFullName);
-                if (!TryGetMethodDefinition(typeDefinition, ref rpcTokenizer, out var methodDefinition))
+                var typeDefinition = assemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
+                if (!TryGetMethodDefinition(typeDefinition, ref rpc, out var methodDefinition))
                 {
-                    Debug.LogError($"Unable to find method signature: \"{methodStr}\".");
+                    Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
                     continue;
                 }
 
-                var il = methodDefinition.Body.GetILProcessor();
-                var firstInstruct = methodDefinition.Body.Instructions.First();
-
-                if (!TryBridge(assemblyDef, il, firstInstruct, rpcTokenizer.RPCId, methodDefinition))
+                if (!TryBridge(
+                    assemblyDef, 
+                    rpc.rpcId, 
+                    methodDefinition))
                     continue;
+
+                InjectSwitchCase(
+                    rpcInterfacesModule,
+                    onTryCallILProcessor,
+                    beforeInstruction: beginningOfFailureInstructions,
+                    objectRegistryTryGetItemMethodRef,
+                    methodDefinition,
+                    firstInstruction: out var startOfSwitchCaseInstruction,
+                    lastInstruction: out lastSwitchCaseInstruction);
+
+                InjectSwitchJmp(
+                    onTryCallILProcessor,
+                    afterInstruction: lastSwitchJmpInstruction,
+                    rpc.rpcId,
+                    targetInstruction: startOfSwitchCaseInstruction,
+                    lastInstruction: out lastSwitchJmpInstruction);
 
                 Debug.Log($"Injected RPC intercept assembly into method: \"{methodDefinition.Name}\" in class: \"{methodDefinition.DeclaringType.FullName}\".");
             }
+
+            tryGetInstanceFailureInstruction.Operand = beginningOfFailureInstructions;
 
             var pe = new MemoryStream();
             var pdb = new MemoryStream();
@@ -335,7 +618,15 @@ namespace Unity.ClusterDisplay
                 SymbolWriterProvider = new PortablePdbWriterProvider(), SymbolStream = pdb, WriteSymbols = true
             };
 
-            assemblyDef.Write(pe, writerParameters);
+            try
+            {
+                assemblyDef.Write(pe, writerParameters);
+            } catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+                return null;
+            }
+
             return new ILPostProcessResult(new InMemoryAssembly(pe.ToArray(), pdb.ToArray()));
         }
 

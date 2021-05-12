@@ -144,6 +144,7 @@ namespace Unity.ClusterDisplay
         public static Guid CoreInputStateID = Guid.Parse("07376B8C-9F18-4DA2-8795-25024F10E572");
         public static Guid CoreRandomStateID = Guid.Parse("ADFB31A9-FE1D-4108-9A4F-D8A0BD1EA9BC");
         public static Guid ClusterInputStateID = Guid.Parse("09D9220F-667A-4EA8-A384-01DAD099A786");
+        public static Guid RPCStateID = Guid.Parse("EC624899-7331-4959-A8FD-5346B610768B");
 
         public UInt64 FrameNumber;
 

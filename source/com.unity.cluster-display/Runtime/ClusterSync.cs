@@ -53,24 +53,6 @@ namespace Unity.ClusterDisplay
         [SerializeField] private ClusterDisplayResources _clusterDisplayResources;
         public ClusterDisplayResources Resources => _clusterDisplayResources;
 
-        private FrameDataManager m_FrameDataManager;
-        public FrameDataManager FrameDataManager
-        {
-            get
-            {
-                if (m_FrameDataManager == null)
-                {
-                    m_FrameDataManager = new FrameDataManager(Resources.IDManager);
-                    m_AccumulateFrameDataDelegate += m_FrameDataManager.Accumulate;
-                }
-
-                return m_FrameDataManager;
-            }
-        }
-
-        private AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
-        public AccumulateFrameDataDelegate AccumulateFrameData => m_AccumulateFrameDataDelegate;
-
 #if UNITY_EDITOR
         public string m_EditorCmdLine = "";
 #endif
@@ -272,7 +254,7 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(m_AccumulateFrameDataDelegate, id, slaveCount, ip, rxport, txport, 30, adapterName );
+                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
                     if (!master.Start())
                         return false;
                     LocalNode = master;

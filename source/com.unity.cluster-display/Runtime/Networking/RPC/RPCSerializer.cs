@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay
 {
     public static class RPCSerializer
     {
+        /*
         public struct RPCTokenizer
         {
             private string sourceString;
@@ -168,6 +169,7 @@ namespace Unity.ClusterDisplay
                 this.parameterNameStrings = null;
             }
         }
+        */
 
         public static bool TryDeserializeType (string assemblyString, string typeString, out System.Type type)
         {
@@ -180,18 +182,28 @@ namespace Unity.ClusterDisplay
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
-        public static bool TryDeserializeMethodInfo (string serializedMethod, out MethodInfo outMethodInfo)
+        public static bool TryDeserializeMethodInfo (SerializedRPC rpcTokenizer, out MethodInfo outMethodInfo)
         {
-            var rpcTokenizer = new RPCTokenizer(serializedMethod);
+            /*
+            SerializedInstanceRPC rpcTokenizer = default(SerializedInstanceRPC); 
             outMethodInfo = null;
 
-            if (!rpcTokenizer.IsValid)
+            try
+            {
+                rpcTokenizer = JsonUtility.FromJson<SerializedInstanceRPC>(json);
+            } catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+                return false;
+            }
+            */
+
+            outMethodInfo = null;
+
+            if (!TryDeserializeType(rpcTokenizer.declaringAssemblyName, rpcTokenizer.declaryingTypeFullName, out var declaringType))
                 return false;
 
-            if (!TryDeserializeType(rpcTokenizer.DeclaringAssemblyName, rpcTokenizer.DeclaringTypeFullName, out var declaringType))
-                return false;
-
-            if (!TryDeserializeType(rpcTokenizer.DeclaringReturnTypeAssemblyName, rpcTokenizer.ReturnTypeFullName, out var returnType))
+            if (!TryDeserializeType(rpcTokenizer.declaringReturnTypeAssemblyName, rpcTokenizer.returnTypeFullName, out var returnType))
                 return false;
 
             var parameterList = new List<(System.Type parameterType, string parameterName)>();
@@ -211,12 +223,12 @@ namespace Unity.ClusterDisplay
 
             if (!cachedTypeMethodInfos.TryGetValue(declaringType, out methods))
             {
-                methods = declaringType.GetMethods((rpcTokenizer.IsStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public);
+                methods = declaringType.GetMethods((rpcTokenizer.isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public);
                 cachedTypeMethodInfos.Add(declaringType, methods);
             }
 
             IEnumerable<MethodInfo> filteredMethods = methods.Where(methodInfo => methodInfo.ReturnType == returnType);
-            var matchingNameMethods = filteredMethods.Where(methodInfo => methodInfo.Name == rpcTokenizer.MethodName);
+            var matchingNameMethods = filteredMethods.Where(methodInfo => methodInfo.Name == rpcTokenizer.methodName);
             if (parameterList.Count > 0)
             {
                 filteredMethods = filteredMethods.Where(methodInfo =>
@@ -240,31 +252,32 @@ namespace Unity.ClusterDisplay
             return (outMethodInfo = filteredMethods.FirstOrDefault()) != null;
         }
 
-        public static bool TryReadRPCStubs (string path, out string[] lines)
+        public static bool TryReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs)
         {
             if (string.IsNullOrEmpty(path))
             {
                 Debug.LogError("Unable to read RPC stubs, the path is invalid.");
-                lines = null;
+                serializedInstanceRPCs = null;
                 return false;
             }
 
             if (!System.IO.File.Exists(path))
             {
                 Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
-                lines = null;
+                serializedInstanceRPCs = null;
                 return false;
             }
 
             try
             {
-                lines = System.IO.File.ReadAllLines(path);
+                var json = System.IO.File.ReadAllText(path);
+                serializedInstanceRPCs = JsonUtility.FromJson<SerializedRPCs>(json).rpcs;
 
             } catch (System.Exception exception)
             {
                 Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
-                lines = null;
+                serializedInstanceRPCs = null;
                 return false;
             }
 
@@ -272,8 +285,13 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public static bool TryWriteRPCStubs (string path, string[] lines)
+        public static bool TryWriteRPCStubs (string path, SerializedRPC[] lines)
         {
+            var serializedInstanceRPCs = new SerializedRPCs
+            {
+                rpcs = lines
+            };
+
             if (string.IsNullOrEmpty(path))
             {
                 Debug.LogError("Unable to write RPC stubs, the path is invalid.");
@@ -282,7 +300,8 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                System.IO.File.WriteAllLines(path, lines);
+                string json = JsonUtility.ToJson(serializedInstanceRPCs);
+                System.IO.File.WriteAllText(path, json);
 
             } catch (System.Exception exception)
             {
@@ -295,11 +314,11 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public static bool TrySerializeMethodInfo (ref RPCMethodInfo rpcMethodInfo, out string serializedRPCMethodInfo)
+        public static bool TrySerializeMethodInfo (ref RPCMethodInfo rpcMethodInfo, out SerializedRPC serializedRPCMethodInfo)
         {
             if (!rpcMethodInfo.IsValid)
             {
-                serializedRPCMethodInfo = null;
+                serializedRPCMethodInfo = default(SerializedRPC);
                 return false;
             }
 
@@ -315,26 +334,50 @@ namespace Unity.ClusterDisplay
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = 
-                    $"{rpcMethodInfo.rpcId}|" +
-                    $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|" +
-                    $"{declaringAssemblystr}:{declaringTypeStr}|" +
-                    $"{returnTypeAssemblyName}:{returnType.FullName}|" +
-                    $"{rpcMethodInfo.methodInfo.Name}|" +
-                    $"void|";
+                serializedRPCMethodInfo = new SerializedRPC
+                {
+                    rpcId = rpcMethodInfo.rpcId,
+                    isStatic = rpcMethodInfo.IsStatic,
+                    declaringAssemblyName = declaringAssemblystr,
+                    declaryingTypeFullName = declaringTypeStr,
+                    declaringReturnTypeAssemblyName = returnTypeAssemblyName,
+                    returnTypeFullName = returnType.FullName,
+                    methodName = rpcMethodInfo.methodInfo.Name,
+                    declaringParameterTypeAssemblyNames = new string[0],
+                    parameterTypeFullNames = new string[0],
+                    parameterNames = new string[0],
+                };
             }
 
             else
             {
                 var returnType = rpcMethodInfo.methodInfo.ReturnType;
                 var returnTypeAssemblyName = returnType.Assembly.GetName().Name;
-                serializedRPCMethodInfo = 
-                    $"{rpcMethodInfo.rpcId}|" +
-                    $"{(rpcMethodInfo.IsStatic ? "static" : "instance")}|" +
-                    $"{declaringAssemblystr}:{declaringTypeStr}|" +
-                    $"{returnTypeAssemblyName}:{returnType.FullName}|" +
-                    $"{rpcMethodInfo.methodInfo.Name}|" +
-                    $"{string.Join(",", rpcMethodInfo.methodInfo.GetParameters().Select(parameter => $"{parameter.ParameterType.Assembly.GetName().Name}:{parameter.ParameterType.FullName} {parameter.Name}"))}|";
+
+                var parameterTypeAssemblyNames = new string[parameters.Length];
+                var parameterTypeNames = new string[parameters.Length];
+                var parameterNames = new string[parameters.Length];
+
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    parameterTypeAssemblyNames[i] = parameters[i].ParameterType.Assembly.GetName().Name;
+                    parameterTypeNames[i] = parameters[i].ParameterType.FullName;
+                    parameterNames[i] = parameters[i].Name;
+                }
+
+                serializedRPCMethodInfo = new SerializedRPC
+                {
+                    rpcId = rpcMethodInfo.rpcId,
+                    isStatic = rpcMethodInfo.IsStatic,
+                    declaringAssemblyName = declaringAssemblystr,
+                    declaryingTypeFullName = declaringTypeStr,
+                    declaringReturnTypeAssemblyName = returnTypeAssemblyName,
+                    returnTypeFullName = returnType.FullName,
+                    methodName = rpcMethodInfo.methodInfo.Name,
+                    declaringParameterTypeAssemblyNames = parameterTypeAssemblyNames,
+                    parameterTypeFullNames = parameterTypeNames,
+                    parameterNames = parameterNames,
+                };
             }
 
             return true;
