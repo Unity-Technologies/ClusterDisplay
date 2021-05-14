@@ -17,19 +17,15 @@ namespace Unity.ClusterDisplay
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    public class ClusterSync : SingletonMonoBehaviour<ClusterSync>
+    public partial class ClusterSync : SingletonMonoBehaviour<ClusterSync>
     {
 
         [HideInInspector]
         bool m_Debugging;
         private bool m_NewFrame = true;
 
-        /// <summary>
-        /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
-        /// </summary>
-        [NonSerialized] bool m_ClusterLogicEnabled = false;
+        private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
 
-        [NonSerialized] private static ClusterSync m_Instance;
 
         private DebugPerf m_FrameRatePerf = new DebugPerf();
 
@@ -40,15 +36,8 @@ namespace Unity.ClusterDisplay
 
         private DebugPerf m_DelayMonitor = new DebugPerf();
 
-        /// <summary>
-        /// Getter that returns if there exists a ClusterSync instance and the synchronization has been enabled.
-        /// </summary>
-        public static bool Active => m_Instance != null && m_Instance.m_ClusterLogicEnabled;
+        // public static bool Active => TryGetInstance(out var instance) && instance.m_ClusterLogicEnabled;
 
-        /// <summary>
-        /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
-        /// </summary>
-        public static bool Terminated { get; private set; }
 
         [SerializeField] private ClusterDisplayResources _clusterDisplayResources;
         public ClusterDisplayResources Resources => _clusterDisplayResources;
@@ -57,6 +46,7 @@ namespace Unity.ClusterDisplay
         public string m_EditorCmdLine = "";
 #endif
         internal ClusterNode LocalNode { get; set; }
+        public static bool IsMaster { get; private set; }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
@@ -73,7 +63,7 @@ namespace Unity.ClusterDisplay
         {
             get
             {
-                if(m_ClusterLogicEnabled)
+                if(ClusterDisplayState.ClusterLogicEnabled)
                     return LocalNode.NodeID;
                 else
                 {
@@ -119,9 +109,8 @@ namespace Unity.ClusterDisplay
 
         private void OnEnable()
         {
-            Terminated = false;
-
-            m_ClusterLogicEnabled = false;
+            stateSetter.SetIsTerminated(false);
+            stateSetter.SetCLusterLogicEnabled(false);
             NodeState.Debugging = m_Debugging;
 
             // Grab command line args related to cluster config
@@ -130,26 +119,24 @@ namespace Unity.ClusterDisplay
             args = m_EditorCmdLine.Split(' ').ToList();
 #endif
             var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
-            m_ClusterLogicEnabled = startIndex > -1;
+            stateSetter.SetCLusterLogicEnabled(startIndex > -1);
 
-            if (!m_ClusterLogicEnabled)
+            if (!ClusterDisplayState.ClusterLogicEnabled)
             {
                 Debug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
                 return;
             }
 
             if (!ProcessCommandLine(args))
-                m_ClusterLogicEnabled = false;
+                stateSetter.SetCLusterLogicEnabled(false);
 
-            if(m_ClusterLogicEnabled)
+            if(ClusterDisplayState.ClusterLogicEnabled)
                 InjectSynchPointInPlayerLoop();
         }
 
         private void OnDisable()
         {
-            m_Instance = null;
-
-            if (!m_ClusterLogicEnabled)
+            if (!ClusterDisplayState.ClusterLogicEnabled)
                 return;
 
             LocalNode.Exit();
@@ -159,13 +146,13 @@ namespace Unity.ClusterDisplay
 
         void Update()
         {
-            if (!m_ClusterLogicEnabled)
+            if (!ClusterDisplayState.ClusterLogicEnabled)
                 return;
 
-            if (Terminated)
+            if (ClusterDisplayState.IsTerminated)
             {
                 this.enabled = false;
-                m_ClusterLogicEnabled = false;
+                stateSetter.SetCLusterLogicEnabled(false);
                 return;
             }
         }
@@ -257,6 +244,7 @@ namespace Unity.ClusterDisplay
                     var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
                     if (!master.Start())
                         return false;
+                    stateSetter.SetIsMaster(true);
                     LocalNode = master;
                 }
                 
@@ -280,6 +268,7 @@ namespace Unity.ClusterDisplay
                     if (!slave.Start())
                         return false;
                     LocalNode = slave;
+                    stateSetter.SetIsMaster(false);
                 }
 
 
@@ -306,7 +295,7 @@ namespace Unity.ClusterDisplay
                     if (!LocalNode.DoFrame(m_NewFrame))
                     {
                         // Game Over!
-                        Terminated = true;
+                        stateSetter.SetIsTerminated(true);
                     }
 
                     m_NewFrame = LocalNode.ReadyToProceed;
@@ -329,22 +318,22 @@ namespace Unity.ClusterDisplay
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!
-                            Terminated = true;
+                            stateSetter.SetIsTerminated(true);
                         }
 
                         newFrame = false;
-                    } while (!LocalNode.ReadyToProceed && !Terminated);
+                    } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
                     m_DelayMonitor.SampleNow();
                 }
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                Terminated = true;
+                stateSetter.SetIsTerminated(true);
             }
             finally
             {
-                if (Terminated)
+                if (ClusterDisplayState.IsTerminated)
                     LocalNode.Exit();
             }
         }

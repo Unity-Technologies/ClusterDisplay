@@ -131,7 +131,7 @@ namespace Unity.ClusterDisplay
 
         private void InjectOpenRPCLatchCall (
             ILProcessor il, 
-            Instruction beforeInstruction, 
+            Instruction afterInstruction, 
             bool isStatic, 
             ushort rpcId, 
             MethodReference call, 
@@ -142,14 +142,14 @@ namespace Unity.ClusterDisplay
             if (isStatic)
             {
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
-                il.InsertBefore(beforeInstruction, newInstruct);
+                il.InsertAfter(afterInstruction, newInstruct);
                 lastInstruction = newInstruct;
             }
 
             else
             {
                 newInstruct = Instruction.Create(OpCodes.Ldarg_0);
-                il.InsertBefore(beforeInstruction, newInstruct);
+                il.InsertAfter(afterInstruction, newInstruct);
                 lastInstruction = newInstruct;
 
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
@@ -217,6 +217,8 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
+        private MethodInfo cachedGetIsMasterMethod;
+
         private bool TryBridge (
             AssemblyDefinition assemblyDef, 
             ushort rpcId, 
@@ -254,9 +256,17 @@ namespace Unity.ClusterDisplay
             Instruction newInstruction = null;
             Instruction previousInstruction = null;
 
+            newInstruction = Instruction.Create(OpCodes.Call, assemblyDef.MainModule.ImportReference(cachedGetIsMasterMethod));
+            il.InsertBefore(beforeInstruction, newInstruction);
+            previousInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Brfalse_S, beforeInstruction);
+            il.InsertAfter(previousInstruction, newInstruction);
+            previousInstruction = newInstruction;
+
             InjectOpenRPCLatchCall(
                 il, 
-                beforeInstruction, 
+                previousInstruction, 
                 targetMethod.IsStatic, 
                 rpcId, 
                 openRPCLatchMethodRef, 
@@ -281,10 +291,8 @@ namespace Unity.ClusterDisplay
                 previousInstruction = newInstruction;
             }
 
-            /*
             var lastInstruction = il.Body.Instructions[il.Body.Instructions.Count - 1];
             il.InsertBefore(lastInstruction, Instruction.Create(OpCodes.Nop));
-            */
 
             return true;
         }
@@ -539,6 +547,9 @@ namespace Unity.ClusterDisplay
 
             if (!GetOnTryCallILProcessor(assemblyDef, out var rpcInterfacesTypeRef, out var onTryCallILProcessor))
                 return null;
+
+            if (cachedGetIsMasterMethod == null)
+                cachedGetIsMasterMethod = typeof(ClusterDisplayState).GetProperty("IsMaster").GetGetMethod();
 
             onTryCallILProcessor.Body.Instructions.Clear();
             onTryCallILProcessor.Body.Variables.Clear();

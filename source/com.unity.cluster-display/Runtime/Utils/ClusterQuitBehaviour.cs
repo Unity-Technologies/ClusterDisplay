@@ -12,7 +12,7 @@ namespace ClusterDisplay.Utils
     {
         private void Update()
         {
-            if (ClusterSync.Active)
+            if (ClusterDisplayState.IsActive)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
                 {
@@ -23,7 +23,7 @@ namespace ClusterDisplay.Utils
             }
             else
             {
-                if (ClusterSync.Terminated)
+                if (ClusterDisplayState.IsTerminated)
                     Application.Quit(0);
             }
         }

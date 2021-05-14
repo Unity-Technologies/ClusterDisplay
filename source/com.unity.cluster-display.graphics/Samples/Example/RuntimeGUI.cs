@@ -82,8 +82,8 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
             DrawStats();
 
-            GUILayout.Label($"Cluster Sync active [{ClusterSync.Active}]");
-            if (ClusterSync.Active && ClusterSync.TryGetInstance(out var clusterSync))
+            GUILayout.Label($"Cluster Sync active [{ClusterDisplayState.IsActive}]");
+            if (ClusterDisplayState.IsActive && ClusterSync.TryGetInstance(out var clusterSync))
                 GUILayout.Label($"Cluster Sync DynamicNodeId [{clusterSync.DynamicLocalNodeId}]");
             GUILayout.Label($"Max Queued Frames [{QualitySettings.maxQueuedFrames}]");
 
