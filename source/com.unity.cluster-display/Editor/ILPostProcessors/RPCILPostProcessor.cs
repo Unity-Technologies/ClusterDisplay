@@ -232,18 +232,6 @@ namespace Unity.ClusterDisplay
             return found;
         }
 
-        private bool TryFindMethodWithName<T> (System.Type type, string name, out MethodInfo methodInfo) where T : Attribute
-        {
-            var attributeType = typeof(T);
-            var found = (methodInfo = type.GetMethods()
-                .Where(method => method.Name == name).FirstOrDefault()) != null;
-
-            if (!found)
-                Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}");
-
-            return found;
-        }
-
         private bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
         {
             var attributeType = typeof(T);
@@ -288,8 +276,10 @@ namespace Unity.ClusterDisplay
 
             MethodInfo appendRPCMethodInfo = null;
             if (!targetMethod.IsStatic)
+            {
                 if (!TryFindMethodWithAttribute<RPCEmitter.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
+            }
 
             else if (!TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                 return false;
