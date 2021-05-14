@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SingletonScriptableObject<T> : ScriptableObject where T : SingletonScriptableObject<T>
 {
-    private static T instance;
+    public static T instance;
     public static bool TryGetInstance (out T outInstance, bool throwException = true)
     {
         if (instance == null)

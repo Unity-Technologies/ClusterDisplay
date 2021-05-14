@@ -9,7 +9,6 @@ namespace Unity.ClusterDisplay
 {
     public class ComponentInspector : EditorWindow
     {
-        private ClusterDisplayNetworkManager objectReferenceContainer;
         private Vector2 selectedObjectsScrollPosition;
         private Vector2 selectedObjectMethodsScrollPosition;
 
@@ -128,11 +127,13 @@ namespace Unity.ClusterDisplay
 
         private void OnGUI()
         {
+            /*
             if (objectReferenceContainer == null && !ClusterDisplayNetworkManager.TryGetInstance(out objectReferenceContainer, throwException: false))
             {
                 EditorGUILayout.LabelField($"Create instance of \"{nameof(ClusterDisplayNetworkManager)}\"");
                 return;
             }
+            */
 
             var selectedObjects =  Selection.objects;
             var objects = selectedObjects

@@ -31,6 +31,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 var newState = new SynchronizeFrame {
                     MaxTimeOut = ClusterParams.CommunicationTimeout,
                 };
+
                 return newState.EnterState(this);
             }
             

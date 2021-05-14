@@ -11,6 +11,4 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Data", menuName = "Cluster Display/ClusterDisplayResources", order = 1)]
 public class ClusterDisplayResources : ScriptableObject
 {
-    [SerializeField] private PipeIDManager _pipeUUIDManager;
-    public PipeIDManager IDManager => _pipeUUIDManager;
 }

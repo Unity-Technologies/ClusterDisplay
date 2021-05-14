@@ -13,7 +13,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
-    internal class UDPAgent
+    public class UDPAgent
     {
         public static int MaxSupportedNodeCount {get => 64;}
 

@@ -6,7 +6,7 @@ using Unity.Collections.LowLevel.Unsafe;
 namespace Unity.ClusterDisplay
 {
 
-    internal enum EMessageType
+    public enum EMessageType
     {
         AckMsgRx,
         StartFrame,
@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay
         //Dead
     }
 
-    struct NetworkingStats
+    public struct NetworkingStats
     {
         public int rxQueueSize;
         public int txQueueSize;
@@ -44,7 +44,7 @@ namespace Unity.ClusterDisplay
         public int msgsSent;
     }
 
-    class NetworkingHelpers
+    public class NetworkingHelpers
     {
         public static byte[] AllocateMessageWithPayload<T>() where T : struct
         {
@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    struct MessageHeader
+    public struct MessageHeader
     {
         [Flags]
         public enum EFlag
@@ -138,7 +138,7 @@ namespace Unity.ClusterDisplay
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct AdvanceFrame
+    public struct AdvanceFrame
     {
         public static Guid CoreTimeStateID = Guid.Parse("E9F8D0DD-AA7F-4DC3-B604-1011A482BD48");
         public static Guid CoreInputStateID = Guid.Parse("07376B8C-9F18-4DA2-8795-25024F10E572");
@@ -171,7 +171,7 @@ namespace Unity.ClusterDisplay
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct RolePublication
+    public struct RolePublication
     {
         private byte m_NodeRole; // see ENodeRole
         public ENodeRole NodeRole
@@ -204,7 +204,7 @@ namespace Unity.ClusterDisplay
 
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct FrameDone
+    public struct FrameDone
     {
         public UInt64 FrameNumber;
 

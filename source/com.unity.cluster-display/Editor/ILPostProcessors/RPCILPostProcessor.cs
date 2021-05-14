@@ -295,8 +295,7 @@ namespace Unity.ClusterDisplay
             Instruction beforeInstruction,
             MethodReference objectRegistryGetItemMethodRef,
             MethodReference targetMethod,
-            out Instruction firstInstruction,
-            out Instruction lastInstruction)
+            out Instruction firstInstruction)
         {
              // Load "objectRegistry" local variable.
             firstInstruction = Instruction.Create(OpCodes.Ldloc_0);
@@ -326,7 +325,6 @@ namespace Unity.ClusterDisplay
 
                 newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
                 il.InsertAfter(afterInstruction, newInstruction);
-                lastInstruction = newInstruction;
                 return;
             }
 
@@ -343,13 +341,16 @@ namespace Unity.ClusterDisplay
             foreach (var parameterReference in targetMethod.Parameters)
             {
                 var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
-                genericInstanceMethod.GenericArguments.Add(parameterReference.ParameterType); // Add the generic argument of the parameter we want to convert from bytes.
+                var paramRef = moduleDef.ImportReference(parameterReference.ParameterType);
+                paramRef.IsValueType = true;
+                genericInstanceMethod.GenericArguments.Add(paramRef);
+                var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                newInstruction = Instruction.Create(OpCodes.Ldarg_S, startPosParamDef); // Load startPos onto stack as an argument.
+                newInstruction = Instruction.Create(OpCodes.Ldarg_3); // Load startPos onto stack as an argument.
                 il.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
-                newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod); // Call generic method to convert bytes into our struct.
+                newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethodRef); // Call generic method to convert bytes into our struct.
                 il.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
             }
@@ -364,7 +365,6 @@ namespace Unity.ClusterDisplay
 
             newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
             il.InsertAfter(afterInstruction, newInstruction);
-            lastInstruction = newInstruction;
         }
 
         private bool GetOnTryCallILProcessor (AssemblyDefinition assemblyDef, out TypeReference derrivedTypeRef, out ILProcessor il)
@@ -421,17 +421,10 @@ namespace Unity.ClusterDisplay
             }
 
             var baseGenericType = new GenericInstanceType(baseTypeRef);
-            baseGenericType.GenericArguments.Add(typeDef);
-            var baseGenericTypeDef = baseGenericType.Resolve();
+            baseGenericType.GenericArguments.Add(typeRef);
+            var baseGenericMethodRef = moduleDefinition.ImportReference(type.BaseType.GetMethod("TryGetInstance"));
 
-            tryGetInstanceMethodRef = moduleDefinition.ImportReference(baseGenericTypeDef.Methods.Where(method => method.Name == "TryGetInstance").FirstOrDefault());
-            /*
-            var tryGetInstanceGenericMethod = new GenericInstanceMethod(tryGetInstanceMethodRef);
-            tryGetInstanceGenericMethod.GenericArguments.Add(typeRef);
-            tryGetInstanceMethodRef = tryGetInstanceGenericMethod.Resolve();
-            */
-
-            return tryGetInstanceMethodRef != null;
+            return (tryGetInstanceMethodRef = baseGenericMethodRef) != null;
         }
 
         private bool TryImportObjectRegistry (
@@ -469,7 +462,34 @@ namespace Unity.ClusterDisplay
             il.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
-            newInstruction = Instruction.Create(OpCodes.Beq_S, targetInstruction);
+            newInstruction = Instruction.Create(OpCodes.Beq, targetInstruction);
+            il.InsertAfter(afterInstruction, newInstruction);
+            lastInstruction = newInstruction;
+        }
+
+        private void InsertDebugMessage (
+            ModuleDefinition moduleDef,
+            ILProcessor il,
+            string message,
+            Instruction afterInstruction,
+            out Instruction lastInstruction)
+        {
+            var debugType = typeof(Debug);
+            var debugTypeRef = moduleDef.ImportReference(debugType);
+            var debugTypeDef = debugTypeRef.Resolve();
+            var logMethodRef = moduleDef.ImportReference(debugTypeDef.Methods.Where(method => {
+                return
+                    method.Name == "Log" &&
+                    method.Parameters.Count == 1;
+            }).FirstOrDefault());
+
+            lastInstruction = null;
+
+            var newInstruction = Instruction.Create(OpCodes.Ldstr, message);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Call, logMethodRef);
             il.InsertAfter(afterInstruction, newInstruction);
             lastInstruction = newInstruction;
         }
@@ -483,20 +503,14 @@ namespace Unity.ClusterDisplay
             out Instruction tryGetInstanceFailureInstruction,
             out Instruction lastInstruction)
         {
-            var objectRegistryLocalVariable = new VariableDefinition(objectRegistryTypeDef);
+            var objectRegistryLocalVariable = new VariableDefinition(moduleDef.ImportReference(objectRegistryTypeDef));
+            onTryCallILProcessor.Body.Variables.Add(objectRegistryLocalVariable);
 
-            var variables = onTryCallILProcessor.Body.Variables.ToList();
-            variables.Insert(0, objectRegistryLocalVariable);
+            var newInstruction = Instruction.Create(OpCodes.Ldloca_S,  onTryCallILProcessor.Body.Variables[0]);
+            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
 
-            onTryCallILProcessor.Body.Variables.Clear();
-            foreach (var var in variables)
-            {
-                if (var == null)
-                    continue;
-                onTryCallILProcessor.Body.Variables.Add(new VariableDefinition(moduleDef.ImportReference(var.VariableType)));
-            }
-
-            var newInstruction = Instruction.Create(OpCodes.Ldloca_S, objectRegistryLocalVariable);
+            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
             onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
@@ -504,23 +518,9 @@ namespace Unity.ClusterDisplay
             onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
-            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            tryGetInstanceFailureInstruction = Instruction.Create(OpCodes.Beq, onTryCallILProcessor.Body.Instructions[0]);
+            tryGetInstanceFailureInstruction = Instruction.Create(OpCodes.Brfalse, onTryCallILProcessor.Body.Instructions[0]);
             onTryCallILProcessor.InsertAfter(afterInstruction, tryGetInstanceFailureInstruction);
             lastInstruction = tryGetInstanceFailureInstruction;
-
-            /*
-            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            newInstruction = Instruction.Create(OpCodes.Ret);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            lastInstruction = newInstruction;
-            */
         }
 
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
@@ -541,6 +541,9 @@ namespace Unity.ClusterDisplay
                 return null;
 
             onTryCallILProcessor.Body.Instructions.Clear();
+            onTryCallILProcessor.Body.Variables.Clear();
+            onTryCallILProcessor.Body.InitLocals = false;
+
             Instruction firstInstruction = Instruction.Create(OpCodes.Nop);
             onTryCallILProcessor.Append(firstInstruction);
 
@@ -558,16 +561,22 @@ namespace Unity.ClusterDisplay
 
             Instruction lastSwitchJmpInstruction = null;
 
+            InsertDebugMessage(
+                rpcInterfacesModule,
+                onTryCallILProcessor,
+                "TEST",
+                firstInstruction,
+                out lastSwitchJmpInstruction);
+
+            lastSwitchJmpInstruction = firstInstruction;
             InjectObjectRegistryTryGet(
                 rpcInterfacesModule,
                 onTryCallILProcessor,
                 objectRegistryTypeRef.Resolve(),
                 objectRegistryTryGetInstanceMethodRef,
-                afterInstruction: firstInstruction,
+                afterInstruction: lastSwitchJmpInstruction,
                 out var tryGetInstanceFailureInstruction,
                 lastInstruction: out lastSwitchJmpInstruction);
-
-            Instruction lastSwitchCaseInstruction = lastSwitchJmpInstruction;
 
             foreach (var serializedRPC in serializedRPCs)
             {
@@ -596,8 +605,7 @@ namespace Unity.ClusterDisplay
                     beforeInstruction: beginningOfFailureInstructions,
                     objectRegistryTryGetItemMethodRef,
                     methodDefinition,
-                    firstInstruction: out var startOfSwitchCaseInstruction,
-                    lastInstruction: out lastSwitchCaseInstruction);
+                    firstInstruction: out var startOfSwitchCaseInstruction);
 
                 InjectSwitchJmp(
                     onTryCallILProcessor,

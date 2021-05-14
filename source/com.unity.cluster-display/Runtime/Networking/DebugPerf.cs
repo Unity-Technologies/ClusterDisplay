@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay
 {
-    internal class DebugPerf
+    public class DebugPerf
     {
         private Stopwatch m_Time = new Stopwatch();
 
