@@ -8,6 +8,11 @@ namespace Unity.ClusterDisplay
 {
     public static class RPCEmitter
     {
+        public class RPCCallMarker : Attribute {}
+        public class StaticRPCCallMarker : Attribute {}
+        public class CopyValueToBufferMarker : Attribute {}
+        public class ParseStructureMarker : Attribute {}
+
         private static NativeArray<byte> rpcBuffer = new NativeArray<byte>(1024, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         private static int rpcBufferSize;
@@ -50,6 +55,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        [ParseStructureMarker]
         public static unsafe T ParseStructure<T> (ref int startPos)
         {
             UnityEngine.Debug.Log($"Parsing structure of tyep: \"{typeof(T).Name}\" starting at: {startPos}");
@@ -79,6 +85,7 @@ namespace Unity.ClusterDisplay
             startPos += sizeof(ushort);
         }
 
+        [CopyValueToBufferMarker]
         public static unsafe void CopyValueToBuffer<T>(T value) where T : struct
         {
             if (!AllowWrites)
@@ -102,6 +109,7 @@ namespace Unity.ClusterDisplay
             rpcBufferSize += structSize;
         }
 
+        [RPCCallMarker]
         public static void AppendRPCCall (UnityEngine.Object instance, ushort rpcId, int parameterPayloadSize)
         {
             if (!AllowWrites)
@@ -118,6 +126,7 @@ namespace Unity.ClusterDisplay
             CopyValueToBuffer<ushort>((ushort)parameterPayloadSize);
         }
 
+        [StaticRPCCallMarker]
         public static void AppendStaticRPCCall (ushort rpcId, int parameterPayloadSize)
         {
             if (!AllowWrites)

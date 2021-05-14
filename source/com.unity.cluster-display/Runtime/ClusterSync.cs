@@ -46,7 +46,6 @@ namespace Unity.ClusterDisplay
         public string m_EditorCmdLine = "";
 #endif
         internal ClusterNode LocalNode { get; set; }
-        public static bool IsMaster { get; private set; }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
@@ -63,7 +62,7 @@ namespace Unity.ClusterDisplay
         {
             get
             {
-                if(ClusterDisplayState.ClusterLogicEnabled)
+                if(ClusterDisplayState.IsClusterLogicEnabled)
                     return LocalNode.NodeID;
                 else
                 {
@@ -121,7 +120,7 @@ namespace Unity.ClusterDisplay
             var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
             stateSetter.SetCLusterLogicEnabled(startIndex > -1);
 
-            if (!ClusterDisplayState.ClusterLogicEnabled)
+            if (!ClusterDisplayState.IsClusterLogicEnabled)
             {
                 Debug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
                 return;
@@ -130,13 +129,13 @@ namespace Unity.ClusterDisplay
             if (!ProcessCommandLine(args))
                 stateSetter.SetCLusterLogicEnabled(false);
 
-            if(ClusterDisplayState.ClusterLogicEnabled)
+            if(ClusterDisplayState.IsClusterLogicEnabled)
                 InjectSynchPointInPlayerLoop();
         }
 
         private void OnDisable()
         {
-            if (!ClusterDisplayState.ClusterLogicEnabled)
+            if (!ClusterDisplayState.IsClusterLogicEnabled)
                 return;
 
             LocalNode.Exit();
@@ -146,7 +145,7 @@ namespace Unity.ClusterDisplay
 
         void Update()
         {
-            if (!ClusterDisplayState.ClusterLogicEnabled)
+            if (!ClusterDisplayState.IsClusterLogicEnabled)
                 return;
 
             if (ClusterDisplayState.IsTerminated)

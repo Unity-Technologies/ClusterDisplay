@@ -1,12 +1,18 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    public class SingletonMonoBehaviourTryGetInstanceMarker : Attribute {}
+
     public class SingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SingletonMonoBehaviour<T>
     {
+
         private static T instance;
+
+        [SingletonMonoBehaviourTryGetInstanceMarker]
         public static bool TryGetInstance (out T outInstance, bool throwException = true)
         {
             if (instance != null)

@@ -12,10 +12,7 @@ namespace Unity.ClusterDisplay
 {
     public class RPCILPostProcessor : ILPostProcessor
     {
-        public override ILPostProcessor GetInstance()
-        {
-            return this;
-        }
+        public override ILPostProcessor GetInstance() => this;
 
         private const string attributeSearchAssemblyName = "ILPostprocessorAttributes";
 
@@ -191,6 +188,7 @@ namespace Unity.ClusterDisplay
                     size += 8;
                     return true;
                 default:
+                    Debug.LogError($"Unable to determine size of assumed primitive type: \"{typeName}\".");
                     return false;
             }
         }
@@ -198,13 +196,14 @@ namespace Unity.ClusterDisplay
         private bool TryDetermineSizeOfStruct (TypeDefinition typeDefinition, ref int size)
         {
             bool allValid = true;
+
             foreach (var field in typeDefinition.Fields)
             {
                 if (field.IsStatic)
                     continue;
-
                 allValid &= TryDetermineSizeOfType(field.FieldType.Resolve(), ref size);
             }
+
             return allValid;
         }
 
@@ -217,7 +216,64 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
-        private MethodInfo cachedGetIsMasterMethod;
+        private bool TryFindMethodDefinitionWithAttribute (TypeDefinition typeDef, TypeReference attributeTypeRef, out MethodDefinition methodDef)
+        {
+            var found = (methodDef = typeDef.Methods
+                .Where(method => method.CustomAttributes
+                    .Any(customAttribute =>
+                    {
+                        return
+                            customAttribute.AttributeType.FullName == attributeTypeRef.FullName;
+                    })).FirstOrDefault()) != null;
+
+            if (!found)
+                Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}");
+
+            return found;
+        }
+
+        private bool TryFindMethodWithName<T> (System.Type type, string name, out MethodInfo methodInfo) where T : Attribute
+        {
+            var attributeType = typeof(T);
+            var found = (methodInfo = type.GetMethods()
+                .Where(method => method.Name == name).FirstOrDefault()) != null;
+
+            if (!found)
+                Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}");
+
+            return found;
+        }
+
+        private bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
+        {
+            var attributeType = typeof(T);
+            var found = (methodInfo = type.GetMethods()
+                .Where(method => method.CustomAttributes
+                    .Any(customAttribute =>
+                    {
+                        return
+                            customAttribute.AttributeType.FullName == attributeType.FullName;
+                    })).FirstOrDefault()) != null;
+
+            if (!found)
+                Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}");
+
+            return found;
+        }
+
+        private bool TryFindPropertyGetMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
+        {
+            methodInfo = null;
+            var attributeType = typeof(T);
+            var propertyInfo = type.GetProperties()
+                .Where(pi => pi.CustomAttributes.Any(customAttribute => customAttribute.AttributeType == attributeType))
+                .FirstOrDefault();
+
+            if (propertyInfo == null || (methodInfo = propertyInfo.GetGetMethod()) == null)
+                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}");
+
+            return methodInfo != null;
+        }
 
         private bool TryBridge (
             AssemblyDefinition assemblyDef, 
@@ -230,12 +286,19 @@ namespace Unity.ClusterDisplay
 
             var rpcEmitterTypeReference = assemblyDef.MainModule.ImportReference(rpcEmitterType);
 
-            var openRPCLatchMethodRef = assemblyDef.MainModule.ImportReference(rpcEmitterType.GetMethod(
-                targetMethod.IsStatic ? 
-                "AppendStaticRPCCall" : 
-                "AppendRPCCall"));
+            MethodInfo appendRPCMethodInfo = null;
+            if (!targetMethod.IsStatic)
+                if (!TryFindMethodWithAttribute<RPCEmitter.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                    return false;
 
-            var copyValueToBufferMethodRef = assemblyDef.MainModule.ImportReference(rpcEmitterType.GetMethod("CopyValueToBuffer"));
+            else if (!TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                return false;
+
+            if (!TryFindMethodWithAttribute<RPCEmitter.CopyValueToBufferMarker>(rpcEmitterType, out var copyValueToBufferMethodInfo))
+                return false;
+
+            var openRPCLatchMethodRef = assemblyDef.MainModule.ImportReference(appendRPCMethodInfo);
+            var copyValueToBufferMethodRef = assemblyDef.MainModule.ImportReference(copyValueToBufferMethodInfo);
 
             var parameters = targetMethod.Parameters;
             ushort sizeOfAllParameters = 0;
@@ -256,7 +319,10 @@ namespace Unity.ClusterDisplay
             Instruction newInstruction = null;
             Instruction previousInstruction = null;
 
-            newInstruction = Instruction.Create(OpCodes.Call, assemblyDef.MainModule.ImportReference(cachedGetIsMasterMethod));
+            if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
+                return false;
+
+            newInstruction = Instruction.Create(OpCodes.Call, assemblyDef.MainModule.ImportReference(getIsMasterMethod));
             il.InsertBefore(beforeInstruction, newInstruction);
             previousInstruction = newInstruction;
 
@@ -336,8 +402,9 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-             // Get static ParseStructure method in RPCEmitter type.
-            var parseStructureMethod = typeof(RPCEmitter).GetMethod("ParseStructure");
+            // Get static ParseStructure method in RPCEmitter type.
+            if (!TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod))
+                return;
 
              // Import the ParseStructureMethod method.
             var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
@@ -377,26 +444,36 @@ namespace Unity.ClusterDisplay
 
         private bool GetOnTryCallILProcessor (AssemblyDefinition assemblyDef, out TypeReference derrivedTypeRef, out ILProcessor il)
         {
-            var rpcInstanceRegistryTypeDef = assemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry)).Resolve();
-            var derrivedTypes = assemblyDef.MainModule.GetTypes()
+            var rpcInterfaceRegistryType = typeof(RPCInterfaceRegistry);
+            var onTryCallMarkerAttributeType = typeof(RPCInterfaceRegistry.OnTryCallMarker);
+
+            var rpcInstanceRegistryTypeDef = assemblyDef.MainModule.ImportReference(rpcInterfaceRegistryType).Resolve();
+            var onTryCallMarkerAttributeTypeRef = assemblyDef.MainModule.ImportReference(onTryCallMarkerAttributeType);
+
+            var derrivedTypeDef = assemblyDef.MainModule.GetTypes()
                 .Where(typeDef => 
                     typeDef != null && 
                     typeDef.BaseType != null && 
                     typeDef.BaseType.FullName == rpcInstanceRegistryTypeDef.FullName).FirstOrDefault();
 
-            if (derrivedTypes == null)
+            if (derrivedTypeDef == null)
             {
                 derrivedTypeRef = null;
                 il = null;
                 return false;
             }
 
-            var onTryCallMethodDef = derrivedTypes
-                .Methods.Where(methodDef => methodDef.Name == "OnTryCall")
-                .FirstOrDefault();
+            if (!TryFindMethodDefinitionWithAttribute(derrivedTypeDef, onTryCallMarkerAttributeTypeRef, out var onTryCallMethod))
+            {
+                derrivedTypeRef = null;
+                il = null;
+                return false;
+            }
 
+            var onTryCallMethodDef = assemblyDef.MainModule.ImportReference(onTryCallMethod);
             derrivedTypeRef = onTryCallMethodDef.DeclaringType;
-            il = onTryCallMethodDef.Body.GetILProcessor();
+            il = onTryCallMethodDef.Resolve().Body.GetILProcessor();
+
             return true;
         }
 
@@ -430,12 +507,19 @@ namespace Unity.ClusterDisplay
 
             var baseGenericType = new GenericInstanceType(baseTypeRef);
             baseGenericType.GenericArguments.Add(typeRef);
-            var baseGenericMethodRef = moduleDefinition.ImportReference(type.BaseType.GetMethod("TryGetInstance"));
+
+            if (!TryFindMethodWithAttribute<SingletonScriptableObjectTryGetInstanceMarker>(type.BaseType, out var tryGetInstanceMethod))
+            {
+                tryGetInstanceMethodRef = null;
+                return false;
+            }
+
+            var baseGenericMethodRef = moduleDefinition.ImportReference(tryGetInstanceMethod);
 
             return (tryGetInstanceMethodRef = baseGenericMethodRef) != null;
         }
 
-        private bool TryImportObjectRegistry (
+        private bool TryInjectTryGetObjectRegistryInstance (
             ModuleDefinition moduleDefinition,
             out TypeReference objectRegistryTypeRef,
             out MethodReference objectRegistryTryGetInstanceMethodRef,
@@ -531,39 +615,89 @@ namespace Unity.ClusterDisplay
             lastInstruction = tryGetInstanceFailureInstruction;
         }
 
-        public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
+        private MethodInfo cachedGetIsMasterMethod;
+        private bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
         {
-            if (!RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out var serializedRPCs))
-                return null;
+            if (!TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out cachedGetIsMasterMethod))
+            {
+                getIsMasterMethod = null;
+                return false;
+            }
+
+            getIsMasterMethod = cachedGetIsMasterMethod;
+            return true;
+        }
+
+        private bool TrySetup (
+            ICompiledAssembly compiledAssembly, 
+            out AssemblyDefinition assemblyDef,
+            out SerializedRPC[] serializedRPCs)
+        {
+            assemblyDef = null;
+            serializedRPCs = null;
 
             if (compiledAssembly.Name != ReflectionUtils.DefaultUserAssemblyName)
-                return null;
+                return false;
 
-            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var assemblyDef))
-                return null;
+            if (!RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out serializedRPCs))
+                return false;
 
             if (serializedRPCs.Length == 0)
-                return null;
+                return false;
 
-            if (!GetOnTryCallILProcessor(assemblyDef, out var rpcInterfacesTypeRef, out var onTryCallILProcessor))
-                return null;
+            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out assemblyDef))
+                return false;
 
-            if (cachedGetIsMasterMethod == null)
-                cachedGetIsMasterMethod = typeof(ClusterDisplayState).GetProperty("IsMaster").GetGetMethod();
+            return true;
+        }
+
+        private bool TrySetupOnTryCall (
+            AssemblyDefinition assemblyDef, 
+            out ILProcessor onTryCallILProcessor, 
+            out ModuleDefinition rpcInterfacesModule, 
+            out Instruction firstInstruction,
+            out Instruction beginningOfFailureInstruction)
+        {
+            if (!GetOnTryCallILProcessor(assemblyDef, out var rpcInterfacesTypeRef, out onTryCallILProcessor))
+            {
+                rpcInterfacesModule = null;
+                firstInstruction = null;
+                beginningOfFailureInstruction = null;
+                return false;
+            }
 
             onTryCallILProcessor.Body.Instructions.Clear();
             onTryCallILProcessor.Body.Variables.Clear();
             onTryCallILProcessor.Body.InitLocals = false;
 
-            Instruction firstInstruction = Instruction.Create(OpCodes.Nop);
+            firstInstruction = Instruction.Create(OpCodes.Nop);
             onTryCallILProcessor.Append(firstInstruction);
 
-            var beginningOfFailureInstructions = Instruction.Create(OpCodes.Ldc_I4_0);
-            onTryCallILProcessor.Append(beginningOfFailureInstructions);
+            beginningOfFailureInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
+            onTryCallILProcessor.Append(beginningOfFailureInstruction);
             onTryCallILProcessor.Append(Instruction.Create(OpCodes.Ret));
 
-            var rpcInterfacesModule = rpcInterfacesTypeRef.Module;
-            if (!TryImportObjectRegistry(
+            rpcInterfacesModule = rpcInterfacesTypeRef.Module;
+            return true;
+        }
+
+        public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
+        {
+            if (!TrySetup(
+                compiledAssembly,
+                out var assemblyDef,
+                out var serializedRPCs))
+                return null;
+
+            if (!TrySetupOnTryCall(
+                assemblyDef,
+                out var onTryCallILProcessor,
+                out var rpcInterfacesModule,
+                out var firstInstruction,
+                out var beginningOfFailureInstruction))
+                return null;
+
+            if (!TryInjectTryGetObjectRegistryInstance(
                 rpcInterfacesModule,
                 out var objectRegistryTypeRef,
                 out var objectRegistryTryGetInstanceMethodRef,
@@ -572,12 +706,14 @@ namespace Unity.ClusterDisplay
 
             Instruction lastSwitchJmpInstruction = null;
 
+            /*
             InsertDebugMessage(
                 rpcInterfacesModule,
                 onTryCallILProcessor,
                 "TEST",
                 firstInstruction,
                 out lastSwitchJmpInstruction);
+            */
 
             lastSwitchJmpInstruction = firstInstruction;
             InjectObjectRegistryTryGet(
@@ -613,7 +749,7 @@ namespace Unity.ClusterDisplay
                 InjectSwitchCase(
                     rpcInterfacesModule,
                     onTryCallILProcessor,
-                    beforeInstruction: beginningOfFailureInstructions,
+                    beforeInstruction: beginningOfFailureInstruction,
                     objectRegistryTryGetItemMethodRef,
                     methodDefinition,
                     firstInstruction: out var startOfSwitchCaseInstruction);
@@ -628,7 +764,7 @@ namespace Unity.ClusterDisplay
                 Debug.Log($"Injected RPC intercept assembly into method: \"{methodDefinition.Name}\" in class: \"{methodDefinition.DeclaringType.FullName}\".");
             }
 
-            tryGetInstanceFailureInstruction.Operand = beginningOfFailureInstructions;
+            tryGetInstanceFailureInstruction.Operand = beginningOfFailureInstruction;
 
             var pe = new MemoryStream();
             var pdb = new MemoryStream();
