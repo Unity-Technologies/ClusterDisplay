@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay
 
             public override void OnInspectorGUI()
             {
-                base.OnInspectorGUI();
+                // base.OnInspectorGUI(); // Something fishy is going on here.
 
                 if (GUILayout.Button("Reset"))
                     (target as RPCRegistry).Clear();
