@@ -8,169 +8,6 @@ namespace Unity.ClusterDisplay
 {
     public static class RPCSerializer
     {
-        /*
-        public struct RPCTokenizer
-        {
-            private string sourceString;
-            public string Source => sourceString;
-
-            private ushort rpcId;
-            public ushort RPCId => rpcId;
-
-            private bool isStatic;
-            public bool IsStatic => isStatic;
-
-            private string declaringAssemblyString;
-            public string DeclaringAssemblyName => declaringAssemblyString;
-
-            private string declaringTypeString;
-            public string DeclaringTypeFullName => declaringTypeString;
-
-            private string declaringReturnTypeAssemblyString;
-            public string DeclaringReturnTypeAssemblyName => declaringReturnTypeAssemblyString;
-
-            private string returnTypeString;
-            public string ReturnTypeFullName => returnTypeString;
-
-            private string methodNameString;
-            public string MethodName => methodNameString;
-
-            private readonly string[] declaringParameterTypeAssemblyStrings;
-            private readonly string[] parameterTypeStrings;
-            private readonly string[] parameterNameStrings;
-
-            public (string declaringParameterTypeAssemblyName, string parameterTypeFullName, string parameterName) this[int parameterIndex]
-            {
-                get =>
-                    parameterTypeStrings != null ? (
-                        declaringParameterTypeAssemblyStrings[parameterIndex],
-                        parameterTypeStrings[parameterIndex], 
-                        parameterNameStrings[parameterIndex]) 
-
-                    : (null, null, null);
-            }
-            public int ParameterCount => parameterTypeStrings != null ? parameterTypeStrings.Length : 0;
-
-            public bool IsValid => !string.IsNullOrEmpty(sourceString);
-
-            private static bool TryParseAssemblyAndType (ref string str, out string declaringAssemblyString, out string typeString)
-            {
-                declaringAssemblyString = null;
-                typeString = null;
-
-                if (string.IsNullOrEmpty(str))
-                    return false;
-
-                var assemblyAndTypeSplit = str.Split(':');
-                if (assemblyAndTypeSplit.Length != 2)
-                    return false;
-
-                declaringAssemblyString = assemblyAndTypeSplit[0];
-                if (string.IsNullOrEmpty(declaringAssemblyString))
-                    return false;
-
-                typeString = assemblyAndTypeSplit[1];
-                if (string.IsNullOrEmpty(typeString))
-                    return false;
-
-                return true;
-            }
-
-            public RPCTokenizer (string source)
-            {
-                if (string.IsNullOrEmpty(source))
-                    goto failure;
-
-                var split = source.Split('|');
-
-                var rpcIdStr = split[0];
-                rpcId = 0;
-                if (string.IsNullOrEmpty(rpcIdStr) && !ushort.TryParse(rpcIdStr, out rpcId))
-                    goto failure;
-
-                var instanceOrStatic = split[1];
-                isStatic = instanceOrStatic == "static";
-
-                var declaringAssemblyAndTypeStr = split[2];
-
-                if (!TryParseAssemblyAndType(ref declaringAssemblyAndTypeStr, out declaringAssemblyString, out declaringTypeString))
-                    goto failure;
-
-                var returnAssemblyAndType = split[3];
-                if (!TryParseAssemblyAndType(ref returnAssemblyAndType, out declaringReturnTypeAssemblyString, out returnTypeString))
-                    goto failure;
-
-                methodNameString = split[4];
-
-                if (string.IsNullOrEmpty(methodNameString))
-                    goto failure;
-
-                var declaringParameterTypeAssemblyStringList = new List<string>();
-                var paramterTypeStringList = new List<string>();
-                var paramterNameStringList = new List<string>();
-
-                string parametersString = split[5];
-                if (!string.IsNullOrEmpty(parametersString) && parametersString != "void")
-                {
-                    var parameterSplit = parametersString.Split(',');
-
-                    for (int i = 0; i < parameterSplit.Length; i++)
-                    {
-                        var parameterTypeAndNameSplit = parameterSplit[i].Split(' ');
-                        if (parameterTypeAndNameSplit.Length != 2)
-                            goto failure;
-
-                        var parameterAssemblyAndTypeString = parameterTypeAndNameSplit[0];
-                        if (!TryParseAssemblyAndType(ref parameterAssemblyAndTypeString, out var parameterAssemblyString, out var parameterTypeString))
-                            goto failure;
-
-                        var parameterName = parameterTypeAndNameSplit[1];
-                        if (string.IsNullOrEmpty(parameterName))
-                            goto failure;
-
-                        declaringParameterTypeAssemblyStringList.Add(parameterAssemblyString);
-                        paramterTypeStringList.Add(parameterTypeString);
-                        paramterNameStringList.Add(parameterName);
-                    }
-                }
-
-                if (paramterNameStringList.Count == 0)
-                {
-                    this.declaringParameterTypeAssemblyStrings = null;
-                    this.parameterTypeStrings = null;
-                    this.parameterNameStrings = null;
-                }
-
-                else
-                {
-                    this.declaringParameterTypeAssemblyStrings = declaringParameterTypeAssemblyStringList.ToArray();
-                    this.parameterTypeStrings = paramterTypeStringList.ToArray();
-                    this.parameterNameStrings = paramterNameStringList.ToArray();
-                }
-
-                this.sourceString = source;
-                return;
-
-                failure:
-                this.sourceString = null;
-                this.rpcId = 0;
-                this.isStatic = false;
-
-                this.declaringAssemblyString = null;
-                this.declaringTypeString = null;
-
-                this.declaringReturnTypeAssemblyString = null;
-                this.returnTypeString = null;
-
-                this.methodNameString = null;
-
-                this.declaringParameterTypeAssemblyStrings = null;
-                this.parameterTypeStrings = null;
-                this.parameterNameStrings = null;
-            }
-        }
-        */
-
         public static bool TryDeserializeType (string assemblyString, string typeString, out System.Type type)
         {
             type = null;
@@ -182,22 +19,9 @@ namespace Unity.ClusterDisplay
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
-        public static bool TryDeserializeMethodInfo (SerializedRPC rpcTokenizer, out MethodInfo outMethodInfo)
+        public static bool TryDeserializeMethodInfo (SerializedRPC rpcTokenizer, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
         {
-            /*
-            SerializedInstanceRPC rpcTokenizer = default(SerializedInstanceRPC); 
-            outMethodInfo = null;
-
-            try
-            {
-                rpcTokenizer = JsonUtility.FromJson<SerializedInstanceRPC>(json);
-            } catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                return false;
-            }
-            */
-
+            rpcExecutionStage = rpcTokenizer.rpcExecutionStage;
             outMethodInfo = null;
 
             if (!TryDeserializeType(rpcTokenizer.declaringAssemblyName, rpcTokenizer.declaryingTypeFullName, out var declaringType))
@@ -338,6 +162,7 @@ namespace Unity.ClusterDisplay
                 {
                     rpcId = rpcMethodInfo.rpcId,
                     isStatic = rpcMethodInfo.IsStatic,
+                    rpcExecutionStage = rpcMethodInfo.rpcExecutionStage,
                     declaringAssemblyName = declaringAssemblystr,
                     declaryingTypeFullName = declaringTypeStr,
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,
@@ -369,6 +194,7 @@ namespace Unity.ClusterDisplay
                 {
                     rpcId = rpcMethodInfo.rpcId,
                     isStatic = rpcMethodInfo.IsStatic,
+                    rpcExecutionStage = rpcMethodInfo.rpcExecutionStage,
                     declaringAssemblyName = declaringAssemblystr,
                     declaryingTypeFullName = declaringTypeStr,
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,

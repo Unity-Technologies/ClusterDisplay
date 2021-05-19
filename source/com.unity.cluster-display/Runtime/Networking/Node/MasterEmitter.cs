@@ -175,7 +175,6 @@ namespace Unity.ClusterDisplay
             *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPCEmitter.RPCBufferSize;
             endPos += Marshal.SizeOf<int>();
 
-            Debug.Log($"RPC Buffer Size: {RPCEmitter.RPCBufferSize}");
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
 
             return RPCEmitter.Latch(buffer, ref endPos);

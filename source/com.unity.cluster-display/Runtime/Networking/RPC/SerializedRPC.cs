@@ -3,10 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
+public enum RPCExecutionStage
+{
+    None,
+    ImmediatelyOnArrival,
+    BeforeFixedUpdate,
+    AfterFixedUpdate,
+    BeforeUpdate,
+    AfterUpdate,
+    BeforeLateUpdate,
+    AfterLateUpdate
+}
+
+[System.Serializable]
 public struct SerializedRPC
 {
     [SerializeField] public ushort rpcId;
     [SerializeField] public bool isStatic;
+
+    [SerializeField] public RPCExecutionStage rpcExecutionStage;
 
     [SerializeField] public string declaringAssemblyName;
     [SerializeField] public string declaryingTypeFullName;

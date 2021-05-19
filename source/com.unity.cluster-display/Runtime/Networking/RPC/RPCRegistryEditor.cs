@@ -127,6 +127,19 @@ namespace Unity.ClusterDisplay
 
                         EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignature(rpcMethodInfo.methodInfo)}\"");
                         EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.BeginHorizontal();
+                        GUILayout.Space(30);
+                        EditorGUILayout.LabelField("Execution Stage:", GUILayout.Width(125));
+
+                        var newRPCExecutionStage = (RPCExecutionStage)EditorGUILayout.EnumPopup(rpcMethodInfo.rpcExecutionStage);
+                        if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage)
+                        {
+                            rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
+                            rpcRegistry.SetRPCByIndex(i, rpcMethodInfo);
+                        }
+
+                        EditorGUILayout.EndHorizontal();
                     }
 
                     EditorGUILayout.EndScrollView();

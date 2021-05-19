@@ -130,7 +130,12 @@ namespace Unity.ClusterDisplay
                 stateSetter.SetCLusterLogicEnabled(false);
 
             if(ClusterDisplayState.IsClusterLogicEnabled)
+            {
                 InjectSynchPointInPlayerLoop();
+
+                if (ClusterDisplayState.IsSlave)
+                    RPCExecutor.TrySetup();
+            }
         }
 
         private void OnDisable()
@@ -139,8 +144,10 @@ namespace Unity.ClusterDisplay
                 return;
 
             LocalNode.Exit();
-
             RemoveSynchPointFromPlayerLoop();
+
+            if (ClusterDisplayState.IsSlave)
+                RPCExecutor.RemovePlayerLoops();
         }
 
         void Update()
@@ -322,6 +329,7 @@ namespace Unity.ClusterDisplay
 
                         newFrame = false;
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
+
                     m_DelayMonitor.SampleNow();
                 }
             }

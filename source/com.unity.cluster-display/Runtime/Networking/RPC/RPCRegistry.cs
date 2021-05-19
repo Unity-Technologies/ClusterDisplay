@@ -13,14 +13,16 @@ namespace Unity.ClusterDisplay
     {
         public readonly ushort rpcId;
         public readonly MethodInfo methodInfo;
+        public RPCExecutionStage rpcExecutionStage;
 
         public ushort instanceCount;
 
         public bool IsValid => methodInfo != null;
         public bool IsStatic => methodInfo != null ? methodInfo.IsStatic : false;
 
-        public RPCMethodInfo (ushort rpcId, MethodInfo methodInfo)
+        public RPCMethodInfo (ushort rpcId, RPCExecutionStage rpcExecutionStage, MethodInfo methodInfo)
         {
+            this.rpcExecutionStage = rpcExecutionStage;
             this.rpcId = rpcId;
             this.methodInfo = methodInfo;
             this.instanceCount = 1;
@@ -39,6 +41,18 @@ namespace Unity.ClusterDisplay
         }
 
         public RPCMethodInfo GetRPCByIndex (ushort rpcIndex) => rpcs[idManager[rpcIndex].id];
+        public void SetRPCByIndex (ushort rpcIndex, RPCMethodInfo rpcMethodInfo)
+        {
+            if (!RPCSerializer.TrySerializeMethodInfo(ref rpcMethodInfo, out var serializedRPC))
+                return;
+
+            rpcs[idManager[rpcIndex].id] = rpcMethodInfo;
+            idManager.SetData(rpcMethodInfo.rpcId, serializedRPC);
+            rpcs[rpcMethodInfo.rpcId] = rpcMethodInfo;
+
+            isDirty = true;
+        }
+
         public ushort RPCCount => idManager.SerializedIdCount;
         public ushort RPCUpperBoundID => idManager.UpperBoundID;
 
@@ -76,7 +90,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            var newRpc = new RPCMethodInfo(rpcId, methodInfo);
+            var newRpc = new RPCMethodInfo(rpcId, RPCExecutionStage.ImmediatelyOnArrival, methodInfo);
             if (!RPCSerializer.TrySerializeMethodInfo(ref newRpc, out var serializedRPC))
             {
                 rpcMethodInfo = default(RPCMethodInfo);
@@ -85,7 +99,6 @@ namespace Unity.ClusterDisplay
             }
 
             idManager.SetData(rpcId, serializedRPC);
-
             rpcs[rpcId] = rpcMethodInfo = newRpc;
             rpcLut.Add(methodInfo.MetadataToken, rpcId);
             isDirty = true;
@@ -94,6 +107,7 @@ namespace Unity.ClusterDisplay
 
             #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             #endif
 
             return true;
@@ -102,7 +116,7 @@ namespace Unity.ClusterDisplay
         public void DeincrementMethodReference (ushort rpcId)
         {
             var rpcMethodInfo = this[rpcId];
-            // rpcMethodInfo.InstanceCount--;
+            rpcMethodInfo.instanceCount--;
 
             if (rpcMethodInfo.instanceCount == 0)
             {
@@ -119,6 +133,7 @@ namespace Unity.ClusterDisplay
 
             #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             #endif
         }
 
@@ -130,10 +145,11 @@ namespace Unity.ClusterDisplay
 
             #if UNITY_EDITOR
             EditorUtility.SetDirty(this);
+            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             #endif
         }
 
-        public void OnAfterDeserialize()
+        private void Load ()
         {
             if (!idManager.HasSerializedData)
                 return;
@@ -141,7 +157,7 @@ namespace Unity.ClusterDisplay
             for (ushort i = 0; i < idManager.SerializedIdCount; i++)
             {
                 (ushort rpcId, SerializedRPC serializedRpcMethodInfo) = idManager[i];
-                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRpcMethodInfo, out var methodInfo))
+                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRpcMethodInfo, out var rpcExecutionStage, out var methodInfo))
                 {
                     Debug.LogError($"Unable to deserialize MethodInfo: \"{serializedRpcMethodInfo}\".");
                     idManager.PushId(rpcId);
@@ -150,12 +166,12 @@ namespace Unity.ClusterDisplay
 
                 Debug.Log($"Successfully deserialize MethodInfo: \"{serializedRpcMethodInfo}\".");
 
-                rpcs[rpcId] = new RPCMethodInfo(rpcId, methodInfo);
+                rpcs[rpcId] = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
                 rpcLut.Add(methodInfo.MetadataToken, rpcId);
             }
         }
 
-        public void OnBeforeSerialize() 
+        private void Save ()
         {
             if (!isDirty)
                 return;
@@ -167,5 +183,8 @@ namespace Unity.ClusterDisplay
             RPCSerializer.TryWriteRPCStubs(RPCStubsPath, list.ToArray());
             isDirty = false;
         }
+
+        public void OnBeforeSerialize() => Save();
+        public void OnAfterDeserialize() => Load();
     }
 }

@@ -104,29 +104,21 @@ namespace Unity.ClusterDisplay
                         bufferPos += stateSize;
 
                         if (id == AdvanceFrame.ClusterInputStateID)
-                        {
                             ClusterSerialization.RestoreClusterInputState(stateData);
-                        }
                         else if (id == AdvanceFrame.CoreInputStateID)
-                        {
                             ClusterSerialization.RestoreInputManagerState(stateData);
-                        }
                         else if (id == AdvanceFrame.CoreTimeStateID)
-                        {
                             ClusterSerialization.RestoreTimeManagerState(stateData);
-                        }
                         else if (id == AdvanceFrame.CoreRandomStateID)
-                        {
                             RestoreRndGeneratorState(stateData);
-                        }
                         else if (id == AdvanceFrame.RPCStateID)
-                        {
                             RestoreRPCState(stateData);
-                        }
+
                         else
                         {
                             // Send out to user provided handlers
                         }
+
                     } while (true);
                 }
             }
@@ -169,7 +161,7 @@ namespace Unity.ClusterDisplay
 
         private static unsafe bool RestoreRPCState (NativeArray<byte> stateData)
         {
-            Debug.Log($"RPC Buffer Size: {stateData.Length}");
+            // Debug.Log($"RPC Buffer Size: {stateData.Length}");
             RPCEmitter.Unlatch(stateData);
             return true;
         }

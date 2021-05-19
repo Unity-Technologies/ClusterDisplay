@@ -8,9 +8,16 @@ namespace Unity.ClusterDisplay
 {
     public static class RPCEmitter
     {
+        [System.AttributeUsage(System.AttributeTargets.Method)]
         public class RPCCallMarker : Attribute {}
+
+        [System.AttributeUsage(System.AttributeTargets.Method)]
         public class StaticRPCCallMarker : Attribute {}
+
+        [System.AttributeUsage(System.AttributeTargets.Method)]
         public class CopyValueToBufferMarker : Attribute {}
+
+        [System.AttributeUsage(System.AttributeTargets.Method)]
         public class ParseStructureMarker : Attribute {}
 
         private static NativeArray<byte> rpcBuffer = new NativeArray<byte>(1024, Allocator.Persistent, NativeArrayOptions.ClearMemory);
@@ -25,7 +32,6 @@ namespace Unity.ClusterDisplay
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
-            UnityEngine.Debug.Log($"Latched RPC Buffer with: {rpcBufferSize} bytes.");
             endPos += rpcBufferSize;
             rpcBufferSize = 0;
             return true;
@@ -33,22 +39,34 @@ namespace Unity.ClusterDisplay
 
         public static unsafe bool Unlatch (NativeArray<byte> buffer)
         {
+            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
+                return false;
+
             UnsafeUtility.MemCpy((byte*)rpcBuffer.GetUnsafePtr(), (byte*)buffer.GetUnsafePtr(), buffer.Length);
             rpcBufferSize = buffer.Length;
 
-            int startPos = 0;
+            ushort bufferPos = 0;
             do
             {
-                if (startPos >= buffer.Length)
-                {
-                    UnityEngine.Debug.Log($"Finished parsing RPC buffer of size: {buffer.Length}");
+                if (bufferPos >= buffer.Length)
                     break;
+
+                ParseRPCId(ref bufferPos, out var rpcId);
+                ParsePipeID(ref bufferPos, out var pipeId);
+                ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
+
+                if (pipeId == 0)
+                {
+                    RPCInterfaceRegistry.TryCallStatic(rpcId, parametersPayloadSize, ref bufferPos);
+                    continue;
                 }
 
-                ParsePipeID(ref startPos, out var pipeId);
-                ParseRPCId(ref startPos, out var rpcId);
-                ParseParametersPayloadSize(ref startPos, out var parametersPayloadSize);
-                RPCInterfaceRegistry.TryCall((ushort)(pipeId - 1), rpcId, ref startPos);
+                RPCInterfaceRegistry.TryCallInstance(
+                    objectRegistry,
+                    rpcId, 
+                    (ushort)(pipeId - 1), 
+                    parametersPayloadSize, 
+                    ref bufferPos);
 
             } while (true);
 
@@ -56,29 +74,28 @@ namespace Unity.ClusterDisplay
         }
 
         [ParseStructureMarker]
-        public static unsafe T ParseStructure<T> (ref int startPos)
+        public static unsafe T ParseStructure<T> (ref ushort startPos)
         {
-            UnityEngine.Debug.Log($"Parsing structure of tyep: \"{typeof(T).Name}\" starting at: {startPos}");
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
-            startPos += Marshal.SizeOf<T>();
+            startPos += (ushort)Marshal.SizeOf<T>();
             return Marshal.PtrToStructure<T>(ptr);
         }
 
-        private static unsafe void ParsePipeID (ref int startPos, out ushort pipeId)
+        private static unsafe void ParsePipeID (ref ushort startPos, out ushort pipeId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             pipeId = Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
-        private static unsafe void ParseRPCId (ref int startPos, out ushort rpcId)
+        private static unsafe void ParseRPCId (ref ushort startPos, out ushort rpcId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             rpcId = Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
-        private static unsafe void ParseParametersPayloadSize (ref int startPos, out ushort parametersPayloadSize)
+        private static unsafe void ParseParametersPayloadSize (ref ushort startPos, out ushort parametersPayloadSize)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             parametersPayloadSize = Marshal.PtrToStructure<ushort>(ptr);
@@ -121,8 +138,8 @@ namespace Unity.ClusterDisplay
             if (!objectRegistry.TryGetPipeId(instance, out var pipeId))
                 return;
 
-            CopyValueToBuffer<ushort>((ushort)(pipeId + 1));
             CopyValueToBuffer<ushort>((ushort)rpcId);
+            CopyValueToBuffer<ushort>((ushort)(pipeId + 1));
             CopyValueToBuffer<ushort>((ushort)parameterPayloadSize);
         }
 
@@ -132,8 +149,8 @@ namespace Unity.ClusterDisplay
             if (!AllowWrites)
                 return;
 
-            CopyValueToBuffer<ushort>((ushort)0);
             CopyValueToBuffer<ushort>((ushort)rpcId);
+            CopyValueToBuffer<ushort>((ushort)0);
             CopyValueToBuffer<ushort>((ushort)parameterPayloadSize);
         }
     }

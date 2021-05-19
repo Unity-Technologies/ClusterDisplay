@@ -53,6 +53,10 @@ namespace Unity.ClusterDisplay
                     Destroy(this.gameObject);
                 else DestroyImmediate(this.gameObject);
             }
+
+            #if UNITY_EDITOR
+            EditorUtility.SetDirty(this);
+            #endif
         }
 
         protected override void OnSerialize()

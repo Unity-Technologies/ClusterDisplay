@@ -20,6 +20,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         private Int64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
         private EStage m_Stage;
         private TimeSpan m_TsOfStage;
+        private bool m_FirstFrame = false;
 
         private MasterEmitter m_MasterEmitter;
 
@@ -44,7 +45,9 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
             m_MasterEmitter = new MasterEmitter(this);
 
-            m_Stage = (int)EStage.ReadyToSignalStartNewFrame;
+            m_Stage = EStage.ProcessFrame;
+            m_FirstFrame = true;
+
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
 
@@ -136,7 +139,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 {
                     case EMessageType.FrameDone:
                     {
-                        Debug.Assert(m_Stage != (int) EStage.ReadyToSignalStartNewFrame,
+                        Debug.Assert(m_Stage != EStage.ReadyToSignalStartNewFrame,
                             "Master: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
 
                         var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
@@ -171,8 +174,11 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         {
             if (m_WaitingOnNodes == 0)
             {
-                LocalNode.CurrentFrameID++;
-                m_Stage = (int) EStage.ReadyToSignalStartNewFrame;
+                if (m_FirstFrame)
+                    m_FirstFrame = false;
+                else LocalNode.CurrentFrameID++;
+
+                m_Stage = EStage.ReadyToSignalStartNewFrame;
                 m_TsOfStage = m_Time.Elapsed;
             }
         }

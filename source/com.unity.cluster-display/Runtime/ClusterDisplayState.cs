@@ -38,6 +38,11 @@ namespace Unity.ClusterDisplay
         public static bool IsMaster => stateStore.m_IsMaster;
 
         /// <summary>
+        /// This property returns true if this running instance is a slave node, this is set to true or false in ClusterSync.
+        /// </summary>
+        public static bool IsSlave => !stateStore.m_IsMaster;
+
+        /// <summary>
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
         /// </summary>
         public static bool IsClusterLogicEnabled => stateStore.m_IsClusterLogicEnabled;
