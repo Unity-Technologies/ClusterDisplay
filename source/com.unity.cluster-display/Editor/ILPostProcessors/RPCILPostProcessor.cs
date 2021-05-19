@@ -346,8 +346,8 @@ namespace Unity.ClusterDisplay
                 var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
                 if (bufferPosParamDef.IsIn || bufferPosParamDef.IsOut)
-                    newInstruction = Instruction.Create(OpCodes.Ldarg_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
-                else newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
+                    newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
+                else newInstruction = Instruction.Create(OpCodes.Ldarg_S, bufferPosParamDef);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
