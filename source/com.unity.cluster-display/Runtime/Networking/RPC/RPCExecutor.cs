@@ -182,6 +182,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeFixedUpdate ()
         {
+            // Debug.Log("BeforeFixedUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.BeforeFixedUpdate();
@@ -189,6 +190,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterFixedUpdate ()
         {
+            // Debug.Log("AfterFixedUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.AfterFixedUpdate();
@@ -196,6 +198,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeUpdate ()
         {
+            // Debug.Log("BeforeUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.BeforeUpdate();
@@ -203,6 +206,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterUpdate ()
         {
+            // Debug.Log("AfterUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.AfterUpdate();
@@ -210,6 +214,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeLateUpdate ()
         {
+            // Debug.Log("BeforeLateUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.BeforeLateUpdate();
@@ -217,6 +222,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterLateUpdate ()
         {
+            // Debug.Log("AfterLateUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
             instanceRegistry.AfterLateUpdate();

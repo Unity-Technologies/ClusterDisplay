@@ -345,7 +345,7 @@ namespace Unity.ClusterDisplay
                 genericInstanceMethod.GenericArguments.Add(paramRef);
                 var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                newInstruction = Instruction.Create(OpCodes.Ldarg_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
+                newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -771,7 +771,7 @@ namespace Unity.ClusterDisplay
                             else lastSwitchJmpInstruction.Add(serializedRPC.rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
                         }
 
-                        var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 2];
+                        var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
 
                         InjectImmediateInstanceRPCExecution(
                             rpcInterfacesModuleDef,
