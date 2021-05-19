@@ -32,33 +32,56 @@ namespace Unity.ClusterDisplay
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
-        private readonly Dictionary<int, ushort> rpcLut = new Dictionary<int, ushort>();
-        private readonly RPCMethodInfo[] rpcs = new RPCMethodInfo[ushort.MaxValue];
-        public RPCMethodInfo this[ushort rpcId]
+        private readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
+        private readonly RPCMethodInfo[] m_RPCs = new RPCMethodInfo[ushort.MaxValue];
+
+        private void ApplyRPC (ref RPCMethodInfo rpcMethodInfo)
         {
-            get => rpcs[rpcId];
-            private set => rpcs[rpcId] = value;
+            if (!IsSerializing)
+            {
+                if (!RPCSerializer.TrySerializeMethodInfo(ref rpcMethodInfo, out var serializedRPC))
+                    return;
+                else m_IDManager.SetData(rpcMethodInfo.rpcId, serializedRPC);
+            }
+
+            m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
+
+            if (!m_RPCLut.ContainsKey(rpcMethodInfo.methodInfo.MetadataToken))
+                m_RPCLut.Add(rpcMethodInfo.methodInfo.MetadataToken, rpcMethodInfo.rpcId);
+
+            #if UNITY_EDITOR
+            SetDirtyAndRecompile();
+            #endif
         }
 
-        public RPCMethodInfo GetRPCByIndex (ushort rpcIndex) => rpcs[idManager[rpcIndex].id];
-        public void SetRPCByIndex (ushort rpcIndex, RPCMethodInfo rpcMethodInfo)
+        private void RemoveRPC (ref RPCMethodInfo rpcMethodInfo)
         {
-            if (!RPCSerializer.TrySerializeMethodInfo(ref rpcMethodInfo, out var serializedRPC))
-                return;
+            m_RPCs[rpcMethodInfo.rpcId] = default(RPCMethodInfo);
+            m_RPCLut.Remove(rpcMethodInfo.methodInfo.MetadataToken);
+            m_IDManager.SetData(rpcMethodInfo.rpcId, null);
+            m_IDManager.PushId(rpcMethodInfo.rpcId);
 
-            rpcs[idManager[rpcIndex].id] = rpcMethodInfo;
-            idManager.SetData(rpcMethodInfo.rpcId, serializedRPC);
-            rpcs[rpcMethodInfo.rpcId] = rpcMethodInfo;
-
-            isDirty = true;
+            #if UNITY_EDITOR
+            SetDirtyAndRecompile();
+            #endif
         }
 
-        public ushort RPCCount => idManager.SerializedIdCount;
-        public ushort RPCUpperBoundID => idManager.UpperBoundID;
+        private void RemoveRPCOnDeserialize (ushort rpcId)
+        {
+            m_RPCs[rpcId] = default(RPCMethodInfo);
+            m_IDManager.SetData(rpcId, null);
+            m_IDManager.PushId(rpcId);
+        }
 
-        [SerializeField][HideInInspector] private IDManager<SerializedRPC> idManager = new IDManager<SerializedRPC>();
+        public bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => (rpcMethodInfo = m_RPCs[rpcId]).IsValid;
+        public bool TryGetRPCByIndex (ushort rpcIndex, out RPCMethodInfo rpcMethodInfo) => (rpcMethodInfo = m_RPCs[m_IDManager.GetDataByIndex(rpcIndex).rpcId]).IsValid;
 
-        private bool isDirty = false;
+        public void SetRPC(ref RPCMethodInfo rpcMethodInfo) => ApplyRPC(ref rpcMethodInfo);
+
+        public ushort RPCCount => m_IDManager.SerializedIdCount;
+        public ushort RPCUpperBoundID => m_IDManager.UpperBoundID;
+
+        [SerializeField][HideInInspector] private IDManager<SerializedRPC> m_IDManager = new IDManager<SerializedRPC>();
 
         private static string cachedRPCStubsPath = null;
         public static string RPCStubsPath
@@ -71,120 +94,150 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public bool TryIncrementMethodReference (System.Type type, MethodInfo methodInfo, out RPCMethodInfo rpcMethodInfo)
+        public bool TryAddNewRPC (System.Type type, MethodInfo methodInfo, RPCExecutionStage rpcExecutionStage, out RPCMethodInfo rpcMethodInfo)
         {
-            if (rpcLut.TryGetValue(methodInfo.MetadataToken, out var rpcId))
+
+            if (m_RPCLut.TryGetValue(methodInfo.MetadataToken, out var rpcId))
             {
-                rpcMethodInfo = this[rpcId];
+                Debug.LogError($"Cannot add RPC method: \"{methodInfo.Name}\" from declaring type: \"{methodInfo.DeclaringType}\", it has already been registered!");
+                rpcMethodInfo = default(RPCMethodInfo);
+                /*
+                if (!TryGetRPC(rpcId, out rpcMethodInfo))
+                    return false;
+
                 rpcMethodInfo.instanceCount++;
-                this[rpcId] = rpcMethodInfo;
+                ApplyRPC(ref rpcMethodInfo);
+                */
                 return true;
             }
 
             if(!methodInfo.GetParameters().All(paramterInfo => paramterInfo.ParameterType.IsValueType))
-                throw new System.Exception($"Unable to register method: \"{methodInfo.Name}\" as an RPC, one or more of the parameters is not a value type!");
+            {
+                Debug.LogError($"Unable to register method: \"{methodInfo.Name}\" as an RPC, one or more of the parameters is not a value type!");
+                rpcMethodInfo = default(RPCMethodInfo);
+                return false;
+            }
 
-            if (!idManager.TryPopId(out rpcId))
+            if (!m_IDManager.TryPopId(out rpcId))
             {
                 rpcMethodInfo = default(RPCMethodInfo);
                 return false;
             }
 
-            var newRpc = new RPCMethodInfo(rpcId, RPCExecutionStage.ImmediatelyOnArrival, methodInfo);
-            if (!RPCSerializer.TrySerializeMethodInfo(ref newRpc, out var serializedRPC))
-            {
-                rpcMethodInfo = default(RPCMethodInfo);
-                idManager.PushId(rpcId);
-                return false;
-            }
-
-            idManager.SetData(rpcId, serializedRPC);
-            rpcs[rpcId] = rpcMethodInfo = newRpc;
-            rpcLut.Add(methodInfo.MetadataToken, rpcId);
-            isDirty = true;
+            rpcMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
+            ApplyRPC(ref rpcMethodInfo);
 
             Debug.Log($"Registered method with UUID: \"{rpcId}\" for method: \"{ReflectionUtils.GetMethodSignature(methodInfo)}\" from type: \"{type.FullName}\" from assembly: \"{type.Assembly}\".");
-
-            #if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-            #endif
 
             return true;
         }
 
-        public void DeincrementMethodReference (ushort rpcId)
+        public void RemoveRPC (ushort rpcId)
         {
-            var rpcMethodInfo = this[rpcId];
+            if (!TryGetRPC(rpcId, out var rpcMethodInfo))
+                return;
+
+            RemoveRPC(ref rpcMethodInfo);
+            /*
             rpcMethodInfo.instanceCount--;
 
             if (rpcMethodInfo.instanceCount == 0)
-            {
-                rpcs[rpcId] = default(RPCMethodInfo);
-                rpcLut.Remove(rpcMethodInfo.methodInfo.MetadataToken);
-                idManager.PushId(rpcId);
-                idManager.SetData(rpcId, null);
-            }
-
-            else this[rpcId] = rpcMethodInfo;
-            isDirty = true;
+                RemoveRPC(ref rpcMethodInfo);
+            else ApplyRPC(ref rpcMethodInfo);
+            */
 
             Debug.Log($"Unregistered method: \"{rpcMethodInfo.methodInfo.Name}\" with UUID: \"{rpcMethodInfo.rpcId}\".");
+        }
 
-            #if UNITY_EDITOR
+        private void SetDirtyAndRecompile ()
+        {
+            if (IsSerializing)
+                return;
+
+            Debug.Log($"Changed RPC Registry, recompiling...");
             EditorUtility.SetDirty(this);
             UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-            #endif
+            m_IsDirty = true;
         }
 
         public void Clear ()
         {
-            idManager.Reset();
-            rpcLut.Clear();
-            isDirty = true;
+            m_IDManager.Clear();
+            m_RPCLut.Clear();
 
             #if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+            SetDirtyAndRecompile();
             #endif
         }
 
-        private void Load ()
+        private void Deserialize ()
         {
-            if (!idManager.HasSerializedData)
+            if (!m_IDManager.HasSerializedData)
                 return;
 
-            for (ushort i = 0; i < idManager.SerializedIdCount; i++)
+            for (ushort rpcIndex = 0; rpcIndex < m_IDManager.SerializedIdCount; rpcIndex++)
             {
-                (ushort rpcId, SerializedRPC serializedRpcMethodInfo) = idManager[i];
+                var serializedRpcMethodInfo = m_IDManager.GetDataByIndex(rpcIndex);
+                var rpcId = serializedRpcMethodInfo.rpcId;
+
+                Debug.Log($"Deserialized RPC Execution Stage: {serializedRpcMethodInfo.rpcExecutionStage}");
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRpcMethodInfo, out var rpcExecutionStage, out var methodInfo))
                 {
-                    Debug.LogError($"Unable to deserialize MethodInfo: \"{serializedRpcMethodInfo}\".");
-                    idManager.PushId(rpcId);
+                    Debug.LogError($"Unable to deserialize method: \"{serializedRpcMethodInfo.methodName}\", declared in type: \"{serializedRpcMethodInfo.declaryingTypeFullName}\".");
+                    RemoveRPCOnDeserialize(rpcId);
                     continue;
                 }
 
-                Debug.Log($"Successfully deserialize MethodInfo: \"{serializedRpcMethodInfo}\".");
+                /*
+                if (!TryIncrementMethodReference(
+                    methodInfo.DeclaringType, 
+                    methodInfo, 
+                    rpcExecutionStage, 
+                    out var _))
+                {
+                    RemoveRPCOnDeserialize(rpcId);
+                    continue;
+                }
+                */
 
-                rpcs[rpcId] = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
-                rpcLut.Add(methodInfo.MetadataToken, rpcId);
+                var deserializedRPCMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
+                ApplyRPC(ref deserializedRPCMethodInfo);
+
+                Debug.Log($"Successfully deserialized method: \"{serializedRpcMethodInfo.methodName}\", declared in type: \"{serializedRpcMethodInfo.declaryingTypeFullName}\".");
             }
         }
 
-        private void Save ()
+        private void Serialize ()
         {
-            if (!isDirty)
+            if (!m_IsDirty)
                 return;
 
-            List<SerializedRPC> list = new List<SerializedRPC>(idManager.SerializedIdCount);
-            for (ushort i = 0; i < idManager.UpperBoundID; i++)
-                list.Add(idManager.GetDataByIndex(i));
+            List<SerializedRPC> list = new List<SerializedRPC>(m_IDManager.SerializedIdCount);
+            for (ushort i = 0; i < m_IDManager.UpperBoundID; i++)
+                list.Add(m_IDManager.GetDataByIndex(i));
 
             RPCSerializer.TryWriteRPCStubs(RPCStubsPath, list.ToArray());
-            isDirty = false;
+            m_IsDirty = false;
         }
 
-        public void OnBeforeSerialize() => Save();
-        public void OnAfterDeserialize() => Load();
+        private bool m_IsSerializing = false;
+        private bool m_IsDirty = false;
+
+        public bool IsSerializing => m_IsSerializing;
+        private void ToggleSerializationState(bool isSerializing) => this.m_IsSerializing = isSerializing;
+
+        public void OnBeforeSerialize()
+        {
+            ToggleSerializationState(true);
+            Serialize();
+            ToggleSerializationState(false);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            ToggleSerializationState(true);
+            Deserialize();
+            ToggleSerializationState(false);
+        }
     }
 }

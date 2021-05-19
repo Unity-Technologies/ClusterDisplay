@@ -44,8 +44,10 @@ namespace Unity.ClusterDisplay
             if (ObjectRegistry.TryGetInstance(out var objectRegistry, throwException: true))
                 objectRegistry.Unregister(sceneObject);
 
+            /*
             if (RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: true))
                 rpcRegistry.DeincrementMethodReference(rpcId);
+            */
 
             if (objects.Count == 0)
             {

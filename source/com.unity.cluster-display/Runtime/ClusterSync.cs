@@ -58,24 +58,21 @@ namespace Unity.ClusterDisplay
         }
 
 
-        internal byte ConfiguredLocalNodeId
-        {
-            get
-            {
-                if(ClusterDisplayState.IsClusterLogicEnabled)
-                    return LocalNode.NodeID;
-                else
-                {
-                    throw new Exception("Cluster Rendering not active. No local node present");
-                }
-            }
-        }
-
         /// <summary>
         /// The Local Cluster Node Id.
         /// </summary>
         /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
-        public byte DynamicLocalNodeId => ConfiguredLocalNodeId;
+        public bool TryGetDynamicLocalNodeId (out byte dynamicLocalNodeId)
+        {
+            if (!ClusterDisplayState.IsClusterLogicEnabled || LocalNode == null)
+            {
+                dynamicLocalNodeId = 0;
+                return false;
+            }
+
+            dynamicLocalNodeId = LocalNode.NodeID;
+            return true;
+        }
 
         /// <summary>
         /// Debug info.

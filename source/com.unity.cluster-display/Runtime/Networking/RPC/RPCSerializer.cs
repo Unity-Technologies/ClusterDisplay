@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
         public static bool TryDeserializeMethodInfo (SerializedRPC rpcTokenizer, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
         {
-            rpcExecutionStage = rpcTokenizer.rpcExecutionStage;
+            rpcExecutionStage = (RPCExecutionStage)rpcTokenizer.rpcExecutionStage;
             outMethodInfo = null;
 
             if (!TryDeserializeType(rpcTokenizer.declaringAssemblyName, rpcTokenizer.declaryingTypeFullName, out var declaringType))
@@ -162,7 +162,7 @@ namespace Unity.ClusterDisplay
                 {
                     rpcId = rpcMethodInfo.rpcId,
                     isStatic = rpcMethodInfo.IsStatic,
-                    rpcExecutionStage = rpcMethodInfo.rpcExecutionStage,
+                    rpcExecutionStage = (int)rpcMethodInfo.rpcExecutionStage,
                     declaringAssemblyName = declaringAssemblystr,
                     declaryingTypeFullName = declaringTypeStr,
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,
@@ -194,7 +194,7 @@ namespace Unity.ClusterDisplay
                 {
                     rpcId = rpcMethodInfo.rpcId,
                     isStatic = rpcMethodInfo.IsStatic,
-                    rpcExecutionStage = rpcMethodInfo.rpcExecutionStage,
+                    rpcExecutionStage = (int)rpcMethodInfo.rpcExecutionStage,
                     declaringAssemblyName = declaringAssemblystr,
                     declaryingTypeFullName = declaringTypeStr,
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,

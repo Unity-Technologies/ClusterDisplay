@@ -41,7 +41,11 @@ namespace Unity.ClusterDisplay
                             rpcToRemove = rpcId;
                         }
 
-                        EditorGUILayout.LabelField(rpcRegistry[rpcId].methodInfo.Name);
+                        if (!rpcRegistry.TryGetRPC(rpcId, out var rpcMethodInfo))
+                            continue;
+
+                        var methodInfo = rpcMethodInfo.methodInfo;
+                        EditorGUILayout.LabelField(methodInfo.Name);
                         EditorGUILayout.EndHorizontal();
                     }
                 }

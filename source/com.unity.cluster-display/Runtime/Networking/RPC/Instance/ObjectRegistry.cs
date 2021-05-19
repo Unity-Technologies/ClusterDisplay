@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay
         public void Reset ()
         {
             pipeIdLut.Clear();
-            pipeIdManager.Reset();
+            pipeIdManager.Clear();
         }
     }
 }

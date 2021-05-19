@@ -5,14 +5,13 @@ using UnityEngine;
 [System.Serializable]
 public enum RPCExecutionStage
 {
-    None,
-    ImmediatelyOnArrival,
-    BeforeFixedUpdate,
-    AfterFixedUpdate,
-    BeforeUpdate,
-    AfterUpdate,
-    BeforeLateUpdate,
-    AfterLateUpdate
+    ImmediatelyOnArrival = 0,
+    BeforeFixedUpdate = 1,
+    AfterFixedUpdate = 2,
+    BeforeUpdate = 3,
+    AfterUpdate = 4,
+    BeforeLateUpdate = 5,
+    AfterLateUpdate = 6
 }
 
 [System.Serializable]
@@ -21,7 +20,7 @@ public struct SerializedRPC
     [SerializeField] public ushort rpcId;
     [SerializeField] public bool isStatic;
 
-    [SerializeField] public RPCExecutionStage rpcExecutionStage;
+    [SerializeField] public int rpcExecutionStage;
 
     [SerializeField] public string declaringAssemblyName;
     [SerializeField] public string declaryingTypeFullName;

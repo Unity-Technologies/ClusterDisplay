@@ -45,8 +45,8 @@ public class IDManager
         serializedIdCount--;
     }
 
-    protected virtual void OnReset () {}
-    public void Reset ()
+    protected virtual void OnClear () {}
+    public void Clear ()
     {
         returnedIds = new ushort[ushort.MaxValue];
         serializedIds = new ushort[ushort.MaxValue];
@@ -55,6 +55,6 @@ public class IDManager
         serializedIdCount = 0;
         newIdIndex = 0;
 
-        OnReset();
+        OnClear();
     }
 }

@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay
                 ParsePipeID(ref bufferPos, out var pipeId);
                 ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
 
-                // UnityEngine.Debug.Log($"Received RPC: (ID: {rpcId}, Pipe ID: {pipeId - 1}, Parameters Payload Size: {parametersPayloadSize})");
+                UnityEngine.Debug.Log($"Received RPC: (ID: {rpcId}, Pipe ID: {pipeId - 1}, Parameters Payload Size: {parametersPayloadSize})");
 
                 if (pipeId == 0)
                 {
@@ -151,7 +151,7 @@ namespace Unity.ClusterDisplay
             CopyValueToBuffer<ushort>((ushort)(pipeId + 1));
             CopyValueToBuffer<ushort>((ushort)parametersPayloadSize);
 
-            // UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
+            UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
         }
 
         [StaticRPCCallMarker]

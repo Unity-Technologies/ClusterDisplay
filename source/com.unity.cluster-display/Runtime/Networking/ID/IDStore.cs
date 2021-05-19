@@ -10,7 +10,7 @@ public class IDManager<T> : IDManager where T : struct
 
     public T[] SerializedData => serializedData;
 
-    public new (ushort id, T serializedData) this[ushort index] => (base[index], serializedData[index]);
+    // public new (ushort id, T serializedData) this[ushort index] => (base[index], serializedData[index]);
 
     public bool SetData (ushort id, T ? data)
     {
@@ -20,7 +20,7 @@ public class IDManager<T> : IDManager where T : struct
         return true;
     }
 
-    protected override void OnReset()
+    protected override void OnClear()
     {
         serializedData = new T[ushort.MaxValue];
     }

@@ -184,7 +184,6 @@ namespace Unity.ClusterDisplay
                         out methodDef);
                     break;
 
-                case RPCExecutionStage.None:
                 case RPCExecutionStage.ImmediatelyOnArrival:
                 default:
                     return false;
@@ -345,9 +344,12 @@ namespace Unity.ClusterDisplay
                 genericInstanceMethod.GenericArguments.Add(paramRef);
                 var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
+                /*
                 if (bufferPosParamDef.IsIn || bufferPosParamDef.IsOut)
                     newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
-                else newInstruction = Instruction.Create(OpCodes.Ldarg_S, bufferPosParamDef);
+                else newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
+                */
+                newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -658,7 +660,6 @@ namespace Unity.ClusterDisplay
                     markerType = typeof(RPCInterfaceRegistry.ExecuteRPCAfterLateUpdateMarker);
                     break;
 
-                case RPCExecutionStage.None:
                 case RPCExecutionStage.ImmediatelyOnArrival:
                 default:
                     ilProcessor = null;
@@ -734,7 +735,8 @@ namespace Unity.ClusterDisplay
                     continue;
 
                 Instruction firstInstructionOfOnTryCallSwitchCase = null;
-                if (serializedRPC.rpcExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
+                var serializedRPCExecutionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
+                if (serializedRPCExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
                 {
                     InjectImmediateInstanceRPCExecution(
                         rpcInterfacesModuleDef,
@@ -751,26 +753,26 @@ namespace Unity.ClusterDisplay
                     if (TryGetExecuteQueuedRPCMethodILProcessor(
                         rpcInterfacesModuleDef,
                         rpcInterfacesTypeRef,
-                        serializedRPC.rpcExecutionStage,
+                        serializedRPCExecutionStage,
                         out var executeQueuedRPCMethodILProcessor))
                     {
                         if (!TryInjectQueueOnArrival(
                             rpcInterfacesModuleDef,
                             onTryCallILProcessor,
                             injectBeforeInstruction: firstOfOnTryFailureInstructions,
-                            serializedRPC.rpcExecutionStage,
+                            serializedRPCExecutionStage,
                             firstInstruction: out firstInstructionOfOnTryCallSwitchCase))
                             continue;
 
                         var firstExecuteQueuedRPCMethodInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[0];
 
                         Instruction lastExecuteQueuedRPCSwitchJmpInstruction = null;
-                        if (lastSwitchJmpInstruction == null || !lastSwitchJmpInstruction.TryGetValue(serializedRPC.rpcExecutionStage, out lastExecuteQueuedRPCSwitchJmpInstruction))
+                        if (lastSwitchJmpInstruction == null || !lastSwitchJmpInstruction.TryGetValue(serializedRPCExecutionStage, out lastExecuteQueuedRPCSwitchJmpInstruction))
                         {
                             lastExecuteQueuedRPCSwitchJmpInstruction = firstExecuteQueuedRPCMethodInstruction;
                             if (lastSwitchJmpInstruction == null)
-                                lastSwitchJmpInstruction = new Dictionary<RPCExecutionStage, Instruction>() { { serializedRPC.rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction } };
-                            else lastSwitchJmpInstruction.Add(serializedRPC.rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
+                                lastSwitchJmpInstruction = new Dictionary<RPCExecutionStage, Instruction>() { { serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction } };
+                            else lastSwitchJmpInstruction.Add(serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
                         }
 
                         var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
@@ -791,7 +793,7 @@ namespace Unity.ClusterDisplay
                             jmpToInstruction: firstInstructionOfExecuteQueuedRPCMethod,
                             lastInstructionOfSwitchJmp: out lastExecuteQueuedRPCSwitchJmpInstruction);
 
-                        lastSwitchJmpInstruction[serializedRPC.rpcExecutionStage] = lastExecuteQueuedRPCSwitchJmpInstruction;
+                        lastSwitchJmpInstruction[serializedRPCExecutionStage] = lastExecuteQueuedRPCSwitchJmpInstruction;
                     }
                 }
 

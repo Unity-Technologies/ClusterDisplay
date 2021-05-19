@@ -28,10 +28,10 @@ namespace ClusterDisplay.Utils
                 return;
             }
 
-            if (!ClusterSync.TryGetInstance(out var clusterSync))
+            if (!ClusterSync.TryGetInstance(out var clusterSync) || !clusterSync.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
                 return;
 
-            var localTile = ClusterDisplayState.IsActive ? clusterSync.DynamicLocalNodeId : 0;
+            var localTile = ClusterDisplayState.IsActive ? dynamicLocalNodeId : 0;
             if (localTile > numTilesX * numTilesY - 1)
                 return;
    

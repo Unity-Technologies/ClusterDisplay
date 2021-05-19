@@ -106,8 +106,7 @@ namespace Unity.ClusterDisplay
 
                     for (ushort i = 0; i < rpcRegistry.RPCUpperBoundID; i++)
                     {
-                        var rpcMethodInfo = rpcRegistry.GetRPCByIndex(i);
-                        if (!rpcMethodInfo.IsValid)
+                        if (!rpcRegistry.TryGetRPCByIndex(i, out var rpcMethodInfo))
                             continue;
 
                         EditorGUILayout.BeginHorizontal();
@@ -136,7 +135,7 @@ namespace Unity.ClusterDisplay
                         if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage)
                         {
                             rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
-                            rpcRegistry.SetRPCByIndex(i, rpcMethodInfo);
+                            rpcRegistry.SetRPC(ref rpcMethodInfo);
                         }
 
                         EditorGUILayout.EndHorizontal();
@@ -149,7 +148,7 @@ namespace Unity.ClusterDisplay
                 else EditorGUILayout.LabelField("No methods reigstered.");
 
                 if (rpcMethodToRemove != null)
-                    rpcRegistry.DeincrementMethodReference(rpcMethodToRemove.Value.rpcId);
+                    rpcRegistry.RemoveRPC(rpcMethodToRemove.Value.rpcId);
             }
 
             private void OnChangeSearch (string newMethodSearchStr)
@@ -167,7 +166,11 @@ namespace Unity.ClusterDisplay
             private void OnSelectMethod (MethodInfo selectedMethodInfo)
             {
                 var rpcRegistry = target as RPCRegistry;
-                rpcRegistry.TryIncrementMethodReference(targetType, selectedMethodInfo, out var rpcMethodInfo);
+                rpcRegistry.TryAddNewRPC(
+                    targetType, 
+                    selectedMethodInfo, 
+                    RPCExecutionStage.ImmediatelyOnArrival, 
+                    out var rpcMethodInfo);
             }
 
             public override void OnInspectorGUI()
