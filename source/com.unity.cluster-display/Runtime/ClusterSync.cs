@@ -330,6 +330,8 @@ namespace Unity.ClusterDisplay
                         newFrame = false;
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
 
+                    LocalNode.EndFrame();
+
                     m_DelayMonitor.SampleNow();
                 }
             }

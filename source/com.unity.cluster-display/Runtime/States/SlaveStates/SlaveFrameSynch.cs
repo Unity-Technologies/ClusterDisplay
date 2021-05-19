@@ -49,6 +49,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
         {
             using (m_MarkerDoFrame.Auto())
             {
+                // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch (m_Stage)
                 {
                     case EStage.WaitingOnGoFromMaster:

@@ -34,6 +34,7 @@ namespace Unity.ClusterDisplay
         public SlaveReciever (ISlaveNodeSyncState nodeSyncState)
         {
             this.nodeSyncState = nodeSyncState;
+            RPCEmitter.Initialize();
         }
 
         public void PumpMsg (ulong currentFrameID)
@@ -176,6 +177,7 @@ namespace Unity.ClusterDisplay
             UnsafeUtility.MemCpy( rawData, (byte*)stateData.GetUnsafePtr(), Marshal.SizeOf<UnityEngine.Random.State>());
 
             UnityEngine.Random.state = rndState;
+            // Debug.Log($"Seed: {UnityEngine.Random.seed}");
             return true;
         }
     }

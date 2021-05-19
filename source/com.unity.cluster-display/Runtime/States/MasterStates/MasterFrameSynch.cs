@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
     {
         enum EStage
         {
+            StepOneFrameOnInitialization,
             ReadyToSignalStartNewFrame,
             WaitingOnFramesDoneMsgs,
             ProcessFrame,
@@ -20,11 +21,10 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         private Int64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
         private EStage m_Stage;
         private TimeSpan m_TsOfStage;
-        private bool m_FirstFrame = false;
 
         private MasterEmitter m_MasterEmitter;
 
-        public override bool ReadyToProceed => m_Stage == EStage.ProcessFrame;
+        public override bool ReadyToProceed => m_Stage == EStage.StepOneFrameOnInitialization || m_Stage == EStage.ProcessFrame;
 
         public UDPAgent NetworkAgent => LocalNode.UdpAgent;
 
@@ -44,16 +44,26 @@ namespace Unity.ClusterDisplay.MasterStateMachine
             base.InitState();
 
             m_MasterEmitter = new MasterEmitter(this);
-
-            m_Stage = EStage.ProcessFrame;
-            m_FirstFrame = true;
+            m_Stage = EStage.StepOneFrameOnInitialization;
 
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
 
             RPCEmitter.AllowWrites = true;
         }
-        
+
+        public override void OnEndFrame()
+        {
+            // Debug.Log($"Ended Frame: {LocalNode.CurrentFrameID}");
+            if (m_Stage == EStage.StepOneFrameOnInitialization)
+            {
+                m_Stage = EStage.ReadyToSignalStartNewFrame;
+                return;
+            }
+
+            LocalNode.CurrentFrameID++;
+        }
+
         protected override NodeState DoFrame(bool newFrame)
         {
             if (LocalNode.TotalExpectedRemoteNodesCount == 0)
@@ -67,6 +77,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 if (newFrame)
                     m_MasterEmitter.GatherFrameState();
 
+                // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch ((EStage) m_Stage)
                 {
                     case EStage.ReadyToSignalStartNewFrame:
@@ -144,7 +155,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
                         var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
 
-                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID)
+                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID - 1)
                         {
                             var maskOut = ~((Int64) 1 << msgHdr.OriginID);
                             do
@@ -174,10 +185,6 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         {
             if (m_WaitingOnNodes == 0)
             {
-                if (m_FirstFrame)
-                    m_FirstFrame = false;
-                else LocalNode.CurrentFrameID++;
-
                 m_Stage = EStage.ReadyToSignalStartNewFrame;
                 m_TsOfStage = m_Time.Elapsed;
             }

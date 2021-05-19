@@ -61,6 +61,8 @@ namespace Unity.ClusterDisplay
             return m_CurrentState.GetType() != typeof(FatalError);
         }
 
+        public void EndFrame () => m_CurrentState?.OnEndFrame();
+
         public void Exit()
         {
             if(m_CurrentState.GetType() != typeof(Shutdown))

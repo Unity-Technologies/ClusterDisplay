@@ -14,7 +14,6 @@ namespace Unity.ClusterDisplay
     internal class MasterNode : ClusterNode
     {
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
-
         public int TotalExpectedRemoteNodesCount { get; set; }
 
         public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, adapterName)

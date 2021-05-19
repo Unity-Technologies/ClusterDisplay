@@ -239,7 +239,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,
@@ -256,7 +256,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,
@@ -273,7 +273,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,
@@ -290,7 +290,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,
@@ -307,7 +307,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeLateUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,
@@ -324,7 +324,7 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ushort rpcsBufferParametersStartPosition)
         {
-            LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
+            // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterLateUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
                 rpcId = rpcId,

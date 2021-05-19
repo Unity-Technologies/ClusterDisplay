@@ -43,6 +43,8 @@ namespace Unity.ClusterDisplay
             return this;
         }
 
+        public virtual void OnEndFrame() {}
+
         public NodeState ProcessFrame( bool newFrame)
         {
             var res = DoFrame(newFrame);

@@ -345,7 +345,9 @@ namespace Unity.ClusterDisplay
                 genericInstanceMethod.GenericArguments.Add(paramRef);
                 var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
+                if (bufferPosParamDef.IsIn || bufferPosParamDef.IsOut)
+                    newInstruction = Instruction.Create(OpCodes.Ldarg_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
+                else newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -809,18 +811,20 @@ namespace Unity.ClusterDisplay
                 failureInstructionToJumpTo: firstOfOnTryFailureInstructions,
                 out var _);
 
-            var rpcExecutionStages = Enum.GetValues(typeof(RPCExecutionStage));
-            foreach (var cachedExecutedRPCMethodILProcessor in cachedExecuteQueuedRPCMethodILProcessors)
+            if (cachedExecuteQueuedRPCMethodILProcessors != null)
             {
-                if (!lastSwitchJmpInstruction.TryGetValue(cachedExecutedRPCMethodILProcessor.Key, out var lastExecuteQueuedRPCJmpInstruction))
-                    continue;
+                foreach (var cachedExecutedRPCMethodILProcessor in cachedExecuteQueuedRPCMethodILProcessors)
+                {
+                    if (!lastSwitchJmpInstruction.TryGetValue(cachedExecutedRPCMethodILProcessor.Key, out var lastExecuteQueuedRPCJmpInstruction))
+                        continue;
 
-                InjectDefaultSwitchReturn(
-                    cachedExecutedRPCMethodILProcessor.Value,
-                    afterInstruction: lastExecuteQueuedRPCJmpInstruction,
-                    failureInstructionToJumpTo: cachedExecutedRPCMethodILProcessor.Value.Body.Instructions[cachedExecutedRPCMethodILProcessor.Value.Body.Instructions.Count - 2],
-                    out var _);
+                    InjectDefaultSwitchReturn(
+                        cachedExecutedRPCMethodILProcessor.Value,
+                        afterInstruction: lastExecuteQueuedRPCJmpInstruction,
+                        failureInstructionToJumpTo: cachedExecutedRPCMethodILProcessor.Value.Body.Instructions[cachedExecutedRPCMethodILProcessor.Value.Body.Instructions.Count - 2],
+                        out var _);
 
+                }
             }
 
             var pe = new MemoryStream();

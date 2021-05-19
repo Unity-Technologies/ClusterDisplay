@@ -29,9 +29,15 @@ namespace Unity.ClusterDisplay
 
         public static bool AllowWrites = false;
 
+        public static void Initialize ()
+        {
+            rpcBufferSize = 0;
+        }
+
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
+            // UnityEngine.Debug.Log($"Latched RPC Buffer of size: {rpcBufferSize}");
             endPos += rpcBufferSize;
             rpcBufferSize = 0;
             return true;
@@ -42,18 +48,23 @@ namespace Unity.ClusterDisplay
             if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
                 return false;
 
+            if (buffer.Length < sizeof(ushort) * 3)
+                return true;
+
             UnsafeUtility.MemCpy((byte*)rpcBuffer.GetUnsafePtr(), (byte*)buffer.GetUnsafePtr(), buffer.Length);
             rpcBufferSize = buffer.Length;
 
             ushort bufferPos = 0;
             do
             {
-                if (bufferPos >= buffer.Length)
+                if (bufferPos > buffer.Length - sizeof(ushort) * 3)
                     break;
 
                 ParseRPCId(ref bufferPos, out var rpcId);
                 ParsePipeID(ref bufferPos, out var pipeId);
                 ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
+
+                // UnityEngine.Debug.Log($"Received RPC: (ID: {rpcId}, Pipe ID: {pipeId - 1}, Parameters Payload Size: {parametersPayloadSize})");
 
                 if (pipeId == 0)
                 {
@@ -109,9 +120,7 @@ namespace Unity.ClusterDisplay
                 return;
 
             int structSize = Marshal.SizeOf<T>(value);
-            if (rpcBufferSize + structSize >= rpcBuffer.Length)
-                rpcBufferSize = 0;
-
+            // UnityEngine.Debug.Log($"Current RPC Buffer Size: {rpcBufferSize}, Struct Size: {structSize}, Max RPC Buffer Size: {rpcBuffer.Length}");
             if (rpcBufferSize + structSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
@@ -127,7 +136,7 @@ namespace Unity.ClusterDisplay
         }
 
         [RPCCallMarker]
-        public static void AppendRPCCall (UnityEngine.Object instance, ushort rpcId, int parameterPayloadSize)
+        public static void AppendRPCCall (UnityEngine.Object instance, ushort rpcId, ushort parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
@@ -140,18 +149,20 @@ namespace Unity.ClusterDisplay
 
             CopyValueToBuffer<ushort>((ushort)rpcId);
             CopyValueToBuffer<ushort>((ushort)(pipeId + 1));
-            CopyValueToBuffer<ushort>((ushort)parameterPayloadSize);
+            CopyValueToBuffer<ushort>((ushort)parametersPayloadSize);
+
+            // UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
         }
 
         [StaticRPCCallMarker]
-        public static void AppendStaticRPCCall (ushort rpcId, int parameterPayloadSize)
+        public static void AppendStaticRPCCall (ushort rpcId, ushort parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
 
             CopyValueToBuffer<ushort>((ushort)rpcId);
             CopyValueToBuffer<ushort>((ushort)0);
-            CopyValueToBuffer<ushort>((ushort)parameterPayloadSize);
+            CopyValueToBuffer<ushort>((ushort)parametersPayloadSize);
         }
     }
 }

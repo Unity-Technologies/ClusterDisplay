@@ -224,26 +224,38 @@ namespace Unity.ClusterDisplay
             {
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
-                lastInstruction = newInstruct;
+                afterInstruction = newInstruct;
             }
 
             else
             {
                 newInstruct = Instruction.Create(OpCodes.Ldarg_0);
                 il.InsertAfter(afterInstruction, newInstruct);
-                lastInstruction = newInstruct;
+                afterInstruction = newInstruct;
 
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
-                il.InsertAfter(lastInstruction, newInstruct);
+                il.InsertAfter(afterInstruction, newInstruct);
+                afterInstruction = newInstruct;
+
+                /*
+                newInstruct = Instruction.Create(OpCodes.Conv_U2);
+                il.InsertAfter(afterInstruction, newInstruct);
                 lastInstruction = newInstruct;
+                */
             }
 
             newInstruct = Instruction.Create(OpCodes.Ldc_I4, sizeOfAllParameters);
-            il.InsertAfter(lastInstruction, newInstruct);
-            lastInstruction = newInstruct;
+            il.InsertAfter(afterInstruction, newInstruct);
+            afterInstruction = newInstruct;
+
+            /*
+            newInstruct = Instruction.Create(OpCodes.Conv_U2);
+            il.InsertAfter(afterInstruction, newInstruct);
+            afterInstruction = newInstruct;
+            */
 
             newInstruct = Instruction.Create(OpCodes.Call, call);
-            il.InsertAfter(lastInstruction, newInstruct);
+            il.InsertAfter(afterInstruction, newInstruct);
             lastInstruction = newInstruct;
         }
     }

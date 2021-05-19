@@ -16,9 +16,13 @@ namespace Unity.ClusterDisplay
 
         public IMasterNodeSyncState nodeState;
 
+        private UnityEngine.Random.State previousFrameState;
+
         public MasterEmitter (IMasterNodeSyncState nodeState)
         {
             this.nodeState = nodeState;
+            previousFrameState = UnityEngine.Random.state;
+            RPCEmitter.Initialize();
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
@@ -143,7 +147,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref int endPos)
+        private unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref int endPos)
         {
             if ((endPos + Marshal.SizeOf<int>() + Marshal.SizeOf<UnityEngine.Random.State>()) >= buffer.Length)
             {
@@ -151,19 +155,21 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            var guidLen = Marshal.SizeOf<Guid>();
-
-            var rndState = UnityEngine.Random.state;
+            var rndState = previousFrameState;
+            previousFrameState = UnityEngine.Random.state;
 
             int sizePos = endPos;
             endPos += Marshal.SizeOf<int>();
-            endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreRandomStateID, guidLen);
+            endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreRandomStateID, Marshal.SizeOf<Guid>());
 
             var rawData = (byte*) &rndState;
             UnsafeUtility.MemCpy((byte*) buffer.GetUnsafePtr() + endPos, rawData, Marshal.SizeOf<UnityEngine.Random.State>());
-            endPos += Marshal.SizeOf<UnityEngine.Random.State>();
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = Marshal.SizeOf<UnityEngine.Random.State>();
+            int sizeOfRandomState = Marshal.SizeOf<UnityEngine.Random.State>();
+            endPos += sizeOfRandomState;
+            *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
+
+            // Debug.Log($"Seed: {UnityEngine.Random.seed}");
             return true;
         }
 
