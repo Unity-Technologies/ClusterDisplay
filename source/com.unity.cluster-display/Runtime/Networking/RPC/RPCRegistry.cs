@@ -33,10 +33,9 @@ namespace Unity.ClusterDisplay
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         private readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
-        private readonly RPCMethodInfo[] m_RPCs = new RPCMethodInfo[ushort.MaxValue];
+        private readonly Dictionary<ushort, RPCMethodInfo> m_RPCs = new Dictionary<ushort, RPCMethodInfo>();
 
-        public int m_RPCCount = 0;
-        public int RPCCount => m_RPCCount;
+        public int RPCCount => m_RPCs.Count;
 
         private void ApplyRPC (ref RPCMethodInfo rpcMethodInfo)
         {
@@ -47,11 +46,8 @@ namespace Unity.ClusterDisplay
                 else m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, serializedRPC);
             }
 
-            m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
-            if (!m_RPCLut.ContainsKey(rpcMethodInfo.methodInfo.MetadataToken))
-                m_RPCLut.Add(rpcMethodInfo.methodInfo.MetadataToken, rpcMethodInfo.rpcId);
-
-            m_RPCCount++;
+            m_RPCs.Add(rpcMethodInfo.rpcId, rpcMethodInfo);
+            m_RPCLut.Add(rpcMethodInfo.methodInfo.MetadataToken, rpcMethodInfo.rpcId);
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -60,12 +56,10 @@ namespace Unity.ClusterDisplay
 
         private void RemoveRPC (ref RPCMethodInfo rpcMethodInfo)
         {
-            m_RPCs[rpcMethodInfo.rpcId] = default(RPCMethodInfo);
+            m_RPCs.Remove(rpcMethodInfo.rpcId);
             m_RPCLut.Remove(rpcMethodInfo.methodInfo.MetadataToken);
             m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, null);
             m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
-
-            m_RPCCount--;
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -82,19 +76,8 @@ namespace Unity.ClusterDisplay
         public bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => (rpcMethodInfo = m_RPCs[rpcId]).IsValid;
         public void Foreach (System.Action<RPCMethodInfo> callback)
         {
-            ushort rpcIndex = 0, rpcCount = 0;
-            while (rpcIndex < ushort.MaxValue)
-            {
-                if (!m_RPCs[rpcIndex].IsValid)
-                {
-                    rpcIndex++;
-                    continue;
-                }
-
-                callback(m_RPCs[rpcIndex++]);
-                if (++rpcCount >= m_RPCCount)
-                    break;
-            }
+            foreach (var rpcIdAndMethodInfo in m_RPCs)
+                callback(rpcIdAndMethodInfo.Value);
         }
 
         public void SetRPC(ref RPCMethodInfo rpcMethodInfo) => ApplyRPC(ref rpcMethodInfo);
@@ -166,8 +149,10 @@ namespace Unity.ClusterDisplay
 
         public void Clear ()
         {
-            m_IDManager.Clear();
             m_RPCLut.Clear();
+            m_RPCs.Clear();
+            m_SerializedRPCsContainer.Clear();
+            m_IDManager.Clear();
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -176,8 +161,8 @@ namespace Unity.ClusterDisplay
 
         private void Deserialize ()
         {
+            m_RPCs.Clear();
             m_RPCLut.Clear();
-            m_RPCCount = 0;
 
             List<ushort> rpcIdsToAdd = new List<ushort>();
             m_SerializedRPCsContainer.Foreach((serializedRPC) =>

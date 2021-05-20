@@ -855,7 +855,6 @@ namespace Unity.ClusterDisplay
 
                 var customAttribute = targetRPCMethodDef.CustomAttributes.First(ca => ca.AttributeType.FullName == rpcMethodAttributeFullName);
                 if (!TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
-                    /*!TryFindFieldDefinitionWithAttribute<RPCMethod.RPCIDMarker>(customAttribute.AttributeType.Resolve(), out var fieldDef))*/
                     !TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
                     continue;
 

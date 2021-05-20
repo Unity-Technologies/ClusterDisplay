@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
 public class IDManager
 {
     private ushort[] returnedIds = new ushort[ushort.MaxValue];

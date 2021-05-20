@@ -2,10 +2,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
+#if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
+#endif
 
 namespace Unity.ClusterDisplay
 {
+    #if UNITY_EDITOR
+    [InitializeOnLoad]
+    #endif
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {
         private readonly Dictionary<Object, List<ushort>> objects = new Dictionary<Object, List<ushort>>();
@@ -16,18 +24,19 @@ namespace Unity.ClusterDisplay
 
         private bool objectsRegistered = false;
 
-        public void RegisterObject<T> (T sceneObject, ushort rpcId) where T : Object
+        private void Clear ()
         {
-            if (Application.isPlaying)
-                return;
+            objects.Clear();
+            serializedObjects = null;
+            serializedRPCCounts = null;
+            serializedRPCIds = null;
+        }
 
+        private void RegisterObject<T> (T sceneObject, ushort rpcId) where T : Object
+        {
             if (!objects.TryGetValue(sceneObject, out var listOfRPCIds))
                 objects.Add(sceneObject, new List<ushort>() { rpcId });
             else listOfRPCIds.Add(rpcId);
-
-            #if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-            #endif
 
             Debug.Log($"Registered scene object of type: \"{typeof(T).FullName}\".");
         }
@@ -43,11 +52,6 @@ namespace Unity.ClusterDisplay
 
             if (ObjectRegistry.TryGetInstance(out var objectRegistry, throwException: true))
                 objectRegistry.Unregister(sceneObject);
-
-            /*
-            if (RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: true))
-                rpcRegistry.DeincrementMethodReference(rpcId);
-            */
 
             if (objects.Count == 0)
             {
@@ -127,7 +131,50 @@ namespace Unity.ClusterDisplay
             objectsRegistered = true;
         }
 
-        private void Awake() => RegisterObjects();
         private void OnLevelWasLoaded(int level) => RegisterObjects();
+
+        #if UNITY_EDITOR
+        static SceneObjectsRegistry ()
+        {
+            EditorSceneManager.sceneOpened += (Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
+        }
+
+        [UnityEditor.Callbacks.DidReloadScripts]
+        private static void PollUnregisteredInstanceRPCs()
+        {
+            Debug.Log("Polling for unregistered instance RPCs.");
+            if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
+                return;
+
+            Dictionary<string, SceneObjectsRegistry> sceneObjectsRegistry = new Dictionary<string, SceneObjectsRegistry>();
+            rpcRegistry.Foreach((rpcMethodInfo) =>
+            {
+                var type = rpcMethodInfo.methodInfo.DeclaringType;
+                var objs = FindObjectsOfType(type);
+
+                foreach (var obj in objs)
+                {
+                    var component = obj as Component;
+                    if (component == null)
+                        continue;
+
+                    if (!sceneObjectsRegistry.TryGetValue(component.gameObject.scene.path, out var sceneRegistry))
+                    {
+                        var path = component.gameObject.scene.path;
+                        if (!TryGetSceneInstance(path, out sceneRegistry, throwException: false))
+                        {
+                            if (!TryCreateNewInstance(component.gameObject.scene, out sceneRegistry))
+                                continue;
+                        }
+
+                        else sceneRegistry.Clear();
+                        sceneObjectsRegistry.Add(path, sceneRegistry);
+                    }
+
+                    sceneRegistry.RegisterObject(component, rpcMethodInfo.rpcId);
+                }
+            });
+        }
+        #endif
     }
 }

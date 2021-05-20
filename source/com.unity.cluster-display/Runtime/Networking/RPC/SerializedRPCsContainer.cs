@@ -57,7 +57,7 @@ public class SerializedRPCsContainer
         m_Count++;
     }
 
-    public void OnClear()
+    public void Clear()
     {
         serializedData = new SerializedRPC[ushort.MaxValue];
         validData = new bool[ushort.MaxValue];
