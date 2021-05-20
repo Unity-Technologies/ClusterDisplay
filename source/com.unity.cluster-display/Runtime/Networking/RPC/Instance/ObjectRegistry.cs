@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
         public bool TryGetPipeId(Object obj, out ushort pipeId) => pipeIdLut.TryGetValue(obj, out pipeId);
 
         public bool TryPopPipeId(out ushort pipeId) => pipeIdManager.TryPopId(out pipeId);
-        public void PushPipeId(ushort pipeId) => pipeIdManager.PushId(pipeId);
+        public void PushPipeId(ushort pipeId) => pipeIdManager.PushUnutilizedId(pipeId);
 
         public void Register<T> (T obj) where T : Object
         {
@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay
 
                 registeredObjects[pipeId] = null;
                 pipeIdLut.Remove(objects[i]);
-                pipeIdManager.PushId(pipeId);
+                pipeIdManager.PushUnutilizedId(pipeId);
             }
         }
 
@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay
 
             registeredObjects[pipeId] = null;
             pipeIdLut.Remove(obj);
-            pipeIdManager.PushId(pipeId);
+            pipeIdManager.PushUnutilizedId(pipeId);
         }
 
         public void Reset ()

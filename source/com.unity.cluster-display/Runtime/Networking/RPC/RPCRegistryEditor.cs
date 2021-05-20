@@ -104,15 +104,12 @@ namespace Unity.ClusterDisplay
 
                     registeredMethodListPosition = EditorGUILayout.BeginScrollView(registeredMethodListPosition, GUILayout.Height(300));
 
-                    for (ushort i = 0; i < rpcRegistry.RPCUpperBoundID; i++)
+                    rpcRegistry.Foreach((rpcMethodInfo) =>
                     {
-                        if (!rpcRegistry.TryGetRPCByIndex(i, out var rpcMethodInfo))
-                            continue;
-
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
 
-                        if (GUILayout.Button("Select", GUILayout.Width(rpcMethodInfo.IsStatic ? 60 : 90 )))
+                        if (GUILayout.Button("Select", GUILayout.Width(rpcMethodInfo.IsStatic ? 60 : 90)))
                         {
                             targetMethod = rpcMethodInfo.methodInfo;
                             targetType = targetMethod.DeclaringType;
@@ -139,7 +136,7 @@ namespace Unity.ClusterDisplay
                         }
 
                         EditorGUILayout.EndHorizontal();
-                    }
+                    });
 
                     EditorGUILayout.EndScrollView();
                     RPCEditorGUICommon.HorizontalLine();

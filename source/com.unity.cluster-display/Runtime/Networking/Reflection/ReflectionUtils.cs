@@ -196,5 +196,19 @@ namespace Unity.ClusterDisplay
                 .Where(type => includeGenerics ? true : !type.IsGenericType)
                 .ToArray();
         }
+
+        public static MethodInfo[] GetAllMethodsWithAttribute<T> (BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        {
+            var targetAttribute = typeof(T);
+
+            var defaultAssembly = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .FirstOrDefault(assembly => assembly.GetName().Name == ReflectionUtils.DefaultUserAssemblyName);
+
+            return defaultAssembly.GetTypes()
+                .SelectMany(type => type.GetMethods(bindingFlags)
+                    .Where(method => method.CustomAttributes
+                        .Any(customAttribute => customAttribute.AttributeType == targetAttribute))).ToArray();
+        }
     }
 }

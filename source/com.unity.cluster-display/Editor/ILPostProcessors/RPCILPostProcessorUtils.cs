@@ -163,6 +163,20 @@ namespace Unity.ClusterDisplay
             return methodInfo != null;
         }
 
+        private static bool TryFindFieldDefinitionWithAttribute<T> (TypeDefinition typeDef, out FieldDefinition fieldDefinition) where T : Attribute
+        {
+            fieldDefinition = null;
+            var attributeType = typeDef.Module.ImportReference(typeof(T));
+            bool found = (fieldDefinition = typeDef.Fields
+                .Where(field => field.CustomAttributes.Any(customAttribute => customAttribute.AttributeType == attributeType))
+                .FirstOrDefault()) != null;
+
+            if (!found)
+                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
+
+            return found;
+        }
+
         private static bool TryFindParameterWithAttribute<T> (MethodDefinition methodDefinition, out ParameterDefinition parameterDef)
         {
             var parameterAttributeType = methodDefinition.Module.ImportReference(typeof(T));
@@ -175,6 +189,26 @@ namespace Unity.ClusterDisplay
                 Debug.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
 
             return found;
+        }
+
+        private static bool TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<T> (CustomAttribute customAttribute, out int customAttributeArgumentIndex)
+        {
+            var customAttributeArgumentAttributeType = customAttribute.AttributeType.Module.ImportReference(typeof(T));
+            var constructorMethodDef = customAttribute.Constructor.Resolve();
+
+            for (int i = 0; i < customAttribute.Constructor.Parameters.Count; i++)
+            {
+                var parameterDef = constructorMethodDef.Parameters[i].Resolve();
+                if (!parameterDef.CustomAttributes.Any(parameterCustomAttribute => parameterCustomAttribute.AttributeType.FullName == customAttributeArgumentAttributeType.FullName))
+                    continue;
+
+                customAttributeArgumentIndex = i;
+                return true;
+            }
+
+            Debug.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
+            customAttributeArgumentIndex = -1;
+            return false;
         }
 
         private static bool TryGetMethodDefinition (TypeDefinition typeDefinition, ref SerializedRPC inRPCTokenizer, out MethodDefinition methodDefinition)

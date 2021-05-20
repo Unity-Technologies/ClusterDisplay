@@ -5,18 +5,16 @@ using UnityEngine;
 [System.Serializable]
 public class IDManager
 {
-    [SerializeField][HideInInspector] private ushort[] returnedIds = new ushort[ushort.MaxValue];
-    [SerializeField][HideInInspector] private ushort returnedIdsIndex = 0;
+    private ushort[] returnedIds = new ushort[ushort.MaxValue];
+    private ushort returnedIdsIndex = 0;
 
-    [SerializeField][HideInInspector] private ushort[] serializedIds = new ushort[ushort.MaxValue];
+    private ushort[] serializedIds = new ushort[ushort.MaxValue];
 
-    [SerializeField][HideInInspector] private ushort serializedIdCount = 0;
+    private ushort serializedIdCount = 0;
     public ushort SerializedIdCount => serializedIdCount;
 
-    [SerializeField][HideInInspector] private ushort newIdIndex = 0;
+    private ushort newIdIndex = 0;
     public ushort UpperBoundID => newIdIndex;
-
-    public bool HasSerializedData => serializedIdCount > 0;
     public ushort this[ushort index] => serializedIds[index];
 
     public bool TryPopId (out ushort id)
@@ -39,7 +37,15 @@ public class IDManager
         return true;
     }
 
-    public void PushId (ushort id)
+    public void PushSetOfIds (ushort[] ids, ushort largestId)
+    {
+        for (int i = 0; i < ids.Length; i++)
+            serializedIds[ids[i]] = ids[i];
+        serializedIdCount += (ushort)ids.Length;
+        newIdIndex = (ushort)(largestId + 1);
+    }
+
+    public void PushUnutilizedId (ushort id)
     {
         returnedIds[returnedIdsIndex++] = id;
         serializedIdCount--;

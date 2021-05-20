@@ -120,6 +120,7 @@ namespace Unity.ClusterDisplay
             if (!ClusterDisplayState.IsClusterLogicEnabled)
             {
                 Debug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
+                stateSetter.SetIsMaster(true);
                 return;
             }
 
@@ -273,8 +274,6 @@ namespace Unity.ClusterDisplay
                     LocalNode = slave;
                     stateSetter.SetIsMaster(false);
                 }
-
-
 
                 return true;
             }

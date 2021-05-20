@@ -35,19 +35,23 @@ namespace Unity.ClusterDisplay
         private readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
         private readonly RPCMethodInfo[] m_RPCs = new RPCMethodInfo[ushort.MaxValue];
 
+        public int m_RPCCount = 0;
+        public int RPCCount => m_RPCCount;
+
         private void ApplyRPC (ref RPCMethodInfo rpcMethodInfo)
         {
             if (!IsSerializing)
             {
                 if (!RPCSerializer.TrySerializeMethodInfo(ref rpcMethodInfo, out var serializedRPC))
                     return;
-                else m_IDManager.SetData(rpcMethodInfo.rpcId, serializedRPC);
+                else m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, serializedRPC);
             }
 
             m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
-
             if (!m_RPCLut.ContainsKey(rpcMethodInfo.methodInfo.MetadataToken))
                 m_RPCLut.Add(rpcMethodInfo.methodInfo.MetadataToken, rpcMethodInfo.rpcId);
+
+            m_RPCCount++;
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -58,8 +62,10 @@ namespace Unity.ClusterDisplay
         {
             m_RPCs[rpcMethodInfo.rpcId] = default(RPCMethodInfo);
             m_RPCLut.Remove(rpcMethodInfo.methodInfo.MetadataToken);
-            m_IDManager.SetData(rpcMethodInfo.rpcId, null);
-            m_IDManager.PushId(rpcMethodInfo.rpcId);
+            m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, null);
+            m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
+
+            m_RPCCount--;
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -69,19 +75,32 @@ namespace Unity.ClusterDisplay
         private void RemoveRPCOnDeserialize (ushort rpcId)
         {
             m_RPCs[rpcId] = default(RPCMethodInfo);
-            m_IDManager.SetData(rpcId, null);
-            m_IDManager.PushId(rpcId);
+            m_SerializedRPCsContainer.SetData(rpcId, null);
+            m_IDManager.PushUnutilizedId(rpcId);
         }
 
         public bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => (rpcMethodInfo = m_RPCs[rpcId]).IsValid;
-        public bool TryGetRPCByIndex (ushort rpcIndex, out RPCMethodInfo rpcMethodInfo) => (rpcMethodInfo = m_RPCs[m_IDManager.GetDataByIndex(rpcIndex).rpcId]).IsValid;
+        public void Foreach (System.Action<RPCMethodInfo> callback)
+        {
+            ushort rpcIndex = 0, rpcCount = 0;
+            while (rpcIndex < ushort.MaxValue)
+            {
+                if (!m_RPCs[rpcIndex].IsValid)
+                {
+                    rpcIndex++;
+                    continue;
+                }
+
+                callback(m_RPCs[rpcIndex++]);
+                if (++rpcCount >= m_RPCCount)
+                    break;
+            }
+        }
 
         public void SetRPC(ref RPCMethodInfo rpcMethodInfo) => ApplyRPC(ref rpcMethodInfo);
 
-        public ushort RPCCount => m_IDManager.SerializedIdCount;
-        public ushort RPCUpperBoundID => m_IDManager.UpperBoundID;
-
-        [SerializeField][HideInInspector] private IDManager<SerializedRPC> m_IDManager = new IDManager<SerializedRPC>();
+        [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
+        [SerializeField][HideInInspector] private SerializedRPCsContainer m_SerializedRPCsContainer = new SerializedRPCsContainer();
 
         private static string cachedRPCStubsPath = null;
         public static string RPCStubsPath
@@ -101,13 +120,6 @@ namespace Unity.ClusterDisplay
             {
                 Debug.LogError($"Cannot add RPC method: \"{methodInfo.Name}\" from declaring type: \"{methodInfo.DeclaringType}\", it has already been registered!");
                 rpcMethodInfo = default(RPCMethodInfo);
-                /*
-                if (!TryGetRPC(rpcId, out rpcMethodInfo))
-                    return false;
-
-                rpcMethodInfo.instanceCount++;
-                ApplyRPC(ref rpcMethodInfo);
-                */
                 return true;
             }
 
@@ -136,15 +148,7 @@ namespace Unity.ClusterDisplay
         {
             if (!TryGetRPC(rpcId, out var rpcMethodInfo))
                 return;
-
             RemoveRPC(ref rpcMethodInfo);
-            /*
-            rpcMethodInfo.instanceCount--;
-
-            if (rpcMethodInfo.instanceCount == 0)
-                RemoveRPC(ref rpcMethodInfo);
-            else ApplyRPC(ref rpcMethodInfo);
-            */
 
             Debug.Log($"Unregistered method: \"{rpcMethodInfo.methodInfo.Name}\" with UUID: \"{rpcMethodInfo.rpcId}\".");
         }
@@ -172,39 +176,42 @@ namespace Unity.ClusterDisplay
 
         private void Deserialize ()
         {
-            if (!m_IDManager.HasSerializedData)
-                return;
+            m_RPCLut.Clear();
+            m_RPCCount = 0;
 
-            for (ushort rpcIndex = 0; rpcIndex < m_IDManager.SerializedIdCount; rpcIndex++)
+            List<ushort> rpcIdsToAdd = new List<ushort>();
+            m_SerializedRPCsContainer.Foreach((serializedRPC) =>
             {
-                var serializedRpcMethodInfo = m_IDManager.GetDataByIndex(rpcIndex);
-                var rpcId = serializedRpcMethodInfo.rpcId;
-
-                Debug.Log($"Deserialized RPC Execution Stage: {serializedRpcMethodInfo.rpcExecutionStage}");
-                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRpcMethodInfo, out var rpcExecutionStage, out var methodInfo))
+                Debug.Log($"Deserialized RPC Execution Stage: {serializedRPC.rpcExecutionStage}");
+                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out var rpcExecutionStage, out var methodInfo))
                 {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedRpcMethodInfo.methodName}\", declared in type: \"{serializedRpcMethodInfo.declaryingTypeFullName}\".");
-                    RemoveRPCOnDeserialize(rpcId);
-                    continue;
+                    Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
+                    RemoveRPCOnDeserialize(serializedRPC.rpcId);
+                    return;
                 }
 
-                /*
-                if (!TryIncrementMethodReference(
-                    methodInfo.DeclaringType, 
-                    methodInfo, 
-                    rpcExecutionStage, 
-                    out var _))
-                {
-                    RemoveRPCOnDeserialize(rpcId);
-                    continue;
-                }
-                */
-
-                var deserializedRPCMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
+                var deserializedRPCMethodInfo = new RPCMethodInfo(serializedRPC.rpcId, rpcExecutionStage, methodInfo);
                 ApplyRPC(ref deserializedRPCMethodInfo);
+                rpcIdsToAdd.Add(serializedRPC.rpcId);
 
-                Debug.Log($"Successfully deserialized method: \"{serializedRpcMethodInfo.methodName}\", declared in type: \"{serializedRpcMethodInfo.declaryingTypeFullName}\".");
+                Debug.Log($"Successfully deserialized method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
+            });
+
+            var methodsWithRPCAttribute = ReflectionUtils.GetAllMethodsWithAttribute<RPCMethod>();
+            foreach (var methodInfo in methodsWithRPCAttribute)
+            {
+                var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPCMethod>();
+                rpcIdsToAdd.Add(rpcMethodAttribute.rpcId);
+
+                var rpcMethodInfo = new RPCMethodInfo(rpcMethodAttribute.rpcId, rpcMethodAttribute.rpcExecutionStage, methodInfo);
+                ApplyRPC(ref rpcMethodInfo);
+
+                Debug.Log($"Registered RPC with {nameof(RPCMethod)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
             }
+
+            rpcIdsToAdd.Sort();
+            ushort largestId = rpcIdsToAdd.Last();
+            m_IDManager.PushSetOfIds(rpcIdsToAdd.ToArray(), largestId);
         }
 
         private void Serialize ()
@@ -212,10 +219,8 @@ namespace Unity.ClusterDisplay
             if (!m_IsDirty)
                 return;
 
-            List<SerializedRPC> list = new List<SerializedRPC>(m_IDManager.SerializedIdCount);
-            for (ushort i = 0; i < m_IDManager.UpperBoundID; i++)
-                list.Add(m_IDManager.GetDataByIndex(i));
-
+            List<SerializedRPC> list = new List<SerializedRPC>(m_SerializedRPCsContainer.Count);
+            m_SerializedRPCsContainer.Foreach((serializedRPC) => list.Add(serializedRPC));
             RPCSerializer.TryWriteRPCStubs(RPCStubsPath, list.ToArray());
             m_IsDirty = false;
         }

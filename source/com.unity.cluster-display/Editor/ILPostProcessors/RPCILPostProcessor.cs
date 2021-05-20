@@ -581,12 +581,6 @@ namespace Unity.ClusterDisplay
             if (compiledAssembly.Name != ReflectionUtils.DefaultUserAssemblyName)
                 return false;
 
-            if (!RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out serializedRPCs))
-                return false;
-
-            if (serializedRPCs.Length == 0)
-                return false;
-
             if (!TryGetAssemblyDefinitionFor(compiledAssembly, out assemblyDef))
                 return false;
 
@@ -688,6 +682,97 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private void ProcessMethodDef (
+            AssemblyDefinition compiledAssemblyDef,
+            ModuleDefinition rpcInterfacesModuleDef,
+            TypeReference rpcInterfacesTypeRef,
+            ILProcessor onTryCallILProcessor,
+            Instruction firstOfOnTryFailureInstructions,
+            Instruction lastSwitchJmpOfOnTryCallMethod,
+            MethodReference objectRegistryTryGetItemMethodRef,
+            ushort rpcId,
+            MethodDefinition targetRPCMethodDef,
+            RPCExecutionStage rpcExecutionStage)
+        {
+            if (!TryInjectBridgeToRPCPropagation(
+                compiledAssemblyDef,
+                rpcId,
+                targetRPCMethodDef))
+                return;
+
+            Instruction firstInstructionOfOnTryCallSwitchCase = null;
+            var serializedRPCExecutionStage = rpcExecutionStage;
+            if (serializedRPCExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
+            {
+                InjectImmediateInstanceRPCExecution(
+                    rpcInterfacesModuleDef,
+                    ilProcessor: onTryCallILProcessor,
+                    injectBeforeInstruction: firstOfOnTryFailureInstructions,
+                    objectRegistryTryGetItemMethodRef,
+                    targetMethodToExecute: targetRPCMethodDef,
+                    hasBooleanReturn: true,
+                    firstInstructionOfInjection: out firstInstructionOfOnTryCallSwitchCase);
+            }
+
+            else
+            {
+                if (TryGetExecuteQueuedRPCMethodILProcessor(
+                    rpcInterfacesModuleDef,
+                    rpcInterfacesTypeRef,
+                    serializedRPCExecutionStage,
+                    out var executeQueuedRPCMethodILProcessor))
+                {
+                    if (!TryInjectQueueOnArrival(
+                        rpcInterfacesModuleDef,
+                        onTryCallILProcessor,
+                        injectBeforeInstruction: firstOfOnTryFailureInstructions,
+                        serializedRPCExecutionStage,
+                        firstInstruction: out firstInstructionOfOnTryCallSwitchCase))
+                        return;
+
+                    var firstExecuteQueuedRPCMethodInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[0];
+
+                    Instruction lastExecuteQueuedRPCSwitchJmpInstruction = null;
+                    if (lastSwitchJmpInstruction == null || !lastSwitchJmpInstruction.TryGetValue(serializedRPCExecutionStage, out lastExecuteQueuedRPCSwitchJmpInstruction))
+                    {
+                        lastExecuteQueuedRPCSwitchJmpInstruction = firstExecuteQueuedRPCMethodInstruction;
+                        if (lastSwitchJmpInstruction == null)
+                            lastSwitchJmpInstruction = new Dictionary<RPCExecutionStage, Instruction>() { { serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction } };
+                        else lastSwitchJmpInstruction.Add(serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
+                    }
+
+                    var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
+
+                    InjectImmediateInstanceRPCExecution(
+                        rpcInterfacesModuleDef,
+                        executeQueuedRPCMethodILProcessor,
+                        injectBeforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
+                        objectRegistryTryGetItemMethodRef,
+                        targetMethodToExecute: targetRPCMethodDef,
+                        hasBooleanReturn: false,
+                        firstInstructionOfInjection: out var firstInstructionOfExecuteQueuedRPCMethod);
+
+                    InjectSwitchJmp(
+                        executeQueuedRPCMethodILProcessor,
+                        afterInstruction: lastExecuteQueuedRPCSwitchJmpInstruction,
+                        valueToPushForBeq: rpcId,
+                        jmpToInstruction: firstInstructionOfExecuteQueuedRPCMethod,
+                        lastInstructionOfSwitchJmp: out lastExecuteQueuedRPCSwitchJmpInstruction);
+
+                    lastSwitchJmpInstruction[serializedRPCExecutionStage] = lastExecuteQueuedRPCSwitchJmpInstruction;
+                }
+            }
+
+            InjectSwitchJmp(
+                onTryCallILProcessor,
+                afterInstruction: lastSwitchJmpOfOnTryCallMethod,
+                valueToPushForBeq: rpcId,
+                jmpToInstruction: firstInstructionOfOnTryCallSwitchCase,
+                lastInstructionOfSwitchJmp: out lastSwitchJmpOfOnTryCallMethod);
+
+            Debug.Log($"Injected RPC intercept assembly into method: \"{targetRPCMethodDef.Name}\" in class: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
+        }
+
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
             if (!TrySetup(
@@ -713,98 +798,84 @@ namespace Unity.ClusterDisplay
             Instruction lastSwitchJmpOfOnTryCallMethod = null;
             lastSwitchJmpOfOnTryCallMethod = firstOnTryInstruction;
 
-            foreach (var serializedRPC in serializedRPCs)
+            List<ushort> usedRPCIds = new List<ushort>();
+            if (RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out serializedRPCs) && serializedRPCs.Length > 0)
             {
-                var rpc = serializedRPC;
-                if (rpc.declaringAssemblyName != compiledAssembly.Name)
-                    continue;
-
-                Debug.Log($"Post processing compiled assembly: \"{compiledAssembly.Name}\".");
-
-                var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
-                if (!TryGetMethodDefinition(typeDefinition, ref rpc, out var targetRPCMethodDef))
+                foreach (var serializedRPC in serializedRPCs)
                 {
-                    Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
-                    continue;
-                }
+                    var rpc = serializedRPC;
+                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
 
-                if (!TryInjectBridgeToRPCPropagation(
-                    compiledAssemblyDef, 
-                    rpc.rpcId, 
-                    targetRPCMethodDef))
-                    continue;
+                    if (!TryGetMethodDefinition(typeDefinition, ref rpc, out var targetRPCMethodDef))
+                    {
+                        Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
+                        continue;
+                    }
 
-                Instruction firstInstructionOfOnTryCallSwitchCase = null;
-                var serializedRPCExecutionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
-                if (serializedRPCExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
-                {
-                    InjectImmediateInstanceRPCExecution(
-                        rpcInterfacesModuleDef,
-                        ilProcessor: onTryCallILProcessor,
-                        injectBeforeInstruction: firstOfOnTryFailureInstructions,
-                        objectRegistryTryGetItemMethodRef,
-                        targetMethodToExecute: targetRPCMethodDef,
-                        hasBooleanReturn: true,
-                        firstInstructionOfInjection: out firstInstructionOfOnTryCallSwitchCase);
-                }
+                    Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
 
-                else
-                {
-                    if (TryGetExecuteQueuedRPCMethodILProcessor(
+                    ProcessMethodDef(
+                        compiledAssemblyDef,
                         rpcInterfacesModuleDef,
                         rpcInterfacesTypeRef,
-                        serializedRPCExecutionStage,
-                        out var executeQueuedRPCMethodILProcessor))
-                    {
-                        if (!TryInjectQueueOnArrival(
-                            rpcInterfacesModuleDef,
-                            onTryCallILProcessor,
-                            injectBeforeInstruction: firstOfOnTryFailureInstructions,
-                            serializedRPCExecutionStage,
-                            firstInstruction: out firstInstructionOfOnTryCallSwitchCase))
-                            continue;
+                        onTryCallILProcessor,
+                        firstOfOnTryFailureInstructions,
+                        lastSwitchJmpOfOnTryCallMethod,
+                        objectRegistryTryGetItemMethodRef,
+                        rpc.rpcId,
+                        targetRPCMethodDef,
+                        (RPCExecutionStage)rpc.rpcExecutionStage);
 
-                        var firstExecuteQueuedRPCMethodInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[0];
-
-                        Instruction lastExecuteQueuedRPCSwitchJmpInstruction = null;
-                        if (lastSwitchJmpInstruction == null || !lastSwitchJmpInstruction.TryGetValue(serializedRPCExecutionStage, out lastExecuteQueuedRPCSwitchJmpInstruction))
-                        {
-                            lastExecuteQueuedRPCSwitchJmpInstruction = firstExecuteQueuedRPCMethodInstruction;
-                            if (lastSwitchJmpInstruction == null)
-                                lastSwitchJmpInstruction = new Dictionary<RPCExecutionStage, Instruction>() { { serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction } };
-                            else lastSwitchJmpInstruction.Add(serializedRPCExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
-                        }
-
-                        var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
-
-                        InjectImmediateInstanceRPCExecution(
-                            rpcInterfacesModuleDef,
-                            executeQueuedRPCMethodILProcessor,
-                            injectBeforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
-                            objectRegistryTryGetItemMethodRef,
-                            targetMethodToExecute: targetRPCMethodDef,
-                            hasBooleanReturn: false,
-                            firstInstructionOfInjection: out var firstInstructionOfExecuteQueuedRPCMethod);
-
-                        InjectSwitchJmp(
-                            executeQueuedRPCMethodILProcessor,
-                            afterInstruction: lastExecuteQueuedRPCSwitchJmpInstruction,
-                            valueToPushForBeq: rpc.rpcId,
-                            jmpToInstruction: firstInstructionOfExecuteQueuedRPCMethod,
-                            lastInstructionOfSwitchJmp: out lastExecuteQueuedRPCSwitchJmpInstruction);
-
-                        lastSwitchJmpInstruction[serializedRPCExecutionStage] = lastExecuteQueuedRPCSwitchJmpInstruction;
-                    }
+                    usedRPCIds.Add(rpc.rpcId);
                 }
+            }
 
-                InjectSwitchJmp(
+            int lastRPCId = -1;
+            if (usedRPCIds.Count > 0)
+            {
+                usedRPCIds.Sort();
+                lastRPCId = usedRPCIds.Last();
+            }
+
+            var rpcMethodCustomAttributeType = typeof(RPCMethod);
+            var rpcMethodCustomAttributeTypeRef = rpcInterfacesModuleDef.ImportReference(rpcMethodCustomAttributeType);
+            string rpcMethodAttributeFullName = rpcMethodCustomAttributeType.FullName;
+            var rpcMethodAttributeRPCExecutionStageArgument = rpcInterfacesModuleDef.ImportReference(typeof(RPCExecutionStage));
+            var methodDefs = compiledAssemblyDef.Modules
+                .SelectMany(moduleDef => moduleDef.Types
+                    .SelectMany(type => type.Methods
+                        .Where(method => method.CustomAttributes
+                            .Any(customAttribute => 
+                            customAttribute.HasConstructorArguments &&
+                            customAttribute.AttributeType.FullName == rpcMethodAttributeFullName))));
+
+            foreach (var targetRPCMethodDef in methodDefs)
+            {
+                Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
+
+                var customAttribute = targetRPCMethodDef.CustomAttributes.First(ca => ca.AttributeType.FullName == rpcMethodAttributeFullName);
+                if (!TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
+                    /*!TryFindFieldDefinitionWithAttribute<RPCMethod.RPCIDMarker>(customAttribute.AttributeType.Resolve(), out var fieldDef))*/
+                    !TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
+                    continue;
+
+                var rpcExecutionStageAttributeArgument = customAttribute.ConstructorArguments[rpcExecutionStageAttributeArgumentIndex];
+
+                ProcessMethodDef(
+                    compiledAssemblyDef,
+                    rpcInterfacesModuleDef,
+                    rpcInterfacesTypeRef,
                     onTryCallILProcessor,
-                    afterInstruction: lastSwitchJmpOfOnTryCallMethod,
-                    valueToPushForBeq: rpc.rpcId,
-                    jmpToInstruction: firstInstructionOfOnTryCallSwitchCase,
-                    lastInstructionOfSwitchJmp: out lastSwitchJmpOfOnTryCallMethod);
+                    firstOfOnTryFailureInstructions,
+                    lastSwitchJmpOfOnTryCallMethod,
+                    objectRegistryTryGetItemMethodRef,
+                    (ushort)++lastRPCId,
+                    targetRPCMethodDef,
+                    (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value);
 
-                Debug.Log($"Injected RPC intercept assembly into method: \"{targetRPCMethodDef.Name}\" in class: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
+                var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];
+                customAttribute.ConstructorArguments.RemoveAt(rpcIdAttributeArgumentIndex);
+                customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(customAttributeArgument.Type, lastRPCId));
             }
 
             InjectDefaultSwitchReturn(
