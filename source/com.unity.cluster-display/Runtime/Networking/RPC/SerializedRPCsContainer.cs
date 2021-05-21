@@ -6,11 +6,10 @@ using UnityEngine;
 public class SerializedRPCsContainer
 {
     [SerializeField][HideInInspector] private SerializedRPC[] serializedData = new SerializedRPC[ushort.MaxValue];
+    [SerializeField][HideInInspector] private bool[] validData = new bool[ushort.MaxValue];
+    [SerializeField][HideInInspector] private int m_Count = 0;
+
     public SerializedRPC[] SerializedData => serializedData;
-
-    [SerializeField] private bool[] validData = new bool[ushort.MaxValue];
-
-    private int m_Count = 0;
     public int Count => m_Count;
 
     public void Foreach (System.Action<SerializedRPC> callback)

@@ -65,23 +65,22 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
-        private static bool TryGetOpCodeForParameter (int parameterIndex, out OpCode opCode)
+        private static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool byReference)
         {
-            opCode = OpCodes.Nop;
-            switch (parameterIndex)
+            if (byReference)
+                return Instruction.Create(OpCodes.Ldarga_S, parameterDefinition);
+
+            switch (parameterDefinition.Index)
             {
                 case 0:
-                    opCode = OpCodes.Ldarg_1;
-                    return true;
+                    return Instruction.Create(OpCodes.Ldarg_1);
                 case 1:
-                    opCode = OpCodes.Ldarg_2;
-                    return true;
+                    return Instruction.Create(OpCodes.Ldarg_2);
                 case 2:
-                    opCode = OpCodes.Ldarg_3;
-                    return true;
+                    return Instruction.Create(OpCodes.Ldarg_3);
+                default:
+                    return Instruction.Create(OpCodes.Ldarg_S, parameterDefinition);
             }
-
-            return false;
         }
 
         private static string GetAssemblyLocation (AssemblyNameReference name) => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == name.Name).Location;
@@ -126,22 +125,19 @@ namespace Unity.ClusterDisplay
                             customAttribute.AttributeType.FullName == attributeTypeRef.FullName;
                     })).FirstOrDefault()) != null;
 
+            methodDef = methodDef.Resolve();
+
             if (!found)
                 Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
 
             return found;
         }
 
-        private static bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
+        private static bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
         {
             var attributeType = typeof(T);
-            var found = (methodInfo = type.GetMethods()
-                .Where(method => method.CustomAttributes
-                    .Any(customAttribute =>
-                    {
-                        return
-                            customAttribute.AttributeType.FullName == attributeType.FullName;
-                    })).FirstOrDefault()) != null;
+            var methods = type.GetMethods(bindingFlags);
+            var found = (methodInfo = methods.FirstOrDefault(method => method.GetCustomAttribute<T>() != null)) != null;
 
             if (!found)
                 Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");

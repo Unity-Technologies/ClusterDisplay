@@ -16,5 +16,7 @@ namespace Unity.ClusterDisplay
         private Dictionary<RPCExecutionStage, ILProcessor> cachedExecuteQueuedRPCMethodILProcessors;
         private Dictionary<RPCExecutionStage, Instruction> lastSwitchJmpInstruction;
         private MethodInfo cachedGetIsMasterMethod;
+
+        private MethodReference cachedDebugLogMethodRef;
     }
 }

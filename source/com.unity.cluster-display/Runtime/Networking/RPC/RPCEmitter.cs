@@ -63,12 +63,13 @@ namespace Unity.ClusterDisplay
                 ParseRPCId(ref bufferPos, out var rpcId);
                 ParsePipeID(ref bufferPos, out var pipeId);
                 ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
+                ushort parametersStartingPos = bufferPos;
 
                 UnityEngine.Debug.Log($"Received RPC: (ID: {rpcId}, Pipe ID: {pipeId - 1}, Parameters Payload Size: {parametersPayloadSize})");
 
                 if (pipeId == 0)
                 {
-                    RPCInterfaceRegistry.TryCallStatic(rpcId, parametersPayloadSize, ref bufferPos);
+                    // RPCInterfaceRegistry.TryCallStatic(rpcId, parametersPayloadSize, ref bufferPos);
                     continue;
                 }
 
@@ -78,6 +79,12 @@ namespace Unity.ClusterDisplay
                     (ushort)(pipeId - 1), 
                     parametersPayloadSize, 
                     ref bufferPos);
+
+                if (parametersPayloadSize > 0 && parametersStartingPos == bufferPos)
+                {
+                    UnityEngine.Debug.LogError("Unable to call RPC instance, check IL Postprocessors.");
+                    break;
+                }
 
             } while (true);
 

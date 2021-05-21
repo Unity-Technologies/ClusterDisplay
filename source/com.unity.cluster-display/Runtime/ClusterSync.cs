@@ -43,7 +43,8 @@ namespace Unity.ClusterDisplay
         public ClusterDisplayResources Resources => _clusterDisplayResources;
 
 #if UNITY_EDITOR
-        public string m_EditorCmdLine = "";
+        [SerializeField] private string m_EditorCmdLine = "";
+        [SerializeField] private bool m_IgnoreEditorCmdLine = false;
 #endif
         internal ClusterNode LocalNode { get; set; }
 
@@ -112,7 +113,8 @@ namespace Unity.ClusterDisplay
             // Grab command line args related to cluster config
             var args = System.Environment.GetCommandLineArgs().ToList();
 #if UNITY_EDITOR
-            args = m_EditorCmdLine.Split(' ').ToList();
+            if (!m_IgnoreEditorCmdLine)
+                args = m_EditorCmdLine.Split(' ').ToList();
 #endif
             var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
             stateSetter.SetCLusterLogicEnabled(startIndex > -1);

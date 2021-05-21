@@ -45,8 +45,30 @@ namespace Unity.ClusterDisplay
         {
             if (!sceneInstances.TryGetValue(scenePath, out instance))
             {
-                if (throwException)
-                    throw new System.Exception($"There is no isntance of type: \"{typeof(T).FullName} in scene: \"{scenePath}\".");
+                var instances = FindObjectsOfType<T>();
+                if (instances.Length == 0)
+                {
+                    if (throwException)
+                        throw new System.Exception($"There are no instances of type: \"{typeof(T).FullName} in scene: \"{scenePath}\".");
+                    return false;
+                }
+
+                for (int i = 0; i < instances.Length; i++)
+                {
+                    if (instances[i].gameObject.scene.path != scenePath)
+                        continue;
+
+                    if (instance != null)
+                    {
+                        if (!Application.isPlaying)
+                            GameObject.DestroyImmediate(instances[i].gameObject);
+                        else GameObject.Destroy(instances[i].gameObject);
+                        continue;
+                    }
+
+                    instance = instances[i];
+                }
+
                 return false;
             }
 

@@ -17,16 +17,16 @@ namespace Unity.ClusterDisplay
         private bool TryInjectBridgeToRPCPropagation (
             AssemblyDefinition assemblyDef, 
             ushort rpcId, 
-            MethodDefinition targetMethod)
+            MethodDefinition targetMethodDef)
         {
-            var beforeInstruction = targetMethod.Body.Instructions.First();
-            var il = targetMethod.Body.GetILProcessor();
+            var beforeInstruction = targetMethodDef.Body.Instructions.First();
+            var il = targetMethodDef.Body.GetILProcessor();
             var rpcEmitterType = typeof(RPCEmitter);
 
             var rpcEmitterTypeReference = assemblyDef.MainModule.ImportReference(rpcEmitterType);
 
             MethodInfo appendRPCMethodInfo = null;
-            if (!targetMethod.IsStatic)
+            if (!targetMethodDef.IsStatic)
             {
                 if (!TryFindMethodWithAttribute<RPCEmitter.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay
             var openRPCLatchMethodRef = assemblyDef.MainModule.ImportReference(appendRPCMethodInfo);
             var copyValueToBufferMethodRef = assemblyDef.MainModule.ImportReference(copyValueToBufferMethodInfo);
 
-            var parameters = targetMethod.Parameters;
+            var parameters = targetMethodDef.Parameters;
             ushort sizeOfAllParameters = 0;
             foreach (var param in parameters)
             {
@@ -74,22 +74,18 @@ namespace Unity.ClusterDisplay
             InjectOpenRPCLatchCall(
                 il, 
                 previousInstruction, 
-                targetMethod.IsStatic, 
+                targetMethodDef.IsStatic, 
                 rpcId, 
                 openRPCLatchMethodRef, 
                 sizeOfAllParameters,
                 out previousInstruction);
 
-            int parameterIndex = 0;
             foreach (var param in parameters)
             {
                 var genericInstanceMethod = new GenericInstanceMethod(copyValueToBufferMethodRef);
                 genericInstanceMethod.GenericArguments.Add(param.ParameterType);
 
-                if (!TryGetOpCodeForParameter(parameterIndex++, out var opCode))
-                    return false;
-
-                newInstruction = Instruction.Create(opCode);
+                newInstruction = PushParameterToStack(param, param.IsOut || param.IsIn);
                 il.InsertAfter(previousInstruction, newInstruction);
                 previousInstruction = newInstruction;
 
@@ -281,13 +277,13 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private bool InjectImmediateInstanceRPCExecution (
+        private bool InjectRPCExecution (
             ModuleDefinition moduleDef,
             ILProcessor ilProcessor,
             Instruction injectBeforeInstruction,
             MethodReference objectRegistryGetItemMethodRef,
             MethodReference targetMethodToExecute,
-            bool hasBooleanReturn,
+            bool isImmediateRPCExeuction,
             out Instruction firstInstructionOfInjection)
         {
             if (!TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod) ||
@@ -299,12 +295,27 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            firstInstructionOfInjection = Instruction.Create(OpCodes.Ldarg_S, objectParamDef);
+            Instruction newInstruction = null;
+
+            /*
+            firstInstructionOfInjection = Instruction.Create(OpCodes.Nop);
+            ilProcessor.InsertBefore(injectBeforeInstruction, firstInstructionOfInjection);
+            var afterInstruction = firstInstructionOfInjection;
+            */
+
+            // InsertDebugMessage(moduleDef, ilProcessor, "HELLO", afterInstruction, out afterInstruction);
+
+            /*
+            newInstruction = PushParameterToStack(objectParamDef, false);
+            ilProcessor.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+            */
+
+            firstInstructionOfInjection = PushParameterToStack(objectParamDef, false);
             ilProcessor.InsertBefore(injectBeforeInstruction, firstInstructionOfInjection);
             var afterInstruction = firstInstructionOfInjection;
 
-            Instruction newInstruction = null;
-            newInstruction = Instruction.Create(OpCodes.Ldarg_S, pipeIdParamDef); // Load pipeId parameter onto stack.
+            newInstruction = PushParameterToStack(pipeIdParamDef, false); // Load pipeId parameter onto stack.
             ilProcessor.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
@@ -320,7 +331,7 @@ namespace Unity.ClusterDisplay
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
-                if (hasBooleanReturn)
+                if (isImmediateRPCExeuction)
                 {
                     newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
                     ilProcessor.InsertAfter(afterInstruction, newInstruction);
@@ -344,12 +355,7 @@ namespace Unity.ClusterDisplay
                 genericInstanceMethod.GenericArguments.Add(paramRef);
                 var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                /*
-                if (bufferPosParamDef.IsIn || bufferPosParamDef.IsOut)
-                    newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef); // Load bufferPos onto stack as an argument.
-                else newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
-                */
-                newInstruction = Instruction.Create(OpCodes.Ldarga_S, bufferPosParamDef);
+                newInstruction = PushParameterToStack(bufferPosParamDef, !isImmediateRPCExeuction);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -362,7 +368,7 @@ namespace Unity.ClusterDisplay
             ilProcessor.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
-            if (hasBooleanReturn)
+            if (isImmediateRPCExeuction)
             {
                 newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
@@ -395,16 +401,22 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            if (!TryFindMethodDefinitionWithAttribute(derrivedTypeDef, onTryCallMarkerAttributeTypeRef, out var onTryCallMethod))
+            // if (!TryFindMethodWithAttribute<RPCInterfaceRegistry.OnTryCallMarker>(rpcInterfaceRegistryType, out var onTryCallMethodInfo))
+            if (!TryFindMethodDefinitionWithAttribute(derrivedTypeDef, onTryCallMarkerAttributeTypeRef, out var onTryCallMethodDef))
             {
                 derrivedTypeRef = null;
                 il = null;
                 return false;
             }
 
-            var onTryCallMethodDef = assemblyDef.MainModule.ImportReference(onTryCallMethod);
+            derrivedTypeRef = onTryCallMethodDef.DeclaringType;
+            il = onTryCallMethodDef.Body.GetILProcessor();
+
+            /*
+            var onTryCallMethodDef = assemblyDef.MainModule.ImportReference(onTryCallMethodInfo);
             derrivedTypeRef = onTryCallMethodDef.DeclaringType;
             il = onTryCallMethodDef.Resolve().Body.GetILProcessor();
+            */
 
             return true;
         }
@@ -455,10 +467,13 @@ namespace Unity.ClusterDisplay
             ModuleDefinition moduleDefinition,
             out MethodReference objectRegistryGetItemMethodRef)
         {
-            var objectRegistryTypeDef = moduleDefinition.ImportReference(typeof(ObjectRegistry)).Resolve();
-            objectRegistryGetItemMethodRef = moduleDefinition.ImportReference(objectRegistryTypeDef.Methods.Where(method => method.Name == "get_Item").FirstOrDefault());
+            if (!TryFindPropertyGetMethodWithAttribute<ObjectRegistry.ObjectRegistryGetItemMarker>(typeof(ObjectRegistry), out var methodInfo))
+            {
+                objectRegistryGetItemMethodRef = null;
+                return false;
+            }
 
-            return objectRegistryGetItemMethodRef != null;
+            return (objectRegistryGetItemMethodRef = moduleDefinition.ImportReference(methodInfo)) != null;
         }
 
         private bool InjectSwitchJmp (
@@ -468,13 +483,13 @@ namespace Unity.ClusterDisplay
             Instruction jmpToInstruction,
             out Instruction lastInstructionOfSwitchJmp)
         {
-            if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(il.Body.Method, out var objectParamDef))
+            if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(il.Body.Method, out var rpcIdParamDef))
             {
                 lastInstructionOfSwitchJmp = null;
                 return false;
             }
 
-            var newInstruction = Instruction.Create(OpCodes.Ldarg_S, objectParamDef);
+            var newInstruction = PushParameterToStack(rpcIdParamDef, false);
             il.InsertAfter(afterInstruction, newInstruction);
             afterInstruction = newInstruction;
 
@@ -570,6 +585,17 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private bool TryGetCachedDebugLogMethodReference (ModuleDefinition moduleDef, out MethodReference methodReference)
+        {
+            if (cachedDebugLogMethodRef == null)
+            {
+                moduleDef.ImportReference(typeof(Debug));
+                cachedDebugLogMethodRef = moduleDef.ImportReference(typeof(Debug).GetMethods(BindingFlags.Static | BindingFlags.Public).FirstOrDefault(method => method.Name == "Log"));
+            }
+
+            return (methodReference = cachedDebugLogMethodRef) != null;
+        }
+
         private bool TrySetup (
             ICompiledAssembly compiledAssembly, 
             out AssemblyDefinition assemblyDef,
@@ -603,6 +629,8 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
+            rpcInterfacesModule = rpcInterfacesTypeRef.Module;
+
             onTryCallILProcessor.Body.Instructions.Clear();
             onTryCallILProcessor.Body.Variables.Clear();
             onTryCallILProcessor.Body.InitLocals = false;
@@ -613,8 +641,22 @@ namespace Unity.ClusterDisplay
             beginningOfFailureInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
             onTryCallILProcessor.Append(beginningOfFailureInstruction);
             onTryCallILProcessor.Append(Instruction.Create(OpCodes.Ret));
+            return true;
+        }
 
-            rpcInterfacesModule = rpcInterfacesTypeRef.Module;
+        private bool TryInjectDebugLogMessage (ModuleDefinition moduleDef, ILProcessor ilProcessor, Instruction afterInstruction, out Instruction lastInstruction)
+        {
+            if (!TryGetCachedDebugLogMethodReference(moduleDef, out var debugLogMethodRef))
+            {
+                lastInstruction = afterInstruction;
+                return false;
+            }
+
+            lastInstruction = Instruction.Create(OpCodes.Ldstr, "HELLO!");
+            ilProcessor.InsertAfter(afterInstruction, lastInstruction);
+
+            lastInstruction = Instruction.Create(OpCodes.Call, debugLogMethodRef);
+            ilProcessor.InsertAfter(afterInstruction, lastInstruction);
             return true;
         }
 
@@ -688,7 +730,7 @@ namespace Unity.ClusterDisplay
             TypeReference rpcInterfacesTypeRef,
             ILProcessor onTryCallILProcessor,
             Instruction firstOfOnTryFailureInstructions,
-            Instruction lastSwitchJmpOfOnTryCallMethod,
+            ref Instruction lastSwitchJmpOfOnTryCallMethod,
             MethodReference objectRegistryTryGetItemMethodRef,
             ushort rpcId,
             MethodDefinition targetRPCMethodDef,
@@ -704,13 +746,13 @@ namespace Unity.ClusterDisplay
             var serializedRPCExecutionStage = rpcExecutionStage;
             if (serializedRPCExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
             {
-                InjectImmediateInstanceRPCExecution(
+                InjectRPCExecution(
                     rpcInterfacesModuleDef,
                     ilProcessor: onTryCallILProcessor,
                     injectBeforeInstruction: firstOfOnTryFailureInstructions,
                     objectRegistryTryGetItemMethodRef,
                     targetMethodToExecute: targetRPCMethodDef,
-                    hasBooleanReturn: true,
+                    isImmediateRPCExeuction: true,
                     firstInstructionOfInjection: out firstInstructionOfOnTryCallSwitchCase);
             }
 
@@ -743,13 +785,13 @@ namespace Unity.ClusterDisplay
 
                     var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
 
-                    InjectImmediateInstanceRPCExecution(
+                    InjectRPCExecution(
                         rpcInterfacesModuleDef,
                         executeQueuedRPCMethodILProcessor,
                         injectBeforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
                         objectRegistryTryGetItemMethodRef,
                         targetMethodToExecute: targetRPCMethodDef,
-                        hasBooleanReturn: false,
+                        isImmediateRPCExeuction: false,
                         firstInstructionOfInjection: out var firstInstructionOfExecuteQueuedRPCMethod);
 
                     InjectSwitchJmp(
@@ -820,7 +862,7 @@ namespace Unity.ClusterDisplay
                         rpcInterfacesTypeRef,
                         onTryCallILProcessor,
                         firstOfOnTryFailureInstructions,
-                        lastSwitchJmpOfOnTryCallMethod,
+                        ref lastSwitchJmpOfOnTryCallMethod,
                         objectRegistryTryGetItemMethodRef,
                         rpc.rpcId,
                         targetRPCMethodDef,
@@ -830,11 +872,19 @@ namespace Unity.ClusterDisplay
                 }
             }
 
+            Queue<ushort> unusedRPCIds = new Queue<ushort>();
             int lastRPCId = -1;
+
             if (usedRPCIds.Count > 0)
             {
                 usedRPCIds.Sort();
                 lastRPCId = usedRPCIds.Last();
+                for (ushort rpcId = 0; rpcId < lastRPCId; rpcId++)
+                {
+                    if (usedRPCIds.Contains(rpcId))
+                        continue;
+                    unusedRPCIds.Enqueue(rpcId);
+                }
             }
 
             var rpcMethodCustomAttributeType = typeof(RPCMethod);
@@ -860,21 +910,22 @@ namespace Unity.ClusterDisplay
 
                 var rpcExecutionStageAttributeArgument = customAttribute.ConstructorArguments[rpcExecutionStageAttributeArgumentIndex];
 
+                ushort newRPCId = unusedRPCIds.Count > 0 ? unusedRPCIds.Dequeue() : (ushort)++lastRPCId;
                 ProcessMethodDef(
                     compiledAssemblyDef,
                     rpcInterfacesModuleDef,
                     rpcInterfacesTypeRef,
                     onTryCallILProcessor,
                     firstOfOnTryFailureInstructions,
-                    lastSwitchJmpOfOnTryCallMethod,
+                    ref lastSwitchJmpOfOnTryCallMethod,
                     objectRegistryTryGetItemMethodRef,
-                    (ushort)++lastRPCId,
+                    newRPCId,
                     targetRPCMethodDef,
                     (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value);
 
                 var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];
                 customAttribute.ConstructorArguments.RemoveAt(rpcIdAttributeArgumentIndex);
-                customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(customAttributeArgument.Type, lastRPCId));
+                customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(customAttributeArgument.Type, newRPCId));
             }
 
             InjectDefaultSwitchReturn(

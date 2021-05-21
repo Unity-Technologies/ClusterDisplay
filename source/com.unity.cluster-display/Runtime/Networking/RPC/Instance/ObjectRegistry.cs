@@ -7,10 +7,13 @@ namespace Unity.ClusterDisplay
     [CreateAssetMenu(fileName = "ObjectRegistry", menuName = "Cluster Display/Object Registry")]
     public partial class ObjectRegistry : SingletonScriptableObject<ObjectRegistry>
     {
+        [System.AttributeUsage(System.AttributeTargets.Property)]
+        public class ObjectRegistryGetItemMarker : System.Attribute {}
+
         private readonly Object[] registeredObjects = new Object[ushort.MaxValue];
         private readonly Dictionary<Object, ushort> pipeIdLut = new Dictionary<Object, ushort>();
 
-        public Object this[ushort pipeId] => registeredObjects[pipeId];
+        [ObjectRegistryGetItemMarker] public Object this[ushort pipeId] => registeredObjects[pipeId];
 
         private readonly IDManager pipeIdManager = new IDManager();
 
