@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class XRTileLayoutBuilder : TileLayoutBuilder, IXRLayoutBuilder
     {
-        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRTile;
+        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRTile;
 
         private XRTileRTManager m_RTManager = new XRTileRTManager();
         private Rect m_OverscannedRect;

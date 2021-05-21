@@ -22,7 +22,7 @@ We suggest using [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submo
 ) to download the package to more easily update.
 
 ## Requirements
-This package depends on a [custom branch of HDRP](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/hdrp-xr-public-layout-api-cluster-display). The changes in the custom branch are not available through the Package Manager and must checked out and referenced locally in the project's `manifest.json` file.
+This package depends on a [custom branch of Graphics](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/cluster-display/backport/v8.3.1) or [custom branch of Graphics for HDRP XR](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/cluster-display/backport-xr/v8.3.1). The changes in the custom branch are not available through the Package Manager and must checked out and referenced locally in the project's `manifest.json` file.
 
 This package also has a dependency on [com.unity.cluster-display](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display) for the core Cluster Display functionality.
 
@@ -108,19 +108,30 @@ However, if we use a high *scatter* value, artefacts become apparent despite ove
 
 #### ClusterRenderer
 
+Cluster Display supports SRP, HDRP and URP. However, to toggle between HDRP and URP, you must use the following scripting define symbols:
+* `CLUSTER_DISPLAY_URP` For enabling cluster display render pipeline for URP. 
+* `CLUSTER_DISPLAY_HDRP` For enabling cluster display render pipeline for HDRP.
+
+#### XR vs Standard Rendering
+Previously, cluster display worked with a custom HDRP branch that refactored the XR api to become public instead of internal. However, in order to improve compatibility with various SRPs, cluster display has been refactored to support XR mode, standard HDRP mode and standard URP mode. The difference being that XR API will render multiple views using single pass stereo, while the standard mode will render the camera in a for loop. To enable XR mode, you will need to use HDRP and the following scripting define symbols: `CLUSTER_DISPLAY_XR` and `CLUSTER_DISPLAY_HDRP`.
+
 To enable Cluster Display graphics features for a project, add a `ClusterRenderer` component to the scene to be displayed. Only one component of that type is expected to be active at any given time. The `ClusterRenderer` component is responsible for managing projection, overscan and activation of Cluster Display-specific shader features (in HDRP). It also offers some debugging features. This component comes also has a custom inspector.
 
 In normal mode, the inspector exposes `Grid` size, `Physical Screen Size`, `Bezel` and `Overscan`. If no bezel is needed both fields can be safely ignored. Leaving `Physical Screen Size` to zero simply bypasses bezel.
+
 ![ClusterRenderer Inspector Normal](images/ClusterRenderer-InspectorNormal.png)
 
 When `Debug` is enabled, some debugging options are available:
+
 ![ClusterRenderer Inspector Debug](images/ClusterRenderer-InspectorDebug.png)
 
 * **Tile Index Override**: the tile index is typically inferred from the synchronization/networking API, but this field lets users manually override the tile index for debugging purposes. The tile displayed by the machine may be manually changed at runtime. Please note that this override is always used when debug mode is active.
 
 * **Enable Keyword**: a shader keyword is used to enable/disable Cluster Display related shader features (implemented in HDRP and user code). Toggling this at runtime lets users compare *normal* vs. *Cluster* rendering. Useful for validating Cluster-specific shader modifications.
 
-* **Enable Stitcher**: when the stitcher is enabled, a single machine will render **all** cluster tiles and compose them appropriately. This allows users to preview the full cluster output without deploying on actual cluster hardware. Please keep in mind that tests on actual cluster hardware are still necessary as the stitcher does not replicate all cluster behavior. For example, with the stitcher, there is only one update and one camera render per tile, while on actual cluster hardware there will be one update followed by one camera render on each cluster machine.
+* **Layout Mode**: Setting the layout mode allows you to switch between **tile** which previews what a single node will render, and the stitcher mode which enables a single machine to render **all** cluster tiles and compose them appropriately. This allows users to preview the full cluster output without deploying on actual cluster hardware. Please keep in mind that tests on actual cluster hardware are still necessary as the stitcher does not replicate all cluster behavior. For example, with the stitcher, there is only one update and one camera render per tile, while on actual cluster hardware there will be one update followed by one camera render on each cluster machine.
+
+* **Bezel Color**: This allows you to manipulate the color of the bezels in between the tiles, this can be handy for debugging.
 
 Users can take control of the viewport subsection rendered by the machine. In that case, the tile index is bypassed and the rectangle corresponding to the viewport subsection can be tweaked directly.
 

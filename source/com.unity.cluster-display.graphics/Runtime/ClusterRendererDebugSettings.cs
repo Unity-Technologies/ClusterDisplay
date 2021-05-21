@@ -40,14 +40,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).
         /// </summary>
-        public int TileIndexOverride
+        public int tileIndexOverride
         {
             get => m_TileIndexOverride;
             set { m_TileIndexOverride = value; }
         }
 
         [SerializeField] ClusterRenderer.LayoutMode m_LayoutMode;
-        public ClusterRenderer.LayoutMode CurrentLayoutMode
+        public ClusterRenderer.LayoutMode currentLayoutMode
         {
             get => m_LayoutMode;
             set
@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// in order to observe cluster-display specific artefacts.
         /// </summary>
         [SerializeField] bool m_EnableKeyword;
-        public bool EnableKeyword
+        public bool enableKeyword
         {
             get => m_EnableKeyword;
             set
@@ -85,7 +85,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// Allows direct control of the viewport subsection.
         /// </summary>
         [SerializeField] Rect m_ViewportSubsection;
-        public Rect ViewportSubsection
+        public Rect viewportSubsection
         {
             get => m_ViewportSubsection;
             set => m_ViewportSubsection = value;
@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// instead of being inferred from tile index and grid size.
         /// </summary>
         [SerializeField] bool m_UseDebugViewportSubsection;
-        public bool UseDebugViewportSubsection
+        public bool useDebugViewportSubsection
         {
             set { m_UseDebugViewportSubsection = value; }
             get { return m_UseDebugViewportSubsection; }
@@ -106,14 +106,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Allows visualization of overscanned pixels in the final render.
         /// </summary>
-        public Vector2 ScaleBiasTexOffset
+        public Vector2 scaleBiasTextOffset
         {
             get => m_ScaleBiasTexOffset;
             set => m_ScaleBiasTexOffset = value;
         }
 
         [SerializeField] Color m_BezelColor;
-        public Color BezelColor
+        public Color bezelColor
         {
             get => m_BezelColor;
             set => m_BezelColor = value;
@@ -124,7 +124,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Reset()
         {
             m_TileIndexOverride = 0;
-            CurrentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
+            currentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
             m_EnableKeyword = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;

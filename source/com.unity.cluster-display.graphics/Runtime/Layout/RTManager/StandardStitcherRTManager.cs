@@ -5,9 +5,13 @@ using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// Manages the set of RenderTextures for stitcher layout rendering. Unfortunately setting Camera.targetTexture to 
+    /// RTHandle seems to be inconsitent. Therefore we use RenderTexture instead.
+    /// </summary>
     public class StandardStitcherRTManager : StitcherRTManager
     {
-        public override RTType Type => RTType.RenderTexture;
+        public override RTType type => RTType.RenderTexture;
         private RenderTexture m_PresentRT;
         private RenderTexture[] m_BlitRTs;
 

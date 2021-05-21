@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class XRStitcherRTManager : StitcherRTManager
     {
-        public override RTType Type => RTType.Handle;
+        public override RTType type => RTType.Handle;
 
         private RTHandle m_PresentTarget;
         private RTHandle[] m_Targets;

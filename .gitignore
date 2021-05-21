@@ -1,6 +1,4 @@
 *.sln
-*.vcxproj*
-*.cmake
 *.swp
 *.csproj
 .DS_Store
@@ -9,7 +7,5 @@ TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
 TestProjects/*/.idea
-*.dll
-**/.vs/*
-**/CMakeFiles/*
-**/out/*
+*.orig
+*.orig.meta

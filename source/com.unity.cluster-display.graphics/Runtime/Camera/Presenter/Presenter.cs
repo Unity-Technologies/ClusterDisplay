@@ -3,10 +3,16 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// The purpose of the presenter is to automatically setup where
+    /// renders are presented. Currently there are two presenting
+    /// modes, one for XR and another for standard which uses
+    /// and canvas UI.
+    /// </summary>
     public abstract class Presenter : ICameraEventReceiver
     {
         protected Camera m_Camera;
-        public abstract RenderTexture PresentRT { get; set; }
+        public abstract RenderTexture presentRT { get; set; }
         public abstract void Dispose();
 
         public void OnCameraContextChange(Camera previousCamera, Camera nextCamera)

@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         [SerializeField] private Camera m_TargetCamera;
         public Camera TargetCamera => m_TargetCamera;
-        public bool CameraReferenceIsValid => m_TargetCamera != null;
+        public bool cameraReferenceIsValid => m_TargetCamera != null;
 
         private void CacheCamera()
         {

@@ -8,8 +8,8 @@ namespace ClusterDisplay.Utils
     [Serializable]
     public class CameraControl : MonoBehaviour
     {
-        public  int numTilesX = 2;
-        public  int numTilesY = 2;
+        public int numTilesX = 2;
+        public int numTilesY = 2;
 
         private Matrix4x4 cameraBackup;
         private bool restoreCam = false;

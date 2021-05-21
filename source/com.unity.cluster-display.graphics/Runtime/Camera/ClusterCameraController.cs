@@ -22,19 +22,22 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
-        public Camera ContextCamera
+        /// <summary>
+        /// Current rendering camera.
+        /// </summary>
+        public Camera contextCamera
         {
             get
             {
                 if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
                     return null;
 
-                if (cameraContextRegistry.FocusedCameraContextTarget == null)
+                if (cameraContextRegistry.focusedCameraContextTarget == null)
                     return null;
 
-                if (!cameraContextRegistry.FocusedCameraContextTarget.TryGetCamera(out var camera))
+                if (!cameraContextRegistry.focusedCameraContextTarget.TryGetCamera(out var camera))
                 {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.FocusedCameraContextTarget, destroy: true);
+                    cameraContextRegistry.UnRegister(cameraContextRegistry.focusedCameraContextTarget, destroy: true);
                     return null;
                 }
 
@@ -42,19 +45,19 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public Camera PreviousContextCamera
+        public Camera previousContextCamera
         {
             get
             {
                 if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
                     return null;
 
-                if (cameraContextRegistry.PreviousFocusedCameraContextTarget == null)
+                if (cameraContextRegistry.previousFocusedCameraContextTarget == null)
                     return null;
 
-                if (!cameraContextRegistry.PreviousFocusedCameraContextTarget.TryGetCamera(out var camera))
+                if (!cameraContextRegistry.previousFocusedCameraContextTarget.TryGetCamera(out var camera))
                 {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.PreviousFocusedCameraContextTarget, destroy: true);
+                    cameraContextRegistry.UnRegister(cameraContextRegistry.previousFocusedCameraContextTarget, destroy: true);
                     return null;
                 }
 
@@ -63,13 +66,13 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
 
-        public bool CameraContextIsSceneViewCamera => CameraIsSceneViewCamera(ContextCamera);
+        public bool cameraContextIsSceneViewCamera => CameraIsSceneViewCamera(contextCamera);
 
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
 
         private Presenter m_Presenter;
-        public Presenter Presenter
+        public Presenter presenter
         {
             get => m_Presenter;
             set
@@ -88,7 +91,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public bool CameraIsInContext(Camera camera)
         {
-            var contextCamera = ContextCamera;
+            var contextCamera = this.contextCamera;
             return contextCamera != null && contextCamera == camera;
         }
 
@@ -113,47 +116,57 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-
             // If we are beginning to render with our context camera, do nothing.
-            if (camera == ContextCamera)
+            if (camera == contextCamera)
             {
-                m_Presenter.PollCamera(ContextCamera);
+                m_Presenter.PollCamera(contextCamera);
                 return;
             }
 
             if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry) ||
                 !cameraContextRegistry.TryGetCameraContextTarget(camera, out var cameraContextTarget))
             {
-                m_Presenter.PollCamera(ContextCamera);
+                m_Presenter.PollCamera(contextCamera);
                 return;
             }
 
-            cameraContextRegistry.FocusedCameraContextTarget = cameraContextTarget;
+            cameraContextRegistry.focusedCameraContextTarget = cameraContextTarget;
             OnPollFrameSettings(camera);
 
             if (onCameraChange != null)
-                onCameraChange(PreviousContextCamera, ContextCamera);
+                onCameraChange(previousContextCamera, contextCamera);
 
-            m_Presenter.PollCamera(ContextCamera);
+            m_Presenter.PollCamera(contextCamera);
         }
 
         public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
+        /// <summary>
+        /// Before we call Camera.Render(), we change the camera's projectionMatrix to some asymmetric projection. However, before we do that
+        /// we cache what the camera's projection matrix should be using the camera's paramters before we modify the camera's projection matrix 
+        /// in order to later revert it after calling Camera.Render()
+        /// </summary>
         public void CacheContextProjectionMatrix ()
         {
-            var contextCamera = ContextCamera;
+            var contextCamera = this.contextCamera;
             if (contextCamera == null)
                 return;
-            var projectionMatrix = contextCamera.projectionMatrix;
+
+            // var projectionMatrix = contextCamera.projectionMatrix;
+            var projectionMatrix = Matrix4x4.Perspective(contextCamera.fieldOfView, contextCamera.aspect, contextCamera.nearClipPlane, contextCamera.farClipPlane);
+
             m_SerializedProjectionMatrixC1 = projectionMatrix.GetColumn(0);
             m_SerializedProjectionMatrixC2 = projectionMatrix.GetColumn(1);
             m_SerializedProjectionMatrixC3 = projectionMatrix.GetColumn(2);
             m_SerializedProjectionMatrixC4 = projectionMatrix.GetColumn(3);
         }
 
+        /// <summary>
+        /// Apply the cached projection matrix to the camera context after we've called Camera.Render().
+        /// </summary>
         public void ApplyCachedProjectionMatrixToContext ()
         {
-            var contextCamera = ContextCamera;
+            var contextCamera = this.contextCamera;
             if (contextCamera == null)
                 return;
 

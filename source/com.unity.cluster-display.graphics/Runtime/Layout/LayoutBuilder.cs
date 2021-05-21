@@ -11,11 +11,11 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Interfaced handle to ClusterRenderer class that initializes this instance.
         /// </summary>
-        protected readonly IClusterRenderer m_ClusterRenderer;
+        protected readonly IClusterRenderer k_ClusterRenderer;
 
-        public abstract ClusterRenderer.LayoutMode LayoutMode { get; }
+        public abstract ClusterRenderer.LayoutMode layoutMode { get; }
 
-        public LayoutBuilder (IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
+        public LayoutBuilder (IClusterRenderer clusterRenderer) => k_ClusterRenderer = clusterRenderer;
         public abstract void LateUpdate();
         public abstract void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         /// <param name="numTiles">The output number of tiles in the grid.</param>
         /// <returns></returns>
-        protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;
+        protected bool ValidGridSize (out int numTiles) => (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
 
         /// <summary>
         /// Upload cluster display parameters for use in ClusterDisplay.hlsl
@@ -46,8 +46,8 @@ namespace Unity.ClusterDisplay.Graphics
         protected Rect CalculateOverscannedRect (int width, int height)
         {
             return new Rect(0, 0, 
-                width + 2 * m_ClusterRenderer.Context.OverscanInPixels, 
-                height + 2 * m_ClusterRenderer.Context.OverscanInPixels);
+                width + 2 * k_ClusterRenderer.context.overscanInPixels, 
+                height + 2 * k_ClusterRenderer.context.overscanInPixels);
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay.Graphics
             s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
 
             // Draw full screen quad.
-            cmd.DrawProcedural(Matrix4x4.identity, m_ClusterRenderer.Settings.Resources.BlitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.BlitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
     }
 }
