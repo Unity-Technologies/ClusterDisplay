@@ -4,15 +4,13 @@ The Unity Cluster Display solution allows multiple machines to display the same 
 
 ## Prerequisites
 
-If not using **Swap Barriers**:
-
-* Unity 2020.1 or higher
+* Unity 2020.1 or higher.
+* Unity 2020.2 or higher if using DX12 and Swap Barriers.
 
 When installing add **Windows Build Support (IL2CPP)**.
 
 If using **Swap Barriers**:
 
-* Build and install one of the Unity versions below in the [NVIDIA Quadro Sync Swap Barrer Support section](#nvidia-quadro-sync-swap-barrier-support) section.
 * Only supported on Windows Vista and higher.
 * Only supported on DirectX 11 or DirectX 12.
 * Requires an [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/).
@@ -42,16 +40,3 @@ This repository contains in-development packages, tests and test projects, as we
 The Cluster Display packages are currently experimental and must be installed manually. [See the documentation for installing a package from a local folder](https://docs.unity3d.com/Manual/upm-ui-local.html).
 
 It is recommended to use [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for development.
-
-### NVIDIA Quadro Sync Swap Barrier support
-
-NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
-
-Swap Barrier support is still experimental and relies on a custom Unity build. There are two separate builds depending on the desired graphics API:
-
-* Unity [**Direct3D11**](https://ono.unity3d.com/unity/unity/pull-request/113317/_/feat/quadro-sync-d3d11) Build Ono PR
-* Unity [**Direct3D12**](https://ono.unity3d.com/unity/unity/pull-request/113690/_/graphics/expose-plugin-callbacks-swapchain-d3d12) Build Ono PR
-
-To install the Quadro Sync feature, generate 2 DLLs by running `build.cmd`. They must be generated in the folder: `source/com.unity.cluster-display/Runtime/Plugins/x86-64`.
-
-See [GfxPluginQuadroSyncCallbacks.cs](source/com.unity.cluster-display/Runtime/QuadroSync/GfxPluginQuadroSyncCallbacks.cs) for example usage.
