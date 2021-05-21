@@ -23,37 +23,37 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
             if (GUILayout.Button("Flush Registry"))
                 cameraContextRegistry.Flush();
 
-            var cameraContextTargets = cameraContextRegistry.CameraContextTargets;
+            var cameraContextTargets = cameraContextRegistry.cameraContextTargets;
             for (int i = 0; i < cameraContextTargets.Length; i++)
                 EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
         }
     }
     #endif
 
-    private readonly Dictionary<Camera, CameraContextTarget> m_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
+    private readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
     [HideInInspector][SerializeField] private CameraContextTarget[] m_SerializedCameraContextTargets;
 
     [HideInInspector] [SerializeField] private CameraContextTarget m_FocusedCameraContextTarget;
     [HideInInspector] [SerializeField] private CameraContextTarget m_PreviousFocusedCameraContextTarget;
-    public CameraContextTarget FocusedCameraContextTarget
+    public CameraContextTarget focusedCameraContextTarget
     {
         get
         {
             if (m_FocusedCameraContextTarget == null)
             {
-                if (m_CameraContextTargets.Count != 0)
+                if (k_CameraContextTargets.Count != 0)
                 {
-                    var first = m_CameraContextTargets.FirstOrDefault();
-                    FocusedCameraContextTarget = first.Value;
+                    var first = k_CameraContextTargets.FirstOrDefault();
+                    focusedCameraContextTarget = first.Value;
                 }
 
                 else
                 {
                     PollCameraTargets();
-                    if (m_CameraContextTargets.Count > 0)
+                    if (k_CameraContextTargets.Count > 0)
                     {
-                        var first = m_CameraContextTargets.FirstOrDefault();
-                        FocusedCameraContextTarget = first.Value;
+                        var first = k_CameraContextTargets.FirstOrDefault();
+                        focusedCameraContextTarget = first.Value;
                     }
                 }
             }
@@ -70,13 +70,13 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
                 Debug.Log($"Changing camera context to: \"{value.gameObject.name}\".");
             else Debug.Log($"Changing camera context to: \"NULL\".");
 
-            PreviousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
+            previousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
             m_FocusedCameraContextTarget = value;
         }
     }
 
     public string m_TargetCameraTag = "MainCamera";
-    public static string TargetCameraTag
+    public static string targetCameraTag
     {
         get
         {
@@ -86,19 +86,19 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
         }
     }
 
-    public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == TargetCameraTag;
+    public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
 
-    public CameraContextTarget PreviousFocusedCameraContextTarget
+    public CameraContextTarget previousFocusedCameraContextTarget
     {
         get => m_PreviousFocusedCameraContextTarget;
         private set => m_PreviousFocusedCameraContextTarget = value;
     }
 
-    private CameraContextTarget[] CameraContextTargets => m_CameraContextTargets.Values.ToArray();
+    private CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
 
     public bool TryGetCameraContextTarget (Camera camera, out CameraContextTarget cameraContextTarget)
     {
-        if (m_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
+        if (k_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
             return true;
         cameraContextTarget = Register(camera);
         return cameraContextTarget;
@@ -115,7 +115,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
             if (!cameraContextTargets[i].TryGetCamera(out var camera))
                 continue;
 
-            if (m_CameraContextTargets.ContainsKey(camera))
+            if (k_CameraContextTargets.ContainsKey(camera))
                 continue;
 
             Register(camera);
@@ -126,7 +126,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
 
     public CameraContextTarget Register (Camera camera)
     {
-        if (m_CameraContextTargets.ContainsKey(camera))
+        if (k_CameraContextTargets.ContainsKey(camera))
         {
             Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
             return null;
@@ -135,7 +135,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
         CameraContextTarget cameraContextTarget = null;
         if ((cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>()) == null)
             cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
-        m_CameraContextTargets.Add(camera, cameraContextTarget);
+        k_CameraContextTargets.Add(camera, cameraContextTarget);
         return cameraContextTarget;
     }
 
@@ -147,13 +147,13 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
             return;
         }
 
-        if (!m_CameraContextTargets.ContainsKey(camera))
+        if (!k_CameraContextTargets.ContainsKey(camera))
         {
             Debug.LogError($"Cannot unregister {nameof(CameraContextTarget)}: \"{cameraContextTarget.gameObject.name}\", it was never registered.");
             return;
         }
 
-        m_CameraContextTargets.Remove(camera);
+        k_CameraContextTargets.Remove(camera);
     }
 
     public void OnAfterDeserialize()
@@ -166,17 +166,17 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
             if (m_SerializedCameraContextTargets[i] == null)
                 continue;
 
-            if (!m_SerializedCameraContextTargets[i].CameraReferenceIsValid)
+            if (!m_SerializedCameraContextTargets[i].cameraReferenceIsValid)
                 continue;
 
-            m_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
+            k_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
         }
     }
 
     public void OnBeforeSerialize()
     {
         int validCameraContextCount = 0;
-        foreach (var cameraContextPair in m_CameraContextTargets)
+        foreach (var cameraContextPair in k_CameraContextTargets)
         {
             if (cameraContextPair.Key == null || cameraContextPair.Value == null)
                 continue;
@@ -191,7 +191,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
 
         m_SerializedCameraContextTargets = new CameraContextTarget[validCameraContextCount];
         int cameraContextIndex = 0;
-        foreach (var cameraContextPair in m_CameraContextTargets)
+        foreach (var cameraContextPair in k_CameraContextTargets)
         {
             if (cameraContextPair.Value == null)
                 continue;
@@ -209,7 +209,7 @@ public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegist
 
     private void Flush ()
     {
-        m_CameraContextTargets.Clear();
+        k_CameraContextTargets.Clear();
         m_SerializedCameraContextTargets = null;
 
         m_FocusedCameraContextTarget = null;

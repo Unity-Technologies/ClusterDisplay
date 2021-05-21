@@ -5,9 +5,9 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public interface IClusterRenderer
     {
-        ClusterRenderContext Context { get; }
-        ClusterCameraController CameraController { get; }
-        ClusterRendererSettings Settings { get; }
+        ClusterRenderContext context { get; }
+        ClusterCameraController cameraController { get; }
+        ClusterRendererSettings settings { get; }
     }
 
 }

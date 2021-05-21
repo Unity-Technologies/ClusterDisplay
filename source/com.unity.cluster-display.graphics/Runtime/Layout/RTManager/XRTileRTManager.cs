@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 public class XRTileRTManager : TileRTManager
 {
-    public override RTType Type => RTType.Handle;
+    public override RTType type => RTType.Handle;
     private RTHandle m_BlitRT;
     private RTHandle m_PresentRT;
 

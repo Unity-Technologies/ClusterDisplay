@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class StandardTileRTManager : TileRTManager
 {
-    public override RTType Type => RTType.RenderTexture;
+    public override RTType type => RTType.RenderTexture;
     private RenderTexture m_BlitRT;
     private RenderTexture m_PresentRT;
 

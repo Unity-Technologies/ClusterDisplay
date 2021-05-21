@@ -11,7 +11,7 @@ public enum RTType
 
 public abstract class TileRTManager
 {
-    public abstract RTType Type { get; }
+    public abstract RTType type { get; }
     protected abstract object BlitRT(int width, int height);
     protected abstract object PresentRT(int width, int height);
     public abstract void Release();

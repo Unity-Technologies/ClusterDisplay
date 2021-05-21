@@ -22,23 +22,23 @@ namespace Unity.ClusterDisplay.Graphics
             m_ClusterRenderer = GetComponent<ClusterRenderer>();
                 
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
-                m_ClusterRenderer.Context.Debug = true;
+                m_ClusterRenderer.context.debug = true;
 
             Vector2Int gridSize;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out gridSize))
-                m_ClusterRenderer.Settings.GridSize = gridSize;
+                m_ClusterRenderer.settings.gridSize = gridSize;
            
             Vector2 bezel;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out bezel))
-                m_ClusterRenderer.Settings.Bezel = bezel;
+                m_ClusterRenderer.settings.bezel = bezel;
             
             Vector2 physicalScreenSize;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out physicalScreenSize))
-                m_ClusterRenderer.Settings.PhysicalScreenSize = physicalScreenSize;
+                m_ClusterRenderer.settings.physicalScreenSize = physicalScreenSize;
 
             int overscanInPixels;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out overscanInPixels))
-                m_ClusterRenderer.Settings.OverscanInPixels = overscanInPixels;
+                m_ClusterRenderer.settings.overScanInPixels = overscanInPixels;
         }
     }
 }

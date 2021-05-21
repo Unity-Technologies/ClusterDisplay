@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.Graphics
     public abstract class Presenter : ICameraEventReceiver
     {
         protected Camera m_Camera;
-        public abstract RenderTexture PresentRT { get; set; }
+        public abstract RenderTexture presentRT { get; set; }
         public abstract void Dispose();
 
         public void OnCameraContextChange(Camera previousCamera, Camera nextCamera)

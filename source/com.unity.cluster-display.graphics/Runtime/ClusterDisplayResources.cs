@@ -6,5 +6,5 @@ using UnityEngine;
 public class ClusterDisplayResources : ScriptableObject
 {
     [SerializeField] private Material m_BlitMaterial;
-    public Material BlitMaterial => m_BlitMaterial;
+    public Material blitMaterial => m_BlitMaterial;
 }

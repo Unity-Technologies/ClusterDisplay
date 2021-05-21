@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.Graphics
     public class StandardPresenter : Presenter
     {
         private RenderTexture m_PresentRT;
-        public override RenderTexture PresentRT 
+        public override RenderTexture presentRT 
         { 
             get => m_PresentRT;
             set
@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
                     return;
 
                 m_PresentRT = value;
-                m_ClusterCanvas.RawImageTexture = m_PresentRT;
+                m_ClusterCanvas.rawImageTexture = m_PresentRT;
             } 
         }
 

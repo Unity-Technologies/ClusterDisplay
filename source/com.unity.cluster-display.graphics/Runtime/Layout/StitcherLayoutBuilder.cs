@@ -21,12 +21,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected void CalculcateAndQueueStitcherParameters (object targetRT, Rect m_OverscannedRect, Rect percentageViewportSubsection)
         {
-            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
             
             var scaleBiasRT = new Vector4(
-                1 - (m_ClusterRenderer.Context.Bezel.x * 2) / croppedSize.x, 1 - (m_ClusterRenderer.Context.Bezel.y * 2) / croppedSize.y, // scale
-                m_ClusterRenderer.Context.Bezel.x / croppedSize.x, m_ClusterRenderer.Context.Bezel.y / croppedSize.y); // offset
+                1 - (k_ClusterRenderer.context.bezel.x * 2) / croppedSize.x, 1 - (k_ClusterRenderer.context.bezel.y * 2) / croppedSize.y, // scale
+                k_ClusterRenderer.context.bezel.x / croppedSize.x, k_ClusterRenderer.context.bezel.y / croppedSize.y); // offset
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
             {
@@ -46,11 +46,11 @@ namespace Unity.ClusterDisplay.Graphics
             out Rect viewportSubsection,
             out Matrix4x4 projectionMatrix)
         {
-            percentageViewportSubsection = m_ClusterRenderer.Context.GetViewportSubsection(i);
+            percentageViewportSubsection = k_ClusterRenderer.context.GetViewportSubsection(i);
             viewportSubsection = percentageViewportSubsection;
-            if (m_ClusterRenderer.Context.PhysicalScreenSize != Vector2Int.zero && m_ClusterRenderer.Context.Bezel != Vector2Int.zero)
-                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, m_ClusterRenderer.Context.PhysicalScreenSize, m_ClusterRenderer.Context.Bezel);
-            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, m_ClusterRenderer.Context.OverscanInPixels);
+            if (k_ClusterRenderer.context.physicalScreenSize != Vector2Int.zero && k_ClusterRenderer.context.bezel != Vector2Int.zero)
+                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
+            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
             projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
             cullingParams.stereoProjectionMatrix = projectionMatrix;
