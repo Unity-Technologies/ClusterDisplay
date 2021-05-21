@@ -29,6 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_ClusterRenderer.CameraController.ContextCamera.enabled = false;
 
             var camera = m_ClusterRenderer.CameraController.ContextCamera;
+            m_ClusterRenderer.CameraController.CacheContextProjectionMatrix();
 
             if (!SetupTiledLayout(
                 camera, 
@@ -43,14 +44,13 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.targetTexture = rt;
 
             UploadClusterDisplayParams(projMatrix);
-
-            m_ClusterRenderer.CameraController.CacheContextProjectionMatrix();
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
 
             camera.Render();
+
             m_ClusterRenderer.CameraController.ApplyCachedProjectionMatrixToContext();
         }
 
