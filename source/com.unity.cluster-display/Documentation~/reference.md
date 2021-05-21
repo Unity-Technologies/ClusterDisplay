@@ -81,8 +81,13 @@ The **Cluster Quit Behaviour** component allows to cleanly quit the cluster.
 When you have this component in your project:
 
 -   You can press **Q** and **K** at the same time on the keyboard connected to the master when you need to manually quit the whole cluster.
-
 -   The nodes can automatically quit the cluster if the [cluster communication times out](#communication-phases-and-timeouts).
+
+**GfxPluginQuadroSyncCallbacks**
+
+NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
+
+Add the **GfxPluginQuadroSyncCallbacks** component to your scene to enable Swap Barriers.
 
 ## Tested Hardware
 
