@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class StitcherRTManager
     {
-        public abstract RTType Type { get; }
+        public abstract RTType type { get; }
         protected abstract object BlitRT(int tileCount, int tileIndex, int width, int height);
         protected abstract object PresentRT(int width, int height);
         public abstract void Release();

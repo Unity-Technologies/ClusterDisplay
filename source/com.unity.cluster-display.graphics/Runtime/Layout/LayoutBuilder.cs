@@ -7,11 +7,11 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
         public static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
-        protected readonly IClusterRenderer m_ClusterRenderer;
+        protected readonly IClusterRenderer k_ClusterRenderer;
 
-        public abstract ClusterRenderer.LayoutMode LayoutMode { get; }
+        public abstract ClusterRenderer.LayoutMode layoutMode { get; }
 
-        public LayoutBuilder (IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
+        public LayoutBuilder (IClusterRenderer clusterRenderer) => k_ClusterRenderer = clusterRenderer;
         public abstract void LateUpdate();
         public abstract void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
@@ -19,14 +19,14 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void Dispose();
 
-        protected bool ValidGridSize (out int numTiles) => (numTiles = m_ClusterRenderer.Context.GridSize.x * m_ClusterRenderer.Context.GridSize.y) > 0;
+        protected bool ValidGridSize (out int numTiles) => (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
         public void UploadClusterDisplayParams (Matrix4x4 projectionMatrix) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, projectionMatrix);
 
         protected Rect CalculateOverscannedRect (int width, int height)
         {
             return new Rect(0, 0, 
-                width + 2 * m_ClusterRenderer.Context.OverscanInPixels, 
-                height + 2 * m_ClusterRenderer.Context.OverscanInPixels);
+                width + 2 * k_ClusterRenderer.context.overscanInPixels, 
+                height + 2 * k_ClusterRenderer.context.overscanInPixels);
         }
 
         protected Vector2 CalculateCroppedSize (Rect rect, int overscanInPixels) => new Vector2(rect.width - 2 * overscanInPixels, rect.height - 2 * overscanInPixels);
@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
-            cmd.DrawProcedural(Matrix4x4.identity, m_ClusterRenderer.Settings.Resources.BlitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
     }
 }

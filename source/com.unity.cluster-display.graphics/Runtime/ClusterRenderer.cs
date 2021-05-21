@@ -125,26 +125,26 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
 #endif
 
-        public ClusterCameraController CameraController => m_ClusterCameraController;
+        public ClusterCameraController cameraController => m_ClusterCameraController;
 
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
-        public ClusterRendererSettings Settings => m_Context.Settings;
+        public ClusterRendererSettings settings => m_Context.settings;
 
         /// <summary>
         /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
         /// </summary>
-        public ClusterRendererDebugSettings DebugSettings => m_Context.DebugSettings;
+        public ClusterRendererDebugSettings debugSettings => m_Context.debugSettings;
        
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
 
         /// <summary>
         /// Camera projection before its slicing to an asymmetric projection.
         /// </summary>
-        public Matrix4x4 OriginalProjectionMatrix => m_OriginalProjectionMatrix;
+        public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
 
-        public ClusterRenderContext Context => m_Context;
+        public ClusterRenderContext context => m_Context;
 
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         private bool m_ShaderKeywordState = false;
@@ -157,18 +157,18 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDrawGizmos()
         {
             if (enabled)
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
+                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.gridSize, m_Context.tileIndex);
         }
 
         private void OnValidate()
         {
-            if (Settings.Resources == null)
+            if (settings.resources == null)
             {
                 var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
                 if (assets.Length == 0)
                     throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
-                Settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{Settings.Resources.name}\" to cluster display settings.");
+                settings.resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{settings.resources.name}\" to cluster display settings.");
                 EditorUtility.SetDirty(this);
             }
         }
@@ -210,7 +210,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             RegisterRendererEvents(m_ClusterCameraController);
             RegisterModule(m_ClusterRendererModule);
-            m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
+            m_Context.debugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
@@ -231,7 +231,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             UnRegisterLateUpdateReciever(m_ClusterCameraController);
             UnRegisterModule(m_ClusterRendererModule);
-            m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
+            m_Context.debugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
@@ -263,20 +263,20 @@ namespace Unity.ClusterDisplay.Graphics
             ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
             onBeginCameraRender(context, camera);
 
-            Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
+            Assert.IsTrue(m_Context.gridSize.x > 0 && m_Context.gridSize.y > 0);
 
             // Update aspect ratio
-            camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
+            camera.aspect = (m_Context.gridSize.x * Screen.width) / (float)(m_Context.gridSize.y * Screen.height);
 
             // Reset debug viewport subsection
-            if (m_Context.Debug && !m_Context.DebugSettings.UseDebugViewportSubsection)
-                m_Context.DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
-                    m_Context.GridSize, m_Context.TileIndex);
+            if (m_Context.debug && !m_Context.debugSettings.useDebugViewportSubsection)
+                m_Context.debugSettings.viewportSubsection = GraphicsUtil.TileIndexToViewportSection(
+                    m_Context.gridSize, m_Context.tileIndex);
         }
 
         private void OnEndCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (!CameraController.CameraIsInContext(camera))
+            if (!cameraController.CameraIsInContext(camera))
                 return;
 
             if (onEndCameraRender != null)
@@ -335,7 +335,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
 #endif
-                    CameraController.Presenter = new StandardPresenter();
+                    cameraController.presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
@@ -344,7 +344,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
 #endif
-                    CameraController.Presenter = new StandardPresenter();
+                    cameraController.presenter = new StandardPresenter();
                     break;
 
 #if CLUSTER_DISPLAY_XR

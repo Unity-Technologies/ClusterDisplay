@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ClusterDisplayResources m_Resources;
 
-        public ClusterDisplayResources Resources
+        public ClusterDisplayResources resources
         {
             get => m_Resources;
             set => m_Resources = value;
@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Cluster Grid size expressed in tiles.
         /// </summary>
-        public Vector2Int GridSize
+        public Vector2Int gridSize
         {
             get => m_GridSize;
             set => m_GridSize = value;
@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Bezel of the screen, expressed in mm.
         /// </summary>
-        public Vector2 Bezel
+        public Vector2 bezel
         {
             get => m_bezel;
             set => m_bezel = value;
@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Physical size of the screen in mm. Used to compute bezel.
         /// </summary>
-        public Vector2 PhysicalScreenSize
+        public Vector2 physicalScreenSize
         {
             get => m_PhysicalScreenSize;
             set => m_PhysicalScreenSize = value;
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Amount of overscan per tile expressed in pixels.
         /// </summary>
-        public int OverscanInPixels
+        public int overScanInPixels
         {
             get { return m_OverscanInPixels; }
             set { m_OverscanInPixels = value; }

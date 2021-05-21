@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class StandardStitcherRTManager : StitcherRTManager
     {
-        public override RTType Type => RTType.RenderTexture;
+        public override RTType type => RTType.RenderTexture;
         private RenderTexture m_PresentRT;
         private RenderTexture[] m_BlitRTs;
 

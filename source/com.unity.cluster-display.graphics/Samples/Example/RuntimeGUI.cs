@@ -89,13 +89,13 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
             if (m_ClusterRenderer != null)
             {
-                GUIUtilities.DrawSettings(m_ClusterRenderer.Settings);
-                GUIUtilities.KeyboardControls(m_ClusterRenderer.Settings);
+                GUIUtilities.DrawSettings(m_ClusterRenderer.settings);
+                GUIUtilities.KeyboardControls(m_ClusterRenderer.settings);
 
-                var prevDebug = m_ClusterRenderer.Context.Debug;
-                m_ClusterRenderer.Context.Debug = GUILayout.Toggle(prevDebug, "debug");
-                if (m_ClusterRenderer.Context.Debug)
-                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.DebugSettings);
+                var prevDebug = m_ClusterRenderer.context.debug;
+                m_ClusterRenderer.context.debug = GUILayout.Toggle(prevDebug, "debug");
+                if (m_ClusterRenderer.context.debug)
+                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.debugSettings);
             }
 
             OnCustomGUI();

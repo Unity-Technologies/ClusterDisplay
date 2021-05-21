@@ -18,18 +18,18 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         private Rect m_OverscannedRect;
 
-        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
+        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.ContextCamera == null)
+            if (k_ClusterRenderer.cameraController.contextCamera == null)
                 return;
 
-            if (m_ClusterRenderer.CameraController.ContextCamera.enabled)
-                m_ClusterRenderer.CameraController.ContextCamera.enabled = false;
+            if (k_ClusterRenderer.cameraController.contextCamera.enabled)
+                k_ClusterRenderer.cameraController.contextCamera.enabled = false;
 
-            var camera = m_ClusterRenderer.CameraController.ContextCamera;
-            m_ClusterRenderer.CameraController.CacheContextProjectionMatrix();
+            var camera = k_ClusterRenderer.cameraController.contextCamera;
+            k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
 
             if (!SetupTiledLayout(
                 camera, 
@@ -47,11 +47,11 @@ namespace Unity.ClusterDisplay.Graphics
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
 
             camera.Render();
 
-            m_ClusterRenderer.CameraController.ApplyCachedProjectionMatrixToContext();
+            k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
@@ -59,20 +59,20 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
-            var scaleBias = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset); ;
+            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset); ;
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             var blitRT = BlitRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
-            m_ClusterRenderer.CameraController.Presenter.PresentRT = presentRT;
+            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
             cmd.SetRenderTarget(presentRT);
-            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
+            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
             Blit(cmd, presentRT, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);

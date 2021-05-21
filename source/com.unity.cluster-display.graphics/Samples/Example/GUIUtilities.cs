@@ -57,19 +57,19 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
         public static void DrawSettings(ClusterRendererSettings settings)
         {
-            settings.GridSize = GUIVector2IntField("Grid", settings.GridSize);
-            settings.PhysicalScreenSize = GUIVector2Field("Physical Screen Size", settings.PhysicalScreenSize);
-            settings.Bezel = GUIVector2Field("Bezel", settings.Bezel);
-            settings.OverscanInPixels = GUIIntSlider("Overscan In Pixels", settings.OverscanInPixels, 0, 256);
+            settings.gridSize = GUIVector2IntField("Grid", settings.gridSize);
+            settings.physicalScreenSize = GUIVector2Field("Physical Screen Size", settings.physicalScreenSize);
+            settings.bezel = GUIVector2Field("Bezel", settings.bezel);
+            settings.overScanInPixels = GUIIntSlider("Overscan In Pixels", settings.overScanInPixels, 0, 256);
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 
         public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
         {
-            settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
-            settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
+            settings.tileIndexOverride = GUIIntField("Tile Index Override", settings.tileIndexOverride);
+            settings.enableKeyword = GUILayout.Toggle(settings.enableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.CurrentLayoutMode);
+            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.currentLayoutMode);
             string[] layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
             GUILayout.Label("Layout Modes");
             for (int i = 0; i < layoutModes.Length; i++)
@@ -81,15 +81,15 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 }
 
                 if (GUILayout.Button(layoutModes[i]))
-                    settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+                    settings.currentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
             }
 
-            settings.UseDebugViewportSubsection = GUILayout.Toggle(settings.UseDebugViewportSubsection, "Debug Viewport Section");
+            settings.useDebugViewportSubsection = GUILayout.Toggle(settings.useDebugViewportSubsection, "Debug Viewport Section");
 
-            if (settings.UseDebugViewportSubsection)
+            if (settings.useDebugViewportSubsection)
             {
                 GUILayout.Label("Viewport Section");
-                var rect = settings.ViewportSubsection;
+                var rect = settings.viewportSubsection;
                 float xMin = rect.xMin;
                 float xMax = rect.xMax;
                 float yMin = rect.yMin;
@@ -99,14 +99,14 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 xMax = GUISlider("xMax", xMax, 0, 1);
                 yMin = GUISlider("yMin", yMin, 0, 1);
                 yMax = GUISlider("yMax", yMax, 0, 1);
-                settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                settings.viewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
 
             GUILayout.Label("Scale Bias Offset");
-            var offset = settings.ScaleBiasTexOffset;
+            var offset = settings.scaleBiasTextOffset;
             offset.x = GUISlider("x", offset.x, -1, 1);
             offset.y = GUISlider("y", offset.y, -1, 1);
-            settings.ScaleBiasTexOffset = offset;
+            settings.scaleBiasTextOffset = offset;
         }
 
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
@@ -126,12 +126,12 @@ namespace Unity.ClusterDisplay.Graphics.Example
             #elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.O))
             {
-                var overscan = settings.OverscanInPixels;
+                var overscan = settings.overScanInPixels;
                 if (Input.GetKey(KeyCode.RightArrow))
                     ++overscan;
                 else if (Input.GetKey(KeyCode.LeftArrow))
                     --overscan;
-                settings.OverscanInPixels = Mathf.Clamp(overscan, 0, 256);
+                settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
             #endif
         }
