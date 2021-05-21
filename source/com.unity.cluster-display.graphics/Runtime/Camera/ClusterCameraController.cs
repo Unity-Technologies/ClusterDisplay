@@ -22,6 +22,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
         [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
+        /// <summary>
+        /// Current rendering camera.
+        /// </summary>
         public Camera contextCamera
         {
             get
@@ -113,7 +116,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-
             // If we are beginning to render with our context camera, do nothing.
             if (camera == contextCamera)
             {
@@ -139,6 +141,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
+        /// <summary>
+        /// Before we call Camera.Render(), we change the camera's projectionMatrix to some asymmetric projection. However, before we do that
+        /// we cache what the camera's projection matrix should be using the camera's paramters before we modify the camera's projection matrix 
+        /// in order to later revert it after calling Camera.Render()
+        /// </summary>
         public void CacheContextProjectionMatrix ()
         {
             var contextCamera = this.contextCamera;
@@ -154,6 +161,9 @@ namespace Unity.ClusterDisplay.Graphics
             m_SerializedProjectionMatrixC4 = projectionMatrix.GetColumn(3);
         }
 
+        /// <summary>
+        /// Apply the cached projection matrix to the camera context after we've called Camera.Render().
+        /// </summary>
         public void ApplyCachedProjectionMatrixToContext ()
         {
             var contextCamera = this.contextCamera;
