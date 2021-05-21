@@ -144,7 +144,10 @@ namespace Unity.ClusterDisplay.Graphics
             var contextCamera = ContextCamera;
             if (contextCamera == null)
                 return;
-            var projectionMatrix = contextCamera.projectionMatrix;
+
+            // var projectionMatrix = contextCamera.projectionMatrix;
+            var projectionMatrix = Matrix4x4.Perspective(contextCamera.fieldOfView, contextCamera.aspect, contextCamera.nearClipPlane, contextCamera.farClipPlane);
+
             m_SerializedProjectionMatrixC1 = projectionMatrix.GetColumn(0);
             m_SerializedProjectionMatrixC2 = projectionMatrix.GetColumn(1);
             m_SerializedProjectionMatrixC3 = projectionMatrix.GetColumn(2);
