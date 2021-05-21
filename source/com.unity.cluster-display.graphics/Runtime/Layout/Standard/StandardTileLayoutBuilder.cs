@@ -3,6 +3,9 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// Disables the camera and calls Camera.Render() for a single tile.
+    /// </summary>
     public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
         public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}

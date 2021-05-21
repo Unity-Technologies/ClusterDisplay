@@ -4,11 +4,13 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// Disables the camera and loops through each tile calling Camera.Render(), then stitches it together.
+    /// </summary>
     public class StandardStitcherLayoutBuilder : StitcherLayoutBuilder, ILayoutBuilder
     {
         public StandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         public override void Dispose() {}
-
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
         private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
@@ -16,6 +18,9 @@ namespace Unity.ClusterDisplay.Graphics
         private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
         private Rect m_OverscannedRect;
 
+        /// <summary>
+        /// Where rendering actually occurs.
+        /// </summary>
         public override void LateUpdate ()
         {
             var camera = k_ClusterRenderer.cameraController.contextCamera;
@@ -35,6 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             for (var i = 0; i < numTiles; i++)
             {
+                k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
                 CalculateStitcherLayout(
                     camera, 
                     i, 
@@ -47,8 +53,6 @@ namespace Unity.ClusterDisplay.Graphics
                 var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
                 camera.targetTexture = blitRT;
-
-                k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
 
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
@@ -64,6 +68,11 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
+        /// <summary>
+        /// When were done with this frame, stitch the results together.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="cameras"></param>
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) 
         {
             if (!ValidGridSize(out var numTiles))
