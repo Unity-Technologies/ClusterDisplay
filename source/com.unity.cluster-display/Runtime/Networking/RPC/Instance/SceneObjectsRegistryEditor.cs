@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay
 {
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {
+#if UNITY_EDITOR
         [CustomEditor(typeof(SceneObjectsRegistry))]
         public class SceneObjectsRegistryEditor : Editor
         {
@@ -60,5 +61,6 @@ namespace Unity.ClusterDisplay
                 PresentGUI();
             }
         }
+#endif
     }
 }

@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay
         [System.AttributeUsage(System.AttributeTargets.Method)]
         public class ParseStructureMarker : Attribute {}
 
-        private static NativeArray<byte> rpcBuffer = new NativeArray<byte>(1024, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        private static NativeArray<byte> rpcBuffer = new NativeArray<byte>(1024 * 16, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         private static int rpcBufferSize;
         public static int RPCBufferSize => rpcBufferSize;

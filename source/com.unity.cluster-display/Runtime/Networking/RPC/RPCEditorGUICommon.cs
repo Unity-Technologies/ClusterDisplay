@@ -1,8 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿#if UNITY_EDITOR
 using System.Reflection;
-using UnityEditor;
 using UnityEngine;
+using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
@@ -50,3 +49,4 @@ namespace Unity.ClusterDisplay
         }
     }
 }
+#endif

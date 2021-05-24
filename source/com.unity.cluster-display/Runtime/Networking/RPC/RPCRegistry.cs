@@ -144,6 +144,7 @@ namespace Unity.ClusterDisplay
 
         private void SetDirtyAndRecompile ()
         {
+            #if UNITY_EDITOR
             if (IsSerializing)
                 return;
 
@@ -151,6 +152,7 @@ namespace Unity.ClusterDisplay
             EditorUtility.SetDirty(this);
             UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             m_IsDirty = true;
+            #endif
         }
 
         public void Clear ()
