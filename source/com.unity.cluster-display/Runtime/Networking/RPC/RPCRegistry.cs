@@ -127,7 +127,7 @@ namespace Unity.ClusterDisplay
             rpcMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
             ApplyRPC(ref rpcMethodInfo);
 
-            Debug.Log($"Registered method with UUID: \"{rpcId}\" for method: \"{ReflectionUtils.GetMethodSignature(methodInfo)}\" from type: \"{type.FullName}\" from assembly: \"{type.Assembly}\".");
+            // Debug.Log($"Registered method with UUID: \"{rpcId}\" for method: \"{ReflectionUtils.GetMethodSignature(methodInfo)}\" from type: \"{type.FullName}\" from assembly: \"{type.Assembly}\".");
 
             return true;
         }
@@ -138,7 +138,7 @@ namespace Unity.ClusterDisplay
                 return;
             RemoveRPC(ref rpcMethodInfo);
 
-            Debug.Log($"Unregistered method: \"{rpcMethodInfo.methodInfo.Name}\" with UUID: \"{rpcMethodInfo.rpcId}\".");
+            // Debug.Log($"Unregistered method: \"{rpcMethodInfo.methodInfo.Name}\" with UUID: \"{rpcMethodInfo.rpcId}\".");
         }
 
         private void SetDirtyAndRecompile ()
@@ -147,7 +147,7 @@ namespace Unity.ClusterDisplay
             if (IsSerializing)
                 return;
 
-            Debug.Log($"Changed RPC Registry, recompiling...");
+            // Debug.Log($"Changed RPC Registry, recompiling...");
             EditorUtility.SetDirty(this);
             UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             m_IsDirty = true;
@@ -171,7 +171,7 @@ namespace Unity.ClusterDisplay
             List<ushort> rpcIdsToAdd = new List<ushort>();
             m_SerializedRPCsContainer.Foreach((serializedRPC) =>
             {
-                Debug.Log($"Deserialized RPC Execution Stage: {serializedRPC.rpcExecutionStage}");
+                // Debug.Log($"Deserialized RPC Execution Stage: {serializedRPC.rpcExecutionStage}");
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out var rpcExecutionStage, out var methodInfo))
                 {
                     Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
@@ -183,7 +183,7 @@ namespace Unity.ClusterDisplay
                 ApplyRPC(ref deserializedRPCMethodInfo);
                 rpcIdsToAdd.Add(serializedRPC.rpcId);
 
-                Debug.Log($"Successfully deserialized method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
+                // Debug.Log($"Successfully deserialized method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
             });
 
             if (ReflectionUtils.TryGetAllMethodsWithAttribute<RPCMethod>(out var methodsWithRPCAttribute))
@@ -202,7 +202,7 @@ namespace Unity.ClusterDisplay
                     var rpcMethodInfo = new RPCMethodInfo(rpcMethodAttribute.rpcId, rpcMethodAttribute.rpcExecutionStage, methodInfo);
                     ApplyRPC(ref rpcMethodInfo);
 
-                    Debug.Log($"Registered RPC with {nameof(RPCMethod)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
+                    // Debug.Log($"Registered RPC with {nameof(RPCMethod)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
                 }
             }
 

@@ -145,7 +145,7 @@ namespace Unity.ClusterDisplay
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void PollUnregisteredInstanceRPCs()
         {
-            Debug.Log("Polling for unregistered instance RPCs.");
+            // Debug.Log("Polling for unregistered instance RPCs.");
             if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
                 return;
 

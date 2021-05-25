@@ -25,10 +25,16 @@ namespace Unity.ClusterDisplay
             outMethodInfo = null;
 
             if (!TryDeserializeType(rpcTokenizer.declaringAssemblyName, rpcTokenizer.declaryingTypeFullName, out var declaringType))
+            {
+                Debug.LogError($"Unable to find serialized method's declaring type: \"{rpcTokenizer.declaryingTypeFullName}\" in assembly: \"{rpcTokenizer.declaringAssemblyName}\".");
                 return false;
+            }
 
             if (!TryDeserializeType(rpcTokenizer.declaringReturnTypeAssemblyName, rpcTokenizer.returnTypeFullName, out var returnType))
+            {
+                Debug.LogError($"Unable to find serialized method's return type: \"{rpcTokenizer.returnTypeFullName}\" in assembly: \"{rpcTokenizer.declaringReturnTypeAssemblyName}\".");
                 return false;
+            }
 
             var parameterList = new List<(System.Type parameterType, string parameterName)>();
             if (rpcTokenizer.ParameterCount > 0)
@@ -37,7 +43,10 @@ namespace Unity.ClusterDisplay
                 {
                     var parameterString = rpcTokenizer[i];
                     if (!TryDeserializeType(parameterString.declaringParameterTypeAssemblyName, parameterString.parameterTypeFullName, out var parameterType))
+                    {
+                        Debug.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeFullName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
                         return false;
+                    }
 
                     parameterList.Add((parameterType, parameterString.parameterName));
                 }

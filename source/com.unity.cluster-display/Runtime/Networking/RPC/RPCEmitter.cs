@@ -111,7 +111,7 @@ namespace Unity.ClusterDisplay
             ushort strLen = Marshal.PtrToStructure<ushort>(ptr);
             ptr += sizeof(ushort);
 
-            var str = Encoding.ASCII.GetString((byte*)ptr.ToPointer(), strLen);
+            var str = Encoding.UTF8.GetString((byte*)ptr.ToPointer(), strLen);
             startPos += (ushort)(sizeof(ushort) + strLen);
             return str;
         }
@@ -124,11 +124,13 @@ namespace Unity.ClusterDisplay
             ushort arrayLength = Marshal.PtrToStructure<ushort>(ptr);
             ptr += sizeof(ushort);
 
+            ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
+
             T[] array = new T[arrayLength];
             void *arrayPtr = UnsafeUtility.AddressOf(ref array[0]);
-            UnsafeUtility.MemCpy(arrayPtr, ptr.ToPointer(), arrayLength);
+            UnsafeUtility.MemCpy(arrayPtr, ptr.ToPointer(), arrayByteCount);
 
-            startPos += (ushort)(sizeof(ushort) + arrayLength);
+            startPos += (ushort)(sizeof(ushort) + arrayByteCount);
             return array;
         }
 
@@ -167,7 +169,7 @@ namespace Unity.ClusterDisplay
             if (!AllowWrites)
                 return;
 
-            int strSize = sizeof(char) * value.Length;
+            int strSize = value.Length;
             if (strSize > ushort.MaxValue)
                 throw new System.Exception($"Max string size is: {ushort.MaxValue} characters.");
 
@@ -179,11 +181,16 @@ namespace Unity.ClusterDisplay
                 UnsafeUtility.AddressOf(ref strSize), 
                 sizeof(ushort));
 
+            rpcBufferSize += sizeof(ushort);
+
             fixed (char* ptr = value)
-                UnsafeUtility.MemCpy(
-                    (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
-                    ptr, 
+                Encoding.ASCII.GetBytes(
+                    ptr,
+                    strSize,
+                    (byte *)rpcBuffer.GetUnsafePtr() + rpcBufferSize,
                     strSize);
+
+            rpcBufferSize += strSize;
         }
 
         [AppendRPCArrayParameterValueMarker]
@@ -192,16 +199,18 @@ namespace Unity.ClusterDisplay
             if (!AllowWrites || value == null)
                 return;
 
-            int arraySize = Marshal.SizeOf<T>() * value.Length;
-            if (arraySize > ushort.MaxValue)
+            int arrayByteCount = Marshal.SizeOf<T>() * value.Length;
+
+            if (arrayByteCount > ushort.MaxValue)
                 throw new System.Exception($"Max string array is: {ushort.MaxValue} characters.");
 
-            if (rpcBufferSize + sizeof(ushort) + arraySize >= rpcBuffer.Length)
+            if (rpcBufferSize + sizeof(ushort) + arrayByteCount >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
+            ushort arrayLength = (ushort)value.Length;
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
-                UnsafeUtility.AddressOf(ref arraySize), 
+                UnsafeUtility.AddressOf(ref arrayLength), 
                 sizeof(ushort));
 
             rpcBufferSize += sizeof(ushort);
@@ -209,7 +218,9 @@ namespace Unity.ClusterDisplay
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
                 UnsafeUtility.AddressOf(ref value[0]), 
-                arraySize);
+                arrayByteCount);
+
+            rpcBufferSize += arrayLength;
         }
 
         [AppendRPCValueTypeParameterValueMarker]

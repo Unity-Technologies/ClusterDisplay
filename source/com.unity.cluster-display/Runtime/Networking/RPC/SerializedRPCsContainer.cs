@@ -14,6 +14,9 @@ public class SerializedRPCsContainer
 
     public void Foreach (System.Action<SerializedRPC> callback)
     {
+        if (m_Count == 0)
+            return;
+
         ushort rpcIndex = 0, rpcCount = 0;
         while (rpcIndex < ushort.MaxValue)
         {
@@ -24,7 +27,7 @@ public class SerializedRPCsContainer
             }
 
             callback(serializedData[rpcIndex++]);
-            if (++rpcCount >= m_Count)
+            if (rpcCount++ >= m_Count)
                 break;
         }
     }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -62,6 +61,8 @@ namespace Unity.ClusterDisplay
                 return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
             else if (typeDefinition.IsValueType)
                 return TryDetermineSizeOfStruct(typeDefinition, ref size);
+
+            Debug.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
             return false;
         }
 
@@ -250,7 +251,7 @@ namespace Unity.ClusterDisplay
                 parameterDef.ParameterType.Name == cachedStringTypeRef.Name;
         }
 
-        private static void InjectAppendStaticSizedRPCCall (
+        private static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
             bool isStatic, 
@@ -259,6 +260,13 @@ namespace Unity.ClusterDisplay
             ushort sizeOfAllParameters,
             out Instruction lastInstruction)
         {
+            if (afterInstruction == null)
+            {
+                Debug.LogError($"Unable to inject call to: \"{call.Name}\" declared in: \"{call.DeclaringType.FullName}\", the instruction to inject after is null!");
+                lastInstruction = null;
+                return false;
+            }
+
             Instruction newInstruct = null;
             if (isStatic)
             {
@@ -285,6 +293,8 @@ namespace Unity.ClusterDisplay
             newInstruct = Instruction.Create(OpCodes.Call, call);
             il.InsertAfter(afterInstruction, newInstruct);
             lastInstruction = newInstruct;
+
+            return true;
         }
     }
 }
