@@ -104,19 +104,18 @@ namespace Unity.ClusterDisplay
 
         public bool TryAddNewRPC (System.Type type, MethodInfo methodInfo, RPCExecutionStage rpcExecutionStage, out RPCMethodInfo rpcMethodInfo)
         {
+            if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))
+            {
+                Debug.LogError($"Unable to register method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType}\", one or more of the method's parameters is not a value type or one of the parameter's members is not a value type.");
+                rpcMethodInfo = default(RPCMethodInfo);
+                return false;
+            }
 
             if (m_RPCLut.TryGetValue(methodInfo.MetadataToken, out var rpcId))
             {
                 Debug.LogError($"Cannot add RPC method: \"{methodInfo.Name}\" from declaring type: \"{methodInfo.DeclaringType}\", it has already been registered!");
                 rpcMethodInfo = default(RPCMethodInfo);
                 return true;
-            }
-
-            if(!methodInfo.GetParameters().All(paramterInfo => paramterInfo.ParameterType.IsValueType))
-            {
-                Debug.LogError($"Unable to register method: \"{methodInfo.Name}\" as an RPC, one or more of the parameters is not a value type!");
-                rpcMethodInfo = default(RPCMethodInfo);
-                return false;
             }
 
             if (!m_IDManager.TryPopId(out rpcId))
@@ -169,9 +168,6 @@ namespace Unity.ClusterDisplay
 
         private void Deserialize ()
         {
-            m_RPCs.Clear();
-            m_RPCLut.Clear();
-
             List<ushort> rpcIdsToAdd = new List<ushort>();
             m_SerializedRPCsContainer.Foreach((serializedRPC) =>
             {
@@ -194,6 +190,12 @@ namespace Unity.ClusterDisplay
             {
                 foreach (var methodInfo in methodsWithRPCAttribute)
                 {
+                    if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))
+                    {
+                        Debug.LogError($"Unable to register method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType}\", one or more of the method's parameters is not a value type or one of the parameter's members is not a value type.");
+                        continue;
+                    }
+
                     var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPCMethod>();
                     rpcIdsToAdd.Add(rpcMethodAttribute.rpcId);
 
@@ -202,6 +204,13 @@ namespace Unity.ClusterDisplay
 
                     Debug.Log($"Registered RPC with {nameof(RPCMethod)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
                 }
+            }
+
+            if (rpcIdsToAdd.Count == 0)
+            {
+                m_RPCs.Clear();
+                m_RPCLut.Clear();
+                return;
             }
 
             rpcIdsToAdd.Sort();

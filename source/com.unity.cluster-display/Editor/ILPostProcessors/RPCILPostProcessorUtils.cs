@@ -50,13 +50,13 @@ namespace Unity.ClusterDisplay
             {
                 if (field.IsStatic)
                     continue;
-                allValid &= TryDetermineSizeOfType(field.FieldType.Resolve(), ref size);
+                allValid &= TryDetermineSizeOfValueType(field.FieldType.Resolve(), ref size);
             }
 
             return allValid;
         }
 
-        private static bool TryDetermineSizeOfType (TypeDefinition typeDefinition, ref int size)
+        private static bool TryDetermineSizeOfValueType (TypeDefinition typeDefinition, ref int size)
         {
             if (typeDefinition.IsPrimitive || typeDefinition.IsEnum)
                 return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
@@ -240,7 +240,17 @@ namespace Unity.ClusterDisplay
             }).FirstOrDefault()) != null;
         }
 
-        private static void InjectOpenRPCLatchCall (
+        private static bool ParameterIsString (ModuleDefinition moduleDefinition, ParameterDefinition parameterDef)
+        {
+            if (cachedStringTypeRef == null)
+                cachedStringTypeRef = moduleDefinition.ImportReference(typeof(string));
+
+            return 
+                parameterDef.ParameterType.Namespace == cachedStringTypeRef.Namespace && 
+                parameterDef.ParameterType.Name == cachedStringTypeRef.Name;
+        }
+
+        private static void InjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
             bool isStatic, 
@@ -266,23 +276,11 @@ namespace Unity.ClusterDisplay
                 newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
-
-                /*
-                newInstruct = Instruction.Create(OpCodes.Conv_U2);
-                il.InsertAfter(afterInstruction, newInstruct);
-                lastInstruction = newInstruct;
-                */
             }
 
             newInstruct = Instruction.Create(OpCodes.Ldc_I4, sizeOfAllParameters);
             il.InsertAfter(afterInstruction, newInstruct);
             afterInstruction = newInstruct;
-
-            /*
-            newInstruct = Instruction.Create(OpCodes.Conv_U2);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
-            */
 
             newInstruct = Instruction.Create(OpCodes.Call, call);
             il.InsertAfter(afterInstruction, newInstruct);

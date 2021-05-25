@@ -14,6 +14,279 @@ namespace Unity.ClusterDisplay
     {
         public override ILPostProcessor GetInstance() => this;
 
+        private bool TryInjectAppendParameterCall (
+            ILProcessor il,
+            ParameterReference paramRef,
+            GenericInstanceMethod genericInstanceMethod,
+            ref Instruction previousInstruction)
+        {
+            var paramDef = paramRef.Resolve();
+            var newInstruction = PushParameterToStack(paramDef, paramDef.IsOut || paramDef.IsIn);
+            il.InsertAfter(previousInstruction, newInstruction);
+            previousInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
+            il.InsertAfter(previousInstruction, newInstruction);
+            previousInstruction = newInstruction;
+
+            return true;
+        }
+
+        private bool TryInjectBridgeToDynamicallySizedRPCPropagation (
+            AssemblyDefinition assemblyDef,
+            Type rpcEmitterType,
+            ushort rpcId,
+            MethodDefinition targetMethodDef,
+            ILProcessor il,
+            Instruction previousInstruction,
+            MethodReference appendRPCMethodRef,
+            ushort totalSizeOfStaticallySizedRPCParameters)
+        {
+            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
+                return false;
+
+            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCStringParameterValueMarker>(rpcEmitterType, out var appendRPCStringParameterValueMethodInfo))
+                return false;
+
+            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo))
+                return false;
+
+            var appendRPCValueTypeParameterValueMethodRef = assemblyDef.MainModule.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
+            var appendRPCStringParameterValueMethodRef = assemblyDef.MainModule.ImportReference(appendRPCStringParameterValueMethodInfo);
+            var appendRPCArrayParameterValueMethodRef = assemblyDef.MainModule.ImportReference(appendRPCArrayParameterValueMethodInfo);
+
+            Instruction newInstruct = null;
+            if (targetMethodDef.IsStatic)
+            {
+                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                il.InsertAfter(previousInstruction, newInstruct);
+                previousInstruction = newInstruct;
+            }
+
+            else
+            {
+                newInstruct = Instruction.Create(OpCodes.Ldarg_0); // Load "this" reference onto stack.
+                il.InsertAfter(previousInstruction, newInstruct);
+                previousInstruction = newInstruct;
+
+                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                il.InsertAfter(previousInstruction, newInstruct);
+                previousInstruction = newInstruct;
+            }
+
+            newInstruct = Instruction.Create(OpCodes.Ldc_I4, totalSizeOfStaticallySizedRPCParameters);
+            il.InsertAfter(previousInstruction, newInstruct);
+            previousInstruction = newInstruct;
+
+            if (targetMethodDef.HasParameters)
+            {
+                // Loop through each array/string parameter adding the runtime byte size to total parameters payload size.
+                foreach (var param in targetMethodDef.Parameters)
+                {
+                    if (ParameterIsString(assemblyDef.MainModule, param))
+                    {
+                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Push sizeof(char) to the stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = PushParameterToStack(param, false); // Push the string parameter reference to the stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        var stringTypeDef = cachedStringTypeRef.Resolve();
+                        var stringLengthPropertyRef = stringTypeDef.Properties.FirstOrDefault(propertyDef =>
+                        {
+                            return
+                                propertyDef.GetMethod != null &&
+                                propertyDef.Name == "Length";
+                        });
+
+                        if (stringLengthPropertyRef == null)
+                        {
+                            Debug.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
+                            return false;
+                        }
+
+                        var stringLengthGetterMethodDef = stringLengthPropertyRef.GetMethod;
+                        if (stringLengthGetterMethodDef == null)
+                        {
+                            Debug.LogError($"Unable to find Length property getter method for parameter type: \"{param.ParameterType.FullName}\".");
+                            return false;
+                        }
+
+                        var stringLengthGetterMethodRef = targetMethodDef.Module.ImportReference(stringLengthGetterMethodDef); // Get the string length getter method.
+
+                        newInstruct = Instruction.Create(OpCodes.Call, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Mul); // Multiply char size of one byte by the length of the string.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Add); // Add string size in bytes to total parameters payload size.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+                    }
+
+                    else if (param.ParameterType.IsArray)
+                    {
+                        int arrayElementSize = 0;
+                        if (!TryDetermineSizeOfValueType(param.ParameterType.Resolve(), ref arrayElementSize))
+                            return false;
+
+                        newInstruct = Instruction.Create(OpCodes.Ldc_I4, arrayElementSize); // Push array element size to stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = PushParameterToStack(param, false); // Push the array reference parameter to the stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        var arrayTypeRef = targetMethodDef.Module.ImportReference(typeof(Array));
+                        var arrayTypeDef = arrayTypeRef.Resolve();
+                        var arrayLengthPropertyRef = arrayTypeDef.Properties.FirstOrDefault(propertyDef =>
+                        {
+                            return
+                                propertyDef.GetMethod != null &&
+                                propertyDef.Name == "Length";
+                        });
+
+                        if (arrayLengthPropertyRef == null)
+                        {
+                            Debug.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
+                            return false;
+                        }
+
+                        var arrayLengthGetterMethodDef = arrayLengthPropertyRef.GetMethod;
+                        if (arrayLengthGetterMethodDef == null)
+                        {
+                            Debug.LogError($"Unable to find Length property getter method for parameter type: \"{param.ParameterType.FullName}\".");
+                            return false;
+                        }
+
+                        var arrayLengthGetterMethodRef = targetMethodDef.Module.ImportReference(arrayLengthGetterMethodDef); // Find array Length get property.
+
+                        newInstruct = Instruction.Create(OpCodes.Call, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Mul); // Multiply array element size by array length.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Add); // Add total array size in bytes to total parameters payload size.
+                        il.InsertAfter(previousInstruction, newInstruct);
+                        previousInstruction = newInstruct;
+                    }
+                }
+            }
+
+            newInstruct = Instruction.Create(OpCodes.Call, appendRPCMethodRef);
+            il.InsertAfter(previousInstruction, newInstruct);
+            previousInstruction = newInstruct;
+
+            if (targetMethodDef.HasParameters)
+            {
+                // Loop through the parameters again to inject instructions to push each parameter values to RPC buffer.
+                foreach (var param in targetMethodDef.Parameters)
+                {
+                    GenericInstanceMethod genericInstanceMethod = null;
+
+                    if (ParameterIsString(targetMethodDef.Module, param))
+                        genericInstanceMethod = new GenericInstanceMethod(appendRPCStringParameterValueMethodRef);
+                    else if (param.ParameterType.IsArray)
+                        genericInstanceMethod = new GenericInstanceMethod(appendRPCArrayParameterValueMethodRef);
+                    else genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
+
+                    genericInstanceMethod.GenericArguments.Add(param.ParameterType);
+
+                    TryInjectAppendParameterCall(
+                        il,
+                        param,
+                        genericInstanceMethod,
+                        ref previousInstruction);
+                }
+            }
+
+            var lastInstruction = il.Body.Instructions[il.Body.Instructions.Count - 1];
+            il.InsertBefore(lastInstruction, Instruction.Create(OpCodes.Nop));
+            return true;
+        }
+
+        private bool TryInjectBridgeToStaticallySizedRPCPropagation (
+            AssemblyDefinition assemblyDef,
+            Type rpcEmitterType,
+            ushort rpcId,
+            MethodDefinition targetMethodDef,
+            ILProcessor il,
+            Instruction previousInstruction,
+            MethodReference appendRPCMethodRef,
+            ushort totalSizeOfStaticallySizedRPCParameters)
+        {
+            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
+                return false;
+
+            var appendRPCValueTypeParameterValueMethodRef = assemblyDef.MainModule.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
+
+            InjectAppendStaticSizedRPCCall(
+                il, 
+                previousInstruction, 
+                targetMethodDef.IsStatic, 
+                rpcId, 
+                appendRPCMethodRef, 
+                totalSizeOfStaticallySizedRPCParameters,
+                out previousInstruction);
+
+            if (targetMethodDef.HasParameters)
+            {
+                foreach (var param in targetMethodDef.Parameters)
+                {
+                    var genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
+                    genericInstanceMethod.GenericArguments.Add(param.ParameterType);
+
+                    TryInjectAppendParameterCall(
+                        il,
+                        param,
+                        genericInstanceMethod,
+                        ref previousInstruction);
+                }
+            }
+
+            var lastInstruction = il.Body.Instructions[il.Body.Instructions.Count - 1];
+            il.InsertBefore(lastInstruction, Instruction.Create(OpCodes.Nop));
+
+            return true;
+        }
+
+        private bool TryPollParameterInformation (ModuleDefinition moduleDef, MethodDefinition methodDef, out ushort totalSizeOfStaticallySizedRPCParameters, out bool hasDynamicallySizedRPCParameters)
+        {
+            totalSizeOfStaticallySizedRPCParameters = 0;
+            hasDynamicallySizedRPCParameters = false;
+
+            foreach (var param in methodDef.Parameters)
+            {
+                var typeReference = moduleDef.ImportReference(param.ParameterType);
+
+                if (typeReference.IsValueType)
+                {
+                    int sizeOfType = 0;
+                    if (!TryDetermineSizeOfValueType(typeReference.Resolve(), ref sizeOfType))
+                        return false;
+
+                    if (sizeOfType > ushort.MaxValue || ((int)totalSizeOfStaticallySizedRPCParameters) + sizeOfType > ushort.MaxValue)
+                        return false;
+                    totalSizeOfStaticallySizedRPCParameters += (ushort)sizeOfType;
+                }
+
+                else hasDynamicallySizedRPCParameters =
+                        ParameterIsString(moduleDef, param) ||
+                        typeReference.IsArray;
+            }
+
+            return true;
+        }
+
         private bool TryInjectBridgeToRPCPropagation (
             AssemblyDefinition assemblyDef, 
             ushort rpcId, 
@@ -21,8 +294,8 @@ namespace Unity.ClusterDisplay
         {
             var beforeInstruction = targetMethodDef.Body.Instructions.First();
             var il = targetMethodDef.Body.GetILProcessor();
-            var rpcEmitterType = typeof(RPCEmitter);
 
+            var rpcEmitterType = typeof(RPCEmitter);
             var rpcEmitterTypeReference = assemblyDef.MainModule.ImportReference(rpcEmitterType);
 
             MethodInfo appendRPCMethodInfo = null;
@@ -35,69 +308,50 @@ namespace Unity.ClusterDisplay
             else if (!TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                 return false;
 
-            if (!TryFindMethodWithAttribute<RPCEmitter.CopyValueToBufferMarker>(rpcEmitterType, out var copyValueToBufferMethodInfo))
-                return false;
-
-            var openRPCLatchMethodRef = assemblyDef.MainModule.ImportReference(appendRPCMethodInfo);
-            var copyValueToBufferMethodRef = assemblyDef.MainModule.ImportReference(copyValueToBufferMethodInfo);
-
-            var parameters = targetMethodDef.Parameters;
-            ushort sizeOfAllParameters = 0;
-            foreach (var param in parameters)
-            {
-                var typeReference = assemblyDef.MainModule.ImportReference(param.ParameterType);
-
-                int sizeOfType = 0;
-                if (!TryDetermineSizeOfType(typeReference.Resolve(), ref sizeOfType))
-                    return false;
-
-                if (sizeOfType > ushort.MaxValue || ((int)sizeOfAllParameters) + sizeOfType > ushort.MaxValue)
-                    return false;
-
-                sizeOfAllParameters += (ushort)sizeOfType;
-            }
-
-            Instruction newInstruction = null;
-            Instruction previousInstruction = null;
+            var appendRPCCMethodRef = assemblyDef.MainModule.ImportReference(appendRPCMethodInfo);
 
             if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
                 return false;
 
-            newInstruction = Instruction.Create(OpCodes.Call, assemblyDef.MainModule.ImportReference(getIsMasterMethod));
+            if (!TryPollParameterInformation(
+                targetMethodDef.Module,
+                targetMethodDef,
+                out var totalSizeOfStaticallySizedRPCParameters,
+                out var hasDynamicallySizedRPCParameters))
+                return false;
+
+            var newInstruction = Instruction.Create(OpCodes.Call, assemblyDef.MainModule.ImportReference(getIsMasterMethod));
             il.InsertBefore(beforeInstruction, newInstruction);
-            previousInstruction = newInstruction;
+            var previousInstruction = newInstruction;
 
             newInstruction = Instruction.Create(OpCodes.Brfalse_S, beforeInstruction);
             il.InsertAfter(previousInstruction, newInstruction);
             previousInstruction = newInstruction;
 
-            InjectOpenRPCLatchCall(
-                il, 
-                previousInstruction, 
-                targetMethodDef.IsStatic, 
-                rpcId, 
-                openRPCLatchMethodRef, 
-                sizeOfAllParameters,
-                out previousInstruction);
+            return
+                !hasDynamicallySizedRPCParameters ?
 
-            foreach (var param in parameters)
-            {
-                var genericInstanceMethod = new GenericInstanceMethod(copyValueToBufferMethodRef);
-                genericInstanceMethod.GenericArguments.Add(param.ParameterType);
+                    TryInjectBridgeToStaticallySizedRPCPropagation(
+                        assemblyDef,
+                        rpcEmitterType,
+                        rpcId,
+                        targetMethodDef,
+                        il,
+                        previousInstruction,
+                        appendRPCCMethodRef,
+                        totalSizeOfStaticallySizedRPCParameters)
 
-                newInstruction = PushParameterToStack(param, param.IsOut || param.IsIn);
-                il.InsertAfter(previousInstruction, newInstruction);
-                previousInstruction = newInstruction;
+                    :
 
-                newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
-                il.InsertAfter(previousInstruction, newInstruction);
-                previousInstruction = newInstruction;
-            }
-
-            var lastInstruction = il.Body.Instructions[il.Body.Instructions.Count - 1];
-            il.InsertBefore(lastInstruction, Instruction.Create(OpCodes.Nop));
-
-            return true;
+                    TryInjectBridgeToDynamicallySizedRPCPropagation(
+                        assemblyDef,
+                        rpcEmitterType,
+                        rpcId,
+                        targetMethodDef,
+                        il,
+                        previousInstruction,
+                        appendRPCCMethodRef,
+                        totalSizeOfStaticallySizedRPCParameters);
         }
 
         private bool TryGetTryCallParameters (
@@ -286,8 +540,7 @@ namespace Unity.ClusterDisplay
             bool isImmediateRPCExeuction,
             out Instruction firstInstructionOfInjection)
         {
-            if (!TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod) ||
-                !TryFindParameterWithAttribute<RPCInterfaceRegistry.ObjectRegistryMarker>(ilProcessor.Body.Method, out var objectParamDef) ||
+            if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.ObjectRegistryMarker>(ilProcessor.Body.Method, out var objectParamDef) ||
                 !TryFindParameterWithAttribute<RPCInterfaceRegistry.PipeIdMarker>(ilProcessor.Body.Method, out var pipeIdParamDef) ||
                 !TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(ilProcessor.Body.Method, out var bufferPosParamDef))
             {
@@ -344,24 +597,68 @@ namespace Unity.ClusterDisplay
             }
 
              // Import the ParseStructureMethod method.
-            var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
-
             // Loop through all parameters of the method we want to call on our object.
-            foreach (var parameterReference in targetMethodToExecute.Parameters)
+            foreach (var paramDef in targetMethodToExecute.Parameters)
             {
-                var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
-                var paramRef = moduleDef.ImportReference(parameterReference.ParameterType);
-                paramRef.IsValueType = true;
-                genericInstanceMethod.GenericArguments.Add(paramRef);
-                var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
+                if (paramDef.ParameterType.IsValueType)
+                {
+                    if (!TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod))
+                        return false;
+                    var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
 
-                newInstruction = PushParameterToStack(bufferPosParamDef, !isImmediateRPCExeuction);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                    var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
+                    var paramRef = moduleDef.ImportReference(paramDef.ParameterType);
+                    paramRef.IsValueType = true;
+                    genericInstanceMethod.GenericArguments.Add(paramRef);
+                    var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethodRef); // Call generic method to convert bytes into our struct.
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                    newInstruction = PushParameterToStack(bufferPosParamDef, !isImmediateRPCExeuction);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+
+                    newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethodRef); // Call generic method to convert bytes into our struct.
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+                }
+
+                else if (ParameterIsString(targetMethodToExecute.Module, paramDef))
+                {
+                    if (!TryFindMethodWithAttribute<RPCEmitter.ParseStringMarker>(typeof(RPCEmitter), out var parseStringMethod))
+                        return false;
+
+                    var parseStringMethodRef = moduleDef.ImportReference(parseStringMethod);
+
+                    newInstruction = PushParameterToStack(bufferPosParamDef, !isImmediateRPCExeuction);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+
+                    newInstruction = Instruction.Create(OpCodes.Call, parseStringMethodRef);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+                }
+
+                else if (paramDef.ParameterType.IsArray)
+                {
+                    var arrayElementType = paramDef.ParameterType.GetElementType();
+                    if (!TryFindMethodWithAttribute<RPCEmitter.ParseArrayMarker>(typeof(RPCEmitter), out var parseArrayMethod))
+                        return false;
+
+                    var parseArrayMethodRef = moduleDef.ImportReference(parseArrayMethod);
+
+                    var genericInstanceMethod = new GenericInstanceMethod(parseArrayMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
+                    var paramRef = moduleDef.ImportReference(arrayElementType);
+                    paramRef.IsValueType = true;
+                    genericInstanceMethod.GenericArguments.Add(paramRef);
+                    var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
+
+                    newInstruction = PushParameterToStack(bufferPosParamDef, !isImmediateRPCExeuction);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+
+                    newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+                }
             }
 
             newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethodToExecute); // Call our method on the target object with all the parameters.
@@ -483,6 +780,20 @@ namespace Unity.ClusterDisplay
             Instruction jmpToInstruction,
             out Instruction lastInstructionOfSwitchJmp)
         {
+            if (afterInstruction == null)
+            {
+                Debug.LogError("Unable to inject switch jump instructions, the instruction we want to inject after is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
+            if (jmpToInstruction == null)
+            {
+                Debug.LogError("Unable to inject switch jump instructions, the target instruction to jump to is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
             if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(il.Body.Method, out var rpcIdParamDef))
             {
                 lastInstructionOfSwitchJmp = null;
@@ -510,6 +821,20 @@ namespace Unity.ClusterDisplay
             Instruction failureInstructionToJumpTo,
             out Instruction lastInstructionOfSwitchJmp)
         {
+            if (afterInstruction == null)
+            {
+                Debug.LogError("Unable to inject default switch return instructions, the instruction we want to inject after is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
+            if (failureInstructionToJumpTo == null)
+            {
+                Debug.LogError("Unable to inject default switch return instructions, the failure instruction that we want to jump to is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
             var newInstruction = Instruction.Create(OpCodes.Br_S, failureInstructionToJumpTo);
             il.InsertAfter(afterInstruction, newInstruction);
             lastInstructionOfSwitchJmp = newInstruction;
@@ -746,14 +1071,15 @@ namespace Unity.ClusterDisplay
             var serializedRPCExecutionStage = rpcExecutionStage;
             if (serializedRPCExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
             {
-                InjectRPCExecution(
+                if (!InjectRPCExecution(
                     rpcInterfacesModuleDef,
                     ilProcessor: onTryCallILProcessor,
                     injectBeforeInstruction: firstOfOnTryFailureInstructions,
                     objectRegistryTryGetItemMethodRef,
                     targetMethodToExecute: targetRPCMethodDef,
                     isImmediateRPCExeuction: true,
-                    firstInstructionOfInjection: out firstInstructionOfOnTryCallSwitchCase);
+                    firstInstructionOfInjection: out firstInstructionOfOnTryCallSwitchCase))
+                    return;
             }
 
             else
@@ -785,32 +1111,35 @@ namespace Unity.ClusterDisplay
 
                     var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
 
-                    InjectRPCExecution(
+                    if (!InjectRPCExecution(
                         rpcInterfacesModuleDef,
                         executeQueuedRPCMethodILProcessor,
                         injectBeforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
                         objectRegistryTryGetItemMethodRef,
                         targetMethodToExecute: targetRPCMethodDef,
                         isImmediateRPCExeuction: false,
-                        firstInstructionOfInjection: out var firstInstructionOfExecuteQueuedRPCMethod);
+                        firstInstructionOfInjection: out var firstInstructionOfExecuteQueuedRPCMethod))
+                        return;
 
-                    InjectSwitchJmp(
+                    if (!InjectSwitchJmp(
                         executeQueuedRPCMethodILProcessor,
                         afterInstruction: lastExecuteQueuedRPCSwitchJmpInstruction,
                         valueToPushForBeq: rpcId,
                         jmpToInstruction: firstInstructionOfExecuteQueuedRPCMethod,
-                        lastInstructionOfSwitchJmp: out lastExecuteQueuedRPCSwitchJmpInstruction);
+                        lastInstructionOfSwitchJmp: out lastExecuteQueuedRPCSwitchJmpInstruction))
+                        return;
 
                     lastSwitchJmpInstruction[serializedRPCExecutionStage] = lastExecuteQueuedRPCSwitchJmpInstruction;
                 }
             }
 
-            InjectSwitchJmp(
+            if (!InjectSwitchJmp(
                 onTryCallILProcessor,
                 afterInstruction: lastSwitchJmpOfOnTryCallMethod,
                 valueToPushForBeq: rpcId,
                 jmpToInstruction: firstInstructionOfOnTryCallSwitchCase,
-                lastInstructionOfSwitchJmp: out lastSwitchJmpOfOnTryCallMethod);
+                lastInstructionOfSwitchJmp: out lastSwitchJmpOfOnTryCallMethod))
+                return;
 
             Debug.Log($"Injected RPC intercept assembly into method: \"{targetRPCMethodDef.Name}\" in class: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
         }

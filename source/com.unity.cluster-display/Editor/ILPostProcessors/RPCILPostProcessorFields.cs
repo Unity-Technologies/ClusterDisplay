@@ -13,10 +13,13 @@ namespace Unity.ClusterDisplay
     public partial class RPCILPostProcessor : ILPostProcessor
     {
         private const string attributeSearchAssemblyName = "ILPostprocessorAttributes";
+
         private Dictionary<RPCExecutionStage, ILProcessor> cachedExecuteQueuedRPCMethodILProcessors;
         private Dictionary<RPCExecutionStage, Instruction> lastSwitchJmpInstruction;
-        private MethodInfo cachedGetIsMasterMethod;
 
+        private static TypeReference cachedStringTypeRef;
+
+        private MethodInfo cachedGetIsMasterMethod;
         private MethodReference cachedDebugLogMethodRef;
     }
 }

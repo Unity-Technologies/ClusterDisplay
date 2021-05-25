@@ -150,12 +150,9 @@ namespace Unity.ClusterDisplay
 
             private void OnChangeSearch (string newMethodSearchStr)
             {
-                cachedMethods = ReflectionUtils.GetAllMethodsFromType(
-                    targetType, 
-                    newMethodSearchStr, 
-                    valueTypeParametersOnly: true,
-                    bindingFlags: BindingFlags.Public | BindingFlags.Static, 
-                    includeGenerics: false);
+                cachedMethods = ReflectionUtils.GetMethodsWithRPCCompatibleParamters(
+                    targetType,
+                    newMethodSearchStr);
 
                 methodSearchStr = newMethodSearchStr;
             }

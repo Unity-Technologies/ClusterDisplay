@@ -27,6 +27,87 @@ namespace Unity.ClusterDisplay
             return type;
         }
 
+        public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
+        {
+            ushort depth = 0;
+            return methodInfo
+                .GetParameters()
+                .All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth));
+        }
+
+        public static bool RecursivelyDetermineIfTypeIsCompatibleRPCParameter (
+            MethodInfo methodInfo, 
+            ParameterInfo parameterInfo, 
+            Type type,
+            ref ushort structureDepth)
+        {
+            if (type.IsPrimitive)
+                return true;
+
+            if (type == typeof(string))
+            {
+                if (structureDepth > 0)
+                    goto dynamicallySizedMemberTypeFailure;
+
+                return true;
+            }
+
+            else if (type.IsArray)
+            {
+                if (structureDepth > 0)
+                    goto dynamicallySizedMemberTypeFailure;
+
+                type = type.GetElementType();
+            }
+
+            ushort localDepth = structureDepth;
+
+            return
+                type.IsValueType &&
+                type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                    .All(fieldInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, fieldInfo.FieldType, ref localDepth));
+
+            dynamicallySizedMemberTypeFailure:
+            Debug.LogError($"Method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.FullName}\" cannot be used as an RPC, the parameter: \"{parameterInfo.Name}\" is type: \"{parameterInfo.ParameterType.FullName}\" which contains dynamically allocated type: \"{type.FullName}\" somehwere in it's member hierarchy.");
+            return false;
+        }
+
+        public static MethodInfo[] GetMethodsWithRPCCompatibleParamters (
+            System.Type type, 
+            string filter)
+        {
+            if (!TryGetDefaultAssembly(out var defaultAssembly))
+                return new MethodInfo[0];
+
+            return
+                string.IsNullOrEmpty(filter) ?
+
+                    type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(method =>
+                        {
+                            ushort depth = 0;
+                            return
+                                !method.IsGenericMethod &&
+                                method.DeclaringType.Assembly == defaultAssembly &&
+                                method.GetParameters().All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(method, parameterInfo, parameterInfo.ParameterType, ref depth));
+                        })
+                        .ToArray()
+
+                    :
+
+                    type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(method =>
+                        {
+                            ushort depth = 0;
+                            return
+                                !method.IsGenericMethod &&
+                                method.DeclaringType.Assembly == defaultAssembly &&
+                                (method.Name.Contains(filter)) &&
+                                method.GetParameters().All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(method, parameterInfo, parameterInfo.ParameterType, ref depth));
+                        }).ToArray();
+                        
+        }
+
         public static MethodInfo[] GetAllMethodsFromType (
             System.Type type, 
             string filter, 
