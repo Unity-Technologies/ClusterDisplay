@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
-                    m_MasterEmitter.GatherFrameState();
+                    m_MasterEmitter.GatherFrameState(LocalNode.CurrentFrameID);
 
                 // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch ((EStage) m_Stage)
@@ -85,7 +85,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                         using (m_MarkerReadyToSignalStartNewFrame.Auto())
                         {
                             if (!m_MasterEmitter.ValidRawStateData) // 1st frame only
-                                m_MasterEmitter.GatherFrameState();
+                                m_MasterEmitter.GatherFrameState(LocalNode.CurrentFrameID);
 
                             if (m_MasterEmitter.ValidRawStateData)
                             {

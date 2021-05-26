@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay
         }
 
 
-        public void GatherFrameState()
+        public void GatherFrameState(ulong frame)
         {
             var endPos = 0;
             using (var buffer = new NativeArray<byte>(16 * 1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay
                     StoreTimeState(buffer, ref endPos) &&
                     StoreClusterInputState(buffer, ref endPos) &&
                     StoreRndGeneratorState(buffer, ref endPos) &&
-                    StoreRPCs(buffer, ref endPos) &&
+                    StoreRPCs(buffer, ref endPos, frame) &&
                     MarkStatesEnd(buffer, ref endPos))
                 {
                     m_RawStateData = new NativeArray<byte>(buffer.GetSubArray(0, endPos), Allocator.Temp);
@@ -173,7 +173,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos)
+        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos, ulong frame)
         {
             if (RPCEmitter.RPCBufferSize == 0)
                 return true;
@@ -183,7 +183,7 @@ namespace Unity.ClusterDisplay
 
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
 
-            return RPCEmitter.Latch(buffer, ref endPos);
+            return RPCEmitter.Latch(buffer, ref endPos, frame);
         }
 
         private static unsafe int StoreStateID(NativeArray<byte> buffer, int endPos, Guid id, int guidLen)

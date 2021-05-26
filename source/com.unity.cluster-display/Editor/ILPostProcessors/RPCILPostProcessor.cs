@@ -109,6 +109,14 @@ namespace Unity.ClusterDisplay
                         newInstruct = Instruction.Create(OpCodes.Add); // Add string size in bytes to total parameters payload size.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        il.InsertAfter(afterInstruction, newInstruct);
+                        afterInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Add); // Add the constant to the total parameters payload size.
+                        il.InsertAfter(afterInstruction, newInstruct);
+                        afterInstruction = newInstruct;
                     }
 
                     else if (param.ParameterType.IsArray)
@@ -158,6 +166,14 @@ namespace Unity.ClusterDisplay
                         afterInstruction = newInstruct;
 
                         newInstruct = Instruction.Create(OpCodes.Add); // Add total array size in bytes to total parameters payload size.
+                        il.InsertAfter(afterInstruction, newInstruct);
+                        afterInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        il.InsertAfter(afterInstruction, newInstruct);
+                        afterInstruction = newInstruct;
+
+                        newInstruct = Instruction.Create(OpCodes.Add); // Add the constant to the total parameters payload size.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
                     }

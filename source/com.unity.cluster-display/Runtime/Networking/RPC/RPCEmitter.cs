@@ -46,10 +46,10 @@ namespace Unity.ClusterDisplay
             rpcBufferSize = 0;
         }
 
-        public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
+        public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos, ulong frame)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
-            // UnityEngine.Debug.Log($"Latched RPC Buffer of size: {rpcBufferSize}");
+            UnityEngine.Debug.Log($"Latched RPC Buffer: (Frame: {frame}, Buffer Size: {rpcBufferSize})");
             endPos += rpcBufferSize;
             rpcBufferSize = 0;
             return true;
@@ -57,31 +57,32 @@ namespace Unity.ClusterDisplay
 
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
+            ushort bufferPos = 0;
             if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return false;
+                goto failure;
 
             if (!RPCRegistry.TryGetInstance(out var rpcRegistry))
-                return false;
+                goto failure;
 
             if (buffer.Length < sizeof(ushort) * 3)
-                return true;
+                goto success;
 
             UnsafeUtility.MemCpy((byte*)rpcBuffer.GetUnsafePtr(), (byte*)buffer.GetUnsafePtr(), buffer.Length);
             rpcBufferSize = buffer.Length;
 
-            ushort bufferPos = 0;
             do
             {
                 if (bufferPos > buffer.Length - sizeof(ushort) * 3)
-                    break;
+                    goto success;
 
+                ushort startingBufferPos = bufferPos;
                 ParseRPCId(ref bufferPos, out var rpcId);
 
                 #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
                 if (!rpcRegistry.IsValidRPCId(rpcId))
                 {
-                    UnityEngine.Debug.LogError($"There are no local RPCs registered with the ID: {rpcId}, discarding the rest of the network frame buffer for frame: {frame}");
-                    break;
+                    UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: ({rpcId} <--- No registered RPC with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    goto failure;
                 }
                 #endif
 
@@ -97,7 +98,7 @@ namespace Unity.ClusterDisplay
                         parametersPayloadSize, 
                         ref bufferPos);
 
-                    UnityEngine.Debug.Log($"Executed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize})");
+                    UnityEngine.Debug.Log($"Processed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     continue;
                 }
 
@@ -106,8 +107,8 @@ namespace Unity.ClusterDisplay
                 #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
                 if (objectRegistry[pipeId] == null)
                 {
-                    UnityEngine.Debug.LogError($"There are no local objects registered with pipe ID: {pipeId}, discarding the rest of the network frame buffer: {frame}");
-                    break;
+                    UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: {rpcId}, Pipe ID: ({pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    goto failure;
                 }
                 #endif
 
@@ -120,15 +121,21 @@ namespace Unity.ClusterDisplay
                     parametersPayloadSize, 
                     ref bufferPos) || (parametersPayloadSize > 0 && parametersPayloadSize == bufferPos))
                 {
-                    UnityEngine.Debug.LogError($"Unknown failure occurred while attempting to execute RPC for frame: {frame}, check IL Postprocessors");
-                    break;
+                    UnityEngine.Debug.LogError($"Unknown error occurred while attempting to process RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    goto failure;
                 }
 
-                UnityEngine.Debug.Log($"Executed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
+                UnityEngine.Debug.Log($"Processed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
 
             } while (true);
 
+            success:
+            UnityEngine.Debug.Log($"Finished processing RPCs: (Frame: {frame}, Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
             return true;
+
+            failure:
+            UnityEngine.Debug.LogError($"Failure occurred while processing RPCs: (Frame: {frame}, Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
+            return false;
         }
 
         [ParseStringMarker]
@@ -292,21 +299,22 @@ namespace Unity.ClusterDisplay
             int totalRPCCallSize = sizeof(ushort) * 3 + parametersPayloadSize;
             if (totalRPCCallSize > ushort.MaxValue)
             {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC call size: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
+                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
                 return;
             }
 
             if (totalRPCCallSize >= rpcBuffer.Length)
             {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC call size of: {totalRPCCallSize} does not fit in the RPC buffer of size: {rpcBuffer.Length}");
+                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} does not fit in the RPC buffer of size: {rpcBuffer.Length}");
                 return;
             }
 
+            int startingBufferPos = rpcBufferSize;
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1));
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
 
-            UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
+            UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
         }
 
         [StaticRPCCallMarker]
@@ -315,16 +323,25 @@ namespace Unity.ClusterDisplay
             if (!AllowWrites)
                 return;
 
-            if (parametersPayloadSize > ushort.MaxValue)
+            int totalRPCCallSize = sizeof(ushort) * 3 + parametersPayloadSize;
+            if (totalRPCCallSize > ushort.MaxValue)
             {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the RPC's parameter payload size is larger then the max parameter payload size of: {ushort.MaxValue}");
+                UnityEngine.Debug.LogError($"Unable to append static RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
                 return;
             }
 
+            if (totalRPCCallSize >= rpcBuffer.Length)
+            {
+                UnityEngine.Debug.LogError($"Unable to append static RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} does not fit in the RPC buffer of size: {rpcBuffer.Length}");
+                return;
+            }
 
+            int startingBufferPos = rpcBufferSize;
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)0);
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
+
+            UnityEngine.Debug.Log($"Sending static RPC: (ID: {rpcId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
         }
     }
 }
