@@ -70,13 +70,10 @@ namespace Unity.ClusterDisplay
                 ref rpcsBufferPosition);
         }
 
-        public static bool TryCallStatic (
-            ushort rpcId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcsBufferPosition)
-        {
-            throw new System.NotImplementedException();
-        }
+        public static bool TryCallStatic(
+            ushort rpcId,
+            ushort parametersPayloadSize,
+            ref ushort rpcsBufferPosition) => false;
 
         protected abstract void ExecuteRPCBeforeFixedUpdate(
             ObjectRegistry objectRegistry,

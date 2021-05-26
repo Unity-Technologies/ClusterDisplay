@@ -95,10 +95,14 @@ namespace Unity.ClusterDisplay
                 {
                     ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
 
-                    RPCInterfaceRegistry.TryCallStatic(
+                    if (!RPCInterfaceRegistry.TryCallStatic(
                         rpcId, 
                         parametersPayloadSize, 
-                        ref bufferPos);
+                        ref bufferPos))
+                    {
+                        UnityEngine.Debug.LogError($"RPC execution failed for static RPC: (ID: {rpcId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                        goto failure;
+                    }
 
                     #if CLUSTER_DISPLAY_VERBOSE_LOGGING
                     UnityEngine.Debug.Log($"Processed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
@@ -124,7 +128,7 @@ namespace Unity.ClusterDisplay
                     parametersPayloadSize, 
                     ref bufferPos))
                 {
-                    UnityEngine.Debug.LogError($"Unknown error occurred while attempting to process RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    UnityEngine.Debug.LogError($"RPC execution failed for RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     goto failure;
                 }
 
@@ -134,19 +138,6 @@ namespace Unity.ClusterDisplay
                     UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     goto failure;
                 }
-
-                /*
-                if (!RPCInterfaceRegistry.TryCallInstance(
-                    objectRegistry,
-                    rpcId, 
-                    pipeId, 
-                    parametersPayloadSize, 
-                    ref bufferPos) || (parametersPayloadSize > 0 && parametersPayloadSize == bufferPos))
-                {
-                    UnityEngine.Debug.LogError($"Unknown error occurred while attempting to process RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                    goto failure;
-                }
-                */
 
                 #if CLUSTER_DISPLAY_VERBOSE_LOGGING
                 UnityEngine.Debug.Log($"Processed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
