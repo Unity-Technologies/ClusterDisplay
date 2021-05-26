@@ -55,9 +55,12 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public static unsafe bool Unlatch (NativeArray<byte> buffer)
+        public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
             if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
+                return false;
+
+            if (!RPCRegistry.TryGetInstance(out var rpcRegistry))
                 return false;
 
             if (buffer.Length < sizeof(ushort) * 3)
@@ -73,30 +76,55 @@ namespace Unity.ClusterDisplay
                     break;
 
                 ParseRPCId(ref bufferPos, out var rpcId);
-                ParsePipeID(ref bufferPos, out var pipeId);
-                ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
-                ushort parametersStartingPos = bufferPos;
 
-                UnityEngine.Debug.Log($"Received RPC: (ID: {rpcId}, Pipe ID: {pipeId - 1}, Parameters Payload Size: {parametersPayloadSize})");
-
-                if (pipeId == 0)
+                #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
+                if (!rpcRegistry.IsValidRPCId(rpcId))
                 {
-                    // RPCInterfaceRegistry.TryCallStatic(rpcId, parametersPayloadSize, ref bufferPos);
+                    UnityEngine.Debug.LogError($"There are no local RPCs registered with the ID: {rpcId}, discarding the rest of the network frame buffer for frame: {frame}");
+                    break;
+                }
+                #endif
+
+                ParsePipeID(ref bufferPos, out var bufferPipeId);
+
+                ushort parametersPayloadSize;
+                if (bufferPipeId == 0)
+                {
+                    ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
+
+                    RPCInterfaceRegistry.TryCallStatic(
+                        rpcId, 
+                        parametersPayloadSize, 
+                        ref bufferPos);
+
+                    UnityEngine.Debug.Log($"Executed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize})");
                     continue;
                 }
 
-                RPCInterfaceRegistry.TryCallInstance(
-                    objectRegistry,
-                    rpcId, 
-                    (ushort)(pipeId - 1), 
-                    parametersPayloadSize, 
-                    ref bufferPos);
+                ushort pipeId = (ushort)(bufferPipeId - 1);
 
-                if (parametersPayloadSize > 0 && parametersStartingPos == bufferPos)
+                #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
+                if (objectRegistry[pipeId] == null)
                 {
-                    UnityEngine.Debug.LogError("Unable to call RPC instance, check IL Postprocessors.");
+                    UnityEngine.Debug.LogError($"There are no local objects registered with pipe ID: {pipeId}, discarding the rest of the network frame buffer: {frame}");
                     break;
                 }
+                #endif
+
+                ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
+
+                if (!RPCInterfaceRegistry.TryCallInstance(
+                    objectRegistry,
+                    rpcId, 
+                    pipeId, 
+                    parametersPayloadSize, 
+                    ref bufferPos) || (parametersPayloadSize > 0 && parametersPayloadSize == bufferPos))
+                {
+                    UnityEngine.Debug.LogError($"Unknown failure occurred while attempting to execute RPC for frame: {frame}, check IL Postprocessors");
+                    break;
+                }
+
+                UnityEngine.Debug.Log($"Executed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize})");
 
             } while (true);
 
@@ -127,7 +155,7 @@ namespace Unity.ClusterDisplay
             ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
 
             T[] array = new T[arrayLength];
-            void *arrayPtr = UnsafeUtility.AddressOf(ref array[0]);
+            void * arrayPtr = UnsafeUtility.AddressOf(ref array[0]);
             UnsafeUtility.MemCpy(arrayPtr, ptr.ToPointer(), arrayByteCount);
 
             startPos += (ushort)(sizeof(ushort) + arrayByteCount);
@@ -194,7 +222,7 @@ namespace Unity.ClusterDisplay
         }
 
         [AppendRPCArrayParameterValueMarker]
-        public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : struct
+        public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : unmanaged
         {
             if (!AllowWrites || value == null)
                 return;
@@ -215,12 +243,13 @@ namespace Unity.ClusterDisplay
 
             rpcBufferSize += sizeof(ushort);
 
-            UnsafeUtility.MemCpy(
-                (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
-                UnsafeUtility.AddressOf(ref value[0]), 
-                arrayByteCount);
+            fixed (T* ptr = &value[0])
+                UnsafeUtility.MemCpy(
+                    (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
+                    ptr, 
+                    arrayByteCount);
 
-            rpcBufferSize += arrayLength;
+            rpcBufferSize += arrayByteCount;
         }
 
         [AppendRPCValueTypeParameterValueMarker]

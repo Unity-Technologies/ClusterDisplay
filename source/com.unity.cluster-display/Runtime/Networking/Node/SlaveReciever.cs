@@ -160,10 +160,10 @@ namespace Unity.ClusterDisplay
             m_TxCount++;
         }
 
-        private static unsafe bool RestoreRPCState (NativeArray<byte> stateData)
+        private unsafe bool RestoreRPCState (NativeArray<byte> stateData)
         {
             // Debug.Log($"RPC Buffer Size: {stateData.Length}");
-            RPCEmitter.Unlatch(stateData);
+            RPCEmitter.Unlatch(stateData, m_LastRxFrameStart);
             return true;
         }
 

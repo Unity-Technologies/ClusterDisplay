@@ -35,6 +35,8 @@ namespace Unity.ClusterDisplay
         private readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
         private readonly Dictionary<ushort, RPCMethodInfo> m_RPCs = new Dictionary<ushort, RPCMethodInfo>();
 
+        public bool IsValidRPCId(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
+
         public int RPCCount => m_RPCs.Count;
 
         private void ApplyRPC (ref RPCMethodInfo rpcMethodInfo)
