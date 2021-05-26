@@ -49,7 +49,9 @@ namespace Unity.ClusterDisplay
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos, ulong frame)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Latched RPC Buffer: (Frame: {frame}, Buffer Size: {rpcBufferSize})");
+            #endif
             endPos += rpcBufferSize;
             rpcBufferSize = 0;
             return true;
@@ -98,7 +100,9 @@ namespace Unity.ClusterDisplay
                         parametersPayloadSize, 
                         ref bufferPos);
 
+                    #if CLUSTER_DISPLAY_VERBOSE_LOGGING
                     UnityEngine.Debug.Log($"Processed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    #endif
                     continue;
                 }
 
@@ -113,7 +117,25 @@ namespace Unity.ClusterDisplay
                 #endif
 
                 ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
+                if (!RPCInterfaceRegistry.TryCallInstance(
+                    objectRegistry,
+                    rpcId, 
+                    pipeId, 
+                    parametersPayloadSize, 
+                    ref bufferPos))
+                {
+                    UnityEngine.Debug.LogError($"Unknown error occurred while attempting to process RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    goto failure;
+                }
 
+                ushort consumedParameterByteCount = (ushort)((bufferPos - startingBufferPos) - MinimumRPCPayloadSize);
+                if (parametersPayloadSize > 0 && parametersPayloadSize != consumedParameterByteCount)
+                {
+                    UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                    goto failure;
+                }
+
+                /*
                 if (!RPCInterfaceRegistry.TryCallInstance(
                     objectRegistry,
                     rpcId, 
@@ -124,13 +146,18 @@ namespace Unity.ClusterDisplay
                     UnityEngine.Debug.LogError($"Unknown error occurred while attempting to process RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     goto failure;
                 }
+                */
 
+                #if CLUSTER_DISPLAY_VERBOSE_LOGGING
                 UnityEngine.Debug.Log($"Processed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                #endif
 
             } while (true);
 
             success:
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Finished processing RPCs: (Frame: {frame}, Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
+            #endif
             return true;
 
             failure:
@@ -146,7 +173,7 @@ namespace Unity.ClusterDisplay
             ushort strLen = Marshal.PtrToStructure<ushort>(ptr);
             ptr += sizeof(ushort);
 
-            var str = Encoding.UTF8.GetString((byte*)ptr.ToPointer(), strLen);
+            var str = Encoding.ASCII.GetString((byte*)ptr.ToPointer(), strLen);
             startPos += (ushort)(sizeof(ushort) + strLen);
             return str;
         }
@@ -266,7 +293,6 @@ namespace Unity.ClusterDisplay
                 return;
 
             int structSize = Marshal.SizeOf<T>(value);
-            // UnityEngine.Debug.Log($"Current RPC Buffer Size: {rpcBufferSize}, Struct Size: {structSize}, Max RPC Buffer Size: {rpcBuffer.Length}");
             if (rpcBufferSize + structSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
@@ -314,7 +340,9 @@ namespace Unity.ClusterDisplay
             AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1));
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
 
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
+            #endif
         }
 
         [StaticRPCCallMarker]
@@ -341,7 +369,9 @@ namespace Unity.ClusterDisplay
             AppendRPCValueTypeParameterValue<ushort>((ushort)0);
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
 
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Sending static RPC: (ID: {rpcId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
+            #endif
         }
     }
 }

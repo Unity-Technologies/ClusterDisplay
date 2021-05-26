@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay
                 {
                     if (ParameterIsString(assemblyDef.MainModule, param))
                     {
-                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Push sizeof(char) to the stack.
+                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_1); // Push sizeof(char) to the stack.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
