@@ -143,23 +143,40 @@ namespace Unity.ClusterDisplay.Graphics
         /// <param name="level"></param>
         private void OnLevelWasLoaded(int level) => PollCameraTargets();
 
-        public CameraContextTarget Register (Camera camera)
+        private void OnCameraEnabled(CameraContextTarget cameraContextTarget)
+        {
+            cameraContextTarget.TargetCamera.enabled = true;
+        }
+
+        private void OnCameraDisabled(CameraContextTarget cameraContextTarget)
+        {
+        }
+
+        public CameraContextTarget Register (Camera camera, bool logError = true)
         {
             if (k_CameraContextTargets.ContainsKey(camera))
             {
-                Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
+                if (logError)
+                    Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
                 return null;
             }
 
             CameraContextTarget cameraContextTarget = null;
             if ((cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>()) == null)
                 cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
+
+            cameraContextTarget.onCameraEnabled += OnCameraEnabled;
+            cameraContextTarget.onCameraDisabled += OnCameraDisabled;
+
             k_CameraContextTargets.Add(camera, cameraContextTarget);
             return cameraContextTarget;
         }
 
         public void UnRegister (CameraContextTarget cameraContextTarget, bool destroy = false)
         {
+            cameraContextTarget.onCameraEnabled -= OnCameraEnabled;
+            cameraContextTarget.onCameraDisabled -= OnCameraDisabled;
+
             if (destroy || !cameraContextTarget.TryGetCamera(out var camera))
             {
                 DestroyCameraContextTarget(cameraContextTarget);
@@ -187,6 +204,9 @@ namespace Unity.ClusterDisplay.Graphics
 
                 if (!m_SerializedCameraContextTargets[i].cameraReferenceIsValid)
                     continue;
+
+                m_SerializedCameraContextTargets[i].onCameraEnabled += OnCameraEnabled;
+                m_SerializedCameraContextTargets[i].onCameraDisabled += OnCameraDisabled;
 
                 k_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
             }
