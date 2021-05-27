@@ -62,11 +62,6 @@ namespace Unity.ClusterDisplay.Graphics
 
                 k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
             }
-
-            /*
-            if (camera.enabled)
-                camera.enabled = cameraEnabled;
-            */
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

@@ -29,9 +29,8 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             var camera = k_ClusterRenderer.cameraController.contextCamera;
-            bool cameraEnabled = camera.enabled;
             if (camera.enabled)
-                camera.enabled = cameraEnabled;
+                camera.enabled = false;
 
             k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
 
@@ -56,9 +55,6 @@ namespace Unity.ClusterDisplay.Graphics
             camera.Render();
 
             k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
-
-            if (camera.enabled)
-                camera.enabled = cameraEnabled;
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
