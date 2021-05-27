@@ -12,6 +12,10 @@ namespace Unity.ClusterDisplay.Graphics
         public Camera TargetCamera => m_TargetCamera;
         public bool cameraReferenceIsValid => m_TargetCamera != null;
 
+        public delegate void CameraActiveDelegate(CameraContextTarget cameraContextTarget);
+        public CameraActiveDelegate onCameraDisabled;
+        public CameraActiveDelegate onCameraEnabled;
+
         private void CacheCamera()
         {
             if (m_TargetCamera != null)
@@ -35,13 +39,29 @@ namespace Unity.ClusterDisplay.Graphics
 
     #if UNITY_EDITOR
         private void OnValidate() => CacheCamera();
-        private void Awake() => CacheCamera();
     #endif
 
         private void OnDestroy()
         {
             if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
                 cameraContextRegistry.UnRegister(this);
+        }
+
+        private void OnDisable()
+        {
+            if (onCameraDisabled != null)
+                onCameraDisabled(this);
+        }
+
+        private void OnEnable()
+        {
+            CacheCamera();
+
+            if (CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                cameraContextRegistry.Register(m_TargetCamera, logError: false);
+
+            if (onCameraEnabled != null)
+                onCameraEnabled(this);
         }
     }
 }
