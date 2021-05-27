@@ -2,6 +2,7 @@
 using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEditor.Scripting;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -30,6 +31,7 @@ namespace Unity.ClusterDisplay
     }
 
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
+    [InitializeOnLoad]
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         private readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
@@ -170,6 +172,18 @@ namespace Unity.ClusterDisplay
 
         private void Deserialize ()
         {
+            // Unfortunately, there seems to be a werid state where:
+            // 1. Managed debugging is turned on in the editor.
+            // 2. You reboot the editor.
+            // 4. Managed debugging will turn off.
+            // 5. Reflection will not be able to retrieve the Assembly-CSharp assembly, so deserialization of methods will fail.
+            // 6. Deserialize seems to be called again after Assembly-CSharp is recompiled and reflection on it will work again.
+            // The order of when Deserialize() is called in between state change of ManagedDebugging.isDebug is unclear, but
+            // something on the lines of this seems to be happening. Therefore, if we simply check whether the assembly exists
+            // we can just not deserialize anything and wait until the assembly becomes available.
+            if (!ReflectionUtils.TryGetDefaultAssembly(out var _, logError: false))
+                return;
+
             List<ushort> rpcIdsToAdd = new List<ushort>();
             m_SerializedRPCsContainer.Foreach((serializedRPC) =>
             {
@@ -177,7 +191,6 @@ namespace Unity.ClusterDisplay
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out var rpcExecutionStage, out var methodInfo))
                 {
                     Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\".");
-                    RemoveRPCOnDeserialize(serializedRPC.rpcId);
                     return;
                 }
 
