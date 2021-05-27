@@ -29,10 +29,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (k_ClusterRenderer.cameraController.contextCamera == null)
                 return;
 
-            if (k_ClusterRenderer.cameraController.contextCamera.enabled)
-                k_ClusterRenderer.cameraController.contextCamera.enabled = false;
-
             var camera = k_ClusterRenderer.cameraController.contextCamera;
+            if (camera.enabled)
+                camera.enabled = false;
+
             k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
 
             if (!SetupTiledLayout(
