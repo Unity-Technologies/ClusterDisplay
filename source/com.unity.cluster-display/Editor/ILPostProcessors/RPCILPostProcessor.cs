@@ -1184,6 +1184,47 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
+        private bool TryFindMethodWithMatchingFormalySerializedAs (ModuleDefinition moduleDef, TypeDefinition typeDefinition, string serializedMethodName, out MethodDefinition outMethodDef)
+        {
+            var rpcMethodAttributeType = typeof(RPCMethod);
+            var stringType = typeof(string);
+
+            foreach (var methodDef in typeDefinition.Methods)
+            {
+                if (!methodDef.HasCustomAttributes)
+                    continue;
+
+                foreach (var customAttribute in methodDef.CustomAttributes)
+                {
+                    if (!customAttribute.HasConstructorArguments ||
+                        customAttribute.AttributeType.Namespace != rpcMethodAttributeType.Namespace ||
+                        customAttribute.AttributeType.Name != rpcMethodAttributeType.Name)
+                        continue;
+
+                    foreach (var constructorArgument in customAttribute.ConstructorArguments)
+                    {
+                        if (constructorArgument.Type.Namespace != stringType.Namespace || 
+                            constructorArgument.Type.Name != stringType.Name)
+                            continue;
+
+                        string formarlySerializedAs = constructorArgument.Value as string;
+                        if (string.IsNullOrEmpty(formarlySerializedAs))
+                            continue;
+
+                        if (serializedMethodName != formarlySerializedAs)
+                            continue;
+
+                        outMethodDef = moduleDef.ImportReference(methodDef).Resolve();
+                        Debug.LogFormat($"Found renamed method: \"{outMethodDef.Name}\" that was previously named as: \"{serializedMethodName}\".");
+                        return true;
+                    }
+                }
+            }
+
+            outMethodDef = null;
+            return false;
+        }
+
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
             if (compiledAssembly.Name != ReflectionUtils.DefaultUserAssemblyName)
@@ -1215,9 +1256,16 @@ namespace Unity.ClusterDisplay
                 foreach (var serializedRPC in serializedRPCs)
                 {
                     var rpc = serializedRPC;
-                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
 
-                    if (!TryGetMethodDefinition(typeDefinition, ref rpc, out var targetRPCMethodDef))
+                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
+                    MethodDefinition targetRPCMethodDef = null;
+
+                    if (!TryFindMethodWithMatchingFormalySerializedAs(
+                        rpcInterfacesModuleDef,
+                        typeDefinition,
+                        rpc.methodName,
+                        out targetRPCMethodDef) &&
+                        !TryGetMethodDefinition(typeDefinition, ref rpc, out targetRPCMethodDef))
                     {
                         Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
                         goto failure;
@@ -1295,8 +1343,7 @@ namespace Unity.ClusterDisplay
                     goto failure;
 
                 var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];
-                customAttribute.ConstructorArguments.RemoveAt(rpcIdAttributeArgumentIndex);
-                customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(customAttributeArgument.Type, newRPCId));
+                customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex] = new CustomAttributeArgument(customAttributeArgument.Type, newRPCId);
             }
 
             if (!InjectDefaultSwitchReturn(

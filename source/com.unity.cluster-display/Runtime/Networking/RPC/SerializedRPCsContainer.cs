@@ -48,20 +48,25 @@ public class SerializedRPCsContainer
     {
         if (!data.HasValue)
         {
+            if (validData[id])
+                m_Count--;
+
             serializedData[id] = default(SerializedRPC);
             validData[id] = false;
-            m_Count--;
             return;
         }
 
+        if (!validData[id])
+            m_Count++;
+
         serializedData[id] = data.Value;
         validData[id] = true;
-        m_Count++;
     }
 
     public void Clear()
     {
         serializedData = new SerializedRPC[ushort.MaxValue];
         validData = new bool[ushort.MaxValue];
+        m_Count = 0;
     }
 }

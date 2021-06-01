@@ -143,11 +143,11 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            Debug.Log($"RPC Stubs was written to path: \"{path}\".");
+            // Debug.Log($"RPC Stubs was written to path: \"{path}\".");
             return true;
         }
 
-        public static bool TrySerializeMethodInfo (ref RPCMethodInfo rpcMethodInfo, out SerializedRPC serializedRPCMethodInfo)
+        public static bool TryCreateSerializableRPC (ref RPCMethodInfo rpcMethodInfo, out SerializedRPC serializedRPCMethodInfo)
         {
             if (!rpcMethodInfo.IsValid)
             {
