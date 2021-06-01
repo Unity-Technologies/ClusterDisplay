@@ -582,20 +582,6 @@ namespace Unity.ClusterDisplay
 
             Instruction newInstruction = null;
 
-            /*
-            firstInstructionOfInjection = Instruction.Create(OpCodes.Nop);
-            ilProcessor.InsertBefore(injectBeforeInstruction, firstInstructionOfInjection);
-            var afterInstruction = firstInstructionOfInjection;
-            */
-
-            // InsertDebugMessage(moduleDef, ilProcessor, "HELLO", afterInstruction, out afterInstruction);
-
-            /*
-            newInstruction = PushParameterToStack(objectParamDef, false);
-            ilProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-            */
-
             firstInstructionOfInjection = PushParameterToStack(objectParamDef, false);
             ilProcessor.InsertBefore(injectBeforeInstruction, firstInstructionOfInjection);
             var afterInstruction = firstInstructionOfInjection;
@@ -730,7 +716,6 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            // if (!TryFindMethodWithAttribute<RPCInterfaceRegistry.OnTryCallMarker>(rpcInterfaceRegistryType, out var onTryCallMethodInfo))
             if (!TryFindMethodDefinitionWithAttribute(derrivedTypeDef, onTryCallMarkerAttributeTypeRef, out var onTryCallMethodDef))
             {
                 derrivedTypeRef = null;
@@ -740,12 +725,6 @@ namespace Unity.ClusterDisplay
 
             derrivedTypeRef = onTryCallMethodDef.DeclaringType;
             il = onTryCallMethodDef.Body.GetILProcessor();
-
-            /*
-            var onTryCallMethodDef = assemblyDef.MainModule.ImportReference(onTryCallMethodInfo);
-            derrivedTypeRef = onTryCallMethodDef.DeclaringType;
-            il = onTryCallMethodDef.Resolve().Body.GetILProcessor();
-            */
 
             return true;
         }
@@ -874,33 +853,6 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private void InsertDebugMessage (
-            ModuleDefinition moduleDef,
-            ILProcessor il,
-            string message,
-            Instruction afterInstruction,
-            out Instruction lastInstruction)
-        {
-            var debugType = typeof(Debug);
-            var debugTypeRef = moduleDef.ImportReference(debugType);
-            var debugTypeDef = debugTypeRef.Resolve();
-            var logMethodRef = moduleDef.ImportReference(debugTypeDef.Methods.Where(method => {
-                return
-                    method.Name == "Log" &&
-                    method.Parameters.Count == 1;
-            }).FirstOrDefault());
-
-            lastInstruction = null;
-
-            var newInstruction = Instruction.Create(OpCodes.Ldstr, message);
-            il.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            newInstruction = Instruction.Create(OpCodes.Call, logMethodRef);
-            il.InsertAfter(afterInstruction, newInstruction);
-            lastInstruction = newInstruction;
-        }
-
         private void InjectObjectRegistryTryGet(
             ModuleDefinition moduleDef,
             ILProcessor onTryCallILProcessor,
@@ -928,41 +880,6 @@ namespace Unity.ClusterDisplay
             tryGetInstanceFailureInstruction = Instruction.Create(OpCodes.Brfalse, onTryCallILProcessor.Body.Instructions[0]);
             onTryCallILProcessor.InsertAfter(afterInstruction, tryGetInstanceFailureInstruction);
             lastInstruction = tryGetInstanceFailureInstruction;
-        }
-
-        private bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
-        {
-            if (cachedGetIsMasterMethod == null && !TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out cachedGetIsMasterMethod))
-            {
-                getIsMasterMethod = null;
-                return false;
-            }
-
-            getIsMasterMethod = cachedGetIsMasterMethod;
-            return true;
-        }
-
-        private bool TryGetCachedDebugLogMethodReference (ModuleDefinition moduleDef, out MethodReference methodReference)
-        {
-            if (cachedDebugLogMethodRef == null)
-            {
-                moduleDef.ImportReference(typeof(Debug));
-                cachedDebugLogMethodRef = moduleDef.ImportReference(typeof(Debug).GetMethods(BindingFlags.Static | BindingFlags.Public).FirstOrDefault(method => method.Name == "Log"));
-            }
-
-            return (methodReference = cachedDebugLogMethodRef) != null;
-        }
-
-        private bool TrySetup (
-            ICompiledAssembly compiledAssembly, 
-            out AssemblyDefinition assemblyDef,
-            out SerializedRPC[] serializedRPCs)
-        {
-            assemblyDef = null;
-            serializedRPCs = null;
-
-
-            return true;
         }
 
         private bool TrySetupOnTryCall (
@@ -993,22 +910,6 @@ namespace Unity.ClusterDisplay
             beginningOfFailureInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
             onTryCallILProcessor.Append(beginningOfFailureInstruction);
             onTryCallILProcessor.Append(Instruction.Create(OpCodes.Ret));
-            return true;
-        }
-
-        private bool TryInjectDebugLogMessage (ModuleDefinition moduleDef, ILProcessor ilProcessor, Instruction afterInstruction, out Instruction lastInstruction)
-        {
-            if (!TryGetCachedDebugLogMethodReference(moduleDef, out var debugLogMethodRef))
-            {
-                lastInstruction = afterInstruction;
-                return false;
-            }
-
-            lastInstruction = Instruction.Create(OpCodes.Ldstr, "HELLO!");
-            ilProcessor.InsertAfter(afterInstruction, lastInstruction);
-
-            lastInstruction = Instruction.Create(OpCodes.Call, debugLogMethodRef);
-            ilProcessor.InsertAfter(afterInstruction, lastInstruction);
             return true;
         }
 
@@ -1181,47 +1082,6 @@ namespace Unity.ClusterDisplay
 
             cleanup:
             onTryCallILProcessor.Clear();
-            return false;
-        }
-
-        private bool TryFindMethodWithMatchingFormalySerializedAs (ModuleDefinition moduleDef, TypeDefinition typeDefinition, string serializedMethodName, out MethodDefinition outMethodDef)
-        {
-            var rpcMethodAttributeType = typeof(RPCMethod);
-            var stringType = typeof(string);
-
-            foreach (var methodDef in typeDefinition.Methods)
-            {
-                if (!methodDef.HasCustomAttributes)
-                    continue;
-
-                foreach (var customAttribute in methodDef.CustomAttributes)
-                {
-                    if (!customAttribute.HasConstructorArguments ||
-                        customAttribute.AttributeType.Namespace != rpcMethodAttributeType.Namespace ||
-                        customAttribute.AttributeType.Name != rpcMethodAttributeType.Name)
-                        continue;
-
-                    foreach (var constructorArgument in customAttribute.ConstructorArguments)
-                    {
-                        if (constructorArgument.Type.Namespace != stringType.Namespace || 
-                            constructorArgument.Type.Name != stringType.Name)
-                            continue;
-
-                        string formarlySerializedAs = constructorArgument.Value as string;
-                        if (string.IsNullOrEmpty(formarlySerializedAs))
-                            continue;
-
-                        if (serializedMethodName != formarlySerializedAs)
-                            continue;
-
-                        outMethodDef = moduleDef.ImportReference(methodDef).Resolve();
-                        Debug.LogFormat($"Found renamed method: \"{outMethodDef.Name}\" that was previously named as: \"{serializedMethodName}\".");
-                        return true;
-                    }
-                }
-            }
-
-            outMethodDef = null;
             return false;
         }
 

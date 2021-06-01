@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay
         private bool objectsRegistered = false;
 
         private void Awake() => RegisterObjects();
-        private void OnLevelWasLoaded(int level) => RegisterObjects();
+        // private void OnLevelWasLoaded(int level) => RegisterObjects();
 
         private void OnDestroy() => Clear();
         private void Clear ()
@@ -35,7 +35,6 @@ namespace Unity.ClusterDisplay
             serializedRPCCounts = null;
             serializedRPCIds = null;
         }
-
 
         private void RegisterObject<T> (T sceneObject, ushort rpcId) where T : Object
         {

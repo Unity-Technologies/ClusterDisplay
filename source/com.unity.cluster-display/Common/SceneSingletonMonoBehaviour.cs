@@ -83,13 +83,17 @@ namespace Unity.ClusterDisplay
             Destroying();
         }
 
-        private static void Register (string serializedScenePath, T instance)
+        private static void Register (string serializedScenePath, T instance, bool throwException = true)
         {
             if (string.IsNullOrEmpty(serializedScenePath))
                 throw new System.Exception($"Unable to register instance of: \"{typeof(T).FullName}\", it's serialized scene path is invalid!");
 
             if (sceneInstances.ContainsKey(serializedScenePath))
-                throw new System.Exception($"Scene: \"{serializedScenePath}\" contains two instances of: \"{typeof(T).FullName}\".");
+            {
+                if (throwException)
+                    throw new System.Exception($"Scene: \"{serializedScenePath}\" contains two instances of: \"{typeof(T).FullName}\".");
+                return;
+            }
 
             Debug.Log($"Registered instance of: \"{typeof(T).FullName}\" in scene: \"{serializedScenePath}\".");
             sceneInstances.Add(serializedScenePath, instance);
@@ -98,7 +102,7 @@ namespace Unity.ClusterDisplay
         protected virtual void OnDeserialize () {}
         public void OnAfterDeserialize()
         {
-            Register(serializedScenePath, this as T);
+            Register(serializedScenePath, this as T, throwException: false);
             OnDeserialize();
         }
 

@@ -241,6 +241,18 @@ namespace Unity.ClusterDisplay
             }).FirstOrDefault()) != null;
         }
 
+        private bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
+        {
+            if (cachedGetIsMasterMethod == null && !TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out cachedGetIsMasterMethod))
+            {
+                getIsMasterMethod = null;
+                return false;
+            }
+
+            getIsMasterMethod = cachedGetIsMasterMethod;
+            return true;
+        }
+
         private static bool ParameterIsString (ModuleDefinition moduleDefinition, ParameterDefinition parameterDef)
         {
             if (cachedStringTypeRef == null)
@@ -295,6 +307,74 @@ namespace Unity.ClusterDisplay
             lastInstruction = newInstruct;
 
             return true;
+        }
+
+        private void InsertDebugMessage (
+            ModuleDefinition moduleDef,
+            ILProcessor il,
+            string message,
+            Instruction afterInstruction,
+            out Instruction lastInstruction)
+        {
+            var debugType = typeof(Debug);
+            var debugTypeRef = moduleDef.ImportReference(debugType);
+            var debugTypeDef = debugTypeRef.Resolve();
+            var logMethodRef = moduleDef.ImportReference(debugTypeDef.Methods.Where(method => {
+                return
+                    method.Name == "Log" &&
+                    method.Parameters.Count == 1;
+            }).FirstOrDefault());
+
+            lastInstruction = null;
+
+            var newInstruction = Instruction.Create(OpCodes.Ldstr, message);
+            il.InsertAfter(afterInstruction, newInstruction);
+            afterInstruction = newInstruction;
+
+            newInstruction = Instruction.Create(OpCodes.Call, logMethodRef);
+            il.InsertAfter(afterInstruction, newInstruction);
+            lastInstruction = newInstruction;
+        }
+
+        private bool TryFindMethodWithMatchingFormalySerializedAs (ModuleDefinition moduleDef, TypeDefinition typeDefinition, string serializedMethodName, out MethodDefinition outMethodDef)
+        {
+            var rpcMethodAttributeType = typeof(RPCMethod);
+            var stringType = typeof(string);
+
+            foreach (var methodDef in typeDefinition.Methods)
+            {
+                if (!methodDef.HasCustomAttributes)
+                    continue;
+
+                foreach (var customAttribute in methodDef.CustomAttributes)
+                {
+                    if (!customAttribute.HasConstructorArguments ||
+                        customAttribute.AttributeType.Namespace != rpcMethodAttributeType.Namespace ||
+                        customAttribute.AttributeType.Name != rpcMethodAttributeType.Name)
+                        continue;
+
+                    foreach (var constructorArgument in customAttribute.ConstructorArguments)
+                    {
+                        if (constructorArgument.Type.Namespace != stringType.Namespace || 
+                            constructorArgument.Type.Name != stringType.Name)
+                            continue;
+
+                        string formarlySerializedAs = constructorArgument.Value as string;
+                        if (string.IsNullOrEmpty(formarlySerializedAs))
+                            continue;
+
+                        if (serializedMethodName != formarlySerializedAs)
+                            continue;
+
+                        outMethodDef = moduleDef.ImportReference(methodDef).Resolve();
+                        Debug.LogFormat($"Found renamed method: \"{outMethodDef.Name}\" that was previously named as: \"{serializedMethodName}\".");
+                        return true;
+                    }
+                }
+            }
+
+            outMethodDef = null;
+            return false;
         }
     }
 }
