@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             for (var i = 0; i < numTiles; i++)
             {
-                k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
+                k_ClusterRenderer.cameraController.ResetProjectionMatrix();
                 CalculateStitcherLayout(
                     camera, 
                     i, 
@@ -56,11 +56,12 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
-                UploadClusterDisplayParams(GraphicsUtil.GetHdrpClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+                UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
                 camera.Render();
 
-                k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
             }
+
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

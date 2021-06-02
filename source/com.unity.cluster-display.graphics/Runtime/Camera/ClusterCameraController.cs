@@ -16,11 +16,6 @@ namespace Unity.ClusterDisplay.Graphics
     [System.Serializable]
     public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
     {
-        // Matrix4x4 does not serialize so we need to serialize to Vector4s.
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC1 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC2 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
         /// <summary>
         /// Current rendering camera.
@@ -146,7 +141,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// we cache what the camera's projection matrix should be using the camera's paramters before we modify the camera's projection matrix 
         /// in order to later revert it after calling Camera.Render()
         /// </summary>
-        public void CacheContextProjectionMatrix ()
+        public void ResetProjectionMatrix ()
         {
             var contextCamera = this.contextCamera;
             if (contextCamera == null)
@@ -154,31 +149,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             // var projectionMatrix = contextCamera.projectionMatrix;
             var projectionMatrix = Matrix4x4.Perspective(contextCamera.fieldOfView, contextCamera.aspect, contextCamera.nearClipPlane, contextCamera.farClipPlane);
-
-            m_SerializedProjectionMatrixC1 = projectionMatrix.GetColumn(0);
-            m_SerializedProjectionMatrixC2 = projectionMatrix.GetColumn(1);
-            m_SerializedProjectionMatrixC3 = projectionMatrix.GetColumn(2);
-            m_SerializedProjectionMatrixC4 = projectionMatrix.GetColumn(3);
-        }
-
-        /// <summary>
-        /// Apply the cached projection matrix to the camera context after we've called Camera.Render().
-        /// </summary>
-        public void ApplyCachedProjectionMatrixToContext ()
-        {
-            var contextCamera = this.contextCamera;
-            if (contextCamera == null)
-                return;
-
-            Matrix4x4 cachedProjectionMatrix = new Matrix4x4(
-                m_SerializedProjectionMatrixC1,
-                m_SerializedProjectionMatrixC2,
-                m_SerializedProjectionMatrixC3,
-                m_SerializedProjectionMatrixC4
-            );
-
-            contextCamera.projectionMatrix = cachedProjectionMatrix;
-            contextCamera.cullingMatrix = contextCamera.projectionMatrix * contextCamera.worldToCameraMatrix;
+            contextCamera.projectionMatrix = projectionMatrix;
+            contextCamera.cullingMatrix = projectionMatrix * contextCamera.worldToCameraMatrix;
         }
     }
 }
