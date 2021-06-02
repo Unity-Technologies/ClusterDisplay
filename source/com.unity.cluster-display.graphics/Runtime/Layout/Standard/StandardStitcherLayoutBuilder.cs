@@ -37,6 +37,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            k_ClusterRenderer.context.debugSettings.enableKeyword = k_ClusterRenderer.context.debugSettings.enableKeyword;
 
             for (var i = 0; i < numTiles; i++)
             {

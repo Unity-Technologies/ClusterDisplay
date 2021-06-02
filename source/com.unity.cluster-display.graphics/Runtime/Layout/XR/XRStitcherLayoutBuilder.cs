@@ -101,16 +101,18 @@ namespace Unity.ClusterDisplay.Graphics
                     renderTarget = targetRT,
                     customMirrorView = BuildMirrorView
                 };
-                
+
+                var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
+                        viewportSubsection,
+                        k_ClusterRenderer.context.globalScreenSize,
+                        k_ClusterRenderer.context.gridSize);
+
                 var viewInfo = new XRViewCreateInfo
                 {
                     viewMatrix = camera.worldToCameraMatrix,
                     projMatrix = projectionMatrix,
                     viewport = m_OverscannedRect,
-                    clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
-                        viewportSubsection, 
-                        k_ClusterRenderer.context.globalScreenSize, 
-                        k_ClusterRenderer.context.gridSize),
+                    clusterDisplayParams = clusterDisplayParams,
                     textureArraySlice = -1
                 };
                 
