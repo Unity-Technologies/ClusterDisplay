@@ -28,8 +28,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.ContextCamera != null)
-                m_ClusterRenderer.CameraController.ContextCamera.enabled = true;
+            if (k_ClusterRenderer.cameraController.contextCamera != null)
+                k_ClusterRenderer.cameraController.contextCamera.enabled = true;
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!m_HasClearedMirrorView)
             {
                 m_HasClearedMirrorView = true;
-                cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
             }
 
             cmd.SetViewport(tileViewport);
@@ -69,7 +69,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
 
             var camera = layout.camera;
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return false;
 
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
@@ -107,10 +107,10 @@ namespace Unity.ClusterDisplay.Graphics
                     viewMatrix = camera.worldToCameraMatrix,
                     projMatrix = projectionMatrix,
                     viewport = m_OverscannedRect,
-                    clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
+                    clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                         viewportSubsection, 
-                        m_ClusterRenderer.Context.GlobalScreenSize, 
-                        m_ClusterRenderer.Context.GridSize),
+                        k_ClusterRenderer.context.globalScreenSize, 
+                        k_ClusterRenderer.context.gridSize),
                     textureArraySlice = -1
                 };
                 
@@ -126,7 +126,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (camera != m_ClusterRenderer.CameraController.ContextCamera)
+            if (camera != k_ClusterRenderer.cameraController.contextCamera)
                 return;
 
             camera.targetTexture = null;
