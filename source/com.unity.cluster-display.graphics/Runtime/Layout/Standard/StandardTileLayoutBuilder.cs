@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.enabled)
                 camera.enabled = false;
 
-            k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
 
             if (!SetupTiledLayout(
                 camera, 
@@ -49,11 +49,11 @@ namespace Unity.ClusterDisplay.Graphics
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
-            UploadClusterDisplayParams(GraphicsUtil.GetHdrpClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
             camera.Render();
 
-            k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
