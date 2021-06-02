@@ -22,10 +22,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.ContextCamera != null)
+            if (k_ClusterRenderer.cameraController.contextCamera != null)
             {
-                m_ClusterRenderer.CameraController.ContextCamera.enabled = true;
-                m_ClusterRenderer.CameraController.ContextCamera.targetTexture = null;
+                k_ClusterRenderer.cameraController.contextCamera.enabled = true;
+                k_ClusterRenderer.cameraController.contextCamera.targetTexture = null;
             }
         }
 
@@ -33,9 +33,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             cmd.SetRenderTarget(rt);
             cmd.SetViewport(viewport);
-            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
+            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
-            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
             var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             HDUtils.BlitQuad(cmd, target, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
         public bool BuildLayout(XRLayout layout)
         {
             var camera = layout.camera;
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return false;
 
             if (!SetupTiledLayout(
@@ -67,10 +67,10 @@ namespace Unity.ClusterDisplay.Graphics
                 customMirrorView = BuildMirrorView
             };
 
-            var clusterDisplayParams = GraphicsUtil.GetHdrpClusterDisplayParams(
+            var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                 viewportSubsection, 
-                m_ClusterRenderer.Context.GlobalScreenSize, 
-                m_ClusterRenderer.Context.GridSize);
+                k_ClusterRenderer.context.globalScreenSize, 
+                k_ClusterRenderer.context.gridSize);
 
             var viewInfo = new XRViewCreateInfo
             {
