@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 cmd.SetRenderTarget(presentRT);
                 cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-                Blit(cmd, backBufferRT, new Vector4(0, 0, 1, 1), new Vector4(0, 0, 1, 1));
+                Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
 
                 cmd.SetRenderTarget(backBufferRT);
                 cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
