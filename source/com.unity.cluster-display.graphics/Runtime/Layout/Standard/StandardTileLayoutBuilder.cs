@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
                 camera, 
                 out var _, 
                 out var projMatrix, 
-                out var _,
+                out var viewportSubsection,
                 out m_OverscannedRect))
                 return;
 
@@ -46,11 +46,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (rt != camera.targetTexture)
                 camera.targetTexture = rt;
 
-            UploadClusterDisplayParams(projMatrix);
             camera.projectionMatrix = projMatrix;
             camera.cullingMatrix = projMatrix * camera.worldToCameraMatrix;
 
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
+            UploadClusterDisplayParams(GraphicsUtil.GetHdrpClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
             camera.Render();
 

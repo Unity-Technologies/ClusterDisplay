@@ -376,6 +376,8 @@ namespace Unity.ClusterDisplay.Graphics
             if (keywordEnabled)
                 Shader.EnableKeyword(k_ShaderKeyword);
             else Shader.DisableKeyword(k_ShaderKeyword);
+
+            Debug.Log($"Keyword: {k_ShaderKeyword}, State: {m_ShaderKeywordState}");
         }
     }
 }
