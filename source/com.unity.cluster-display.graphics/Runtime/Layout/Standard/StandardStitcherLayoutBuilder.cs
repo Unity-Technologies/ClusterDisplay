@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
         private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
-        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRenderTexture(tileCount, tileIdnex, width, height, GraphicsFormat.R8G8B8A8_SRGB);
+        private RenderTexture BlitRT(int tileCount, int tileIndex, int width, int height) => m_RTManager.BlitRenderTexture(tileCount, tileIndex, width, height, GraphicsFormat.R8G8B8A8_SRGB);
         private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height, GraphicsFormat.R8G8B8A8_SRGB);
         private Rect m_OverscannedRect;
 
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             for (var i = 0; i < numTiles; i++)
             {
-                k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
+                k_ClusterRenderer.cameraController.ResetProjectionMatrix();
                 CalculateStitcherLayout(
                     camera, 
                     i, 
@@ -62,9 +62,9 @@ namespace Unity.ClusterDisplay.Graphics
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
                 camera.Render();
-
-                k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
             }
+
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
@@ -82,10 +82,11 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             // Once the queue reaches the number of tiles, then we perform the blit copy.
-            if (m_QueuedStitcherParameters.Count < numTiles)
+            if (m_QueuedStitcherParameters.Count != numTiles)
                 return;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
+
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
@@ -102,19 +103,21 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.y *= croppedSize.y;
                 croppedViewport.width *= croppedSize.x;
                 croppedViewport.height *= croppedSize.y;
-
                 cmd.SetViewport(croppedViewport);
+
+                var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
                 Blit(
                     cmd, 
-                    k_ClusterRenderer.cameraController.presenter.presentRT, 
-                    // stitcherParameters.targetRT as RenderTexture, 
+                    blitRT,
                     stitcherParameters.scaleBiasTex, 
                     stitcherParameters.scaleBiasRT);
             }
 
-            m_QueuedStitcherParameters.Clear();
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
+
+            m_QueuedStitcherParameters.Clear();
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

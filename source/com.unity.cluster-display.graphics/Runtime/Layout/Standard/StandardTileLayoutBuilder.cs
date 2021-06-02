@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.enabled)
                 camera.enabled = false;
 
-            k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
 
             if (!SetupTiledLayout(
                 camera, 
@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             camera.Render();
 
-            k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
@@ -76,25 +76,29 @@ namespace Unity.ClusterDisplay.Graphics
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             var sourceRT = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
-            if (ClusterDisplay.ClusterDisplayState.IsMaster)
-            {
-                var backBufferRT = BackBufferRT((int)Screen.width, (int)Screen.height);
+            cmd.SetRenderTarget(presentRT);
+            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+            Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
 
-                cmd.SetRenderTarget(presentRT);
-                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-                Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
+            // if (ClusterDisplay.ClusterDisplayState.IsMaster)
+            // {
+            //     var backBufferRT = BackBufferRT((int)Screen.width, (int)Screen.height);
 
-                cmd.SetRenderTarget(backBufferRT);
-                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-                Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
-            }
+            //     cmd.SetRenderTarget(presentRT);
+            //     cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+            //     Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
 
-            else
-            {
-                cmd.SetRenderTarget(presentRT);
-                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-                Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
-            }
+            //     cmd.SetRenderTarget(backBufferRT);
+            //     cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+            //     Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+            // }
+
+            // else
+            // {
+            //     cmd.SetRenderTarget(presentRT);
+            //     cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+            //     Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+            // }
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
