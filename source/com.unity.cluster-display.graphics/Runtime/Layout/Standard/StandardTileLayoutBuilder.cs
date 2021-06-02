@@ -17,8 +17,9 @@ namespace Unity.ClusterDisplay.Graphics
         public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRTHandle(width, height);
         public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
 #else
-        public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
+        public RenderTexture SourceRT(int width, int height) => m_RTManager.SourceRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
         public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
+        public RenderTexture BackBufferRT(int width, int height) => m_RTManager.BackBufferRenderTexture(width, height, GraphicsFormat.R8G8B8A8_UNorm);
 #endif
         private Rect m_OverscannedRect;
 
@@ -43,7 +44,7 @@ namespace Unity.ClusterDisplay.Graphics
                 out m_OverscannedRect))
                 return;
 
-            var rt = BlitRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var rt = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             if (rt != camera.targetTexture)
                 camera.targetTexture = rt;
 
@@ -66,19 +67,33 @@ namespace Unity.ClusterDisplay.Graphics
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
-            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset); ;
-
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
+            Vector4 texBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
-            var blitRT = BlitRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var sourceRT = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+
+            if (ClusterDisplay.ClusterDisplayState.IsMaster)
+            {
+                var backBufferRT = BackBufferRT((int)Screen.width, (int)Screen.height);
+
+                cmd.SetRenderTarget(presentRT);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+                Blit(cmd, backBufferRT, new Vector4(0, 0, 1, 1), new Vector4(0, 0, 1, 1));
+
+                cmd.SetRenderTarget(backBufferRT);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+                Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+            }
+
+            else
+            {
+                cmd.SetRenderTarget(presentRT);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+                Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+            }
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
-
-            cmd.SetRenderTarget(presentRT);
-            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-
-            Blit(cmd, blitRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
 
 #if UNITY_EDITOR

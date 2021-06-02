@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay
         public void GatherFrameState(ulong frame)
         {
             var endPos = 0;
-            using (var buffer = new NativeArray<byte>(16 * 1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
+            using (var buffer = new NativeArray<byte>(32 * 1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
             {
                 if (
                     StoreInputState(buffer, ref endPos) &&
