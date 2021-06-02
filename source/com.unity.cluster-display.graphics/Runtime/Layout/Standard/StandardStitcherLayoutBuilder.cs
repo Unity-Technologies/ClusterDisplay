@@ -46,9 +46,8 @@ namespace Unity.ClusterDisplay.Graphics
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
-                    out var _, 
+                    out var viewportSubsection, 
                     out var projectionMatrix);
-
 
                 var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
@@ -57,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.projectionMatrix = projectionMatrix;
                 camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
-                UploadClusterDisplayParams(projectionMatrix);
+                UploadClusterDisplayParams(GraphicsUtil.GetHdrpClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
                 camera.Render();
 
                 k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
