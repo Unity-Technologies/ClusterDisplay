@@ -54,6 +54,9 @@ namespace Unity.ClusterDisplay.Graphics
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
+            camera.projectionMatrix = projectionMatrix;
+            camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
+
             camera.Render();
 
             k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
