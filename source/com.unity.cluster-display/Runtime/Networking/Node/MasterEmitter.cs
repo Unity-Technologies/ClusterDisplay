@@ -10,41 +10,45 @@ namespace Unity.ClusterDisplay
 {
     public class MasterEmitter
     {
-        private NativeArray<byte> m_RawStateData;
+        private NativeArray<byte> m_StateBuffer;
+        private NativeArray<byte> m_StateSubBuffer;
+
         private byte[] m_MsgBuffer = new byte[0];
-        public bool ValidRawStateData => m_RawStateData != default;
+        public bool ValidRawStateData => m_StateSubBuffer != default;
 
         public IMasterNodeSyncState nodeState;
 
         private UnityEngine.Random.State previousFrameState;
 
-        public MasterEmitter (IMasterNodeSyncState nodeState)
+        public MasterEmitter (IMasterNodeSyncState nodeState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
         {
+            m_StateBuffer = new NativeArray<byte>((int)maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
             this.nodeState = nodeState;
             previousFrameState = UnityEngine.Random.state;
-            RPCEmitter.Initialize();
+
+            RPCEmitter.Initialize(maxRpcByteBufferSize);
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
         {
-            using (m_RawStateData)
+            using (m_StateSubBuffer)
             {
-                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + m_RawStateData.Length;
+                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + m_StateSubBuffer.Length;
+
                 if (m_MsgBuffer.Length != len)
-                {
                     m_MsgBuffer = new byte[len];
-                }
 
                 var msg = new AdvanceFrame() {FrameNumber = currentFrameId };
                 msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
-                Marshal.Copy((IntPtr) m_RawStateData.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), m_RawStateData.Length);
+                Marshal.Copy((IntPtr) m_StateSubBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), m_StateSubBuffer.Length);
 
                 var msgHdr = new MessageHeader()
                 {
                     MessageType = EMessageType.StartFrame,
                     Flags = MessageHeader.EFlag.Broadcast,
-                    PayloadSize = (UInt16)m_RawStateData.Length
+                    PayloadSize = (UInt16)m_StateSubBuffer.Length
                 };
 
                 nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
@@ -55,23 +59,18 @@ namespace Unity.ClusterDisplay
         public void GatherFrameState(ulong frame)
         {
             var endPos = 0;
-            using (var buffer = new NativeArray<byte>(32 * 1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory))
-            {
-                if (
-                    StoreInputState(buffer, ref endPos) &&
-                    StoreTimeState(buffer, ref endPos) &&
-                    StoreClusterInputState(buffer, ref endPos) &&
-                    StoreRndGeneratorState(buffer, ref endPos) &&
-                    StoreRPCs(buffer, ref endPos, frame) &&
-                    MarkStatesEnd(buffer, ref endPos))
-                {
-                    m_RawStateData = new NativeArray<byte>(buffer.GetSubArray(0, endPos), Allocator.Temp);
-                }
-                else
-                {
-                    m_RawStateData = default;
-                }
-            }
+
+            bool result = 
+                StoreInputState(m_StateBuffer, ref endPos) &&
+                StoreTimeState(m_StateBuffer, ref endPos) &&
+                StoreClusterInputState(m_StateBuffer, ref endPos) &&
+                StoreRndGeneratorState(m_StateBuffer, ref endPos) &&
+                StoreRPCs(m_StateBuffer, ref endPos, frame) &&
+                MarkStatesEnd(m_StateBuffer, ref endPos);
+
+            if (result)
+                m_StateSubBuffer = new NativeArray<byte>(m_StateBuffer.GetSubArray(0, endPos), Allocator.Temp);
+            else m_StateSubBuffer = default;
         }
 
         private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref int endPos)

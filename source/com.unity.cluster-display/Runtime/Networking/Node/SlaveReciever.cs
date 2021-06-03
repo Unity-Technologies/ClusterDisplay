@@ -31,10 +31,10 @@ namespace Unity.ClusterDisplay
         private DebugPerf m_NetworkingOverhead = new DebugPerf();
         public float NetworkingOverheadAverage => m_NetworkingOverhead.Average;
 
-        public SlaveReciever (ISlaveNodeSyncState nodeSyncState)
+        public SlaveReciever (ISlaveNodeSyncState nodeSyncState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
         {
             this.nodeSyncState = nodeSyncState;
-            RPCEmitter.Initialize();
+            RPCEmitter.Initialize(maxRpcByteBufferSize);
         }
 
         public void PumpMsg (ulong currentFrameID)

@@ -39,10 +39,14 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         public override void InitState()
         {
+            if (!ClusterSync.TryGetInstance(out var clusterSync))
+                return;
+
             m_Stage = EStage.WaitingOnGoFromMaster;
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
-            m_SlaveReceiver = new SlaveReciever(this);
+
+            m_SlaveReceiver = new SlaveReciever(this, clusterSync.maxFrameNetworkByteBufferSize, clusterSync.maxRpcByteBufferSize);
         }
 
         protected override NodeState DoFrame(bool newFrame)

@@ -42,10 +42,14 @@ namespace Unity.ClusterDisplay
         [SerializeField] private ClusterDisplayResources _clusterDisplayResources;
         public ClusterDisplayResources Resources => _clusterDisplayResources;
 
+        public uint maxFrameNetworkByteBufferSize => _clusterDisplayResources.MaxFrameNetworkByteBufferSize;
+        public uint maxRpcByteBufferSize => _clusterDisplayResources.MaxRpcByteBufferSize;
+
 #if UNITY_EDITOR
         [SerializeField] private string m_EditorCmdLine = "";
         [SerializeField] private bool m_IgnoreEditorCmdLine = false;
 #endif
+
         internal ClusterNode LocalNode { get; set; }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;

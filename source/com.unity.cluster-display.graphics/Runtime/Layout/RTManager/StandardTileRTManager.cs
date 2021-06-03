@@ -34,6 +34,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_BlitRT = new RenderTexture(width, height, 1, format, 0);
                 m_BlitRT.name = $"Tile-RT-({m_BlitRT.width}X{m_BlitRT.height})";
+                Debug.Log("Resizing tile RT.");
             }
 
             return m_BlitRT;
@@ -53,6 +54,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_PresentRT = new RenderTexture(width, height, 1, format, 0);
                 m_PresentRT.name = $"Present-RT-({m_PresentRT.width}X{m_PresentRT.height})";
+                Debug.Log("Resizing present RT.");
             }
 
             return m_PresentRT;
@@ -72,6 +74,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_BackBufferRT = new RenderTexture(width, height, 1, format, 0);
                 m_BackBufferRT.name = $"Present-RT-({m_BackBufferRT.width}X{m_BackBufferRT.height})";
+                Debug.Log("Resizing back buffer RT.");
             }
 
             return m_BackBufferRT;

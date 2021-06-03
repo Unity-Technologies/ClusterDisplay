@@ -11,4 +11,18 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Data", menuName = "Cluster Display/ClusterDisplayResources", order = 1)]
 public class ClusterDisplayResources : ScriptableObject
 {
+    [SerializeField] private uint m_MaxFrameNetworkByteBufferSize = 32 * 1024;
+    [SerializeField] private uint m_MaxRpcByteBufferSize = 16 * 1024;
+
+    public uint MaxFrameNetworkByteBufferSize => m_MaxFrameNetworkByteBufferSize;
+    public uint MaxRpcByteBufferSize => m_MaxRpcByteBufferSize;
+
+    private void OnValidate()
+    {
+        if (m_MaxRpcByteBufferSize > m_MaxFrameNetworkByteBufferSize)
+        {
+            Debug.LogError($"RPC byte buffer cannot be larger then the frame network byte buffer size.");
+            m_MaxRpcByteBufferSize = m_MaxFrameNetworkByteBufferSize;
+        }
+    }
 }

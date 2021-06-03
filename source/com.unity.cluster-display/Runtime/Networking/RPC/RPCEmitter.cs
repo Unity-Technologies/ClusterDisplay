@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay
         [System.AttributeUsage(System.AttributeTargets.Method)]
         public class ParseStructureMarker : Attribute {}
 
-        private static NativeArray<byte> rpcBuffer = new NativeArray<byte>(1024 * 32, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+        private static NativeArray<byte> rpcBuffer;
 
         private static int rpcBufferSize;
         public static int RPCBufferSize => rpcBufferSize;
@@ -41,8 +41,9 @@ namespace Unity.ClusterDisplay
 
         public static bool AllowWrites = false;
 
-        public static void Initialize ()
+        public static void Initialize (uint maxRpcByteBufferSize)
         {
+            rpcBuffer = new NativeArray<byte>((int)maxRpcByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             rpcBufferSize = 0;
         }
 
