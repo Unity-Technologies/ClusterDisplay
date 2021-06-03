@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
-            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix(), viewportSubsection);
             
             return true;
         }

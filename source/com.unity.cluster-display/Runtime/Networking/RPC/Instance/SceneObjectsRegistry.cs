@@ -152,7 +152,13 @@ namespace Unity.ClusterDisplay
             rpcRegistry.Foreach((rpcMethodInfo) =>
             {
                 var type = rpcMethodInfo.methodInfo.DeclaringType;
+                if (type.IsAbstract)
+                    return;
+
                 var objs = FindObjectsOfType(type);
+
+                if (objs.Length == 0)
+                    return;
 
                 foreach (var obj in objs)
                 {

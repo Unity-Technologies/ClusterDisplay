@@ -30,7 +30,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (camera.enabled)
                 camera.enabled = false;
-            camera.usePhysicalProperties = true;
 
             if (!ValidGridSize(out var numTiles))
                 return;
@@ -39,32 +38,37 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var cachedProjectionMatrix = k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix();
+
+            bool usingPhysicalProperties = camera.usePhysicalProperties;
+            camera.usePhysicalProperties = true;
 
             for (var i = 0; i < numTiles; i++)
             {
-                k_ClusterRenderer.cameraController.ResetProjectionMatrix();
                 CalculateStitcherLayout(
                     camera, 
+                    cachedProjectionMatrix,
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
                     out var viewportSubsection, 
-                    out var projectionMatrix);
+                    out var asymmetricProjectionMatrix);
 
                 var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
-                camera.targetTexture = blitRT;
-
-                camera.projectionMatrix = projectionMatrix;
-                camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+
+                camera.targetTexture = blitRT;
+                camera.projectionMatrix = asymmetricProjectionMatrix;
+                camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
 
                 camera.Render();
             }
 
             k_ClusterRenderer.cameraController.ResetProjectionMatrix();
+            camera.usePhysicalProperties = usingPhysicalProperties;
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

@@ -7,6 +7,7 @@ namespace Unity.ClusterDisplay
     public abstract class RPCInterfaceRegistry : SingletonScriptableObject<RPCInterfaceRegistry>
     {
         public class OnTryCallMarker : Attribute {}
+        public class OnTryStaticCallMarker : Attribute {}
 
         public class ObjectRegistryMarker : Attribute {}
         public class PipeIdMarker : Attribute {}
@@ -52,6 +53,11 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ref ushort rpcsBufferPosition);
 
+        protected abstract bool OnTryStaticCallInstance(
+            ushort rpcId, 
+            ushort parametersPayloadSize, 
+            ref ushort rpcsBufferPosition);
+
         public static bool TryCallInstance (
             ObjectRegistry objectRegistry,
             ushort rpcId, 
@@ -73,7 +79,16 @@ namespace Unity.ClusterDisplay
         public static bool TryCallStatic(
             ushort rpcId,
             ushort parametersPayloadSize,
-            ref ushort rpcsBufferPosition) => false;
+            ref ushort rpcsBufferPosition)
+        {
+            if (!TryGetInstance(out var instanceRegistry))
+                return false;
+
+            return instanceRegistry.OnTryStaticCallInstance(
+                rpcId, 
+                parametersPayloadSize, 
+                ref rpcsBufferPosition);
+        }
 
         protected abstract void ExecuteRPCBeforeFixedUpdate(
             ObjectRegistry objectRegistry,

@@ -153,9 +153,30 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             // var projectionMatrix = contextCamera.projectionMatrix;
-            var projectionMatrix = Matrix4x4.Perspective(contextCamera.fieldOfView, contextCamera.aspect, contextCamera.nearClipPlane, contextCamera.farClipPlane);
-            contextCamera.projectionMatrix = projectionMatrix;
-            contextCamera.cullingMatrix = contextCamera.projectionMatrix * contextCamera.worldToCameraMatrix;
+            var matrix = new Matrix4x4(
+                m_SerializedProjectionMatrixC1,
+                m_SerializedProjectionMatrixC2,
+                m_SerializedProjectionMatrixC3,
+                m_SerializedProjectionMatrixC4);
+
+            contextCamera.projectionMatrix = matrix;
+            contextCamera.cullingMatrix = matrix * contextCamera.worldToCameraMatrix;
+        }
+
+        public Matrix4x4 CacheAndReturnProjectionMatrix ()
+        {
+            var contextCamera = this.contextCamera;
+            if (contextCamera == null)
+                return Matrix4x4.identity;
+
+            var matrix = contextCamera.projectionMatrix;
+
+            m_SerializedProjectionMatrixC1 = matrix.GetColumn(0);
+            m_SerializedProjectionMatrixC2 = matrix.GetColumn(1);
+            m_SerializedProjectionMatrixC3 = matrix.GetColumn(2);
+            m_SerializedProjectionMatrixC4 = matrix.GetColumn(3);
+
+            return matrix;
         }
     }
 }

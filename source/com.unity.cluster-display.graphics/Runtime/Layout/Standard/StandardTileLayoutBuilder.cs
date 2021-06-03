@@ -34,8 +34,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (camera.enabled)
                 camera.enabled = false;
 
-            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
-
             if (!SetupTiledLayout(
                 camera, 
                 out var _, 
