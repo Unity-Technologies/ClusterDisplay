@@ -66,12 +66,12 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
-        private static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStatic, bool byReference)
+        private static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
         {
             if (byReference)
                 return Instruction.Create(OpCodes.Ldarga_S, parameterDefinition);
 
-            if (isStatic)
+            if (isStaticCaller)
             {
                 switch (parameterDefinition.Index)
                 {
@@ -452,7 +452,7 @@ namespace Unity.ClusterDisplay
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
-                        newInstruct = PushParameterToStack(param, isStatic: targetMethodDef.IsStatic, byReference: false); // Push the string parameter reference to the stack.
+                        newInstruct = PushParameterToStack(param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the string parameter reference to the stack.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
@@ -510,7 +510,7 @@ namespace Unity.ClusterDisplay
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
-                        newInstruct = PushParameterToStack(param, isStatic: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
+                        newInstruct = PushParameterToStack(param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
@@ -576,7 +576,7 @@ namespace Unity.ClusterDisplay
 
                     if (ParameterIsString(targetMethodDef.Module, param))
                     {
-                        newInstruction = PushParameterToStack(paramDef, isStatic: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                        newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
                         il.InsertAfter(afterInstruction, newInstruction);
                         afterInstruction = newInstruction;
 
@@ -598,7 +598,7 @@ namespace Unity.ClusterDisplay
                         genericInstanceMethod.GenericArguments.Add(param.ParameterType);
                     }
 
-                    newInstruction = PushParameterToStack(paramDef, isStatic: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                    newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
                     il.InsertAfter(afterInstruction, newInstruction);
                     afterInstruction = newInstruction;
 
@@ -644,7 +644,7 @@ namespace Unity.ClusterDisplay
                     var genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
                     genericInstanceMethod.GenericArguments.Add(paramDef.ParameterType);
 
-                    var newInstruction = PushParameterToStack(paramDef, isStatic: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                    var newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
                     il.InsertAfter(afterInstruction, newInstruction);
                     afterInstruction = newInstruction;
 

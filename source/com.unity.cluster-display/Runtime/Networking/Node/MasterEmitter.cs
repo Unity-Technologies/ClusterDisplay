@@ -155,7 +155,6 @@ namespace Unity.ClusterDisplay
             }
 
             var rndState = previousFrameState;
-            previousFrameState = UnityEngine.Random.state;
 
             int sizePos = endPos;
             endPos += Marshal.SizeOf<int>();
@@ -167,6 +166,8 @@ namespace Unity.ClusterDisplay
             int sizeOfRandomState = Marshal.SizeOf<UnityEngine.Random.State>();
             endPos += sizeOfRandomState;
             *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
+
+            previousFrameState = UnityEngine.Random.state;
 
             // Debug.Log($"Seed: {UnityEngine.Random.seed}");
             return true;

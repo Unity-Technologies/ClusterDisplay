@@ -154,9 +154,6 @@ namespace Unity.ClusterDisplay
             if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
                 return;
 
-            if (afterFixedUpdateRPCQueue.Count > 1)
-                Debug.Log("TEST");
-
             while (afterFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
