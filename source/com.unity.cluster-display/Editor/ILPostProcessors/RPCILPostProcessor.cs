@@ -361,8 +361,8 @@ namespace Unity.ClusterDisplay
                 customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex] = new CustomAttributeArgument(customAttributeArgument.Type, newRPCId);
             }
 
-            if (!onTryCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() &&
-                !onTryStaticCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() &&
+            if (!onTryCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() ||
+                !onTryStaticCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() ||
                 !TryInjectDefaultSwitchCaseForExecutionStageMethods())
                 goto failure;
 
