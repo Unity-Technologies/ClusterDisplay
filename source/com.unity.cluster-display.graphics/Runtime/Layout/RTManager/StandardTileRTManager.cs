@@ -26,11 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_BlitRT == null || resized || m_BlitRT.graphicsFormat != format)
             {
                 if (m_BlitRT != null)
-                {
-                    // if (camera.targetTexture != null && camera.targetTexture == m_BlitRT)
-                    //     camera.targetTexture = null;
                     m_BlitRT.Release();
-                }
 
                 m_BlitRT = new RenderTexture(width, height, 1, format, 0);
                 m_BlitRT.name = $"Tile-RT-({m_BlitRT.width}X{m_BlitRT.height})";

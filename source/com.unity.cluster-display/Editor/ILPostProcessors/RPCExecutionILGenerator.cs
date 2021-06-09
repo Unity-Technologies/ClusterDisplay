@@ -875,11 +875,12 @@ namespace Unity.ClusterDisplay
                     firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
                     goto unableToInjectIL;
 
-                if (!TryInjectILForQueuedRPC(
-                    targetMethodRef,
-                    rpcExecutionStage,
-                    rpcId))
-                    goto unableToInjectIL;
+                if (rpcExecutionStage != RPCExecutionStage.ImmediatelyOnArrival)
+                    if (!TryInjectILForQueuedRPC(
+                        targetMethodRef,
+                        rpcExecutionStage,
+                        rpcId))
+                        goto unableToInjectIL;
 
                 if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
                     ilProcessor,
