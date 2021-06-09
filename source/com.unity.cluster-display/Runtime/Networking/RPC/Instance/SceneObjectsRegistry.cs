@@ -138,8 +138,11 @@ namespace Unity.ClusterDisplay
         #if UNITY_EDITOR
         static SceneObjectsRegistry ()
         {
-            EditorSceneManager.sceneOpened += (Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+            EditorSceneManager.sceneOpened += OnSceneOpened;
         }
+
+        private static void OnSceneOpened(Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
 
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void PollUnregisteredInstanceRPCs()

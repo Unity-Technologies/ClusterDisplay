@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            return true;
+            return instance != null;
         }
 
         protected virtual void Destroying () {}
@@ -90,8 +90,12 @@ namespace Unity.ClusterDisplay
 
             if (sceneInstances.ContainsKey(serializedScenePath))
             {
-                if (throwException)
+                if (sceneInstances[serializedScenePath] == null)
+                    sceneInstances[serializedScenePath] = instance;
+
+                else if (throwException)
                     throw new System.Exception($"Scene: \"{serializedScenePath}\" contains two instances of: \"{typeof(T).FullName}\".");
+
                 return;
             }
 
