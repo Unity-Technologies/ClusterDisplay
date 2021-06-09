@@ -368,13 +368,20 @@ namespace Unity.ClusterDisplay
                 Instruction newInstruction = null;
                 Instruction afterInstruction = null;
 
+                var voidTypeRef = ilProcessor.Body.Method.Module.ImportReference(typeof(void));
                 if (!targetMethodRef.HasParameters)
                 {
                     // Call method on target object without any parameters.
                     firstInstructionOfInjection = Instruction.Create(OpCodes.Call, targetMethodRef);
-
                     ilProcessor.InsertAfter(beforeInstruction, firstInstructionOfInjection);
-                    afterInstruction = newInstruction;
+                    afterInstruction = firstInstructionOfInjection;
+
+                    if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
+                    {
+                        newInstruction = Instruction.Create(OpCodes.Pop);
+                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                        afterInstruction = newInstruction;
+                    }
 
                     if (isImmediateRPCExeuction)
                     {
@@ -400,9 +407,15 @@ namespace Unity.ClusterDisplay
                      ref afterInstruction);
 
                 newInstruction = Instruction.Create(OpCodes.Call, targetMethodRef);
-
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
+
+                if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
+                {
+                    newInstruction = Instruction.Create(OpCodes.Pop);
+                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    afterInstruction = newInstruction;
+                }
 
                 if (isImmediateRPCExeuction)
                 {
