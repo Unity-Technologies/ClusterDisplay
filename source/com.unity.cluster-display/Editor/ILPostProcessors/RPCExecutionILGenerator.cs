@@ -152,13 +152,8 @@ namespace Unity.ClusterDisplay
                     out var hasDynamicallySizedRPCParameters))
                     return false;
 
-                var newInstruction = Instruction.Create(OpCodes.Call, targetMethodRef.Module.ImportReference(getIsMasterMethod));
-                il.InsertBefore(beforeInstruction, newInstruction);
-                var afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Brfalse, beforeInstruction);
-                il.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                var afterInstruction = InsertCallBefore(il, beforeInstruction, targetMethodRef.Module.ImportReference(getIsMasterMethod));
+                InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
 
                 return !hasDynamicallySizedRPCParameters ?
 
@@ -207,13 +202,8 @@ namespace Unity.ClusterDisplay
                         genericInstanceMethod.GenericArguments.Add(paramRef);
                         var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                        newInstruction = PushParameterToStack(bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-
-                        newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethodRef); // Call generic method to convert bytes into our struct.
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
+                        InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                        InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethodRef);  // Call generic method to convert bytes into our struct.
                     }
 
                     else if (ParameterIsString(targetMethodRef.Module, paramDef))
@@ -223,13 +213,8 @@ namespace Unity.ClusterDisplay
 
                         var parseStringMethodRef = moduleDef.ImportReference(parseStringMethod);
 
-                        newInstruction = PushParameterToStack(bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-
-                        newInstruction = Instruction.Create(OpCodes.Call, parseStringMethodRef);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
+                        InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                        InsertCallAfter(ilProcessor, ref afterInstruction, parseStringMethodRef);
                     }
 
                     else if (paramDef.ParameterType.IsArray)
@@ -246,13 +231,8 @@ namespace Unity.ClusterDisplay
                         genericInstanceMethod.GenericArguments.Add(paramRef);
                         var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 
-                        newInstruction = PushParameterToStack(bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-
-                        newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
+                        InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                        InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethod);
                     }
                 }
 
@@ -289,41 +269,19 @@ namespace Unity.ClusterDisplay
                     return false;
                 }
 
-                firstInstructionOfInjection = PushParameterToStack(objectParamDef, isStaticCaller: method.IsStatic, byReference: false);
-                ilProcessor.InsertBefore(beforeInstruction, firstInstructionOfInjection);
-                var afterInstruction = firstInstructionOfInjection;
-
-                var newInstruction = PushParameterToStack(pipeIdParamDef, isStaticCaller: method.IsStatic, byReference: false); // Load pipeId parameter onto stack.
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                // Call objectRegistry[pipeId].
-                newInstruction = Instruction.Create(OpCodes.Callvirt, objectRegistryTryGetItemMethodRef);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                /*
-                newInstruction = Instruction.Create(OpCodes.Castclass, targetMethod.DeclaringType);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-                */
+                var afterInstruction = firstInstructionOfInjection = InsertPushParameterToStackBefore(ilProcessor, beforeInstruction, objectParamDef, isStaticCaller: method.IsStatic, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, pipeIdParamDef, isStaticCaller: method.IsStatic, byReference: false); // Load pipeId parameter onto stack.
+                InsertCallAfter(ilProcessor, ref afterInstruction, objectRegistryTryGetItemMethodRef);
 
                 if (!targetMethod.HasParameters)
                 {
                     // Call method on target object without any parameters.
-                    newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod);
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
+                    InsertCallAfter(ilProcessor, ref afterInstruction, targetMethod);
 
                     if (isImmediateRPCExeuction)
-                    {
-                        newInstruction = PushInt(1); // Return true.
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-                    }
+                        InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
-                    newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                     return true;
                 }
 
@@ -334,20 +292,12 @@ namespace Unity.ClusterDisplay
                      isImmediateRPCExeuction,
                      ref afterInstruction);
 
-                newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod);
-
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertCallAfter(ilProcessor, ref afterInstruction, targetMethod);
 
                 if (isImmediateRPCExeuction)
-                {
-                    newInstruction = PushInt(1); // Return true.
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
-                }
+                    InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
-                newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                 return true;
             }
 
@@ -365,39 +315,25 @@ namespace Unity.ClusterDisplay
                     return false;
                 }
 
-                Instruction newInstruction = null;
                 Instruction afterInstruction = null;
 
                 var voidTypeRef = ilProcessor.Body.Method.Module.ImportReference(typeof(void));
                 if (!targetMethodRef.HasParameters)
                 {
                     // Call method on target object without any parameters.
-                    firstInstructionOfInjection = Instruction.Create(OpCodes.Call, targetMethodRef);
-                    ilProcessor.InsertAfter(beforeInstruction, firstInstructionOfInjection);
-                    afterInstruction = firstInstructionOfInjection;
+                    firstInstructionOfInjection = InsertCallBefore(ilProcessor, beforeInstruction, targetMethodRef);
 
                     if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
-                    {
-                        newInstruction = Instruction.Create(OpCodes.Pop);
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-                    }
+                        InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
 
                     if (isImmediateRPCExeuction)
-                    {
-                        newInstruction = PushInt(1); // Return true.
-                        ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-                    }
+                        InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
-                    newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                    InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                     return true;
                 }
 
-                firstInstructionOfInjection = Instruction.Create(OpCodes.Nop);
-                ilProcessor.InsertBefore(beforeInstruction, firstInstructionOfInjection);
-                afterInstruction = firstInstructionOfInjection;
+                afterInstruction = firstInstructionOfInjection = InsertBefore(ilProcessor, beforeInstruction, OpCodes.Nop);
 
                 InjectPushOfRPCParamters(
                     ilProcessor,
@@ -406,26 +342,15 @@ namespace Unity.ClusterDisplay
                      isImmediateRPCExeuction,
                      ref afterInstruction);
 
-                newInstruction = Instruction.Create(OpCodes.Call, targetMethodRef);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertCallAfter(ilProcessor, ref afterInstruction, targetMethodRef);
 
                 if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
-                {
-                    newInstruction = Instruction.Create(OpCodes.Pop);
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
-                }
+                    InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
 
                 if (isImmediateRPCExeuction)
-                {
-                    newInstruction = PushInt(1); // Push "true" to stack.
-                    ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
-                }
+                    InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
-                newInstruction = Instruction.Create(OpCodes.Ret); // Return
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                 return true;
             }
 
@@ -611,45 +536,17 @@ namespace Unity.ClusterDisplay
                     out var queueRPCMethodRef))
                     return false;
 
-                var newInstruction = Instruction.Create(OpCodes.Call, queueRPCMethodRef);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertCallAfter(ilProcessor, ref afterInstruction, queueRPCMethodRef);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldind_U2);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Add);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Conv_U2);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Stind_I2);
+                InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
 
-                newInstruction = PushParameterToStack(rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Ldind_U2);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Add);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Conv_U2);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Stind_I2);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushInt(1);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Ret);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
                 return true;
             }
 
@@ -669,25 +566,11 @@ namespace Unity.ClusterDisplay
                     return false;
 
                 // Pipe ID = 0 when the method we want to call is static.
-                newInstruction = PushInt(0);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(rpcIdParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Ldind_U2);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertPushIntAfter(ilProcessor, ref afterInstruction, 0);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldind_U2);
 
                 TryInjectQueueCall(
                     rpcExecutionStage,
@@ -703,9 +586,7 @@ namespace Unity.ClusterDisplay
                 RPCExecutionStage rpcExecutionStage,
                 out Instruction firstInstruction)
             {
-                var newInstruction = Instruction.Create(OpCodes.Nop);
-                ilProcessor.InsertBefore(beforeInstruction, newInstruction);
-                var afterInstruction = firstInstruction = newInstruction;
+                var afterInstruction = firstInstruction = InsertBefore(ilProcessor, beforeInstruction, OpCodes.Nop);
 
                 if (!TryGetTryCallParameters(
                     out var pipeIdParamDef,
@@ -714,25 +595,11 @@ namespace Unity.ClusterDisplay
                     out var rpcBufferPositionParamDef))
                     return false;
 
-                newInstruction = PushParameterToStack(pipeIdParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(rpcIdParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = PushParameterToStack(rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Ldind_U2);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, pipeIdParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldind_U2);
 
                 TryInjectQueueCall(
                     rpcExecutionStage,
@@ -770,17 +637,11 @@ namespace Unity.ClusterDisplay
                     return false;
                 }
 
-                var newInstruction = PushParameterToStack(rpcIdParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: false);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
+                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: false);
 
-                newInstruction = Instruction.Create(OpCodes.Ldc_I4, valueToPushForBeq);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                afterInstruction = newInstruction;
-
-                newInstruction = Instruction.Create(OpCodes.Beq, jmpToInstruction);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
-                lastInstructionOfSwitchJmp = newInstruction;
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldc_I4, valueToPushForBeq);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Beq, jmpToInstruction);
+                lastInstructionOfSwitchJmp = afterInstruction;
 
                 return true;
             }
@@ -800,8 +661,7 @@ namespace Unity.ClusterDisplay
                     return false;
                 }
 
-                var newInstruction = Instruction.Create(OpCodes.Br, lastInstruction);
-                ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Br, lastInstruction);
 
                 return true;
             }

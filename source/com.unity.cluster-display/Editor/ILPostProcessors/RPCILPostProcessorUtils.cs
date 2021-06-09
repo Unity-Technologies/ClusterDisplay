@@ -325,36 +325,19 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            Instruction newInstruct = null;
             if (isStatic)
-            {
-                newInstruct = PushInt(rpcId);
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
-            }
+                InsertPushIntAfter(il, ref afterInstruction, rpcId);
 
             else
             {
-                newInstruct = Instruction.Create(OpCodes.Ldarg_0);
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
-
-                newInstruct = PushInt(rpcId);
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
+                InsertPushThisAfter(il, ref afterInstruction);
+                InsertPushIntAfter(il, ref afterInstruction, rpcId);
             }
 
-            newInstruct = PushInt(rpcExecutionStage);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
-
-            newInstruct = PushInt(sizeOfAllParameters);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
-
-            newInstruct = Instruction.Create(OpCodes.Call, call);
-            il.InsertAfter(afterInstruction, newInstruct);
-            lastInstruction = newInstruct;
+            InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            InsertPushIntAfter(il, ref afterInstruction, sizeOfAllParameters);
+            InsertCallAfter(il, ref afterInstruction, call);
+            lastInstruction = afterInstruction;
 
             return true;
         }
@@ -377,13 +360,8 @@ namespace Unity.ClusterDisplay
 
             lastInstruction = null;
 
-            var newInstruction = Instruction.Create(OpCodes.Ldstr, message);
-            il.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            newInstruction = Instruction.Create(OpCodes.Call, logMethodRef);
-            il.InsertAfter(afterInstruction, newInstruction);
-            lastInstruction = newInstruction;
+            InsertPushStringAfter(il, ref afterInstruction, message);
+            InsertCallAfter(il, ref afterInstruction, logMethodRef);
         }
 
         private bool TryFindMethodWithMatchingFormalySerializedAs (
@@ -456,33 +434,17 @@ namespace Unity.ClusterDisplay
 
             var targetMethodDef = targetMethodRef.Resolve();
 
-            Instruction newInstruct = null;
             if (targetMethodDef.IsStatic)
-            {
-                newInstruct = PushInt(rpcId);
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
-            }
+                InsertPushIntAfter(il, ref afterInstruction, rpcId);
 
             else
             {
-                newInstruct = Instruction.Create(OpCodes.Ldarg_0); // Load "this" reference onto stack.
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
-
-                newInstruct = PushInt(rpcId);
-                il.InsertAfter(afterInstruction, newInstruct);
-                afterInstruction = newInstruct;
+                InsertPushThisAfter(il, ref afterInstruction);
+                InsertPushIntAfter(il, ref afterInstruction, rpcId);
             }
 
-            newInstruct = PushInt(rpcExecutionStage);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
-
-            newInstruct = PushInt(totalSizeOfStaticallySizedRPCParameters);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
-
+            InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            InsertPushIntAfter(il, ref afterInstruction, totalSizeOfStaticallySizedRPCParameters);
 
             if (targetMethodRef.HasParameters)
             {
@@ -491,13 +453,8 @@ namespace Unity.ClusterDisplay
                 {
                     if (ParameterIsString(targetMethodRef.Module, param))
                     {
-                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_1); // Push sizeof(char) to the stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = PushParameterToStack(param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the string parameter reference to the stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
+                        InsertPushIntAfter(il, ref afterInstruction, 1);
+                        InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false);
 
                         var stringTypeDef = cachedStringTypeRef.Resolve();
                         var stringLengthPropertyRef = stringTypeDef.Properties.FirstOrDefault(propertyDef =>
@@ -521,26 +478,11 @@ namespace Unity.ClusterDisplay
                         }
 
                         var stringLengthGetterMethodRef = targetMethodRef.Module.ImportReference(stringLengthGetterMethodDef); // Get the string length getter method.
-
-                        newInstruct = Instruction.Create(OpCodes.Call, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Mul); // Multiply char size of one byte by the length of the string.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Add); // Add string size in bytes to total parameters payload size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Add); // Add the constant to the total parameters payload size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
+                        InsertCallAfter(il, ref afterInstruction, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply char size of one byte by the length of the string.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add string size in bytes to total parameters payload size.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
                     }
 
                     else if (param.ParameterType.IsArray)
@@ -549,13 +491,8 @@ namespace Unity.ClusterDisplay
                         if (!TryDetermineSizeOfValueType(param.ParameterType.Resolve(), ref arrayElementSize))
                             return false;
 
-                        newInstruct = PushInt(arrayElementSize); // Push array element size to stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = PushParameterToStack(param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
+                        InsertPushIntAfter(il, ref afterInstruction, arrayElementSize); // Push array element size to stack.
+                        InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
 
                         var arrayTypeRef = targetMethodRef.Module.ImportReference(typeof(Array));
                         var arrayTypeDef = arrayTypeRef.Resolve();
@@ -581,32 +518,16 @@ namespace Unity.ClusterDisplay
 
                         var arrayLengthGetterMethodRef = targetMethodRef.Module.ImportReference(arrayLengthGetterMethodDef); // Find array Length get property.
 
-                        newInstruct = Instruction.Create(OpCodes.Call, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Mul); // Multiply array element size by array length.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Add); // Add total array size in bytes to total parameters payload size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
-
-                        newInstruct = Instruction.Create(OpCodes.Add); // Add the constant to the total parameters payload size.
-                        il.InsertAfter(afterInstruction, newInstruct);
-                        afterInstruction = newInstruct;
+                        InsertCallAfter(il, ref afterInstruction, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply array element size by array length.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add total array size in bytes to total parameters payload size.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
                     }
                 }
             }
 
-            newInstruct = Instruction.Create(OpCodes.Call, appendRPCMethodRef);
-            il.InsertAfter(afterInstruction, newInstruct);
-            afterInstruction = newInstruct;
+            InsertCallAfter(il, ref afterInstruction, appendRPCMethodRef);
 
             if (targetMethodRef.HasParameters)
             {
@@ -615,17 +536,11 @@ namespace Unity.ClusterDisplay
                 {
                     GenericInstanceMethod genericInstanceMethod = null;
                     var paramDef = param.Resolve();
-                    Instruction newInstruction = null;
 
                     if (ParameterIsString(targetMethodRef.Module, param))
                     {
-                        newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                        il.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
-
-                        newInstruction = Instruction.Create(OpCodes.Call, appendRPCStringParameterValueMethodRef);
-                        il.InsertAfter(afterInstruction, newInstruction);
-                        afterInstruction = newInstruction;
+                        InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                        InsertCallAfter(il, ref afterInstruction, appendRPCStringParameterValueMethodRef);
                         continue;
                     }
 
@@ -641,13 +556,8 @@ namespace Unity.ClusterDisplay
                         genericInstanceMethod.GenericArguments.Add(param.ParameterType);
                     }
 
-                    newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                    il.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
-
-                    newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
-                    il.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
+                    InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                    InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
                 }
             }
 
@@ -691,13 +601,8 @@ namespace Unity.ClusterDisplay
                     var genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
                     genericInstanceMethod.GenericArguments.Add(paramDef.ParameterType);
 
-                    var newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                    il.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
-
-                    newInstruction = Instruction.Create(OpCodes.Call, genericInstanceMethod);
-                    il.InsertAfter(afterInstruction, newInstruction);
-                    afterInstruction = newInstruction;
+                    InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, paramDef.IsOut || paramDef.IsIn);
+                    InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
                 }
             }
 
@@ -804,21 +709,11 @@ namespace Unity.ClusterDisplay
             var objectRegistryLocalVariable = new VariableDefinition(moduleDef.ImportReference(objectRegistryTypeDef));
             onTryCallILProcessor.Body.Variables.Add(objectRegistryLocalVariable);
 
-            var newInstruction = Instruction.Create(OpCodes.Ldloca_S,  onTryCallILProcessor.Body.Variables[0]);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            newInstruction = Instruction.Create(OpCodes.Call, objectRegistryTryGetInstance);
-            onTryCallILProcessor.InsertAfter(afterInstruction, newInstruction);
-            afterInstruction = newInstruction;
-
-            tryGetInstanceFailureInstruction = Instruction.Create(OpCodes.Brfalse, onTryCallILProcessor.Body.Instructions[0]);
-            onTryCallILProcessor.InsertAfter(afterInstruction, tryGetInstanceFailureInstruction);
-            lastInstruction = tryGetInstanceFailureInstruction;
+            IsertPushLocalVariableAfter(onTryCallILProcessor, ref afterInstruction, onTryCallILProcessor.Body.Variables[0]);
+            InsertAfter(onTryCallILProcessor, ref afterInstruction, OpCodes.Ldc_I4_0);
+            InsertCallAfter(onTryCallILProcessor, ref afterInstruction, objectRegistryTryGetInstance);
+            InsertAfter(onTryCallILProcessor, ref afterInstruction, OpCodes.Brfalse, onTryCallILProcessor.Body.Instructions[0]);
+            tryGetInstanceFailureInstruction = lastInstruction = afterInstruction;
         }
 
         private static bool TryGetDerrivedType (

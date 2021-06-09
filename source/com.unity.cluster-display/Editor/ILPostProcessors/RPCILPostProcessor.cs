@@ -32,6 +32,144 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private static void InsertCallAfter (ILProcessor il, ref Instruction afterInstruction, MethodReference methodRef)
+        {
+            Instruction instruction = null;
+            var methodDef = methodRef.Resolve();
+
+            if (methodDef.IsVirtual || methodDef.IsAbstract)
+                instruction = Instruction.Create(OpCodes.Callvirt, methodRef);
+            else instruction = Instruction.Create(OpCodes.Call, methodRef);
+
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertCallBefore (ILProcessor il, Instruction beforeInstruction, MethodReference methodRef)
+        {
+            Instruction instruction = null;
+            var methodDef = methodRef.Resolve();
+
+            if (methodDef.IsVirtual || methodDef.IsAbstract)
+                instruction = Instruction.Create(OpCodes.Callvirt, methodRef);
+            else instruction = Instruction.Create(OpCodes.Call, methodRef);
+
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void IsertPushLocalVariableAfter (ILProcessor il, ref Instruction afterInstruction, VariableDefinition variableDef)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction IsertPushLocalVariableBefore (ILProcessor il, Instruction beforeInstruction, VariableDefinition variableDef)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertPushParameterToStackAfter (ILProcessor il, ref Instruction afterInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
+        {
+            var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertPushParameterToStackBefore (ILProcessor il, Instruction beforeInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
+        {
+            var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertPushIntAfter (ILProcessor il, ref Instruction afterInstruction, int integer)
+        {
+            var instruction = PushInt(integer);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertPushIntBefore (ILProcessor il, Instruction beforeInstruction, int integer)
+        {
+            var instruction = PushInt(integer);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertPushStringAfter (ILProcessor il, ref Instruction afterInstruction, string str)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldstr, str);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertPushStringBefore (ILProcessor il, Instruction beforeInstruction, string str)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldstr, str);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertPushThisAfter (ILProcessor il, ref Instruction afterInstruction)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldarg_0);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertPushThisBefore (ILProcessor il, Instruction beforeInstruction)
+        {
+            var instruction = Instruction.Create(OpCodes.Ldarg_0);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, int operand)
+        {
+            var instruction = Instruction.Create(opCode, operand);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, int operand)
+        {
+            var instruction = Instruction.Create(opCode);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, Instruction operand)
+        {
+            var instruction = Instruction.Create(opCode, operand);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, Instruction operand)
+        {
+            var instruction = Instruction.Create(opCode);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
+        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode)
+        {
+            var instruction = Instruction.Create(opCode);
+            il.InsertAfter(afterInstruction, instruction);
+            afterInstruction = instruction;
+        }
+
+        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode)
+        {
+            var instruction = Instruction.Create(opCode);
+            il.InsertBefore(beforeInstruction, instruction);
+            return instruction;
+        }
+
         private static void CachMethodReferencesInMethodInstructions (MethodDefinition callingMethodDef)
         {
             if (!cachedCallTree.TryGetValue(callingMethodDef.MetadataToken, out var call))
