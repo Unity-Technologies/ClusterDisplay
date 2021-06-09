@@ -40,9 +40,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             var cachedProjectionMatrix = k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix();
 
-            bool usingPhysicalProperties = camera.usePhysicalProperties;
-            camera.usePhysicalProperties = true;
-
             for (var i = 0; i < numTiles; i++)
             {
                 CalculateStitcherLayout(
@@ -54,11 +51,11 @@ namespace Unity.ClusterDisplay.Graphics
                     out var viewportSubsection, 
                     out var asymmetricProjectionMatrix);
 
-                var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-                CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
-
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+
+                var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
 
                 camera.targetTexture = blitRT;
                 camera.projectionMatrix = asymmetricProjectionMatrix;
@@ -68,7 +65,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             k_ClusterRenderer.cameraController.ResetProjectionMatrix();
-            camera.usePhysicalProperties = usingPhysicalProperties;
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

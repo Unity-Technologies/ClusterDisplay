@@ -42,16 +42,10 @@ namespace Unity.ClusterDisplay.Graphics
                 out m_OverscannedRect))
                 return;
 
-            var rt = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            if (rt != camera.targetTexture)
-                camera.targetTexture = rt;
-
-            camera.projectionMatrix = projectionMatrix;
-            camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
-
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
+            camera.targetTexture = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             camera.projectionMatrix = projectionMatrix;
             camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
