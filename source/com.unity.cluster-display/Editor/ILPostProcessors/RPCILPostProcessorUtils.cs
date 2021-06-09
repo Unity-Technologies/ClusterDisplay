@@ -69,7 +69,7 @@ namespace Unity.ClusterDisplay
         private static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
         {
             if (byReference)
-                return Instruction.Create(OpCodes.Ldarga_S, parameterDefinition);
+                return Instruction.Create(OpCodes.Ldarga, parameterDefinition);
 
             if (isStaticCaller)
             {
@@ -84,7 +84,7 @@ namespace Unity.ClusterDisplay
                     case 3:
                         return Instruction.Create(OpCodes.Ldarg_3);
                     default:
-                        return Instruction.Create(OpCodes.Ldarg_S, parameterDefinition);
+                        return Instruction.Create(OpCodes.Ldarg, parameterDefinition);
                 }
             }
 
@@ -133,23 +133,51 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static bool TryFindMethodDefinitionWithAttribute (TypeDefinition typeDef, TypeReference attributeTypeRef, out MethodDefinition methodDef)
+        private static bool TryGetMethodReference (
+            ModuleDefinition moduleDef,
+            TypeDefinition typeDef, 
+            ref SerializedRPC inRPCTokenizer, 
+            out MethodReference methodRef)
         {
-            var found = (methodDef = typeDef.Methods
-                .Where(method => method.CustomAttributes
-                    .Any(customAttribute =>
+            var rpcTokenizer = inRPCTokenizer;
+            MethodDefinition methodDef = null;
+            bool found = (methodDef = typeDef.Methods.Where(method =>
+            {
+                // Debug.Log($"Method Signature: {methodDef.Name} == {rpcTokenizer.MethodName} &&\n{methodDef.ReturnType.Resolve().Module.Assembly.Name.Name} == {rpcTokenizer.DeclaringReturnTypeAssemblyName} &&\n{methodDef.HasParameters} == {rpcTokenizer.ParameterCount > 0} &&\n{methodDef.Parameters.Count} == {rpcTokenizer.ParameterCount}");
+                bool allMatch = 
+                    method.HasParameters == rpcTokenizer.ParameterCount > 0 &&
+                    method.Parameters.Count == rpcTokenizer.ParameterCount &&
+                    method.Name == rpcTokenizer.methodName &&
+                    method.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.declaringReturnTypeAssemblyName &&
+                    method.Parameters.All(parameterDefinition =>
                     {
-                        return
-                            customAttribute.AttributeType.FullName == attributeTypeRef.FullName;
-                    })).FirstOrDefault()) != null;
+                        if (rpcTokenizer.ParameterCount == 0)
+                            return true;
+
+                        bool any = false;
+                        for (int i = 0; i < rpcTokenizer.ParameterCount; i++)
+                        {
+                            // Debug.Log($"Method Parameters: {parameterDefinition.Name} == {rpcTokenizer[i].parameterName} &&\n{parameterDefinition.ParameterType.FullName} == {rpcTokenizer[i].parameterTypeFullName} &&\n{parameterDefinition.ParameterType.Module.Assembly.Name.Name} == {rpcTokenizer[i].declaringParameterTypeAssemblyName}");
+                            any |=
+                                parameterDefinition.Name == rpcTokenizer[i].parameterName &&
+                                parameterDefinition.ParameterType.FullName == rpcTokenizer[i].parameterTypeFullName &&
+                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer[i].declaringParameterTypeAssemblyName;
+                        }
+                        return any;
+                    });
+
+                return allMatch;
+
+            }).FirstOrDefault()) != null;
 
             if (!found)
             {
-                Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
+                Debug.LogError($"Unable to find method reference for serialized RPC: \"{inRPCTokenizer.methodName}\" declared in: \"{typeDef.FullName}\".");
+                methodRef = null;
                 return false;
             }
 
-            methodDef = methodDef.Resolve();
+            methodRef = moduleDef.ImportReference(methodDef);
             return true;
         }
 
@@ -193,7 +221,9 @@ namespace Unity.ClusterDisplay
             return found;
         }
 
-        private static bool TryFindParameterWithAttribute<T> (MethodDefinition methodDefinition, out ParameterDefinition parameterDef)
+        private static bool TryFindParameterWithAttribute<T> (
+            MethodDefinition methodDefinition, 
+            out ParameterDefinition parameterDef)
         {
             var parameterAttributeType = methodDefinition.Module.ImportReference(typeof(T));
             bool found = (parameterDef = methodDefinition
@@ -227,39 +257,6 @@ namespace Unity.ClusterDisplay
             return false;
         }
 
-        private static bool TryGetMethodDefinition (TypeDefinition typeDefinition, ref SerializedRPC inRPCTokenizer, out MethodDefinition methodDefinition)
-        {
-            var rpcTokenizer = inRPCTokenizer;
-            return (methodDefinition = typeDefinition.Methods.Where(methodDef =>
-            {
-                // Debug.Log($"Method Signature: {methodDef.Name} == {rpcTokenizer.MethodName} &&\n{methodDef.ReturnType.Resolve().Module.Assembly.Name.Name} == {rpcTokenizer.DeclaringReturnTypeAssemblyName} &&\n{methodDef.HasParameters} == {rpcTokenizer.ParameterCount > 0} &&\n{methodDef.Parameters.Count} == {rpcTokenizer.ParameterCount}");
-                bool allMatch = 
-                    methodDef.HasParameters == rpcTokenizer.ParameterCount > 0 &&
-                    methodDef.Parameters.Count == rpcTokenizer.ParameterCount &&
-                    methodDef.Name == rpcTokenizer.methodName &&
-                    methodDef.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.declaringReturnTypeAssemblyName &&
-                    methodDef.Parameters.All(parameterDefinition =>
-                    {
-                        if (rpcTokenizer.ParameterCount == 0)
-                            return true;
-
-                        bool any = false;
-                        for (int i = 0; i < rpcTokenizer.ParameterCount; i++)
-                        {
-                            // Debug.Log($"Method Parameters: {parameterDefinition.Name} == {rpcTokenizer[i].parameterName} &&\n{parameterDefinition.ParameterType.FullName} == {rpcTokenizer[i].parameterTypeFullName} &&\n{parameterDefinition.ParameterType.Module.Assembly.Name.Name} == {rpcTokenizer[i].declaringParameterTypeAssemblyName}");
-                            any |=
-                                parameterDefinition.Name == rpcTokenizer[i].parameterName &&
-                                parameterDefinition.ParameterType.FullName == rpcTokenizer[i].parameterTypeFullName &&
-                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer[i].declaringParameterTypeAssemblyName;
-                        }
-                        return any;
-                    });
-
-                return allMatch;
-
-            }).FirstOrDefault()) != null;
-        }
-
         private static bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
         {
             if (cachedGetIsMasterMethod == null && !TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out cachedGetIsMasterMethod))
@@ -282,15 +279,45 @@ namespace Unity.ClusterDisplay
                 parameterDef.ParameterType.Name == cachedStringTypeRef.Name;
         }
 
+        private static Instruction PushInt (int value)
+        {
+            switch (value)
+            {
+                case 0:
+                    return Instruction.Create(OpCodes.Ldc_I4_0);
+                case 1:
+                    return Instruction.Create(OpCodes.Ldc_I4_1);
+                case 2:
+                    return Instruction.Create(OpCodes.Ldc_I4_2);
+                case 3:
+                    return Instruction.Create(OpCodes.Ldc_I4_3);
+                case 4:
+                    return Instruction.Create(OpCodes.Ldc_I4_4);
+                case 5:
+                    return Instruction.Create(OpCodes.Ldc_I4_5);
+                case 6:
+                    return Instruction.Create(OpCodes.Ldc_I4_6);
+                case 7:
+                    return Instruction.Create(OpCodes.Ldc_I4_7);
+                case 8:
+                    return Instruction.Create(OpCodes.Ldc_I4_8);
+
+                default:
+                    return Instruction.Create(OpCodes.Ldc_I4, value);
+            }
+        }
+
         private static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
             bool isStatic, 
-            ushort rpcId, 
+            int rpcId, 
+            int rpcExecutionStage,
             MethodReference call, 
-            ushort sizeOfAllParameters,
+            int sizeOfAllParameters,
             out Instruction lastInstruction)
         {
+
             if (afterInstruction == null)
             {
                 Debug.LogError($"Unable to inject call to: \"{call.Name}\" declared in: \"{call.DeclaringType.FullName}\", the instruction to inject after is null!");
@@ -301,7 +328,7 @@ namespace Unity.ClusterDisplay
             Instruction newInstruct = null;
             if (isStatic)
             {
-                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                newInstruct = PushInt(rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
             }
@@ -312,12 +339,16 @@ namespace Unity.ClusterDisplay
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
 
-                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                newInstruct = PushInt(rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
             }
 
-            newInstruct = Instruction.Create(OpCodes.Ldc_I4, sizeOfAllParameters);
+            newInstruct = PushInt(rpcExecutionStage);
+            il.InsertAfter(afterInstruction, newInstruct);
+            afterInstruction = newInstruct;
+
+            newInstruct = PushInt(sizeOfAllParameters);
             il.InsertAfter(afterInstruction, newInstruct);
             afterInstruction = newInstruct;
 
@@ -355,7 +386,11 @@ namespace Unity.ClusterDisplay
             lastInstruction = newInstruction;
         }
 
-        private bool TryFindMethodWithMatchingFormalySerializedAs (ModuleDefinition moduleDef, TypeDefinition typeDefinition, string serializedMethodName, out MethodDefinition outMethodDef)
+        private bool TryFindMethodWithMatchingFormalySerializedAs (
+            ModuleDefinition moduleDef, 
+            TypeDefinition typeDefinition, 
+            string serializedMethodName, 
+            out MethodReference outMethodRef)
         {
             var rpcMethodAttributeType = typeof(RPCMethod);
             var stringType = typeof(string);
@@ -385,25 +420,26 @@ namespace Unity.ClusterDisplay
                         if (serializedMethodName != formarlySerializedAs)
                             continue;
 
-                        outMethodDef = moduleDef.ImportReference(methodDef).Resolve();
-                        Debug.LogFormat($"Found renamed method: \"{outMethodDef.Name}\" that was previously named as: \"{serializedMethodName}\".");
+                        outMethodRef = moduleDef.ImportReference(methodDef);
+                        Debug.LogFormat($"Found renamed method: \"{outMethodRef.Name}\" that was previously named as: \"{serializedMethodName}\".");
                         return true;
                     }
                 }
             }
 
-            outMethodDef = null;
+            outMethodRef = null;
             return false;
         }
 
         private static bool TryInjectBridgeToDynamicallySizedRPCPropagation (
             Type rpcEmitterType,
-            ushort rpcId,
-            MethodDefinition targetMethodDef,
+            int rpcId,
+            int rpcExecutionStage,
+            MethodReference targetMethodRef,
             ILProcessor il,
-            Instruction afterInstruction,
+            ref Instruction afterInstruction,
             MethodReference appendRPCMethodRef,
-            ushort totalSizeOfStaticallySizedRPCParameters)
+            int totalSizeOfStaticallySizedRPCParameters)
         {
             if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
                 return false;
@@ -414,14 +450,16 @@ namespace Unity.ClusterDisplay
             if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo))
                 return false;
 
-            var appendRPCValueTypeParameterValueMethodRef = targetMethodDef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
-            var appendRPCStringParameterValueMethodRef = targetMethodDef.Module.ImportReference(appendRPCStringParameterValueMethodInfo);
-            var appendRPCArrayParameterValueMethodRef = targetMethodDef.Module.ImportReference(appendRPCArrayParameterValueMethodInfo);
+            var appendRPCValueTypeParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
+            var appendRPCStringParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCStringParameterValueMethodInfo);
+            var appendRPCArrayParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCArrayParameterValueMethodInfo);
+
+            var targetMethodDef = targetMethodRef.Resolve();
 
             Instruction newInstruct = null;
             if (targetMethodDef.IsStatic)
             {
-                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                newInstruct = PushInt(rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
             }
@@ -432,21 +470,26 @@ namespace Unity.ClusterDisplay
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
 
-                newInstruct = Instruction.Create(OpCodes.Ldc_I4, rpcId);
+                newInstruct = PushInt(rpcId);
                 il.InsertAfter(afterInstruction, newInstruct);
                 afterInstruction = newInstruct;
             }
 
-            newInstruct = Instruction.Create(OpCodes.Ldc_I4, totalSizeOfStaticallySizedRPCParameters);
+            newInstruct = PushInt(rpcExecutionStage);
             il.InsertAfter(afterInstruction, newInstruct);
             afterInstruction = newInstruct;
 
-            if (targetMethodDef.HasParameters)
+            newInstruct = PushInt(totalSizeOfStaticallySizedRPCParameters);
+            il.InsertAfter(afterInstruction, newInstruct);
+            afterInstruction = newInstruct;
+
+
+            if (targetMethodRef.HasParameters)
             {
                 // Loop through each array/string parameter adding the runtime byte size to total parameters payload size.
-                foreach (var param in targetMethodDef.Parameters)
+                foreach (var param in targetMethodRef.Parameters)
                 {
-                    if (ParameterIsString(targetMethodDef.Module, param))
+                    if (ParameterIsString(targetMethodRef.Module, param))
                     {
                         newInstruct = Instruction.Create(OpCodes.Ldc_I4_1); // Push sizeof(char) to the stack.
                         il.InsertAfter(afterInstruction, newInstruct);
@@ -477,7 +520,7 @@ namespace Unity.ClusterDisplay
                             return false;
                         }
 
-                        var stringLengthGetterMethodRef = targetMethodDef.Module.ImportReference(stringLengthGetterMethodDef); // Get the string length getter method.
+                        var stringLengthGetterMethodRef = targetMethodRef.Module.ImportReference(stringLengthGetterMethodDef); // Get the string length getter method.
 
                         newInstruct = Instruction.Create(OpCodes.Call, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
                         il.InsertAfter(afterInstruction, newInstruct);
@@ -506,7 +549,7 @@ namespace Unity.ClusterDisplay
                         if (!TryDetermineSizeOfValueType(param.ParameterType.Resolve(), ref arrayElementSize))
                             return false;
 
-                        newInstruct = Instruction.Create(OpCodes.Ldc_I4, arrayElementSize); // Push array element size to stack.
+                        newInstruct = PushInt(arrayElementSize); // Push array element size to stack.
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
@@ -514,7 +557,7 @@ namespace Unity.ClusterDisplay
                         il.InsertAfter(afterInstruction, newInstruct);
                         afterInstruction = newInstruct;
 
-                        var arrayTypeRef = targetMethodDef.Module.ImportReference(typeof(Array));
+                        var arrayTypeRef = targetMethodRef.Module.ImportReference(typeof(Array));
                         var arrayTypeDef = arrayTypeRef.Resolve();
                         var arrayLengthPropertyRef = arrayTypeDef.Properties.FirstOrDefault(propertyDef =>
                         {
@@ -536,7 +579,7 @@ namespace Unity.ClusterDisplay
                             return false;
                         }
 
-                        var arrayLengthGetterMethodRef = targetMethodDef.Module.ImportReference(arrayLengthGetterMethodDef); // Find array Length get property.
+                        var arrayLengthGetterMethodRef = targetMethodRef.Module.ImportReference(arrayLengthGetterMethodDef); // Find array Length get property.
 
                         newInstruct = Instruction.Create(OpCodes.Call, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
                         il.InsertAfter(afterInstruction, newInstruct);
@@ -565,16 +608,16 @@ namespace Unity.ClusterDisplay
             il.InsertAfter(afterInstruction, newInstruct);
             afterInstruction = newInstruct;
 
-            if (targetMethodDef.HasParameters)
+            if (targetMethodRef.HasParameters)
             {
                 // Loop through the parameters again to inject instructions to push each parameter values to RPC buffer.
-                foreach (var param in targetMethodDef.Parameters)
+                foreach (var param in targetMethodRef.Parameters)
                 {
                     GenericInstanceMethod genericInstanceMethod = null;
                     var paramDef = param.Resolve();
                     Instruction newInstruction = null;
 
-                    if (ParameterIsString(targetMethodDef.Module, param))
+                    if (ParameterIsString(targetMethodRef.Module, param))
                     {
                         newInstruction = PushParameterToStack(paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
                         il.InsertAfter(afterInstruction, newInstruction);
@@ -615,31 +658,35 @@ namespace Unity.ClusterDisplay
 
         private static bool TryInjectBridgeToStaticallySizedRPCPropagation (
             Type rpcEmitterType,
-            ushort rpcId,
-            MethodDefinition targetMethodDef,
+            int rpcId,
+            int rpcExecutionStage,
+            MethodReference targetMethodRef,
             ILProcessor il,
-            Instruction afterInstruction,
+            ref Instruction afterInstruction,
             MethodReference appendRPCMethodRef,
-            ushort totalSizeOfStaticallySizedRPCParameters)
+            int totalSizeOfStaticallySizedRPCParameters)
         {
             if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
                 return false;
 
-            var appendRPCValueTypeParameterValueMethodRef = targetMethodDef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
+            var targetMethodDef = targetMethodRef.Resolve();
+
+            var appendRPCValueTypeParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
 
             if (!TryInjectAppendStaticSizedRPCCall(
                 il,
                 afterInstruction,
                 targetMethodDef.IsStatic,
                 rpcId,
+                rpcExecutionStage,
                 appendRPCMethodRef,
                 totalSizeOfStaticallySizedRPCParameters,
                 out afterInstruction))
                 return false;
 
-            if (targetMethodDef.HasParameters)
+            if (targetMethodRef.HasParameters)
             {
-                foreach (var paramDef in targetMethodDef.Parameters)
+                foreach (var paramDef in targetMethodRef.Parameters)
                 {
                     var genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
                     genericInstanceMethod.GenericArguments.Add(paramDef.ParameterType);
@@ -660,12 +707,16 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static bool TryPollParameterInformation (ModuleDefinition moduleDef, MethodDefinition methodDef, out ushort totalSizeOfStaticallySizedRPCParameters, out bool hasDynamicallySizedRPCParameters)
+        private static bool TryPollParameterInformation (
+            ModuleDefinition moduleDef, 
+            MethodReference targetMethodRef, 
+            out int totalSizeOfStaticallySizedRPCParameters, 
+            out bool hasDynamicallySizedRPCParameters)
         {
             totalSizeOfStaticallySizedRPCParameters = 0;
             hasDynamicallySizedRPCParameters = false;
 
-            foreach (var param in methodDef.Parameters)
+            foreach (var param in targetMethodRef.Parameters)
             {
                 var typeReference = moduleDef.ImportReference(param.ParameterType);
 
@@ -677,14 +728,14 @@ namespace Unity.ClusterDisplay
 
                     if (sizeOfType > ushort.MaxValue)
                     {
-                        Debug.LogError($"Unable to post process method: \"{methodDef.Name}\" declared in: \"{methodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" of type: \"{typeReference.FullName}\" is larger then the max parameter size of: {ushort.MaxValue} bytes.");
+                        Debug.LogError($"Unable to post process method: \"{targetMethodRef.Name}\" declared in: \"{targetMethodRef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" of type: \"{typeReference.FullName}\" is larger then the max parameter size of: {ushort.MaxValue} bytes.");
                         return false;
                     }
 
                     int totalBytesNow = ((int)totalSizeOfStaticallySizedRPCParameters) + sizeOfType;
                     if (totalBytesNow > ushort.MaxValue)
                     {
-                        Debug.LogError($"Unable to post process method: \"{methodDef.Name}\" declared in: \"{methodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" pushes the total parameter payload size to: {totalBytesNow} bytes, the max parameters payload size is: {ushort.MaxValue} bytes.");
+                        Debug.LogError($"Unable to post process method: \"{targetMethodRef.Name}\" declared in: \"{targetMethodRef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" pushes the total parameter payload size to: {totalBytesNow} bytes, the max parameters payload size is: {ushort.MaxValue} bytes.");
                         return false;
                     }
 
@@ -695,26 +746,6 @@ namespace Unity.ClusterDisplay
                         ParameterIsString(moduleDef, param) ||
                         typeReference.IsArray;
             }
-
-            return true;
-        }
-
-        private static bool GetRPCInstanceRegistryMethodImplementation (
-            AssemblyDefinition assemblyDef, 
-            TypeReference derrivedTypeRef,
-            Type markerAttribute, 
-            out ILProcessor il)
-        {
-            var onTryCallMarkerAttributeTypeRef = assemblyDef.MainModule.ImportReference(markerAttribute);
-
-            if (!TryFindMethodDefinitionWithAttribute(derrivedTypeRef.Resolve(), onTryCallMarkerAttributeTypeRef, out var onTryCallMethodDef))
-            {
-                il = null;
-                return false;
-            }
-
-            derrivedTypeRef = onTryCallMethodDef.DeclaringType;
-            il = onTryCallMethodDef.Body.GetILProcessor();
 
             return true;
         }

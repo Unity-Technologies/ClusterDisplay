@@ -43,11 +43,60 @@ namespace Unity.ClusterDisplay
                 firstInstruction = Instruction.Create(OpCodes.Nop);
                 ilProcessor.Append(firstInstruction);
 
-                lastInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
+                lastInstruction = PushInt(0);
                 ilProcessor.Append(lastInstruction);
                 ilProcessor.Append(Instruction.Create(OpCodes.Ret));
 
                 lastSwitchJmpInstruction = firstInstruction;
+                return true;
+            }
+
+            private bool TryFindMethodReferenceWithAttribute (
+                TypeDefinition typeDef, 
+                TypeReference attributeTypeRef, 
+                out MethodReference methodRef)
+            {
+                MethodDefinition methodDef = null;
+                var found = (methodDef = typeDef.Methods
+                    .Where(method => method.CustomAttributes
+                        .Any(customAttribute =>
+                        {
+                            return
+                                customAttribute.AttributeType.FullName == attributeTypeRef.FullName;
+                        })).FirstOrDefault()) != null;
+
+                if (!found)
+                {
+                    Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
+                    methodRef = null;
+                    return false;
+                }
+
+                methodRef = moduleDef.ImportReference(methodDef);
+                return true;
+            }
+
+            private bool GetRPCInstanceRegistryMethodImplementation (
+                AssemblyDefinition assemblyDef, 
+                TypeReference derrivedTypeRef,
+                Type markerAttribute, 
+                out ILProcessor il)
+            {
+                var onTryCallMarkerAttributeTypeRef = assemblyDef.MainModule.ImportReference(markerAttribute);
+
+                if (!TryFindMethodReferenceWithAttribute(
+                    derrivedTypeRef.Resolve(), 
+                    onTryCallMarkerAttributeTypeRef, 
+                    out var onTryCallMethodRef))
+                {
+                    il = null;
+                    return false;
+                }
+
+                var methodDef = onTryCallMethodRef.Resolve();
+                derrivedTypeRef = onTryCallMethodRef.DeclaringType;
+                il = methodDef.Body.GetILProcessor();
+
                 return true;
             }
 
@@ -69,14 +118,17 @@ namespace Unity.ClusterDisplay
             }
 
             private bool TryInjectRPCInterceptIL (
-                ushort rpcId, 
-                MethodDefinition targetMethodDef)
+                int rpcId, 
+                int rpcExecutionStage,
+                MethodReference targetMethodRef)
             {
+                var targetMethodDef = targetMethodRef.Resolve();
+
                 var beforeInstruction = targetMethodDef.Body.Instructions.First();
                 var il = targetMethodDef.Body.GetILProcessor();
 
                 var rpcEmitterType = typeof(RPCEmitter);
-                var rpcEmitterTypeReference = targetMethodDef.Module.ImportReference(rpcEmitterType);
+                var rpcEmitterTypeReference = targetMethodRef.Module.ImportReference(rpcEmitterType);
 
                 MethodInfo appendRPCMethodInfo = null;
                 if (!targetMethodDef.IsStatic)
@@ -88,35 +140,35 @@ namespace Unity.ClusterDisplay
                 else if (!TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
 
-                var appendRPCCMethodRef = targetMethodDef.Module.ImportReference(appendRPCMethodInfo);
+                var appendRPCCMethodRef = targetMethodRef.Module.ImportReference(appendRPCMethodInfo);
 
                 if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
                     return false;
 
                 if (!TryPollParameterInformation(
-                    targetMethodDef.Module,
-                    targetMethodDef,
+                    targetMethodRef.Module,
+                    targetMethodRef,
                     out var totalSizeOfStaticallySizedRPCParameters,
                     out var hasDynamicallySizedRPCParameters))
                     return false;
 
-                var newInstruction = Instruction.Create(OpCodes.Call, targetMethodDef.Module.ImportReference(getIsMasterMethod));
+                var newInstruction = Instruction.Create(OpCodes.Call, targetMethodRef.Module.ImportReference(getIsMasterMethod));
                 il.InsertBefore(beforeInstruction, newInstruction);
                 var afterInstruction = newInstruction;
 
-                newInstruction = Instruction.Create(OpCodes.Brfalse_S, beforeInstruction);
+                newInstruction = Instruction.Create(OpCodes.Brfalse, beforeInstruction);
                 il.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
-                return
-                    !hasDynamicallySizedRPCParameters ?
+                return !hasDynamicallySizedRPCParameters ?
 
                         TryInjectBridgeToStaticallySizedRPCPropagation(
                             rpcEmitterType,
                             rpcId,
-                            targetMethodDef,
+                            rpcExecutionStage,
+                            targetMethodRef,
                             il,
-                            afterInstruction,
+                            ref afterInstruction,
                             appendRPCCMethodRef,
                             totalSizeOfStaticallySizedRPCParameters)
 
@@ -125,22 +177,23 @@ namespace Unity.ClusterDisplay
                         TryInjectBridgeToDynamicallySizedRPCPropagation(
                             rpcEmitterType,
                             rpcId,
-                            targetMethodDef,
+                            rpcExecutionStage,
+                            targetMethodRef,
                             il,
-                            afterInstruction,
+                            ref afterInstruction,
                             appendRPCCMethodRef,
                             totalSizeOfStaticallySizedRPCParameters);
             }
 
             private bool InjectPushOfRPCParamters (
                 ILProcessor ilProcessor,
-                MethodDefinition targetMethodToExecute,
+                MethodReference targetMethodRef,
                 ParameterDefinition bufferPosParamDef,
                 bool isImmediateRPCExeuction,
                 ref Instruction afterInstruction)
             {
                 Instruction newInstruction = null;
-                foreach (var paramDef in targetMethodToExecute.Parameters)
+                foreach (var paramDef in targetMethodRef.Parameters)
                 {
                     if (paramDef.ParameterType.IsValueType)
                     {
@@ -163,7 +216,7 @@ namespace Unity.ClusterDisplay
                         afterInstruction = newInstruction;
                     }
 
-                    else if (ParameterIsString(targetMethodToExecute.Module, paramDef))
+                    else if (ParameterIsString(targetMethodRef.Module, paramDef))
                     {
                         if (!TryFindMethodWithAttribute<RPCEmitter.ParseStringMarker>(typeof(RPCEmitter), out var parseStringMethod))
                             return false;
@@ -206,10 +259,18 @@ namespace Unity.ClusterDisplay
                 return true;
             }
 
+            private Instruction PerformCall (MethodReference methodRef)
+            {
+                var methodDef = methodRef.Resolve();
+                if (methodDef.IsVirtual)
+                    return Instruction.Create(OpCodes.Callvirt, methodRef);
+                return Instruction.Create(OpCodes.Call, methodRef);
+            }
+
             private bool TryInjectInstanceRPCExecution (
                 ILProcessor ilProcessor,
                 Instruction beforeInstruction,
-                MethodDefinition targetMethodToExecute,
+                MethodReference targetMethod,
                 bool isImmediateRPCExeuction,
                 out Instruction firstInstructionOfInjection)
             {
@@ -241,17 +302,22 @@ namespace Unity.ClusterDisplay
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
-                if (!targetMethodToExecute.HasParameters)
+                /*
+                newInstruction = Instruction.Create(OpCodes.Castclass, targetMethod.DeclaringType);
+                ilProcessor.InsertAfter(afterInstruction, newInstruction);
+                afterInstruction = newInstruction;
+                */
+
+                if (!targetMethod.HasParameters)
                 {
                     // Call method on target object without any parameters.
-                    newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethodToExecute);
-
+                    newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod);
                     ilProcessor.InsertAfter(afterInstruction, newInstruction);
                     afterInstruction = newInstruction;
 
                     if (isImmediateRPCExeuction)
                     {
-                        newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+                        newInstruction = PushInt(1); // Return true.
                         ilProcessor.InsertAfter(afterInstruction, newInstruction);
                         afterInstruction = newInstruction;
                     }
@@ -263,19 +329,19 @@ namespace Unity.ClusterDisplay
 
                 InjectPushOfRPCParamters(
                     ilProcessor,
-                    targetMethodToExecute,
+                    targetMethod,
                      bufferPosParamDef,
                      isImmediateRPCExeuction,
                      ref afterInstruction);
 
-                newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethodToExecute);
+                newInstruction = Instruction.Create(OpCodes.Callvirt, targetMethod);
 
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
                 if (isImmediateRPCExeuction)
                 {
-                    newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+                    newInstruction = PushInt(1); // Return true.
                     ilProcessor.InsertAfter(afterInstruction, newInstruction);
                     afterInstruction = newInstruction;
                 }
@@ -288,7 +354,7 @@ namespace Unity.ClusterDisplay
             private bool TryInjectStaticRPCExecution (
                 ILProcessor ilProcessor,
                 Instruction beforeInstruction,
-                MethodDefinition targetMethodToExecute,
+                MethodReference targetMethodRef,
                 bool isImmediateRPCExeuction,
                 out Instruction firstInstructionOfInjection)
             {
@@ -302,17 +368,17 @@ namespace Unity.ClusterDisplay
                 Instruction newInstruction = null;
                 Instruction afterInstruction = null;
 
-                if (!targetMethodToExecute.HasParameters)
+                if (!targetMethodRef.HasParameters)
                 {
                     // Call method on target object without any parameters.
-                    firstInstructionOfInjection = Instruction.Create(OpCodes.Call, targetMethodToExecute);
+                    firstInstructionOfInjection = Instruction.Create(OpCodes.Call, targetMethodRef);
 
                     ilProcessor.InsertAfter(beforeInstruction, firstInstructionOfInjection);
                     afterInstruction = newInstruction;
 
                     if (isImmediateRPCExeuction)
                     {
-                        newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+                        newInstruction = PushInt(1); // Return true.
                         ilProcessor.InsertAfter(afterInstruction, newInstruction);
                         afterInstruction = newInstruction;
                     }
@@ -328,24 +394,24 @@ namespace Unity.ClusterDisplay
 
                 InjectPushOfRPCParamters(
                     ilProcessor,
-                    targetMethodToExecute,
+                    targetMethodRef,
                      bufferPosParamDef,
                      isImmediateRPCExeuction,
                      ref afterInstruction);
 
-                newInstruction = Instruction.Create(OpCodes.Call, targetMethodToExecute);
+                newInstruction = Instruction.Create(OpCodes.Call, targetMethodRef);
 
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
                 if (isImmediateRPCExeuction)
                 {
-                    newInstruction = Instruction.Create(OpCodes.Ldc_I4_1); // Return true.
+                    newInstruction = PushInt(1); // Push "true" to stack.
                     ilProcessor.InsertAfter(afterInstruction, newInstruction);
                     afterInstruction = newInstruction;
                 }
 
-                newInstruction = Instruction.Create(OpCodes.Ret); // Return true.
+                newInstruction = Instruction.Create(OpCodes.Ret); // Return
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 return true;
             }
@@ -432,30 +498,31 @@ namespace Unity.ClusterDisplay
                         markerType = typeof(RPCInterfaceRegistry.ExecuteRPCAfterLateUpdateMarker);
                         break;
 
+                    case RPCExecutionStage.Automatic:
                     case RPCExecutionStage.ImmediatelyOnArrival:
                     default:
+                        Debug.LogError($"Invalid {nameof(RPCExecutionStage)} to queue RPC: \"{rpcExecutionStage}\".");
                         ilProcessor = null;
                         return false;
                 }
 
-                if (!TryFindMethodDefinitionWithAttribute(
+                if (!TryFindMethodReferenceWithAttribute(
                     rpcInterfacesTypeRef.Resolve(),
                     rpcInterfacesTypeRef.Module.ImportReference(markerType),
-                    out var methodDef))
+                    out var methodRef))
                 {
                     ilProcessor = null;
                     return false;
                 }
 
+                var methodDef = methodRef.Resolve();
                 methodDef.Body.Instructions.Clear();
                 ilProcessor = methodDef.Body.GetILProcessor();
 
                 ilProcessor.Emit(OpCodes.Nop);
                 ilProcessor.Emit(OpCodes.Ret);
 
-                if (cachedExecuteQueuedRPCMethodILProcessors == null)
-                    cachedExecuteQueuedRPCMethodILProcessors = new Dictionary<RPCExecutionStage, ILProcessor>() { { rpcExecutionStage, ilProcessor } };
-                else cachedExecuteQueuedRPCMethodILProcessors.Add(rpcExecutionStage, ilProcessor);
+                cachedExecuteQueuedRPCMethodILProcessors.Add(rpcExecutionStage, ilProcessor);
 
                 return true;
             }
@@ -465,59 +532,58 @@ namespace Unity.ClusterDisplay
                 out MethodReference methodRef)
             {
                 var rpcInterfaceRegistryRef = moduleDef.ImportReference(typeof(RPCInterfaceRegistry));
-                MethodDefinition methodDef = null;
-                methodRef = null;
 
                 switch (rpcExecutionStage)
                 {
                     case RPCExecutionStage.BeforeFixedUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                                 rpcInterfaceRegistryRef.Resolve(), 
                                 moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeFixedUpdateRPCMarker)), 
-                                out methodDef);
+                                out methodRef);
                         break;
 
                     case RPCExecutionStage.AfterFixedUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                             rpcInterfaceRegistryRef.Resolve(),
                             moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterFixedUpdateRPCMarker)),
-                            out methodDef);
+                            out methodRef);
                         break;
 
                     case RPCExecutionStage.BeforeUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                             rpcInterfaceRegistryRef.Resolve(),
                             moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeUpdateRPCMarker)),
-                            out methodDef);
+                            out methodRef);
                         break;
 
                     case RPCExecutionStage.AfterUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                             rpcInterfaceRegistryRef.Resolve(),
                             moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterUpdateRPCMarker)),
-                            out methodDef);
+                            out methodRef);
                         break;
 
                     case RPCExecutionStage.BeforeLateUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                             rpcInterfaceRegistryRef.Resolve(), 
                             moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeLateUpdateRPCMarker)), 
-                            out methodDef);
+                            out methodRef);
                         break;
 
                     case RPCExecutionStage.AfterLateUpdate:
-                        TryFindMethodDefinitionWithAttribute(
+                        TryFindMethodReferenceWithAttribute(
                             rpcInterfaceRegistryRef.Resolve(), 
                             moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterLateUpdateRPCMarker)), 
-                            out methodDef);
+                            out methodRef);
                         break;
 
                     case RPCExecutionStage.ImmediatelyOnArrival:
+                    case RPCExecutionStage.Automatic:
                     default:
+                        methodRef = null;
                         return false;
                 }
 
-                methodRef = moduleDef.ImportReference(methodDef);
                 return true;
             }
 
@@ -564,7 +630,7 @@ namespace Unity.ClusterDisplay
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
-                newInstruction = Instruction.Create(OpCodes.Ldc_I4_1);
+                newInstruction = PushInt(1);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -590,7 +656,7 @@ namespace Unity.ClusterDisplay
                     return false;
 
                 // Pipe ID = 0 when the method we want to call is static.
-                newInstruction = Instruction.Create(OpCodes.Ldc_I4_0);
+                newInstruction = PushInt(0);
                 ilProcessor.InsertAfter(afterInstruction, newInstruction);
                 afterInstruction = newInstruction;
 
@@ -667,7 +733,7 @@ namespace Unity.ClusterDisplay
             private bool TryInjectSwitchCaseForRPC (
                 ILProcessor ilProcessor,
                 Instruction afterInstruction,
-                ushort valueToPushForBeq,
+                int valueToPushForBeq,
                 Instruction jmpToInstruction,
                 out Instruction lastInstructionOfSwitchJmp)
             {
@@ -727,10 +793,10 @@ namespace Unity.ClusterDisplay
                 return true;
             }
 
-            private bool TryInjectILForQueuedRPC(
-                MethodDefinition targetMethodToExecute,
+            private bool TryInjectILToExecuteQueuedRPC(
+                MethodReference targetMethod,
                 RPCExecutionStage rpcExecutionStage,
-                ushort rpcId)
+                int rpcId)
             {
                 if (!TryGetExecuteQueuedRPCMethodILProcessor(
                     ilProcessor.Body.Method.DeclaringType,
@@ -744,20 +810,19 @@ namespace Unity.ClusterDisplay
                 if (executionStageLastSwitchJmpInstructions == null || !executionStageLastSwitchJmpInstructions.TryGetValue(rpcExecutionStage, out lastExecuteQueuedRPCSwitchJmpInstruction))
                 {
                     lastExecuteQueuedRPCSwitchJmpInstruction = firstExecuteQueuedRPCMethodInstruction;
-                    if (executionStageLastSwitchJmpInstructions == null)
-                        executionStageLastSwitchJmpInstructions = new Dictionary<RPCExecutionStage, Instruction>() { { rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction } };
-                    else executionStageLastSwitchJmpInstructions.Add(rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
+                    executionStageLastSwitchJmpInstructions.Add(rpcExecutionStage, lastExecuteQueuedRPCSwitchJmpInstruction);
                 }
 
                 var lastExecuteQueuedRPCSwitchInstruction = executeQueuedRPCMethodILProcessor.Body.Instructions[executeQueuedRPCMethodILProcessor.Body.Instructions.Count - 1];
 
                 Instruction firstInstructionOfExecuteQueuedRPCMethod;
-                if (targetMethodToExecute.IsStatic)
+                var targetMethodDef = targetMethod.Resolve();
+                if (targetMethodDef.IsStatic)
                 {
                      if (!TryInjectStaticRPCExecution(
                         executeQueuedRPCMethodILProcessor,
                         beforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
-                        targetMethodToExecute: targetMethodToExecute,
+                        targetMethodRef: targetMethod,
                         isImmediateRPCExeuction: false,
                         firstInstructionOfInjection: out firstInstructionOfExecuteQueuedRPCMethod))
                         return false;
@@ -766,7 +831,7 @@ namespace Unity.ClusterDisplay
                 else if (!TryInjectInstanceRPCExecution(
                     executeQueuedRPCMethodILProcessor,
                     beforeInstruction: lastExecuteQueuedRPCSwitchInstruction,
-                    targetMethodToExecute: targetMethodToExecute,
+                    targetMethod: targetMethod,
                     isImmediateRPCExeuction: false,
                     firstInstructionOfInjection: out firstInstructionOfExecuteQueuedRPCMethod))
                     return false;
@@ -784,38 +849,225 @@ namespace Unity.ClusterDisplay
                 return true;
             }
 
-            public bool ProcessMethodDef (
-                ushort rpcId,
-                MethodDefinition targetMethodToExecute,
-                RPCExecutionStage rpcExecutionStage)
+            private static readonly RPCExecutionStage[] queuedRPCExecutionStages = new RPCExecutionStage[6]
             {
-                if (!TryInjectRPCInterceptIL(
-                    rpcId,
-                    targetMethodToExecute))
-                    goto unableToInjectIL;
+                RPCExecutionStage.BeforeFixedUpdate,
+                RPCExecutionStage.AfterFixedUpdate,
+                RPCExecutionStage.BeforeUpdate,
+                RPCExecutionStage.AfterUpdate,
+                RPCExecutionStage.BeforeLateUpdate,
+                RPCExecutionStage.AfterLateUpdate
+            };
 
-                Instruction firstInstructionOfSwitchCaseImpl = null;
-
-                if (rpcExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
+            private bool TryInjectILForQueuedRPC(
+                MethodReference targetMethod,
+                RPCExecutionStage rpcExecutionStage,
+                int rpcId)
+            {
+                if (rpcExecutionStage == RPCExecutionStage.Automatic)
                 {
-                    if (targetMethodToExecute.IsStatic)
+                    for (int i = 0; i < queuedRPCExecutionStages.Length; i++)
+                        if (!TryInjectILToExecuteQueuedRPC(
+                            targetMethod,
+                            queuedRPCExecutionStages[i],
+                            rpcId))
+                            return false;
+
+                    return true;
+                }
+
+                return TryInjectILToExecuteQueuedRPC(targetMethod, rpcExecutionStage, rpcId);
+            }
+
+            private bool TryDetermineRPCExecutionStageAutomatically (
+                MethodReference targetMethodRef,
+                out RPCExecutionStage rpcExecutionStage)
+            {
+                var rpcExecutionStageTypeRef = targetMethodRef.Module.ImportReference(typeof(RPCExecutionStage));
+                rpcExecutionStage = RPCExecutionStage.Automatic;
+
+                if (!cachedCallTree.TryGetValue(targetMethodRef.MetadataToken, out var call))
+                    goto missingMethodFailure;
+
+                if (call.callingMethods == null || call.callingMethods.Count == 0)
+                {
+                    Debug.LogError($"Method: \"{targetMethodRef.Name}\" declared in type: \"{targetMethodRef.DeclaringType.Name}\" is flagged for determing it's RPC execution stage automatically. However, we cannot determine where this method is called from.");
+                    return false;
+                }
+
+                List<MetadataToken> currentCallers = new List<MetadataToken>() { targetMethodRef.MetadataToken };
+                List<MethodReference> rootCallers = new List<MethodReference>();
+
+                while (true)
+                {
+                    List<MetadataToken> nextCallers = new List<MetadataToken>();
+                    foreach (var callMetadataToken in currentCallers)
                     {
-                        if (!TryInjectStaticRPCExecution(
-                            ilProcessor,
-                            beforeInstruction: lastInstruction,
-                            targetMethodToExecute: targetMethodToExecute,
-                            isImmediateRPCExeuction: true,
-                            firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
-                            goto unableToInjectIL;
+                        if (!cachedCallTree.TryGetValue(callMetadataToken, out call))
+                            goto missingMethodFailure;
+
+                        foreach (var callerMetadataToken in call.callingMethods)
+                        {
+                            if (!cachedCallTree.TryGetValue(callerMetadataToken, out var caller))
+                                goto missingMethodFailure;
+
+                            if (caller.callingMethods.Count == 0)
+                                rootCallers.Add(caller.calledMethodRef);
+                            else nextCallers.Add(callerMetadataToken);
+                        }
                     }
 
-                    else if (!TryInjectInstanceRPCExecution(
+                    currentCallers = nextCallers;
+                    if (currentCallers.Count == 0)
+                        break;
+                }
+
+                var distinctRootCallers = rootCallers.Distinct();
+                if (distinctRootCallers.Count() > 1)
+                {
+                    string stringOfRootCallers = rootCallers.Select(rc => rc.Name).Aggregate((aggregation, methodName) => $"{aggregation}\n\t{methodName},");
+                    Debug.LogError($"Method: \"{targetMethodRef.Name}\" declared in type: \"{targetMethodRef.DeclaringType.Name}\" is flagged for determing it's RPC execution stage automatically. However, it's currently being called from multiple independent roots which are: {stringOfRootCallers}\n We will fall back to RPC execution stage: \"{RPCExecutionStage.ImmediatelyOnArrival}\".");
+                    return false;
+                }
+
+                var rootCaller = rootCallers[0];
+
+                TypeReference monoBehaviourType = targetMethodRef.Module.ImportReference(typeof(MonoBehaviour));
+                TypeReference declaringType = rootCaller.DeclaringType;
+                var rootCallerMethodDef = rootCaller.Resolve();
+
+                if (MethodIsCoroutine(rootCallerMethodDef))
+                {
+                    rpcExecutionStage = RPCExecutionStage.AfterUpdate;
+                    return true;
+                }
+
+                while (declaringType != null)
+                {
+                    if (declaringType.MetadataToken == monoBehaviourType.MetadataToken)
+                        break;
+
+                    declaringType = declaringType.DeclaringType;
+                }
+
+                if (declaringType == null)
+                {
+                    Debug.LogError($"Method: \"{targetMethodRef.Name}\" declared in type: \"{targetMethodRef.DeclaringType.Name}\" is flagged for determing it's RPC execution stage automatically. However, the root calling type: \"{rootCaller.DeclaringType.Name}\" does not derrive from MonoBehaviour.");
+                    return false;
+                }
+
+                string rootCallerSignature = $"{declaringType.Namespace}.{nameof(MonoBehaviour)}.{rootCaller.Name}";
+                if (!cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.TryGetValue(rootCallerSignature, out rpcExecutionStage))
+                {
+                    Debug.LogError($"Method: \"{targetMethodRef.Name}\" declared in type: \"{targetMethodRef.DeclaringType.Name}\" is flagged for determing it's RPC execution stage automatically. However, the root caller: \"{rootCaller.Name}\" declared in type: \"{rootCaller.DeclaringType.Name}\" is not a supported MonoBehaviour method to automatically determine the RPC execution stage.");
+                    return false;
+                }
+
+                /*
+                foreach (var callerMetadataToken in call.callingMethods)
+                {
+                    var callerMethodDef = cachedCallTree[callerMetadataToken].calledMethodRef.Resolve();
+                    for (int ii = 0; ii < callerMethodDef.Body.Instructions.Count; ii++)
+                    {
+                        var methodRef = callerMethodDef.Body.Instructions[ii].Operand as MethodReference;
+                        if (methodRef == null)
+                            continue;
+
+                        if (methodRef.MetadataToken != call.calledMethodRef.MetadataToken)
+                            continue;
+
+                        callerMethodDef.Body.Instructions.Insert(ii++, Instruction.Create(OpCodes.Ldc_I4, (int)determinedRPCExecutionStage));
+                    }
+                }
+                */
+
+                // targetMethodToExecute.Parameters.Add(new ParameterDefinition("rpcExecutionStage", Mono.Cecil.ParameterAttributes.None, rpcExecutionStageTypeRef));
+                return true;
+
+                missingMethodFailure:
+                Debug.LogError($"Unable to append RPC execution stage method argument, the call tree is invalid!");
+                return false;
+            }
+
+            public bool ProcessMethodDef (
+                int rpcId,
+                MethodReference targetMethodRef,
+                RPCExecutionStage rpcExecutionStage)
+            {
+                Instruction firstInstructionOfSwitchCaseImpl = null;
+
+                /*
+                if (rpcExecutionStage == RPCExecutionStage.AutomaticallyDetermineExecutionStage)
+                    if (!TryDetermineRPCExecutionStageAutomatically(targetMethodToExecute, out rpcExecutionStage))
+                        goto unableToInjectIL;
+                */
+
+                var targetMethodDef = targetMethodRef.Resolve();
+
+                if (!TryInjectRPCInterceptIL(
+                    rpcId,
+                    (int)rpcExecutionStage,
+                    targetMethodRef))
+                    goto unableToInjectIL;
+
+                if (targetMethodDef.IsStatic)
+                {
+                    if (!TryInjectStaticRPCExecution(
                         ilProcessor,
                         beforeInstruction: lastInstruction,
-                        targetMethodToExecute: targetMethodToExecute,
+                        targetMethodRef: targetMethodRef,
                         isImmediateRPCExeuction: true,
                         firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
                         goto unableToInjectIL;
+                }
+
+                else if (!TryInjectInstanceRPCExecution(
+                    ilProcessor,
+                    beforeInstruction: lastInstruction,
+                    targetMethod: targetMethodRef,
+                    isImmediateRPCExeuction: true,
+                    firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
+                    goto unableToInjectIL;
+
+                if (!TryInjectILForQueuedRPC(
+                    targetMethodRef,
+                    rpcExecutionStage,
+                    rpcId))
+                    goto unableToInjectIL;
+
+                switch (rpcExecutionStage)
+                {
+                    case RPCExecutionStage.ImmediatelyOnArrival:
+                    {
+
+                    } break;
+
+                    default:
+                    {
+                        /*
+                        if (targetMethodDef.IsStatic)
+                        {
+                            if (!TryInjectQueueStaticRPCCall(
+                                beforeInstruction: lastInstruction,
+                                rpcExecutionStage,
+                                firstInstruction: out firstInstructionOfSwitchCaseImpl))
+                                goto unableToInjectIL;
+                        }
+
+                        else if (!TryInjectQueueInstanceRPCCall(
+                            beforeInstruction: lastInstruction,
+                            rpcExecutionStage,
+                            firstInstruction: out firstInstructionOfSwitchCaseImpl))
+                            goto unableToInjectIL;
+                        */
+
+
+                    } break;
+                }
+
+                /*
+                if (rpcExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
+                {
                 }
 
                 else
@@ -835,14 +1087,10 @@ namespace Unity.ClusterDisplay
                         firstInstruction: out firstInstructionOfSwitchCaseImpl))
                         goto unableToInjectIL;
 
-                    if (!TryInjectILForQueuedRPC(
-                        targetMethodToExecute,
-                        rpcExecutionStage,
-                        rpcId))
-                        goto unableToInjectIL;
                 }
+                */
 
-                if (!TryInjectSwitchCaseForRPC(
+                if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     afterInstruction: lastSwitchJmpInstruction,
                     valueToPushForBeq: rpcId,
@@ -854,7 +1102,7 @@ namespace Unity.ClusterDisplay
                 return true;
 
                 unableToInjectIL:
-                Debug.LogError($"Failure occurred while attempting to post process method: \"{targetMethodToExecute.Name}\" in class: \"{targetMethodToExecute.DeclaringType.FullName}\".");
+                Debug.LogError($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
                 goto cleanup;
 
                 cleanup:

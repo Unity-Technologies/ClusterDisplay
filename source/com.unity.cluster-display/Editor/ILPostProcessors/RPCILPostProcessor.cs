@@ -14,9 +14,6 @@ namespace Unity.ClusterDisplay
     {
         public override ILPostProcessor GetInstance() => this;
 
-        private static Dictionary<RPCExecutionStage, ILProcessor> cachedExecuteQueuedRPCMethodILProcessors;
-        private static Dictionary<RPCExecutionStage, Instruction> executionStageLastSwitchJmpInstructions;
-
         public bool TryInjectDefaultSwitchCaseForExecutionStageMethods()
         {
             if (cachedExecuteQueuedRPCMethodILProcessors != null)
@@ -34,6 +31,77 @@ namespace Unity.ClusterDisplay
 
             return true;
         }
+
+        private static void CachMethodReferencesInMethodInstructions (MethodDefinition callingMethodDef)
+        {
+            if (!cachedCallTree.TryGetValue(callingMethodDef.MetadataToken, out var call))
+            {
+                call = new Call
+                {
+                    callingMethods = new List<MetadataToken>(),
+                    calledMethodRef = callingMethodDef,
+                    methodsCalled = new List<MetadataToken>()
+                };
+
+                cachedCallTree.Add(callingMethodDef.MetadataToken, call);
+            }
+
+            for (int ii = 0; ii < callingMethodDef.Body.Instructions.Count; ii++)
+            {
+                var calledMethodDef = callingMethodDef.Body.Instructions[ii].Operand as MethodReference;
+                if (calledMethodDef == null)
+                    continue;
+
+                if (!cachedCallTree.TryGetValue(calledMethodDef.MetadataToken, out var called))
+                    cachedCallTree.Add(calledMethodDef.MetadataToken, new Call
+                    {
+                        callingMethods = new List<MetadataToken>() { callingMethodDef.MetadataToken },
+                        calledMethodRef = calledMethodDef,
+                        methodsCalled = new List<MetadataToken>()
+                    });
+
+                else called.callingMethods.Add(callingMethodDef.MetadataToken);
+
+                call.methodsCalled.Add(calledMethodDef.MetadataToken);
+            }
+        }
+
+        private static void CacheCallTree (ModuleDefinition moduleDef)
+        {
+            var coroutineTypeRef = moduleDef.ImportReference(typeof(System.Collections.IEnumerator));
+            for (int ti = 0; ti < moduleDef.Types.Count; ti++)
+            {
+                for (int mi = 0; mi < moduleDef.Types[ti].Methods.Count; mi++)
+                {
+                    if (moduleDef.Types[ti].Methods[mi].Body == null)
+                        continue;
+
+                    var callingMethodDef = moduleDef.Types[ti].Methods[mi];
+
+                    bool isCoroutine =
+                        callingMethodDef.ReturnType.MetadataToken == coroutineTypeRef.MetadataToken &&
+                        callingMethodDef.DeclaringType.HasNestedTypes;
+
+                    if (isCoroutine)
+                        for (int ni = 0; ni < callingMethodDef.DeclaringType.NestedTypes.Count; ni++)
+                            for (int nmi = 0; nmi < callingMethodDef.DeclaringType.NestedTypes[ni].Methods.Count; nmi++)
+                                CachMethodReferencesInMethodInstructions(callingMethodDef.DeclaringType.NestedTypes[ni].Methods[nmi]);
+
+                    CachMethodReferencesInMethodInstructions(callingMethodDef);
+                }
+            }
+        }
+
+        private static void CacheExecutionStageMethods ()
+        {
+            var monoBehaviourType = typeof(MonoBehaviour);
+            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.FixedUpdate", RPCExecutionStage.AfterFixedUpdate);
+            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.Update", RPCExecutionStage.AfterUpdate);
+            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.LateUpdate", RPCExecutionStage.AfterLateUpdate);
+            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.OnGUI", RPCExecutionStage.AfterLateUpdate);
+        }
+
+        private static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == methodDef.Module.ImportReference(typeof(System.Collections.IEnumerator)).MetadataToken;
 
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
@@ -66,6 +134,9 @@ namespace Unity.ClusterDisplay
                 typeof(RPCInterfaceRegistry.OnTryStaticCallMarker)))
                 goto failure;
 
+            // CacheCallTree(compiledAssemblyDef.MainModule);
+            // CacheExecutionStageMethods();
+
             List<ushort> usedRPCIds = new List<ushort>();
             if (RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out var serializedRPCs) && serializedRPCs.Length > 0)
             {
@@ -74,22 +145,23 @@ namespace Unity.ClusterDisplay
                     var rpc = serializedRPC;
 
                     var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
-                    MethodDefinition targetRPCMethodDef = null;
+                    MethodReference targetMethodRef = null;
 
                     if (!TryFindMethodWithMatchingFormalySerializedAs(
                         compiledAssemblyDef.MainModule,
                         typeDefinition,
                         rpc.methodName,
-                        out targetRPCMethodDef) &&
-                        !TryGetMethodDefinition(typeDefinition, ref rpc, out targetRPCMethodDef))
+                        out targetMethodRef) &&
+                        !TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
                     {
                         Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
                         goto failure;
                     }
 
-                    if (!(targetRPCMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
+                    var targetMethodDef = targetMethodRef.Resolve();
+                    if (!(targetMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
                         serializedRPC.rpcId,
-                        targetRPCMethodDef,
+                        targetMethodRef,
                         (RPCExecutionStage)serializedRPC.rpcExecutionStage))
                         goto failure;
 
@@ -160,7 +232,9 @@ namespace Unity.ClusterDisplay
             var pdb = new MemoryStream();
             var writerParameters = new WriterParameters
             {
-                SymbolWriterProvider = new PortablePdbWriterProvider(), SymbolStream = pdb, WriteSymbols = true
+                SymbolWriterProvider = new PortablePdbWriterProvider(), 
+                SymbolStream = pdb, 
+                WriteSymbols = true,
             };
 
             try

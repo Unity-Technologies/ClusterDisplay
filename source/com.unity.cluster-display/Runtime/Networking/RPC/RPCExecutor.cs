@@ -9,6 +9,9 @@ namespace Unity.ClusterDisplay
 {
     public static class RPCExecutor
     {
+        public static RPCExecutionStage CurrentExecutionStage => m_CurrentExecutionStage;
+        private static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
+
         private static bool TryFindIndexOfPlayerLoopSystem (
             PlayerLoopSystem inPlayerSystemLoop, 
             System.Type targetPlayerSystemLoop,
@@ -182,6 +185,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeFixedUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
             // Debug.Log("BeforeFixedUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
@@ -190,6 +194,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterFixedUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.AfterFixedUpdate;
             // Debug.Log("AfterFixedUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
@@ -198,6 +203,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.BeforeUpdate;
             // Debug.Log("BeforeUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
@@ -206,6 +212,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.AfterUpdate;
             // Debug.Log("AfterUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
@@ -214,6 +221,7 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeLateUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.BeforeLateUpdate;
             // Debug.Log("BeforeLateUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
@@ -222,6 +230,7 @@ namespace Unity.ClusterDisplay
 
         public static void AfterLateUpdate ()
         {
+            m_CurrentExecutionStage = RPCExecutionStage.AfterLateUpdate;
             // Debug.Log("AfterLateUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;

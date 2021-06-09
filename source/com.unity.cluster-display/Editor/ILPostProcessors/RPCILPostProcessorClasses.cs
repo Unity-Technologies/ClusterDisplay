@@ -12,6 +12,13 @@ namespace Unity.ClusterDisplay
 {
     public partial class RPCILPostProcessor : ILPostProcessor
     {
+        public struct Call
+        {
+            public List<MetadataToken> callingMethods;
+            public MethodReference calledMethodRef;
+            public List<MetadataToken> methodsCalled;
+        }
+
         private class AssemblyResolver : BaseAssemblyResolver
         {
             private DefaultAssemblyResolver _defaultResolver;

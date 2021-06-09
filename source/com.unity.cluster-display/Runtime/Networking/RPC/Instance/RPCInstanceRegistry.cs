@@ -242,7 +242,7 @@ namespace Unity.ClusterDisplay
             Debug.Log($"Queued RPC with pipe ID: {pipeId}, RPC ID: {rpcId}, Parameter Payload Size: {parametersPayloadSize}, RPC Buffer Parameters Start Position: {rpcBufferParametersStartPosition}");
 
         [QueueBeforeFixedUpdateRPCMarker]
-        protected static void QueueBeforeFixedUpdateRPC (
+        public static void QueueBeforeFixedUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 
@@ -259,7 +259,7 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterFixedUpdateRPCMarker]
-        protected static void QueueAfterFixedUpdateRPC (
+        public static void QueueAfterFixedUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 
@@ -276,7 +276,7 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueBeforeUpdateRPCMarker]
-        protected static void QueueBeforeUpdateRPC (
+        public static void QueueBeforeUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 
@@ -293,7 +293,7 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterUpdateRPCMarker]
-        protected static void QueueAfterUpdateRPC (
+        public static void QueueAfterUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 
@@ -310,7 +310,7 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueBeforeLateUpdateRPCMarker]
-        protected static void QueueBeforeLateUpdateRPC (
+        public static void QueueBeforeLateUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 
@@ -327,7 +327,7 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterLateUpdateRPCMarker]
-        protected static void QueueAfterLateUpdateRPC (
+        public static void QueueAfterLateUpdateRPC (
             ushort pipeId, 
             ushort rpcId, 
             ushort parametersPayloadSize, 

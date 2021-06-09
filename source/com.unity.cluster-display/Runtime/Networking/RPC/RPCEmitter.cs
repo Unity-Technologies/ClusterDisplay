@@ -37,7 +37,12 @@ namespace Unity.ClusterDisplay
         private static int rpcBufferSize;
         public static int RPCBufferSize => rpcBufferSize;
 
-        public const int MinimumRPCPayloadSize = sizeof(ushort) * 3;
+        // The RPC header is represented by 3 unsigned shorts and a byte:
+        //  RPC ID: ushort (2 bytes)
+        //  RPC Execution Stage: ushort (2 bytes).
+        //  Pipe ID: ushort (2 bytes).
+        //  Parameter payload size: ushort (2 bytes).
+        private const int MinimumRPCPayloadSize = sizeof(ushort) * 4;
 
         public static bool AllowWrites = false;
 
@@ -67,7 +72,7 @@ namespace Unity.ClusterDisplay
             if (!RPCRegistry.TryGetInstance(out var rpcRegistry))
                 goto failure;
 
-            if (buffer.Length < sizeof(ushort) * 3)
+            if (buffer.Length < MinimumRPCPayloadSize)
                 goto success;
 
             UnsafeUtility.MemCpy((byte*)rpcBuffer.GetUnsafePtr(), (byte*)buffer.GetUnsafePtr(), buffer.Length);
@@ -75,7 +80,7 @@ namespace Unity.ClusterDisplay
 
             do
             {
-                if (bufferPos > buffer.Length - sizeof(ushort) * 3)
+                if (bufferPos > buffer.Length - MinimumRPCPayloadSize)
                     goto success;
 
                 ushort startingBufferPos = bufferPos;
@@ -89,60 +94,99 @@ namespace Unity.ClusterDisplay
                 }
                 #endif
 
+                ParseRPCExecutionStage(ref bufferPos, out var rpcExecutionStage);
+
                 ParsePipeID(ref bufferPos, out var bufferPipeId);
+                ushort pipeId = (ushort)(bufferPipeId > 0 ? bufferPipeId - 1 : 0);
 
-                ushort parametersPayloadSize;
-                if (bufferPipeId == 0)
-                {
-                    ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
-
-                    if (!RPCInterfaceRegistry.TryCallStatic(
-                        rpcId, 
-                        parametersPayloadSize, 
-                        ref bufferPos))
-                    {
-                        UnityEngine.Debug.LogError($"RPC execution failed for static RPC: (ID: {rpcId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                        goto failure;
-                    }
-
-                    #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-                    UnityEngine.Debug.Log($"Processed static RPC: (ID: {rpcId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                    #endif
-                    continue;
-                }
-
-                ushort pipeId = (ushort)(bufferPipeId - 1);
-
-                #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
-                if (objectRegistry[pipeId] == null)
-                {
-                    UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: {rpcId}, Pipe ID: ({pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                    goto failure;
-                }
-                #endif
-
-                ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
-                if (!RPCInterfaceRegistry.TryCallInstance(
-                    objectRegistry,
-                    rpcId, 
-                    pipeId, 
-                    parametersPayloadSize, 
-                    ref bufferPos))
-                {
-                    UnityEngine.Debug.LogError($"RPC execution failed for RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                    goto failure;
-                }
-
-                ushort consumedParameterByteCount = (ushort)((bufferPos - startingBufferPos) - MinimumRPCPayloadSize);
-                if (parametersPayloadSize > 0 && parametersPayloadSize != consumedParameterByteCount)
-                {
-                    UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
-                    goto failure;
-                }
+                ParseParametersPayloadSize(ref bufferPos, out var parametersPayloadSize);
 
                 #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-                UnityEngine.Debug.Log($"Processed RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                UnityEngine.Debug.Log($"Processing RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                 #endif
+
+                switch (rpcExecutionStage)
+                {
+                    case RPCExecutionStage.ImmediatelyOnArrival:
+                    {
+                        if (bufferPipeId == 0)
+                        {
+                            if (!RPCInterfaceRegistry.TryCallStatic(
+                                rpcId, 
+                                parametersPayloadSize, 
+                                ref bufferPos))
+                            {
+                                UnityEngine.Debug.LogError($"RPC execution failed for static RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                                goto failure;
+                            }
+
+                            break;
+                        }
+
+                        #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
+                        if (objectRegistry[pipeId] == null)
+                        {
+                            UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: ({pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                            goto failure;
+                        }
+                        #endif
+
+                        ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
+                        if (!RPCInterfaceRegistry.TryCallInstance(
+                            objectRegistry,
+                            rpcId, 
+                            pipeId, 
+                            parametersPayloadSize, 
+                            ref bufferPos))
+                        {
+                            UnityEngine.Debug.LogError($"RPC execution failed for RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                            goto failure;
+                        }
+
+                        ushort consumedParameterByteCount = (ushort)((bufferPos - startingBufferPos) - MinimumRPCPayloadSize);
+                        if (parametersPayloadSize > 0 && parametersPayloadSize != consumedParameterByteCount)
+                        {
+                            UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+                            goto failure;
+                        }
+
+                    } break;
+
+                    case RPCExecutionStage.BeforeFixedUpdate:
+                        RPCInterfaceRegistry.QueueBeforeFixedUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.AfterFixedUpdate:
+                        RPCInterfaceRegistry.QueueAfterFixedUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.BeforeUpdate:
+                        RPCInterfaceRegistry.QueueBeforeUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.AfterUpdate:
+                        RPCInterfaceRegistry.QueueAfterUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.BeforeLateUpdate:
+                        RPCInterfaceRegistry.QueueBeforeLateUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.AfterLateUpdate:
+                        RPCInterfaceRegistry.QueueAfterLateUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        bufferPos += parametersPayloadSize;
+                        break;
+
+                    case RPCExecutionStage.Automatic:
+                    default:
+                        UnityEngine.Debug.LogError($"RPC execution failed for static RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame}), unable to determine it's execution stage automatically.");
+                        break;
+                }
 
             } while (true);
 
@@ -207,6 +251,13 @@ namespace Unity.ClusterDisplay
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             rpcId = Marshal.PtrToStructure<ushort>(ptr);
+            startPos += sizeof(ushort);
+        }
+
+        private static unsafe void ParseRPCExecutionStage (ref ushort startPos, out RPCExecutionStage rpcExecutionStage)
+        {
+            var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
+            rpcExecutionStage = (RPCExecutionStage)Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
@@ -297,7 +348,11 @@ namespace Unity.ClusterDisplay
         }
 
         [RPCCallMarker]
-        public static void AppendRPCCall (UnityEngine.Object instance, ushort rpcId, int parametersPayloadSize)
+        public static void AppendRPCCall (
+            UnityEngine.Object instance, 
+            int rpcId, 
+            int rpcExecutionStage, 
+            int parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
@@ -314,7 +369,7 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-            int totalRPCCallSize = sizeof(ushort) * 3 + parametersPayloadSize;
+            int totalRPCCallSize = MinimumRPCPayloadSize + parametersPayloadSize;
             if (totalRPCCallSize > ushort.MaxValue)
             {
                 UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
@@ -328,22 +383,28 @@ namespace Unity.ClusterDisplay
             }
 
             int startingBufferPos = rpcBufferSize;
+            rpcExecutionStage = rpcExecutionStage > 0 ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
+            AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
             AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1));
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-            UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
+            UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, RPC ExecutionStage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
             #endif
         }
 
         [StaticRPCCallMarker]
-        public static void AppendStaticRPCCall (ushort rpcId, int parametersPayloadSize)
+        public static void AppendStaticRPCCall (
+            int rpcId, 
+            int rpcExecutionStage, 
+            int parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
 
-            int totalRPCCallSize = sizeof(ushort) * 3 + parametersPayloadSize;
+            int totalRPCCallSize = MinimumRPCPayloadSize + parametersPayloadSize;
             if (totalRPCCallSize > ushort.MaxValue)
             {
                 UnityEngine.Debug.LogError($"Unable to append static RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
@@ -357,12 +418,15 @@ namespace Unity.ClusterDisplay
             }
 
             int startingBufferPos = rpcBufferSize;
+            rpcExecutionStage = rpcExecutionStage > 0 ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
+            AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
             AppendRPCValueTypeParameterValue<ushort>((ushort)0);
             AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-            UnityEngine.Debug.Log($"Sending static RPC: (ID: {rpcId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
+            UnityEngine.Debug.Log($"Sending static RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
             #endif
         }
     }

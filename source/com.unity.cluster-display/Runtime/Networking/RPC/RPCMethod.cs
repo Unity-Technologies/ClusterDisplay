@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
         public readonly ushort rpcId;
 
         public RPCMethod (
-            [RPCExecutionStageMarker] RPCExecutionStage rpcExecutionStage = RPCExecutionStage.ImmediatelyOnArrival, 
+            [RPCExecutionStageMarker] RPCExecutionStage rpcExecutionStage = RPCExecutionStage.Automatic, 
             [RPCIDMarker] ushort rpcId = 0,
             [FormalySerializedAsMarker] string formarlySerializedAs = "")
         {
