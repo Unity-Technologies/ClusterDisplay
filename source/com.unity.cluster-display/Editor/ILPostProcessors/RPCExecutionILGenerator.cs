@@ -187,7 +187,6 @@ namespace Unity.ClusterDisplay
                 bool isImmediateRPCExeuction,
                 ref Instruction afterInstruction)
             {
-                Instruction newInstruction = null;
                 foreach (var paramDef in targetMethodRef.Parameters)
                 {
                     if (paramDef.ParameterType.IsValueType)
@@ -836,25 +835,6 @@ namespace Unity.ClusterDisplay
                     return false;
                 }
 
-                /*
-                foreach (var callerMetadataToken in call.callingMethods)
-                {
-                    var callerMethodDef = cachedCallTree[callerMetadataToken].calledMethodRef.Resolve();
-                    for (int ii = 0; ii < callerMethodDef.Body.Instructions.Count; ii++)
-                    {
-                        var methodRef = callerMethodDef.Body.Instructions[ii].Operand as MethodReference;
-                        if (methodRef == null)
-                            continue;
-
-                        if (methodRef.MetadataToken != call.calledMethodRef.MetadataToken)
-                            continue;
-
-                        callerMethodDef.Body.Instructions.Insert(ii++, Instruction.Create(OpCodes.Ldc_I4, (int)determinedRPCExecutionStage));
-                    }
-                }
-                */
-
-                // targetMethodToExecute.Parameters.Add(new ParameterDefinition("rpcExecutionStage", Mono.Cecil.ParameterAttributes.None, rpcExecutionStageTypeRef));
                 return true;
 
                 missingMethodFailure:
@@ -868,13 +848,6 @@ namespace Unity.ClusterDisplay
                 RPCExecutionStage rpcExecutionStage)
             {
                 Instruction firstInstructionOfSwitchCaseImpl = null;
-
-                /*
-                if (rpcExecutionStage == RPCExecutionStage.AutomaticallyDetermineExecutionStage)
-                    if (!TryDetermineRPCExecutionStageAutomatically(targetMethodToExecute, out rpcExecutionStage))
-                        goto unableToInjectIL;
-                */
-
                 var targetMethodDef = targetMethodRef.Resolve();
 
                 if (!TryInjectRPCInterceptIL(
@@ -907,61 +880,6 @@ namespace Unity.ClusterDisplay
                     rpcExecutionStage,
                     rpcId))
                     goto unableToInjectIL;
-
-                switch (rpcExecutionStage)
-                {
-                    case RPCExecutionStage.ImmediatelyOnArrival:
-                    {
-
-                    } break;
-
-                    default:
-                    {
-                        /*
-                        if (targetMethodDef.IsStatic)
-                        {
-                            if (!TryInjectQueueStaticRPCCall(
-                                beforeInstruction: lastInstruction,
-                                rpcExecutionStage,
-                                firstInstruction: out firstInstructionOfSwitchCaseImpl))
-                                goto unableToInjectIL;
-                        }
-
-                        else if (!TryInjectQueueInstanceRPCCall(
-                            beforeInstruction: lastInstruction,
-                            rpcExecutionStage,
-                            firstInstruction: out firstInstructionOfSwitchCaseImpl))
-                            goto unableToInjectIL;
-                        */
-
-
-                    } break;
-                }
-
-                /*
-                if (rpcExecutionStage == RPCExecutionStage.ImmediatelyOnArrival)
-                {
-                }
-
-                else
-                {
-                    if (targetMethodToExecute.IsStatic)
-                    {
-                        if (!TryInjectQueueStaticRPCCall(
-                            beforeInstruction: lastInstruction,
-                            rpcExecutionStage,
-                            firstInstruction: out firstInstructionOfSwitchCaseImpl))
-                            goto unableToInjectIL;
-                    }
-
-                    else if (!TryInjectQueueInstanceRPCCall(
-                        beforeInstruction: lastInstruction,
-                        rpcExecutionStage,
-                        firstInstruction: out firstInstructionOfSwitchCaseImpl))
-                        goto unableToInjectIL;
-
-                }
-                */
 
                 if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
                     ilProcessor,
