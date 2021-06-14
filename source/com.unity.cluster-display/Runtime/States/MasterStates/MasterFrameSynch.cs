@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 return;
             }
 
-            LocalNode.CurrentFrameID++;
+            base.OnEndFrame();
         }
 
         protected override NodeState DoFrame(bool newFrame)
@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
-                    m_MasterEmitter.GatherFrameState(LocalNode.CurrentFrameID);
+                    m_MasterEmitter.GatherFrameState(CurrentFrameID);
 
                 // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch ((EStage) m_Stage)
@@ -88,12 +88,12 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                         using (m_MarkerReadyToSignalStartNewFrame.Auto())
                         {
                             if (!m_MasterEmitter.ValidRawStateData) // 1st frame only
-                                m_MasterEmitter.GatherFrameState(LocalNode.CurrentFrameID);
+                                m_MasterEmitter.GatherFrameState(CurrentFrameID);
 
                             if (m_MasterEmitter.ValidRawStateData)
                             {
                                 using (m_MarkerPublishState.Auto())
-                                    m_MasterEmitter.PublishCurrentState(LocalNode.CurrentFrameID);
+                                    m_MasterEmitter.PublishCurrentState(PreviousFrameID);
 
                                 m_WaitingOnNodes = (Int64) (LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
                                 m_Stage = EStage.ProcessFrame;
@@ -158,7 +158,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
                         var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
 
-                        if (respMsg.FrameNumber == LocalNode.CurrentFrameID - 1)
+                        if (respMsg.FrameNumber == CurrentFrameID - 1)
                         {
                             var maskOut = ~((Int64) 1 << msgHdr.OriginID);
                             do
@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                             } while ((m_WaitingOnNodes & ((Int64) 1 << msgHdr.OriginID)) != 0);
                         }
                         else
-                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {LocalNode.CurrentFrameID}" );
+                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {CurrentFrameID}" );
 
                         break;
                     }

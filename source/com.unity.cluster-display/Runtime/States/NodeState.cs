@@ -124,6 +124,16 @@ namespace Unity.ClusterDisplay
     // SlaveState state -------------------------------------------------------- 
     internal abstract class SlaveState : NodeState
     {
+        protected ulong CurrentFrameID
+        {
+            get
+            {
+                if (ClusterSync.TryGetInstance(out var clusterSync))
+                    return clusterSync.CurrentFrameID;
+                return 0;
+            }
+        }
+
         protected SlavedNode LocalNode
         {
             get
@@ -138,6 +148,17 @@ namespace Unity.ClusterDisplay
     // MasterState state -------------------------------------------------------- 
     internal abstract class MasterState : NodeState
     {
+        protected ulong PreviousFrameID => CurrentFrameID - 1;
+        protected ulong CurrentFrameID
+        {
+            get
+            {
+                if (ClusterSync.TryGetInstance(out var clusterSync))
+                    return clusterSync.CurrentFrameID;
+                return 0;
+            }
+        }
+
         protected MasterNode LocalNode
         {
             get

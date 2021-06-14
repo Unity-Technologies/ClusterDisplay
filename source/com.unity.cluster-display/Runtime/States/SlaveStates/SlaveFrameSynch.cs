@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} / {m_Stage} : {LocalNode.CurrentFrameID}, {m_SlaveReceiver.LastReportedFrameDone}, {m_SlaveReceiver.LastRxFrameStart}, {m_SlaveReceiver.RxCount}, {m_SlaveReceiver.TxCount}" +
+            return $"{base.GetDebugString()} / {m_Stage} : {CurrentFrameID}, {m_SlaveReceiver.LastReportedFrameDone}, {m_SlaveReceiver.LastRxFrameStart}, {m_SlaveReceiver.RxCount}, {m_SlaveReceiver.TxCount}" +
             $"\r\nNetwork: {m_SlaveReceiver.NetworkingOverheadAverage * 1000:000.0}";
         }
         //-------------------------------------------------
@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                     {
                         using (m_MarkerWaitingOnGoFromMaster.Auto())
                         {
-                            m_SlaveReceiver.PumpMsg(LocalNode.CurrentFrameID);
+                            m_SlaveReceiver.PumpMsg(CurrentFrameID);
                             
                             if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
                             {
@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                     {
                         if (newFrame)
                             using (m_MarkerReadyToProcessFrame.Auto())
-                                m_SlaveReceiver.SignalFrameDone(LocalNode.CurrentFrameID);
+                                m_SlaveReceiver.SignalFrameDone(CurrentFrameID);
                         break;
                     }
                 }
@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
         {
             PendingStateChange =
                 new FatalError(
-                    $"Received a message from node {originID} about a starting frame {frameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {m_Stage})");
+                    $"Received a message from node {originID} about a starting frame {frameNumber}, when we are at {CurrentFrameID} (stage: {m_Stage})");
         }
 
         public void OnPumpedMsg()
@@ -108,7 +108,6 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
         {
             m_Stage = EStage.WaitingOnGoFromMaster;
             m_TsOfStage = m_Time.Elapsed;
-            LocalNode.CurrentFrameID++;
         }
 
     }

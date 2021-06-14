@@ -10,31 +10,30 @@ namespace Unity.ClusterDisplay
 {
     public class MasterEmitter
     {
-        private NativeArray<byte> m_StateBuffer;
-        private NativeArray<byte> m_StateSubBuffer;
+        private NativeArray<byte> m_PreviousStateSubBuffer;
+        private NativeArray<byte> m_CurrentStateBuffer;
+
+        private int m_CurrentStateBufferEndPos = 0;
+        private bool m_CurrentStateResult = false;
 
         private byte[] m_MsgBuffer = new byte[0];
-        public bool ValidRawStateData => m_StateSubBuffer != default;
+        public bool ValidRawStateData => m_PreviousStateSubBuffer != default;
 
         public IMasterNodeSyncState nodeState;
-
-        private UnityEngine.Random.State previousFrameState;
+        private bool firstFrame = true;
 
         public MasterEmitter (IMasterNodeSyncState nodeState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
         {
-            m_StateBuffer = new NativeArray<byte>((int)maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-
+            m_CurrentStateBuffer = new NativeArray<byte>((int)maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             this.nodeState = nodeState;
-            previousFrameState = UnityEngine.Random.state;
-
             RPCEmitter.Initialize(maxRpcByteBufferSize);
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
         {
-            using (m_StateSubBuffer)
+            using (m_PreviousStateSubBuffer)
             {
-                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + m_StateSubBuffer.Length;
+                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>() + m_PreviousStateSubBuffer.Length;
 
                 if (m_MsgBuffer.Length != len)
                     m_MsgBuffer = new byte[len];
@@ -42,13 +41,13 @@ namespace Unity.ClusterDisplay
                 var msg = new AdvanceFrame() {FrameNumber = currentFrameId };
                 msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
-                Marshal.Copy((IntPtr) m_StateSubBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), m_StateSubBuffer.Length);
+                Marshal.Copy((IntPtr) m_PreviousStateSubBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<AdvanceFrame>(), m_PreviousStateSubBuffer.Length);
 
                 var msgHdr = new MessageHeader()
                 {
                     MessageType = EMessageType.StartFrame,
                     Flags = MessageHeader.EFlag.Broadcast,
-                    PayloadSize = (UInt16)m_StateSubBuffer.Length
+                    PayloadSize = (UInt16)m_PreviousStateSubBuffer.Length
                 };
 
                 nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
@@ -58,19 +57,22 @@ namespace Unity.ClusterDisplay
 
         public void GatherFrameState(ulong frame)
         {
-            var endPos = 0;
+            if (m_CurrentStateResult)
+            {
+                if (StoreRPCs(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) && MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
+                    m_PreviousStateSubBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, m_CurrentStateBufferEndPos), Allocator.Temp);
+                else m_PreviousStateSubBuffer = default;
+            }
 
-            bool result = 
-                StoreInputState(m_StateBuffer, ref endPos) &&
-                StoreTimeState(m_StateBuffer, ref endPos) &&
-                StoreClusterInputState(m_StateBuffer, ref endPos) &&
-                StoreRndGeneratorState(m_StateBuffer, ref endPos) &&
-                StoreRPCs(m_StateBuffer, ref endPos, frame) &&
-                MarkStatesEnd(m_StateBuffer, ref endPos);
+            else m_PreviousStateSubBuffer = default;
 
-            if (result)
-                m_StateSubBuffer = new NativeArray<byte>(m_StateBuffer.GetSubArray(0, endPos), Allocator.Temp);
-            else m_StateSubBuffer = default;
+            m_CurrentStateBufferEndPos = 0;
+            m_CurrentStateResult =
+                StoreInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
+                StoreTimeState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
+                StoreClusterInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
+                StoreRndGeneratorState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
+                
         }
 
         private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref int endPos)
@@ -154,7 +156,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            var rndState = previousFrameState;
+            var rndState = UnityEngine.Random.state;
 
             int sizePos = endPos;
             endPos += Marshal.SizeOf<int>();
@@ -167,13 +169,11 @@ namespace Unity.ClusterDisplay
             endPos += sizeOfRandomState;
             *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
 
-            previousFrameState = UnityEngine.Random.state;
-
             // Debug.Log($"Seed: {UnityEngine.Random.seed}");
             return true;
         }
 
-        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos, ulong frame)
+        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos)
         {
             if (RPCEmitter.RPCBufferSize == 0)
                 return true;
@@ -183,7 +183,7 @@ namespace Unity.ClusterDisplay
 
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
 
-            return RPCEmitter.Latch(buffer, ref endPos, frame);
+            return RPCEmitter.Latch(buffer, ref endPos);
         }
 
         private static unsafe int StoreStateID(NativeArray<byte> buffer, int endPos, Guid id, int guidLen)

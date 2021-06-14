@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    [DefaultExecutionOrder(int.MaxValue)]
     public abstract class RPCInterfaceRegistry : SingletonScriptableObject<RPCInterfaceRegistry>
     {
         public class OnTryCallMarker : Attribute {}

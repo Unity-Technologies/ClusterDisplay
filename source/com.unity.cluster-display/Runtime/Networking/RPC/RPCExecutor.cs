@@ -10,7 +10,14 @@ namespace Unity.ClusterDisplay
     public static class RPCExecutor
     {
         public static RPCExecutionStage CurrentExecutionStage => m_CurrentExecutionStage;
-        private static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
+        private static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.AfterInitialization;
+
+        public class BeforeFixedUpdateType {}
+        public class AfterFixedUpdateType {}
+        public class BeforeUpdateType {}
+        public class AfterUpdateType {}
+        public class BeforeLateUpdateType {}
+        public class AfterLateUpdateType {}
 
         private static bool TryFindIndexOfPlayerLoopSystem (
             PlayerLoopSystem inPlayerSystemLoop, 
@@ -176,19 +183,13 @@ namespace Unity.ClusterDisplay
             PlayerLoop.SetPlayerLoop(defaultPlayerSystemLoop);
         }
 
-        public class BeforeFixedUpdateType {}
-        public class AfterFixedUpdateType {}
-        public class BeforeUpdateType {}
-        public class AfterUpdateType {}
-        public class BeforeLateUpdateType {}
-        public class AfterLateUpdateType {}
-
         public static void BeforeFixedUpdate ()
         {
-            m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
-            // Debug.Log("BeforeFixedUpdate");
             if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
                 return;
+
+            m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
+            // Debug.Log("BeforeFixedUpdate");
             instanceRegistry.BeforeFixedUpdate();
         }
 

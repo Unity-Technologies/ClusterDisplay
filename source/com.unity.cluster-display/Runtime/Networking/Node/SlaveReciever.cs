@@ -51,8 +51,11 @@ namespace Unity.ClusterDisplay
                         if (msgHdr.PayloadSize > 0)
                         {
                             var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+
+                            // The master is on the next frame, so were matching against the previous frame.
                             m_LastRxFrameStart = respMsg.FrameNumber;
-                            if (respMsg.FrameNumber == currentFrameID)
+
+                            if (m_LastRxFrameStart == currentFrameID)
                             {
                                 Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
                                 m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);

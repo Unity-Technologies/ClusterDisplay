@@ -12,8 +12,6 @@ namespace Unity.ClusterDisplay
         public byte NodeID => m_UDPAgent.LocalNodeID;
         public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
-        public UInt64 CurrentFrameID { get; set; }
-
         protected ClusterNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut, string adapterName)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
@@ -89,7 +87,7 @@ namespace Unity.ClusterDisplay
             if (ClusterSync.TryGetInstance(out var clusterSync) && clusterSync.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
             {
                 var stats = clusterSync.CurrentNetworkStats;
-                return $"Node {dynamicLocalNodeId} at {clusterSync.FrameCount}\r\n" +
+                return $"Node {dynamicLocalNodeId} at {clusterSync.CurrentFrameID}\r\n" +
                        $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
                        $"State: { m_CurrentState.GetDebugString() }";
             }

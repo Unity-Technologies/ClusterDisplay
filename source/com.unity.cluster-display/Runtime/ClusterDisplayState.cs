@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay
             void SetIsMaster(bool isMaster);
             void SetCLusterLogicEnabled(bool clusterLogicEnabled);
             void SetIsTerminated(bool isTerminated);
+            void SetFrame(ulong frame);
         }
 
         private class ClusterDisplayStateStore : IClusterDisplayStateSetter
@@ -19,11 +20,12 @@ namespace Unity.ClusterDisplay
             public bool m_IsMaster = false;
             public bool m_IsClusterLogicEnabled = false;
             public bool m_IsTerminated = false;
+            public ulong m_Frame = 0;
 
             public void SetCLusterLogicEnabled(bool clusterLogicEnabled) => this.m_IsClusterLogicEnabled = clusterLogicEnabled;
             public void SetIsMaster(bool isMaster) => this.m_IsMaster = isMaster;
-
             public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
+            public void SetFrame(ulong frame) => m_Frame = frame;
         }
 
         public class IsMasterMarker : Attribute {}
@@ -56,5 +58,10 @@ namespace Unity.ClusterDisplay
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
         /// </summary>
         public static bool IsTerminated => stateStore.m_IsTerminated;
+
+        /// <summary>
+        /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
+        /// </summary>
+        public static ulong Frame => stateStore.m_Frame;
     }
 }

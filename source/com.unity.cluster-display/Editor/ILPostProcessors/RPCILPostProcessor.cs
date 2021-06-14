@@ -230,15 +230,6 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static void CacheExecutionStageMethods ()
-        {
-            var monoBehaviourType = typeof(MonoBehaviour);
-            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.FixedUpdate", RPCExecutionStage.AfterFixedUpdate);
-            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.Update", RPCExecutionStage.AfterUpdate);
-            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.LateUpdate", RPCExecutionStage.AfterLateUpdate);
-            cachedMonoBehaviourMethodSignaturesForRPCExecutionStages.Add($"{monoBehaviourType.Namespace}.{monoBehaviourType.Name}.OnGUI", RPCExecutionStage.AfterLateUpdate);
-        }
-
         private static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == methodDef.Module.ImportReference(typeof(System.Collections.IEnumerator)).MetadataToken;
 
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
@@ -296,11 +287,12 @@ namespace Unity.ClusterDisplay
                         goto failure;
                     }
 
+                    var executionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
                     var targetMethodDef = targetMethodRef.Resolve();
                     if (!(targetMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
                         serializedRPC.rpcId,
                         targetMethodRef,
-                        (RPCExecutionStage)serializedRPC.rpcExecutionStage))
+                        executionStage))
                         goto failure;
 
                     // Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
@@ -351,10 +343,11 @@ namespace Unity.ClusterDisplay
 
                 ushort newRPCId = unusedRPCIds.Count > 0 ? unusedRPCIds.Dequeue() : (ushort)++lastRPCId;
 
+                RPCExecutionStage executionStage = (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value;
                 if (!(targetRPCMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
                     newRPCId,
                     targetRPCMethodDef,
-                    (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value))
+                    executionStage))
                     goto failure;
 
                 var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];

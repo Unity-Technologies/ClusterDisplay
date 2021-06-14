@@ -1,8 +1,15 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [System.Serializable]
+
+/// <summary>
+/// This enum is used to define and RPC's execution stage either implicitly
+/// or explicitly. When an RPC's execution stage is set to RPCExecutionStage.Automatic, the 
+/// RPC will get executed by slave nodes in the NEXT execution stage that it's called by the
+/// since the RPC is essentially the result of that stage. However, when you explicitly set
+/// the execution stage to something else besides RPCExecutionStage.Automatic, this behaviour
+/// is disabled and slaves will execute the RPC in the stage you've defined.
+/// </summary>
 public enum RPCExecutionStage : int
 {
 
@@ -19,14 +26,23 @@ public enum RPCExecutionStage : int
     /// </summary>
     ImmediatelyOnArrival = 1,
 
-    BeforeFixedUpdate = 2,
-    AfterFixedUpdate = 3,
+    /// <summary>
+    /// RPCs explicitly marked with this execution stage will automatically 
+    /// get executed in the "BeforeFixedUpdateQueue". Futhermore, When the RPCExecutionStage
+    /// is set to RPCExecutionStage.automatic and this RPC gets executed in Awake, OnEnable 
+    /// or Start, the RPCExecutionStage is added by 1 to become the next stage which
+    ///  in this case is RPCExecutionSTage.BeforeFixedUpdate.
+    /// </summary>
+    AfterInitialization = 2,
 
-    BeforeUpdate = 4,
-    AfterUpdate = 5,
+    BeforeFixedUpdate = 3,
+    AfterFixedUpdate = 4,
 
-    BeforeLateUpdate = 6,
-    AfterLateUpdate = 7
+    BeforeUpdate = 5,
+    AfterUpdate = 6,
+
+    BeforeLateUpdate = 7,
+    AfterLateUpdate = 8
 }
 
 [System.Serializable]

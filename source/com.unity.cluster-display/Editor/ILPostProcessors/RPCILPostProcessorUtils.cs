@@ -335,6 +335,7 @@ namespace Unity.ClusterDisplay
             }
 
             InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            // InsertPushIntAfter(il, ref afterInstruction, ((RPCExecutionStage)rpcExecutionStage) != RPCExecutionStage.Automatic ? 1 : 0);
             InsertPushIntAfter(il, ref afterInstruction, sizeOfAllParameters);
             InsertCallAfter(il, ref afterInstruction, call);
             lastInstruction = afterInstruction;
@@ -444,6 +445,7 @@ namespace Unity.ClusterDisplay
             }
 
             InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            // InsertPushIntAfter(il, ref afterInstruction, ((RPCExecutionStage)rpcExecutionStage) != RPCExecutionStage.Automatic ? 1 : 0);
             InsertPushIntAfter(il, ref afterInstruction, totalSizeOfStaticallySizedRPCParameters);
 
             if (targetMethodRef.HasParameters)

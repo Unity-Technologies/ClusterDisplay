@@ -32,7 +32,8 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Returns the number of frames rendered by the Cluster Display.
         /// </summary>
-        public UInt64 FrameCount => LocalNode.CurrentFrameID;
+        public UInt64 CurrentFrameID => m_CurrentFrameID;
+        private UInt64 m_CurrentFrameID;
 
         private DebugPerf m_DelayMonitor = new DebugPerf();
 
@@ -329,6 +330,7 @@ namespace Unity.ClusterDisplay
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
 
                     LocalNode.EndFrame();
+                    stateSetter.SetFrame(m_CurrentFrameID++);
 
                     m_DelayMonitor.SampleNow();
                 }

@@ -52,12 +52,9 @@ namespace Unity.ClusterDisplay
             rpcBufferSize = 0;
         }
 
-        public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos, ulong frame)
+        public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
-            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-            UnityEngine.Debug.Log($"Latched RPC Buffer: (Frame: {frame}, Buffer Size: {rpcBufferSize})");
-            #endif
             endPos += rpcBufferSize;
             rpcBufferSize = 0;
             return true;
@@ -152,6 +149,7 @@ namespace Unity.ClusterDisplay
 
                     } break;
 
+                    case RPCExecutionStage.AfterInitialization:
                     case RPCExecutionStage.BeforeFixedUpdate:
                         RPCInterfaceRegistry.QueueBeforeFixedUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
@@ -352,6 +350,7 @@ namespace Unity.ClusterDisplay
             UnityEngine.Object instance, 
             int rpcId, 
             int rpcExecutionStage, 
+            // int explicitRPCExeuctionStage, // 1 == Explicit RPC Exeuction | 0 == Implicit RPC Execution.
             int parametersPayloadSize)
         {
             if (!AllowWrites)
@@ -383,7 +382,7 @@ namespace Unity.ClusterDisplay
             }
 
             int startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = rpcExecutionStage > 0 ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+            rpcExecutionStage = (/*explicitRPCExeuctionStage == 0 && */rpcExecutionStage > 0) ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
@@ -399,6 +398,7 @@ namespace Unity.ClusterDisplay
         public static void AppendStaticRPCCall (
             int rpcId, 
             int rpcExecutionStage, 
+            // int explicitRPCExeuctionStage, // 1 == Explicit RPC Exeuction | 0 == Implicit RPC Execution.
             int parametersPayloadSize)
         {
             if (!AllowWrites)
@@ -418,7 +418,7 @@ namespace Unity.ClusterDisplay
             }
 
             int startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = rpcExecutionStage > 0 ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+            rpcExecutionStage = (/*explicitRPCExeuctionStage == 0 && */rpcExecutionStage > 0) ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
