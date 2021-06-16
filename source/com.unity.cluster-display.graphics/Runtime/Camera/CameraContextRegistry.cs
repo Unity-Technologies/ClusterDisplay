@@ -15,28 +15,6 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
     {
-        #if UNITY_EDITOR
-        [CustomEditor(typeof(CameraContextRegistry))]
-        private class CameraContextRegistryEditor : Editor
-        {
-            public override void OnInspectorGUI()
-            {
-                base.OnInspectorGUI();
-
-                var cameraContextRegistry = target as CameraContextRegistry;
-                if (cameraContextRegistry == null)
-                    return;
-
-                if (GUILayout.Button("Flush Registry"))
-                    cameraContextRegistry.Flush();
-
-                var cameraContextTargets = cameraContextRegistry.cameraContextTargets;
-                for (int i = 0; i < cameraContextTargets.Length; i++)
-                    EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
-            }
-        }
-        #endif
-
         private readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
         [HideInInspector][SerializeField] private CameraContextTarget[] m_SerializedCameraContextTargets;
 
@@ -104,7 +82,7 @@ namespace Unity.ClusterDisplay.Graphics
         public bool TryGetPreviousFocusedCameraContextTarget (out CameraContextTarget previousCameraContextTarget) => (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
         public void SetPreviousFocusedCameraContextTarget (CameraContextTarget previousCameraContextTarget) => m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
 
-        private CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
+        public CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
 
         public bool TryGetCameraContextTarget (Camera camera, out CameraContextTarget cameraContextTarget)
         {
@@ -243,7 +221,7 @@ namespace Unity.ClusterDisplay.Graphics
             else Object.Destroy(cameraContextTarget);
         }
 
-        private void Flush ()
+        public void Flush ()
         {
             k_CameraContextTargets.Clear();
             m_SerializedCameraContextTargets = null;
