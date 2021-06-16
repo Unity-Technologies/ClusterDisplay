@@ -13,17 +13,17 @@ namespace Unity.ClusterDisplay.Graphics
     /// OnCameraRender is called. Cameras registered here are automatically accessed by ClusterDisplayRenderer
     /// and this registry manages it's camera context.
     /// </summary>
-    public class CameraContextRegistery : SingletonMonoBehaviour<CameraContextRegistery>, ISerializationCallbackReceiver
+    public class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
     {
         #if UNITY_EDITOR
-        [CustomEditor(typeof(CameraContextRegistery))]
+        [CustomEditor(typeof(CameraContextRegistry))]
         private class CameraContextRegistryEditor : Editor
         {
             public override void OnInspectorGUI()
             {
                 base.OnInspectorGUI();
 
-                var cameraContextRegistry = target as CameraContextRegistery;
+                var cameraContextRegistry = target as CameraContextRegistry;
                 if (cameraContextRegistry == null)
                     return;
 

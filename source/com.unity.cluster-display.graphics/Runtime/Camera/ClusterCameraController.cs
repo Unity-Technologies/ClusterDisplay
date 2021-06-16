@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get
             {
-                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
                     return null;
 
                 if (cameraContextRegistry.focusedCameraContextTarget == null)
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get
             {
-                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
+                if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
                     return null;
 
                 if (cameraContextRegistry.previousFocusedCameraContextTarget == null)
@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry) ||
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry) ||
                 !cameraContextRegistry.TryGetCameraContextTarget(camera, out var cameraContextTarget))
             {
                 m_Presenter.PollCamera(contextCamera);

@@ -253,7 +253,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (!CameraContextRegistery.CanChangeContextTo(camera))
+            if (!CameraContextRegistry.CanChangeContextTo(camera))
             {
                 ToggleShaderKeywords(keywordEnabled: false);
                 return;
