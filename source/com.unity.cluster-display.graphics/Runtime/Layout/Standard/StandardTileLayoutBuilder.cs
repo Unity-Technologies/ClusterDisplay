@@ -28,10 +28,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (k_ClusterRenderer.cameraController.contextCamera == null)
+            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var camera))
                 return;
 
-            var camera = k_ClusterRenderer.cameraController.contextCamera;
             if (camera.enabled)
                 camera.enabled = false;
 
@@ -77,6 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             Blit(cmd, presentRT, sourceRT, scaleBias, k_ScaleBiasRT);
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

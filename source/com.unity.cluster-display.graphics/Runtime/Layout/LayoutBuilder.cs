@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         private static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
-        protected void Blit (CommandBuffer cmd, RenderTexture presentRT, RenderTexture target, Vector4 texBias, Vector4 rtBias)
+        protected void Blit (CommandBuffer cmd, RenderTexture sourceRT, RenderTexture target, Vector4 texBias, Vector4 rtBias)
         {
             s_PropertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);

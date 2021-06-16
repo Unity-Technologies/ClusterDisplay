@@ -25,44 +25,40 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Current rendering camera.
         /// </summary>
-        public Camera contextCamera
+        public bool TryGetContextCamera (out Camera contextCamera)
         {
-            get
+            contextCamera = null;
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+                return false;
+
+            if (!cameraContextRegistry.TryGetFocusedCameraContextTarget(out var focusedCameraContextTarget))
+                return false;
+
+            if (!focusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
-                    return null;
-
-                if (cameraContextRegistry.focusedCameraContextTarget == null)
-                    return null;
-
-                if (!cameraContextRegistry.focusedCameraContextTarget.TryGetCamera(out var camera))
-                {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.focusedCameraContextTarget, destroy: true);
-                    return null;
-                }
-
-                return camera;
+                cameraContextRegistry.UnRegister(focusedCameraContextTarget, destroy: true);
+                return false;
             }
+
+            return (contextCamera = camera) != null;
         }
 
-        public Camera previousContextCamera
+        public bool TryGetPreviousCameraContext (out Camera previousCameraContext)
         {
-            get
+            previousCameraContext = null;
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+                return false;
+
+            if (!cameraContextRegistry.TryGetPreviousFocusedCameraContextTarget(out var previousFocusedCameraContextTarget))
+                return false;
+
+            if (!previousFocusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
-                    return null;
-
-                if (cameraContextRegistry.previousFocusedCameraContextTarget == null)
-                    return null;
-
-                if (!cameraContextRegistry.previousFocusedCameraContextTarget.TryGetCamera(out var camera))
-                {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.previousFocusedCameraContextTarget, destroy: true);
-                    return null;
-                }
-
-                return camera;
+                cameraContextRegistry.UnRegister(previousFocusedCameraContextTarget, destroy: true);
+                return false;
             }
+
+            return (previousCameraContext = camera) != null;
         }
 
 
@@ -87,11 +83,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public bool CameraIsInContext(Camera camera)
-        {
-            var contextCamera = this.contextCamera;
-            return contextCamera != null && contextCamera == camera;
-        }
+        public bool CameraIsInContext(Camera camera) => TryGetContextCamera(out var contextCamera) && contextCamera == camera;
 
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
         public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
@@ -107,7 +99,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             // If we are beginning to render with our context camera, do nothing.
-            if (camera == contextCamera)
+            if (TryGetContextCamera(out var contextCamera) && camera == contextCamera)
             {
                 m_Presenter.PollCamera(contextCamera);
                 return;
@@ -120,11 +112,12 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            cameraContextRegistry.focusedCameraContextTarget = cameraContextTarget;
+            cameraContextRegistry.SetFocusedCameraContextTarget(cameraContextTarget);
             OnPollFrameSettings(camera);
 
+            TryGetPreviousCameraContext(out var previousCameraContext);
             if (onCameraChange != null)
-                onCameraChange(previousContextCamera, contextCamera);
+                onCameraChange(previousCameraContext, contextCamera);
 
             m_Presenter.PollCamera(contextCamera);
         }
@@ -138,8 +131,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public void ResetProjectionMatrix ()
         {
-            var contextCamera = this.contextCamera;
-            if (contextCamera == null)
+            if (!TryGetContextCamera(out var contextCamera))
                 return;
 
             contextCamera.ResetProjectionMatrix();
@@ -147,8 +139,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Matrix4x4 CacheAndReturnProjectionMatrix ()
         {
-            var contextCamera = this.contextCamera;
-            if (contextCamera == null)
+            if (!TryGetContextCamera(out var contextCamera))
                 return Matrix4x4.identity;
 
             var matrix = contextCamera.projectionMatrix;

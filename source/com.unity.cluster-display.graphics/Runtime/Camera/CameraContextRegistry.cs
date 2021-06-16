@@ -46,44 +46,41 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// The current camera that's rendering.
         /// </summary>
-        public CameraContextTarget focusedCameraContextTarget
+        public bool TryGetFocusedCameraContextTarget (out CameraContextTarget cameraContextTarget)
         {
-            get
+            if (m_FocusedCameraContextTarget == null)
             {
-                if (m_FocusedCameraContextTarget == null)
+                if (k_CameraContextTargets.Count != 0)
                 {
-                    if (k_CameraContextTargets.Count != 0)
-                    {
-                        var first = k_CameraContextTargets.FirstOrDefault();
-                        focusedCameraContextTarget = first.Value;
-                    }
-
-                    else
-                    {
-                        PollCameraTargets();
-                        if (k_CameraContextTargets.Count > 0)
-                        {
-                            var first = k_CameraContextTargets.FirstOrDefault();
-                            focusedCameraContextTarget = first.Value;
-                        }
-                    }
+                    var first = k_CameraContextTargets.FirstOrDefault();
+                    SetFocusedCameraContextTarget(first.Value);
                 }
 
-                return m_FocusedCameraContextTarget;
+                else
+                {
+                    PollCameraTargets();
+                    if (k_CameraContextTargets.Count > 0)
+                    {
+                        var first = k_CameraContextTargets.FirstOrDefault();
+                        SetFocusedCameraContextTarget(first.Value);
+                    }
+                }
             }
 
-            set
-            {
-                if (value == m_FocusedCameraContextTarget)
-                    return;
+            return (cameraContextTarget = m_FocusedCameraContextTarget) != null;
+        }
 
-                if (value != null)
-                    Debug.Log($"Changing camera context to: \"{value.gameObject.name}\".");
-                else Debug.Log($"Changing camera context to: \"NULL\".");
+        public void SetFocusedCameraContextTarget (CameraContextTarget cameraContextTarget)
+        {
+            if (cameraContextTarget == m_FocusedCameraContextTarget)
+                return;
 
-                previousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
-                m_FocusedCameraContextTarget = value;
-            }
+            if (cameraContextTarget != null)
+                Debug.Log($"Changing camera context to: \"{cameraContextTarget.gameObject.name}\".");
+            else Debug.Log($"Changing camera context to: \"NULL\".");
+
+            SetPreviousFocusedCameraContextTarget(m_FocusedCameraContextTarget);
+            m_FocusedCameraContextTarget = cameraContextTarget;
         }
 
         public string m_TargetCameraTag = "MainCamera";
@@ -103,11 +100,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
 
-        public CameraContextTarget previousFocusedCameraContextTarget
-        {
-            get => m_PreviousFocusedCameraContextTarget;
-            private set => m_PreviousFocusedCameraContextTarget = value;
-        }
+        public bool TryGetPreviousFocusedCameraContextTarget (out CameraContextTarget previousCameraContextTarget) => (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
+        public void SetPreviousFocusedCameraContextTarget (CameraContextTarget previousCameraContextTarget) => m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
 
         private CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
 
