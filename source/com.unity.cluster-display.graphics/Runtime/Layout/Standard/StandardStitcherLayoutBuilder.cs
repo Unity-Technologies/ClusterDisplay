@@ -37,30 +37,34 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var cachedProjectionMatrix = k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix();
 
             for (var i = 0; i < numTiles; i++)
             {
-                k_ClusterRenderer.cameraController.CacheContextProjectionMatrix();
                 CalculateStitcherLayout(
                     camera, 
+                    cachedProjectionMatrix,
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
                     out var viewportSubsection, 
-                    out var projectionMatrix);
+                    out var asymmetricProjectionMatrix);
+
+                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
+                UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
                 var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
+
                 camera.targetTexture = blitRT;
+                camera.projectionMatrix = asymmetricProjectionMatrix;
+                camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
 
-                camera.projectionMatrix = projectionMatrix;
-                camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
-
-                UploadClusterDisplayParams(GraphicsUtil.GetHdrpClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
                 camera.Render();
-
-                k_ClusterRenderer.cameraController.ApplyCachedProjectionMatrixToContext();
             }
+
+            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
+
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
@@ -111,6 +115,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_QueuedStitcherParameters.Clear();
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

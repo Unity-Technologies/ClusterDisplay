@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : 
         MonoBehaviour, 
-        IClusterRenderer, 
+        IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
         // |---> IClusterRendererEventReceiver delegates for RenderPipelineManager.*
@@ -146,8 +146,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public ClusterRenderContext context => m_Context;
 
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        private bool m_ShaderKeywordState = false;
+        private const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         
 #if UNITY_EDITOR
         // we need a clip-to-world space conversion for gizmo
@@ -256,11 +255,11 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (!CameraContextRegistery.CanChangeContextTo(camera))
             {
-                ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
+                ToggleShaderKeywords(keywordEnabled: false);
                 return;
             }
 
-            ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ShaderKeywordState);
+            ToggleShaderKeywords(debugSettings.enableKeyword);
             onBeginCameraRender(context, camera);
 
             Assert.IsTrue(m_Context.gridSize.x > 0 && m_Context.gridSize.y > 0);
@@ -366,18 +365,17 @@ namespace Unity.ClusterDisplay.Graphics
             SetLayoutBuilder(newLayoutBuilder);
         }
 
-        public void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
+        public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (keywordEnabled == m_ShaderKeywordState)
+            bool isCurrentlyEnabled = Shader.IsKeywordEnabled(k_ShaderKeyword);
+            if (isCurrentlyEnabled == keywordEnabled)
                 return;
-
-            m_ShaderKeywordState = keywordEnabled;
 
             if (keywordEnabled)
                 Shader.EnableKeyword(k_ShaderKeyword);
             else Shader.DisableKeyword(k_ShaderKeyword);
-
-            Debug.Log($"Keyword: {k_ShaderKeyword}, State: {m_ShaderKeywordState}");
         }
+
+        public void ToggleShaderKeywords(bool keywordEnabled) => ToggleClusterDisplayShaderKeywords(keywordEnabled);
     }
 }
