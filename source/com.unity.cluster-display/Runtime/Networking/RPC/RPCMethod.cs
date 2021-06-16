@@ -5,8 +5,12 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    [AttributeUsage(AttributeTargets.Method)]
-    public class RPCMethod : Attribute 
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+    [Obsolete("RPCMethod has been renamed to RPC")]
+    public class RPCMethod : RPC {}
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+    public class RPC : Attribute 
     {
         [AttributeUsage(AttributeTargets.Parameter)] public class FormalySerializedAsMarker : Attribute {}
         [AttributeUsage(AttributeTargets.Parameter)] public class RPCExecutionStageMarker : Attribute {}
@@ -16,7 +20,7 @@ namespace Unity.ClusterDisplay
         public readonly RPCExecutionStage rpcExecutionStage;
         public readonly ushort rpcId;
 
-        public RPCMethod (
+        public RPC (
             [RPCExecutionStageMarker] RPCExecutionStage rpcExecutionStage = RPCExecutionStage.Automatic, 
             [RPCIDMarker] ushort rpcId = 0,
             [FormalySerializedAsMarker] string formarlySerializedAs = "")

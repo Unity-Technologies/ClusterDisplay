@@ -316,7 +316,7 @@ namespace Unity.ClusterDisplay
                 }
             }
 
-            var rpcMethodCustomAttributeType = typeof(RPCMethod);
+            var rpcMethodCustomAttributeType = typeof(RPC);
 
             var rpcMethodCustomAttributeTypeRef = compiledAssemblyDef.MainModule.ImportReference(rpcMethodCustomAttributeType);
             string rpcMethodAttributeFullName = rpcMethodCustomAttributeType.FullName;
@@ -335,8 +335,8 @@ namespace Unity.ClusterDisplay
                 // Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
 
                 var customAttribute = targetRPCMethodDef.CustomAttributes.First(ca => ca.AttributeType.FullName == rpcMethodAttributeFullName);
-                if (!TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
-                    !TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPCMethod.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
+                if (!TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPC.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
+                    !TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPC.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
                     goto failure;
 
                 var rpcExecutionStageAttributeArgument = customAttribute.ConstructorArguments[rpcExecutionStageAttributeArgumentIndex];

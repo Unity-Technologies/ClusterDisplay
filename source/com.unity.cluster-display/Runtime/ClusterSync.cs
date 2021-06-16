@@ -330,7 +330,7 @@ namespace Unity.ClusterDisplay
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
 
                     LocalNode.EndFrame();
-                    stateSetter.SetFrame(m_CurrentFrameID++);
+                    stateSetter.SetFrame(++m_CurrentFrameID);
 
                     m_DelayMonitor.SampleNow();
                 }

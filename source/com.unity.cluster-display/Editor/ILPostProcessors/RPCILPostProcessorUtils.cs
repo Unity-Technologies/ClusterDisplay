@@ -371,7 +371,7 @@ namespace Unity.ClusterDisplay
             string serializedMethodName, 
             out MethodReference outMethodRef)
         {
-            var rpcMethodAttributeType = typeof(RPCMethod);
+            var rpcMethodAttributeType = typeof(RPC);
             var stringType = typeof(string);
 
             foreach (var methodDef in typeDefinition.Methods)

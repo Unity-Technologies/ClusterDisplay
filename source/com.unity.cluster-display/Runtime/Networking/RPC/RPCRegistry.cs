@@ -194,11 +194,11 @@ namespace Unity.ClusterDisplay
             List<ushort> rpcIdsToAdd = new List<ushort>();
             List<string> renamedRPCs = new List<string>();
 
-            if (ReflectionUtils.TryGetAllMethodsWithAttribute<RPCMethod>(out var methodsWithRPCAttribute))
+            if (ReflectionUtils.TryGetAllMethodsWithAttribute<RPC>(out var methodsWithRPCAttribute))
             {
                 foreach (var methodInfo in methodsWithRPCAttribute)
                 {
-                    var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPCMethod>();
+                    var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPC>();
 
                     if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))
                     {
@@ -241,7 +241,7 @@ namespace Unity.ClusterDisplay
                         ApplyRPC(ref rpcMethodInfo, serialize: false);
                     }
 
-                    // Debug.Log($"Registered RPC with {nameof(RPCMethod)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
+                    // Debug.Log($"Registered RPC with {nameof(RPC)} attribute for method: \"{methodInfo.Name}\" with RPC Execution Stage: \"{rpcMethodAttribute.rpcExecutionStage}\" and RPC ID: \"{rpcMethodAttribute.rpcId}\".");
                 }
             }
 
@@ -254,12 +254,12 @@ namespace Unity.ClusterDisplay
 
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out rpcExecutionStage, out var methodInfo))
                 {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(RPCMethod)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                    Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(RPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                     m_SerializedRPCsContainer.SetData(serializedRPC.rpcId, null);
                     return;
                 }
 
-                var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPCMethod>();
+                var rpcMethodAttribute = methodInfo.GetCustomAttribute<RPC>();
                 if (rpcMethodAttribute != null)
                     rpcExecutionStage = rpcMethodAttribute.rpcExecutionStage;
 

@@ -179,7 +179,7 @@ namespace Unity.ClusterDisplay
             for (int i = 0; i < sceneObjectRegistry.Length; i++)
             {
                 RPCEditorGUICommon.HorizontalLine();
-                var editor = Editor.CreateEditor(sceneObjectRegistry[i], typeof(SceneObjectsRegistry.SceneObjectsRegistryEditor)) as SceneObjectsRegistry.SceneObjectsRegistryEditor;
+                var editor = UnityEditor.Editor.CreateEditor(sceneObjectRegistry[i], typeof(SceneObjectsRegistry.SceneObjectsRegistryEditor)) as SceneObjectsRegistry.SceneObjectsRegistryEditor;
                 editor.PresentGUI();
             }
 

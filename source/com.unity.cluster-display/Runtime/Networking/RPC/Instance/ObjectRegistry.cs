@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay
 
         private readonly Object[] registeredObjects = new Object[ushort.MaxValue];
         private readonly Dictionary<Object, ushort> pipeIdLut = new Dictionary<Object, ushort>();
+        private readonly Dictionary<ushort, bool[]> rpcStates = new Dictionary<ushort, bool[]>();
 
         [ObjectRegistryGetItemMarker] public Object this[ushort pipeId] => registeredObjects[pipeId];
 
