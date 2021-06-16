@@ -1,11 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-#if UNITY_EDITOR
-using System.Linq;
-using UnityEditor;
-#endif
-
 namespace Unity.ClusterDisplay.Graphics
 {
     public interface ICameraEventReceiver
