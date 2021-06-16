@@ -66,8 +66,6 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
 
-        public bool cameraContextIsSceneViewCamera => CameraIsSceneViewCamera(contextCamera);
-
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
 
@@ -93,17 +91,6 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var contextCamera = this.contextCamera;
             return contextCamera != null && contextCamera == camera;
-        }
-
-        public bool CameraIsSceneViewCamera (Camera camera)
-        {
-#if UNITY_EDITOR
-            return camera != null && SceneView.sceneViews.ToArray()
-                .Select(sceneView => (sceneView as SceneView).camera)
-                .Any(sceneViewCamera => sceneViewCamera == camera);
-#else
-        return false;
-#endif
         }
 
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
@@ -146,39 +133,30 @@ namespace Unity.ClusterDisplay.Graphics
         /// we cache what the camera's projection matrix should be using the camera's paramters before we modify the camera's projection matrix 
         /// in order to later revert it after calling Camera.Render()
         /// </summary>
-        public void CacheContextProjectionMatrix ()
+        public void ResetProjectionMatrix ()
         {
             var contextCamera = this.contextCamera;
             if (contextCamera == null)
                 return;
 
-            // var projectionMatrix = contextCamera.projectionMatrix;
-            var projectionMatrix = Matrix4x4.Perspective(contextCamera.fieldOfView, contextCamera.aspect, contextCamera.nearClipPlane, contextCamera.farClipPlane);
-
-            m_SerializedProjectionMatrixC1 = projectionMatrix.GetColumn(0);
-            m_SerializedProjectionMatrixC2 = projectionMatrix.GetColumn(1);
-            m_SerializedProjectionMatrixC3 = projectionMatrix.GetColumn(2);
-            m_SerializedProjectionMatrixC4 = projectionMatrix.GetColumn(3);
+            contextCamera.ResetProjectionMatrix();
         }
 
-        /// <summary>
-        /// Apply the cached projection matrix to the camera context after we've called Camera.Render().
-        /// </summary>
-        public void ApplyCachedProjectionMatrixToContext ()
+        public Matrix4x4 CacheAndReturnProjectionMatrix ()
         {
             var contextCamera = this.contextCamera;
             if (contextCamera == null)
-                return;
+                return Matrix4x4.identity;
 
-            Matrix4x4 cachedProjectionMatrix = new Matrix4x4(
-                m_SerializedProjectionMatrixC1,
-                m_SerializedProjectionMatrixC2,
-                m_SerializedProjectionMatrixC3,
-                m_SerializedProjectionMatrixC4
-            );
+            var matrix = contextCamera.projectionMatrix;
 
-            contextCamera.projectionMatrix = cachedProjectionMatrix;
-            contextCamera.cullingMatrix = contextCamera.projectionMatrix * contextCamera.worldToCameraMatrix;
+            m_SerializedProjectionMatrixC1 = matrix.GetColumn(0);
+            m_SerializedProjectionMatrixC2 = matrix.GetColumn(1);
+            m_SerializedProjectionMatrixC3 = matrix.GetColumn(2);
+            m_SerializedProjectionMatrixC4 = matrix.GetColumn(3);
+
+            return matrix;
         }
+
     }
 }

@@ -22,7 +22,6 @@ namespace Unity.ClusterDisplay.Graphics
         protected bool ValidGridSize (out int numTiles) => (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
         public void UploadClusterDisplayParams (Matrix4x4 projectionMatrix)
         {
-            Debug.Log($"Uploading cluster display parameters to parameter: \"{k_ClusterDisplayParamsShaderVariableName}\".");
             Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, projectionMatrix);
         }
 
