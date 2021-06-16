@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (camera.cameraType != CameraType.Game)
+            if (!CameraContextRegistry.CanChangeContextTo(camera))
                 return;
 
             // If we are beginning to render with our context camera, do nothing.
