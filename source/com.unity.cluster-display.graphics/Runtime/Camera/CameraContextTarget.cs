@@ -16,19 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
         public CameraActiveDelegate onCameraDisabled;
         public CameraActiveDelegate onCameraEnabled;
 
-        private void CacheCamera()
-        {
-            if (m_TargetCamera != null)
-                return;
-
-            m_TargetCamera = GetComponent<Camera>();
-            if (m_TargetCamera == null)
-            {
-                Debug.LogError($"Missing {nameof(Camera)} component attached to: \"{gameObject.name}\".");
-                return;
-            }
-        }
-
+        private void CacheCamera() => m_TargetCamera = GetComponent<Camera>();
         public bool TryGetCamera (out Camera camera)
         {
             if (m_TargetCamera == null)
