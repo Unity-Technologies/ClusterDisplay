@@ -73,9 +73,6 @@ namespace Unity.ClusterDisplay.Graphics
             get => m_EnableKeyword;
             set
             {
-                if (value == m_EnableKeyword)
-                    return;
-
                 m_EnableKeyword = value;
                 if (onEnableKeywords != null)
                     onEnableKeywords(m_EnableKeyword);
