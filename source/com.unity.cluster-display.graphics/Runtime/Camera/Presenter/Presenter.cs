@@ -17,11 +17,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnCameraContextChange(Camera previousCamera, Camera nextCamera)
         {
-            /*
-            if (previousCamera != null)
-                DeinitializeCamera(previousCamera);
-            */
-
             m_Camera = nextCamera;
             if (m_Camera != null)
                 InitializeCamera(m_Camera);
