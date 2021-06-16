@@ -77,7 +77,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (cameraContextTarget != null)
                 Debug.Log($"Changing camera context to: \"{cameraContextTarget.gameObject.name}\".");
-            else Debug.Log($"Changing camera context to: \"NULL\".");
+            else
+                Debug.Log($"Changing camera context to: \"NULL\".");
 
             SetPreviousFocusedCameraContextTarget(m_FocusedCameraContextTarget);
             m_FocusedCameraContextTarget = cameraContextTarget;
