@@ -157,7 +157,9 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             CameraContextTarget cameraContextTarget = null;
-            if ((cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>()) == null)
+
+            cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>();
+            if (cameraContextTarget == null)
                 cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
 
             cameraContextTarget.onCameraEnabled += OnCameraEnabled;
