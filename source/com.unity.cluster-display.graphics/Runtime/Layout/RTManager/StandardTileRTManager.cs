@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
         private RenderTexture m_PresentRT;
         private RenderTexture m_BackBufferRT;
 
-        protected override object BlitRT(int width, int height, GraphicsFormat format)
+        protected override object GetBlitRT(int width, int height, GraphicsFormat format)
         {
             bool resized = 
                 m_BlitRT != null && 
@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_BlitRT;
         }
 
-        protected override object PresentRT(int width, int height, GraphicsFormat format)
+        protected override object GetPresentRT(int width, int height, GraphicsFormat format)
         {
             bool resized = 
                 m_PresentRT != null && 
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_PresentRT;
         }
 
-        protected override object BackBufferRT(int width, int height, GraphicsFormat format)
+        protected override object GetBackBufferRT(int width, int height, GraphicsFormat format)
         {
             bool resized = 
                 m_BackBufferRT != null && 

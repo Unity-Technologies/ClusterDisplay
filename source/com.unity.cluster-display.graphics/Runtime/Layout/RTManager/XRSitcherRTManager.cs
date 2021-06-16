@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Targets = new RTHandle[tileCount];
         }
 
-        protected override object BlitRT(int tileCount, int tileIndex, int width, int height)
+        protected override object GetBlitRT(int tileCount, int tileIndex, int width, int height)
         {
             PollRTs(tileCount);
 
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_Targets[tileIndex];
         }
 
-        protected override object PresentRT(int width, int height)
+        protected override object GetPresentRT(int width, int height)
         {
             bool resized = 
                 m_PresentTarget != null && 

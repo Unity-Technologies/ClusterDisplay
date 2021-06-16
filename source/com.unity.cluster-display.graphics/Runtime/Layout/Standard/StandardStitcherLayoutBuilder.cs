@@ -14,8 +14,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
         private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
-        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.BlitRenderTexture(tileCount, tileIdnex, width, height);
-        private RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height);
+        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.GetBlitRenderTexture(tileCount, tileIdnex, width, height);
+        private RenderTexture PresentRT(int width, int height) => m_RTManager.GetPresentRenderTexture(width, height);
         private Rect m_OverscannedRect;
 
         /// <summary>

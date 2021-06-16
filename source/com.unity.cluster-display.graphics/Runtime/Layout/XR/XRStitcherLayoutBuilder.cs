@@ -84,7 +84,7 @@ namespace Unity.ClusterDisplay.Graphics
             
             for (var i = 0; i != numTiles; ++i)
             {
-                var targetRT = m_RTManager.BlitRTHandle(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                var targetRT = m_RTManager.GetBlitRTHandle(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculateStitcherLayout(
                     camera, 
                     i, 

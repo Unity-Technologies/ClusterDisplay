@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var target = m_RTManager.GetBlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             HDUtils.BlitQuad(cmd, target, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cullingParams.stereoProjectionMatrix = projMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var target = m_RTManager.GetBlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
             {
