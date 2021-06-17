@@ -896,7 +896,7 @@ namespace Unity.ClusterDisplay
                 goto cleanup;
 
                 cleanup:
-                ilProcessor.Clear();
+                ilProcessor.Body.Instructions.Clear();
                 return false;
             }
         }
