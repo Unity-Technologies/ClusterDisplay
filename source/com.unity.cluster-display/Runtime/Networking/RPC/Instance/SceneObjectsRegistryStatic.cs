@@ -15,11 +15,11 @@ namespace Unity.ClusterDisplay
         public class GetInstanceMarker : System.Attribute {}
         [GetInstanceMarker] public static Object GetInstance(ushort pipeId) => instances[pipeId];
 
-        private static readonly IDManager pipeIdManager = new IDManager();
+        private readonly static IDManager pipeIdManager = new IDManager();
 
-        private static readonly Object[] instances = new Object[ushort.MaxValue];
-        private static readonly Dictionary<Object, ushort> pipeIdLookUp = new Dictionary<Object, ushort>();
-        private static readonly Dictionary<ushort, bool[]> rpcStates = new Dictionary<ushort, bool[]>();
+        private readonly static Object[] instances = new Object[ushort.MaxValue];
+        private readonly static Dictionary<Object, ushort> pipeIdLookUp = new Dictionary<Object, ushort>();
+        private readonly static Dictionary<ushort, bool[]> rpcStates = new Dictionary<ushort, bool[]>();
 
         public static bool TryGetPipeId(Object obj, out ushort pipeId) => pipeIdLookUp.TryGetValue(obj, out pipeId);
         public static bool TryPopPipeId(out ushort pipeId) => pipeIdManager.TryPopId(out pipeId);
@@ -36,6 +36,9 @@ namespace Unity.ClusterDisplay
 
         private static void RegisterInstanceAccessor<T> (T obj) where T : Object
         {
+            if (!Application.isPlaying)
+                return;
+
             if (obj == null)
                 throw new System.Exception($"Received NULL object to register.");
 
@@ -50,51 +53,13 @@ namespace Unity.ClusterDisplay
             rpcStates.Add(pipeId, new bool[ushort.MaxValue]);
         }
 
-        private static void RegisterInstanceAccessors (Object[] objects)
-        {
-            if (objects == null || objects.Length == 0)
-                throw new System.Exception($"Received empty set of objects to register.");
-
-            for (int i = 0; i < objects.Length; i++)
-            {
-                if (!pipeIdManager.TryPopId(out var pipeId))
-                    throw new System.Exception("Cannot register any more objects, no more ids available.");
-
-                if (pipeIdLookUp.ContainsKey(objects[i]))
-                    continue;
-
-                instances[pipeId] = objects[i];
-                pipeIdLookUp.Add(objects[i], pipeId);
-                rpcStates.Add(pipeId, new bool[ushort.MaxValue]);
-            }
-        }
-
-        private static void UnregisterInstanceAccessors (Object[] objects)
-        {
-            if (objects == null || objects.Length == 0)
-                throw new System.Exception($"Received empty set of objects to un-register.");
-
-            for (int i = 0; i < objects.Length; i++)
-            {
-                if (objects[i] == null)
-                    continue;
-
-                if (!pipeIdLookUp.TryGetValue(objects[i], out var pipeId))
-                    continue;
-
-                instances[pipeId] = null;
-
-                pipeIdLookUp.Remove(objects[i]);
-                rpcStates.Remove(pipeId);
-
-                pipeIdManager.PushUnutilizedId(pipeId);
-            }
-        }
-
         private static void UnregisterInstanceAccessor (Object obj)
         {
+            if (!Application.isPlaying)
+                return;
+
             if (obj == null)
-                throw new System.Exception($"Received NULL object to un-register.");
+                return;
 
             if (!pipeIdLookUp.TryGetValue(obj, out var pipeId))
                 return;
@@ -126,6 +91,9 @@ namespace Unity.ClusterDisplay
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void PollUnregisteredInstanceRPCs()
         {
+            if (Application.isPlaying)
+                return;
+
             // Debug.Log("Polling for unregistered instance RPCs.");
             if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
                 return;

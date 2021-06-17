@@ -21,33 +21,47 @@ namespace Unity.ClusterDisplay
         private readonly List<Object> sceneObjects = new List<Object>();
         [SerializeField] private Object[] serializedSceneObjects;
 
-        private void Awake() => RegisterObjects();
+        private void Awake()
+        {
+            RegisterObjects();
+        }
 
-        private void OnDestroy() => Clear();
+        protected override void Destroying() => Clear();
+
         private void Clear ()
         {
-            if (serializedSceneObjects != null)
-                UnregisterInstanceAccessors(serializedSceneObjects);
+            if (!Application.isPlaying)
+                return;
+
+            UnregisterObjects();
 
             sceneObjects.Clear();
             serializedSceneObjects = null;
-
             sceneObjectsRegistered = false;
         }
 
-        public void Register<T> (T sceneObject) where T : Object
+        public void Register<T> (T sceneObject, bool isSerializing = false) where T : Object
         {
-            if (sceneObjects.Contains(sceneObject))
+            if (sceneObject == null)
                 return;
 
+            if (sceneObjects.Contains(sceneObject))
+                goto registerInstanceAccessor;
+
             sceneObjects.Add(sceneObject);
-            RegisterInstanceAccessor(sceneObject);
+
+            registerInstanceAccessor:
+            if (!isSerializing)
+                RegisterInstanceAccessor(sceneObject);
+
         }
 
-        public void Unregister<T> (T sceneObject, ushort rpcId) where T : Object
+        public void Unregister<T> (T sceneObject, bool isSerializing = false) where T : Object
         {
             sceneObjects.Remove(sceneObject);
-            UnregisterInstanceAccessor(sceneObject);
+
+            if (!isSerializing)
+                UnregisterInstanceAccessor(sceneObject);
 
             if (sceneObjects.Count == 0)
             {
@@ -77,19 +91,11 @@ namespace Unity.ClusterDisplay
             {
                 if (serializedSceneObjects[i] == null)
                     continue;
-                Register(serializedSceneObjects[i]);
+
+                Register(serializedSceneObjects[i], isSerializing: true);
             }
 
             serializedSceneObjects = sceneObjects.ToArray();
-        }
-
-        protected override void Destroying()
-        {
-            if (!Application.isPlaying)
-                return;
-
-            if (serializedSceneObjects != null)
-                UnregisterInstanceAccessors(serializedSceneObjects);
         }
 
         private void RegisterObjects ()
@@ -112,6 +118,13 @@ namespace Unity.ClusterDisplay
             }
 
             sceneObjectsRegistered = true;
+        }
+
+        private void UnregisterObjects ()
+        {
+            if (serializedSceneObjects != null)
+                for (int i = 0; i < serializedSceneObjects.Length; i++)
+                    Unregister(serializedSceneObjects[i]);
         }
     }
 }

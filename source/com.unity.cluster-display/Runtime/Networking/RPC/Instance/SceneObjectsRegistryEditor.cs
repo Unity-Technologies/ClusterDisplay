@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay
                 }
 
                 if (rpcToRemove != null)
-                    sceneObjectsRegistry.Unregister(objectToRemove, rpcToRemove.Value);
+                    sceneObjectsRegistry.Unregister(objectToRemove);
             }
 
             public override void OnInspectorGUI()
