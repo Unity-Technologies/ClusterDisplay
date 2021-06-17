@@ -25,20 +25,21 @@ namespace Unity.ClusterDisplay
                 Object objectToRemove = null;
                 ushort ? rpcToRemove = null;
 
-                foreach (var objectAndRPCList in sceneObjectsRegistry.objects)
+                foreach (var obj in sceneObjectsRegistry.sceneObjects)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField($"Object: \"{objectAndRPCList.Key.GetType().Name}\" (RPC Count: {objectAndRPCList.Value.Count})", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Object: \"{obj.GetType().Name}\"", EditorStyles.boldLabel);
                     EditorGUILayout.EndHorizontal();
 
+                    /*
                     EditorGUILayout.LabelField("RPCs:", EditorStyles.boldLabel);
-                    foreach (var rpcId in objectAndRPCList.Value)
+                    foreach (var rpcId in obj.Value)
                     {
                         EditorGUILayout.BeginHorizontal();
 
                         if (GUILayout.Button("X", GUILayout.Width(20)))
                         {
-                            objectToRemove = objectAndRPCList.Key;
+                            objectToRemove = obj.Key;
                             rpcToRemove = rpcId;
                         }
 
@@ -49,6 +50,7 @@ namespace Unity.ClusterDisplay
                         EditorGUILayout.LabelField(methodInfo.Name);
                         EditorGUILayout.EndHorizontal();
                     }
+                    */
                 }
 
                 if (rpcToRemove != null)

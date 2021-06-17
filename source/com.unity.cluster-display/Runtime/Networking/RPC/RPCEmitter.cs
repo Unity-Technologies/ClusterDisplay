@@ -63,8 +63,6 @@ namespace Unity.ClusterDisplay
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
             ushort bufferPos = 0;
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                goto failure;
 
             if (!RPCRegistry.TryGetInstance(out var rpcRegistry))
                 goto failure;
@@ -121,7 +119,7 @@ namespace Unity.ClusterDisplay
                         }
 
                         #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
-                        if (objectRegistry[pipeId] == null)
+                        if (SceneObjectsRegistry.GetInstance(pipeId) == null)
                         {
                             UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: ({pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                             goto failure;
@@ -130,7 +128,6 @@ namespace Unity.ClusterDisplay
 
                         ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
                         if (!RPCInterfaceRegistry.TryCallInstance(
-                            objectRegistry,
                             rpcId, 
                             pipeId, 
                             parametersPayloadSize, 
@@ -356,15 +353,9 @@ namespace Unity.ClusterDisplay
             if (!AllowWrites)
                 return;
 
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
+            if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
             {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the singleton type instance of \"{nameof(ObjectRegistry)}\" cannot be found!");
-                return;
-            }
-
-            if (!objectRegistry.TryGetPipeId(instance, out var pipeId))
-            {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the calling instance has not been registered with the {nameof(ObjectRegistry)}.");
+                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the calling instance has not been registered with the {nameof(SceneObjectsRegistry)}.");
                 return;
             }
 

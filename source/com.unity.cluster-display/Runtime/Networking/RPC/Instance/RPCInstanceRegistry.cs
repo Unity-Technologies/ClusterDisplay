@@ -48,7 +48,6 @@ namespace Unity.ClusterDisplay
         private static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
         protected abstract bool OnTryCallInstance(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
@@ -60,7 +59,6 @@ namespace Unity.ClusterDisplay
             ref ushort rpcsBufferPosition);
 
         public static bool TryCallInstance (
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
@@ -70,7 +68,6 @@ namespace Unity.ClusterDisplay
                 return false;
 
             return instanceRegistry.OnTryCallInstance(
-                objectRegistry,
                 rpcId, 
                 pipeId, 
                 parametersPayloadSize, 
@@ -92,42 +89,36 @@ namespace Unity.ClusterDisplay
         }
 
         protected abstract void ExecuteRPCBeforeFixedUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ushort rpcBufferParameterPosition);
 
         protected abstract void ExecuteRPCAfterFixedUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ushort rpcBufferParameterPosition);
 
         protected abstract void ExecuteRPCBeforeUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ushort rpcBufferParameterPosition);
 
         protected abstract void ExecuteRPCAfterUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ushort rpcBufferParameterPosition);
 
         protected abstract void ExecuteRPCBeforeLateUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ushort rpcBufferParameterPosition);
 
         protected abstract void ExecuteRPCAfterLateUpdate(
-            ObjectRegistry objectRegistry,
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
@@ -135,14 +126,10 @@ namespace Unity.ClusterDisplay
 
         public void BeforeFixedUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (beforeFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeFixedUpdateRPCQueue.Dequeue();
                 ExecuteRPCBeforeFixedUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -152,14 +139,10 @@ namespace Unity.ClusterDisplay
 
         public void AfterFixedUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (afterFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
                 ExecuteRPCAfterFixedUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -169,14 +152,10 @@ namespace Unity.ClusterDisplay
 
         public void BeforeUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (beforeUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeUpdateRPCQueue.Dequeue();
                 ExecuteRPCBeforeUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -186,14 +165,10 @@ namespace Unity.ClusterDisplay
 
         public void AfterUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (afterUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterUpdateRPCQueue.Dequeue();
                 ExecuteRPCAfterUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -203,14 +178,10 @@ namespace Unity.ClusterDisplay
 
         public void BeforeLateUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (beforeLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeLateUpdateRPCQueue.Dequeue();
                 ExecuteRPCBeforeLateUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -220,14 +191,10 @@ namespace Unity.ClusterDisplay
 
         public void AfterLateUpdate()
         {
-            if (!ObjectRegistry.TryGetInstance(out var objectRegistry))
-                return;
-
             while (afterLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterLateUpdateRPCQueue.Dequeue();
                 ExecuteRPCAfterLateUpdate(
-                    objectRegistry,
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 

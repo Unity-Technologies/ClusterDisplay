@@ -86,7 +86,6 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
-
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
@@ -103,6 +102,7 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.y *= croppedSize.y;
                 croppedViewport.width *= croppedSize.x;
                 croppedViewport.height *= croppedSize.y;
+
                 cmd.SetViewport(croppedViewport);
 
                 var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
@@ -114,10 +114,9 @@ namespace Unity.ClusterDisplay.Graphics
                     stitcherParameters.scaleBiasRT);
             }
 
+            m_QueuedStitcherParameters.Clear();
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
-
-            m_QueuedStitcherParameters.Clear();
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

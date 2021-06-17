@@ -69,20 +69,14 @@ namespace Unity.ClusterDisplay.Graphics
             var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
             var sourceRT = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
-            // cmd.SetRenderTarget(presentRT);
-            // cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
-            // Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
-
             if (ClusterDisplay.ClusterDisplayState.IsMaster)
             {
                 var backBufferRT = BackBufferRT((int)Screen.width, (int)Screen.height);
 
                 cmd.SetRenderTarget(presentRT);
-                // cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
                 Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
 
                 cmd.SetRenderTarget(backBufferRT);
-                // cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
                 Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
             }
 

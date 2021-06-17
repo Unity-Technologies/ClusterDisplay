@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay
         private static TypeReference cachedStringTypeRef;
         private static MethodInfo cachedGetIsMasterMethod;
         private static MethodReference cachedDebugLogMethodRef;
-        private static MethodReference cachedObjectRegistryGetItemMethodRef;
+        private static MethodReference cachedGetInstanceMethodRef;
 
         private static readonly Dictionary<RPCExecutionStage, ILProcessor> cachedExecuteQueuedRPCMethodILProcessors = new Dictionary<RPCExecutionStage, ILProcessor>();
         private static readonly Dictionary<RPCExecutionStage, Instruction> executionStageLastSwitchJmpInstructions = new Dictionary<RPCExecutionStage, Instruction>();

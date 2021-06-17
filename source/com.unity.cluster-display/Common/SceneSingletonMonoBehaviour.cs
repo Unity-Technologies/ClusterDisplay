@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay
                         continue;
                     }
 
-                    instance = instances[i];
+                    return (instance = instances[i]) != null;
                 }
 
                 return false;

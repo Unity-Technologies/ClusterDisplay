@@ -152,16 +152,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (contextCamera == null)
                 return;
 
-            // var projectionMatrix = contextCamera.projectionMatrix;
-            // var matrix = new Matrix4x4(
-            //     m_SerializedProjectionMatrixC1,
-            //     m_SerializedProjectionMatrixC2,
-            //     m_SerializedProjectionMatrixC3,
-            //     m_SerializedProjectionMatrixC4);
-
-            // contextCamera.projectionMatrix = matrix;
-            // contextCamera.cullingMatrix = matrix * contextCamera.worldToCameraMatrix;
-
             contextCamera.ResetProjectionMatrix();
         }
 

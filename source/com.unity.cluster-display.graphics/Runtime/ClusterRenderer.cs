@@ -382,5 +382,7 @@ namespace Unity.ClusterDisplay.Graphics
                 Shader.EnableKeyword(k_ShaderKeyword);
             else Shader.DisableKeyword(k_ShaderKeyword);
         }
+
+        public void ToggleShaderKeywords(bool keywordEnabled) => ToggleClusterDisplayShaderKeywords(keywordEnabled);
     }
 }

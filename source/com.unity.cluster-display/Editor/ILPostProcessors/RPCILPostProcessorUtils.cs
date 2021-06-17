@@ -699,25 +699,6 @@ namespace Unity.ClusterDisplay
             return (tryGetInstanceMethodRef = baseGenericMethodRef) != null;
         }
 
-        private static void InjectObjectRegistryTryGet(
-            ModuleDefinition moduleDef,
-            ILProcessor onTryCallILProcessor,
-            TypeDefinition objectRegistryTypeDef,
-            MethodReference objectRegistryTryGetInstance,
-            Instruction afterInstruction,
-            out Instruction tryGetInstanceFailureInstruction,
-            out Instruction lastInstruction)
-        {
-            var objectRegistryLocalVariable = new VariableDefinition(moduleDef.ImportReference(objectRegistryTypeDef));
-            onTryCallILProcessor.Body.Variables.Add(objectRegistryLocalVariable);
-
-            IsertPushLocalVariableAfter(onTryCallILProcessor, ref afterInstruction, onTryCallILProcessor.Body.Variables[0]);
-            InsertAfter(onTryCallILProcessor, ref afterInstruction, OpCodes.Ldc_I4_0);
-            InsertCallAfter(onTryCallILProcessor, ref afterInstruction, objectRegistryTryGetInstance);
-            InsertAfter(onTryCallILProcessor, ref afterInstruction, OpCodes.Brfalse, onTryCallILProcessor.Body.Instructions[0]);
-            tryGetInstanceFailureInstruction = lastInstruction = afterInstruction;
-        }
-
         private static bool TryGetDerrivedType (
             AssemblyDefinition assemblyDef,
             TypeDefinition targetTypeDef,

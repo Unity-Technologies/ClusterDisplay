@@ -100,21 +100,21 @@ namespace Unity.ClusterDisplay
                 return true;
             }
 
-            private bool TryGetObjectRegistryGetItemMethodRef (out MethodReference objectRegistryGetItemMethodRef)
+            private bool TryGetGetInstanceMethodRef (out MethodReference getInstanceMethodRef)
             {
-                if (cachedObjectRegistryGetItemMethodRef != null)
+                if (cachedGetInstanceMethodRef != null)
                 {
-                    objectRegistryGetItemMethodRef = cachedObjectRegistryGetItemMethodRef;
+                    getInstanceMethodRef = cachedGetInstanceMethodRef;
                     return true;
                 }
 
-                if (!TryFindPropertyGetMethodWithAttribute<ObjectRegistry.ObjectRegistryGetItemMarker>(typeof(ObjectRegistry), out var methodInfo))
+                if (!TryFindMethodWithAttribute<SceneObjectsRegistry.GetInstanceMarker>(typeof(SceneObjectsRegistry), out var methodInfo))
                 {
-                    objectRegistryGetItemMethodRef = null;
+                    getInstanceMethodRef = null;
                     return false;
                 }
 
-                return (objectRegistryGetItemMethodRef = cachedObjectRegistryGetItemMethodRef = moduleDef.ImportReference(methodInfo)) != null;
+                return (getInstanceMethodRef = cachedGetInstanceMethodRef = moduleDef.ImportReference(methodInfo)) != null;
             }
 
             private bool TryInjectRPCInterceptIL (
@@ -254,23 +254,21 @@ namespace Unity.ClusterDisplay
                 out Instruction firstInstructionOfInjection)
             {
                 var method = ilProcessor.Body.Method;
-                if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.ObjectRegistryMarker>(method, out var objectParamDef) ||
-                    !TryFindParameterWithAttribute<RPCInterfaceRegistry.PipeIdMarker>(method, out var pipeIdParamDef) ||
+                if (!TryFindParameterWithAttribute<RPCInterfaceRegistry.PipeIdMarker>(method, out var pipeIdParamDef) ||
                     !TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(method, out var bufferPosParamDef))
                 {
                     firstInstructionOfInjection = null;
                     return false;
                 }
 
-                if (!TryGetObjectRegistryGetItemMethodRef(out var objectRegistryTryGetItemMethodRef))
+                if (!TryGetGetInstanceMethodRef(out var getInstanceMEthodRef))
                 {
                     firstInstructionOfInjection = null;
                     return false;
                 }
 
-                var afterInstruction = firstInstructionOfInjection = InsertPushParameterToStackBefore(ilProcessor, beforeInstruction, objectParamDef, isStaticCaller: method.IsStatic, byReference: false);
-                InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, pipeIdParamDef, isStaticCaller: method.IsStatic, byReference: false); // Load pipeId parameter onto stack.
-                InsertCallAfter(ilProcessor, ref afterInstruction, objectRegistryTryGetItemMethodRef);
+                var afterInstruction = firstInstructionOfInjection = InsertPushParameterToStackBefore(ilProcessor, beforeInstruction, pipeIdParamDef, isStaticCaller: method.IsStatic, byReference: false); // Load pipeId parameter onto stack.
+                InsertCallAfter(ilProcessor, ref afterInstruction, getInstanceMEthodRef);
 
                 if (!targetMethod.HasParameters)
                 {
