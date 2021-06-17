@@ -13,7 +13,24 @@ namespace Unity.ClusterDisplay
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {
         public class GetInstanceMarker : System.Attribute {}
-        [GetInstanceMarker] public static Object GetInstance(ushort pipeId) => instances[pipeId];
+
+        /// <summary>
+        /// RPCIL references objects through this method to directly call methods on the instance. 
+        /// </summary>
+        /// <param name="pipeId">The ID of your instance containing and RPC method.</param>
+        /// <returns></returns>
+        [GetInstanceMarker] public static Object GetInstance(ushort pipeId)
+        {
+            // TODO: Wrap this null check in a verbose logging #if to improve performance.
+            var obj = instances[pipeId];
+            if (obj == null)
+            {
+                Debug.LogError($"There is no instance with pipe ID: \"{pipeId}\", verify whether your instance was destroyed or unregistered.");
+                return null;
+            }
+
+            return obj;
+        }
 
         private readonly static IDManager pipeIdManager = new IDManager();
 
