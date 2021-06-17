@@ -1,12 +1,32 @@
-﻿using System;
+﻿using System.Reflection;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    [DefaultExecutionOrder(int.MaxValue)]
-    public abstract class RPCInterfaceRegistry : SingletonScriptableObject<RPCInterfaceRegistry>
+    public abstract class RPCInterfaceRegistry
     {
+        private const string RPCILFullName = "Unity.ClusterDisplay.Networking.RPCIL";
+        private static RPCInterfaceRegistry instance;
+        static RPCInterfaceRegistry ()
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (var assembly in assemblies)
+            {
+                var types = assembly.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.FullName != RPCILFullName)
+                        continue;
+
+                    instance = (RPCInterfaceRegistry)assembly.CreateInstance(type.FullName);
+                    return;
+                }
+            }
+        }
+
         public class OnTryCallMarker : Attribute {}
         public class OnTryStaticCallMarker : Attribute {}
 
@@ -38,6 +58,23 @@ namespace Unity.ClusterDisplay
             public ushort rpcsBufferParametersStartPosition;
         }
 
+        protected delegate bool ExecuteStaticRPCDelegate(
+            ushort rpcId, 
+            ushort parametersPayloadSize, 
+            ref ushort rpcBufferParameterPosition);
+
+        protected delegate bool ExecuteRPCDelegate(
+            ushort rpcId, 
+            ushort pipeId, 
+            ushort parametersPayloadSize, 
+            ref ushort rpcBufferParameterPosition);
+
+        protected delegate void ExecuteQueuedRPCDelegate(
+            ushort rpcId, 
+            ushort pipeId, 
+            ushort parametersPayloadSize, 
+            ushort rpcBufferParameterPosition);
+
         private static readonly Queue<QueuedRPCCall> beforeFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
         private static readonly Queue<QueuedRPCCall> afterFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
@@ -47,16 +84,20 @@ namespace Unity.ClusterDisplay
         private static readonly Queue<QueuedRPCCall> beforeLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
         private static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
-        protected abstract bool OnTryCallInstance(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcsBufferPosition);
+        protected static ExecuteRPCDelegate OnTryCallInstanceDelegate;
+        protected static ExecuteStaticRPCDelegate OnTryStaticCallInstanceDelegate;
 
-        protected abstract bool OnTryStaticCallInstance(
-            ushort rpcId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcsBufferPosition);
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeFixedUpdateDelegate;
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterFixedUpdateDelegate;
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeUpdateDelegate;
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterUpdateDelegate;
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeLateUpdateDelegate;
+        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterLateUpdateDelegate;
+
+        private static void DelegateNotRegisteredError ()
+        {
+            Debug.LogError($"Unable to call instance method, the delegate has not been registered!");
+        }
 
         public static bool TryCallInstance (
             ushort rpcId, 
@@ -64,10 +105,13 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize, 
             ref ushort rpcsBufferPosition)
         {
-            if (!TryGetInstance(out var instanceRegistry))
+            if (OnTryCallInstanceDelegate == null)
+            {
+                DelegateNotRegisteredError();
                 return false;
+            }
 
-            return instanceRegistry.OnTryCallInstance(
+            return OnTryCallInstanceDelegate(
                 rpcId, 
                 pipeId, 
                 parametersPayloadSize, 
@@ -79,57 +123,34 @@ namespace Unity.ClusterDisplay
             ushort parametersPayloadSize,
             ref ushort rpcsBufferPosition)
         {
-            if (!TryGetInstance(out var instanceRegistry))
+            if (OnTryStaticCallInstanceDelegate == null)
+            {
+                DelegateNotRegisteredError();
                 return false;
+            }
 
-            return instanceRegistry.OnTryStaticCallInstance(
+            return OnTryStaticCallInstanceDelegate(
                 rpcId, 
                 parametersPayloadSize, 
                 ref rpcsBufferPosition);
         }
 
-        protected abstract void ExecuteRPCBeforeFixedUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        protected abstract void ExecuteRPCAfterFixedUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        protected abstract void ExecuteRPCBeforeUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        protected abstract void ExecuteRPCAfterUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        protected abstract void ExecuteRPCBeforeLateUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        protected abstract void ExecuteRPCAfterLateUpdate(
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
-
-        public void BeforeFixedUpdate()
+        public static void BeforeFixedUpdate()
         {
+            if (beforeFixedUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCBeforeFixedUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                beforeFixedUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (beforeFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeFixedUpdateRPCQueue.Dequeue();
-                ExecuteRPCBeforeFixedUpdate(
+                ExecuteRPCBeforeFixedUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -137,12 +158,22 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void AfterFixedUpdate()
+        public static void AfterFixedUpdate()
         {
+            if (afterFixedUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCAfterFixedUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                afterFixedUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (afterFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
-                ExecuteRPCAfterFixedUpdate(
+                ExecuteRPCAfterFixedUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -150,12 +181,22 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void BeforeUpdate()
+        public static void BeforeUpdate()
         {
+            if (beforeUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCBeforeUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                beforeUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (beforeUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeUpdateRPCQueue.Dequeue();
-                ExecuteRPCBeforeUpdate(
+                ExecuteRPCBeforeUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -163,12 +204,22 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void AfterUpdate()
+        public static void AfterUpdate()
         {
+            if (afterUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCAfterUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                afterUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (afterUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterUpdateRPCQueue.Dequeue();
-                ExecuteRPCAfterUpdate(
+                ExecuteRPCAfterUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -176,12 +227,22 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void BeforeLateUpdate()
+        public static void BeforeLateUpdate()
         {
+            if (beforeLateUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCBeforeLateUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                beforeLateUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (beforeLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeLateUpdateRPCQueue.Dequeue();
-                ExecuteRPCBeforeLateUpdate(
+                ExecuteRPCBeforeLateUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 
@@ -189,12 +250,22 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void AfterLateUpdate()
+        public static void AfterLateUpdate()
         {
+            while (afterLateUpdateRPCQueue.Count == 0)
+                return;
+
+            if (ExecuteRPCAfterLateUpdateDelegate == null)
+            {
+                DelegateNotRegisteredError();
+                afterLateUpdateRPCQueue.Clear();
+                return;
+            }
+
             while (afterLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterLateUpdateRPCQueue.Dequeue();
-                ExecuteRPCAfterLateUpdate(
+                ExecuteRPCAfterLateUpdateDelegate(
                     queuedRPCCall.rpcId, 
                     queuedRPCCall.pipeId, 
                     queuedRPCCall.parametersPayloadSize, 

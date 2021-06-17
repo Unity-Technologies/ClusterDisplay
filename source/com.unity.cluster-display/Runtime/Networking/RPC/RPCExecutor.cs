@@ -185,57 +185,44 @@ namespace Unity.ClusterDisplay
 
         public static void BeforeFixedUpdate ()
         {
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-
             m_CurrentExecutionStage = RPCExecutionStage.BeforeFixedUpdate;
             // Debug.Log("BeforeFixedUpdate");
-            instanceRegistry.BeforeFixedUpdate();
+            RPCInterfaceRegistry.BeforeFixedUpdate();
         }
 
         public static void AfterFixedUpdate ()
         {
             m_CurrentExecutionStage = RPCExecutionStage.AfterFixedUpdate;
             // Debug.Log("AfterFixedUpdate");
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-            instanceRegistry.AfterFixedUpdate();
+            RPCInterfaceRegistry.AfterFixedUpdate();
         }
 
         public static void BeforeUpdate ()
         {
             m_CurrentExecutionStage = RPCExecutionStage.BeforeUpdate;
             // Debug.Log("BeforeUpdate");
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-            instanceRegistry.BeforeUpdate();
+            RPCInterfaceRegistry.BeforeUpdate();
         }
 
         public static void AfterUpdate ()
         {
             m_CurrentExecutionStage = RPCExecutionStage.AfterUpdate;
             // Debug.Log("AfterUpdate");
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-            instanceRegistry.AfterUpdate();
+            RPCInterfaceRegistry.AfterUpdate();
         }
 
         public static void BeforeLateUpdate ()
         {
             m_CurrentExecutionStage = RPCExecutionStage.BeforeLateUpdate;
             // Debug.Log("BeforeLateUpdate");
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-            instanceRegistry.BeforeLateUpdate();
+            RPCInterfaceRegistry.BeforeLateUpdate();
         }
 
         public static void AfterLateUpdate ()
         {
             m_CurrentExecutionStage = RPCExecutionStage.AfterLateUpdate;
             // Debug.Log("AfterLateUpdate");
-            if (!RPCInterfaceRegistry.TryGetInstance(out var instanceRegistry))
-                return;
-            instanceRegistry.AfterLateUpdate();
+            RPCInterfaceRegistry.AfterLateUpdate();
         }
     }
 }

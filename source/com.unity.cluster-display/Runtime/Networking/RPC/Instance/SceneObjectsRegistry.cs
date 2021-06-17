@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay
     {
         private bool sceneObjectsRegistered = false;
 
-        private List<Object> sceneObjects = new List<Object>();
+        private readonly List<Object> sceneObjects = new List<Object>();
         [SerializeField] private Object[] serializedSceneObjects;
 
         private void Awake() => RegisterObjects();
@@ -65,7 +65,6 @@ namespace Unity.ClusterDisplay
         {
             if (sceneObjects.Count == 0)
                 return;
-
             serializedSceneObjects = sceneObjects.ToArray();
         }
 
@@ -78,9 +77,7 @@ namespace Unity.ClusterDisplay
             {
                 if (serializedSceneObjects[i] == null)
                     continue;
-
-                sceneObjects.Add(serializedSceneObjects[i]);
-                RegisterInstanceAccessor(serializedSceneObjects[i]);
+                Register(serializedSceneObjects[i]);
             }
 
             serializedSceneObjects = sceneObjects.ToArray();
@@ -104,7 +101,15 @@ namespace Unity.ClusterDisplay
                 return;
 
             if (serializedSceneObjects != null)
-                RegisterInstanceAccessors(serializedSceneObjects);
+            {
+                for (int i = 0; i < serializedSceneObjects.Length; i++)
+                {
+                    if (serializedSceneObjects[i] == null)
+                        return;
+
+                    Register(serializedSceneObjects[i]);
+                }
+            }
 
             sceneObjectsRegistered = true;
         }
