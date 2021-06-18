@@ -248,6 +248,40 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        public static Type[] GetAllTypes ()
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(assembly =>
+                {
+                    Type[] assemblyTypes = null;
+                    try
+                    {
+                        assemblyTypes = assembly.GetTypes();
+                    }
+                    catch (ReflectionTypeLoadException e)
+                    {
+                        assemblyTypes = e.Types;
+                    }
+
+                    return assemblyTypes;
+                }).ToArray();
+        }
+
+        public static Type[] GetAllTypes (Assembly assembly)
+        {
+            Type[] assemblyTypes = null;
+            try
+            {
+                assemblyTypes = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                assemblyTypes = e.Types;
+            }
+
+            return assemblyTypes;
+        }
+
         public static Type[] GetAllTypes (string filter, Assembly targetAssembly, bool includeGenerics = true)
         {
             Type[] types = new Type[1] {
@@ -255,30 +289,46 @@ namespace Unity.ClusterDisplay
             };
 
             string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
+
+            Type[] targetAssemblyTypes = null;
+            try
+            {
+                targetAssemblyTypes = targetAssembly.GetTypes();
+            } catch (ReflectionTypeLoadException e)
+            {
+                targetAssemblyTypes = e.Types;
+            }
+
             return filterLower == null ?
 
-                targetAssembly.GetTypes()
-                .Where(type =>
-                {
-                    bool found = false;
-                    for (int i = 0; i < types.Length; i++)
-                        found |= type.IsSubclassOf(types[i]);
-                    return found;
-                })
-                .Where(type => includeGenerics ? true : !type.IsGenericType)
-                .ToArray() :
+                targetAssemblyTypes
+                    .Where(type =>
+                    {
+                        if (type == null)
+                            return false;
 
-                targetAssembly.GetTypes()
-                .Where(type =>
-                {
-                    bool found = false;
-                    for (int i = 0; i < types.Length; i++)
-                        found |= type.IsSubclassOf(types[i]);
-                    return found;
-                })
-                .Where(type => type.FullName.ToLower().Contains(filterLower))
-                .Where(type => includeGenerics ? true : !type.IsGenericType)
-                .ToArray();
+                        bool found = false;
+                        for (int i = 0; i < types.Length; i++)
+                            found |= type.IsSubclassOf(types[i]);
+                        return found;
+                    })
+                    .Where(type => includeGenerics ? true : !type.IsGenericType)
+                    .ToArray() :
+
+                targetAssemblyTypes
+                    .Where(type =>
+                    {
+                        if (type == null)
+                            return false;
+
+                        bool found = false;
+                        for (int i = 0; i < types.Length; i++)
+                            found |= type.IsSubclassOf(types[i]);
+                        return found;
+                    })
+                    .Where(type => type.FullName.ToLower().Contains(filterLower))
+                    .Where(type => includeGenerics ? true : !type.IsGenericType)
+                    .ToArray();
         }
 
         public static Type[] GetAllTypes (string filter, bool includeGenerics = true)
@@ -291,29 +341,59 @@ namespace Unity.ClusterDisplay
             return filterLower == null ?
 
                 AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(type =>
-                {
-                    bool found = false;
-                    for (int i = 0; i < types.Length; i++)
-                        found |= type.IsSubclassOf(types[i]);
-                    return found;
-                })
-                .Where(type => includeGenerics ? true : !type.IsGenericType)
-                .ToArray() :
+                    .SelectMany(assembly =>
+                    {
+                        Type[] assemblyTypes = null;
+                        try
+                        {
+                            assemblyTypes = assembly.GetTypes();
+                        } catch (ReflectionTypeLoadException e)
+                        {
+                            assemblyTypes = e.Types;
+                        }
+
+                        return assemblyTypes;
+                    })
+                    .Where(type =>
+                    {
+                        if (type == null)
+                            return false;
+
+                        bool found = false;
+                        for (int i = 0; i < types.Length; i++)
+                            found |= type.IsSubclassOf(types[i]);
+                        return found;
+                    })
+                    .Where(type => includeGenerics ? true : !type.IsGenericType)
+                    .ToArray() :
 
                 AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(type =>
-                {
-                    bool found = false;
-                    for (int i = 0; i < types.Length; i++)
-                        found |= type.IsSubclassOf(types[i]);
-                    return found;
-                })
-                .Where(type => type.FullName.ToLower().Contains(filterLower))
-                .Where(type => includeGenerics ? true : !type.IsGenericType)
-                .ToArray();
+                    .SelectMany(assembly => 
+                    {
+                        Type[] assemblyTypes = null;
+                        try
+                        {
+                            assemblyTypes = assembly.GetTypes();
+                        } catch (ReflectionTypeLoadException e)
+                        {
+                            assemblyTypes = e.Types;
+                        }
+
+                        return assemblyTypes;
+                    })
+                    .Where(type =>
+                    {
+                        if (type == null)
+                            return false;
+
+                        bool found = false;
+                        for (int i = 0; i < types.Length; i++)
+                            found |= type.IsSubclassOf(types[i]);
+                        return found;
+                    })
+                    .Where(type => type.FullName.ToLower().Contains(filterLower))
+                    .Where(type => includeGenerics ? true : !type.IsGenericType)
+                    .ToArray();
         }
 
         public static bool TryGetAllMethodsWithAttribute<T> (out MethodInfo[] methodInfos, BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
@@ -326,7 +406,17 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            return (methodInfos = defaultAssembly.GetTypes()
+            Type[] types = null;
+            try
+            {
+                types = defaultAssembly.GetTypes();
+            } catch (ReflectionTypeLoadException e)
+            {
+                types = e.Types;
+            }
+
+            return (methodInfos = types
+                .Where(type => type != null)
                 .SelectMany(type => type.GetMethods(bindingFlags)
                     .Where(method => method.CustomAttributes
                         .Any(customAttribute => customAttribute.AttributeType == targetAttribute))).ToArray()).Length > 0;

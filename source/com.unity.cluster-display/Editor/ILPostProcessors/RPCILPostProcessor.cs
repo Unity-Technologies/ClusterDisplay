@@ -170,6 +170,7 @@ namespace Unity.ClusterDisplay
             return instruction;
         }
 
+        /*
         private static void CachMethodReferencesInMethodInstructions (MethodDefinition callingMethodDef)
         {
             if (!cachedCallTree.TryGetValue(callingMethodDef.MetadataToken, out var call))
@@ -229,8 +230,182 @@ namespace Unity.ClusterDisplay
                 }
             }
         }
+        */
 
         private static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == methodDef.Module.ImportReference(typeof(System.Collections.IEnumerator)).MetadataToken;
+
+        private static bool TryPushMethodRef<DelegateMarker> (AssemblyDefinition compiledAssemblyDef, MethodReference methodRef, ILProcessor constructorILProcessor)
+            where DelegateMarker : Attribute
+        {
+            constructorILProcessor.Emit(OpCodes.Ldnull);
+            constructorILProcessor.Emit(OpCodes.Ldftn, methodRef);
+
+            if (!TryFindNestedTypeWithAttribute<DelegateMarker>(compiledAssemblyDef.MainModule, typeof(RPCInterfaceRegistry), out var delegateTypeRef))
+                return false;
+
+            constructorILProcessor.Emit(OpCodes.Newobj, compiledAssemblyDef.MainModule.ImportReference(delegateTypeRef.Resolve().Methods.FirstOrDefault(method => method.IsConstructor)));
+            return true;
+        }
+
+        private static bool TryCreateRPCILClassConstructor (
+            AssemblyDefinition compiledAssemblyDef, 
+            MethodReference onTryCallInstanceMethodDef,
+            MethodReference onTryStaticCallInstanceMethodDef,
+            MethodReference executeRPCBeforeFixedUpdateMethodDef,
+            MethodReference executeRPCAfterFixedUpdateMethodDef,
+            MethodReference executeRPCBeforeUpdateMethodDef,
+            MethodReference executeRPCAfterUpdateMethodDef,
+            MethodReference executeRPCBeforeLateUpdateMethodDef,
+            MethodReference executeRPCAfterLateUpdateMethodDef,
+            out MethodDefinition constructorMethodDef)
+        {
+            constructorMethodDef = new MethodDefinition(".ctor", Mono.Cecil.MethodAttributes.Public, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            var constructorILProcessor = constructorMethodDef.Body.GetILProcessor();
+
+            constructorILProcessor.Emit(OpCodes.Ldarg_0);
+
+            if (!TryPushMethodRef<RPCInterfaceRegistry.OnTryCallDelegateMarker>(compiledAssemblyDef, onTryCallInstanceMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.OnTryStaticCallDelegateMarker>(compiledAssemblyDef, onTryStaticCallInstanceMethodDef, constructorILProcessor) || 
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeFixedUpdateMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterFixedUpdateMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeUpdateMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterUpdateMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeLateUpdateMethodDef, constructorILProcessor) ||
+                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterLateUpdateMethodDef, constructorILProcessor))
+            {
+                constructorMethodDef = null;
+                return false;
+            }
+
+            var constructorMethodInfo = typeof(RPCInterfaceRegistry).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(constructorInfo => constructorInfo.GetCustomAttribute<RPCInterfaceRegistry.RPCInterfaceRegistryConstuctorMarker>() != null);
+            constructorILProcessor.Emit(OpCodes.Call, compiledAssemblyDef.MainModule.ImportReference(constructorMethodInfo));
+            constructorILProcessor.Emit(OpCodes.Nop);
+            constructorILProcessor.Emit(OpCodes.Nop);
+            constructorILProcessor.Emit(OpCodes.Ret);
+
+            return true;
+        }
+
+        private static void AddCustomAttributeToParameterDef<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
+        {
+            var onTryCallMarkerAttributeTypeDef = compiledAssemblyDef.MainModule.ImportReference(typeof(Attribute)).Resolve();
+            var constructor = onTryCallMarkerAttributeTypeDef.Methods.FirstOrDefault(methodDef => methodDef.IsConstructor);
+            parameterDef.CustomAttributes.Add(new CustomAttribute(compiledAssemblyDef.MainModule.ImportReference(constructor)));
+        }
+
+        private static void AddCustomAttribute<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
+        {
+            var attributeTypeRef = moduleDef.ImportReference(typeof(Attribute)).Resolve();
+            var constructor = attributeTypeRef.Methods.FirstOrDefault(method => method.IsConstructor);
+            var customAttribute = new CustomAttribute(moduleDef.ImportReference(constructor));
+            methoDef.CustomAttributes.Add(customAttribute);
+        }
+
+        private static bool TryCreateRPCILClass (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
+        {
+            var newTypeDef = new TypeDefinition("Unity.ClusterDisplay.Networking", "RPCIL", Mono.Cecil.TypeAttributes.Public);
+            newTypeDef.BaseType = compiledAssemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry));
+
+            var rpcIdParameterDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, rpcIdParameterDef);
+
+            var pipeParameterDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, pipeParameterDef);
+
+            var parametersPayloadSize = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, parametersPayloadSize);
+
+            var rpcBufferParameterPositionRef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.In, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            var rpcBufferParameterPosition = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+
+            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPositionRef);
+            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPosition);
+
+            var onTryCallInstanceMethodDef = new MethodDefinition("OnTryCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
+            onTryCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
+            onTryCallInstanceMethodDef.Parameters.Add(pipeParameterDef);
+            onTryCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
+            onTryCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
+            AddCustomAttribute<RPCInterfaceRegistry.OnTryCallMarker>(compiledAssemblyDef.MainModule, onTryCallInstanceMethodDef);
+
+            var onTryStaticCallInstanceMethodDef = new MethodDefinition("OnTryStaticCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
+            AddCustomAttribute<RPCInterfaceRegistry.OnTryStaticCallMarker>(compiledAssemblyDef.MainModule, onTryStaticCallInstanceMethodDef);
+
+            var executeRPCBeforeFixedUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeFixedUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeFixedUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeFixedUpdateMethodDef);
+
+            var executeRPCAfterFixedUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterFixedUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterFixedUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterFixedUpdateMethodDef);
+
+            var executeRPCBeforeUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCBeforeUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCBeforeUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCBeforeUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCBeforeUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeUpdateMethodDef);
+
+            var executeRPCAfterUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCAfterUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCAfterUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCAfterUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCAfterUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterUpdateMethodDef);
+
+            var executeRPCBeforeLateUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeLateUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeLateUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeLateUpdateMethodDef);
+
+            var executeRPCAfterLateUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterLateUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeRPCAfterLateUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeRPCAfterLateUpdateMethodDef.Parameters.Add(pipeParameterDef);
+            executeRPCAfterLateUpdateMethodDef.Parameters.Add(parametersPayloadSize);
+            executeRPCAfterLateUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterLateUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterLateUpdateMethodDef);
+
+            newTypeDef.Methods.Add(onTryCallInstanceMethodDef);
+            newTypeDef.Methods.Add(onTryStaticCallInstanceMethodDef);
+            newTypeDef.Methods.Add(executeRPCBeforeFixedUpdateMethodDef);
+            newTypeDef.Methods.Add(executeRPCAfterFixedUpdateMethodDef);
+            newTypeDef.Methods.Add(executeRPCBeforeUpdateMethodDef);
+            newTypeDef.Methods.Add(executeRPCAfterUpdateMethodDef);
+            newTypeDef.Methods.Add(executeRPCBeforeLateUpdateMethodDef);
+            newTypeDef.Methods.Add(executeRPCAfterLateUpdateMethodDef);
+
+            if (!TryCreateRPCILClassConstructor(
+                compiledAssemblyDef, 
+                onTryCallInstanceMethodDef,
+                onTryStaticCallInstanceMethodDef,
+                executeRPCBeforeFixedUpdateMethodDef,
+                executeRPCAfterFixedUpdateMethodDef,
+                executeRPCBeforeUpdateMethodDef,
+                executeRPCAfterUpdateMethodDef,
+                executeRPCBeforeLateUpdateMethodDef,
+                executeRPCAfterLateUpdateMethodDef,
+                out var constructorMethodDef))
+            {
+                rpcInterfaceRegistryDerrivedTypeRef = null;
+                return false;
+            }
+
+            newTypeDef.Methods.Add(constructorMethodDef);
+            rpcInterfaceRegistryDerrivedTypeRef = newTypeDef;
+            compiledAssemblyDef.MainModule.Types.Add(newTypeDef);
+            return true;
+        }
 
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
@@ -243,11 +418,16 @@ namespace Unity.ClusterDisplay
             var rpcInterfaceRegistryType = typeof(RPCInterfaceRegistry);
             var rpcInstanceRegistryTypeDef = compiledAssemblyDef.MainModule.ImportReference(rpcInterfaceRegistryType).Resolve();
 
+            if (!TryCreateRPCILClass(compiledAssemblyDef, out var rpcInterfaceRegistryDerrivedTypeRef))
+                goto failure;
+
+            /*
             if (!TryGetDerrivedType(
                 compiledAssemblyDef,
                 rpcInstanceRegistryTypeDef, 
                 out var rpcInterfaceRegistryDerrivedTypeRef))
                 goto failure;
+            */
 
             var onTryCallProcessor = new RPCExecutionILGenerator();
             if (!onTryCallProcessor.TrySetup(

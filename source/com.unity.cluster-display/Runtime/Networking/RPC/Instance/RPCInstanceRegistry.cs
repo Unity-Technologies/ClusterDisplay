@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,28 +6,16 @@ namespace Unity.ClusterDisplay
 {
     public abstract class RPCInterfaceRegistry
     {
-        private const string RPCILFullName = "Unity.ClusterDisplay.Networking.RPCIL";
-        private static RPCInterfaceRegistry instance;
-        static RPCInterfaceRegistry ()
-        {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-            foreach (var assembly in assemblies)
-            {
-                var types = assembly.GetTypes();
-                foreach (var type in types)
-                {
-                    if (type.FullName != RPCILFullName)
-                        continue;
-
-                    instance = (RPCInterfaceRegistry)assembly.CreateInstance(type.FullName);
-                    return;
-                }
-            }
-        }
+        public class RPCInterfaceRegistryConstuctorMarker : Attribute {}
 
         public class OnTryCallMarker : Attribute {}
         public class OnTryStaticCallMarker : Attribute {}
+
+        public class OnTryCallDelegateMarker : Attribute {}
+        public class OnTryStaticCallDelegateMarker : Attribute {}
+
+        public class OnTryCallDelegateFieldMarker : Attribute {}
+        public class OnTryStaticCallDelegateFieldMarker : Attribute {}
 
         public class ObjectRegistryMarker : Attribute {}
         public class PipeIdMarker : Attribute {}
@@ -50,6 +37,15 @@ namespace Unity.ClusterDisplay
         public class ExecuteRPCBeforeLateUpdateMarker : Attribute {};
         public class ExecuteRPCAfterLateUpdateMarker : Attribute {};
 
+        public class ExecuteQueuedRPCDelegateMarker : Attribute { };
+
+        public class ExecuteRPCBeforeFixedUpdateDelegateFieldMarker : Attribute { };
+        public class ExecuteRPCAfterFixedUpdateDelegateFieldMarker : Attribute {};
+        public class ExecuteRPCBeforeUpdateDelegateFieldMarker : Attribute {};
+        public class ExecuteRPCAfterUpdateDelegateFieldMarker : Attribute {};
+        public class ExecuteRPCBeforeLateUpdateDelegateFieldMarker : Attribute {};
+        public class ExecuteRPCAfterLateUpdateDelegateFieldMarker : Attribute {};
+
         protected struct QueuedRPCCall
         {
             public ushort rpcId;
@@ -58,18 +54,65 @@ namespace Unity.ClusterDisplay
             public ushort rpcsBufferParametersStartPosition;
         }
 
-        protected delegate bool ExecuteStaticRPCDelegate(
-            ushort rpcId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcBufferParameterPosition);
+        private const string RPCILFullName = "Unity.ClusterDisplay.Networking.RPCIL";
+        private static RPCInterfaceRegistry instance;
 
-        protected delegate bool ExecuteRPCDelegate(
+        static RPCInterfaceRegistry ()
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (var assembly in assemblies)
+            {
+                var types = ReflectionUtils.GetAllTypes(assembly);
+                foreach (var type in types)
+                {
+                    if (type == null)
+                        continue;
+
+                    if (type.FullName != RPCILFullName)
+                        continue;
+
+                    instance = (RPCInterfaceRegistry)assembly.CreateInstance(type.FullName);
+                    return;
+                }
+            }
+        }
+
+        [RPCInterfaceRegistryConstuctorMarker] protected RPCInterfaceRegistry (
+            ExecuteRPCDelegate OnTryCallInstance,
+            ExecuteStaticRPCDelegate OnTryStaticCallInstance,
+            ExecuteQueuedRPCDelegate ExecuteRPCBeforeFixedUpdate,
+            ExecuteQueuedRPCDelegate ExecuteRPCAfterFixedUpdate,
+            ExecuteQueuedRPCDelegate ExecuteRPCBeforeUpdate,
+            ExecuteQueuedRPCDelegate ExecuteRPCAfterUpdate,
+            ExecuteQueuedRPCDelegate ExecuteRPCBeforeLateUpdate,
+            ExecuteQueuedRPCDelegate ExecuteRPCAfterLateUpdate)
+        {
+            OnTryCallInstanceDelegate += OnTryCallInstance;
+            OnTryStaticCallInstanceDelegate += OnTryStaticCallInstance;
+
+            ExecuteRPCBeforeFixedUpdateDelegate += ExecuteRPCBeforeFixedUpdate;
+            ExecuteRPCAfterFixedUpdateDelegate += ExecuteRPCAfterFixedUpdate;
+
+            ExecuteRPCBeforeUpdateDelegate += ExecuteRPCBeforeUpdate;
+            ExecuteRPCAfterUpdateDelegate += ExecuteRPCAfterUpdate;
+
+            ExecuteRPCBeforeLateUpdateDelegate += ExecuteRPCBeforeLateUpdate;
+            ExecuteRPCAfterLateUpdateDelegate += ExecuteRPCAfterLateUpdate;
+        }
+
+         [OnTryCallDelegateMarker] protected delegate bool ExecuteRPCDelegate(
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
             ref ushort rpcBufferParameterPosition);
 
-        protected delegate void ExecuteQueuedRPCDelegate(
+        [OnTryStaticCallDelegateMarker] protected delegate bool ExecuteStaticRPCDelegate(
+            ushort rpcId, 
+            ushort parametersPayloadSize, 
+            ref ushort rpcBufferParameterPosition);
+
+        [ExecuteQueuedRPCDelegateMarker] protected delegate void ExecuteQueuedRPCDelegate(
             ushort rpcId, 
             ushort pipeId, 
             ushort parametersPayloadSize, 
@@ -84,15 +127,15 @@ namespace Unity.ClusterDisplay
         private static readonly Queue<QueuedRPCCall> beforeLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
         private static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
-        protected static ExecuteRPCDelegate OnTryCallInstanceDelegate;
-        protected static ExecuteStaticRPCDelegate OnTryStaticCallInstanceDelegate;
+        [OnTryCallDelegateFieldMarker] protected static ExecuteRPCDelegate OnTryCallInstanceDelegate;
+        [OnTryStaticCallDelegateFieldMarker] protected static ExecuteStaticRPCDelegate OnTryStaticCallInstanceDelegate;
 
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeFixedUpdateDelegate;
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterFixedUpdateDelegate;
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeUpdateDelegate;
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterUpdateDelegate;
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeLateUpdateDelegate;
-        protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterLateUpdateDelegate;
+        [ExecuteRPCBeforeFixedUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeFixedUpdateDelegate;
+        [ExecuteRPCAfterFixedUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterFixedUpdateDelegate;
+        [ExecuteRPCBeforeUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeUpdateDelegate;
+        [ExecuteRPCAfterUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterUpdateDelegate;
+        [ExecuteRPCBeforeLateUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCBeforeLateUpdateDelegate;
+        [ExecuteRPCAfterLateUpdateDelegateFieldMarker] protected static ExecuteQueuedRPCDelegate ExecuteRPCAfterLateUpdateDelegate;
 
         private static void DelegateNotRegisteredError ()
         {

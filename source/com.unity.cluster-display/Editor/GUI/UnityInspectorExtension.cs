@@ -15,13 +15,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         public UnityInspectorExtension ()
         {
             if (cachedTypesWithCustomEditorAttribute == null)
-                cachedTypesWithCustomEditorAttribute = AppDomain.CurrentDomain
-                    .GetAssemblies()
-                    .SelectMany(assembly => assembly
-                        .GetTypes())
-                    .Where(type => type
-                        .GetCustomAttributes<CustomEditor>().Count() > 0)
-                    .ToArray();
+                cachedTypesWithCustomEditorAttribute = ReflectionUtils.GetAllTypes().Where(type => type != null && type.GetCustomAttributes<CustomEditor>().Count() > 0).ToArray();
         }
     }
 

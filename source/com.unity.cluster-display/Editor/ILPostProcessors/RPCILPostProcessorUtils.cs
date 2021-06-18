@@ -181,6 +181,22 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private static bool TryFindNestedTypeWithAttribute<T> (ModuleDefinition moduleDef, Type type, out TypeReference typeRef, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
+        {
+            var nestedTypes = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+            var typeDef = nestedTypes.FirstOrDefault(nestedType => nestedType.GetCustomAttribute<T>() != null);
+
+            if (typeDef == null)
+            {
+                typeRef = null;
+                Debug.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                return false;
+            }
+
+            typeRef = moduleDef.ImportReference(typeDef);
+            return true;
+        }
+
         private static bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
         {
             var attributeType = typeof(T);
@@ -189,6 +205,18 @@ namespace Unity.ClusterDisplay
 
             if (!found)
                 Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+
+            return found;
+        }
+
+        private static bool TryFindFieldWithAttribute<T> (System.Type type, out FieldInfo fieldInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
+        {
+            var attributeType = typeof(T);
+            var fields = type.GetFields(bindingFlags);
+            var found = (fieldInfo = fields.FirstOrDefault(field => field.GetCustomAttribute<T>() != null)) != null;
+
+            if (!found)
+                Debug.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return found;
         }
