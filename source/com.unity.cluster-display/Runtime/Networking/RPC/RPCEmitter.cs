@@ -6,32 +6,8 @@ using System.Text;
 
 namespace Unity.ClusterDisplay
 {
-    public static class RPCEmitter
+    public static partial class RPCEmitter
     {
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class RPCCallMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class StaticRPCCallMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class AppendRPCStringParameterValueMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class AppendRPCArrayParameterValueMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class AppendRPCValueTypeParameterValueMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class ParseStringMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class ParseArrayMarker : Attribute {}
-
-        [System.AttributeUsage(System.AttributeTargets.Method)]
-        public class ParseStructureMarker : Attribute {}
-
         private static NativeArray<byte> rpcBuffer;
 
         private static int rpcBufferSize;
