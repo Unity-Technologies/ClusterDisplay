@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -16,6 +17,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         [HideInInspector] [SerializeField] private CameraContextTarget m_FocusedCameraContextTarget;
         [HideInInspector] [SerializeField] private CameraContextTarget m_PreviousFocusedCameraContextTarget;
+
+        static CameraContextRegistry ()
+        {
+            SceneManager.sceneLoaded += (scene, mode) =>
+            {
+                PollCameraTargets();
+            };
+        }
 
         /// <summary>
         /// The current camera that's rendering.
@@ -88,8 +97,11 @@ namespace Unity.ClusterDisplay.Graphics
             return cameraContextTarget;
         }
 
-        private void PollCameraTargets ()
+        private static void PollCameraTargets ()
         {
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+                return;
+
             var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
             if (cameraContextTargets.Length == 0)
                 return;
@@ -99,18 +111,20 @@ namespace Unity.ClusterDisplay.Graphics
                 if (!cameraContextTargets[i].TryGetCamera(out var camera))
                     continue;
 
-                if (k_CameraContextTargets.ContainsKey(camera))
+                if (cameraContextRegistry.k_CameraContextTargets.ContainsKey(camera))
                     continue;
 
-                Register(camera);
+                cameraContextRegistry.Register(camera);
             }
         }
 
+        /*
         /// <summary>
         /// When the level is loaded, automatically find all CameraContextTargets and register them.
         /// </summary>
         /// <param name="level"></param>
         private void OnLevelWasLoaded(int level) => PollCameraTargets();
+        */
 
         private void OnCameraEnabled(CameraContextTarget cameraContextTarget)
         {
