@@ -213,8 +213,8 @@ namespace Unity.ClusterDisplay.Graphics
         private void DestroyCameraContextTarget (CameraContextTarget cameraContextTarget)
         {
             if (!Application.isPlaying)
-                Object.DestroyImmediate(cameraContextTarget);
-            else Object.Destroy(cameraContextTarget);
+                DestroyImmediate(cameraContextTarget);
+            else Destroy(cameraContextTarget);
         }
 
         public void Flush ()
