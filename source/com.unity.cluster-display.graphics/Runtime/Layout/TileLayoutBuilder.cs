@@ -6,9 +6,9 @@ namespace Unity.ClusterDisplay.Graphics
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
 #if CLUSTER_DISPLAY_XR
-        protected TileRTManager m_RTManager = new XRTileRTManager();
+        protected XRTileRTManager m_RTManager = new XRTileRTManager();
 #else
-        protected TileRTManager m_RTManager = new StandardTileRTManager();
+        protected StandardTileRTManager m_RTManager = new StandardTileRTManager();
 #endif
 
         protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) 
