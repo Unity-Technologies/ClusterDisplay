@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(tileCount, tileIndex, width, height);
             if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(tileCount, tileIndex, width, height);
             if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
             return rt as RTHandle;
         }
 
@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height);
             if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height);
             if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
             return rt as RTHandle;
         }
     }

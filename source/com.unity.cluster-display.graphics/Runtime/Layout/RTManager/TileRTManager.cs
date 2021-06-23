@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(width, height, format);
             if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(width, height, format);
             if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
+                throw new System.InvalidOperationException("RT is not a RTHandle.");
             return rt as RTHandle;
         }
 
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height, format);
             if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height, format);
             if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
+                throw new System.InvalidOperationException("RT is not a RTHandle.");
             return rt as RTHandle;
         }
 
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBackBufferRT(width, height, format);
             if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBackBufferRT(width, height, format);
             if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
+                throw new System.InvalidOperationException("RT is not a RTHandle.");
             return rt as RTHandle;
         }
 
