@@ -85,6 +85,62 @@ namespace Unity.ClusterDisplay
             return (outMethodInfo = filteredMethods.FirstOrDefault()) != null;
         }
 
+        public static bool TryWriteRegisteredAssemblies (string path, string[] assemblies)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogError("Unable to write RPC stubs, the path is invalid.");
+                return false;
+            }
+
+            try
+            {
+                System.IO.File.WriteAllLines(path, assemblies);
+
+            } catch (System.Exception exception)
+            {
+                Debug.LogError($"Unable to write registered assemblies to path: \"{path}\", the following exception occurred.");
+                Debug.LogException(exception);
+                return false;
+            }
+
+            // Debug.Log($"RPC Stubs was written to path: \"{path}\".");
+            return true;
+        }
+
+        public static bool TryReadRegisteredAssemblies (string path, out string[] registeredAssemblyFullNames)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                Debug.LogError("Unable to read registered assemblies, the path is invalid.");
+                registeredAssemblyFullNames = null;
+                return false;
+            }
+
+            if (!System.IO.File.Exists(path))
+            {
+                Debug.LogError($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
+                registeredAssemblyFullNames = null;
+                return false;
+            }
+
+            try
+            {
+                var assemblyFullNames = System.IO.File.ReadAllLines(path);
+                registeredAssemblyFullNames = assemblyFullNames.Where(assemblyFullName => !string.IsNullOrEmpty(assemblyFullName)).ToArray();
+
+            } catch (System.Exception exception)
+            {
+                Debug.LogError($"Unable to read registered assemblies from path: \"{path}\", the following exception occurred.");
+                Debug.LogException(exception);
+                registeredAssemblyFullNames = null;
+                return false;
+            }
+
+            Debug.Log($"Registered assemblies was read from path: \"{path}\".");
+            return true;
+        }
+
         public static bool TryReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs)
         {
             if (string.IsNullOrEmpty(path))
@@ -133,12 +189,12 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                string json = JsonUtility.ToJson(serializedInstanceRPCs);
+                string json = JsonUtility.ToJson(serializedInstanceRPCs, true);
                 System.IO.File.WriteAllText(path, json);
 
             } catch (System.Exception exception)
             {
-                Debug.LogError($"Unable to write RPC stubs from path: \"{path}\", the following exception occurred.");
+                Debug.LogError($"Unable to write RPC stubs to path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
                 return false;
             }

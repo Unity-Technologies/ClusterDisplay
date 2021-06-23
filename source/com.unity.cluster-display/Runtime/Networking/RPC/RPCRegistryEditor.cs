@@ -4,8 +4,10 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Reflection;
+using UnityEngine.UIElements;
 
 #if UNITY_EDITOR
+using UnityEditorInternal;
 using UnityEditor;
 
 namespace Unity.ClusterDisplay
@@ -15,6 +17,16 @@ namespace Unity.ClusterDisplay
         [CustomEditor(typeof(RPCRegistry))]
         private class RPCRegistryEditor : Editor
         {
+            private Assembly[] cachedAllAssemblies;
+            private string assemblySearchStr = "";
+            private Vector2 assemblyListScrollPosition;
+            private Vector2 registeredAssemblyListScrollPosition;
+
+            private Assembly[] cachedSearchedAssemblies;
+            private string[] cachedSearchedAssemblyNames;
+
+            private Assembly selectedAssembly;
+
             private string typeSearchStr = "";
             private Type[] cachedTypes;
             private Type targetType;
@@ -27,20 +39,101 @@ namespace Unity.ClusterDisplay
 
             private Vector2 registeredMethodListPosition;
 
+            private ReorderableList assemblyList;
+
+            private void UpdateAssemblySearch (string newAssemblySearchStr, bool forceUpdate = false)
+            {
+                if (!forceUpdate && newAssemblySearchStr == assemblySearchStr)
+                    return;
+
+                if (cachedAllAssemblies == null)
+                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+                assemblySearchStr = newAssemblySearchStr;
+                cachedSearchedAssemblies = cachedAllAssemblies.Where(assembly => string.IsNullOrEmpty(assemblySearchStr) || assembly.FullName.Contains(assemblySearchStr)).ToArray();
+                cachedSearchedAssemblyNames = cachedSearchedAssemblies.Select(assembly => assembly.GetName().Name).ToArray();
+            }
+
+            private void ListAssemblies ()
+            {
+                var rpcRegistery = target as RPCRegistry;
+                if (cachedSearchedAssemblyNames != null && cachedSearchedAssemblyNames.Length > 0)
+                {
+                    EditorGUILayout.LabelField("Filtered Assemblies", EditorStyles.boldLabel);
+                    assemblyListScrollPosition = EditorGUILayout.BeginScrollView(assemblyListScrollPosition, GUILayout.Height(150));
+
+                    for (int i = 0; i < cachedSearchedAssemblyNames.Length; i++)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        if (GUILayout.Button("Select", GUILayout.Width(60)))
+                        {
+                            selectedAssembly = cachedSearchedAssemblies[i];
+                            UpdateTypeSearch(typeSearchStr, forceUpdate: true);
+                        }
+
+                        var assemblyIsRegistered = rpcRegistery.AssemblyIsRegistered(cachedSearchedAssemblies[i]);
+                        if (GUILayout.Button(assemblyIsRegistered ? "Unregister" : "Register", GUILayout.Width(60)))
+                        {
+                            if (assemblyIsRegistered)
+                                rpcRegistery.UnregisterAssembly(cachedSearchedAssemblies[i]);
+                            else
+                                rpcRegistery.RegisterAssembly(cachedSearchedAssemblies[i]);
+                        }
+
+                        EditorGUILayout.LabelField(cachedSearchedAssemblyNames[i]);
+
+                        EditorGUILayout.EndHorizontal();
+                    }
+
+                    EditorGUILayout.EndScrollView();
+                }
+
+                else EditorGUILayout.LabelField($"No assemblies found from search: \"{assemblySearchStr}\".");
+            }
+
+            private void ListRegisteredAssemblies ()
+            {
+                if (cachedAllAssemblies == null)
+                    return;
+
+                var rpcRegistery = target as RPCRegistry;
+                if (RPCRegistry.targetAssemblies != null && RPCRegistry.targetAssemblies.Count > 0)
+                {
+                    EditorGUILayout.LabelField("Registered Assemblies", EditorStyles.boldLabel);
+                    registeredAssemblyListScrollPosition = EditorGUILayout.BeginScrollView(registeredAssemblyListScrollPosition, GUILayout.Height(150));
+
+                    for (int i = 0; i < RPCRegistry.targetAssemblies.Count; i++)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+
+                        if (GUILayout.Button("Select", GUILayout.Width(60)))
+                        {
+                            selectedAssembly = RPCRegistry.targetAssemblies[i];
+                            UpdateTypeSearch(typeSearchStr, forceUpdate: true);
+                        }
+
+                        if (GUILayout.Button("Unregister", GUILayout.Width(70)))
+                            rpcRegistery.UnregisterAssembly(RPCRegistry.targetAssemblies[i]);
+
+                        EditorGUILayout.LabelField(RPCRegistry.targetAssemblies[i].GetName().Name);
+                        EditorGUILayout.EndHorizontal();
+                    }
+
+                    EditorGUILayout.EndScrollView();
+                }
+            }
+
             private void UpdateTypeSearch (string newClassSearchStr, bool forceUpdate = false)
             {
                 if (!forceUpdate && newClassSearchStr == typeSearchStr)
                     return;
 
+                if (selectedAssembly == null)
+                    return;
+
                 typeSearchStr = newClassSearchStr;
 
-                if (!ReflectionUtils.TryGetDefaultAssembly(out var defaultUserAssembly))
-                {
-                    Debug.LogError($"Unable to find default user assembly with name: \"{ReflectionUtils.DefaultUserAssemblyName}\".");
-                    return;
-                }
-
-                cachedTypes = ReflectionUtils.GetAllTypes(typeSearchStr, defaultUserAssembly, includeGenerics: false);
+                cachedTypes = ReflectionUtils.GetAllTypes(typeSearchStr, selectedAssembly, includeGenerics: false);
             }
 
             private void ListTypes ()
@@ -50,7 +143,7 @@ namespace Unity.ClusterDisplay
 
                 if (cachedTypes != null && cachedTypes.Length > 0)
                 {
-                    EditorGUILayout.LabelField("Types", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Filtered Types", EditorStyles.boldLabel);
                     typeListScrollPosition = EditorGUILayout.BeginScrollView(typeListScrollPosition, GUILayout.Height(150));
                     for (int i = 0; i < cachedTypes.Length; i++)
                     {
@@ -78,7 +171,7 @@ namespace Unity.ClusterDisplay
                 // Type methodTypeInRemoval = null;
                 RPCMethodInfo ? rpcMethodToRemove = null;
 
-                if (rpcRegistry.RPCCount > 0)
+                if (RPCRegistry.RPCCount > 0)
                 {
                     if (targetType != null && targetMethod != null)
                     {
@@ -104,7 +197,7 @@ namespace Unity.ClusterDisplay
 
                     registeredMethodListPosition = EditorGUILayout.BeginScrollView(registeredMethodListPosition, GUILayout.Height(300));
 
-                    rpcRegistry.Foreach((rpcMethodInfo) =>
+                    rpcRegistry.Foreach((Action<RPCMethodInfo>)((rpcMethodInfo) =>
                     {
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
@@ -132,11 +225,11 @@ namespace Unity.ClusterDisplay
                         if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage)
                         {
                             rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
-                            rpcRegistry.SetRPC(ref rpcMethodInfo);
+                            rpcRegistry.UpdateRPC(ref rpcMethodInfo);
                         }
 
                         EditorGUILayout.EndHorizontal();
-                    });
+                    }));
 
                     EditorGUILayout.EndScrollView();
                     RPCEditorGUICommon.HorizontalLine();
@@ -167,15 +260,25 @@ namespace Unity.ClusterDisplay
                     out var rpcMethodInfo);
             }
 
+            private bool changed = false;
             public override void OnInspectorGUI()
             {
-                // base.OnInspectorGUI(); // Something fishy is going on here.
+                RPCRegistry rpcRegistry = target as RPCRegistry;
 
                 if (GUILayout.Button("Reset"))
-                    (target as RPCRegistry).Clear();
+                    rpcRegistry.Clear();
 
-                UpdateTypeSearch(EditorGUILayout.TextField(typeSearchStr));
                 RPCEditorGUICommon.HorizontalLine();
+                EditorGUILayout.LabelField("Assemblies", EditorStyles.boldLabel);
+                UpdateAssemblySearch(EditorGUILayout.TextField(assemblySearchStr));
+                ListAssemblies();
+                ListRegisteredAssemblies();
+                RPCEditorGUICommon.HorizontalLine();
+
+                // assemblyList.DoLayoutList();
+
+                EditorGUILayout.LabelField("Types", EditorStyles.boldLabel);
+                UpdateTypeSearch(EditorGUILayout.TextField(typeSearchStr));
                 ListTypes();
                 RPCEditorGUICommon.HorizontalLine();
 
@@ -207,6 +310,38 @@ namespace Unity.ClusterDisplay
                 }
 
                 ListRegisteredMethods();
+                /*
+                if (changed)
+                    serializedObject.ApplyModifiedProperties();
+                */
+            }
+
+            private void OnEnable()
+            {
+                UpdateAssemblySearch(assemblySearchStr, forceUpdate: true);
+                /*
+                assemblyList = new ReorderableList(
+                    serializedObject,
+                    serializedObject.FindProperty("targetAssemblies"),
+                    true, true, true, true);
+
+                assemblyList.drawHeaderCallback = (Rect rect) => 
+                {
+                    EditorGUI.LabelField(rect, "Assemblies to Post Process");
+                };
+
+                assemblyList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) =>
+                {
+                    var rpcRegistry = target as RPCRegistry;
+                    int selectedIndex = Array.IndexOf(cachedAllAssemblies, cachedAllAssemblies.FirstOrDefault(assembly => assembly.FullName == rpcRegistry.targetAssemblies[index]));
+                    EditorGUI.Popup(rect, selectedIndex, cachedSearchedAssemblyNames);
+                };
+
+                assemblyList.onChangedCallback = (ReorderableList list) =>
+                {
+                    serializedObject.ApplyModifiedProperties();
+                };
+                */
             }
         }
     }

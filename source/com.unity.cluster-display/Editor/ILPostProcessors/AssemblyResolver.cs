@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
+﻿using System.IO;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
@@ -12,13 +7,6 @@ namespace Unity.ClusterDisplay
 {
     public partial class RPCILPostProcessor : ILPostProcessor
     {
-        public struct Call
-        {
-            public List<MetadataToken> callingMethods;
-            public MethodReference calledMethodRef;
-            public List<MetadataToken> methodsCalled;
-        }
-
         private class AssemblyResolver : BaseAssemblyResolver
         {
             private DefaultAssemblyResolver _defaultResolver;
@@ -29,7 +17,7 @@ namespace Unity.ClusterDisplay
 
             public override AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
             {
-                string assemblyLocation = GetAssemblyLocation(name);
+                string assemblyLocation = ReflectionUtils.GetAssemblyLocation(name.Name);
                 try
                 {
 
