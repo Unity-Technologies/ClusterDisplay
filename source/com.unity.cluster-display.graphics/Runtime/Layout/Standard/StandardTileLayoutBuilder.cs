@@ -13,15 +13,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Dispose() {}
 
-        #if CLUSTER_DISPLAY_XR
-        public RenderTexture BlitRT(int width, int height) => m_RTManager.GetBlitRTHandle(width, height);
-        public RenderTexture PresentRT(int width, int height) => m_RTManager.GetPresentRTHandle(width, height);
-#else
-        public RenderTexture GetSourceRT(int width, int height) => m_RTManager.GetSourceRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-        public RenderTexture GetPresentRT(int width, int height) => m_RTManager.GetPresentRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-        public RenderTexture GetBackBufferRT(int width, int height) => m_RTManager.GetBackBufferRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-#endif
-
         private Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
@@ -45,7 +36,7 @@ namespace Unity.ClusterDisplay.Graphics
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
-            camera.targetTexture = GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            camera.targetTexture = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             camera.projectionMatrix = projectionMatrix;
             camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
@@ -66,8 +57,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
-            var presentRT = GetPresentRT((int)Screen.width, (int)Screen.height);
-            var sourceRT = GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
+            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 

@@ -28,8 +28,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (k_ClusterRenderer.cameraController.contextCamera != null)
-                k_ClusterRenderer.cameraController.contextCamera.enabled = true;
+            if (k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera))
+                contextCamera.enabled = true;
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
@@ -84,9 +84,10 @@ namespace Unity.ClusterDisplay.Graphics
             
             for (var i = 0; i != numTiles; ++i)
             {
-                var targetRT = m_RTManager.GetBlitRTHandle(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                var targetRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculateStitcherLayout(
                     camera, 
+                    camera.projectionMatrix,
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
@@ -128,7 +129,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (camera != k_ClusterRenderer.cameraController.contextCamera)
+            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
                 return;
 
             camera.targetTexture = null;

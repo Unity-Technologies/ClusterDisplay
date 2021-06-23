@@ -13,10 +13,9 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Dispose() {}
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
-        private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
-        private RenderTexture BlitRT(int tileCount, int tileIdnex, int width, int height) => m_RTManager.GetBlitRenderTexture(tileCount, tileIdnex, width, height);
-        private RenderTexture PresentRT(int width, int height) => m_RTManager.GetPresentRenderTexture(width, height);
         private Rect m_OverscannedRect;
+
+        private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
 
         /// <summary>
         /// Where rendering actually occurs.
@@ -52,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
-                var blitRT = BlitRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                var blitRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
                 CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
 
                 camera.targetTexture = blitRT;
@@ -85,7 +84,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
-            var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
+            var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
