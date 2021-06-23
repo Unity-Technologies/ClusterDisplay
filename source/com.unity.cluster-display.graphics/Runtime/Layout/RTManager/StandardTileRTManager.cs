@@ -11,7 +11,6 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardTileRTManager : TileRTManager
     {
-        public override RTType type => RTType.RenderTexture;
         private RenderTexture m_BlitRT;
         private RenderTexture m_PresentRT;
         private RenderTexture m_BackBufferRT;

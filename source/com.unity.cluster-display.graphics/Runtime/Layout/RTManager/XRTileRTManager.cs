@@ -8,7 +8,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class XRTileRTManager : TileRTManager
     {
-                public override RTType type => RTType.Handle;
         private RTHandle m_BlitRT;
         private RTHandle m_PresentRT;
         private RTHandle m_BackBufferRT;

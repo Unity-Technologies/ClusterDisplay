@@ -7,7 +7,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class StitcherRTManager
     {
-        public abstract RTType type { get; }
         protected abstract object GetBlitRT(int tileCount, int tileIndex, int width, int height);
         protected abstract object GetPresentRT(int width, int height);
         public abstract void Release();
@@ -16,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(tileCount, tileIndex, width, height);
             if (!(rt is RenderTexture))
-                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -24,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetBlitRT(tileCount, tileIndex, width, height);
             if (!(rt is RTHandle))
-                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RTHandle;
         }
 
@@ -32,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height);
             if (!(rt is RenderTexture))
-                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RenderTexture;
         }
 
@@ -40,7 +39,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var rt = GetPresentRT(width, height);
             if (!(rt is RTHandle))
-                throw new System.InvalidOperationException("Blit RT is not a RenderTexture.");
+                throw new System.InvalidOperationException("RT is not a RenderTexture.");
             return rt as RTHandle;
         }
     }

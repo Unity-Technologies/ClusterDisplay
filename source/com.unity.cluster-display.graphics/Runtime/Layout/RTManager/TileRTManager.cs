@@ -14,7 +14,6 @@ namespace Unity.ClusterDisplay.Graphics
 
     public abstract class TileRTManager
     {
-        public abstract RTType type { get; }
         protected abstract object GetBlitRT(int width, int height, GraphicsFormat format);
         protected abstract object GetPresentRT(int width, int height, GraphicsFormat format);
         protected abstract object GetBackBufferRT(int width, int height, GraphicsFormat format);
