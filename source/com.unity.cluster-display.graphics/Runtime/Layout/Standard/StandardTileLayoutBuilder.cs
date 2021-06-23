@@ -9,13 +9,12 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
-        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
-
-        public override void Dispose() {}
-
+        private StandardTileRTManager m_RTManager = new StandardTileRTManager();
         private Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
+        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public override void Dispose() {}
 
         public override void LateUpdate()
         {
