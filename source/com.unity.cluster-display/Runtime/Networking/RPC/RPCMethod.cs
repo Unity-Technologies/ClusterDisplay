@@ -1,16 +1,17 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
     [Obsolete("RPCMethod has been renamed to RPC")]
-    public class RPCMethod : RPC {}
+    public class RPCMethod : ClusterRPC {}
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
-    public class RPC : Attribute 
+    [Obsolete("RPC has been renamed to ClusterRPC")]
+    public class RPC : ClusterRPC {}
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+    public class ClusterRPC : Attribute 
     {
         [AttributeUsage(AttributeTargets.Parameter)] public class FormalySerializedAsMarker : Attribute {}
         [AttributeUsage(AttributeTargets.Parameter)] public class RPCExecutionStageMarker : Attribute {}
@@ -20,7 +21,7 @@ namespace Unity.ClusterDisplay
         public readonly RPCExecutionStage rpcExecutionStage;
         public readonly ushort rpcId;
 
-        public RPC (
+        public ClusterRPC (
             [RPCExecutionStageMarker] RPCExecutionStage rpcExecutionStage = RPCExecutionStage.Automatic, 
             [RPCIDMarker] ushort rpcId = 0,
             [FormalySerializedAsMarker] string formarlySerializedAs = "")

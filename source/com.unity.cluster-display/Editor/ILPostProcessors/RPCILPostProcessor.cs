@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
@@ -14,445 +16,130 @@ namespace Unity.ClusterDisplay
     {
         public override ILPostProcessor GetInstance() => this;
 
-        public bool TryInjectDefaultSwitchCaseForExecutionStageMethods()
+        private IEnumerable<MethodDefinition> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
         {
-            if (cachedExecuteQueuedRPCMethodILProcessors != null)
+            var rpcMethodCustomAttributeType = typeof(ClusterRPC);
+            var attributeFullName = rpcMethodAttributeFullName = rpcMethodCustomAttributeType.FullName;
+            ConcurrentQueue<MethodDefinition> queuedMethodDefs = new ConcurrentQueue<MethodDefinition>();
+
+            for (int moduleIndex = 0; moduleIndex < compiledAssemblyDef.Modules.Count; moduleIndex++)
             {
-                foreach (var cachedExecutedRPCMethodILProcessor in cachedExecuteQueuedRPCMethodILProcessors)
+                int typeCount = compiledAssemblyDef.Modules[moduleIndex].Types.Count;
+
+                int workerCount = Mathf.Min(Environment.ProcessorCount, typeCount);
+                int typeCountPerWorker = typeCount / workerCount;
+                int remainder = typeCount % workerCount;
+
+                Parallel.For(0, workerCount, workerId =>
                 {
-                    if (!executionStageLastSwitchJmpInstructions.TryGetValue(cachedExecutedRPCMethodILProcessor.Key, out var lastExecuteQueuedRPCJmpInstruction))
-                        continue;
+                    int start = typeCountPerWorker * workerId;
+                    int end = typeCountPerWorker * (workerId + 1);
+                    if (workerId == Environment.ProcessorCount - 1)
+                        end += remainder;
 
-                    var isntructionToJmpTo = cachedExecutedRPCMethodILProcessor.Value.Body.Instructions[cachedExecutedRPCMethodILProcessor.Value.Body.Instructions.Count - 2];
-                    var newInstruction = Instruction.Create(OpCodes.Br, isntructionToJmpTo);
-                    cachedExecutedRPCMethodILProcessor.Value.InsertAfter(lastExecuteQueuedRPCJmpInstruction, newInstruction);
-                }
-            }
+                    // Debug.Log($"Worker: {workerId}, Start: {start}, End: {end}, Type Count: {typeCount}");
 
-            return true;
-        }
-
-        private static void InsertCallAfter (ILProcessor il, ref Instruction afterInstruction, MethodReference methodRef)
-        {
-            Instruction instruction = null;
-            var methodDef = methodRef.Resolve();
-
-            if (methodDef.IsVirtual || methodDef.IsAbstract)
-                instruction = Instruction.Create(OpCodes.Callvirt, methodRef);
-            else instruction = Instruction.Create(OpCodes.Call, methodRef);
-
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertCallBefore (ILProcessor il, Instruction beforeInstruction, MethodReference methodRef)
-        {
-            Instruction instruction = null;
-            var methodDef = methodRef.Resolve();
-
-            if (methodDef.IsVirtual || methodDef.IsAbstract)
-                instruction = Instruction.Create(OpCodes.Callvirt, methodRef);
-            else instruction = Instruction.Create(OpCodes.Call, methodRef);
-
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void IsertPushLocalVariableAfter (ILProcessor il, ref Instruction afterInstruction, VariableDefinition variableDef)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction IsertPushLocalVariableBefore (ILProcessor il, Instruction beforeInstruction, VariableDefinition variableDef)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertPushParameterToStackAfter (ILProcessor il, ref Instruction afterInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
-        {
-            var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertPushParameterToStackBefore (ILProcessor il, Instruction beforeInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
-        {
-            var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertPushIntAfter (ILProcessor il, ref Instruction afterInstruction, int integer)
-        {
-            var instruction = PushInt(integer);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertPushIntBefore (ILProcessor il, Instruction beforeInstruction, int integer)
-        {
-            var instruction = PushInt(integer);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertPushStringAfter (ILProcessor il, ref Instruction afterInstruction, string str)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldstr, str);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertPushStringBefore (ILProcessor il, Instruction beforeInstruction, string str)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldstr, str);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertPushThisAfter (ILProcessor il, ref Instruction afterInstruction)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldarg_0);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertPushThisBefore (ILProcessor il, Instruction beforeInstruction)
-        {
-            var instruction = Instruction.Create(OpCodes.Ldarg_0);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, int operand)
-        {
-            var instruction = Instruction.Create(opCode, operand);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, int operand)
-        {
-            var instruction = Instruction.Create(opCode);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, Instruction operand)
-        {
-            var instruction = Instruction.Create(opCode, operand);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, Instruction operand)
-        {
-            var instruction = Instruction.Create(opCode);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        private static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode)
-        {
-            var instruction = Instruction.Create(opCode);
-            il.InsertAfter(afterInstruction, instruction);
-            afterInstruction = instruction;
-        }
-
-        private static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode)
-        {
-            var instruction = Instruction.Create(opCode);
-            il.InsertBefore(beforeInstruction, instruction);
-            return instruction;
-        }
-
-        /*
-        private static void CachMethodReferencesInMethodInstructions (MethodDefinition callingMethodDef)
-        {
-            if (!cachedCallTree.TryGetValue(callingMethodDef.MetadataToken, out var call))
-            {
-                call = new Call
-                {
-                    callingMethods = new List<MetadataToken>(),
-                    calledMethodRef = callingMethodDef,
-                    methodsCalled = new List<MetadataToken>()
-                };
-
-                cachedCallTree.Add(callingMethodDef.MetadataToken, call);
-            }
-
-            for (int ii = 0; ii < callingMethodDef.Body.Instructions.Count; ii++)
-            {
-                var calledMethodDef = callingMethodDef.Body.Instructions[ii].Operand as MethodReference;
-                if (calledMethodDef == null)
-                    continue;
-
-                if (!cachedCallTree.TryGetValue(calledMethodDef.MetadataToken, out var called))
-                    cachedCallTree.Add(calledMethodDef.MetadataToken, new Call
+                    var types = compiledAssemblyDef.Modules[moduleIndex].Types;
+                    for (int typeIndex = start; typeIndex < end; typeIndex++)
                     {
-                        callingMethods = new List<MetadataToken>() { callingMethodDef.MetadataToken },
-                        calledMethodRef = calledMethodDef,
-                        methodsCalled = new List<MetadataToken>()
-                    });
+                        var type = types[typeIndex];
+                        if (type == null)
+                            continue;
 
-                else called.callingMethods.Add(callingMethodDef.MetadataToken);
+                        var methods = type.Methods;
+                        for (int methodIndex = 0; methodIndex < methods.Count; methodIndex++)
+                        {
+                            var method = methods[methodIndex];
+                            if (method == null)
+                                continue;
 
-                call.methodsCalled.Add(calledMethodDef.MetadataToken);
+                            var customAttributes = method.CustomAttributes;
+                            for (int caIndex = 0; caIndex < customAttributes.Count; caIndex++)
+                            {
+                                var customAttribute = customAttributes[caIndex];
+
+                                if (customAttribute.AttributeType.FullName != attributeFullName)
+                                {
+                                    // If the custom attribute does not match, then check it's base type as this attribute may be an
+                                    // obsolete version of the RPC attribute that derrives from the current one.
+                                    var attributeType = customAttribute.AttributeType.Resolve();
+                                    if (attributeType.BaseType.FullName != attributeFullName)
+                                        continue;
+                                }
+
+                                queuedMethodDefs.Enqueue(method);
+                            }
+                        }
+                    }
+                });
             }
+
+            return queuedMethodDefs.OrderBy(methodDef => methodDef.FullName);
         }
 
-        private static void CacheCallTree (ModuleDefinition moduleDef)
-        {
-            var coroutineTypeRef = moduleDef.ImportReference(typeof(System.Collections.IEnumerator));
-            for (int ti = 0; ti < moduleDef.Types.Count; ti++)
-            {
-                for (int mi = 0; mi < moduleDef.Types[ti].Methods.Count; mi++)
-                {
-                    if (moduleDef.Types[ti].Methods[mi].Body == null)
-                        continue;
-
-                    var callingMethodDef = moduleDef.Types[ti].Methods[mi];
-
-                    bool isCoroutine =
-                        callingMethodDef.ReturnType.MetadataToken == coroutineTypeRef.MetadataToken &&
-                        callingMethodDef.DeclaringType.HasNestedTypes;
-
-                    if (isCoroutine)
-                        for (int ni = 0; ni < callingMethodDef.DeclaringType.NestedTypes.Count; ni++)
-                            for (int nmi = 0; nmi < callingMethodDef.DeclaringType.NestedTypes[ni].Methods.Count; nmi++)
-                                CachMethodReferencesInMethodInstructions(callingMethodDef.DeclaringType.NestedTypes[ni].Methods[nmi]);
-
-                    CachMethodReferencesInMethodInstructions(callingMethodDef);
-                }
-            }
-        }
-        */
-
-        private static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == methodDef.Module.ImportReference(typeof(System.Collections.IEnumerator)).MetadataToken;
-
-        private static bool TryPushMethodRef<DelegateMarker> (AssemblyDefinition compiledAssemblyDef, MethodReference methodRef, ILProcessor constructorILProcessor)
-            where DelegateMarker : Attribute
-        {
-            constructorILProcessor.Emit(OpCodes.Ldnull);
-            constructorILProcessor.Emit(OpCodes.Ldftn, methodRef);
-
-            if (!TryFindNestedTypeWithAttribute<DelegateMarker>(compiledAssemblyDef.MainModule, typeof(RPCInterfaceRegistry), out var delegateTypeRef))
-                return false;
-
-            constructorILProcessor.Emit(OpCodes.Newobj, compiledAssemblyDef.MainModule.ImportReference(delegateTypeRef.Resolve().Methods.FirstOrDefault(method => method.IsConstructor)));
-            return true;
-        }
-
-        private static bool TryCreateRPCILClassConstructor (
+        private bool TryGetRPCILGenerators (
             AssemblyDefinition compiledAssemblyDef, 
-            MethodReference onTryCallInstanceMethodDef,
-            MethodReference onTryStaticCallInstanceMethodDef,
-            MethodReference executeRPCBeforeFixedUpdateMethodDef,
-            MethodReference executeRPCAfterFixedUpdateMethodDef,
-            MethodReference executeRPCBeforeUpdateMethodDef,
-            MethodReference executeRPCAfterUpdateMethodDef,
-            MethodReference executeRPCBeforeLateUpdateMethodDef,
-            MethodReference executeRPCAfterLateUpdateMethodDef,
-            out MethodDefinition constructorMethodDef)
+            MethodDefinition targetMethodDef,
+            out RPCILGenerator rpcILGenerator, 
+            out QueuedRPCILGenerator queuedRPCILGenerator)
         {
-            constructorMethodDef = new MethodDefinition(".ctor", Mono.Cecil.MethodAttributes.Public, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            var constructorILProcessor = constructorMethodDef.Body.GetILProcessor();
+            rpcILGenerator = null;
+            queuedRPCILGenerator = null;
 
-            constructorILProcessor.Emit(OpCodes.Ldarg_0);
-
-            if (!TryPushMethodRef<RPCInterfaceRegistry.OnTryCallDelegateMarker>(compiledAssemblyDef, onTryCallInstanceMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.OnTryStaticCallDelegateMarker>(compiledAssemblyDef, onTryStaticCallInstanceMethodDef, constructorILProcessor) || 
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeFixedUpdateMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterFixedUpdateMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeUpdateMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterUpdateMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCBeforeLateUpdateMethodDef, constructorILProcessor) ||
-                !TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeRPCAfterLateUpdateMethodDef, constructorILProcessor))
+            if (targetMethodDef.IsStatic)
             {
-                constructorMethodDef = null;
-                return false;
+                if (!TryGetCachedStaticRPCILGenerator(compiledAssemblyDef, out rpcILGenerator))
+                    return false;
             }
 
-            var constructorMethodInfo = typeof(RPCInterfaceRegistry).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(constructorInfo => constructorInfo.GetCustomAttribute<RPCInterfaceRegistry.RPCInterfaceRegistryConstuctorMarker>() != null);
-            constructorILProcessor.Emit(OpCodes.Call, compiledAssemblyDef.MainModule.ImportReference(constructorMethodInfo));
-            constructorILProcessor.Emit(OpCodes.Nop);
-            constructorILProcessor.Emit(OpCodes.Nop);
-            constructorILProcessor.Emit(OpCodes.Ret);
+            else if (!TryGetCachedRPCILGenerator(compiledAssemblyDef, out rpcILGenerator))
+                return false;
+
+            if (!TryGetCachedQueuedRPCILGenerator(compiledAssemblyDef, out queuedRPCILGenerator))
+                return false;
 
             return true;
         }
 
-        private static void AddCustomAttributeToParameterDef<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
+        private void InjectDefaultSwitchCases ()
         {
-            var onTryCallMarkerAttributeTypeDef = compiledAssemblyDef.MainModule.ImportReference(typeof(Attribute)).Resolve();
-            var constructor = onTryCallMarkerAttributeTypeDef.Methods.FirstOrDefault(methodDef => methodDef.IsConstructor);
-            parameterDef.CustomAttributes.Add(new CustomAttribute(compiledAssemblyDef.MainModule.ImportReference(constructor)));
+            if (cachedOnTryCallProcessor != null)
+                cachedOnTryCallProcessor.InjectDefaultSwitchCase();
+
+            if (cachedOnTryStaticCallProcessor != null)
+                cachedOnTryStaticCallProcessor.InjectDefaultSwitchCase();
+
+            if (cachedQueuedRPCILGenerator != null)
+                cachedQueuedRPCILGenerator.InjectDefaultSwitchCase();
         }
 
-        private static void AddCustomAttribute<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
+        private Dictionary<uint, HashSet<uint>> processedMethods = new Dictionary<uint, HashSet<uint>>();
+        private bool MethodAlreadyProcessed (MethodReference methodRef) => 
+            processedMethods.TryGetValue(methodRef.DeclaringType.MetadataToken.RID, out var hash) &&
+            hash.Contains(methodRef.MetadataToken.RID);
+
+        private void AddProcessedMethod (MethodReference methodRef)
         {
-            var attributeTypeRef = moduleDef.ImportReference(typeof(Attribute)).Resolve();
-            var constructor = attributeTypeRef.Methods.FirstOrDefault(method => method.IsConstructor);
-            var customAttribute = new CustomAttribute(moduleDef.ImportReference(constructor));
-            methoDef.CustomAttributes.Add(customAttribute);
-        }
-
-        private static bool TryCreateRPCILClass (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
-        {
-            var newTypeDef = new TypeDefinition("Unity.ClusterDisplay.Networking", "RPCIL", Mono.Cecil.TypeAttributes.Public);
-            newTypeDef.BaseType = compiledAssemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry));
-
-            var rpcIdParameterDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, rpcIdParameterDef);
-
-            var pipeParameterDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, pipeParameterDef);
-
-            var parametersPayloadSize = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, parametersPayloadSize);
-
-            var rpcBufferParameterPositionRef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.In, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            var rpcBufferParameterPosition = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-
-            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPositionRef);
-            AddCustomAttributeToParameterDef<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPosition);
-
-            var onTryCallInstanceMethodDef = new MethodDefinition("OnTryCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
-            onTryCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
-            onTryCallInstanceMethodDef.Parameters.Add(pipeParameterDef);
-            onTryCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
-            onTryCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
-            AddCustomAttribute<RPCInterfaceRegistry.OnTryCallMarker>(compiledAssemblyDef.MainModule, onTryCallInstanceMethodDef);
-
-            var onTryStaticCallInstanceMethodDef = new MethodDefinition("OnTryStaticCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
-            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
-            onTryStaticCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
-            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
-            AddCustomAttribute<RPCInterfaceRegistry.OnTryStaticCallMarker>(compiledAssemblyDef.MainModule, onTryStaticCallInstanceMethodDef);
-
-            var executeRPCBeforeFixedUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeFixedUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCBeforeFixedUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeFixedUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeFixedUpdateMethodDef);
-
-            var executeRPCAfterFixedUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterFixedUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCAfterFixedUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterFixedUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterFixedUpdateMethodDef);
-
-            var executeRPCBeforeUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCBeforeUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCBeforeUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCBeforeUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCBeforeUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeUpdateMethodDef);
-
-            var executeRPCAfterUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCAfterUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCAfterUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCAfterUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCAfterUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterUpdateMethodDef);
-
-            var executeRPCBeforeLateUpdateMethodDef = new MethodDefinition("ExecuteRPCBeforeLateUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCBeforeLateUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCBeforeLateUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCBeforeLateUpdateMethodDef);
-
-            var executeRPCAfterLateUpdateMethodDef = new MethodDefinition("ExecuteRPCAfterLateUpdate", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
-            executeRPCAfterLateUpdateMethodDef.Parameters.Add(rpcIdParameterDef);
-            executeRPCAfterLateUpdateMethodDef.Parameters.Add(pipeParameterDef);
-            executeRPCAfterLateUpdateMethodDef.Parameters.Add(parametersPayloadSize);
-            executeRPCAfterLateUpdateMethodDef.Parameters.Add(rpcBufferParameterPosition);
-            AddCustomAttribute<RPCInterfaceRegistry.ExecuteRPCAfterLateUpdateMarker>(compiledAssemblyDef.MainModule, executeRPCAfterLateUpdateMethodDef);
-
-            newTypeDef.Methods.Add(onTryCallInstanceMethodDef);
-            newTypeDef.Methods.Add(onTryStaticCallInstanceMethodDef);
-            newTypeDef.Methods.Add(executeRPCBeforeFixedUpdateMethodDef);
-            newTypeDef.Methods.Add(executeRPCAfterFixedUpdateMethodDef);
-            newTypeDef.Methods.Add(executeRPCBeforeUpdateMethodDef);
-            newTypeDef.Methods.Add(executeRPCAfterUpdateMethodDef);
-            newTypeDef.Methods.Add(executeRPCBeforeLateUpdateMethodDef);
-            newTypeDef.Methods.Add(executeRPCAfterLateUpdateMethodDef);
-
-            if (!TryCreateRPCILClassConstructor(
-                compiledAssemblyDef, 
-                onTryCallInstanceMethodDef,
-                onTryStaticCallInstanceMethodDef,
-                executeRPCBeforeFixedUpdateMethodDef,
-                executeRPCAfterFixedUpdateMethodDef,
-                executeRPCBeforeUpdateMethodDef,
-                executeRPCAfterUpdateMethodDef,
-                executeRPCBeforeLateUpdateMethodDef,
-                executeRPCAfterLateUpdateMethodDef,
-                out var constructorMethodDef))
+            if (!processedMethods.TryGetValue(methodRef.DeclaringType.MetadataToken.RID, out var hash))
             {
-                rpcInterfaceRegistryDerrivedTypeRef = null;
-                return false;
+                processedMethods.Add(methodRef.DeclaringType.MetadataToken.RID, new HashSet<uint>() { methodRef.MetadataToken.RID });
+                return;
             }
 
-            newTypeDef.Methods.Add(constructorMethodDef);
-            rpcInterfaceRegistryDerrivedTypeRef = newTypeDef;
-            compiledAssemblyDef.MainModule.Types.Add(newTypeDef);
-            return true;
+            hash.Add(methodRef.MetadataToken.RID);
         }
 
-        public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
+        private bool TryProcessSerializedRPCs (
+            AssemblyDefinition compiledAssemblyDef, 
+            SerializedRPC[] serializedRPCs)
         {
-            if (compiledAssembly.Name != ReflectionUtils.DefaultUserAssemblyName)
-                goto ignoreAssembly;
-
-            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var compiledAssemblyDef))
-                goto failure;
-
-            var rpcInterfaceRegistryType = typeof(RPCInterfaceRegistry);
-            var rpcInstanceRegistryTypeDef = compiledAssemblyDef.MainModule.ImportReference(rpcInterfaceRegistryType).Resolve();
-
-            if (!TryCreateRPCILClass(compiledAssemblyDef, out var rpcInterfaceRegistryDerrivedTypeRef))
-                goto failure;
-
-            /*
-            if (!TryGetDerrivedType(
-                compiledAssemblyDef,
-                rpcInstanceRegistryTypeDef, 
-                out var rpcInterfaceRegistryDerrivedTypeRef))
-                goto failure;
-            */
-
-            var onTryCallProcessor = new RPCExecutionILGenerator();
-            if (!onTryCallProcessor.TrySetup(
-                compiledAssemblyDef,
-                rpcInterfaceRegistryDerrivedTypeRef,
-                typeof(RPCInterfaceRegistry.OnTryCallMarker)))
-                goto failure;
-
-            var onTryStaticCallProcessor = new RPCExecutionILGenerator();
-            if (!onTryStaticCallProcessor.TrySetup(
-                compiledAssemblyDef,
-                rpcInterfaceRegistryDerrivedTypeRef,
-                typeof(RPCInterfaceRegistry.OnTryStaticCallMarker)))
-                goto failure;
-
-            // CacheCallTree(compiledAssemblyDef.MainModule);
-            // CacheExecutionStageMethods();
-
-            List<ushort> usedRPCIds = new List<ushort>();
-            if (RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out var serializedRPCs) && serializedRPCs.Length > 0)
+            foreach (var serializedRPC in serializedRPCs)
             {
-                foreach (var serializedRPC in serializedRPCs)
+                var rpc = serializedRPC;
+
+                // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
+                if (rpc.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    var rpc = serializedRPC;
-
                     var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
                     MethodReference targetMethodRef = null;
 
@@ -461,83 +148,141 @@ namespace Unity.ClusterDisplay
                         typeDefinition,
                         rpc.methodName,
                         out targetMethodRef) &&
-                        !TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
+                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
                     {
                         Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
-                        goto failure;
+                        return false;
                     }
 
+                    if (MethodAlreadyProcessed(targetMethodRef))
+                        continue;
+
+                    if (!TryGetRPCILGenerators(compiledAssemblyDef, targetMethodRef.Resolve(), out var rpcILGenerator, out var queuedRPCILGenerator))
+                        return false;
+
                     var executionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
-                    var targetMethodDef = targetMethodRef.Resolve();
-                    if (!(targetMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
+                    if (!rpcILGenerator.ProcessMethodDef(
                         serializedRPC.rpcId,
                         targetMethodRef,
                         executionStage))
-                        goto failure;
+                        return false;
 
-                    // Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
+                    if (executionStage != RPCExecutionStage.ImmediatelyOnArrival)
+                        if (!queuedRPCILGenerator.TryInjectILToExecuteQueuedRPC(targetMethodRef, executionStage, serializedRPC.rpcId))
+                            return false;
 
-                    usedRPCIds.Add(rpc.rpcId);
+                    AddProcessedMethod(targetMethodRef);
                 }
+
+                // Even if an RPC is in another assembly, we still want to store it's RPC ID to flag it's use.
+                UniqueRPCIdManager.Add(rpc.rpcId);
             }
 
-            Queue<ushort> unusedRPCIds = new Queue<ushort>();
-            int lastRPCId = -1;
+            return true;
+        }
 
-            if (usedRPCIds.Count > 0)
+        private bool TryPollSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
+        {
+            if (cachedSerializedRPCS == null)
+                RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out cachedSerializedRPCS);
+
+            if (cachedSerializedRPCS != null && cachedSerializedRPCS.Length > 0)
+                if (!TryProcessSerializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray()))
+                    return false;
+
+            /*
+            if (cachedSerializedRPCS != null && cachedSerializedRPCS.Length > 0)
             {
-                usedRPCIds.Sort();
-                lastRPCId = usedRPCIds.Last();
-                for (ushort rpcId = 0; rpcId < lastRPCId; rpcId++)
+                List<SerializedRPC> serializedRPCsInCompiledAssembly = new List<SerializedRPC>();
+                for (int i = 0; i < cachedSerializedRPCS.Length; i++)
                 {
-                    if (usedRPCIds.Contains(rpcId))
-                        continue;
-                    unusedRPCIds.Enqueue(rpcId);
+                    foreach (var serializedRPC in cachedSerializedRPCS)
+                    {
+                        if (serializedRPC.declaringAssemblyName != compiledAssemblyDef.FullName)
+                            continue;
+                        serializedRPCsInCompiledAssembly.Add(serializedRPC);
+                    }
                 }
+
+                if (serializedRPCsInCompiledAssembly.Count > 0)
+                    if (!TryProcessSerializedRPCs(compiledAssemblyDef, serializedRPCsInCompiledAssembly))
+                        return false;
             }
+            */
 
-            var rpcMethodCustomAttributeType = typeof(RPC);
+            UniqueRPCIdManager.PollUnused();
+            return true;
+        }
 
-            var rpcMethodCustomAttributeTypeRef = compiledAssemblyDef.MainModule.ImportReference(rpcMethodCustomAttributeType);
-            string rpcMethodAttributeFullName = rpcMethodCustomAttributeType.FullName;
+        private void SetRPCAttributeRPCIDArgument (CustomAttribute customAttribute, int rpcIdAttributeArgumentIndex, ushort newRPCId)
+        {
+            var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];
+            customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex] = new CustomAttributeArgument(customAttributeArgument.Type, newRPCId);
+        }
 
-            var rpcMethodAttributeRPCExecutionStageArgument = compiledAssemblyDef.MainModule.ImportReference(typeof(RPCExecutionStage));
-            var methodDefs = compiledAssemblyDef.Modules
-                .SelectMany(moduleDef => moduleDef.Types
-                    .SelectMany(type => type.Methods
-                        .Where(method => method.CustomAttributes
-                            .Any(customAttribute => 
-                            customAttribute.HasConstructorArguments &&
-                            customAttribute.AttributeType.FullName == rpcMethodAttributeFullName))));
-
-            foreach (var targetRPCMethodDef in methodDefs)
+        private bool TryProcessMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef)
+        {
+            var methodDefs = GetMethodsWithRPCAttribute(compiledAssemblyDef, out var rpcMethodAttributeFullName);
+            foreach (var methodDef in methodDefs)
             {
-                // Debug.Log($"Post Processing method: \"{targetRPCMethodDef.Name}\" in type: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
+                if (methodDef == null)
+                    continue;
 
-                var customAttribute = targetRPCMethodDef.CustomAttributes.First(ca => ca.AttributeType.FullName == rpcMethodAttributeFullName);
-                if (!TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPC.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
-                    !TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<RPC.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
-                    goto failure;
+                if (MethodAlreadyProcessed(methodDef))
+                    continue;
+
+                var customAttribute = methodDef.CustomAttributes.First(ca => ca.AttributeType.FullName == rpcMethodAttributeFullName);
+                if (!CecilUtils.TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<ClusterRPC.RPCExecutionStageMarker>(customAttribute, out var rpcExecutionStageAttributeArgumentIndex) ||
+                    !CecilUtils.TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<ClusterRPC.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
+                    return false;
 
                 var rpcExecutionStageAttributeArgument = customAttribute.ConstructorArguments[rpcExecutionStageAttributeArgumentIndex];
 
-                ushort newRPCId = unusedRPCIds.Count > 0 ? unusedRPCIds.Dequeue() : (ushort)++lastRPCId;
+                ushort newRPCId = UniqueRPCIdManager.Get();
+                SetRPCAttributeRPCIDArgument(customAttribute, rpcIdAttributeArgumentIndex, newRPCId);
 
                 RPCExecutionStage executionStage = (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value;
-                if (!(targetRPCMethodDef.IsStatic ? onTryStaticCallProcessor : onTryCallProcessor).ProcessMethodDef(
-                    newRPCId,
-                    targetRPCMethodDef,
-                    executionStage))
-                    goto failure;
+                if (!TryGetRPCILGenerators(compiledAssemblyDef, methodDef, out var rpcILGenerator, out var queuedRPCILGenerator))
+                    return false;
 
-                var customAttributeArgument = customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex];
-                customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex] = new CustomAttributeArgument(customAttributeArgument.Type, newRPCId);
+                if (!rpcILGenerator.ProcessMethodDef(
+                    newRPCId,
+                    methodDef,
+                    executionStage))
+                    return false;
+
+                if (executionStage != RPCExecutionStage.ImmediatelyOnArrival)
+                    if (!queuedRPCILGenerator.TryInjectILToExecuteQueuedRPC(methodDef, executionStage, newRPCId))
+                        return false;
+
+                AddProcessedMethod(methodDef);
             }
 
-            if (!onTryCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() ||
-                !onTryStaticCallProcessor.TryInjectSwitchCaseForImmediateRPCExecutionMethod() ||
-                !TryInjectDefaultSwitchCaseForExecutionStageMethods())
+            return true;
+        }
+
+        public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
+        {
+            if (cachedRegisteredAssemblyFullNames == null)
+                if (!RPCSerializer.TryReadRegisteredAssemblies(RPCRegistry.RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames))
+                    goto failure;
+
+            if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Contains(compiledAssembly.Name)))
+                goto ignoreAssembly;
+
+            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var compiledAssemblyDef))
                 goto failure;
+
+            UniqueRPCIdManager.Read();
+            if (!TryPollSerializedRPCs(compiledAssemblyDef))
+                goto failure;
+
+            if (!TryProcessMethodsWithRPCAttribute(compiledAssemblyDef))
+                goto failure;
+
+            InjectDefaultSwitchCases();
+            FlushCache();
+            UniqueRPCIdManager.Close();
 
             var pe = new MemoryStream();
             var pdb = new MemoryStream();

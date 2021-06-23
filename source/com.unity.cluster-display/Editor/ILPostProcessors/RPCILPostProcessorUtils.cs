@@ -11,106 +11,13 @@ namespace Unity.ClusterDisplay
 {
     public partial class RPCILPostProcessor : ILPostProcessor
     {
-        private static bool TryDetermineSizeOfPrimitive (string typeName, ref int size)
-        {
-            switch (typeName)
-            {
-                case "Byte":
-                case "SByte":
-                case "Boolean":
-                    size += 1;
-                    return true;
-                case "Int16":
-                case "UInt16":
-                case "Char":
-                    size += 2;
-                    return true;
-                case "Int32":
-                case "UInt32":
-                case "Single":
-                    size += 4;
-                    return true;
-                case "Int64":
-                case "UInt64":
-                case "Double":
-                    size += 8;
-                    return true;
-                default:
-                    Debug.LogError($"Unable to determine size of assumed primitive type: \"{typeName}\".");
-                    return false;
-            }
-        }
-
-        private static bool TryDetermineSizeOfStruct (TypeDefinition typeDefinition, ref int size)
-        {
-            bool allValid = true;
-
-            foreach (var field in typeDefinition.Fields)
-            {
-                if (field.IsStatic)
-                    continue;
-                allValid &= TryDetermineSizeOfValueType(field.FieldType.Resolve(), ref size);
-            }
-
-            return allValid;
-        }
-
-        private static bool TryDetermineSizeOfValueType (TypeDefinition typeDefinition, ref int size)
-        {
-            if (typeDefinition.IsPrimitive || typeDefinition.IsEnum)
-                return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
-            else if (typeDefinition.IsValueType)
-                return TryDetermineSizeOfStruct(typeDefinition, ref size);
-
-            Debug.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
-            return false;
-        }
-
-        private static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
-        {
-            if (byReference)
-                return Instruction.Create(OpCodes.Ldarga, parameterDefinition);
-
-            if (isStaticCaller)
-            {
-                switch (parameterDefinition.Index)
-                {
-                    case 0:
-                        return Instruction.Create(OpCodes.Ldarg_0);
-                    case 1:
-                        return Instruction.Create(OpCodes.Ldarg_1);
-                    case 2:
-                        return Instruction.Create(OpCodes.Ldarg_2);
-                    case 3:
-                        return Instruction.Create(OpCodes.Ldarg_3);
-                    default:
-                        return Instruction.Create(OpCodes.Ldarg, parameterDefinition);
-                }
-            }
-
-            switch (parameterDefinition.Index)
-            {
-                case 0:
-                    return Instruction.Create(OpCodes.Ldarg_1);
-                case 1:
-                    return Instruction.Create(OpCodes.Ldarg_2);
-                case 2:
-                    return Instruction.Create(OpCodes.Ldarg_3);
-                default:
-                    return Instruction.Create(OpCodes.Ldarg_S, parameterDefinition);
-            }
-        }
-
-        private static string GetAssemblyLocation (AssemblyNameReference name) => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == name.Name).Location;
-        private static string GetAssemblyLocation (string name) => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == name).Location;
-
         private static MemoryStream CreatePdbStreamFor(string assemblyLocation)
         {
             string pdbFilePath = Path.ChangeExtension(assemblyLocation, ".pdb");
             return !File.Exists(pdbFilePath) ? null : new MemoryStream(File.ReadAllBytes(pdbFilePath));
         }
 
-        private static bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
+        public static bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
         {
             var readerParameters = new ReaderParameters
             {
@@ -133,208 +40,6 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static bool TryGetMethodReference (
-            ModuleDefinition moduleDef,
-            TypeDefinition typeDef, 
-            ref SerializedRPC inRPCTokenizer, 
-            out MethodReference methodRef)
-        {
-            var rpcTokenizer = inRPCTokenizer;
-            MethodDefinition methodDef = null;
-            bool found = (methodDef = typeDef.Methods.Where(method =>
-            {
-                // Debug.Log($"Method Signature: {methodDef.Name} == {rpcTokenizer.MethodName} &&\n{methodDef.ReturnType.Resolve().Module.Assembly.Name.Name} == {rpcTokenizer.DeclaringReturnTypeAssemblyName} &&\n{methodDef.HasParameters} == {rpcTokenizer.ParameterCount > 0} &&\n{methodDef.Parameters.Count} == {rpcTokenizer.ParameterCount}");
-                bool allMatch = 
-                    method.HasParameters == rpcTokenizer.ParameterCount > 0 &&
-                    method.Parameters.Count == rpcTokenizer.ParameterCount &&
-                    method.Name == rpcTokenizer.methodName &&
-                    method.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.declaringReturnTypeAssemblyName &&
-                    method.Parameters.All(parameterDefinition =>
-                    {
-                        if (rpcTokenizer.ParameterCount == 0)
-                            return true;
-
-                        bool any = false;
-                        for (int i = 0; i < rpcTokenizer.ParameterCount; i++)
-                        {
-                            // Debug.Log($"Method Parameters: {parameterDefinition.Name} == {rpcTokenizer[i].parameterName} &&\n{parameterDefinition.ParameterType.FullName} == {rpcTokenizer[i].parameterTypeFullName} &&\n{parameterDefinition.ParameterType.Module.Assembly.Name.Name} == {rpcTokenizer[i].declaringParameterTypeAssemblyName}");
-                            any |=
-                                parameterDefinition.Name == rpcTokenizer[i].parameterName &&
-                                parameterDefinition.ParameterType.FullName == rpcTokenizer[i].parameterTypeFullName &&
-                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer[i].declaringParameterTypeAssemblyName;
-                        }
-                        return any;
-                    });
-
-                return allMatch;
-
-            }).FirstOrDefault()) != null;
-
-            if (!found)
-            {
-                Debug.LogError($"Unable to find method reference for serialized RPC: \"{inRPCTokenizer.methodName}\" declared in: \"{typeDef.FullName}\".");
-                methodRef = null;
-                return false;
-            }
-
-            methodRef = moduleDef.ImportReference(methodDef);
-            return true;
-        }
-
-        private static bool TryFindNestedTypeWithAttribute<T> (ModuleDefinition moduleDef, Type type, out TypeReference typeRef, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
-        {
-            var nestedTypes = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-            var typeDef = nestedTypes.FirstOrDefault(nestedType => nestedType.GetCustomAttribute<T>() != null);
-
-            if (typeDef == null)
-            {
-                typeRef = null;
-                Debug.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
-                return false;
-            }
-
-            typeRef = moduleDef.ImportReference(typeDef);
-            return true;
-        }
-
-        private static bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
-        {
-            var attributeType = typeof(T);
-            var methods = type.GetMethods(bindingFlags);
-            var found = (methodInfo = methods.FirstOrDefault(method => method.GetCustomAttribute<T>() != null)) != null;
-
-            if (!found)
-                Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
-
-            return found;
-        }
-
-        private static bool TryFindFieldWithAttribute<T> (System.Type type, out FieldInfo fieldInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
-        {
-            var attributeType = typeof(T);
-            var fields = type.GetFields(bindingFlags);
-            var found = (fieldInfo = fields.FirstOrDefault(field => field.GetCustomAttribute<T>() != null)) != null;
-
-            if (!found)
-                Debug.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
-
-            return found;
-        }
-
-        private static bool TryFindPropertyGetMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
-        {
-            methodInfo = null;
-            var attributeType = typeof(T);
-            var propertyInfo = type.GetProperties()
-                .Where(pi => pi.CustomAttributes.Any(customAttribute => customAttribute.AttributeType == attributeType))
-                .FirstOrDefault();
-
-            if (propertyInfo == null || (methodInfo = propertyInfo.GetGetMethod()) == null)
-                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
-
-            return methodInfo != null;
-        }
-
-        private static bool TryFindFieldDefinitionWithAttribute<T> (TypeDefinition typeDef, out FieldDefinition fieldDefinition) where T : Attribute
-        {
-            fieldDefinition = null;
-            var attributeType = typeDef.Module.ImportReference(typeof(T));
-            bool found = (fieldDefinition = typeDef.Fields
-                .Where(field => field.CustomAttributes.Any(customAttribute => customAttribute.AttributeType == attributeType))
-                .FirstOrDefault()) != null;
-
-            if (!found)
-                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
-
-            return found;
-        }
-
-        private static bool TryFindParameterWithAttribute<T> (
-            MethodDefinition methodDefinition, 
-            out ParameterDefinition parameterDef)
-        {
-            var parameterAttributeType = methodDefinition.Module.ImportReference(typeof(T));
-            bool found = (parameterDef = methodDefinition
-                .Parameters
-                .Where(parameter => parameter.CustomAttributes.Any(customAttributeData => customAttributeData.AttributeType.FullName == parameterAttributeType.FullName))
-                .FirstOrDefault()) != null;
-
-            if (!found)
-                Debug.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
-
-            return found;
-        }
-
-        private static bool TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<T> (CustomAttribute customAttribute, out int customAttributeArgumentIndex)
-        {
-            var customAttributeArgumentAttributeType = customAttribute.AttributeType.Module.ImportReference(typeof(T));
-            var constructorMethodDef = customAttribute.Constructor.Resolve();
-
-            for (int i = 0; i < customAttribute.Constructor.Parameters.Count; i++)
-            {
-                var parameterDef = constructorMethodDef.Parameters[i].Resolve();
-                if (!parameterDef.CustomAttributes.Any(parameterCustomAttribute => parameterCustomAttribute.AttributeType.FullName == customAttributeArgumentAttributeType.FullName))
-                    continue;
-
-                customAttributeArgumentIndex = i;
-                return true;
-            }
-
-            Debug.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
-            customAttributeArgumentIndex = -1;
-            return false;
-        }
-
-        private static bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
-        {
-            if (cachedGetIsMasterMethod == null && !TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out cachedGetIsMasterMethod))
-            {
-                getIsMasterMethod = null;
-                return false;
-            }
-
-            getIsMasterMethod = cachedGetIsMasterMethod;
-            return true;
-        }
-
-        private static bool ParameterIsString (ModuleDefinition moduleDefinition, ParameterDefinition parameterDef)
-        {
-            if (cachedStringTypeRef == null)
-                cachedStringTypeRef = moduleDefinition.ImportReference(typeof(string));
-
-            return 
-                parameterDef.ParameterType.Namespace == cachedStringTypeRef.Namespace && 
-                parameterDef.ParameterType.Name == cachedStringTypeRef.Name;
-        }
-
-        private static Instruction PushInt (int value)
-        {
-            switch (value)
-            {
-                case 0:
-                    return Instruction.Create(OpCodes.Ldc_I4_0);
-                case 1:
-                    return Instruction.Create(OpCodes.Ldc_I4_1);
-                case 2:
-                    return Instruction.Create(OpCodes.Ldc_I4_2);
-                case 3:
-                    return Instruction.Create(OpCodes.Ldc_I4_3);
-                case 4:
-                    return Instruction.Create(OpCodes.Ldc_I4_4);
-                case 5:
-                    return Instruction.Create(OpCodes.Ldc_I4_5);
-                case 6:
-                    return Instruction.Create(OpCodes.Ldc_I4_6);
-                case 7:
-                    return Instruction.Create(OpCodes.Ldc_I4_7);
-                case 8:
-                    return Instruction.Create(OpCodes.Ldc_I4_8);
-
-                default:
-                    return Instruction.Create(OpCodes.Ldc_I4, value);
-            }
-        }
-
         private static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
@@ -354,18 +59,18 @@ namespace Unity.ClusterDisplay
             }
 
             if (isStatic)
-                InsertPushIntAfter(il, ref afterInstruction, rpcId);
+                CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcId);
 
             else
             {
-                InsertPushThisAfter(il, ref afterInstruction);
-                InsertPushIntAfter(il, ref afterInstruction, rpcId);
+                CecilUtils.InsertPushThisAfter(il, ref afterInstruction);
+                CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcId);
             }
 
-            InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
             // InsertPushIntAfter(il, ref afterInstruction, ((RPCExecutionStage)rpcExecutionStage) != RPCExecutionStage.Automatic ? 1 : 0);
-            InsertPushIntAfter(il, ref afterInstruction, sizeOfAllParameters);
-            InsertCallAfter(il, ref afterInstruction, call);
+            CecilUtils.InsertPushIntAfter(il, ref afterInstruction, sizeOfAllParameters);
+            CecilUtils.InsertCallAfter(il, ref afterInstruction, call);
             lastInstruction = afterInstruction;
 
             return true;
@@ -389,8 +94,8 @@ namespace Unity.ClusterDisplay
 
             lastInstruction = null;
 
-            InsertPushStringAfter(il, ref afterInstruction, message);
-            InsertCallAfter(il, ref afterInstruction, logMethodRef);
+            CecilUtils.InsertPushStringAfter(il, ref afterInstruction, message);
+            CecilUtils.InsertCallAfter(il, ref afterInstruction, logMethodRef);
         }
 
         private bool TryFindMethodWithMatchingFormalySerializedAs (
@@ -399,7 +104,7 @@ namespace Unity.ClusterDisplay
             string serializedMethodName, 
             out MethodReference outMethodRef)
         {
-            var rpcMethodAttributeType = typeof(RPC);
+            var rpcMethodAttributeType = typeof(ClusterRPC);
             var stringType = typeof(string);
 
             foreach (var methodDef in typeDefinition.Methods)
@@ -448,13 +153,13 @@ namespace Unity.ClusterDisplay
             MethodReference appendRPCMethodRef,
             int totalSizeOfStaticallySizedRPCParameters)
         {
-            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
+            if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
                 return false;
 
-            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCStringParameterValueMarker>(rpcEmitterType, out var appendRPCStringParameterValueMethodInfo))
+            if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.AppendRPCStringParameterValueMarker>(rpcEmitterType, out var appendRPCStringParameterValueMethodInfo))
                 return false;
 
-            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo))
+            if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo))
                 return false;
 
             var appendRPCValueTypeParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
@@ -464,29 +169,29 @@ namespace Unity.ClusterDisplay
             var targetMethodDef = targetMethodRef.Resolve();
 
             if (targetMethodDef.IsStatic)
-                InsertPushIntAfter(il, ref afterInstruction, rpcId);
+                CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcId);
 
             else
             {
-                InsertPushThisAfter(il, ref afterInstruction);
-                InsertPushIntAfter(il, ref afterInstruction, rpcId);
+                CecilUtils.InsertPushThisAfter(il, ref afterInstruction);
+                CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcId);
             }
 
-            InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
+            CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
             // InsertPushIntAfter(il, ref afterInstruction, ((RPCExecutionStage)rpcExecutionStage) != RPCExecutionStage.Automatic ? 1 : 0);
-            InsertPushIntAfter(il, ref afterInstruction, totalSizeOfStaticallySizedRPCParameters);
+            CecilUtils.InsertPushIntAfter(il, ref afterInstruction, totalSizeOfStaticallySizedRPCParameters);
 
             if (targetMethodRef.HasParameters)
             {
                 // Loop through each array/string parameter adding the runtime byte size to total parameters payload size.
                 foreach (var param in targetMethodRef.Parameters)
                 {
-                    if (ParameterIsString(targetMethodRef.Module, param))
+                    if (CecilUtils.ParameterIsString(targetMethodRef.Module, param))
                     {
-                        InsertPushIntAfter(il, ref afterInstruction, 1);
-                        InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false);
+                        CecilUtils.InsertPushIntAfter(il, ref afterInstruction, 1);
+                        CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false);
 
-                        var stringTypeDef = cachedStringTypeRef.Resolve();
+                        var stringTypeDef = targetMethodDef.Module.TypeSystem.String.Resolve();
                         var stringLengthPropertyRef = stringTypeDef.Properties.FirstOrDefault(propertyDef =>
                         {
                             return
@@ -508,21 +213,21 @@ namespace Unity.ClusterDisplay
                         }
 
                         var stringLengthGetterMethodRef = targetMethodRef.Module.ImportReference(stringLengthGetterMethodDef); // Get the string length getter method.
-                        InsertCallAfter(il, ref afterInstruction, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply char size of one byte by the length of the string.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add string size in bytes to total parameters payload size.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
+                        CecilUtils.InsertCallAfter(il, ref afterInstruction, stringLengthGetterMethodRef); // Call string length getter with pushes the string length to the stack.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply char size of one byte by the length of the string.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add string size in bytes to total parameters payload size.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
                     }
 
                     else if (param.ParameterType.IsArray)
                     {
                         int arrayElementSize = 0;
-                        if (!TryDetermineSizeOfValueType(param.ParameterType.Resolve(), ref arrayElementSize))
+                        if (!CecilUtils.TryDetermineSizeOfValueType(param.ParameterType.Resolve(), ref arrayElementSize))
                             return false;
 
-                        InsertPushIntAfter(il, ref afterInstruction, arrayElementSize); // Push array element size to stack.
-                        InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
+                        CecilUtils.InsertPushIntAfter(il, ref afterInstruction, arrayElementSize); // Push array element size to stack.
+                        CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, param, isStaticCaller: targetMethodDef.IsStatic, byReference: false); // Push the array reference parameter to the stack.
 
                         var arrayTypeRef = targetMethodRef.Module.ImportReference(typeof(Array));
                         var arrayTypeDef = arrayTypeRef.Resolve();
@@ -548,16 +253,16 @@ namespace Unity.ClusterDisplay
 
                         var arrayLengthGetterMethodRef = targetMethodRef.Module.ImportReference(arrayLengthGetterMethodDef); // Find array Length get property.
 
-                        InsertCallAfter(il, ref afterInstruction, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply array element size by array length.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add total array size in bytes to total parameters payload size.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
-                        InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
+                        CecilUtils.InsertCallAfter(il, ref afterInstruction, arrayLengthGetterMethodRef); // Call array length getter which will push array length to stack.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply array element size by array length.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add total array size in bytes to total parameters payload size.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
+                        CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add the constant to the total parameters payload size.
                     }
                 }
             }
 
-            InsertCallAfter(il, ref afterInstruction, appendRPCMethodRef);
+            CecilUtils.InsertCallAfter(il, ref afterInstruction, appendRPCMethodRef);
 
             if (targetMethodRef.HasParameters)
             {
@@ -567,10 +272,10 @@ namespace Unity.ClusterDisplay
                     GenericInstanceMethod genericInstanceMethod = null;
                     var paramDef = param.Resolve();
 
-                    if (ParameterIsString(targetMethodRef.Module, param))
+                    if (CecilUtils.ParameterIsString(targetMethodRef.Module, param))
                     {
-                        InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                        InsertCallAfter(il, ref afterInstruction, appendRPCStringParameterValueMethodRef);
+                        CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                        CecilUtils.InsertCallAfter(il, ref afterInstruction, appendRPCStringParameterValueMethodRef);
                         continue;
                     }
 
@@ -586,8 +291,8 @@ namespace Unity.ClusterDisplay
                         genericInstanceMethod.GenericArguments.Add(param.ParameterType);
                     }
 
-                    InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                    InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
+                    CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                    CecilUtils.InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
                 }
             }
 
@@ -606,7 +311,7 @@ namespace Unity.ClusterDisplay
             MethodReference appendRPCMethodRef,
             int totalSizeOfStaticallySizedRPCParameters)
         {
-            if (!TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
+            if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
                 return false;
 
             var targetMethodDef = targetMethodRef.Resolve();
@@ -631,8 +336,8 @@ namespace Unity.ClusterDisplay
                     var genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
                     genericInstanceMethod.GenericArguments.Add(paramDef.ParameterType);
 
-                    InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, paramDef.IsOut || paramDef.IsIn);
-                    InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
+                    CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, paramDef.IsOut || paramDef.IsIn);
+                    CecilUtils.InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
                 }
             }
 
@@ -658,7 +363,7 @@ namespace Unity.ClusterDisplay
                 if (typeReference.IsValueType)
                 {
                     int sizeOfType = 0;
-                    if (!TryDetermineSizeOfValueType(typeReference.Resolve(), ref sizeOfType))
+                    if (!CecilUtils.TryDetermineSizeOfValueType(typeReference.Resolve(), ref sizeOfType))
                         return false;
 
                     if (sizeOfType > ushort.MaxValue)
@@ -678,7 +383,7 @@ namespace Unity.ClusterDisplay
                 }
 
                 else hasDynamicallySizedRPCParameters =
-                        ParameterIsString(moduleDef, param) ||
+                        CecilUtils.ParameterIsString(moduleDef, param) ||
                         typeReference.IsArray;
             }
 
@@ -716,7 +421,7 @@ namespace Unity.ClusterDisplay
             var baseGenericType = new GenericInstanceType(baseTypeRef);
             baseGenericType.GenericArguments.Add(typeRef);
 
-            if (!TryFindMethodWithAttribute<SingletonScriptableObjectTryGetInstanceMarker>(type.BaseType, out var tryGetInstanceMethod))
+            if (!CecilUtils.TryFindMethodWithAttribute<SingletonScriptableObjectTryGetInstanceMarker>(type.BaseType, out var tryGetInstanceMethod))
             {
                 tryGetInstanceMethodRef = null;
                 return false;
@@ -745,6 +450,337 @@ namespace Unity.ClusterDisplay
             }
 
             derrivedTypeRef = assemblyDef.MainModule.ImportReference(derrivedTypeDef);
+            return true;
+        }
+
+        private static bool TryFindMethodReferenceWithAttributeInModule (
+            ModuleDefinition moduleDef,
+            TypeDefinition typeDef, 
+            TypeReference attributeTypeRef, 
+            out MethodReference methodRef)
+        {
+            MethodDefinition methodDef = null;
+            var found = (methodDef = typeDef.Methods
+                .Where(method => method.CustomAttributes
+                    .Any(customAttribute =>
+                    {
+                        return
+                            customAttribute.AttributeType.FullName == attributeTypeRef.FullName;
+                    })).FirstOrDefault()) != null;
+
+            if (!found)
+            {
+                Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
+                methodRef = null;
+                return false;
+            }
+
+            methodRef = moduleDef.ImportReference(methodDef);
+            return true;
+        }
+
+        private static bool TryCreateRPCILClassConstructor (
+            AssemblyDefinition compiledAssemblyDef, 
+            MethodReference onTryCallInstanceMethodDef,
+            MethodReference onTryStaticCallInstanceMethodDef,
+            MethodReference executeQueuedRPCMethodRef,
+            out MethodDefinition constructorMethodDef)
+        {
+            constructorMethodDef = new MethodDefinition(".ctor", Mono.Cecil.MethodAttributes.Public, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            var constructorILProcessor = constructorMethodDef.Body.GetILProcessor();
+
+            constructorILProcessor.Emit(OpCodes.Ldarg_0);
+
+            if (!CecilUtils.TryPushMethodRef<RPCInterfaceRegistry.OnTryCallDelegateMarker>(compiledAssemblyDef, onTryCallInstanceMethodDef, constructorILProcessor) ||
+                !CecilUtils.TryPushMethodRef<RPCInterfaceRegistry.OnTryStaticCallDelegateMarker>(compiledAssemblyDef, onTryStaticCallInstanceMethodDef, constructorILProcessor) || 
+                !CecilUtils.TryPushMethodRef<RPCInterfaceRegistry.ExecuteQueuedRPCDelegateMarker>(compiledAssemblyDef, executeQueuedRPCMethodRef, constructorILProcessor))
+            {
+                constructorMethodDef = null;
+                return false;
+            }
+
+            var constructorMethodInfo = typeof(RPCInterfaceRegistry).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(constructorInfo => constructorInfo.GetCustomAttribute<RPCInterfaceRegistry.RPCInterfaceRegistryConstuctorMarker>() != null);
+            constructorILProcessor.Emit(OpCodes.Call, compiledAssemblyDef.MainModule.ImportReference(constructorMethodInfo));
+            constructorILProcessor.Emit(OpCodes.Nop);
+            constructorILProcessor.Emit(OpCodes.Nop);
+            constructorILProcessor.Emit(OpCodes.Ret);
+
+            return true;
+        }
+
+        private static bool InjectPushOfRPCParamters (
+            ModuleDefinition moduleDef,
+            ILProcessor ilProcessor,
+            MethodReference targetMethodRef,
+            ParameterDefinition bufferPosParamDef,
+            bool isImmediateRPCExeuction,
+            ref Instruction afterInstruction)
+        {
+            foreach (var paramDef in targetMethodRef.Parameters)
+            {
+                if (paramDef.ParameterType.IsValueType)
+                {
+                    if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod))
+                        return false;
+                    var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
+
+                    var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
+                    var paramRef = moduleDef.ImportReference(paramDef.ParameterType);
+                    paramRef.IsValueType = true;
+                    genericInstanceMethod.GenericArguments.Add(paramRef);
+                    var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
+
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethodRef);  // Call generic method to convert bytes into our struct.
+                }
+
+                else if (CecilUtils.ParameterIsString(targetMethodRef.Module, paramDef))
+                {
+                    if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseStringMarker>(typeof(RPCEmitter), out var parseStringMethod))
+                        return false;
+
+                    var parseStringMethodRef = moduleDef.ImportReference(parseStringMethod);
+
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, parseStringMethodRef);
+                }
+
+                else if (paramDef.ParameterType.IsArray)
+                {
+                    var arrayElementType = paramDef.ParameterType.GetElementType();
+                    if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseArrayMarker>(typeof(RPCEmitter), out var parseArrayMethod))
+                        return false;
+
+                    var parseArrayMethodRef = moduleDef.ImportReference(parseArrayMethod);
+
+                    var genericInstanceMethod = new GenericInstanceMethod(parseArrayMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
+                    var paramRef = moduleDef.ImportReference(arrayElementType);
+                    paramRef.IsValueType = true;
+                    genericInstanceMethod.GenericArguments.Add(paramRef);
+                    var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
+
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethod);
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryInjectInstanceRPCExecution (
+            ModuleDefinition moduleDef,
+            ILProcessor ilProcessor,
+            Instruction beforeInstruction,
+            MethodReference targetMethod,
+            bool isImmediateRPCExeuction,
+            out Instruction firstInstructionOfInjection)
+        {
+            var method = ilProcessor.Body.Method;
+            if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.PipeIdMarker>(method, out var pipeIdParamDef) ||
+                !CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(method, out var bufferPosParamDef))
+            {
+                firstInstructionOfInjection = null;
+                return false;
+            }
+
+            if (!TryGetGetInstanceMethodRef(moduleDef, out var getInstanceMEthodRef))
+            {
+                firstInstructionOfInjection = null;
+                return false;
+            }
+
+            var afterInstruction = firstInstructionOfInjection = CecilUtils.InsertPushParameterToStackBefore(ilProcessor, beforeInstruction, pipeIdParamDef, isStaticCaller: method.IsStatic, byReference: false); // Load pipeId parameter onto stack.
+            CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, getInstanceMEthodRef);
+
+            if (!targetMethod.HasParameters)
+            {
+                // Call method on target object without any parameters.
+                CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, targetMethod);
+
+                if (isImmediateRPCExeuction)
+                    CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+
+                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
+                return true;
+            }
+
+            InjectPushOfRPCParamters(
+                moduleDef,
+                ilProcessor,
+                targetMethod,
+                 bufferPosParamDef,
+                 isImmediateRPCExeuction,
+                 ref afterInstruction);
+
+            CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, targetMethod);
+
+            if (isImmediateRPCExeuction)
+                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+
+            CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
+            return true;
+        }
+
+        private static bool TryInjectStaticRPCExecution (
+            ModuleDefinition moduleDef,
+            ILProcessor ilProcessor,
+            Instruction beforeInstruction,
+            MethodReference targetMethodRef,
+            bool isImmediateRPCExeuction,
+            out Instruction firstInstructionOfInjection)
+        {
+            var method = ilProcessor.Body.Method;
+            if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(method, out var bufferPosParamDef))
+            {
+                firstInstructionOfInjection = null;
+                return false;
+            }
+
+            Instruction afterInstruction = null;
+
+            var voidTypeRef = ilProcessor.Body.Method.Module.ImportReference(typeof(void));
+            if (!targetMethodRef.HasParameters)
+            {
+                // Call method on target object without any parameters.
+                afterInstruction = firstInstructionOfInjection = CecilUtils.InsertCallBefore(ilProcessor, beforeInstruction, targetMethodRef);
+
+                if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
+                    CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
+
+                if (isImmediateRPCExeuction)
+                    CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+
+                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
+                return true;
+            }
+
+            afterInstruction = firstInstructionOfInjection = CecilUtils.InsertBefore(ilProcessor, beforeInstruction, OpCodes.Nop);
+
+            InjectPushOfRPCParamters(
+                moduleDef,
+                ilProcessor,
+                targetMethodRef,
+                 bufferPosParamDef,
+                 isImmediateRPCExeuction,
+                 ref afterInstruction);
+
+            CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, targetMethodRef);
+
+            if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
+                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
+
+            if (isImmediateRPCExeuction)
+                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+
+            CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
+            return true;
+        }
+
+        private static bool TryInjectSwitchCaseForRPC (
+            ILProcessor ilProcessor,
+            Instruction afterInstruction,
+            int valueToPushForBeq,
+            Instruction jmpToInstruction,
+            out Instruction lastInstructionOfSwitchJmp)
+        {
+            if (afterInstruction == null)
+            {
+                Debug.LogError("Unable to inject switch jump instructions, the instruction we want to inject AFTER is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
+            if (jmpToInstruction == null)
+            {
+                Debug.LogError("Unable to inject switch jump instructions, the target instruction to jump to is null!");
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
+            if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(ilProcessor.Body.Method, out var rpcIdParamDef))
+            {
+                lastInstructionOfSwitchJmp = null;
+                return false;
+            }
+
+            CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: false);
+
+            CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldc_I4, valueToPushForBeq);
+            CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Beq, jmpToInstruction);
+            lastInstructionOfSwitchJmp = afterInstruction;
+
+            return true;
+        }
+
+        private static bool TryGenerateRPCILTypeInCompiledAssembly (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
+        {
+            var newTypeDef = new TypeDefinition("Unity.ClusterDisplay.Networking", "RPCIL", Mono.Cecil.TypeAttributes.NestedPrivate);
+            newTypeDef.BaseType = compiledAssemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry));
+
+            var rpcIdParameterDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, rpcIdParameterDef);
+
+            var pipeParameterDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, pipeParameterDef);
+
+            var parametersPayloadSize = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, parametersPayloadSize);
+
+            var rpcBufferParameterPositionRef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.In, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            var rpcBufferParameterPosition = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPositionRef);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPosition);
+
+            var onTryCallInstanceMethodDef = new MethodDefinition("OnTryCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
+            onTryCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
+            onTryCallInstanceMethodDef.Parameters.Add(pipeParameterDef);
+            onTryCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
+            onTryCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
+            CecilUtils.AddCustomAttributeToMethod<RPCInterfaceRegistry.OnTryCallMarker>(compiledAssemblyDef.MainModule, onTryCallInstanceMethodDef);
+            var il = onTryCallInstanceMethodDef.Body.GetILProcessor();
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ldc_I4_0);
+            il.Emit(OpCodes.Ret);
+
+            var onTryStaticCallInstanceMethodDef = new MethodDefinition("OnTryStaticCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
+            onTryStaticCallInstanceMethodDef.Parameters.Add(rpcBufferParameterPositionRef);
+            CecilUtils.AddCustomAttributeToMethod<RPCInterfaceRegistry.OnTryStaticCallMarker>(compiledAssemblyDef.MainModule, onTryStaticCallInstanceMethodDef);
+            il = onTryStaticCallInstanceMethodDef.Body.GetILProcessor();
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ldc_I4_0);
+            il.Emit(OpCodes.Ret);
+
+            var executeQueuedRPCMethodDef = new MethodDefinition("ExecuteQueuedRPC", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            executeQueuedRPCMethodDef.Parameters.Add(rpcIdParameterDef);
+            executeQueuedRPCMethodDef.Parameters.Add(pipeParameterDef);
+            executeQueuedRPCMethodDef.Parameters.Add(parametersPayloadSize);
+            executeQueuedRPCMethodDef.Parameters.Add(rpcBufferParameterPosition);
+            CecilUtils.AddCustomAttributeToMethod<RPCInterfaceRegistry.ExecuteQueuedRPC>(compiledAssemblyDef.MainModule, executeQueuedRPCMethodDef);
+            il = executeQueuedRPCMethodDef.Body.GetILProcessor();
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ret);
+
+            newTypeDef.Methods.Add(onTryCallInstanceMethodDef);
+            newTypeDef.Methods.Add(onTryStaticCallInstanceMethodDef);
+            newTypeDef.Methods.Add(executeQueuedRPCMethodDef);
+
+            if (!TryCreateRPCILClassConstructor(
+                compiledAssemblyDef, 
+                onTryCallInstanceMethodDef,
+                onTryStaticCallInstanceMethodDef,
+                executeQueuedRPCMethodDef,
+                out var constructorMethodDef))
+            {
+                rpcInterfaceRegistryDerrivedTypeRef = null;
+                return false;
+            }
+
+            newTypeDef.Methods.Add(constructorMethodDef);
+            rpcInterfaceRegistryDerrivedTypeRef = newTypeDef;
+            compiledAssemblyDef.MainModule.Types.Add(newTypeDef);
             return true;
         }
     }

@@ -26,6 +26,8 @@ namespace Unity.ClusterDisplay
         {
             rpcBuffer = new NativeArray<byte>((int)maxRpcByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             rpcBufferSize = 0;
+
+            RPCRegistry.SetupInstances();
         }
 
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
@@ -39,10 +41,6 @@ namespace Unity.ClusterDisplay
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
             ushort bufferPos = 0;
-
-            if (!RPCRegistry.TryGetInstance(out var rpcRegistry))
-                goto failure;
-
             if (buffer.Length < MinimumRPCPayloadSize)
                 goto success;
 
@@ -58,7 +56,7 @@ namespace Unity.ClusterDisplay
                 ParseRPCId(ref bufferPos, out var rpcId);
 
                 #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
-                if (!rpcRegistry.IsValidRPCId(rpcId))
+                if (!RPCRegistry.RPCRegistered(rpcId))
                 {
                     UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: ({rpcId} <--- No registered RPC with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     goto failure;
@@ -76,6 +74,9 @@ namespace Unity.ClusterDisplay
                 UnityEngine.Debug.Log($"Processing RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                 #endif
 
+                if (!RPCRegistry.TryGetAssemblyIndex(rpcId, out var assemblyIndex))
+                    goto failure;
+
                 switch (rpcExecutionStage)
                 {
                     case RPCExecutionStage.ImmediatelyOnArrival:
@@ -83,6 +84,7 @@ namespace Unity.ClusterDisplay
                         if (bufferPipeId == 0)
                         {
                             if (!RPCInterfaceRegistry.TryCallStatic(
+                                assemblyIndex,
                                 rpcId, 
                                 parametersPayloadSize, 
                                 ref bufferPos))
@@ -104,6 +106,7 @@ namespace Unity.ClusterDisplay
 
                         ParseParametersPayloadSize(ref bufferPos, out parametersPayloadSize);
                         if (!RPCInterfaceRegistry.TryCallInstance(
+                            assemblyIndex,
                             rpcId, 
                             pipeId, 
                             parametersPayloadSize, 
@@ -124,32 +127,32 @@ namespace Unity.ClusterDisplay
 
                     case RPCExecutionStage.AfterInitialization:
                     case RPCExecutionStage.BeforeFixedUpdate:
-                        RPCInterfaceRegistry.QueueBeforeFixedUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueBeforeFixedUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 
                     case RPCExecutionStage.AfterFixedUpdate:
-                        RPCInterfaceRegistry.QueueAfterFixedUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueAfterFixedUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 
                     case RPCExecutionStage.BeforeUpdate:
-                        RPCInterfaceRegistry.QueueBeforeUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueBeforeUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 
                     case RPCExecutionStage.AfterUpdate:
-                        RPCInterfaceRegistry.QueueAfterUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueAfterUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 
                     case RPCExecutionStage.BeforeLateUpdate:
-                        RPCInterfaceRegistry.QueueBeforeLateUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueBeforeLateUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 
                     case RPCExecutionStage.AfterLateUpdate:
-                        RPCInterfaceRegistry.QueueAfterLateUpdateRPC(pipeId, rpcId, parametersPayloadSize, bufferPos);
+                        RPCInterfaceRegistry.QueueAfterLateUpdateRPC(assemblyIndex, rpcId, pipeId, parametersPayloadSize, bufferPos);
                         bufferPos += parametersPayloadSize;
                         break;
 

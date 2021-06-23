@@ -9,22 +9,35 @@ namespace Unity.ClusterDisplay
     public static class ReflectionUtils
     {
         public const string DefaultUserAssemblyName = "Assembly-CSharp";
+        public static string GetAssemblyLocation (string name) => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == name).Location;
+
+        private readonly static Dictionary<Assembly, Type[]> cachedAssemblyTypes = new Dictionary<Assembly, Type[]>();
+        private static Type[] cachedAllTypes;
+
+        private static Type[] CachedTypes
+        {
+            get
+            {
+                if (cachedAllTypes == null)
+                    cachedAllTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).ToArray();
+                return cachedAllTypes;
+            }
+        }
+
         public static System.Type GetTypeByString (string typeString)
         {
             string[] split = typeString.Split('.');
             if (split.Length == 0)
                 return null;
-            var className = split[split.Length - 1];
-            System.Type type = null;
+
             try
             {
-                type = Type.GetType(typeString, true);
+                return Type.GetType(typeString, true);
             } catch (System.Exception exception)
             {
                 Debug.LogException(exception);
+                return null;
             }
-
-            return type;
         }
 
         public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
@@ -248,38 +261,15 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public static Type[] GetAllTypes ()
-        {
-            return AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly =>
-                {
-                    Type[] assemblyTypes = null;
-                    try
-                    {
-                        assemblyTypes = assembly.GetTypes();
-                    }
-                    catch (ReflectionTypeLoadException e)
-                    {
-                        assemblyTypes = e.Types;
-                    }
-
-                    return assemblyTypes;
-                }).ToArray();
-        }
+        public static Type[] GetAllTypes() => CachedTypes;
 
         public static Type[] GetAllTypes (Assembly assembly)
         {
-            Type[] assemblyTypes = null;
-            try
-            {
-                assemblyTypes = assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException e)
-            {
-                assemblyTypes = e.Types;
-            }
-
-            return assemblyTypes;
+            if (cachedAssemblyTypes.TryGetValue(assembly, out var types))
+                return types;
+            types = assembly.GetTypes();
+            cachedAssemblyTypes.Add(assembly, types);
+            return types;
         }
 
         public static Type[] GetAllTypes (string filter, Assembly targetAssembly, bool includeGenerics = true)
@@ -290,23 +280,18 @@ namespace Unity.ClusterDisplay
 
             string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
 
-            Type[] targetAssemblyTypes = null;
-            try
+            Type[] assemblyTypes = null;
+            if (!cachedAssemblyTypes.TryGetValue(targetAssembly, out assemblyTypes))
             {
-                targetAssemblyTypes = targetAssembly.GetTypes();
-            } catch (ReflectionTypeLoadException e)
-            {
-                targetAssemblyTypes = e.Types;
+                assemblyTypes = targetAssembly.GetTypes();
+                cachedAssemblyTypes.Add(targetAssembly, assemblyTypes);
             }
 
             return filterLower == null ?
 
-                targetAssemblyTypes
+                assemblyTypes
                     .Where(type =>
                     {
-                        if (type == null)
-                            return false;
-
                         bool found = false;
                         for (int i = 0; i < types.Length; i++)
                             found |= type.IsSubclassOf(types[i]);
@@ -315,12 +300,9 @@ namespace Unity.ClusterDisplay
                     .Where(type => includeGenerics ? true : !type.IsGenericType)
                     .ToArray() :
 
-                targetAssemblyTypes
+                assemblyTypes
                     .Where(type =>
                     {
-                        if (type == null)
-                            return false;
-
                         bool found = false;
                         for (int i = 0; i < types.Length; i++)
                             found |= type.IsSubclassOf(types[i]);
@@ -340,25 +322,9 @@ namespace Unity.ClusterDisplay
             string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
             return filterLower == null ?
 
-                AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(assembly =>
-                    {
-                        Type[] assemblyTypes = null;
-                        try
-                        {
-                            assemblyTypes = assembly.GetTypes();
-                        } catch (ReflectionTypeLoadException e)
-                        {
-                            assemblyTypes = e.Types;
-                        }
-
-                        return assemblyTypes;
-                    })
+                CachedTypes
                     .Where(type =>
                     {
-                        if (type == null)
-                            return false;
-
                         bool found = false;
                         for (int i = 0; i < types.Length; i++)
                             found |= type.IsSubclassOf(types[i]);
@@ -367,25 +333,9 @@ namespace Unity.ClusterDisplay
                     .Where(type => includeGenerics ? true : !type.IsGenericType)
                     .ToArray() :
 
-                AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(assembly => 
-                    {
-                        Type[] assemblyTypes = null;
-                        try
-                        {
-                            assemblyTypes = assembly.GetTypes();
-                        } catch (ReflectionTypeLoadException e)
-                        {
-                            assemblyTypes = e.Types;
-                        }
-
-                        return assemblyTypes;
-                    })
+                CachedTypes
                     .Where(type =>
                     {
-                        if (type == null)
-                            return false;
-
                         bool found = false;
                         for (int i = 0; i < types.Length; i++)
                             found |= type.IsSubclassOf(types[i]);
@@ -396,30 +346,33 @@ namespace Unity.ClusterDisplay
                     .ToArray();
         }
 
-        public static bool TryGetAllMethodsWithAttribute<T> (out MethodInfo[] methodInfos, BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+        public static bool TryGetAllMethodsWithAttribute<T> (
+            out MethodInfo[] methodInfos, 
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            where T : Attribute
         {
-            var targetAttribute = typeof(T);
 
-            if (!TryGetDefaultAssembly(out var defaultAssembly))
+            List<MethodInfo> list = new List<MethodInfo>();
+            for (int ti = 0; ti < CachedTypes.Length; ti++)
             {
-                methodInfos = null;
-                return false;
+                var type = CachedTypes[ti];
+                if (type == null)
+                    continue;
+                var methods = type.GetMethods(bindingFlags);
+                for (int mi = 0; mi < methods.Length; mi++)
+                {
+                    if (methods[mi].CustomAttributes.Count() == 0)
+                        continue;
+
+                    if (methods[mi].GetCustomAttribute<T>() == null)
+                        continue;
+
+                    list.Add(methods[mi]);
+                }
             }
 
-            Type[] types = null;
-            try
-            {
-                types = defaultAssembly.GetTypes();
-            } catch (ReflectionTypeLoadException e)
-            {
-                types = e.Types;
-            }
-
-            return (methodInfos = types
-                .Where(type => type != null)
-                .SelectMany(type => type.GetMethods(bindingFlags)
-                    .Where(method => method.CustomAttributes
-                        .Any(customAttribute => customAttribute.AttributeType == targetAttribute))).ToArray()).Length > 0;
+            methodInfos = list.ToArray();
+            return methodInfos.Length > 0;
         }
     }
 }
