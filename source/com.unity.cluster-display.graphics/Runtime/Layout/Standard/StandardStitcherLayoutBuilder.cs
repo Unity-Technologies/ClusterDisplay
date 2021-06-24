@@ -9,13 +9,27 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardStitcherLayoutBuilder : StitcherLayoutBuilder, ILayoutBuilder
     {
+        private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
+        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
+
         public StandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         public override void Dispose() {}
 
-        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
-        private Rect m_OverscannedRect;
+        private void ClearTiles (int numTiles)
+        {
+            var cmd = CommandBufferPool.Get("ClearRT");
 
-        private StandardStitcherRTManager m_RTManager = new StandardStitcherRTManager();
+            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            for (var i = 0; i < numTiles; i++)
+            {
+                var sourceRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                cmd.SetRenderTarget(sourceRT);
+                cmd.ClearRenderTarget(true, true, Color.black);
+            }
+
+            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
+        }
 
         /// <summary>
         /// Where rendering actually occurs.
@@ -30,18 +44,19 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!ValidGridSize(out var numTiles))
                 return;
+            ClearTiles(numTiles);
 
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
                 return;
 
-            m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
-            var cachedProjectionMatrix = k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix();
+            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var startingProjectionMatrix = camera.projectionMatrix;
 
             for (var i = 0; i < numTiles; i++)
             {
                 CalculateStitcherLayout(
                     camera, 
-                    cachedProjectionMatrix,
+                    startingProjectionMatrix,
                     i, 
                     ref cullingParams, 
                     out var percentageViewportSubsection, 
@@ -51,10 +66,10 @@ namespace Unity.ClusterDisplay.Graphics
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
-                var blitRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-                CalculcateAndQueueStitcherParameters(blitRT, m_OverscannedRect, percentageViewportSubsection);
+                var sourceRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                CalculcateAndQueueStitcherParameters(i, sourceRT, m_OverscannedRect, percentageViewportSubsection);
 
-                camera.targetTexture = blitRT;
+                camera.targetTexture = sourceRT;
                 camera.projectionMatrix = asymmetricProjectionMatrix;
                 camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
 
@@ -65,7 +80,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         }
 
-        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) 
+        {
+        }
+
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
 
@@ -83,12 +101,14 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_QueuedStitcherParameters.Count < numTiles)
                 return;
 
+            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
-            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
-            cmd.SetRenderTarget(k_ClusterRenderer.cameraController.presenter.presentRT);
+
+            cmd.SetRenderTarget(presentRT);
+            cmd.SetViewport(new Rect(0f, 0f, presentRT.width, presentRT.height));
             cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
             for (var i = 0; i < numTiles; i++)
@@ -102,18 +122,21 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.height *= croppedSize.y;
 
                 cmd.SetViewport(croppedViewport);
+                var sourceRT = stitcherParameters.sourceRT as RenderTexture;
 
                 Blit(
                     cmd, 
-                    k_ClusterRenderer.cameraController.presenter.presentRT, 
-                    stitcherParameters.targetRT as RenderTexture, 
+                    sourceRT, 
                     stitcherParameters.scaleBiasTex, 
                     stitcherParameters.scaleBiasRT);
             }
 
             m_QueuedStitcherParameters.Clear();
+
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
+
+            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

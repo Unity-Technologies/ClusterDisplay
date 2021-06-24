@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
                 if (m_SourceRTs[tileIndex] != null)
                     m_SourceRTs[tileIndex].Release();
 
-                m_SourceRTs[tileIndex] = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm);
+                m_SourceRTs[tileIndex] = new RenderTexture(width, height, 1, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_SRGB);
                 m_SourceRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_SourceRTs[tileIndex].width}X{m_SourceRTs[tileIndex].height})";
             }
 

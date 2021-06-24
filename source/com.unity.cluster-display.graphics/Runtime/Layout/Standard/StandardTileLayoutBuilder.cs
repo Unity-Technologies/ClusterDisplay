@@ -57,16 +57,17 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
-            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-
-            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
             cmd.SetRenderTarget(presentRT);
             cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
-            Blit(cmd, presentRT, sourceRT, scaleBias, k_ScaleBiasRT);
+            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            Blit(cmd, sourceRT, scaleBias, k_ScaleBiasRT);
+
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
+
+            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
