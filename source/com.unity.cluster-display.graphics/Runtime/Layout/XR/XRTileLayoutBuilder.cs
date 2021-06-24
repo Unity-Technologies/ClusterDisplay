@@ -22,28 +22,28 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (m_ClusterRenderer.CameraController.ContextCamera != null)
-            {
-                m_ClusterRenderer.CameraController.ContextCamera.enabled = true;
-                m_ClusterRenderer.CameraController.ContextCamera.targetTexture = null;
-            }
+            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera))
+                return;
+
+            contextCamera.enabled = true;
+            contextCamera.targetTexture = null;
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
         {
             cmd.SetRenderTarget(rt);
             cmd.SetViewport(viewport);
-            cmd.ClearRenderTarget(true, true, m_ClusterRenderer.Context.Debug ? m_ClusterRenderer.Context.BezelColor : Color.black);
+            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
-            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
-            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            HDUtils.BlitQuad(cmd, target, scaleBiasTex, k_ScaleBiasRT, 0, true);
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
+            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            HDUtils.BlitQuad(cmd, sourceRT, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)
         {
             var camera = layout.camera;
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return false;
 
             if (!SetupTiledLayout(
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cullingParams.stereoProjectionMatrix = projMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-            var target = m_RTManager.BlitRTHandle((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var target = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
             {
@@ -69,8 +69,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                 viewportSubsection, 
-                m_ClusterRenderer.Context.GlobalScreenSize, 
-                m_ClusterRenderer.Context.GridSize);
+                k_ClusterRenderer.context.globalScreenSize, 
+                k_ClusterRenderer.context.gridSize);
 
             var viewInfo = new XRViewCreateInfo
             {

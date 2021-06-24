@@ -17,14 +17,22 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
             {
+<<<<<<< HEAD
                 if (previousContextCamera != null)
+=======
+                if (TryGetPreviousCameraContext(out var previousContextCamera))
+>>>>>>> 2d66b570e0aed08c93a752d6ed14377986100698
                 {
                     additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
                     additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
                     additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
                 }
 
+<<<<<<< HEAD
                 if (contextCamera != null && contextCamera.TryGetComponent(out additionalCameraData))
+=======
+                if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
+>>>>>>> 2d66b570e0aed08c93a752d6ed14377986100698
                 {
                     m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
                     m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;

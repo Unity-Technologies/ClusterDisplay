@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField] ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
         public ClusterRendererDebugSettings debugSettings => m_DebugSettings;
         
-        [SerializeField] bool m_Debug;
+        private bool m_Debug;
         public bool debug
         {
             get => m_Debug;

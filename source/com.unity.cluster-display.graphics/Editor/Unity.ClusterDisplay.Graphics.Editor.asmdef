@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.Editor",
     "references": [
+        "Unity.ClusterDisplay.Common",
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.ClusterDisplay.Graphics"
@@ -14,5 +15,6 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": []
+    "versionDefines": [],
+    "noEngineReferences": false
 }

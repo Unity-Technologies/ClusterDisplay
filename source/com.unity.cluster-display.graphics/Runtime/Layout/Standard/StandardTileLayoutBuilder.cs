@@ -9,28 +9,18 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
-        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
-
-        public override void Dispose() {}
-
-#if CLUSTER_DISPLAY_XR
-        public RenderTexture BlitRT(int width, int height) => m_RTManager.BlitRTHandle(width, height);
-        public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRTHandle(width, height);
-#else
-        public RenderTexture SourceRT(int width, int height) => m_RTManager.SourceRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-        public RenderTexture PresentRT(int width, int height) => m_RTManager.PresentRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-        public RenderTexture BackBufferRT(int width, int height) => m_RTManager.BackBufferRenderTexture(width, height, GraphicsFormat.B8G8R8A8_SRGB);
-#endif
+        private StandardTileRTManager m_RTManager = new StandardTileRTManager();
         private Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
+        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public override void Dispose() {}
 
         public override void LateUpdate()
         {
-            if (k_ClusterRenderer.cameraController.contextCamera == null)
+            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var camera))
                 return;
 
-            var camera = k_ClusterRenderer.cameraController.contextCamera;
             if (camera.enabled)
                 camera.enabled = false;
 
@@ -45,13 +35,12 @@ namespace Unity.ClusterDisplay.Graphics
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
-            camera.targetTexture = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            camera.targetTexture = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
             camera.projectionMatrix = projectionMatrix;
             camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
 
             camera.Render();
-
-            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
+            camera.ResetProjectionMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
@@ -66,12 +55,12 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.Clear();
 
             Vector4 texBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            var presentRT = PresentRT((int)Screen.width, (int)Screen.height);
-            var sourceRT = SourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
+            var sourceRT =  m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             if (ClusterDisplay.ClusterDisplayState.IsMaster)
             {
-                var backBufferRT = BackBufferRT((int)Screen.width, (int)Screen.height);
+                var backBufferRT = m_RTManager.GetBackBufferRT((int)Screen.width, (int)Screen.height);
 
                 cmd.SetRenderTarget(presentRT);
                 Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
@@ -88,7 +77,13 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
+
+            Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
+
+            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

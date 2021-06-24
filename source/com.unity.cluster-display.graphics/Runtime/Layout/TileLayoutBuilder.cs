@@ -5,11 +5,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
-#if CLUSTER_DISPLAY_XR
-        protected TileRTManager m_RTManager = new XRTileRTManager();
-#else
-        protected TileRTManager m_RTManager = new StandardTileRTManager();
-#endif
 
         protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) 
         {
@@ -43,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
-            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(k_ClusterRenderer.cameraController.CacheAndReturnProjectionMatrix(), viewportSubsection);
+            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
             
             return true;
         }

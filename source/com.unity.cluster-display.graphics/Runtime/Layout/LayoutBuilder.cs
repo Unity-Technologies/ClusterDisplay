@@ -96,9 +96,18 @@ namespace Unity.ClusterDisplay.Graphics
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+        }
+
+        protected void Blit (CommandBuffer cmd, RTHandle source, Vector4 texBias, Vector4 rtBias)
+        {
+            s_PropertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), source);
+            s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
+            s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
+            s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
 
             // Draw full screen quad.
-            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.BlitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
     }
 }

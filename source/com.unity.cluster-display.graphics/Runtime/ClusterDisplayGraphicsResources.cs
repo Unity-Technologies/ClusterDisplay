@@ -17,5 +17,5 @@ public class ClusterDisplayGraphicsResources : ScriptableObject
     /// The material used by the standard stitcher/tile layout mode to blit a camera
     /// render into the present render texture.
     /// </summary>
-    public Material BlitMaterial => m_BlitMaterial;
+    public Material blitMaterial => m_BlitMaterial;
 }

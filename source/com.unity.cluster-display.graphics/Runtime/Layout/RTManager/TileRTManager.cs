@@ -6,66 +6,15 @@ using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public enum RTType
+    public abstract class TileRTManager<T>
     {
-        Handle,
-        RenderTexture
-    }
+        protected T m_SourceRT;
+        protected T m_PresentRT;
+        protected T m_BackBufferRT;
 
-    public abstract class TileRTManager
-    {
-        public abstract RTType type { get; }
-        protected abstract object BlitRT(int width, int height, GraphicsFormat format);
-        protected abstract object PresentRT(int width, int height, GraphicsFormat format);
-        protected abstract object BackBufferRT(int width, int height, GraphicsFormat format);
+        public abstract T GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
+        public abstract T GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
+        public abstract T GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
         public abstract void Release();
-
-        public RenderTexture SourceRenderTexture (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = BlitRT(width, height, format);
-            if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
-            return rt as RenderTexture;
-        }
-
-        public RTHandle BlitRTHandle (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = BlitRT(width, height, format);
-            if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
-            return rt as RTHandle;
-        }
-
-        public RenderTexture PresentRenderTexture (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = PresentRT(width, height, format);
-            if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
-            return rt as RenderTexture;
-        }
-
-        public RTHandle PresentRTHandle (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = PresentRT(width, height, format);
-            if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
-            return rt as RTHandle;
-        }
-
-        public RenderTexture BackBufferRenderTexture (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = BackBufferRT(width, height, format);
-            if (!(rt is RenderTexture))
-                throw new System.Exception("Blit RT is not a RenderTexture.");
-            return rt as RenderTexture;
-        }
-
-        public RTHandle BackBufferRTHandle (int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
-        {
-            var rt = BackBufferRT(width, height, format);
-            if (!(rt is RTHandle))
-                throw new System.Exception("Blit RT is not a RTHandle.");
-            return rt as RTHandle;
-        }
     }
 }

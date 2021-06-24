@@ -1,11 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 
-#if UNITY_EDITOR
-using System.Linq;
-using UnityEditor;
-#endif
-
 namespace Unity.ClusterDisplay.Graphics
 {
     public interface ICameraEventReceiver
@@ -25,48 +20,42 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Current rendering camera.
         /// </summary>
-        public Camera contextCamera
+        public bool TryGetContextCamera (out Camera contextCamera)
         {
-            get
+            contextCamera = null;
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+                return false;
+
+            if (!cameraContextRegistry.TryGetFocusedCameraContextTarget(out var focusedCameraContextTarget))
+                return false;
+
+            if (!focusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
-                    return null;
-
-                if (cameraContextRegistry.focusedCameraContextTarget == null)
-                    return null;
-
-                if (!cameraContextRegistry.focusedCameraContextTarget.TryGetCamera(out var camera))
-                {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.focusedCameraContextTarget, destroy: true);
-                    return null;
-                }
-
-                return camera;
+                cameraContextRegistry.UnRegister(focusedCameraContextTarget, destroy: true);
+                return false;
             }
+
+            return (contextCamera = camera) != null;
         }
 
-        public Camera previousContextCamera
+        public bool TryGetPreviousCameraContext (out Camera previousCameraContext)
         {
-            get
+            previousCameraContext = null;
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+                return false;
+
+            if (!cameraContextRegistry.TryGetPreviousFocusedCameraContextTarget(out var previousFocusedCameraContextTarget))
+                return false;
+
+            if (!previousFocusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry))
-                    return null;
-
-                if (cameraContextRegistry.previousFocusedCameraContextTarget == null)
-                    return null;
-
-                if (!cameraContextRegistry.previousFocusedCameraContextTarget.TryGetCamera(out var camera))
-                {
-                    cameraContextRegistry.UnRegister(cameraContextRegistry.previousFocusedCameraContextTarget, destroy: true);
-                    return null;
-                }
-
-                return camera;
+                cameraContextRegistry.UnRegister(previousFocusedCameraContextTarget, destroy: true);
+                return false;
             }
+
+            return (previousCameraContext = camera) != null;
         }
 
-
-        public bool cameraContextIsSceneViewCamera => CameraIsSceneViewCamera(contextCamera);
 
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
@@ -89,22 +78,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public bool CameraIsInContext(Camera camera)
-        {
-            var contextCamera = this.contextCamera;
-            return contextCamera != null && contextCamera == camera;
-        }
-
-        public bool CameraIsSceneViewCamera (Camera camera)
-        {
-#if UNITY_EDITOR
-            return camera != null && SceneView.sceneViews.ToArray()
-                .Select(sceneView => (sceneView as SceneView).camera)
-                .Any(sceneViewCamera => sceneViewCamera == camera);
-#else
-        return false;
-#endif
-        }
+        public bool CameraIsInContext(Camera camera) => TryGetContextCamera(out var contextCamera) && contextCamera == camera;
 
         public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
         public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
@@ -116,25 +90,29 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
+            if (!CameraContextRegistry.CanChangeContextTo(camera))
+                return;
+
             // If we are beginning to render with our context camera, do nothing.
-            if (camera == contextCamera)
+            if (TryGetContextCamera(out var contextCamera) && camera == contextCamera)
             {
                 m_Presenter.PollCamera(contextCamera);
                 return;
             }
 
-            if (!CameraContextRegistery.TryGetInstance(out var cameraContextRegistry) ||
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry) ||
                 !cameraContextRegistry.TryGetCameraContextTarget(camera, out var cameraContextTarget))
             {
                 m_Presenter.PollCamera(contextCamera);
                 return;
             }
 
-            cameraContextRegistry.focusedCameraContextTarget = cameraContextTarget;
+            cameraContextRegistry.SetFocusedCameraContextTarget(cameraContextTarget);
             OnPollFrameSettings(camera);
 
+            TryGetPreviousCameraContext(out var previousCameraContext);
             if (onCameraChange != null)
-                onCameraChange(previousContextCamera, contextCamera);
+                onCameraChange(previousCameraContext, contextCamera);
 
             m_Presenter.PollCamera(contextCamera);
         }
@@ -148,27 +126,10 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public void ResetProjectionMatrix ()
         {
-            var contextCamera = this.contextCamera;
-            if (contextCamera == null)
+            if (!TryGetContextCamera(out var contextCamera))
                 return;
 
             contextCamera.ResetProjectionMatrix();
-        }
-
-        public Matrix4x4 CacheAndReturnProjectionMatrix ()
-        {
-            var contextCamera = this.contextCamera;
-            if (contextCamera == null)
-                return Matrix4x4.identity;
-
-            var matrix = contextCamera.projectionMatrix;
-
-            m_SerializedProjectionMatrixC1 = matrix.GetColumn(0);
-            m_SerializedProjectionMatrixC2 = matrix.GetColumn(1);
-            m_SerializedProjectionMatrixC3 = matrix.GetColumn(2);
-            m_SerializedProjectionMatrixC4 = matrix.GetColumn(3);
-
-            return matrix;
         }
     }
 }

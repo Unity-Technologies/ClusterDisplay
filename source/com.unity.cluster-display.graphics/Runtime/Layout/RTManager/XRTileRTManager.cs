@@ -6,26 +6,21 @@ using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class XRTileRTManager : TileRTManager
+    public class XRTileRTManager : TileRTManager<RTHandle>
     {
-        public override RTType type => RTType.Handle;
-        private RTHandle m_BlitRT;
-        private RTHandle m_PresentRT;
-        private RTHandle m_BackBufferRT;
-
-        protected override object BlitRT(int width, int height, GraphicsFormat format)
+        public override RTHandle GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
             bool resized = 
-                m_BlitRT != null && 
-                (m_BlitRT.rt.width != (int)width || 
-                m_BlitRT.rt.height != (int)height);
+                m_SourceRT != null && 
+                (m_SourceRT.rt.width != (int)width || 
+                m_SourceRT.rt.height != (int)height);
 
-            if (m_BlitRT == null || resized)
+            if (m_SourceRT == null || resized)
             {
-                if (m_BlitRT != null)
-                    RTHandles.Release(m_BlitRT);
+                if (m_SourceRT != null)
+                    RTHandles.Release(m_SourceRT);
 
-                m_BlitRT = RTHandles.Alloc(
+                m_SourceRT = RTHandles.Alloc(
                     width: (int)width, 
                     height: (int)height, 
                     slices: 1, 
@@ -37,10 +32,10 @@ namespace Unity.ClusterDisplay.Graphics
                     name: "Overscanned Target");
             }
 
-            return m_BlitRT;
+            return m_SourceRT;
         }
 
-        protected override object PresentRT(int width, int height, GraphicsFormat format)
+        public override RTHandle GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
             bool resized = 
                 m_PresentRT != null && 
@@ -67,7 +62,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_PresentRT;
         }
 
-        protected override object BackBufferRT(int width, int height, GraphicsFormat format)
+        public override RTHandle GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
             bool resized = 
                 m_BackBufferRT != null && 
@@ -96,8 +91,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Release()
         {
-            if (m_BlitRT != null)
-                RTHandles.Release(m_BlitRT);
+            if (m_SourceRT != null)
+                RTHandles.Release(m_SourceRT);
 
             if (m_PresentRT != null)
                 RTHandles.Release(m_PresentRT);
@@ -105,7 +100,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_BackBufferRT != null)
                 RTHandles.Release(m_BackBufferRT);
 
-            m_BlitRT = null;
+            m_SourceRT = null;
             m_PresentRT = null;
             m_BackBufferRT = null;
         }

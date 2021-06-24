@@ -9,40 +9,36 @@ namespace Unity.ClusterDisplay.Graphics
     /// Manages the set of RenderTextures for stitcher layout rendering. Unfortunately setting Camera.targetTexture to 
     /// RTHandle seems to be inconsitent. Therefore we use RenderTexture instead.
     /// </summary>
-    public class StandardStitcherRTManager : StitcherRTManager
+    public class StandardStitcherRTManager : StitcherRTManager<RenderTexture>
     {
-        public override RTType type => RTType.RenderTexture;
-        private RenderTexture m_PresentRT;
-        private RenderTexture[] m_BlitRTs;
-
         private void PollRTs (int tileCount)
         {
-            if (m_BlitRTs != null && m_BlitRTs.Length == tileCount)
+            if (m_SourceRTs != null && m_SourceRTs.Length == tileCount)
                 return;
-            m_BlitRTs = new RenderTexture[tileCount];
+            m_SourceRTs = new RenderTexture[tileCount];
         }
 
-        protected override object BlitRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format)
+        public override RenderTexture GetSourceRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
         {
             PollRTs(tileCount);
 
-            bool resized = m_BlitRTs[tileIndex] != null && 
-                (m_BlitRTs[tileIndex].width != (int)width || 
-                m_BlitRTs[tileIndex].height != (int)height);
+            bool resized = m_SourceRTs[tileIndex] != null && 
+                (m_SourceRTs[tileIndex].width != (int)width || 
+                m_SourceRTs[tileIndex].height != (int)height);
 
-            if (m_BlitRTs[tileIndex] == null || resized || m_BlitRTs[tileIndex].graphicsFormat != format)
+            if (m_SourceRTs[tileIndex] == null || resized || m_SourceRTs[tileIndex].graphicsFormat != format)
             {
-                if (m_BlitRTs[tileIndex] != null)
-                    m_BlitRTs[tileIndex].Release();
+                if (m_SourceRTs[tileIndex] != null)
+                    m_SourceRTs[tileIndex].Release();
 
-                m_BlitRTs[tileIndex] = new RenderTexture(width, height, 1, format);
-                m_BlitRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_BlitRTs[tileIndex].width}X{m_BlitRTs[tileIndex].height})";
+                m_SourceRTs[tileIndex] = new RenderTexture(width, height, 1, format);
+                m_SourceRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_SourceRTs[tileIndex].width}X{m_SourceRTs[tileIndex].height})";
             }
 
-            return m_BlitRTs[tileIndex];
+            return m_SourceRTs[tileIndex];
         }
 
-        protected override object PresentRT(int width, int height, GraphicsFormat format)
+        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
         {
             bool resized = 
                 m_PresentRT != null && 
@@ -66,17 +62,17 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_PresentRT != null)
                 m_PresentRT.Release();
 
-            if (m_BlitRTs != null)
+            if (m_SourceRTs != null)
             {
-                for (var i = 0; i != m_BlitRTs.Length; ++i)
+                for (var i = 0; i != m_SourceRTs.Length; ++i)
                 {
-                    m_BlitRTs[i].Release();
-                    m_BlitRTs[i] = null;
+                    m_SourceRTs[i].Release();
+                    m_SourceRTs[i] = null;
                 }
             }
 
             m_PresentRT = null;
-            m_BlitRTs = null;
+            m_SourceRTs = null;
         }
     }
 }

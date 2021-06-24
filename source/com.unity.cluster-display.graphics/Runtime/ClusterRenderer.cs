@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : 
         MonoBehaviour, 
-        IClusterRenderer, 
+        IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
         // Any class with this interface that is registered with ClusterRenderer will receive these callbacks.
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.Graphics
         public ClusterRendererDebugSettings debugSettings => m_Context.debugSettings;
 
         public ClusterRenderContext context => m_Context;
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
+        private const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         
         #if UNITY_EDITOR
         // We need a clip-to-world space conversion for gizmo.
@@ -259,9 +259,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
-            if (!CameraContextRegistery.CanChangeContextTo(camera))
+            if (!CameraContextRegistry.CanChangeContextTo(camera))
                 return;
 
+            ToggleShaderKeywords(debugSettings.enableKeyword);
             onBeginCameraRender(context, camera);
 
             Assert.IsTrue(m_Context.gridSize.x > 0 && m_Context.gridSize.y > 0);
@@ -356,12 +357,12 @@ namespace Unity.ClusterDisplay.Graphics
                 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    CameraController.Presenter = new XRPresenter();
+                    cameraController.presenter = new XRPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    CameraController.Presenter = new XRPresenter();
+                    cameraController.presenter = new XRPresenter();
                     break;
                 #endif
 

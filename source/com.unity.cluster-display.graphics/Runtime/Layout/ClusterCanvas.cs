@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Rendering;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -17,17 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private Canvas m_Canvas;
         [HideInInspector][SerializeField] private RawImage m_RawImage;
 
-        public RawImage fullScreenRawImage
-        {
-            get
-            {
-                // TODO: Even though this is an initial caching of the RawImage instance, this
-                // should probably be replaced with something more efficient.
-                if (m_RawImage == null)
-                    m_RawImage = GetComponentInChildren<RawImage>();
-                return m_RawImage;
-            }
-        }
+        public RawImage fullScreenRawImage => m_RawImage;
 
         /// <summary>
         /// When we create our present render texture in standard tile/XR layout, we apply it

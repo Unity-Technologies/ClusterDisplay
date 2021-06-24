@@ -9,34 +9,29 @@ namespace Unity.ClusterDisplay.Graphics
     /// Manages the RenderTextures for tile layout rendering. Unfortunately setting Camera.targetTexture to 
     /// RTHandle seems to be inconsitent. Therefore we use RenderTexture instead.
     /// </summary>
-    public class StandardTileRTManager : TileRTManager
+    public class StandardTileRTManager : TileRTManager<RenderTexture>
     {
-        public override RTType type => RTType.RenderTexture;
-        private RenderTexture m_BlitRT;
-        private RenderTexture m_PresentRT;
-        private RenderTexture m_BackBufferRT;
-
-        protected override object BlitRT(int width, int height, GraphicsFormat format)
+        public override RenderTexture GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
         {
             bool resized = 
-                m_BlitRT != null && 
-                (m_BlitRT.width != (int)width || 
-                m_BlitRT.height != (int)height);
+                m_SourceRT != null && 
+                (m_SourceRT.width != (int)width || 
+                m_SourceRT.height != (int)height);
 
-            if (m_BlitRT == null || resized || m_BlitRT.graphicsFormat != format)
+            if (m_SourceRT == null || resized || m_SourceRT.graphicsFormat != format)
             {
-                if (m_BlitRT != null)
-                    m_BlitRT.Release();
+                if (m_SourceRT != null)
+                    m_SourceRT.Release();
 
-                m_BlitRT = new RenderTexture(width, height, 1, format, 0);
-                m_BlitRT.name = $"Tile-RT-({m_BlitRT.width}X{m_BlitRT.height})";
+                m_SourceRT = new RenderTexture(width, height, 1, format, 0);
+                m_SourceRT.name = $"Tile-RT-({m_SourceRT.width}X{m_SourceRT.height})";
                 // Debug.Log("Resizing tile RT.");
             }
 
-            return m_BlitRT;
+            return m_SourceRT;
         }
 
-        protected override object PresentRT(int width, int height, GraphicsFormat format)
+        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
         {
             bool resized = 
                 m_PresentRT != null && 
@@ -56,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_PresentRT;
         }
 
-        protected override object BackBufferRT(int width, int height, GraphicsFormat format)
+        public override RenderTexture GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
         {
             bool resized = 
                 m_BackBufferRT != null && 
@@ -78,8 +73,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Release()
         {
-            if (m_BlitRT != null)
-                m_BlitRT.Release();
+            if (m_SourceRT != null)
+                m_SourceRT.Release();
 
             if (m_PresentRT != null)
                 m_PresentRT.Release();
@@ -87,9 +82,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_BackBufferRT != null)
                 m_BackBufferRT.Release();
 
-            m_BlitRT = null;
+            m_SourceRT = null;
             m_PresentRT = null;
             m_BackBufferRT = null;
         }
+
     }
 }
