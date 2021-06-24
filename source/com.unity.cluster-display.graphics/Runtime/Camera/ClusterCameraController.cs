@@ -131,21 +131,5 @@ namespace Unity.ClusterDisplay.Graphics
 
             contextCamera.ResetProjectionMatrix();
         }
-
-        public Matrix4x4 CacheAndReturnProjectionMatrix ()
-        {
-            if (!TryGetContextCamera(out var contextCamera))
-                return Matrix4x4.identity;
-
-            var matrix = contextCamera.projectionMatrix;
-
-            m_SerializedProjectionMatrixC1 = matrix.GetColumn(0);
-            m_SerializedProjectionMatrixC2 = matrix.GetColumn(1);
-            m_SerializedProjectionMatrixC3 = matrix.GetColumn(2);
-            m_SerializedProjectionMatrixC4 = matrix.GetColumn(3);
-
-            return matrix;
-        }
-
     }
 }

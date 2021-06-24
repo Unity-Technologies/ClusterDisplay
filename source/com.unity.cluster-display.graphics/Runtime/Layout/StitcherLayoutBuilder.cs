@@ -9,7 +9,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         protected struct StitcherParameters
         {
-            public object targetRT;
+            public int tileIndex;
+            public object sourceRT;
             public Vector4 scaleBiasTex;
             public Vector4 scaleBiasRT;
             public Rect percentageViewportSubsection;
@@ -19,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected StitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
-        protected void CalculcateAndQueueStitcherParameters (object targetRT, Rect m_OverscannedRect, Rect percentageViewportSubsection)
+        protected void CalculcateAndQueueStitcherParameters<T> (int tileIndex, T targetRT, Rect m_OverscannedRect, Rect percentageViewportSubsection)
         {
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
@@ -30,10 +31,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
             {
+                tileIndex = tileIndex,
                 scaleBiasTex = scaleBiasTex,
                 scaleBiasRT = scaleBiasRT,
                 percentageViewportSubsection = percentageViewportSubsection,
-                targetRT = targetRT,
+                sourceRT = targetRT,
             });
         }
 
