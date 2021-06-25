@@ -6,15 +6,15 @@ using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public abstract class TileRTManager<T>
+    public abstract class TileRTManager<T> : RTManager
     {
         protected T m_SourceRT;
         protected T m_PresentRT;
         protected T m_BackBufferRT;
 
-        public abstract T GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
-        public abstract T GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
-        public abstract T GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB);
+        public abstract T GetSourceRT(int width, int height, GraphicsFormat format = defaultFormat);
+        public abstract T GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat);
+        public abstract T GetBackBufferRT(int width, int height, GraphicsFormat format = defaultFormat);
         public abstract void Release();
     }
 }

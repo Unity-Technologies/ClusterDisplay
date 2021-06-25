@@ -5,28 +5,17 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public abstract class TileLayoutBuilder : LayoutBuilder
     {
-
-        protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) 
-        {
-        }
-
-        protected void PollRT (Camera camera, ref RenderTexture targetRT, int width, int height)
-        {
-        }
+        protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
         protected bool SetupTiledLayout (
             Camera camera, 
-            out ScriptableCullingParameters cullingParameters, 
-            out Matrix4x4 projectionMatrix,
+            out Matrix4x4 asymmetricProjectionMatrix,
             out Rect viewportSubsection,
             out Rect overscannedRect)
         {
-            if (!ValidGridSize(out var numTiles) || 
-                camera.cameraType != CameraType.Game || 
-                !camera.TryGetCullingParameters(false, out cullingParameters))
+            if (!ValidGridSize(out var numTiles) || camera.cameraType != CameraType.Game)
             {
-                cullingParameters = default(ScriptableCullingParameters);
-                projectionMatrix = Matrix4x4.identity;
+                asymmetricProjectionMatrix = Matrix4x4.identity;
                 viewportSubsection = Rect.zero;
                 overscannedRect = Rect.zero;
                 return false;
@@ -38,8 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
-            projectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
-            
+            asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
             return true;
         }
     }
