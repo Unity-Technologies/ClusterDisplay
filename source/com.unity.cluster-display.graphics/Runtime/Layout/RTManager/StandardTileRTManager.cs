@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardTileRTManager : TileRTManager<RenderTexture>
     {
-        public override RenderTexture GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RenderTexture GetSourceRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
             bool resized = 
                 m_SourceRT != null && 
@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_SourceRT;
         }
 
-        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
             bool resized = 
                 m_PresentRT != null && 
@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_PresentRT;
         }
 
-        public override RenderTexture GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RenderTexture GetBackBufferRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
             bool resized = 
                 m_BackBufferRT != null && 

@@ -71,6 +71,9 @@ namespace Unity.ClusterDisplay.Graphics
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return false;
 
+            if (!camera.enabled)
+                camera.enabled = true;
+
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
                 return false;
 
@@ -81,20 +84,23 @@ namespace Unity.ClusterDisplay.Graphics
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             var cachedProjectionMatrix = camera.projectionMatrix;
             
-            for (var i = 0; i != numTiles; ++i)
+            for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
-                var sourceRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
                 CalculateStitcherLayout(
                     camera, 
                     cachedProjectionMatrix,
-                    i, 
-                    ref cullingParams, 
+                    tileIndex, 
                     out var percentageViewportSubsection, 
                     out var viewportSubsection, 
-                    out var projectionMatrix);
+                    out var asymmetricProjectionMatrix);
+
+                cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
+                cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
+                cullingParams.cullingMatrix = camera.worldToCameraMatrix * asymmetricProjectionMatrix ;
                
-                CalculcateAndQueueStitcherParameters(i, sourceRT, m_OverscannedRect, percentageViewportSubsection);
+                CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
 
                 var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                         viewportSubsection,
@@ -103,8 +109,8 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var passInfo = new XRPassCreateInfo
                 {
-                    multipassId = i,
-                    cullingPassId = 0,
+                    multipassId = tileIndex,
+                    cullingPassId = tileIndex,
                     cullingParameters = cullingParams,
                     renderTarget = sourceRT,
                     customMirrorView = BuildMirrorView
@@ -113,7 +119,7 @@ namespace Unity.ClusterDisplay.Graphics
                 var viewInfo = new XRViewCreateInfo
                 {
                     viewMatrix = camera.worldToCameraMatrix,
-                    projMatrix = projectionMatrix,
+                    projMatrix = asymmetricProjectionMatrix,
                     viewport = m_OverscannedRect,
                     clusterDisplayParams = clusterDisplayParams,
                     textureArraySlice = -1

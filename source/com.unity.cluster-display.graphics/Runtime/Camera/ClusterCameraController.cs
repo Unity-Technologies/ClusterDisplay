@@ -118,18 +118,5 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
-
-        /// <summary>
-        /// Before we call Camera.Render(), we change the camera's projectionMatrix to some asymmetric projection. However, before we do that
-        /// we cache what the camera's projection matrix should be using the camera's paramters before we modify the camera's projection matrix 
-        /// in order to later revert it after calling Camera.Render()
-        /// </summary>
-        public void ResetProjectionMatrix ()
-        {
-            if (!TryGetContextCamera(out var contextCamera))
-                return;
-
-            contextCamera.ResetProjectionMatrix();
-        }
     }
 }

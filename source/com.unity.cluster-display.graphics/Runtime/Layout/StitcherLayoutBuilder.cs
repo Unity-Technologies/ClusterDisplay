@@ -43,23 +43,18 @@ namespace Unity.ClusterDisplay.Graphics
         protected void CalculateStitcherLayout(
             Camera camera,
             Matrix4x4 cameraProjectionMatrix,
-            int i,
-            ref ScriptableCullingParameters cullingParams,
+            int tileIndex,
             out Rect percentageViewportSubsection,
             out Rect viewportSubsection,
             out Matrix4x4 asymmetricProjectionMatrix)
         {
-            percentageViewportSubsection = k_ClusterRenderer.context.GetViewportSubsection(i);
+            percentageViewportSubsection = k_ClusterRenderer.context.GetViewportSubsection(tileIndex);
             viewportSubsection = percentageViewportSubsection;
             if (k_ClusterRenderer.context.physicalScreenSize != Vector2Int.zero && k_ClusterRenderer.context.bezel != Vector2Int.zero)
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
             asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(cameraProjectionMatrix, viewportSubsection);
-
-            cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
-            cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
         }
-
     }
 }
