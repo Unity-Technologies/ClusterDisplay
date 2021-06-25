@@ -26,8 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!SetupTiledLayout(
                 camera, 
-                out var _, 
-                out var projectionMatrix, 
+                out var asymmetricProjectionMatrix, 
                 out var viewportSubsection,
                 out m_OverscannedRect))
                 return;
@@ -36,11 +35,12 @@ namespace Unity.ClusterDisplay.Graphics
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
             camera.targetTexture = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            camera.projectionMatrix = projectionMatrix;
-            camera.cullingMatrix = projectionMatrix * camera.worldToCameraMatrix;
+            camera.projectionMatrix = asymmetricProjectionMatrix;
+            camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
 
             camera.Render();
             camera.ResetProjectionMatrix();
+            camera.ResetCullingMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

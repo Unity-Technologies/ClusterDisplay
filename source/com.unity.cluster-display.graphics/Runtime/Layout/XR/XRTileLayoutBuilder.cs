@@ -46,24 +46,29 @@ namespace Unity.ClusterDisplay.Graphics
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return false;
 
+            if (!camera.enabled)
+                camera.enabled = true;
+
+            if (!camera.TryGetCullingParameters(false, out var cullingParams))
+                return false;
+
             if (!SetupTiledLayout(
                 camera, 
-                out var cullingParams, 
-                out var projMatrix, 
+                out var asymmetricProjectionMatrix, 
                 out var viewportSubsection,
                 out m_OverscannedRect))
                 return false;
 
-            cullingParams.stereoProjectionMatrix = projMatrix;
+            cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-            var target = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
             {
                 multipassId = 0,
                 cullingPassId = 0,
                 cullingParameters = cullingParams,
-                renderTarget = target,
+                renderTarget = sourceRT,
                 customMirrorView = BuildMirrorView
             };
 
@@ -75,13 +80,12 @@ namespace Unity.ClusterDisplay.Graphics
             var viewInfo = new XRViewCreateInfo
             {
                 viewMatrix = camera.worldToCameraMatrix,
-                projMatrix = projMatrix,
+                projMatrix = asymmetricProjectionMatrix,
                 viewport = m_OverscannedRect,
                 clusterDisplayParams = clusterDisplayParams,
                 textureArraySlice = -1
             };
 
-            passInfo.multipassId = 0;
             XRPass pass = layout.CreatePass(passInfo);
             layout.AddViewToPass(viewInfo, pass);
 

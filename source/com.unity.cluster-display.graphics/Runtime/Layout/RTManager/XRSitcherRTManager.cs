@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_SourceRTs = new RTHandle[tileCount];
         }
 
-        public override RTHandle GetSourceRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RTHandle GetSourceRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format = defaultFormat)
         {
             PollRTs(tileCount);
 
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.Graphics
             return m_SourceRTs[tileIndex];
         }
 
-        public override RTHandle GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RTHandle GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
             bool resized = 
                 m_PresentRT != null && 

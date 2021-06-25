@@ -47,19 +47,15 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             ClearTiles(numTiles);
 
-            if (!camera.TryGetCullingParameters(false, out var cullingParams))
-                return;
-
             var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
-            var startingProjectionMatrix = camera.projectionMatrix;
+            var cachedProjectionMatrix = camera.projectionMatrix;
 
-            for (var i = 0; i < numTiles; i++)
+            for (var tileIndex = 0; tileIndex < numTiles; tileIndex++)
             {
                 CalculateStitcherLayout(
                     camera, 
-                    startingProjectionMatrix,
-                    i, 
-                    ref cullingParams, 
+                    cachedProjectionMatrix,
+                    tileIndex, 
                     out var percentageViewportSubsection, 
                     out var viewportSubsection, 
                     out var asymmetricProjectionMatrix);
@@ -67,8 +63,8 @@ namespace Unity.ClusterDisplay.Graphics
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
-                var sourceRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-                CalculcateAndQueueStitcherParameters(i, sourceRT, m_OverscannedRect, percentageViewportSubsection);
+                var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
 
                 camera.targetTexture = sourceRT;
                 camera.projectionMatrix = asymmetricProjectionMatrix;
@@ -77,8 +73,8 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.Render();
             }
 
-            k_ClusterRenderer.cameraController.ResetProjectionMatrix();
-
+            camera.ResetProjectionMatrix();
+            camera.ResetCullingMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

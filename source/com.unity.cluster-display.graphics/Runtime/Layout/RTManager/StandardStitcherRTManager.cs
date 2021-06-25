@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -18,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_SourceRTs = new RenderTexture[tileCount];
         }
 
-        public override RenderTexture GetSourceRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RenderTexture GetSourceRT(int tileCount, int tileIndex, int width, int height, GraphicsFormat format = defaultFormat)
         {
             PollRTs(tileCount);
 
@@ -26,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
                 (m_SourceRTs[tileIndex].width != (int)width || 
                 m_SourceRTs[tileIndex].height != (int)height);
 
-            if (m_SourceRTs[tileIndex] == null || resized || m_SourceRTs[tileIndex].graphicsFormat != format)
+            if (m_SourceRTs[tileIndex] == null || resized | m_SourceRTs[tileIndex].graphicsFormat != format)
             {
                 if (m_SourceRTs[tileIndex] != null)
                     m_SourceRTs[tileIndex].Release();
@@ -38,14 +39,14 @@ namespace Unity.ClusterDisplay.Graphics
             return m_SourceRTs[tileIndex];
         }
 
-        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.R8G8B8A8_SRGB)
+        public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
             bool resized = 
                 m_PresentRT != null && 
                 (m_PresentRT.width != (int)width || 
                 m_PresentRT.height != (int)height);
 
-            if (m_PresentRT == null || resized || m_PresentRT.graphicsFormat != format)
+            if (m_PresentRT == null || resized | m_PresentRT.graphicsFormat != format)
             {
                 if (m_PresentRT != null)
                     m_PresentRT.Release();
