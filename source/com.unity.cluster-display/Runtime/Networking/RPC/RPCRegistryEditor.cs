@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Reflection;
 using UnityEngine.UIElements;
+using System.IO;
 
 #if UNITY_EDITOR
 using UnityEditorInternal;
@@ -47,7 +48,13 @@ namespace Unity.ClusterDisplay
                     return;
 
                 if (cachedAllAssemblies == null)
-                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                {
+                    string scriptAssembliesPath = Path.Combine(Application.dataPath, "../Library/ScriptAssemblies").Replace('\\', '/');
+                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly =>
+                    {
+                        return File.Exists($"{scriptAssembliesPath}/{assembly.GetName().Name}.dll"); 
+                    }).ToArray();
+                }
 
                 assemblySearchStr = newAssemblySearchStr;
                 cachedSearchedAssemblies = cachedAllAssemblies.Where(assembly => string.IsNullOrEmpty(assemblySearchStr) || assembly.FullName.Contains(assemblySearchStr)).ToArray();

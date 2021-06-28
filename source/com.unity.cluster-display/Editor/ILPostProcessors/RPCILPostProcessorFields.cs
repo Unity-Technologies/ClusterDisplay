@@ -8,10 +8,9 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public partial class RPCILPostProcessor : ILPostProcessor
+    public partial class RPCILPostProcessor
     {
         private SerializedRPC[] cachedSerializedRPCS = null;
-        private string[] cachedRegisteredAssemblyFullNames = null;
 
         private static TypeReference cachedGeneratedRPCILTypeRef;
         private static MethodInfo cachedGetIsMasterMethod;

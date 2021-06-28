@@ -12,10 +12,8 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public partial class RPCILPostProcessor : ILPostProcessor
+    public partial class RPCILPostProcessor
     {
-        public override ILPostProcessor GetInstance() => this;
-
         private IEnumerable<MethodDefinition> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
         {
             var rpcMethodCustomAttributeType = typeof(ClusterRPC);
@@ -261,57 +259,19 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
+        public bool TryProcess(AssemblyDefinition compiledAssemblyDef)
         {
-            if (cachedRegisteredAssemblyFullNames == null)
-                if (!RPCSerializer.TryReadRegisteredAssemblies(RPCRegistry.RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames))
-                    goto failure;
-
-            if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Contains(compiledAssembly.Name)))
-                goto ignoreAssembly;
-
-            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var compiledAssemblyDef))
-                goto failure;
-
             UniqueRPCIdManager.Read();
             if (!TryPollSerializedRPCs(compiledAssemblyDef))
-                goto failure;
+                return false;
 
             if (!TryProcessMethodsWithRPCAttribute(compiledAssemblyDef))
-                goto failure;
+                return false;
 
             InjectDefaultSwitchCases();
             FlushCache();
             UniqueRPCIdManager.Close();
-
-            var pe = new MemoryStream();
-            var pdb = new MemoryStream();
-            var writerParameters = new WriterParameters
-            {
-                SymbolWriterProvider = new PortablePdbWriterProvider(), 
-                SymbolStream = pdb, 
-                WriteSymbols = true,
-            };
-
-            try
-            {
-                compiledAssemblyDef.Write(pe, writerParameters);
-            } catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                goto failure;
-            }
-
-            return new ILPostProcessResult(new InMemoryAssembly(pe.ToArray(), pdb.ToArray()));
-
-            ignoreAssembly:
-            return null;
-
-            failure:
-            Debug.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
-            return null;
+            return true;
         }
-
-        public override bool WillProcess(ICompiledAssembly compiledAssembly) => true;
     }
 }

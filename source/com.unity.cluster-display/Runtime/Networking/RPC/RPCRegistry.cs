@@ -85,7 +85,7 @@ namespace Unity.ClusterDisplay
             if (targetAssemblies.Contains(assembly))
                 return;
             targetAssemblies.Add(assembly);
-            m_IsDirty = true;
+            WriteRegisteredAssemblies();
         }
 
         private void UnregisterAssembly (Assembly assembly)
@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay
             if (!targetAssemblies.Contains(assembly))
                 return;
             targetAssemblies.Remove(assembly);
-            m_IsDirty = true;
+            WriteRegisteredAssemblies();
         }
 
         private bool AssemblyIsRegistered(Assembly assembly) => targetAssemblies.Contains(assembly);
@@ -114,6 +114,9 @@ namespace Unity.ClusterDisplay
 
             if (!RPCSerializer.TryCreateSerializableRPC(ref rpcMethodInfo, out var serializedRPC))
                 return;
+
+            if (!targetAssemblies.Contains(rpcMethodInfo.methodInfo.Module.Assembly))
+                targetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
 
             m_RPCs.Add(rpcMethodInfo.rpcId, rpcMethodInfo);
 
@@ -191,8 +194,6 @@ namespace Unity.ClusterDisplay
             rpcMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
             RegisterRPC(ref rpcMethodInfo);
 
-            // Debug.Log($"Registered method with UUID: \"{rpcId}\" for method: \"{ReflectionUtils.GetMethodSignature(methodInfo)}\" from type: \"{type.FullName}\" from assembly: \"{type.Assembly}\".");
-
             return true;
         }
 
@@ -231,6 +232,12 @@ namespace Unity.ClusterDisplay
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
             #endif
+        }
+
+        private void WriteAll ()
+        {
+            WriteRegisteredAssemblies();
+            WriteRPCStubs();
         }
 
         private void WriteRPCStubs ()
@@ -293,23 +300,9 @@ namespace Unity.ClusterDisplay
                 return;
             */
 
-            if (RPCSerializer.TryReadRegisteredAssemblies(RegisteredAssembliesJsonPath, out var registeredAssemblyFullNames))
-            {
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-                targetAssemblies.Clear();
-
-                for (int rai = 0; rai < registeredAssemblyFullNames.Length; rai++)
-                {
-                    for (int ai = 0; ai < assemblies.Length; ai++)
-                    {
-                        if (assemblies[ai].FullName != registeredAssemblyFullNames[rai])
-                            continue;
-
-                        targetAssemblies.Add(assemblies[ai]);
-                        break;
-                    }
-                }
-            }
+            List<Assembly> registeredAssemblies = new List<Assembly>();
+            if (!RPCSerializer.TryReadRegisteredAssemblies(RegisteredAssembliesJsonPath, out registeredAssemblies))
+                return;
 
             RPCSerializer.TryReadRPCStubs(RPCStubsPath, out var serializedRPCs);
 
@@ -323,7 +316,7 @@ namespace Unity.ClusterDisplay
             {
                 foreach (var methodInfo in cachedMethodsWithRPCAttribute)
                 {
-                    if (!RPCInterfaceRegistry.HasImplementationInAssembly(methodInfo.Module.Assembly))
+                    if (!registeredAssemblies.Contains(methodInfo.Module.Assembly))
                         continue;
 
                     var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
@@ -377,7 +370,7 @@ namespace Unity.ClusterDisplay
                     continue;
                 }
 
-                if (!RPCInterfaceRegistry.HasImplementationInAssembly(methodInfo.Module.Assembly))
+                if (!registeredAssemblies.Contains(methodInfo.Module.Assembly))
                     continue;
 
                 var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
@@ -405,7 +398,7 @@ namespace Unity.ClusterDisplay
             ushort largestId = rpcIdsToAdd.Last();
             m_IDManager.PushSetOfIds(rpcIdsToAdd.ToArray(), largestId);
 
-            WriteRPCStubs();
+            WriteAll();
         }
 
         private void Serialize ()
@@ -413,8 +406,7 @@ namespace Unity.ClusterDisplay
             if (!m_IsDirty)
                 return;
 
-            WriteRegisteredAssemblies();
-
+            WriteAll();
             m_IsDirty = false;
         }
 

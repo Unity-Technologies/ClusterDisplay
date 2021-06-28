@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public partial class RPCILPostProcessor : ILPostProcessor
+    public partial class RPCILPostProcessor
     {
         sealed class RPCILGenerator
         {

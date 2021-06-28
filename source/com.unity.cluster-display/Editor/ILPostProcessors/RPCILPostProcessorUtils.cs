@@ -9,37 +9,8 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public partial class RPCILPostProcessor : ILPostProcessor
+    public partial class RPCILPostProcessor
     {
-        private static MemoryStream CreatePdbStreamFor(string assemblyLocation)
-        {
-            string pdbFilePath = Path.ChangeExtension(assemblyLocation, ".pdb");
-            return !File.Exists(pdbFilePath) ? null : new MemoryStream(File.ReadAllBytes(pdbFilePath));
-        }
-
-        public static bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
-        {
-            var readerParameters = new ReaderParameters
-            {
-                AssemblyResolver = new AssemblyResolver(),
-                SymbolStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PdbData.ToArray()),
-                SymbolReaderProvider = new PortablePdbReaderProvider(),
-                ReadingMode = ReadingMode.Immediate,
-            };
-
-            var peStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PeData.ToArray());
-            try
-            {
-                assemblyDef = AssemblyDefinition.ReadAssembly(peStream, readerParameters);
-                return true;
-            } catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                assemblyDef = null;
-                return false;
-            }
-        }
-
         private static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
@@ -526,7 +497,7 @@ namespace Unity.ClusterDisplay
 
                     var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
                     var paramRef = moduleDef.ImportReference(paramDef.ParameterType);
-                    paramRef.IsValueType = true;
+                    // paramRef.IsValueType = true;
                     genericInstanceMethod.GenericArguments.Add(paramRef);
                     var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
 

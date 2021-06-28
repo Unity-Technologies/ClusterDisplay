@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -139,6 +140,32 @@ namespace Unity.ClusterDisplay
 
             Debug.Log($"Registered assemblies was read from path: \"{path}\".");
             return true;
+        }
+
+        public static bool TryReadRegisteredAssemblies (string path, out List<Assembly> registeredAssemblies)
+        {
+            if (!TryReadRegisteredAssemblies(path, out string[] registeredAssemblyFullNames))
+            {
+                registeredAssemblies = null;
+                return false;
+            }
+
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            registeredAssemblies = new List<Assembly>();
+
+            for (int rai = 0; rai < registeredAssemblyFullNames.Length; rai++)
+            {
+                for (int ai = 0; ai < assemblies.Length; ai++)
+                {
+                    if (assemblies[ai].FullName != registeredAssemblyFullNames[rai])
+                        continue;
+
+                    registeredAssemblies.Add(assemblies[ai]);
+                    break;
+                }
+            }
+
+            return registeredAssemblies.Count > 0;
         }
 
         public static bool TryReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs)
