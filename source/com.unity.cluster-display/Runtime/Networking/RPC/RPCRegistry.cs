@@ -56,9 +56,7 @@ namespace Unity.ClusterDisplay
         private static readonly Dictionary<ushort, ushort> assemblyIndexLookUp = new Dictionary<ushort, ushort>();
 
         public static bool TryGetAssemblyIndex(ushort rpcId, out ushort assemblyIndex) => assemblyIndexLookUp.TryGetValue(rpcId, out assemblyIndex);
-
         [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
-        [SerializeField][HideInInspector] private SerializedRPCsContainer m_SerializedRPCsContainer = new SerializedRPCsContainer();
 
         public const string RPCStubsPath = "./RPCStubs.json";
 
@@ -108,9 +106,14 @@ namespace Unity.ClusterDisplay
         /// <param name="serialize">If the RPC is flagged using the [RPC] attribute, then we don't need to serialize it.</param>
         private void RegisterRPC (ref RPCMethodInfo rpcMethodInfo)
         {
+            if (m_RPCs.TryGetValue(rpcMethodInfo.rpcId, out var registeredRPCMethodInfo))
+            {
+                Debug.LogError($"Unable to register RPC: \"{rpcMethodInfo.methodInfo.Name}\" with ID: \"{rpcMethodInfo.rpcId}\", there is an already RPC registered with that ID.");
+                return;
+            }
+
             if (!RPCSerializer.TryCreateSerializableRPC(ref rpcMethodInfo, out var serializedRPC))
                 return;
-            else m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, serializedRPC);
 
             m_RPCs.Add(rpcMethodInfo.rpcId, rpcMethodInfo);
 
@@ -127,7 +130,6 @@ namespace Unity.ClusterDisplay
         {
             if (!RPCSerializer.TryCreateSerializableRPC(ref rpcMethodInfo, out var serializedRPC))
                 return;
-            m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, serializedRPC);
 
             m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
 
@@ -144,7 +146,6 @@ namespace Unity.ClusterDisplay
         {
             m_RPCs.Remove(rpcMethodInfo.rpcId);
             m_RPCLut.Remove(rpcMethodInfo.methodInfo.MetadataToken);
-            m_SerializedRPCsContainer.SetData(rpcMethodInfo.rpcId, null);
             m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
 
             #if UNITY_EDITOR
@@ -155,7 +156,6 @@ namespace Unity.ClusterDisplay
         private void UnregisterRPCOnDeserialize (ushort rpcId)
         {
             m_RPCs[rpcId] = default(RPCMethodInfo);
-            m_SerializedRPCsContainer.SetData(rpcId, null);
             m_IDManager.PushUnutilizedId(rpcId);
         }
 
@@ -201,8 +201,6 @@ namespace Unity.ClusterDisplay
             if (!TryGetRPC(rpcId, out var rpcMethodInfo))
                 return;
             UnregisterRPC(ref rpcMethodInfo);
-
-            // Debug.Log($"Unregistered method: \"{rpcMethodInfo.methodInfo.Name}\" with UUID: \"{rpcMethodInfo.rpcId}\".");
         }
 
         /// <summary>
@@ -215,6 +213,9 @@ namespace Unity.ClusterDisplay
                 return;
 
             // Debug.Log($"Changed RPC Registry, recompiling...");
+            foreach (var assembly in UnityEditor.Compilation.CompilationPipeline.GetAssemblies(UnityEditor.Compilation.AssembliesType.Player))
+                Debug.Log(assembly.name);
+
             EditorUtility.SetDirty(this);
             UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             m_IsDirty = true;
@@ -225,7 +226,6 @@ namespace Unity.ClusterDisplay
         {
             m_RPCLut.Clear();
             m_RPCs.Clear();
-            m_SerializedRPCsContainer.Clear();
             m_IDManager.Clear();
 
             #if UNITY_EDITOR
@@ -235,8 +235,15 @@ namespace Unity.ClusterDisplay
 
         private void WriteRPCStubs ()
         {
-            List<SerializedRPC> list = new List<SerializedRPC>(m_SerializedRPCsContainer.Count == 0 ? 10 : m_SerializedRPCsContainer.Count);
-            m_SerializedRPCsContainer.Foreach((serializedRPC) => list.Add(serializedRPC));
+            List<SerializedRPC> list = new List<SerializedRPC>();
+            foreach (var keyValuePair in m_RPCs)
+            {
+                var rpc = keyValuePair.Value;
+                if (!RPCSerializer.TryCreateSerializableRPC(ref rpc, out var serializedRPC))
+                    continue;
+                list.Add(serializedRPC);
+            }
+
             RPCSerializer.TryWriteRPCStubs(RPCStubsPath, list.ToArray());
         }
 
@@ -304,6 +311,8 @@ namespace Unity.ClusterDisplay
                 }
             }
 
+            RPCSerializer.TryReadRPCStubs(RPCStubsPath, out var serializedRPCs);
+
             List<ushort> rpcIdsToAdd = new List<ushort>();
             List<string> renamedRPCs = new List<string>();
 
@@ -327,12 +336,17 @@ namespace Unity.ClusterDisplay
 
                     SerializedRPC ? nullableSerializedRPC = null;
                     // Search for the serialized RPC with the former name.
-                    m_SerializedRPCsContainer.Foreach((serializedRPC) =>
+                    if (serializedRPCs != null)
                     {
-                        if (serializedRPC.methodName != methodInfo.Name && serializedRPC.methodName != rpcMethodAttribute.formarlySerializedAs)
-                            return;
-                        nullableSerializedRPC = serializedRPC;
-                    });
+                        for (int i = 0; i < serializedRPCs.Length; i++)
+                        {
+                            if (serializedRPCs[i].methodName != methodInfo.Name && serializedRPCs[i].methodName != rpcMethodAttribute.formarlySerializedAs)
+                                continue;
+
+                            nullableSerializedRPC = serializedRPCs[i];
+                            break;
+                        }
+                    }
 
                     // If "formarlySerializedAs" has not beend defined, or if the current method matches the former name, then simply register the RPC.
                     var rpcId = nullableSerializedRPC != null ? nullableSerializedRPC.Value.rpcId : rpcMethodAttribute.rpcId;
@@ -351,21 +365,20 @@ namespace Unity.ClusterDisplay
                 }
             }
 
-            m_SerializedRPCsContainer.Foreach((serializedRPC) =>
+            for (int i = 0; i < serializedRPCs.Length; i++)
             {
                 var rpcExecutionStage = RPCExecutionStage.ImmediatelyOnArrival;
-                if (renamedRPCs.Contains(serializedRPC.methodName))
+                if (renamedRPCs.Contains(serializedRPCs[i].methodName))
                     return;
 
-                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out rpcExecutionStage, out var methodInfo))
+                if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPCs[i], out rpcExecutionStage, out var methodInfo))
                 {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedRPC.methodName}\", declared in type: \"{serializedRPC.declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
-                    m_SerializedRPCsContainer.SetData(serializedRPC.rpcId, null);
-                    return;
+                    Debug.LogError($"Unable to deserialize method: \"{serializedRPCs[i].methodName}\", declared in type: \"{serializedRPCs[i].declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                    continue;
                 }
 
                 if (!RPCInterfaceRegistry.HasImplementationInAssembly(methodInfo.Module.Assembly))
-                    return;
+                    continue;
 
                 var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
                 if (rpcMethodAttribute != null)
@@ -373,13 +386,13 @@ namespace Unity.ClusterDisplay
 
                 if (!TryRegisterSerializeRPC(
                     methodInfo.Module.Assembly,
-                    serializedRPC.rpcId,
+                    serializedRPCs[i].rpcId,
                     rpcExecutionStage,
                     methodInfo))
-                    return;
+                    continue;
 
-                rpcIdsToAdd.Add(serializedRPC.rpcId);
-            });
+                rpcIdsToAdd.Add(serializedRPCs[i].rpcId);
+            }
 
             if (rpcIdsToAdd.Count == 0)
             {
@@ -399,9 +412,6 @@ namespace Unity.ClusterDisplay
         {
             if (!m_IsDirty)
                 return;
-
-            if (m_SerializedRPCsContainer.Count > -1)
-                WriteRPCStubs();
 
             WriteRegisteredAssemblies();
 

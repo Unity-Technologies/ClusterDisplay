@@ -89,36 +89,16 @@ namespace Unity.ClusterDisplay
             System.Type type, 
             string filter)
         {
-            if (!TryGetDefaultAssembly(out var defaultAssembly))
-                return new MethodInfo[0];
-
             return
                 string.IsNullOrEmpty(filter) ?
-
-                    type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(method =>
-                        {
-                            ushort depth = 0;
-                            return
-                                !method.IsGenericMethod &&
-                                method.DeclaringType.Assembly == defaultAssembly &&
-                                method.GetParameters().All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(method, parameterInfo, parameterInfo.ParameterType, ref depth));
-                        })
-                        .ToArray()
-
+                    type
+                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(method => DetermineIfMethodIsRPCCompatible(method)).ToArray()
                     :
-
                     type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                         .Where(method =>
-                        {
-                            ushort depth = 0;
-                            return
-                                !method.IsGenericMethod &&
-                                method.DeclaringType.Assembly == defaultAssembly &&
                                 (method.Name.Contains(filter)) &&
-                                method.GetParameters().All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(method, parameterInfo, parameterInfo.ParameterType, ref depth));
-                        }).ToArray();
-                        
+                                DetermineIfMethodIsRPCCompatible(method)).ToArray();
         }
 
         public static MethodInfo[] GetAllMethodsFromType (
