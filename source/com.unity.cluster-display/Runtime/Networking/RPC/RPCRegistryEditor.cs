@@ -215,7 +215,7 @@ namespace Unity.ClusterDisplay
                             targetType = targetMethod.DeclaringType;
                         }
 
-                        if (rpcMethodInfo.IsStatic && GUILayout.Button("X", GUILayout.Width(25)))
+                        if (GUILayout.Button("X", GUILayout.Width(25)))
                         {
                             if (EditorUtility.DisplayDialog("Unregister Method?", "Are you sure you want to unregister this method?", "Yes", "Cancel"))
                                 rpcMethodToRemove = rpcMethodInfo;
