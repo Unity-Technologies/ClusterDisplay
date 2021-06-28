@@ -1,9 +1,7 @@
 ﻿using System.Linq;
-using System;
 using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEditor.Scripting;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -33,7 +31,9 @@ namespace Unity.ClusterDisplay
     }
 
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
+    #if UNITY_EDITOR
     [InitializeOnLoad]
+    #endif
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         private static readonly Dictionary<int, ushort> m_RPCLut = new Dictionary<int, ushort>();
@@ -66,17 +66,24 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public const string RegisteredAssembliesJsonPath = "./RegisteredAssemblies.txt";
 
+        [SerializeField][HideInInspector] private string serializedRegisteredAssemblies;
+        [SerializeField][HideInInspector] private string serializedRPCStubs;
+
         public static bool RPCRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
         public static bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => m_RPCs.TryGetValue(rpcId, out rpcMethodInfo);
 
-        public static void SetupInstances ()
+        public static bool Setup ()
         {
-            foreach (var rpcIdAndInfo in m_RPCs)
+            if (!TryGetInstance(out var rpcRegistry))
             {
-                if (!RPCInterfaceRegistry.TryCreateImplementationInstance(rpcIdAndInfo.Value.methodInfo.Module.Assembly, out var assemblyIndex))
-                    continue;
-                assemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
+                Debug.LogError($"Unable to retrieve instance of \"{nameof(RPCRegistry)}\".");
+                return false;
             }
+
+            if (m_RPCs.Count == 0)
+                rpcRegistry.Deserialize();
+
+            return true;
         }
 
         private void RegisterAssembly (Assembly assembly)
@@ -85,7 +92,7 @@ namespace Unity.ClusterDisplay
             if (targetAssemblies.Contains(assembly))
                 return;
             targetAssemblies.Add(assembly);
-            WriteRegisteredAssemblies();
+            SerializeRegisteredAssemblies();
         }
 
         private void UnregisterAssembly (Assembly assembly)
@@ -94,7 +101,7 @@ namespace Unity.ClusterDisplay
             if (!targetAssemblies.Contains(assembly))
                 return;
             targetAssemblies.Remove(assembly);
-            WriteRegisteredAssemblies();
+            SerializeRegisteredAssemblies();
         }
 
         private bool AssemblyIsRegistered(Assembly assembly) => targetAssemblies.Contains(assembly);
@@ -234,13 +241,13 @@ namespace Unity.ClusterDisplay
             #endif
         }
 
-        private void WriteAll ()
+        private void SerializeAll ()
         {
-            WriteRegisteredAssemblies();
-            WriteRPCStubs();
+            SerializeRegisteredAssemblies();
+            SerializeRPCStubs();
         }
 
-        private void WriteRPCStubs ()
+        private void SerializeRPCStubs ()
         {
             List<SerializedRPC> list = new List<SerializedRPC>();
             foreach (var keyValuePair in m_RPCs)
@@ -251,12 +258,25 @@ namespace Unity.ClusterDisplay
                 list.Add(serializedRPC);
             }
 
-            RPCSerializer.TryWriteRPCStubs(RPCStubsPath, list.ToArray());
+            if (!RPCSerializer.TryPrepareRPCStubsForSerialization(list.ToArray(), out serializedRPCStubs))
+                return;
+
+            #if UNITY_EDITOR
+            RPCSerializer.TryWriteRPCStubs(RPCStubsPath, serializedRPCStubs);
+            #endif
+
+            m_IsDirty = true;
         }
 
-        private void WriteRegisteredAssemblies ()
+        private void SerializeRegisteredAssemblies ()
         {
-            RPCSerializer.TryWriteRegisteredAssemblies(RegisteredAssembliesJsonPath, targetAssemblies.Where(assembly => assembly != null).Select(assembly => assembly.FullName).ToArray());
+            RPCSerializer.PrepareRegisteredAssembliesForSerialization(targetAssemblies, out serializedRegisteredAssemblies);
+
+            #if UNITY_EDITOR
+            RPCSerializer.TryWriteRegisteredAssemblies(RegisteredAssembliesJsonPath, serializedRegisteredAssemblies);
+            #endif
+
+            m_IsDirty = true;
         }
 
         private void InstanceRPCInstanceRegistry (Assembly assembly, ushort rpcId)
@@ -283,6 +303,22 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
+        private void DeserializeData (out List<Assembly> registeredAssemblies, out SerializedRPC[] serializedRPCs)
+        {
+            registeredAssemblies = null;
+            serializedRPCs = null;
+
+            if (Application.isEditor)
+                RPCSerializer.TryReadRegisteredAssemblies(RegisteredAssembliesJsonPath, out registeredAssemblies);
+            else RPCSerializer.TryDeserializeRegisteredAssemblies(serializedRegisteredAssemblies, out registeredAssemblies);
+
+            if (Application.isEditor)
+                RPCSerializer.TryReadRPCStubs(RPCStubsPath, out serializedRPCs);
+            else RPCSerializer.TryDeserializeRPCStubsJson(serializedRPCStubs, out serializedRPCs);
+
+            Debug.Log($"Deserialized: (Registered Assemblies: {(registeredAssemblies != null ? registeredAssemblies.Count : 0)}, RPCs: {(serializedRPCs != null ? serializedRPCs.Length : 0)})");
+        }
+
         private MethodInfo[] cachedMethodsWithRPCAttribute = null;
         private void Deserialize ()
         {
@@ -300,11 +336,7 @@ namespace Unity.ClusterDisplay
                 return;
             */
 
-            List<Assembly> registeredAssemblies = new List<Assembly>();
-            if (!RPCSerializer.TryReadRegisteredAssemblies(RegisteredAssembliesJsonPath, out registeredAssemblies))
-                return;
-
-            RPCSerializer.TryReadRPCStubs(RPCStubsPath, out var serializedRPCs);
+            DeserializeData(out var registeredAssemblies, out var serializedRPCs);
 
             List<ushort> rpcIdsToAdd = new List<ushort>();
             List<string> renamedRPCs = new List<string>();
@@ -394,11 +426,22 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-            rpcIdsToAdd.Sort();
-            ushort largestId = rpcIdsToAdd.Last();
-            m_IDManager.PushSetOfIds(rpcIdsToAdd.ToArray(), largestId);
+            else
+            {
+                rpcIdsToAdd.Sort();
+                ushort largestId = rpcIdsToAdd.Last();
+                m_IDManager.PushSetOfIds(rpcIdsToAdd.ToArray(), largestId);
 
-            WriteAll();
+                foreach (var rpcIdAndInfo in m_RPCs)
+                {
+                    if (!RPCInterfaceRegistry.TryCreateImplementationInstance(rpcIdAndInfo.Value.methodInfo.Module.Assembly, out var assemblyIndex))
+                        continue;
+                    assemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
+                }
+            }
+
+            if (Application.isEditor)
+                SerializeAll();
         }
 
         private void Serialize ()
@@ -406,7 +449,7 @@ namespace Unity.ClusterDisplay
             if (!m_IsDirty)
                 return;
 
-            WriteAll();
+            SerializeAll();
             m_IsDirty = false;
         }
 

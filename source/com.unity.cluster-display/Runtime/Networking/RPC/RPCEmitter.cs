@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay
             rpcBuffer = new NativeArray<byte>((int)maxRpcByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             rpcBufferSize = 0;
 
-            RPCRegistry.SetupInstances();
+            RPCRegistry.Setup();
         }
 
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
@@ -40,6 +40,9 @@ namespace Unity.ClusterDisplay
 
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
+            if (!RPCRegistry.Setup())
+                return false;
+
             ushort bufferPos = 0;
             if (buffer.Length < MinimumRPCPayloadSize)
                 goto success;
@@ -75,7 +78,10 @@ namespace Unity.ClusterDisplay
                 #endif
 
                 if (!RPCRegistry.TryGetAssemblyIndex(rpcId, out var assemblyIndex))
+                {
+                    UnityEngine.Debug.LogError($"There is no assembly registered for RPC with ID: {rpcId}");
                     goto failure;
+                }
 
                 switch (rpcExecutionStage)
                 {
@@ -159,7 +165,7 @@ namespace Unity.ClusterDisplay
                     case RPCExecutionStage.Automatic:
                     default:
                         UnityEngine.Debug.LogError($"RPC execution failed for static RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Parameters Payload Byte Count: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame}), unable to determine it's execution stage automatically.");
-                        break;
+                        goto failure;
                 }
 
             } while (true);

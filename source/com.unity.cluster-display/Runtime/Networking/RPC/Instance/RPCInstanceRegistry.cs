@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            RPCInterfaceRegistry instance =  m_ImplementationInstances.FirstOrDefault(i => i.GetType().Assembly == assembly);
+            RPCInterfaceRegistry instance = m_ImplementationInstances.FirstOrDefault(i => i.GetType().Assembly == assembly);
             if (instance == null)
             {
                 instance = Activator.CreateInstance(rpcILType) as RPCInterfaceRegistry;

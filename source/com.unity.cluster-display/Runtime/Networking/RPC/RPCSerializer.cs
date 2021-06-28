@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -86,7 +85,18 @@ namespace Unity.ClusterDisplay
             return (outMethodInfo = filteredMethods.FirstOrDefault()) != null;
         }
 
-        public static bool TryWriteRegisteredAssemblies (string path, string[] assemblies)
+        public static void PrepareRegisteredAssembliesForSerialization (List<Assembly> assemblies, out string serializedAssemblies)
+        {
+            serializedAssemblies = "";
+            foreach (var assembly in assemblies)
+            {
+                if (assembly == null)
+                    continue;
+                serializedAssemblies = $"{serializedAssemblies}{Environment.NewLine}{assembly.GetName().FullName}";
+            }
+        }
+
+        public static bool TryWriteRegisteredAssemblies (string path, string serializedAssemblies)
         {
             if (string.IsNullOrEmpty(path))
             {
@@ -96,7 +106,7 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                System.IO.File.WriteAllLines(path, assemblies);
+                System.IO.File.WriteAllText(path, serializedAssemblies);
 
             } catch (System.Exception exception)
             {
@@ -138,8 +148,37 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            Debug.Log($"Registered assemblies was read from path: \"{path}\".");
+            // Debug.Log($"Registered assemblies was read from path: \"{path}\".");
             return true;
+        }
+
+        public static bool TryDeserializeRegisteredAssemblies (string serializedRegisteredAssemblies, out List<Assembly> registeredAssemblies)
+        {
+            if (string.IsNullOrEmpty(serializedRegisteredAssemblies))
+            {
+                Debug.LogError("String containing serialized registered assemblies is null or empty.");
+                registeredAssemblies = null;
+                return false;
+            }
+
+            var registeredAssemblyFullNames = serializedRegisteredAssemblies.Split(new string[] {Environment.NewLine }, StringSplitOptions.None);
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            registeredAssemblies = new List<Assembly>();
+
+            for (int rai = 0; rai < registeredAssemblyFullNames.Length; rai++)
+            {
+                for (int ai = 0; ai < assemblies.Length; ai++)
+                {
+                    if (assemblies[ai].FullName != registeredAssemblyFullNames[rai])
+                        continue;
+
+                    registeredAssemblies.Add(assemblies[ai]);
+                    break;
+                }
+            }
+
+            // Debug.Log($"Deserialized: {registeredAssemblies.Count} registered assemblies.");
+            return registeredAssemblies.Count > 0;
         }
 
         public static bool TryReadRegisteredAssemblies (string path, out List<Assembly> registeredAssemblies)
@@ -168,6 +207,28 @@ namespace Unity.ClusterDisplay
             return registeredAssemblies.Count > 0;
         }
 
+        public static bool TryPrepareRPCStubsForSerialization (SerializedRPC[] rpcsToSerialize, out string serializedRPCs)
+        {
+            try
+            {
+                var serializedInstanceRPCs = new SerializedRPCs
+                {
+                    rpcs = rpcsToSerialize
+                };
+
+                serializedRPCs = JsonUtility.ToJson(serializedInstanceRPCs, true);
+
+            } catch (System.Exception exception)
+            {
+                Debug.LogError($"Unable to serialize RPC stubs, the following exception occurred.");
+                Debug.LogException(exception);
+                serializedRPCs = null;
+                return false;
+            }
+
+            return true;
+        }
+
         public static bool TryReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs)
         {
             if (string.IsNullOrEmpty(path))
@@ -186,8 +247,9 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                var json = System.IO.File.ReadAllText(path);
-                serializedInstanceRPCs = JsonUtility.FromJson<SerializedRPCs>(json).rpcs;
+                var text = System.IO.File.ReadAllText(path);
+                if (!TryDeserializeRPCStubsJson(text, out serializedInstanceRPCs))
+                    return false;
 
             } catch (System.Exception exception)
             {
@@ -197,17 +259,31 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            Debug.Log($"RPC Stubs was read from path: \"{path}\".");
+
+            // Debug.Log($"RPC Stubs was read from path: \"{path}\".");
             return true;
         }
 
-        public static bool TryWriteRPCStubs (string path, SerializedRPC[] lines)
+        public static bool TryDeserializeRPCStubsJson (string jsonStr, out SerializedRPC[] serializedInstanceRPCs)
         {
-            var serializedInstanceRPCs = new SerializedRPCs
+            try
             {
-                rpcs = lines
-            };
+                serializedInstanceRPCs = JsonUtility.FromJson<SerializedRPCs>(jsonStr).rpcs;
 
+            } catch (System.Exception exception)
+            {
+                Debug.LogError($"Unable to parse RPC stubs JSON, the following exception occurred.");
+                Debug.LogException(exception);
+                serializedInstanceRPCs = null;
+                return false;
+            }
+
+            // Debug.Log($"Deserialized: {serializedInstanceRPCs.Length} RPCs.");
+            return true;
+        }
+
+        public static bool TryWriteRPCStubs (string path, string serializedRPCs)
+        {
             if (string.IsNullOrEmpty(path))
             {
                 Debug.LogError("Unable to write RPC stubs, the path is invalid.");
@@ -216,17 +292,14 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                string json = JsonUtility.ToJson(serializedInstanceRPCs, true);
-                System.IO.File.WriteAllText(path, json);
-
+                System.IO.File.WriteAllText(path, serializedRPCs);
             } catch (System.Exception exception)
             {
-                Debug.LogError($"Unable to write RPC stubs to path: \"{path}\", the following exception occurred.");
+                Debug.LogError($"Unable to write RPC stubs JSON to path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
                 return false;
             }
 
-            // Debug.Log($"RPC Stubs was written to path: \"{path}\".");
             return true;
         }
 
