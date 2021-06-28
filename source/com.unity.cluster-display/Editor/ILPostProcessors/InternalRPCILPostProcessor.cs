@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay.Networking
     {
         static InternalRPCILPostProcessor ()
         {
+            return;
             try
             {
                 EditorApplication.LockReloadAssemblies();
