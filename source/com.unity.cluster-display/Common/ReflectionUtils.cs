@@ -40,6 +40,21 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        private static string scriptAssembliesPath;
+        public static bool IsAssemblyPostProcessable (Assembly assembly)
+        {
+            if (string.IsNullOrEmpty(scriptAssembliesPath))
+                scriptAssembliesPath = System.IO.Path.Combine(Application.dataPath, "../Library/ScriptAssemblies").Replace('\\', '/');
+            return System.IO.File.Exists($"{scriptAssembliesPath}/{assembly.GetName().Name}.dll");
+        }
+
+        public static bool TypeIsInPostProcessableAssembly (Type type)
+        {
+            if (string.IsNullOrEmpty(scriptAssembliesPath))
+                scriptAssembliesPath = System.IO.Path.Combine(Application.dataPath, "../Library/ScriptAssemblies").Replace('\\', '/');
+            return System.IO.File.Exists($"{scriptAssembliesPath}/{type.Assembly.GetName().Name}.dll");
+        }
+
         public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
         {
             ushort depth = 0;
@@ -101,12 +116,41 @@ namespace Unity.ClusterDisplay
                                 DetermineIfMethodIsRPCCompatible(method)).ToArray();
         }
 
+        public static FieldInfo[] GetAllFieldsFromType (
+            System.Type type, 
+            string filter, 
+            bool valueTypesOnly = false,
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
+        {
+            return
+                string.IsNullOrEmpty(filter) ?
+
+                    type.GetFields(bindingFlags)
+                        .Where(field =>
+                        {
+                            return
+                                (valueTypesOnly ? field.FieldType.IsValueType : true);
+                        })
+                        .ToArray()
+
+                    :
+
+                    type.GetFields(bindingFlags)
+                        .Where(field =>
+                        {
+                            return
+                                (valueTypesOnly ? field.FieldType.IsValueType : true) &&
+                                field.Name.Contains(filter);
+
+                        }).ToArray();
+        }
+
         public static MethodInfo[] GetAllMethodsFromType (
             System.Type type, 
             string filter, 
             bool valueTypeParametersOnly = false,
-            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public, 
-            bool includeGenerics = true)
+            bool includeGenerics = true,
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
         {
             return
                 string.IsNullOrEmpty(filter) ?
@@ -115,6 +159,7 @@ namespace Unity.ClusterDisplay
                         .Where(method =>
                         {
                             return
+                                !method.IsSpecialName &&
                                 (!includeGenerics ? !method.IsGenericMethod : true) &&
                                 (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
 
@@ -127,12 +172,46 @@ namespace Unity.ClusterDisplay
                         .Where(method =>
                         {
                             return
+                                !method.IsSpecialName &&
                                 (!includeGenerics ? !method.IsGenericMethod : true) &&
                                 (method.Name.Contains(filter)) &&
                                 (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
 
                         }).ToArray();
-                        
+        }
+
+        public static (PropertyInfo, MethodInfo)[] GetAllPropertySetMethods (
+            System.Type type, 
+            string filter, 
+            bool valueTypesOnly = false,
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
+        {
+            return
+                string.IsNullOrEmpty(filter) ?
+
+                    type.GetProperties(bindingFlags)
+                        .Where(property =>
+                        {
+                            return
+                                property.SetMethod != null &&
+                                (valueTypesOnly ? property.PropertyType.IsValueType : true);
+                        })
+                        .Select(property => (property, property.SetMethod))
+                        .ToArray()
+
+                    :
+
+                    type.GetProperties(bindingFlags)
+                        .Where(property =>
+                        {
+                            return
+                                property.SetMethod != null &&
+                                (valueTypesOnly ? property.PropertyType.IsValueType : true) &&
+                                property.Name.Contains(filter);
+
+                        })
+                        .Select(property => (property, property.SetMethod))
+                        .ToArray();
         }
 
         // From https://stackoverflow.com/a/1312321

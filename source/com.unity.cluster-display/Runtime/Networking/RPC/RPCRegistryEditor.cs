@@ -48,13 +48,7 @@ namespace Unity.ClusterDisplay
                     return;
 
                 if (cachedAllAssemblies == null)
-                {
-                    string scriptAssembliesPath = Path.Combine(Application.dataPath, "../Library/ScriptAssemblies").Replace('\\', '/');
-                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly =>
-                    {
-                        return File.Exists($"{scriptAssembliesPath}/{assembly.GetName().Name}.dll"); 
-                    }).ToArray();
-                }
+                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => ReflectionUtils.IsAssemblyPostProcessable(assembly)).ToArray();
 
                 assemblySearchStr = newAssemblySearchStr;
                 cachedSearchedAssemblies = cachedAllAssemblies.Where(assembly => string.IsNullOrEmpty(assemblySearchStr) || assembly.FullName.Contains(assemblySearchStr)).ToArray();
@@ -245,7 +239,7 @@ namespace Unity.ClusterDisplay
                 else EditorGUILayout.LabelField("No methods reigstered.");
 
                 if (rpcMethodToRemove != null)
-                    rpcRegistry.RemoveRPC(rpcMethodToRemove.Value.rpcId);
+                    RPCRegistry.RemoveRPC(rpcMethodToRemove.Value.rpcId);
             }
 
             private void OnChangeSearch (string newMethodSearchStr)
@@ -259,11 +253,10 @@ namespace Unity.ClusterDisplay
 
             private void OnSelectMethod (MethodInfo selectedMethodInfo)
             {
-                var rpcRegistry = target as RPCRegistry;
-                rpcRegistry.TryAddNewRPC(
+                RPCRegistry.TryAddNewRPC(
                     targetType, 
                     selectedMethodInfo, 
-                    RPCExecutionStage.ImmediatelyOnArrival, 
+                    RPCExecutionStage.Automatic, 
                     out var rpcMethodInfo);
             }
 

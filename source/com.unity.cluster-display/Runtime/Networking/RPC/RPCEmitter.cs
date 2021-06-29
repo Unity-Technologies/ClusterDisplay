@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay
                 ParseRPCId(ref bufferPos, out var rpcId);
 
                 #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
-                if (!RPCRegistry.RPCRegistered(rpcId))
+                if (!RPCRegistry.MethodRegistered(rpcId))
                 {
                     UnityEngine.Debug.LogError($"Recieved potentially invalid RPC data: (ID: ({rpcId} <--- No registered RPC with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
                     goto failure;

@@ -3,7 +3,7 @@
 namespace Unity.ClusterDisplay
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
-    [Obsolete("RPCMethod has been renamed to RPC")]
+    [Obsolete("RPCMethod has been renamed to ClusterRPC")]
     public class RPCMethod : ClusterRPC {}
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]

@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Networking
 {
+    class RPCFlagEnumState : System.Attribute {}
+
     [RequireComponent(typeof(Transform))]
     public partial class TransformReflector : ComponentReflector<Transform>
     {
@@ -16,28 +18,24 @@ namespace Unity.ClusterDisplay.Networking
             Scale = 4
         }
 
-        public TransformReflectorMode mode;
-
-        protected override void OnCache()
-        {
-        }
+        public TransformReflectorMode m_Mode;
 
         public Vector3 position
         {
-            get => transform.position;
-            [ClusterRPC] set => transform.position = value;
+            get => m_TargetInstance.position;
+            [ClusterRPC] set => m_TargetInstance.position = value;
         }
 
         public Quaternion rotation
         {
-            get => transform.rotation;
-            [ClusterRPC] set => transform.rotation = value;
+            get => m_TargetInstance.rotation;
+            [ClusterRPC] set => m_TargetInstance.rotation = value;
         }
 
         public Vector3 scale
         {
-            get => transform.localScale;
-            [ClusterRPC] set => transform.localScale = value;
+            get => m_TargetInstance.localScale;
+            [ClusterRPC] set => m_TargetInstance.localScale = value;
         }
     }
 }

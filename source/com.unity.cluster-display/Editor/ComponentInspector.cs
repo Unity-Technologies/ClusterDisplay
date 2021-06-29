@@ -58,14 +58,11 @@ namespace Unity.ClusterDisplay
 
                 if (sceneObjectsRegistry != null)
                 {
-                    if (RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: true))
-                    {
-                        rpcRegistry.TryAddNewRPC(
-                            targetObjectType,
-                            selectedMethodInfo,
-                            RPCExecutionStage.ImmediatelyOnArrival,
-                            out var rpcMethodInfo);
-                    }
+                    RPCRegistry.TryAddNewRPC(
+                        targetObjectType,
+                        selectedMethodInfo,
+                        RPCExecutionStage.ImmediatelyOnArrival,
+                        out var rpcMethodInfo);
                 }
             }
         }

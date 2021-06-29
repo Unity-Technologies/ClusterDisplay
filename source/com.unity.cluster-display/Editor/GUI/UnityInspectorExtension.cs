@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
     {
         protected static Type[] cachedTypesWithCustomEditorAttribute = null;
 
-        public UnityInspectorExtension ()
+        public UnityInspectorExtension(bool useDefaultInspector) : base(useDefaultInspector)
         {
             if (cachedTypesWithCustomEditorAttribute == null)
                 cachedTypesWithCustomEditorAttribute = ReflectionUtils.GetAllTypes().Where(type => type != null && type.GetCustomAttributes<CustomEditor>().Count() > 0).ToArray();
@@ -54,6 +54,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 return cachedEditorInstance;
             }
         }
+
+        public UnityInspectorExtension(bool useDefaultInspector) : base(useDefaultInspector) => Initialize();
 
         private void TryCallCachedMethod (string methodName, bool throwError = true)
         {
@@ -147,8 +149,6 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 }
             }
         }
-
-        public UnityInspectorExtension () : base() => Initialize();
         protected abstract void OnExtendInspectorGUI(T instance);
         public void ExtendInspectorGUI(T instance) => OnExtendInspectorGUI(instance);
         public override void OnInspectorGUI()
@@ -156,7 +156,9 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (cachedEditorInstance == null)
                 return;
 
-            cachedEditorInstance.OnInspectorGUI();
+            if (UseDefaultInspector)
+                cachedEditorInstance.OnInspectorGUI();
+
             PollExtendInspectorGUI<IInspectorExtension<T>, T>(this);
         }
 

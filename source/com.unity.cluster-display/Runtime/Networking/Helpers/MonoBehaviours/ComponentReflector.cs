@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Networking
 {
-    public abstract class ComponentReflector<T> : MonoBehaviour, IRPCStatus, ISerializationCallbackReceiver where T : Component
+    public abstract class ComponentReflector<T> : ComponentReflectorBase, IRPCStatus, ISerializationCallbackReceiver where T : Component
     {
         [SerializeField] protected T m_TargetInstance;
         [SerializeField] protected Type m_TargetType;

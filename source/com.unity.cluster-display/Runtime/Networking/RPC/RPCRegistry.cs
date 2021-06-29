@@ -69,7 +69,9 @@ namespace Unity.ClusterDisplay
         [SerializeField][HideInInspector] private string serializedRegisteredAssemblies;
         [SerializeField][HideInInspector] private string serializedRPCStubs;
 
-        public static bool RPCRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
+        public static bool MethodRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
+        public static bool MethodRegistered(MethodInfo methodInfo) => m_RPCLut.ContainsKey(methodInfo.MetadataToken);
+
         public static bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => m_RPCs.TryGetValue(rpcId, out rpcMethodInfo);
 
         public static bool Setup ()
@@ -176,39 +178,51 @@ namespace Unity.ClusterDisplay
                 callback(m_RPCs[keys[i]]);
         }
 
-        public bool TryAddNewRPC (System.Type type, MethodInfo methodInfo, RPCExecutionStage rpcExecutionStage, out RPCMethodInfo rpcMethodInfo)
+        public static bool TryAddNewRPC (System.Type type, MethodInfo methodInfo, RPCExecutionStage rpcExecutionStage, out RPCMethodInfo rpcMethodInfo)
         {
+            if (!TryGetInstance(out var rpcRegistry))
+                goto failure;
+
             if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))
             {
                 Debug.LogError($"Unable to register method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType}\", one or more of the method's parameters is not a value type or one of the parameter's members is not a value type.");
-                rpcMethodInfo = default(RPCMethodInfo);
-                return false;
+                goto failure;
             }
 
             if (m_RPCLut.TryGetValue(methodInfo.MetadataToken, out var rpcId))
             {
                 Debug.LogError($"Cannot add RPC method: \"{methodInfo.Name}\" from declaring type: \"{methodInfo.DeclaringType}\", it has already been registered!");
-                rpcMethodInfo = default(RPCMethodInfo);
-                return true;
+                goto failure;
             }
 
-            if (!m_IDManager.TryPopId(out rpcId))
-            {
-                rpcMethodInfo = default(RPCMethodInfo);
-                return false;
-            }
+            if (!rpcRegistry.m_IDManager.TryPopId(out rpcId))
+                goto failure;
 
             rpcMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);
-            RegisterRPC(ref rpcMethodInfo);
-
+            rpcRegistry.RegisterRPC(ref rpcMethodInfo);
             return true;
+
+            failure:
+            rpcMethodInfo = default(RPCMethodInfo);
+            return false;
         }
 
-        public void RemoveRPC (ushort rpcId)
+        public static void RemoveRPC (ushort rpcId)
         {
             if (!TryGetRPC(rpcId, out var rpcMethodInfo))
                 return;
-            UnregisterRPC(ref rpcMethodInfo);
+
+            if (!TryGetInstance(out var rpcRegistry))
+                return;
+
+            rpcRegistry.UnregisterRPC(ref rpcMethodInfo);
+        }
+
+        public static void RemoveRPC (MethodInfo methodInfo)
+        {
+            if (!m_RPCLut.TryGetValue(methodInfo.MetadataToken, out var rpcId))
+                return;
+            RemoveRPC(rpcId);
         }
 
         /// <summary>
@@ -294,7 +308,7 @@ namespace Unity.ClusterDisplay
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo)
         {
-            if (RPCRegistered(rpcId))
+            if (MethodRegistered(rpcId))
                 return false;
 
             var rpcMethodInfo = new RPCMethodInfo(rpcId, rpcExecutionStage, methodInfo);

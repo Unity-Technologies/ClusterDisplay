@@ -10,20 +10,34 @@ namespace Unity.ClusterDisplay.Editor.Extensions
     [CustomEditor(typeof(MonoBehaviour), editorForChildClasses: true)]
     public class MonoBehaviourExtension : UserInspectorExtension<MonoBehaviour>
     {
+        public MonoBehaviourExtension() : base(useDefaultInspector: true) {}
+
         private MonoBehaviourReflector cachedReflector;
         protected override void OnExtendInspectorGUI(MonoBehaviour instance)
         {
-            TryGetReflectorInstance(instance, ref cachedReflector);
-
-            if (GUILayout.Button(cachedReflector == null ? "Create Reflect" : "Remove Reflector"))
+            var type = instance.GetType();
+            bool isPostProcessable = ReflectionUtils.TypeIsInPostProcessableAssembly(type);
+            if (isPostProcessable)
             {
-                if (cachedReflector == null)
+                if (ListFields(instance, out var selectedField, out var selectedState))
                 {
-                    cachedReflector = instance.gameObject.AddComponent<MonoBehaviourReflector>();
-                    cachedReflector.Setup(instance);
                 }
 
-                else DestroyImmediate(cachedReflector);
+                if (ListProperties(instance, out var selectedProperty, out selectedState))
+                {
+                }
+
+                if (ListMethods(instance, out var selectedMethodInfo, out selectedState))
+                {
+                }
+            }
+
+            else
+            {
+                TryGetReflectorInstance(instance, ref cachedReflector);
+                ReflectorButton(instance, ref cachedReflector);
+                if (cachedReflector == null)
+                    return;
             }
         }
     }
@@ -31,21 +45,24 @@ namespace Unity.ClusterDisplay.Editor.Extensions
     [CustomEditor(typeof(Transform))]
     public class TransformExtension : UnityInspectorExtension<Transform>
     {
+        public TransformExtension() : base(useDefaultInspector: true) {}
+
         private TransformReflector cachedReflector;
         protected override void OnExtendInspectorGUI(Transform instance)
         {
             TryGetReflectorInstance(instance, ref cachedReflector);
+            ReflectorButton(instance, ref cachedReflector);
 
-            if (GUILayout.Button(cachedReflector == null ? "Create Reflect" : "Remove Reflector"))
-            {
-                if (cachedReflector == null)
-                {
-                    cachedReflector = instance.gameObject.AddComponent<TransformReflector>();
-                    cachedReflector.Setup(instance);
-                }
+            if (cachedReflector == null)
+                return;
 
-                else DestroyImmediate(cachedReflector);
-            }
+            var reflectorSerializedObject = new SerializedObject(cachedReflector);
+            reflectorSerializedObject.Update();
+
+            var modeProperty = reflectorSerializedObject.FindProperty("m_Mode");
+            EditorGUILayout.PropertyField(modeProperty);
+
+            reflectorSerializedObject.ApplyModifiedProperties();
         }
     }
 }
