@@ -14,15 +14,34 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
     public abstract class InspectorExtension : UnityEditor.Editor
     {
+        protected enum SelectedState
+        {
+            None,
+            Added,
+            Removed
+        }
+
         private bool foldOut = false;
 
         protected bool UseDefaultInspector => useDefaultInspector;
         private readonly bool useDefaultInspector;
 
-        public InspectorExtension(bool useDefaultInspector)
-        {
-            this.useDefaultInspector = useDefaultInspector;
-        }
+        private const int maxListSizeBeforeScroll = 200;
+        private bool usingScrollView = false;
+
+        private string fieldSearchStr;
+        private string methodSearchStr;
+        private string propertySearchStr;
+
+        private Vector2 fieldScrollPosition;
+        private Vector2 methodScrollPosition;
+        private Vector2 propertyScrollPosition;
+
+        private SerializedProperty[] cachedSerializedProperties;
+        private MethodInfo[] cachedMethods;
+        private (PropertyInfo property, MethodInfo setMethod)[] cachedProperties;
+
+        public InspectorExtension(bool useDefaultInspector) => this.useDefaultInspector = useDefaultInspector;
 
         /// <summary>
         /// This method generically casts our target to our instance type then performs
@@ -82,16 +101,6 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return false;
         }
 
-        protected enum SelectedState
-        {
-            None,
-            Added,
-            Removed
-        }
-
-        private const int maxListSizeBeforeScroll = 200;
-        private bool usingScrollView = false;
-
         private void BeginScrollView (int count, ref Vector2 scrollPosition)
         {
             float totalHeight = count * EditorGUIUtility.singleLineHeight; 
@@ -110,36 +119,41 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         {
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel, GUILayout.Width(75));
+
             var newFieldSearchStr = EditorGUILayout.TextField(currentSearchStr);
+            bool changed = currentSearchStr != newFieldSearchStr;
+            currentSearchStr = newFieldSearchStr;
+
             EditorGUILayout.EndHorizontal();
-            return currentSearchStr != newFieldSearchStr;
+            return changed;
         }
 
         private bool Button (bool registered, string text)
         {
             EditorGUILayout.BeginHorizontal();
+
             var cachedPreviousColor = GUI.backgroundColor;
             GUI.backgroundColor = registered ? Color.green : Color.red;
+
             bool selected = GUILayout.Button(registered ? "→" : "→", GUILayout.Width(20));
+
             GUI.backgroundColor = cachedPreviousColor;
+
             EditorGUILayout.LabelField(text);
             EditorGUILayout.EndHorizontal();
+
             return selected;
         }
-        private SerializedProperty[] cachedSerializedProperties;
-        private string fieldSearchStr;
-        private Vector2 fieldScrollPosition;
 
         private void PollFields<InstanceType> (InstanceType targetInstance)
             where InstanceType : Component
         {
             var type = targetInstance.GetType();
             var fields = ReflectionUtils.GetAllFieldsFromType(type, fieldSearchStr, valueTypesOnly: true, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-            if (fields != null && fields.Length > 0)
-            {
-                List<SerializedProperty> serializedProperties = new List<SerializedProperty>();
-                var serializedObject = new SerializedObject(targetInstance);
+            List<SerializedProperty> serializedProperties = new List<SerializedProperty>();
+            var serializedObject = new SerializedObject(targetInstance);
 
+            if (fields != null)
                 for (int i = 0; i < fields.Length; i++)
                 {
                     var serializedProperty = serializedObject.FindProperty(fields[i].Name);
@@ -148,8 +162,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                     serializedProperties.Add(serializedProperty);
                 }
 
-                cachedSerializedProperties = serializedProperties.ToArray();
-            }
+            cachedSerializedProperties = serializedProperties.ToArray();
         }
 
         protected bool ListFields<InstanceType> (InstanceType targetInstance, out SerializedProperty selectedField, out SelectedState selectedState)
@@ -162,7 +175,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 return false;
 
             RPCEditorGUICommon.HorizontalLine();
-            if (PollSearch("Fields", ref fieldSearchStr))
+            if (cachedSerializedProperties == null || PollSearch("Fields", ref fieldSearchStr))
                 PollFields(targetInstance);
 
             if (cachedSerializedProperties != null && cachedSerializedProperties.Length > 0)
@@ -181,9 +194,6 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return true;
         }
 
-        private MethodInfo[] cachedMethods;
-        private string methodSearchStr;
-        private Vector2 methodScrollPosition;
         protected bool ListMethods<InstanceType> (InstanceType targetInstance, out System.Reflection.MethodInfo selectedMethodInfo, out SelectedState selectedState)
             where InstanceType : Component
         {
@@ -225,10 +235,6 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
             return selectedState != SelectedState.None && selectedMethodInfo != null;
         }
-
-        private (PropertyInfo property, MethodInfo setMethod)[] cachedProperties;
-        private string propertySearchStr;
-        private Vector2 propertyScrollPosition;
 
         protected bool ListProperties<InstanceType> (InstanceType targetInstance, out (PropertyInfo property, MethodInfo setMethod) selectedProperty, out SelectedState selectedState)
             where InstanceType : Component

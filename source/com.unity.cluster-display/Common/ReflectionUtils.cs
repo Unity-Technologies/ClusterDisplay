@@ -234,7 +234,6 @@ namespace Unity.ClusterDisplay
                 (memberInfo as PropertyInfo).PropertyType;
         }
 
-
         public static (FieldInfo[], PropertyInfo[]) GetAllValueTypeFieldsAndProperties(System.Type targetType)
         {
             BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
