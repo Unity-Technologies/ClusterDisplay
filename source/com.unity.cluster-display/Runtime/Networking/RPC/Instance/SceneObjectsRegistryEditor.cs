@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay
         {
             public void PresentGUI ()
             {
+                /*
                 var sceneObjectsRegistry = target as SceneObjectsRegistry;
                 var scene = sceneObjectsRegistry.gameObject.scene;
 
@@ -30,30 +31,11 @@ namespace Unity.ClusterDisplay
                     EditorGUILayout.LabelField($"Object: \"{instance.GetType().Name}\"", EditorStyles.boldLabel);
                     EditorGUILayout.EndHorizontal();
 
-                    /*
-                    EditorGUILayout.LabelField("RPCs:", EditorStyles.boldLabel);
-                    foreach (var rpcId in obj.Value)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-
-                        if (GUILayout.Button("X", GUILayout.Width(20)))
-                        {
-                            objectToRemove = obj.Key;
-                            rpcToRemove = rpcId;
-                        }
-
-                        if (!rpcRegistry.TryGetRPC(rpcId, out var rpcMethodInfo))
-                            continue;
-
-                        var methodInfo = rpcMethodInfo.methodInfo;
-                        EditorGUILayout.LabelField(methodInfo.Name);
-                        EditorGUILayout.EndHorizontal();
-                    }
-                    */
                 }
 
                 if (rpcToRemove != null)
                     sceneObjectsRegistry.Unregister(instanceToRemove);
+                */
             }
 
             public override void OnInspectorGUI()

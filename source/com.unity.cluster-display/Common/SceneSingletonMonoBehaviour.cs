@@ -7,9 +7,10 @@ namespace Unity.ClusterDisplay
 {
     public class SceneSingletonMonoBehaviourTryGetInstanceMarker : Attribute {}
     [ExecuteAlways]
-    public abstract class SceneSingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SceneSingletonMonoBehaviour<T>
+    public abstract class SceneSingletonMonoBehaviour<SceneInstanceType> : MonoBehaviour
+        where SceneInstanceType : SceneSingletonMonoBehaviour<SceneInstanceType>
     {
-        private static readonly Dictionary<string, T> sceneInstances = new Dictionary<string, T>();
+        private static readonly Dictionary<string, SceneInstanceType> sceneInstances = new Dictionary<string, SceneInstanceType>();
         [SerializeField] private string serializedScenePath;
 
         protected virtual void Enabled () {}
@@ -22,34 +23,34 @@ namespace Unity.ClusterDisplay
         protected virtual void Disabled () {}
         private void OnDisable() => Disabled();
 
-        public static bool TryCreateNewInstance (Scene scene, out T instance)
+        public static bool TryCreateNewInstance (Scene scene, out SceneInstanceType instance)
         {
             instance = null;
             if (!scene.IsValid() || string.IsNullOrEmpty(scene.path))
             {
-                Debug.LogError($"Unable to create instance of: \"{typeof(T).Name}\", the save the scene first.");
+                Debug.LogError($"Unable to create instance of: \"{typeof(SceneInstanceType).Name}\", the save the scene first.");
                 return false;
             }
 
             GameObject go = new GameObject("SceneObjectRegistry");
             SceneManager.SetActiveScene(scene);
 
-            instance = go.AddComponent<T>();
+            instance = go.AddComponent<SceneInstanceType>();
             Register(scene.path, instance);
 
             return instance;
         }
 
         [SingletonScriptableObjectTryGetInstanceMarker]
-        public static bool TryGetSceneInstance (string scenePath, out T instance, bool throwException = true)
+        public static bool TryGetSceneInstance (string scenePath, out SceneInstanceType instance, bool throwException = true)
         {
             if (!sceneInstances.TryGetValue(scenePath, out instance))
             {
-                var instances = FindObjectsOfType<T>();
+                var instances = FindObjectsOfType<SceneInstanceType>();
                 if (instances.Length == 0)
                 {
                     if (throwException)
-                        throw new System.Exception($"There are no instances of type: \"{typeof(T).FullName} in scene: \"{scenePath}\".");
+                        throw new System.Exception($"There are no instances of type: \"{typeof(SceneInstanceType).FullName} in scene: \"{scenePath}\".");
                     return false;
                 }
 
@@ -83,10 +84,10 @@ namespace Unity.ClusterDisplay
             Destroying();
         }
 
-        private static void Register (string serializedScenePath, T instance, bool throwException = true)
+        private static void Register (string serializedScenePath, SceneInstanceType instance, bool throwException = true)
         {
             if (string.IsNullOrEmpty(serializedScenePath))
-                throw new System.Exception($"Unable to register instance of: \"{typeof(T).FullName}\", it's serialized scene path is invalid!");
+                throw new System.Exception($"Unable to register instance of: \"{typeof(SceneInstanceType).FullName}\", it's serialized scene path is invalid!");
 
             if (sceneInstances.ContainsKey(serializedScenePath))
             {
@@ -94,28 +95,24 @@ namespace Unity.ClusterDisplay
                     sceneInstances[serializedScenePath] = instance;
 
                 else if (throwException)
-                    throw new System.Exception($"Scene: \"{serializedScenePath}\" contains two instances of: \"{typeof(T).FullName}\".");
+                    throw new System.Exception($"Scene: \"{serializedScenePath}\" contains two instances of: \"{typeof(SceneInstanceType).FullName}\".");
 
                 return;
             }
 
-            Debug.Log($"Registered instance of: \"{typeof(T).FullName}\" in scene: \"{serializedScenePath}\".");
+            Debug.Log($"Registered instance of: \"{typeof(SceneInstanceType).FullName}\" in scene: \"{serializedScenePath}\".");
             sceneInstances.Add(serializedScenePath, instance);
         }
 
-        protected virtual void OnDeserialize () {}
-        public void OnAfterDeserialize()
+        protected void DeserializeInstance () 
         {
-            Register(serializedScenePath, this as T, throwException: false);
-            OnDeserialize();
+            Register(serializedScenePath, this as SceneInstanceType, throwException: false);
         }
 
-        protected virtual void OnSerialize () {}
-        public void OnBeforeSerialize() 
+        protected void SerializeInstance () 
         {
             serializedScenePath = gameObject.scene.path;
             sceneInstances.Clear();
-            OnSerialize();
         }
     }
 }

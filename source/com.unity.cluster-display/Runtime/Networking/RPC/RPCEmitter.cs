@@ -344,6 +344,12 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
+            /*
+            var rpcConfig = SceneObjectsRegistry.GetRPCConfig(pipeId, (ushort)rpcId);
+            if (!rpcConfig.enabled)
+                return;
+            */
+
             int totalRPCCallSize = MinimumRPCPayloadSize + parametersPayloadSize;
             if (totalRPCCallSize > ushort.MaxValue)
             {

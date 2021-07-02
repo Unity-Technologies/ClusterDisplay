@@ -45,18 +45,21 @@ namespace Unity.ClusterDisplay
             get
             {
                 #if UNITY_EDITOR
-                return !IsSerializing || UnityEditor.EditorApplication.isPlaying;
+                if (IsSerializing)
+                    return false;
+                return UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode;
                 #else
                 return true;
                 #endif
             }
         }
 
-        private static void RegisterPipeIdWithInstanceId (int instanceId, ushort pipeId)
+        private static void RegisterPipeIdWithInstanceId (Component instance, ushort pipeId)
         {
             if (!UseDictionary)
                 return;
 
+            var instanceId = instance.GetInstanceID();
             if (m_InstanceIdToPipeId.ContainsKey(instanceId))
                 m_InstanceIdToPipeId[instanceId] = pipeId;
             else m_InstanceIdToPipeId.Add(instanceId, pipeId);
@@ -64,10 +67,15 @@ namespace Unity.ClusterDisplay
 
         public static bool TryGetPipeId(Component instance, out ushort pipeId)
         {
+            /*
             if (UseDictionary)
-                return m_InstanceIdToPipeId.TryGetValue(instance.GetHashCode(), out pipeId);
+            {
+                var instanceId = instance.GetInstanceID();
+                return m_InstanceIdToPipeId.TryGetValue(instanceId, out pipeId);
+            }
+            */
 
-            if (instance == null)
+            if (instance == null || m_Instances == null)
             {
                 pipeId = 0;
                 return false;
@@ -93,23 +101,36 @@ namespace Unity.ClusterDisplay
         public static RPCConfig GetRPCConfig(ushort pipeId, ushort rpcId)
         {
             var configs = m_PipeIdToInstanceConfig[pipeId].configs;
-            return configs == null || rpcId >= configs.Length ? default(RPCConfig) : configs[rpcId];
+            if (configs == null || rpcId >= configs.Length)
+            {
+                var newRPCConfig = new RPCConfig();
+                newRPCConfig.enabled = true;
+                return newRPCConfig;
+            }
+
+            return configs[rpcId];
         }
 
         public static void SetRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
             var pipeConfig = m_PipeIdToInstanceConfig[pipeId];
-            var rpcConfigs = pipeConfig.configs;
+            RPCConfig[] rpcConfigs = null;
 
-            if (rpcConfigs == null)
+            if (pipeConfig.configs == null)
+            {
                 rpcConfigs = new RPCConfig[rpcId + 1];
+                for (int i = 0; i < rpcId + 1; i++)
+                    rpcConfigs[i] = new RPCConfig();
+            }
 
-            else if (rpcConfigs.Length < rpcId + 1)
+            else if (pipeConfig.configs.Length < rpcId + 1)
             {
                 var resizedConfigs = new RPCConfig[rpcId + 1];
                 System.Array.Copy(pipeConfig.configs, resizedConfigs, pipeConfig.configs.Length);
                 rpcConfigs = resizedConfigs;
             }
+
+            else rpcConfigs = pipeConfig.configs;
 
             rpcConfigs[rpcId] = rpcConfig;
             pipeConfig.configs = rpcConfigs;
@@ -119,10 +140,10 @@ namespace Unity.ClusterDisplay
         private static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
             where InstanceType : Component
         {
-            pipeId = 0;
             if (instance == null)
             {
                 Debug.LogError($"Received NULL object to register.");
+                pipeId = 0;
                 return false;
             }
 
@@ -145,9 +166,11 @@ namespace Unity.ClusterDisplay
                 return;
 
             m_Instances[pipeId] = instance;
-            RegisterPipeIdWithInstanceId(instance.GetInstanceID(), pipeId);
+            // RegisterPipeIdWithInstanceId(instance, pipeId);
 
-            var newInstanceRPCConfig = new RPCConfig(); 
+            var newInstanceRPCConfig = new RPCConfig();
+            newInstanceRPCConfig.enabled = true;
+
             SetRPCConfig(pipeId, rpcId, ref newInstanceRPCConfig);
         }
 
@@ -158,7 +181,7 @@ namespace Unity.ClusterDisplay
                 return;
 
             m_Instances[pipeId] = instance;
-            RegisterPipeIdWithInstanceId(instance.GetHashCode(), pipeId);
+            // RegisterPipeIdWithInstanceId(instance, pipeId);
 
             SetRPCConfig(pipeId, rpcId, ref instanceRPCConfig);
         }
@@ -186,6 +209,8 @@ namespace Unity.ClusterDisplay
         {
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneOpened += OnSceneOpened;
+
+            Debug.Log($"Initialized static: \"{nameof(SceneObjectsRegistry)}\".");
         }
 
         private static void OnSceneOpened(Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
@@ -231,7 +256,7 @@ namespace Unity.ClusterDisplay
                         }
 
                         sceneObjectsRegistry.Add(path, sceneRegistry);
-                        sceneRegistry.OnDeserialize();
+                        sceneRegistry.DeserializeInstance();
                     }
 
                     if (sceneRegistry.Registered(component))

@@ -532,7 +532,9 @@ namespace Unity.ClusterDisplay
                 {
                     if (!RPCInterfaceRegistry.TryCreateImplementationInstance(rpcIdAndInfo.Value.methodInfo.Module.Assembly, out var assemblyIndex))
                         continue;
-                    assemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
+                    if (assemblyIndexLookUp.ContainsKey(rpcIdAndInfo.Key))
+                        assemblyIndexLookUp[rpcIdAndInfo.Key] = assemblyIndex;
+                    else assemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
                 }
             }
 

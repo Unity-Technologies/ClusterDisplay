@@ -8,34 +8,36 @@ using UnityEditor;
 namespace Unity.ClusterDisplay
 {
     [System.Serializable]
-    public struct RPCConfig
+    public struct SerializedInstancePRCdata
     {
-        [SerializeField] public bool enabled;
+        // [SerializeField] public ushort pipeId;
+        [SerializeField] public Component instance;
+        [SerializeField] public PipeConfig pipeConfig;
     }
 
-    [System.Serializable]
-    public struct PipeConfig
-    {
-        [SerializeField] public RPCConfig[] configs;
-    }
-
-    public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
+    public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>, ISerializationCallbackReceiver
     {
         private bool m_SceneObjectsRegistered = false;
 
         private readonly List<Component> m_SceneInstances = new List<Component>();
-
-        [SerializeField] private Component[] m_SerializedInstances = new Component[0];
-        [SerializeField] private PipeConfig[] m_SerializedInstanceConfigs = new PipeConfig[0];
+        public SerializedInstancePRCdata[] m_SerializedInstances;
 
         public bool Registered(Component instance) => m_SceneInstances.Contains(instance);
 
-        private void Awake() => RegisterObjects();
+        private void Awake() => Load();
 
         public void UpdateRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
             SetRPCConfig(pipeId, rpcId, ref rpcConfig);
-            Save(inSerializationState: false);
+            Save();
+        }
+
+        private void Dirty ()
+        {
+            #if UNITY_EDITOR
+            if (!IsSerializing)
+                EditorUtility.SetDirty(this);
+            #endif
         }
 
         public void Register<InstanceType> (InstanceType sceneObject, ushort rpcId)
@@ -48,6 +50,7 @@ namespace Unity.ClusterDisplay
                 m_SceneInstances.Add(sceneObject);
 
             RegisterInstanceAccessor(sceneObject, rpcId);
+            Dirty();
         }
 
         public void Register<InstanceType> (InstanceType sceneObject, ushort rpcId, ref RPCConfig instanceRPCConfig)
@@ -60,6 +63,7 @@ namespace Unity.ClusterDisplay
                 m_SceneInstances.Add(sceneObject);
 
             RegisterInstanceAccessor(sceneObject, rpcId, ref instanceRPCConfig);
+            Dirty();
         }
 
         public void Unregister<InstanceType> (InstanceType sceneObject)
@@ -75,18 +79,15 @@ namespace Unity.ClusterDisplay
                 else DestroyImmediate(this.gameObject);
             }
 
-            #if UNITY_EDITOR
-            EditorUtility.SetDirty(this);
-            #endif
+            Dirty();
         }
 
-        private void Save (bool inSerializationState)
+        private void Save ()
         {
             if (m_SceneInstances.Count == 0)
                 return;
 
-            List<Component> instanceList = new List<Component>();
-            List<PipeConfig> pipeConfigList = new List<PipeConfig>();
+            List<SerializedInstancePRCdata> serializedInstances = new List<SerializedInstancePRCdata>();
 
             for (int i = 0; i < m_SceneInstances.Count; i++)
             {
@@ -96,43 +97,52 @@ namespace Unity.ClusterDisplay
                 if (!TryGetPipeId(m_SceneInstances[i], out var pipeId))
                     continue;
 
-                if (instanceList.Contains(m_SceneInstances[i]))
-                    continue;
-
                 var pipeConfig = GetPipeConfig(pipeId);
-                instanceList.Add(m_SceneInstances[i]);
-                pipeConfigList.Add(pipeConfig);
+                serializedInstances.Add(new SerializedInstancePRCdata
+                {
+                    // pipeId = pipeId,
+                    instance = m_SceneInstances[i],
+                    pipeConfig = pipeConfig
+                });
             }
 
-            m_SerializedInstances = m_SceneInstances.ToArray();
-            m_SerializedInstanceConfigs = pipeConfigList.ToArray();
-
-            #if UNITY_EDITOR
-            if (!inSerializationState)
-                EditorUtility.SetDirty(this);
-            #endif
+            m_SerializedInstances = serializedInstances.ToArray();
+            Dirty();
         }
 
-        protected override void OnSerialize()
+        public void OnBeforeSerialize() 
         {
             IsSerializing = true;
-            Save(inSerializationState: true);
+            Save();
             IsSerializing = false;
+            SerializeInstance();
         }
 
-        protected override void OnDeserialize() => RegisterObjects();
-
-        private void RegisterObjects ()
+        public void OnAfterDeserialize()
         {
+            // IsSerializing = true;
+            // Load();
+            // IsSerializing = false;
+            DeserializeInstance();
+        }
+
+        private void Load ()
+        {
+            if (m_SceneObjectsRegistered)
+                return;
+            m_SceneObjectsRegistered = true;
+
+            Debug.Log($"Loading serialized scene instance RPCs.");
+
             if (m_SerializedInstances == null)
                 return;
             m_SceneInstances.Clear();
 
-            for (int ii = 0; ii < m_SerializedInstances.Length; ii++)
+            for (int i = 0; i < m_SerializedInstances.Length; i++)
             {
-                var type = m_SerializedInstances[ii].GetType();
-                var pipeConfig = m_SerializedInstanceConfigs[ii];
-                var rpcConfigs = pipeConfig.configs;
+                var rpcConfigs = m_SerializedInstances[i].pipeConfig.configs;
+
+                var type = m_SerializedInstances[i].instance.GetType();
 
                 if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs))
                     continue;
@@ -141,14 +151,18 @@ namespace Unity.ClusterDisplay
                 {
                     if (rpcConfigs == null || rpcs[ri].rpcId >= rpcConfigs.Length)
                     {
-                        Register(m_SerializedInstances[ii], rpcs[ri].rpcId);
+                        Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId);
+                        // Register(m_SerializedInstances[i].instance, m_SerializedInstances[i].pipeId, rpcs[ri].rpcId);
                         continue;
                     }
 
                     var instanceRPCConfig = rpcConfigs[rpcs[ri].rpcId];
-                    Register(m_SerializedInstances[ii], rpcs[ri].rpcId, ref instanceRPCConfig);
+                    Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId, ref instanceRPCConfig);
+                    // Register(m_SerializedInstances[i].instance, m_SerializedInstances[i].pipeId, rpcs[ri].rpcId, ref instanceRPCConfig);
                 }
             }
+
+            Dirty();
         }
 
         private void UnregisterObjects ()
@@ -157,7 +171,7 @@ namespace Unity.ClusterDisplay
                 return;
 
             for (int i = 0; i < m_SerializedInstances.Length; i++)
-                Unregister(m_SerializedInstances[i]);
+                Unregister(m_SerializedInstances[i].instance);
         }
     }
 }
