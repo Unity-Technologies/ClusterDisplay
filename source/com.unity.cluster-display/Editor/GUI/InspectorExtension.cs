@@ -205,11 +205,15 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
                 return;
 
-            if (!SceneObjectsRegistry.TryGetRPCConfig(pipeId, rpcMethodInfo.rpcId, out var config))
-                return;
+            var rpcConfig = SceneObjectsRegistry.GetRPCConfig(pipeId, rpcMethodInfo.rpcId);
+            bool newState = EditorGUILayout.Toggle(rpcConfig.enabled, GUILayout.Width(15));
 
-            config.enabled = EditorGUILayout.Toggle(/*"Enabled", */config.enabled, GUILayout.Width(15));
-            SceneObjectsRegistry.TrySetRPCConfig(pipeId, rpcMethodInfo.rpcId, ref config);
+            if (rpcConfig.enabled != newState)
+            {
+                rpcConfig.enabled = newState;
+                if (SceneObjectsRegistry.TryGetSceneInstance(instance.gameObject.scene.path, out var sceneObjectsRegistry))
+                    sceneObjectsRegistry.UpdateRPCConfig(pipeId, rpcMethodInfo.rpcId, ref rpcConfig);
+            }
         }
 
         private void Label (string text)

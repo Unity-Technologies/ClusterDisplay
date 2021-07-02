@@ -21,14 +21,13 @@ namespace Unity.ClusterDisplay
                 if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
                     return;
 
-
                 Component instanceToRemove = null;
                 ushort ? rpcToRemove = null;
 
-                foreach (var obj in sceneObjectsRegistry.sceneInstances)
+                foreach (var instance in sceneObjectsRegistry.m_SceneInstances)
                 {
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField($"Object: \"{obj.GetType().Name}\"", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Object: \"{instance.GetType().Name}\"", EditorStyles.boldLabel);
                     EditorGUILayout.EndHorizontal();
 
                     /*
