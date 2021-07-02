@@ -1,0 +1,23 @@
+{
+    "name": "Unity.ClusterDisplay.Networking.Editor.SourceGenerator",
+    "references": [
+        "GUID:d17cf94e78b26ac4db1dca31abae1b06",
+        "GUID:b43fac41fad43f5458043d6551bc571e"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Microsoft.CodeAnalysis.dll",
+        "Microsoft.CodeAnalysis.CSharp.dll",
+        "Microsoft.CodeAnalysis.Workspaces.dll",
+        "Microsoft.CodeAnalysis.CSharp.Workspaces.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

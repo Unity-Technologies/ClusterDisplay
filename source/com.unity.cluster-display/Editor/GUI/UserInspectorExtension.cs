@@ -7,10 +7,11 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 {
     public abstract class UserInspectorExtension<T> : InspectorExtension, IInspectorExtension<T> where T : MonoBehaviour
     {
-        public UserInspectorExtension(bool useDefaultInspector) : base(useDefaultInspector) {}
-
         protected abstract void OnExtendInspectorGUI(T instance);
+        protected abstract void OnPollReflectorGUI(T instance, bool anyStreamablesRegistered);
+        public void PollReflectorGUI(T instance, bool hasRegistered) => OnPollReflectorGUI(instance, hasRegistered);
         public void ExtendInspectorGUI(T instance) => OnExtendInspectorGUI(instance);
+
         public override void OnInspectorGUI ()
         {
             if (UseDefaultInspector)

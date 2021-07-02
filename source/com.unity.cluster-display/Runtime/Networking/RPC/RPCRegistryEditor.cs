@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay
                 var rpcRegistery = target as RPCRegistry;
                 if (cachedSearchedAssemblyNames != null && cachedSearchedAssemblyNames.Length > 0)
                 {
-                    EditorGUILayout.LabelField("Filtered Assemblies", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Filtered Post Processable Assemblies", EditorStyles.boldLabel);
                     assemblyListScrollPosition = EditorGUILayout.BeginScrollView(assemblyListScrollPosition, GUILayout.Height(150));
 
                     for (int i = 0; i < cachedSearchedAssemblyNames.Length; i++)
@@ -100,7 +100,7 @@ namespace Unity.ClusterDisplay
                 var rpcRegistery = target as RPCRegistry;
                 if (RPCRegistry.targetAssemblies != null && RPCRegistry.targetAssemblies.Count > 0)
                 {
-                    EditorGUILayout.LabelField("Registered Assemblies", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Registered Post Processable Assemblies", EditorStyles.boldLabel);
                     registeredAssemblyListScrollPosition = EditorGUILayout.BeginScrollView(registeredAssemblyListScrollPosition, GUILayout.Height(150));
 
                     for (int i = 0; i < RPCRegistry.targetAssemblies.Count; i++)
@@ -269,7 +269,7 @@ namespace Unity.ClusterDisplay
                     rpcRegistry.Clear();
 
                 RPCEditorGUICommon.HorizontalLine();
-                EditorGUILayout.LabelField("Assemblies", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Post Processable Assemblies", EditorStyles.boldLabel);
                 UpdateAssemblySearch(EditorGUILayout.TextField(assemblySearchStr));
                 ListAssemblies();
                 ListRegisteredAssemblies();

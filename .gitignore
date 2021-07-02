@@ -7,5 +7,6 @@ TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
 TestProjects/*/.idea
+bee.exe
 *.orig
 *.orig.meta

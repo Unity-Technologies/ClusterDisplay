@@ -19,7 +19,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         }
     }
 
-    public abstract class UnityInspectorExtension<T> : UnityInspectorExtension, IInspectorExtension<T> where T : Component
+    public abstract class UnityInspectorExtension<InstanceType> : UnityInspectorExtension, IInspectorExtension<InstanceType>
+        where InstanceType : Component
     {
         private readonly static Dictionary<string, MethodInfo> cachedMethods = new Dictionary<string, MethodInfo>();
 
@@ -55,7 +56,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             }
         }
 
-        public UnityInspectorExtension(bool useDefaultInspector) : base(useDefaultInspector) => Initialize();
+        public UnityInspectorExtension(bool useDefaultInspector = true) : base(useDefaultInspector) => Initialize();
 
         private void TryCallCachedMethod (string methodName, bool throwError = true)
         {
@@ -149,8 +150,12 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 }
             }
         }
-        protected abstract void OnExtendInspectorGUI(T instance);
-        public void ExtendInspectorGUI(T instance) => OnExtendInspectorGUI(instance);
+
+        protected abstract void OnExtendInspectorGUI(InstanceType instance);
+        protected abstract void OnPollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
+
+        public void ExtendInspectorGUI(InstanceType instance) => OnExtendInspectorGUI(instance);
+        public void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered) => OnPollReflectorGUI(instance, anyStreamablesRegistered);
         public override void OnInspectorGUI()
         {
             if (cachedEditorInstance == null)
@@ -159,7 +164,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (UseDefaultInspector)
                 cachedEditorInstance.OnInspectorGUI();
 
-            PollExtendInspectorGUI<IInspectorExtension<T>, T>(this);
+            PollExtendInspectorGUI<IInspectorExtension<InstanceType>, InstanceType>(this);
         }
 
         public void OnSceneGUI() => TryCallCachedMethod(OnSceneGUIMethodString, throwError: false);

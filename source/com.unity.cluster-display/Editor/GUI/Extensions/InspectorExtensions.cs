@@ -7,52 +7,48 @@ using Unity.ClusterDisplay.Networking;
 
 namespace Unity.ClusterDisplay.Editor.Extensions
 {
-    [CustomEditor(typeof(MonoBehaviour), editorForChildClasses: true)]
-    public class MonoBehaviourExtension : UserInspectorExtension<MonoBehaviour>
+    public abstract class UserReflectorInspectorExtension<InstanceType, ReflectorType> : UserInspectorExtension<InstanceType>
+        where InstanceType : MonoBehaviour
+        where ReflectorType : ComponentReflector<InstanceType>
     {
-        public MonoBehaviourExtension() : base(useDefaultInspector: true) {}
+        protected ReflectorType cachedReflector;
 
-        private MonoBehaviourReflector cachedReflector;
-        protected override void OnExtendInspectorGUI(MonoBehaviour instance)
+        protected override void OnPollReflectorGUI (InstanceType instance, bool hasRegistered)
         {
-            var type = instance.GetType();
-            bool isPostProcessable = ReflectionUtils.TypeIsInPostProcessableAssembly(type);
-            if (isPostProcessable)
-            {
-                if (ListFields(instance, out var selectedField, out var selectedState))
-                {
-                }
-
-                if (ListProperties(instance, out var selectedProperty, out selectedState))
-                {
-                }
-
-                if (ListMethods(instance, out var selectedMethodInfo, out selectedState))
-                {
-                }
-            }
-
-            else
+            if (!ReflectionUtils.TypeIsInPostProcessableAssembly(instance.GetType()))
             {
                 TryGetReflectorInstance(instance, ref cachedReflector);
-                ReflectorButton(instance, ref cachedReflector);
-                if (cachedReflector == null)
-                    return;
+                if (hasRegistered && cachedReflector == null)
+                    ReflectorButton(instance, ref cachedReflector);
             }
         }
     }
 
-    [CustomEditor(typeof(Transform))]
-    public class TransformExtension : UnityInspectorExtension<Transform>
+    public abstract class UnityReflectorInspectorExtension<InstanceType, ReflectorType> : UnityInspectorExtension<InstanceType>
+        where InstanceType : Component
+        where ReflectorType : ComponentReflector<InstanceType>
     {
-        public TransformExtension() : base(useDefaultInspector: true) {}
+        protected ReflectorType cachedReflector;
 
-        private TransformReflector cachedReflector;
-        protected override void OnExtendInspectorGUI(Transform instance)
+        protected override void OnPollReflectorGUI (InstanceType instance, bool anyStreamablesRegistered)
         {
             TryGetReflectorInstance(instance, ref cachedReflector);
-            ReflectorButton(instance, ref cachedReflector);
+            if (anyStreamablesRegistered && cachedReflector == null)
+                ReflectorButton(instance, ref cachedReflector);
+        }
+    }
 
+    [CustomEditor(typeof(MonoBehaviour), editorForChildClasses: true)]
+    public class MonoBehaviourExtension : UserReflectorInspectorExtension<MonoBehaviour, MonoBehaviourReflector>
+    {
+        protected override void OnExtendInspectorGUI(MonoBehaviour instance) {}
+    }
+
+    [CustomEditor(typeof(Transform))]
+    public class TransformExtension : UnityReflectorInspectorExtension<Transform, TransformReflector>
+    {
+        protected override void OnExtendInspectorGUI(Transform instance)
+        {
             if (cachedReflector == null)
                 return;
 

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Unity.ClusterDisplay.Networking;
@@ -8,8 +9,10 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Editor.Extensions
 {
     public interface IInspectorExtension<InstanceType>
+        where InstanceType : Component
     {
         void ExtendInspectorGUI(InstanceType instance);
+        void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
     }
 
     public abstract class InspectorExtension : UnityEditor.Editor
@@ -29,6 +32,10 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         private const int maxListSizeBeforeScroll = 200;
         private bool usingScrollView = false;
 
+        private bool foldOutFields;
+        private bool foldOutMethods;
+        private bool foldOutProperties;
+
         private string fieldSearchStr;
         private string methodSearchStr;
         private string propertySearchStr;
@@ -37,11 +44,15 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         private Vector2 methodScrollPosition;
         private Vector2 propertyScrollPosition;
 
-        private SerializedProperty[] cachedSerializedProperties;
+        private SerializedProperty[] cachedFields;
         private MethodInfo[] cachedMethods;
         private (PropertyInfo property, MethodInfo setMethod)[] cachedProperties;
 
-        public InspectorExtension(bool useDefaultInspector) => this.useDefaultInspector = useDefaultInspector;
+        private Dictionary<SerializedProperty, string> cachedFieldDescriptors = new Dictionary<SerializedProperty, string>();
+        private Dictionary<PropertyInfo, string> cachedPropertyDescriptors = new Dictionary<PropertyInfo, string>();
+        private Dictionary<MethodInfo, string> cachedMethodDescriptors = new Dictionary<MethodInfo, string>();
+
+        public InspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
 
         /// <summary>
         /// This method generically casts our target to our instance type then performs
@@ -52,17 +63,21 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         /// <param name="interfaceInstance"></param>
         protected void PollExtendInspectorGUI<EditorType, InstanceType> (EditorType interfaceInstance)
             where EditorType : IInspectorExtension<InstanceType>
-            where InstanceType : Object
+            where InstanceType : Component
         {
             var instance = target as InstanceType;
             if (instance == null)
                 return;
 
             if (foldOut = EditorGUILayout.Foldout(foldOut, "Cluster Display"))
+            {
+                PresentStreamables(instance, out var hasRegistered);
+                interfaceInstance.PollReflectorGUI(instance, hasRegistered);
                 interfaceInstance.ExtendInspectorGUI(instance);
+            }
         }
 
-        protected bool TryGetReflectorInstance<ReflectorType, InstanceType> (InstanceType instance, ref ReflectorType reflectorInstance) 
+        protected bool TryGetReflectorInstance<InstanceType, ReflectorType> (InstanceType instance, ref ReflectorType reflectorInstance) 
             where InstanceType : Component 
             where ReflectorType : ComponentReflector<InstanceType>
         {
@@ -82,11 +97,52 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return reflectorInstance != null;
         }
 
+        protected void PresentStreamables<InstanceType> (InstanceType instance, out bool anyStreamablesRegistered)
+            where InstanceType : Component
+        {
+            // EditorGUILayout.LabelField("Streamables", EditorStyles.boldLabel);
+
+            BeginTab();
+            anyStreamablesRegistered = false;
+
+            if ((foldOutFields = EditorGUILayout.Foldout(foldOutFields, "Fields")) && PollFields(
+                instance, 
+                out var selectedField, 
+                out var selectedState, 
+                ref anyStreamablesRegistered))
+            {
+            }
+
+            RPCEditorGUICommon.HorizontalLine();
+            if ((foldOutProperties = EditorGUILayout.Foldout(foldOutProperties, "Properties")) && PollProperties(
+                instance, 
+                out var selectedProperty, 
+                out selectedState, 
+                ref anyStreamablesRegistered))
+            {
+            }
+
+            RPCEditorGUICommon.HorizontalLine();
+            if ((foldOutMethods = EditorGUILayout.Foldout(foldOutMethods, "Methods")) && PollMethods(
+                instance, 
+                out var selectedMethodInfo, 
+                out selectedState, 
+                ref anyStreamablesRegistered))
+            {
+            }
+
+            RPCEditorGUICommon.HorizontalLine();
+
+            EndTab();
+        }
+
         protected bool ReflectorButton<ReflectorType, InstanceType> (InstanceType instance, ref ReflectorType reflectorInstance)
             where InstanceType : Component
             where ReflectorType : ComponentReflector<InstanceType> 
         {
-            if (GUILayout.Button(reflectorInstance == null ? "Create Reflect" : "Remove Reflector"))
+            var cachedBackgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = Color.green;
+            if (GUILayout.Button(reflectorInstance == null ? "Create Reflector" : "Remove Reflector"))
             {
                 if (reflectorInstance == null)
                 {
@@ -97,6 +153,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 else DestroyImmediate(reflectorInstance);
                 return true;
             }
+
+            GUI.backgroundColor = cachedBackgroundColor;
 
             return false;
         }
@@ -115,10 +173,23 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 EditorGUILayout.EndScrollView();
         }
 
+        private void BeginTab ()
+        {
+            EditorGUILayout.BeginHorizontal();
+            // EditorGUILayout.Space(5);
+            EditorGUILayout.BeginVertical();
+        }
+
+        private void EndTab ()
+        {
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+        }
+
         private bool PollSearch (string title, ref string currentSearchStr)
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel, GUILayout.Width(75));
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel, GUILayout.Width(100));
 
             var newFieldSearchStr = EditorGUILayout.TextField(currentSearchStr);
             bool changed = currentSearchStr != newFieldSearchStr;
@@ -128,19 +199,30 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return changed;
         }
 
-        private bool Button (bool registered, string text)
+        private void RPCToggle (Component instance, ref RPCMethodInfo rpcMethodInfo)
         {
-            EditorGUILayout.BeginHorizontal();
+            // EditorGUILayout.LabelField(text);
+            if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
+                return;
 
+            if (!SceneObjectsRegistry.TryGetRPCConfig(pipeId, rpcMethodInfo.rpcId, out var config))
+                return;
+
+            config.enabled = EditorGUILayout.Toggle(/*"Enabled", */config.enabled, GUILayout.Width(15));
+            SceneObjectsRegistry.TrySetRPCConfig(pipeId, rpcMethodInfo.rpcId, ref config);
+        }
+
+        private void Label (string text)
+        {
+            EditorGUILayout.LabelField(text);
+        }
+
+        private bool Button (bool registered)
+        {
             var cachedPreviousColor = GUI.backgroundColor;
             GUI.backgroundColor = registered ? Color.green : Color.red;
-
             bool selected = GUILayout.Button(registered ? "→" : "→", GUILayout.Width(20));
-
             GUI.backgroundColor = cachedPreviousColor;
-
-            EditorGUILayout.LabelField(text);
-            EditorGUILayout.EndHorizontal();
 
             return selected;
         }
@@ -162,39 +244,60 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                     serializedProperties.Add(serializedProperty);
                 }
 
-            cachedSerializedProperties = serializedProperties.ToArray();
+            cachedFields = serializedProperties.ToArray();
+            cachedFieldDescriptors = cachedFields.ToDictionary(
+                serializedProperty => serializedProperty,
+                serializedProperty => $"{serializedProperty.type} {serializedProperty.name}");
         }
 
-        protected bool ListFields<InstanceType> (InstanceType targetInstance, out SerializedProperty selectedField, out SelectedState selectedState)
+        protected bool PollFields<InstanceType> (
+            InstanceType targetInstance, 
+            out SerializedProperty selectedField, 
+            out SelectedState selectedState, 
+            ref bool hasRegistered)
             where InstanceType : Component
         {
             selectedField = null;
             selectedState = SelectedState.None;
 
             if (targetInstance == null)
+            {
+                hasRegistered = false;
                 return false;
+            }
 
-            RPCEditorGUICommon.HorizontalLine();
-            if (cachedSerializedProperties == null || PollSearch("Fields", ref fieldSearchStr))
+            BeginTab();
+            if (cachedFields == null || PollSearch("Filter Fields:", ref fieldSearchStr))
                 PollFields(targetInstance);
 
-            if (cachedSerializedProperties != null && cachedSerializedProperties.Length > 0)
+            if (cachedFields != null && cachedFields.Length > 0)
             {
-                BeginScrollView(cachedSerializedProperties.Length, ref fieldScrollPosition);
-                for (int i = 0; i < cachedSerializedProperties.Length; i++)
+                BeginScrollView(cachedFields.Length, ref fieldScrollPosition);
+                for (int i = 0; i < cachedFields.Length; i++)
                 {
-                    if (Button(false, cachedSerializedProperties[i].name))
+                    EditorGUILayout.BeginHorizontal();
+                    if (Button(false))
                     {
                     }
+                    Label(cachedFieldDescriptors[cachedFields[i]]);
+                    EditorGUILayout.EndHorizontal();
                 }
 
                 EndScrollView();
             }
 
+            else EditorGUILayout.LabelField("No Fields Available");
+            EndTab();
+
+            hasRegistered = false;
             return true;
         }
 
-        protected bool ListMethods<InstanceType> (InstanceType targetInstance, out System.Reflection.MethodInfo selectedMethodInfo, out SelectedState selectedState)
+        protected bool PollMethods<InstanceType> (
+            InstanceType targetInstance, 
+            out System.Reflection.MethodInfo selectedMethodInfo, 
+            out SelectedState selectedState, 
+            ref bool hasRegistered)
             where InstanceType : Component
         {
             selectedMethodInfo = null;
@@ -203,17 +306,32 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (targetInstance == null)
                 return false;
 
-            RPCEditorGUICommon.HorizontalLine();
-            if (cachedMethods == null || PollSearch("Methods", ref methodSearchStr))
+            BeginTab();
+            if (cachedMethods == null || PollSearch("Filter Methods:", ref methodSearchStr))
+            {
                 cachedMethods = ReflectionUtils.GetAllMethodsFromType(targetInstance.GetType(), methodSearchStr, valueTypeParametersOnly: true, includeGenerics: false, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+                cachedMethodDescriptors = cachedMethods.ToDictionary(
+                    cachedMethod => cachedMethod,
+                    cachedMethod =>
+                    {
+                        var parameters = cachedMethod.GetParameters();
+                        if (parameters.Length > 0)
+                            return $"{cachedMethod.ReturnType.Name} {cachedMethod.Name} ({(parameters.Select(parameter => parameter.ParameterType.Name).Aggregate((aggregation, next) => $"{aggregation}, {next}"))})";
+                        return $"{cachedMethod.ReturnType.Name} {cachedMethod.Name} ()";
+                    });
+            }
 
             if (cachedMethods != null && cachedMethods.Length > 0)
             {
                 BeginScrollView(cachedMethods.Length, ref methodScrollPosition);
                 for (int i = 0; i < cachedMethods.Length; i++)
                 {
-                    bool registered = RPCRegistry.MethodRegistered(cachedMethods[i]);
-                    if (Button(registered, cachedMethods[i].Name))
+                    bool registered = RPCRegistry.TryGetRPC(cachedMethods[i], out var rpcMethodInfo);
+                    hasRegistered |= registered;
+
+                    EditorGUILayout.BeginHorizontal();
+
+                    if (Button(registered))
                     {
                         if (registered)
                         {
@@ -228,25 +346,44 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Added;
                         }
                     }
+
+                    if (registered)
+                        RPCToggle(targetInstance, ref rpcMethodInfo);
+                    Label(cachedMethodDescriptors[cachedMethods[i]]);
+
+                    EditorGUILayout.EndHorizontal();
                 }
 
                 EndScrollView();
             }
 
+            else EditorGUILayout.LabelField("No Methods Available");
+            EndTab();
+
             return selectedState != SelectedState.None && selectedMethodInfo != null;
         }
 
-        protected bool ListProperties<InstanceType> (InstanceType targetInstance, out (PropertyInfo property, MethodInfo setMethod) selectedProperty, out SelectedState selectedState)
+        protected bool PollProperties<InstanceType> (
+            InstanceType targetInstance, 
+            out (PropertyInfo property, MethodInfo setMethod) selectedProperty, 
+            out SelectedState selectedState,
+            ref bool hasRegistered)
             where InstanceType : Component
         {
             selectedProperty = (null, null);
             selectedState = SelectedState.None;
+
             if (targetInstance == null)
                 return false;
 
-            RPCEditorGUICommon.HorizontalLine();
-            if (cachedProperties == null || PollSearch("Properties", ref propertySearchStr))
+            BeginTab();
+            if (cachedProperties == null || PollSearch("Filter Properties:", ref propertySearchStr))
+            {
                 cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+                cachedPropertyDescriptors = cachedProperties.ToDictionary(
+                    cachedPropertyData => cachedPropertyData.property,
+                    cachedPropertyData => $"{cachedPropertyData.property.PropertyType.Name} {cachedPropertyData.property.Name}");
+            }
 
             if (cachedProperties != null && cachedProperties.Length > 0)
             {
@@ -254,8 +391,12 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
                 for (int i = 0; i < cachedProperties.Length; i++)
                 {
-                    bool registered = RPCRegistry.MethodRegistered(cachedProperties[i].setMethod);
-                    if (Button(registered, cachedProperties[i].property.Name))
+                    bool registered = RPCRegistry.TryGetRPC(cachedProperties[i].setMethod, out var rpcMethodInfo);
+                    hasRegistered |= registered;
+
+                    EditorGUILayout.BeginHorizontal();
+
+                    if (Button(registered))
                     {
                         if (registered)
                         {
@@ -270,10 +411,19 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Added;
                         }
                     }
+
+                    if (registered)
+                        RPCToggle(targetInstance, ref rpcMethodInfo);
+                    Label(cachedPropertyDescriptors[cachedProperties[i].property]);
+
+                    EditorGUILayout.EndHorizontal();
                 }
 
                 EndScrollView();
             }
+
+            else EditorGUILayout.LabelField("No Properties Available");
+            EndTab();
 
             return selectedState != SelectedState.None && selectedProperty.property != null && selectedProperty.setMethod != null;
         }

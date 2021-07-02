@@ -329,7 +329,7 @@ namespace Unity.ClusterDisplay
 
         [RPCCallMarker]
         public static void AppendRPCCall (
-            UnityEngine.Object instance, 
+            UnityEngine.Component instance, 
             int rpcId, 
             int rpcExecutionStage, 
             // int explicitRPCExeuctionStage, // 1 == Explicit RPC Exeuction | 0 == Implicit RPC Execution.

@@ -19,7 +19,22 @@ namespace Unity.ClusterDisplay
             get
             {
                 if (cachedAllTypes == null)
-                    cachedAllTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).ToArray();
+                    cachedAllTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly =>
+                    {
+                        IEnumerable<Type> types = null;
+                        try
+                        {
+                            types = assembly.GetTypes().Where(type => type != null);
+                        }
+
+                        catch (ReflectionTypeLoadException e)
+                        {
+                            types = e.Types.Where(type => type != null);
+                        }
+
+                        return types;
+
+                    }).ToArray();
                 return cachedAllTypes;
             }
         }

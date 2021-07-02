@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay
         [GetInstanceMarker] public static Object GetInstance(ushort pipeId)
         {
             // TODO: Wrap this null check in a verbose logging #if to improve performance.
-            var obj = instances[pipeId];
+            var obj = m_Instances[pipeId];
             if (obj == null)
             {
                 Debug.LogError($"There is no instance with pipe ID: \"{pipeId}\", verify whether your instance was destroyed or unregistered.");
@@ -32,68 +32,136 @@ namespace Unity.ClusterDisplay
             return obj;
         }
 
-        private readonly static IDManager pipeIdManager = new IDManager();
+        private readonly static IDManager m_PipeIdManager = new IDManager();
 
-        private readonly static Object[] instances = new Object[ushort.MaxValue];
-        private readonly static Dictionary<Object, ushort> pipeIdLookUp = new Dictionary<Object, ushort>();
-        private readonly static Dictionary<ushort, bool[]> rpcStates = new Dictionary<ushort, bool[]>();
+        private readonly static Component[] m_Instances = new Component[ushort.MaxValue];
+        private readonly static Dictionary<int, ushort> m_InstanceIdToPipeId = new Dictionary<int, ushort>();
+        private readonly static Dictionary<ushort, PipeConfig> m_PipeIdToInstanceConfig = new Dictionary<ushort, PipeConfig>();
 
-        public static bool TryGetPipeId(Object obj, out ushort pipeId) => pipeIdLookUp.TryGetValue(obj, out pipeId);
-        public static bool TryPopPipeId(out ushort pipeId) => pipeIdManager.TryPopId(out pipeId);
-        public static void PushPipeId(ushort pipeId) => pipeIdManager.PushUnutilizedId(pipeId);
+        public static bool TryGetPipeId(int instanceId, out ushort pipeId) => m_InstanceIdToPipeId.TryGetValue(instanceId, out pipeId);
+        public static bool TryGetPipeId(Component instance, out ushort pipeId) => m_InstanceIdToPipeId.TryGetValue(instance.GetInstanceID(), out pipeId);
+        public static bool TryPopPipeId(out ushort pipeId) => m_PipeIdManager.TryPopId(out pipeId);
+        public static void PushPipeId(ushort pipeId) => m_PipeIdManager.PushUnutilizedId(pipeId);
 
-        public static bool TryGetRPCState(ushort pipeId, ushort rpcId) => rpcStates.TryGetValue(pipeId, out var states) && states[rpcId];
-        public static bool TrySetRPCState(ushort pipeId, ushort rpcId, bool state)
+        public static bool TryGetInstanceConfig(ushort pipeId, out PipeConfig pipeConfig) => m_PipeIdToInstanceConfig.TryGetValue(pipeId, out pipeConfig);
+        public static bool TryGetRPCConfig(ushort pipeId, ushort rpcId, out RPCConfig rpcConfig)
         {
-            if (!rpcStates.TryGetValue(pipeId, out var states))
+            if (!m_PipeIdToInstanceConfig.TryGetValue(pipeId, out var pipeConfig))
+            {
+                rpcConfig = default(RPCConfig);
                 return false;
-            states[rpcId] = state;
+            }
+
+            rpcConfig = pipeConfig.configs[rpcId];
             return true;
         }
 
-        private static void RegisterInstanceAccessor<T> (T obj) where T : Object
+        public static bool TrySetRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig pipeConfig)
         {
-            if (!Application.isPlaying)
-                return;
+            if (!m_PipeIdToInstanceConfig.ContainsKey(pipeId))
+                return false;
 
-            if (obj == null)
-                throw new System.Exception($"Received NULL object to register.");
+            if (m_PipeIdToInstanceConfig[pipeId].configs == null || m_PipeIdToInstanceConfig[pipeId].configs.Length < rpcId + 1)
+            {
+                var instanceConfig = m_PipeIdToInstanceConfig[pipeId];
 
-            if (pipeIdLookUp.ContainsKey(obj))
-                return;
+                var resizedConfigs = new RPCConfig[rpcId + 1];
+                System.Array.Copy(instanceConfig.configs, resizedConfigs, instanceConfig.configs.Length);
+                resizedConfigs[rpcId] = pipeConfig;
 
-            if (!pipeIdManager.TryPopId(out var pipeId))
-                throw new System.Exception("Cannot register any more objects, no more ids available.");
+                instanceConfig.configs = resizedConfigs;
+                return true;
+            }
 
-            instances[pipeId] = obj;
-            pipeIdLookUp.Add(obj, pipeId);
-            rpcStates.Add(pipeId, new bool[ushort.MaxValue]);
+            m_PipeIdToInstanceConfig[pipeId].configs[rpcId] = pipeConfig;
+            return true;
         }
 
-        private static void UnregisterInstanceAccessor (Object obj)
+        private static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
+            where InstanceType : Component
         {
-            if (!Application.isPlaying)
+            pipeId = 0;
+            if (instance == null)
+            {
+                Debug.LogError($"Received NULL object to register.");
+                return false;
+            }
+
+            if (m_InstanceIdToPipeId.ContainsKey(instance.GetInstanceID()))
+                return false;
+
+            if (!m_PipeIdManager.TryPopId(out pipeId))
+            {
+                Debug.LogError("Cannot register any more objects, no more ids available.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void SetConfig (ushort pipeId, ushort rpcId, ref RPCConfig instanceRPCConfig)
+        {
+            if (!m_PipeIdToInstanceConfig.ContainsKey(pipeId))
+            {
+                var newConfigs = new RPCConfig[rpcId + 1];
+                newConfigs[rpcId] = instanceRPCConfig;
+                m_PipeIdToInstanceConfig.Add(pipeId, new PipeConfig() { configs = newConfigs });
+                return;
+            }
+
+            m_PipeIdToInstanceConfig[pipeId].configs[rpcId] = instanceRPCConfig;
+        }
+
+        private static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
+            where InstanceType : Component
+        {
+            if (!Validate(instance, out var pipeId))
                 return;
 
-            if (obj == null)
+            m_Instances[pipeId] = instance;
+            m_InstanceIdToPipeId.Add(instance.GetInstanceID(), pipeId);
+
+            if (!m_PipeIdToInstanceConfig.TryGetValue(pipeId, out var _))
+            {
+                var newInstanceRPCConfig = new RPCConfig(); 
+                SetConfig(pipeId, rpcId, ref newInstanceRPCConfig);
+            }
+        }
+
+        private static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
+            where InstanceType : Component
+        {
+            if (!Validate(instance, out var pipeId))
                 return;
 
-            if (!pipeIdLookUp.TryGetValue(obj, out var pipeId))
+            m_Instances[pipeId] = instance;
+            m_InstanceIdToPipeId.Add(instance.GetInstanceID(), pipeId);
+            SetConfig(pipeId, rpcId, ref instanceRPCConfig);
+        }
+
+        private static void UnregisterInstanceAccessor<InstanceType> (InstanceType instance)
+            where InstanceType : Component
+        {
+            if (instance == null)
                 return;
 
-            instances[pipeId] = null;
+            int instanceId = instance.GetInstanceID();
+            if (!m_InstanceIdToPipeId.TryGetValue(instanceId, out var pipeId))
+                return;
 
-            pipeIdLookUp.Remove(obj);
-            rpcStates.Remove(pipeId);
+            m_Instances[pipeId] = null;
 
-            pipeIdManager.PushUnutilizedId(pipeId);
+            m_InstanceIdToPipeId.Remove(instanceId);
+            m_PipeIdToInstanceConfig.Remove(pipeId);
+
+            m_PipeIdManager.PushUnutilizedId(pipeId);
         }
 
         public static void ClearAccessors ()
         {
-            pipeIdLookUp.Clear();
-            pipeIdManager.Clear();
-            rpcStates.Clear();
+            m_InstanceIdToPipeId.Clear();
+            m_PipeIdManager.Clear();
+            m_PipeIdToInstanceConfig.Clear();
         }
 
         #if UNITY_EDITOR
@@ -146,9 +214,17 @@ namespace Unity.ClusterDisplay
                         }
 
                         sceneObjectsRegistry.Add(path, sceneRegistry);
+                        sceneRegistry.OnDeserialize();
                     }
 
-                    sceneRegistry.Register(component);
+                    if (sceneRegistry.Registered(component))
+                        continue;
+
+                    if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs))
+                        continue;
+
+                    for (int ri = 0; ri < rpcs.Length; ri++)
+                        sceneRegistry.Register(component, rpcs[ri].rpcId);
                 }
             });
         }

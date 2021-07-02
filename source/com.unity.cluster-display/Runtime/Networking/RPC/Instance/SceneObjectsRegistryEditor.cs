@@ -22,10 +22,10 @@ namespace Unity.ClusterDisplay
                     return;
 
 
-                Object objectToRemove = null;
+                Component instanceToRemove = null;
                 ushort ? rpcToRemove = null;
 
-                foreach (var obj in sceneObjectsRegistry.sceneObjects)
+                foreach (var obj in sceneObjectsRegistry.sceneInstances)
                 {
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField($"Object: \"{obj.GetType().Name}\"", EditorStyles.boldLabel);
@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay
                 }
 
                 if (rpcToRemove != null)
-                    sceneObjectsRegistry.Unregister(objectToRemove);
+                    sceneObjectsRegistry.Unregister(instanceToRemove);
             }
 
             public override void OnInspectorGUI()
