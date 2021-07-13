@@ -137,7 +137,7 @@ namespace Unity.ClusterDisplay
             if(ClusterDisplayState.IsClusterLogicEnabled)
             {
                 InjectSynchPointInPlayerLoop();
-                RPCExecutor.TrySetup();
+                RPC.RPCExecutor.TrySetup();
             }
         }
 
@@ -148,7 +148,7 @@ namespace Unity.ClusterDisplay
 
             LocalNode.Exit();
             RemoveSynchPointFromPlayerLoop();
-            RPCExecutor.RemovePlayerLoops();
+            RPC.RPCExecutor.RemovePlayerLoops();
         }
 
         void Update()

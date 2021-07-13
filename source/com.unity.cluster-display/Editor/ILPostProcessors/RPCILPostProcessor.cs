@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
-using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public partial class RPCILPostProcessor
     {
@@ -136,19 +132,19 @@ namespace Unity.ClusterDisplay
                 var rpc = serializedRPC;
 
                 // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
-                if (rpc.declaringAssemblyName == compiledAssemblyDef.Name.Name)
+                if (rpc.method.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.declaryingTypeFullName);
+                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.method.declaryingTypeFullName);
                     MethodReference targetMethodRef = null;
 
                     if (!TryFindMethodWithMatchingFormalySerializedAs(
                         compiledAssemblyDef.MainModule,
                         typeDefinition,
-                        rpc.methodName,
+                        rpc.method.methodName,
                         out targetMethodRef) &&
                         !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
                     {
-                        Debug.LogError($"Unable to find method signature: \"{rpc.methodName}\".");
+                        Debug.LogError($"Unable to find method signature: \"{rpc.method.methodName}\".");
                         return false;
                     }
 
@@ -182,31 +178,11 @@ namespace Unity.ClusterDisplay
         private bool TryPollSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
             if (cachedSerializedRPCS == null)
-                RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out cachedSerializedRPCS);
+                RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out cachedSerializedRPCS, out var serializedStagedMethods);
 
             if (cachedSerializedRPCS != null && cachedSerializedRPCS.Length > 0)
                 if (!TryProcessSerializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray()))
                     return false;
-
-            /*
-            if (cachedSerializedRPCS != null && cachedSerializedRPCS.Length > 0)
-            {
-                List<SerializedRPC> serializedRPCsInCompiledAssembly = new List<SerializedRPC>();
-                for (int i = 0; i < cachedSerializedRPCS.Length; i++)
-                {
-                    foreach (var serializedRPC in cachedSerializedRPCS)
-                    {
-                        if (serializedRPC.declaringAssemblyName != compiledAssemblyDef.FullName)
-                            continue;
-                        serializedRPCsInCompiledAssembly.Add(serializedRPC);
-                    }
-                }
-
-                if (serializedRPCsInCompiledAssembly.Count > 0)
-                    if (!TryProcessSerializedRPCs(compiledAssemblyDef, serializedRPCsInCompiledAssembly))
-                        return false;
-            }
-            */
 
             UniqueRPCIdManager.PollUnused();
             return true;

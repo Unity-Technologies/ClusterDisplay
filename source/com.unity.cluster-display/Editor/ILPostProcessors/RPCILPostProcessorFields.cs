@@ -6,7 +6,7 @@ using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public partial class RPCILPostProcessor
     {

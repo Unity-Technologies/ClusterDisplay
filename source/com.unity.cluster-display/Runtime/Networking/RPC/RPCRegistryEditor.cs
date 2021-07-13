@@ -11,7 +11,7 @@ using System.IO;
 using UnityEditorInternal;
 using UnityEditor;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
@@ -254,10 +254,9 @@ namespace Unity.ClusterDisplay
             private void OnSelectMethod (MethodInfo selectedMethodInfo)
             {
                 RPCRegistry.TryAddNewRPC(
-                    targetType, 
-                    selectedMethodInfo, 
-                    RPCExecutionStage.Automatic, 
-                    out var rpcMethodInfo);
+                    targetType,
+                    selectedMethodInfo,
+                    RPCExecutionStage.Automatic);
             }
 
             private bool changed = false;

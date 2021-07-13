@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-namespace Unity.ClusterDisplay.Networking
+namespace Unity.ClusterDisplay.RPC
 {
     [CustomEditor(typeof(ComponentReflectorBase), editorForChildClasses: true)]
     public class ComponentReflectorBaseEditor : UnityEditor.Editor

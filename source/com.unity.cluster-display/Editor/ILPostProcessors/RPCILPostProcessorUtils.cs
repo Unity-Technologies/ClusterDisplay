@@ -7,7 +7,7 @@ using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public partial class RPCILPostProcessor
     {
@@ -21,6 +21,12 @@ namespace Unity.ClusterDisplay
             int sizeOfAllParameters,
             out Instruction lastInstruction)
         {
+            if (call == null)
+            {
+                Debug.LogError($"Unable to inject call into method body: \"{il.Body.Method.Name}\" declared in: \"{il.Body.Method.DeclaringType.Name}\", the call is null!");
+                lastInstruction = null;
+                return false;
+            }
 
             if (afterInstruction == null)
             {

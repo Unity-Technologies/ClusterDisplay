@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {

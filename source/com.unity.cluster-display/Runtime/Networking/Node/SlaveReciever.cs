@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay
         public SlaveReciever (ISlaveNodeSyncState nodeSyncState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
         {
             this.nodeSyncState = nodeSyncState;
-            RPCEmitter.Initialize(maxRpcByteBufferSize);
+            RPC.RPCEmitter.Initialize(maxRpcByteBufferSize);
         }
 
         public void PumpMsg (ulong currentFrameID)
@@ -166,7 +166,7 @@ namespace Unity.ClusterDisplay
         private unsafe bool RestoreRPCState (NativeArray<byte> stateData)
         {
             // Debug.Log($"RPC Buffer Size: {stateData.Length}");
-            RPCEmitter.Unlatch(stateData, m_LastRxFrameStart);
+            RPC.RPCEmitter.Unlatch(stateData, m_LastRxFrameStart);
             return true;
         }
 

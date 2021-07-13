@@ -4,61 +4,102 @@ using UnityEngine;
 
 public class IDManager
 {
-    private ushort[] returnedIds = new ushort[ushort.MaxValue];
-    private ushort returnedIdsIndex = 0;
+    private ushort[] m_QueuedReturnedIDs = new ushort[ushort.MaxValue];
+    private bool[] m_ReturnedIDs = new bool[ushort.MaxValue];
+    private ushort m_ReturnedIDsIndex = 0;
 
-    private ushort[] serializedIds = new ushort[ushort.MaxValue];
+    private bool[] m_IDStates = new bool[ushort.MaxValue];
 
-    private ushort serializedIdCount = 0;
-    public ushort SerializedIdCount => serializedIdCount;
-
-    private ushort newIdIndex = 0;
-    public ushort UpperBoundID => newIdIndex;
-    public ushort this[ushort index] => serializedIds[index];
+    private ushort m_NewIDIndex = 0;
 
     public bool TryPopId (out ushort id)
     {
         id = 0;
-        if (returnedIdsIndex > 0)
-            id = (ushort)(returnedIds[--returnedIdsIndex]);
-
-        else if (newIdIndex < ushort.MaxValue)
-            id = newIdIndex++;
-
-        else
+        if (m_ReturnedIDsIndex > 0)
         {
-            Debug.LogError($"All ids are in use.");
+            id = (ushort)(m_QueuedReturnedIDs[--m_ReturnedIDsIndex]);
+            m_ReturnedIDs[id] = false;
+        }
+
+        else if (m_NewIDIndex < ushort.MaxValue)
+        {
+            id = m_NewIDIndex++;
+
+            // Not great, maybe I should just use dictionaries.
+            while (m_IDStates[id])
+            {
+                id = m_NewIDIndex++;
+                if (id >= ushort.MaxValue)
+                    goto allIDsInUse;
+            }
+        }
+
+        else goto allIDsInUse;
+
+        m_IDStates[id] = true;
+        return true;
+
+        allIDsInUse:
+        Debug.LogError($"All ids are in use.");
+        return false;
+    }
+
+    /// <summary>
+    /// When you push an ID, you should not push an ID that was previously used by this
+    /// ID manager. It's structured this way so I don't need to search m_QueuedReturnedIDs
+    /// for whether the ID we want to push is currently in the return queue.
+    /// </summary>
+    /// <param name="id">The ID we want to register as in use.</param>
+    /// <returns></returns>
+    public bool TryPushId (ushort id)
+    {
+        if (m_ReturnedIDs[id])
+        {
+            Debug.LogError($"The ID: {id} was used previously, so you should be using TryPopId instead due to internal structure.");
             return false;
         }
 
-        serializedIds[id] = id;
-        serializedIdCount++;
+        if (m_IDStates[id])
+        {
+            Debug.LogError($"The ID: {id} is already in use.");
+            return false;
+        }
+
+        m_IDStates[id] = true;
         return true;
     }
 
-    public void PushSetOfIds (ushort[] ids, ushort largestId)
+    /// <summary>
+    /// Attempt to push an ID as being used, if it's in use, then try 
+    /// and pop a new one. If that also fails, return false.
+    /// </summary>
+    /// <param name="id">The ID we are pushing or returning if we pop a new one.</param>
+    /// <returns></returns>
+    public bool TryPushOrPopId (ref ushort id) => TryPushId(id) || TryPopId(out id);
+
+    public void OverwriteSetOfIds (ushort[] ids, ushort largestId)
     {
         for (int i = 0; i < ids.Length; i++)
-            serializedIds[ids[i]] = ids[i];
-        serializedIdCount += (ushort)ids.Length;
-        newIdIndex = (ushort)(largestId + 1);
+            this.m_IDStates[ids[i]] = true;
+        m_NewIDIndex = (ushort)(largestId + 1);
     }
 
     public void PushUnutilizedId (ushort id)
     {
-        returnedIds[returnedIdsIndex++] = id;
-        serializedIdCount--;
+        m_IDStates[id] = false;
+        m_QueuedReturnedIDs[m_ReturnedIDsIndex++] = id;
+        m_ReturnedIDs[id] = true;
     }
 
     protected virtual void OnClear () {}
     public void Clear ()
     {
-        returnedIds = new ushort[ushort.MaxValue];
-        serializedIds = new ushort[ushort.MaxValue];
+        m_QueuedReturnedIDs = new ushort[ushort.MaxValue];
+        m_ReturnedIDs = new bool[ushort.MaxValue];
+        m_IDStates = new bool[ushort.MaxValue];
 
-        returnedIdsIndex = 0;
-        serializedIdCount = 0;
-        newIdIndex = 0;
+        m_ReturnedIDsIndex = 0;
+        m_NewIDIndex = 0;
 
         OnClear();
     }

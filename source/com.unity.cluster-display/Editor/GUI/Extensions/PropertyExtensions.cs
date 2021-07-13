@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-using Unity.ClusterDisplay.Networking;
+using Unity.ClusterDisplay.RPC;
 
 namespace Unity.ClusterDisplay.Editor.Extensions
 {

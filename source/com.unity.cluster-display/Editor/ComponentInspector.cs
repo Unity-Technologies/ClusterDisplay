@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public class ComponentInspector : EditorWindow
     {
@@ -61,8 +61,7 @@ namespace Unity.ClusterDisplay
                     RPCRegistry.TryAddNewRPC(
                         targetObjectType,
                         selectedMethodInfo,
-                        RPCExecutionStage.ImmediatelyOnArrival,
-                        out var rpcMethodInfo);
+                        RPCExecutionStage.ImmediatelyOnArrival);
                 }
             }
         }

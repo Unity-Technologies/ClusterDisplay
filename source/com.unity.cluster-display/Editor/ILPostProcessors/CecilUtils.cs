@@ -8,7 +8,7 @@ using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public static class CecilUtils
     {
@@ -267,23 +267,23 @@ namespace Unity.ClusterDisplay
             {
                 // Debug.Log($"Method Signature: {methodDef.Name} == {rpcTokenizer.MethodName} &&\n{methodDef.ReturnType.Resolve().Module.Assembly.Name.Name} == {rpcTokenizer.DeclaringReturnTypeAssemblyName} &&\n{methodDef.HasParameters} == {rpcTokenizer.ParameterCount > 0} &&\n{methodDef.Parameters.Count} == {rpcTokenizer.ParameterCount}");
                 bool allMatch = 
-                    method.HasParameters == rpcTokenizer.ParameterCount > 0 &&
-                    method.Parameters.Count == rpcTokenizer.ParameterCount &&
-                    method.Name == rpcTokenizer.methodName &&
-                    method.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.declaringReturnTypeAssemblyName &&
+                    method.HasParameters == rpcTokenizer.method.ParameterCount > 0 &&
+                    method.Parameters.Count == rpcTokenizer.method.ParameterCount &&
+                    method.Name == rpcTokenizer.method.methodName &&
+                    method.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method.declaringReturnTypeAssemblyName &&
                     method.Parameters.All(parameterDefinition =>
                     {
-                        if (rpcTokenizer.ParameterCount == 0)
+                        if (rpcTokenizer.method.ParameterCount == 0)
                             return true;
 
                         bool any = false;
-                        for (int i = 0; i < rpcTokenizer.ParameterCount; i++)
+                        for (int i = 0; i < rpcTokenizer.method.ParameterCount; i++)
                         {
                             // Debug.Log($"Method Parameters: {parameterDefinition.Name} == {rpcTokenizer[i].parameterName} &&\n{parameterDefinition.ParameterType.FullName} == {rpcTokenizer[i].parameterTypeFullName} &&\n{parameterDefinition.ParameterType.Module.Assembly.Name.Name} == {rpcTokenizer[i].declaringParameterTypeAssemblyName}");
                             any |=
-                                parameterDefinition.Name == rpcTokenizer[i].parameterName &&
-                                parameterDefinition.ParameterType.FullName == rpcTokenizer[i].parameterTypeFullName &&
-                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer[i].declaringParameterTypeAssemblyName;
+                                parameterDefinition.Name == rpcTokenizer.method[i].parameterName &&
+                                parameterDefinition.ParameterType.FullName == rpcTokenizer.method[i].parameterTypeFullName &&
+                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method[i].declaringParameterTypeAssemblyName;
                         }
                         return any;
                     });
@@ -294,7 +294,7 @@ namespace Unity.ClusterDisplay
 
             if (!found)
             {
-                Debug.LogError($"Unable to find method reference for serialized RPC: \"{inRPCTokenizer.methodName}\" declared in: \"{typeDef.FullName}\".");
+                Debug.LogError($"Unable to find method reference for serialized RPC: \"{inRPCTokenizer.method.methodName}\" declared in: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }

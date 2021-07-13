@@ -6,7 +6,7 @@ using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public class AssemblyILPostProcessor : ILPostProcessor
     {
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay
                 if (!RPCSerializer.TryReadRegisteredAssemblies(RPCRegistry.RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames))
                     goto failure;
 
-            if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Contains(compiledAssembly.Name)))
+            if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Split(',')[0] == compiledAssembly.Name))
                 goto ignoreAssembly;
 
             if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var compiledAssemblyDef))

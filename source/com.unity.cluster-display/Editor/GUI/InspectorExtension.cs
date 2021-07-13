@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using Unity.ClusterDisplay.Networking;
+using Unity.ClusterDisplay.RPC;
 using UnityEditor;
 using UnityEngine;
 
@@ -344,7 +344,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedMethods[i].DeclaringType, cachedMethods[i], RPCExecutionStage.Automatic, out var _))
+                        else if (RPCRegistry.TryAddNewRPC(cachedMethods[i].DeclaringType, cachedMethods[i], RPCExecutionStage.Automatic))
                         {
                             selectedMethodInfo = cachedMethods[i];
                             selectedState = SelectedState.Added;
@@ -409,7 +409,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedProperties[i].property.DeclaringType, cachedProperties[i].setMethod, RPCExecutionStage.Automatic, out var _))
+                        else if (RPCRegistry.TryAddNewRPC(cachedProperties[i].property.DeclaringType, cachedProperties[i].setMethod, RPCExecutionStage.Automatic))
                         {
                             selectedProperty = cachedProperties[i];
                             selectedState = SelectedState.Added;

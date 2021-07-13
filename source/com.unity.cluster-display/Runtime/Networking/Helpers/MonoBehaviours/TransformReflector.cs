@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.Networking
+namespace Unity.ClusterDisplay.RPC
 {
     class RPCFlagEnumState : System.Attribute {}
 

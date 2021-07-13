@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
 
-            RPCEmitter.AllowWrites = true;
+            RPC.RPCEmitter.AllowWrites = true;
         }
 
         public override void OnEndFrame()

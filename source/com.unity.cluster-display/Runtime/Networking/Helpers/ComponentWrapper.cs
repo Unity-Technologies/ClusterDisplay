@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.Networking
+namespace Unity.ClusterDisplay.RPC
 {
     public class ComponentWrapper<InstanceType> : MonoBehaviour
         where InstanceType : UnityEngine.Component
     {
-        protected InstanceType instance;
-        public void Setup (InstanceType instance) => this.instance = instance;
+        [SerializeField] protected InstanceType instance;
+        private void OnValidate()
+        {
+            instance = GetComponent<InstanceType>();
+        }
     }
 }

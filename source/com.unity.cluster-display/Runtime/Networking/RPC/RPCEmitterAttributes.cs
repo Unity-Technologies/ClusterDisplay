@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public static partial class RPCEmitter
     {

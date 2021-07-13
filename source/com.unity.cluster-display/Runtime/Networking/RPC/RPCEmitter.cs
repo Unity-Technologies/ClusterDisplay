@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using System.Text;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public static partial class RPCEmitter
     {

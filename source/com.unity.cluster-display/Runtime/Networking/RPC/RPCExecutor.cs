@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.RPC
 {
     public static class RPCExecutor
     {
