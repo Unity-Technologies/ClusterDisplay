@@ -1,0 +1,25 @@
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
+
+namespace Unity.ClusterDisplay
+{
+    public static partial class ReflectionUtils
+    {
+        public static bool PropertySignaturesAreEqual (PropertyInfo a, PropertyInfo b, bool matchGetSetters)
+        {
+            if (a.PropertyType.Assembly != b.PropertyType.Assembly ||
+                a.PropertyType.FullName != b.PropertyType.FullName ||
+                a.Name != b.Name)
+                return false;
+
+            return
+                a.SetMethod == null && b.SetMethod == null ||
+                a.SetMethod != null && b.SetMethod != null &&
+                a.GetMethod == null && b.GetMethod == null ||
+                a.GetMethod != null && b.GetMethod != null;
+        }
+    }
+}

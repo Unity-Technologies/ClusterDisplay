@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.Networking.Editor.SourceGenerators",
     "references": [
+        "Unity.ClusterDisplay.Common",
         "Unity.ClusterDisplay.Networking"
     ],
     "includePlatforms": [

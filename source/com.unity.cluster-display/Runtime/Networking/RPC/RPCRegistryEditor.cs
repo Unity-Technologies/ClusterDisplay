@@ -177,7 +177,7 @@ namespace Unity.ClusterDisplay.RPC
                     if (targetType != null && targetMethod != null)
                     {
                         EditorGUILayout.LabelField("Selected Method", EditorStyles.boldLabel);
-                        EditorGUILayout.LabelField($"\"{ReflectionUtils.GetMethodSignature(targetMethod)}\" in type: \"{targetType.FullName}\".");
+                        EditorGUILayout.LabelField($"\"{ReflectionUtils.GetMethodSignatureString(targetMethod)}\" in type: \"{targetType.FullName}\".");
                     }
 
                     RPCEditorGUICommon.HorizontalLine();
@@ -215,7 +215,7 @@ namespace Unity.ClusterDisplay.RPC
                                 rpcMethodToRemove = rpcMethodInfo;
                         }
 
-                        EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignature(rpcMethodInfo.methodInfo)}\"");
+                        EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignatureString(rpcMethodInfo.methodInfo)}\"");
                         EditorGUILayout.EndHorizontal();
 
                         EditorGUILayout.BeginHorizontal();
@@ -253,10 +253,7 @@ namespace Unity.ClusterDisplay.RPC
 
             private void OnSelectMethod (MethodInfo selectedMethodInfo)
             {
-                RPCRegistry.TryAddNewRPC(
-                    targetType,
-                    selectedMethodInfo,
-                    RPCExecutionStage.Automatic);
+                RPCRegistry.TryAddNewRPC(selectedMethodInfo);
             }
 
             private bool changed = false;

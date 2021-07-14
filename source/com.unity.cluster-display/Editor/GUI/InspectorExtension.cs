@@ -49,8 +49,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         private (PropertyInfo property, MethodInfo setMethod)[] cachedProperties;
 
         private Dictionary<SerializedProperty, string> cachedFieldDescriptors = new Dictionary<SerializedProperty, string>();
-        private Dictionary<PropertyInfo, string> cachedPropertyDescriptors = new Dictionary<PropertyInfo, string>();
-        private Dictionary<MethodInfo, string> cachedMethodDescriptors = new Dictionary<MethodInfo, string>();
+        private Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)> cachedPropertyDescriptors = new Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)>();
+        private Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)> cachedMethodDescriptors = new Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)>();
 
         public InspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
 
@@ -231,9 +231,36 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return selected;
         }
 
-        private void PollFields<InstanceType> (InstanceType targetInstance)
+        private string WrapperString(bool isWrapper) => isWrapper ? "[WRAPPER]" : "";
+
+        private string PrettyMethodString (MethodInfo methodInfo, bool isWrapper)
+        {
+            var parameters = methodInfo.GetParameters();
+            if (parameters.Length > 0)
+                return $"{methodInfo.ReturnType.Name} {methodInfo.Name} ({(parameters.Select(parameter => parameter.ParameterType.Name).Aggregate((aggregation, next) => $"{aggregation}, {next}"))}) {WrapperString(isWrapper)}";
+            return $"{methodInfo.ReturnType.Name} {methodInfo.Name} () {WrapperString(isWrapper)}";
+        }
+
+        private string PrettyPropertyName(PropertyInfo propertyInfo, bool isWrapper) => $"{propertyInfo.PropertyType.Name} {propertyInfo.Name} {WrapperString(isWrapper)}";
+
+        private bool TryGetDirectOrWrapperType<InstanceType> (InstanceType targetInstance, out System.Type targetInstanceType)
             where InstanceType : Component
         {
+            var defaultType = targetInstanceType = targetInstance.GetType();
+
+            if (!ReflectionUtils.IsAssemblyPostProcessable(defaultType.Assembly))
+                if (!WrapperUtils.TryGetWrapperForType(defaultType, out targetInstanceType))
+                    targetInstanceType = defaultType;
+
+            return targetInstanceType != null;
+        }
+
+        private void CacheFields<InstanceType> (InstanceType targetInstance)
+            where InstanceType : Component
+        {
+            if (!TryGetDirectOrWrapperType(targetInstance, out var targetInstanceType))
+                return;
+
             var type = targetInstance.GetType();
             var fields = ReflectionUtils.GetAllFieldsFromType(type, fieldSearchStr, valueTypesOnly: true, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             List<SerializedProperty> serializedProperties = new List<SerializedProperty>();
@@ -272,7 +299,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
             BeginTab();
             if (cachedFields == null || PollSearch("Filter Fields:", ref fieldSearchStr))
-                PollFields(targetInstance);
+                CacheFields(targetInstance);
 
             if (cachedFields != null && cachedFields.Length > 0)
             {
@@ -297,6 +324,41 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return true;
         }
 
+        private void CacheMethodsAndDescriptors<InstanceType> (InstanceType targetInstance)
+            where InstanceType : Component
+        {
+            cachedMethods = ReflectionUtils.GetAllMethodsFromType(targetInstance.GetType(), methodSearchStr, valueTypeParametersOnly: true, includeGenerics: false, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+            if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
+            {
+                cachedMethodDescriptors = cachedMethods.ToDictionary(
+                    cachedMethod => cachedMethod,
+                    cachedMethod => 
+                    {
+                        ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod);
+                        (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
+                        (
+                            wrapperMethod,
+                            PrettyMethodString(cachedMethod, wrapperMethod != null)
+                        );
+                        return tuple;
+                    });
+
+                return;
+            }
+
+            cachedMethodDescriptors = cachedMethods.ToDictionary(
+                cachedMethod => cachedMethod,
+                cachedMethod => 
+                {
+                    (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
+                    (
+                        null,
+                        PrettyMethodString(cachedMethod, false)
+                    );
+                    return tuple;
+                });
+        }
+
         protected bool PollMethods<InstanceType> (
             InstanceType targetInstance, 
             out System.Reflection.MethodInfo selectedMethodInfo, 
@@ -312,18 +374,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
             BeginTab();
             if (cachedMethods == null || PollSearch("Filter Methods:", ref methodSearchStr))
-            {
-                cachedMethods = ReflectionUtils.GetAllMethodsFromType(targetInstance.GetType(), methodSearchStr, valueTypeParametersOnly: true, includeGenerics: false, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
-                cachedMethodDescriptors = cachedMethods.ToDictionary(
-                    cachedMethod => cachedMethod,
-                    cachedMethod =>
-                    {
-                        var parameters = cachedMethod.GetParameters();
-                        if (parameters.Length > 0)
-                            return $"{cachedMethod.ReturnType.Name} {cachedMethod.Name} ({(parameters.Select(parameter => parameter.ParameterType.Name).Aggregate((aggregation, next) => $"{aggregation}, {next}"))})";
-                        return $"{cachedMethod.ReturnType.Name} {cachedMethod.Name} ()";
-                    });
-            }
+                CacheMethodsAndDescriptors(targetInstance);
 
             if (cachedMethods != null && cachedMethods.Length > 0)
             {
@@ -344,7 +395,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedMethods[i].DeclaringType, cachedMethods[i], RPCExecutionStage.Automatic))
+                        else if (RPCRegistry.TryAddNewRPC(cachedMethods[i]))
                         {
                             selectedMethodInfo = cachedMethods[i];
                             selectedState = SelectedState.Added;
@@ -353,7 +404,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
                     if (registered)
                         RPCToggle(targetInstance, ref rpcMethodInfo);
-                    Label(cachedMethodDescriptors[cachedMethods[i]]);
+                    Label(cachedMethodDescriptors[cachedMethods[i]].methodString);
 
                     EditorGUILayout.EndHorizontal();
                 }
@@ -365,6 +416,41 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             EndTab();
 
             return selectedState != SelectedState.None && selectedMethodInfo != null;
+        }
+
+        private void CachePropertiesAndDescriptors<InstanceType> (InstanceType targetInstance)
+            where InstanceType : Component
+        {
+            cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+            if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
+            {
+                cachedPropertyDescriptors = cachedProperties.ToDictionary(
+                    cachedPropertyData => cachedPropertyData.property,
+                    cachedPropertyData => {
+
+                        ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty);
+                        (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
+                        (
+                            wrapperProperty,
+                            PrettyPropertyName(cachedPropertyData.property, wrapperProperty != null)
+                        );
+
+                        return tuple;
+                    });
+
+                return;
+            }
+
+            cachedPropertyDescriptors = cachedProperties.ToDictionary(
+                cachedPropertyData => cachedPropertyData.property,
+                cachedPropertyData => {
+                    (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
+                    (
+                        null,
+                        PrettyPropertyName(cachedPropertyData.property, false)
+                    );
+                    return tuple;
+                });
         }
 
         protected bool PollProperties<InstanceType> (
@@ -382,12 +468,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
             BeginTab();
             if (cachedProperties == null || PollSearch("Filter Properties:", ref propertySearchStr))
-            {
-                cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
-                cachedPropertyDescriptors = cachedProperties.ToDictionary(
-                    cachedPropertyData => cachedPropertyData.property,
-                    cachedPropertyData => $"{cachedPropertyData.property.PropertyType.Name} {cachedPropertyData.property.Name}");
-            }
+                CachePropertiesAndDescriptors(targetInstance);
 
             if (cachedProperties != null && cachedProperties.Length > 0)
             {
@@ -409,7 +490,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedProperties[i].property.DeclaringType, cachedProperties[i].setMethod, RPCExecutionStage.Automatic))
+                        else if (RPCRegistry.TryAddNewRPC(cachedProperties[i].property))
                         {
                             selectedProperty = cachedProperties[i];
                             selectedState = SelectedState.Added;
@@ -418,7 +499,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
                     if (registered)
                         RPCToggle(targetInstance, ref rpcMethodInfo);
-                    Label(cachedPropertyDescriptors[cachedProperties[i].property]);
+                    Label(cachedPropertyDescriptors[cachedProperties[i].property].propertyString);
 
                     EditorGUILayout.EndHorizontal();
                 }
