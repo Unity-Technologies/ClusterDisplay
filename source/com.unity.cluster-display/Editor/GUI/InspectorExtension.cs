@@ -54,6 +54,13 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
         public InspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
 
+        private void SelectMonoScriptViaType (System.Type type) =>
+            Selection.objects = new Object[1] { AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(AssetDatabase
+                .FindAssets("t:MonoScript")
+                .FirstOrDefault(ms =>
+                    AssetDatabase.LoadAssetAtPath<MonoScript>(
+                        AssetDatabase.GUIDToAssetPath(ms)).GetClass() == type))) };
+
         /// <summary>
         /// This method generically casts our target to our instance type then performs
         /// base functions such as determining whether the cluster display foldout should be shown.
@@ -199,7 +206,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return changed;
         }
 
-        private void RPCToggle (Component instance, ref RPCMethodInfo rpcMethodInfo)
+        private void RPCToggleGUI (Component instance, ref RPCMethodInfo rpcMethodInfo)
         {
             // EditorGUILayout.LabelField(text);
             if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
@@ -216,12 +223,26 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             }
         }
 
-        private void Label (string text)
+        private void DescriptorGUI (string text, out Vector2 textSize)
         {
-            EditorGUILayout.LabelField(text);
+            textSize = GUI.skin.label.CalcSize(new GUIContent(text));
+            EditorGUILayout.LabelField(text, GUILayout.Width(textSize.x));
         }
 
-        private bool Button (bool registered)
+        private void InfoGUI (string text, bool usingWrapper = false, System.Type wrapperType = null)
+        {
+            EditorGUILayout.BeginHorizontal();
+            DescriptorGUI(text, out var textSize);
+            if (usingWrapper)
+            {
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Wrapper", GUILayout.Width(75)))
+                    SelectMonoScriptViaType(wrapperType);
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private bool ButtonGUI (bool registered)
         {
             var cachedPreviousColor = GUI.backgroundColor;
             GUI.backgroundColor = registered ? Color.green : Color.red;
@@ -231,17 +252,15 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             return selected;
         }
 
-        private string WrapperString(bool isWrapper) => isWrapper ? "[WRAPPER]" : "";
-
-        private string PrettyMethodString (MethodInfo methodInfo, bool isWrapper)
+        private string PrettyMethodString (MethodInfo methodInfo)
         {
             var parameters = methodInfo.GetParameters();
             if (parameters.Length > 0)
-                return $"{methodInfo.ReturnType.Name} {methodInfo.Name} ({(parameters.Select(parameter => parameter.ParameterType.Name).Aggregate((aggregation, next) => $"{aggregation}, {next}"))}) {WrapperString(isWrapper)}";
-            return $"{methodInfo.ReturnType.Name} {methodInfo.Name} () {WrapperString(isWrapper)}";
+                return $"{methodInfo.ReturnType.Name} {methodInfo.Name} ({(parameters.Select(parameter => parameter.ParameterType.Name).Aggregate((aggregation, next) => $"{aggregation}, {next}"))})";
+            return $"{methodInfo.ReturnType.Name} {methodInfo.Name} ()";
         }
 
-        private string PrettyPropertyName(PropertyInfo propertyInfo, bool isWrapper) => $"{propertyInfo.PropertyType.Name} {propertyInfo.Name} {WrapperString(isWrapper)}";
+        private string PrettyPropertyName(PropertyInfo propertyInfo) => $"{propertyInfo.PropertyType.Name} {propertyInfo.Name}";
 
         private bool TryGetDirectOrWrapperType<InstanceType> (InstanceType targetInstance, out System.Type targetInstanceType)
             where InstanceType : Component
@@ -306,11 +325,12 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 BeginScrollView(cachedFields.Length, ref fieldScrollPosition);
                 for (int i = 0; i < cachedFields.Length; i++)
                 {
+                    var fieldDescriptor = cachedFieldDescriptors[cachedFields[i]];
                     EditorGUILayout.BeginHorizontal();
-                    if (Button(false))
+                    if (ButtonGUI(false))
                     {
                     }
-                    Label(cachedFieldDescriptors[cachedFields[i]]);
+                    InfoGUI(fieldDescriptor, false, null);
                     EditorGUILayout.EndHorizontal();
                 }
 
@@ -328,17 +348,23 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             where InstanceType : Component
         {
             cachedMethods = ReflectionUtils.GetAllMethodsFromType(targetInstance.GetType(), methodSearchStr, valueTypeParametersOnly: true, includeGenerics: false, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+
+            // If our wrapper type exists, then we should be using our wrapper methods instead.
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
+                // Create a <MethodInfo, <MethodInfo, string>> dictionary from the methods we find.
                 cachedMethodDescriptors = cachedMethods.ToDictionary(
                     cachedMethod => cachedMethod,
                     cachedMethod => 
                     {
+                        // Using the method in our target instance, find equivalent method in the type that wraps our target type.
                         ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod);
+
+                        // Store the nullable wrapper method and method string in this tuple as a value in our dictionary.
                         (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
                         (
                             wrapperMethod,
-                            PrettyMethodString(cachedMethod, wrapperMethod != null)
+                            PrettyMethodString(cachedMethod)
                         );
                         return tuple;
                     });
@@ -346,6 +372,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 return;
             }
 
+            // If our wrapper does not exist, then we just use our target type methods instead.
             cachedMethodDescriptors = cachedMethods.ToDictionary(
                 cachedMethod => cachedMethod,
                 cachedMethod => 
@@ -353,7 +380,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                     (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
                     (
                         null,
-                        PrettyMethodString(cachedMethod, false)
+                        PrettyMethodString(cachedMethod)
                     );
                     return tuple;
                 });
@@ -381,31 +408,36 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 BeginScrollView(cachedMethods.Length, ref methodScrollPosition);
                 for (int i = 0; i < cachedMethods.Length; i++)
                 {
-                    bool registered = RPCRegistry.TryGetRPC(cachedMethods[i], out var rpcMethodInfo);
+                    var methodDescriptor = cachedMethodDescriptors[cachedMethods[i]];
+
+                    // Determine whether a wrapper method exists, and if it does, use that one instead, otherwise use the target instance method.
+                    bool usingWrapper = methodDescriptor.wrapperEquivalentMethod != null;
+                    var method = usingWrapper ? methodDescriptor.wrapperEquivalentMethod : cachedMethods[i];
+
+                    bool registered = RPCRegistry.TryGetRPC(method, out var rpcMethodInfo);
                     hasRegistered |= registered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (Button(registered))
+                    if (ButtonGUI(registered))
                     {
                         if (registered)
                         {
-                            RPCRegistry.RemoveRPC(cachedMethods[i]);
-                            selectedMethodInfo = cachedMethods[i];
+                            RPCRegistry.RemoveRPC(method);
+                            selectedMethodInfo = method;
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedMethods[i]))
+                        else if (RPCRegistry.TryAddNewRPC(method))
                         {
-                            selectedMethodInfo = cachedMethods[i];
+                            selectedMethodInfo = method;
                             selectedState = SelectedState.Added;
                         }
                     }
 
                     if (registered)
-                        RPCToggle(targetInstance, ref rpcMethodInfo);
-                    Label(cachedMethodDescriptors[cachedMethods[i]].methodString);
-
+                        RPCToggleGUI(targetInstance, ref rpcMethodInfo);
+                    InfoGUI(methodDescriptor.methodString, usingWrapper, method.DeclaringType);
                     EditorGUILayout.EndHorizontal();
                 }
 
@@ -422,17 +454,23 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             where InstanceType : Component
         {
             cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+
+            // If our wrapper type exists, then we should be using our wrapper properties instead.
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
+                // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
                 cachedPropertyDescriptors = cachedProperties.ToDictionary(
                     cachedPropertyData => cachedPropertyData.property,
                     cachedPropertyData => {
 
+                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
                         ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty);
+
+                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
                         (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
                         (
                             wrapperProperty,
-                            PrettyPropertyName(cachedPropertyData.property, wrapperProperty != null)
+                            PrettyPropertyName(cachedPropertyData.property)
                         );
 
                         return tuple;
@@ -441,13 +479,14 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                 return;
             }
 
+            // If our wrapper does not exist, then we just use our target type properties instead.
             cachedPropertyDescriptors = cachedProperties.ToDictionary(
                 cachedPropertyData => cachedPropertyData.property,
                 cachedPropertyData => {
                     (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
                     (
                         null,
-                        PrettyPropertyName(cachedPropertyData.property, false)
+                        PrettyPropertyName(cachedPropertyData.property)
                     );
                     return tuple;
                 });
@@ -476,31 +515,36 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
                 for (int i = 0; i < cachedProperties.Length; i++)
                 {
-                    bool registered = RPCRegistry.TryGetRPC(cachedProperties[i].setMethod, out var rpcMethodInfo);
+                    var propertyDescriptor = cachedPropertyDescriptors[cachedProperties[i].property];
+
+                    // Determine whether a wrapper property exists, and if it does, use that one instead, otherwise use the target instance property.
+                    bool usingWrapper = propertyDescriptor.wrapperEquivalentProperty != null;
+                    var property = usingWrapper ? propertyDescriptor.wrapperEquivalentProperty : cachedProperties[i].property;
+
+                    bool registered = RPCRegistry.TryGetRPC(property.SetMethod, out var rpcMethodInfo);
                     hasRegistered |= registered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (Button(registered))
+                    if (ButtonGUI(registered))
                     {
                         if (registered)
                         {
-                            RPCRegistry.RemoveRPC(cachedProperties[i].setMethod);
-                            selectedProperty = cachedProperties[i];
+                            RPCRegistry.RemoveRPC(property.SetMethod);
+                            selectedProperty = (property, property.SetMethod);
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(cachedProperties[i].property))
+                        else if (RPCRegistry.TryAddNewRPC(property))
                         {
-                            selectedProperty = cachedProperties[i];
+                            selectedProperty = (property, property.SetMethod);
                             selectedState = SelectedState.Added;
                         }
                     }
 
                     if (registered)
-                        RPCToggle(targetInstance, ref rpcMethodInfo);
-                    Label(cachedPropertyDescriptors[cachedProperties[i].property].propertyString);
-
+                        RPCToggleGUI(targetInstance, ref rpcMethodInfo);
+                    InfoGUI(propertyDescriptor.propertyString, usingWrapper, property.DeclaringType);
                     EditorGUILayout.EndHorizontal();
                 }
 
