@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
     public abstract class UnityInspectorExtension<InstanceType> : UnityInspectorExtension, IInspectorExtension<InstanceType>
         where InstanceType : Component
     {
-        private readonly static Dictionary<string, MethodInfo> cachedMethods = new Dictionary<string, MethodInfo>();
+        private readonly static Dictionary<string, MethodInfo> cachedReflectionAccessibleMethods = new Dictionary<string, MethodInfo>();
 
         protected static Type cachedEditorType;
         protected static Type cachedAssignedType;
@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
         private void TryCallCachedMethod (string methodName, bool throwError = true)
         {
-            if (!cachedMethods.TryGetValue(methodName, out var method))
+            if (!cachedReflectionAccessibleMethods.TryGetValue(methodName, out var method))
                 goto failure;
 
             if (method == null)
@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
         private A TryCallCachedMethod<A> (string methodName, bool throwError = true) where A : struct
         {
-            if (!cachedMethods.TryGetValue(methodName, out var method))
+            if (!cachedReflectionAccessibleMethods.TryGetValue(methodName, out var method))
                 goto failure;
 
             if (method == null)
@@ -134,7 +134,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                     return;
             }
 
-            if (cachedMethods.Count == 0)
+            if (cachedReflectionAccessibleMethods.Count == 0)
             {
                 for (int i = 0; i < TargetMethodStrings.Length; i++)
                 {
@@ -145,17 +145,17 @@ namespace Unity.ClusterDisplay.Editor.Extensions
                         continue;
                     }
 
-                    if (!cachedMethods.ContainsKey(TargetMethodStrings[i]))
-                        cachedMethods.Add(TargetMethodStrings[i], method);
+                    if (!cachedReflectionAccessibleMethods.ContainsKey(TargetMethodStrings[i]))
+                        cachedReflectionAccessibleMethods.Add(TargetMethodStrings[i], method);
                 }
             }
         }
 
         protected abstract void OnExtendInspectorGUI(InstanceType instance);
-        protected abstract void OnPollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
+        protected abstract void OnPollWrapperGUI(InstanceType instance, bool anyStreamablesRegistered);
 
         public void ExtendInspectorGUI(InstanceType instance) => OnExtendInspectorGUI(instance);
-        public void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered) => OnPollReflectorGUI(instance, anyStreamablesRegistered);
+        public void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered) => OnPollWrapperGUI(instance, anyStreamablesRegistered);
         public override void OnInspectorGUI()
         {
             if (cachedEditorInstance == null)

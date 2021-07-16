@@ -1,6 +1,5 @@
-﻿using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Unity.ClusterDisplay.RPC;
 using UnityEditor;
@@ -76,6 +75,10 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (instance == null)
                 return;
 
+            // Only present the cluster display UI for instances that the wrapper wraps, don't display it for wrappers.
+            if (WrapperUtils.IsWrapper(target.GetType()))
+                return;
+
             if (foldOut = EditorGUILayout.Foldout(foldOut, "Cluster Display"))
             {
                 PresentStreamables(instance, out var hasRegistered);
@@ -84,24 +87,28 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             }
         }
 
-        protected bool TryGetReflectorInstance<InstanceType, ReflectorType> (InstanceType instance, ref ReflectorType reflectorInstance) 
+        protected bool TryGetWrapperInstance<InstanceType, WrapperType> (InstanceType instance, ref WrapperType wrapperInstance) 
             where InstanceType : Component 
-            where ReflectorType : ComponentReflector<InstanceType>
+            where WrapperType : ComponentWrapper<InstanceType>
         {
-            if (reflectorInstance == null)
+            if (wrapperInstance == null)
             {
-                var reflectors = instance.gameObject.GetComponents<ReflectorType>();
-                foreach (var reflector in reflectors)
+                var wrapperType = typeof(WrapperType);
+                var wrappers = instance.gameObject.GetComponents<WrapperType>();
+                foreach (var wrapper in wrappers)
                 {
-                    if (reflector.TargetInstance != instance)
+                    if (!wrapper.TryGetInstance(out var wrappedInstance))
                         continue;
 
-                    reflectorInstance = reflector;
+                    if (wrappedInstance != instance)
+                        continue;
+
+                    wrapperInstance = wrapper;
                     return true;
                 }
             }
 
-            return reflectorInstance != null;
+            return wrapperInstance != null;
         }
 
         protected void PresentStreamables<InstanceType> (InstanceType instance, out bool anyStreamablesRegistered)
@@ -143,21 +150,21 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             EndTab();
         }
 
-        protected bool ReflectorButton<ReflectorType, InstanceType> (InstanceType instance, ref ReflectorType reflectorInstance)
+        protected bool WrapperButton<WrapperType, InstanceType> (InstanceType instance, ref WrapperType wrapperInstance)
             where InstanceType : Component
-            where ReflectorType : ComponentReflector<InstanceType> 
+            where WrapperType : ComponentWrapper<InstanceType> 
         {
             var cachedBackgroundColor = GUI.backgroundColor;
-            GUI.backgroundColor = Color.green;
-            if (GUILayout.Button(reflectorInstance == null ? "Create Reflector" : "Remove Reflector"))
+            GUI.backgroundColor = wrapperInstance == null ? Color.green : Color.red;
+            if (GUILayout.Button(wrapperInstance == null ? "Create Wrapper" : "Remove Wrapper"))
             {
-                if (reflectorInstance == null)
+                if (wrapperInstance == null)
                 {
-                    reflectorInstance = instance.gameObject.AddComponent<ReflectorType>();
-                    reflectorInstance.Setup(instance);
+                    wrapperInstance = instance.gameObject.AddComponent<WrapperType>();
+                    wrapperInstance.SetInstance(instance);
                 }
 
-                else DestroyImmediate(reflectorInstance);
+                else DestroyImmediate(wrapperInstance);
                 return true;
             }
 
@@ -262,16 +269,15 @@ namespace Unity.ClusterDisplay.Editor.Extensions
 
         private string PrettyPropertyName(PropertyInfo propertyInfo) => $"{propertyInfo.PropertyType.Name} {propertyInfo.Name}";
 
-        private bool TryGetDirectOrWrapperType<InstanceType> (InstanceType targetInstance, out System.Type targetInstanceType)
+        private bool TryGetDirectOrWrapperType<InstanceType> (InstanceType targetInstance, out System.Type wrapperType)
             where InstanceType : Component
         {
-            var defaultType = targetInstanceType = targetInstance.GetType();
+            var targetInstanceType = targetInstance.GetType();
+            wrapperType = null;
 
-            if (!ReflectionUtils.IsAssemblyPostProcessable(defaultType.Assembly))
-                if (!WrapperUtils.TryGetWrapperForType(defaultType, out targetInstanceType))
-                    targetInstanceType = defaultType;
-
-            return targetInstanceType != null;
+            if (!ReflectionUtils.IsAssemblyPostProcessable(targetInstanceType.Assembly))
+                return WrapperUtils.TryGetWrapperForType(targetInstanceType, out wrapperType);
+            return false;
         }
 
         private void CacheFields<InstanceType> (InstanceType targetInstance)

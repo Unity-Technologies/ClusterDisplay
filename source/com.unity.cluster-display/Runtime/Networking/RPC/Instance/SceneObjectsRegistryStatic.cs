@@ -215,6 +215,11 @@ namespace Unity.ClusterDisplay.RPC
 
         private static void OnSceneOpened(Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
 
+        /// <summary>
+        /// This is executed when scripts are reloaded or if a scene is opened in the editor. What it does is 
+        /// search the scene for instances of registered RPC declaring types and registers those instances with a
+        /// scene instance of SceneObjectsRegistry. If a SceneObjectsRegistry does not exist, it will automatically be created.
+        /// </summary>
         [UnityEditor.Callbacks.DidReloadScripts]
         private static void PollUnregisteredInstanceRPCs()
         {

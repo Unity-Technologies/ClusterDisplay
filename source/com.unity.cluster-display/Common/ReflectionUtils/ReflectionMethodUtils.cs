@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay
                 a.Name != b.Name)
                 return false;
 
-            var aParam = b.GetParameters();
+            var aParam = a.GetParameters();
             var bParam = b.GetParameters();
 
             if (aParam.Length != bParam.Length)

@@ -23,31 +23,49 @@ namespace Unity.ClusterDisplay
             RPCRegistry.generateWrapperForProperty += TryCreateWrapper;
         }
 
-        private static MemberAccessExpressionSyntax GetInstanceAccessExpression (MethodInfo methodInfo) => SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName("instance"), SyntaxFactory.IdentifierName(methodInfo.Name));
-        private static MemberAccessExpressionSyntax GetInstanceAccessExpression (PropertyInfo propertyInfo) => SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName("instance"), SyntaxFactory.IdentifierName(propertyInfo.Name));
+        private static MemberAccessExpressionSyntax NewInstanceAccessExpression (MethodInfo methodInfo) => 
+            SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName("instance"), SyntaxFactory.IdentifierName(methodInfo.Name));
+        private static MemberAccessExpressionSyntax NewInstanceAccessExpression (PropertyInfo propertyInfo) => 
+            SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, SyntaxFactory.IdentifierName("instance"), SyntaxFactory.IdentifierName(propertyInfo.Name));
 
-        private static AttributeSyntax GetClusterRPCAttributeSyntax () => SyntaxFactory.Attribute(SyntaxFactory.ParseName(typeof(ClusterRPC).Name));
+        private static AttributeSyntax NewRPCAttribute () => 
+            SyntaxFactory.Attribute(SyntaxFactory.ParseName(typeof(ClusterRPC).Name));
+
+        private static PrefixUnaryExpressionSyntax NewTryGetInstanceExpression (MemberInfo memberInfo) => 
+            SyntaxFactory.PrefixUnaryExpression(SyntaxKind.LogicalNotExpression, 
+                SyntaxFactory.InvocationExpression(SyntaxFactory.IdentifierName("TryGetInstance"),
+                    SyntaxFactory.ArgumentList(
+                        SyntaxFactory.SingletonSeparatedList<ArgumentSyntax>(
+                            SyntaxFactory.Argument(SyntaxFactory.ParseExpression($"{memberInfo.DeclaringType.FullName} instance"))
+                            .WithRefKindKeyword(SyntaxFactory.Token(SyntaxKind.OutKeyword))))));
 
         private static PropertyDeclarationSyntax NewProperty (PropertyInfo propertyInfo)
         {
-            var instancePropertyAccessExpression = GetInstanceAccessExpression(propertyInfo);
-            var propertyAssignmentExpression = SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, instancePropertyAccessExpression, SyntaxFactory.IdentifierName("value"));
+            var clusterRPCAttribute = NewRPCAttribute();
 
-            var clusterRPCAttribute = GetClusterRPCAttributeSyntax();
+            var tryGetInstanceExpression = NewTryGetInstanceExpression(propertyInfo);
+            var instancePropertyAccessExpression = NewInstanceAccessExpression(propertyInfo);
+
+            var getterReturnStatement = SyntaxFactory.ReturnStatement(SyntaxFactory.DefaultExpression(SyntaxFactory.ParseTypeName(propertyInfo.PropertyType.FullName)));
+            var setterReturnStatement = SyntaxFactory.ReturnStatement();
+
+            var getterIfStatement = SyntaxFactory.IfStatement(tryGetInstanceExpression, getterReturnStatement);
+            var setterIfStatement = SyntaxFactory.IfStatement(tryGetInstanceExpression, setterReturnStatement);
+
+            var returnStatement = SyntaxFactory.ReturnStatement(instancePropertyAccessExpression);
+            var propertyAssignmentExpression = SyntaxFactory.ExpressionStatement(SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, instancePropertyAccessExpression, SyntaxFactory.IdentifierName("value")));
 
             return SyntaxFactory.PropertyDeclaration(SyntaxFactory.ParseTypeName(propertyInfo.PropertyType.FullName), propertyInfo.Name)
                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
                 .AddAccessorListAccessors(
                     // => Getter.
                     SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-                        .WithExpressionBody(SyntaxFactory.ArrowExpressionClause(instancePropertyAccessExpression)) 
-                        .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)),
+                        .WithBody(SyntaxFactory.Block(getterIfStatement, returnStatement)),
                     // => Setter.
                     SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
                         // Add [ClusterRPC] attribute.
                         .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(clusterRPCAttribute)))
-                        .WithExpressionBody(SyntaxFactory.ArrowExpressionClause(propertyAssignmentExpression))
-                        .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)));
+                        .WithBody(SyntaxFactory.Block(setterIfStatement, propertyAssignmentExpression)));
         }
 
         private static MethodDeclarationSyntax NewMethod (MethodInfo methodInfo)
@@ -55,7 +73,15 @@ namespace Unity.ClusterDisplay
             bool hasReturnType = methodInfo.ReturnType != null && methodInfo.ReturnType != typeof(void);
             var parameters = methodInfo.GetParameters();
 
-            var clusterRPCAttribute = GetClusterRPCAttributeSyntax();
+            var clusterRPCAttribute = NewRPCAttribute();
+
+            var tryGetInstanceExpression = NewTryGetInstanceExpression(methodInfo);
+            var instancePropertyAccessExpression = NewInstanceAccessExpression(methodInfo);
+            var tryGetFailureReturnStatement = hasReturnType ?
+                SyntaxFactory.ReturnStatement(SyntaxFactory.DefaultExpression(SyntaxFactory.ParseTypeName(methodInfo.ReturnType.FullName))) :
+                SyntaxFactory.ReturnStatement();
+
+            var tryGetIfStatement = SyntaxFactory.IfStatement(tryGetInstanceExpression, tryGetFailureReturnStatement);
 
             var separatedArgumentList = SyntaxFactory.SeparatedList<ArgumentSyntax>();
             var parametersList = SyntaxFactory.SeparatedList<ParameterSyntax>(parameters.Select(parameter =>
@@ -67,17 +93,19 @@ namespace Unity.ClusterDisplay
                         .WithType(SyntaxFactory.ParseTypeName(parameter.ParameterType.FullName));
                 }).ToArray());
 
-            var instanceMethodAccessExpression = GetInstanceAccessExpression(methodInfo);
+            var instanceMethodAccessExpression = NewInstanceAccessExpression(methodInfo);
             var invocationExpression = SyntaxFactory.InvocationExpression(instanceMethodAccessExpression, SyntaxFactory.ArgumentList(separatedArgumentList));
+            var emptyOrReturnStatement = hasReturnType ?
+                SyntaxFactory.ReturnStatement(invocationExpression) :
+                SyntaxFactory.ExpressionStatement(invocationExpression) as StatementSyntax;
 
-            return 
+            return
                 SyntaxFactory.MethodDeclaration(SyntaxFactory.ParseTypeName(hasReturnType ? methodInfo.ReturnType.FullName : "void"), methodInfo.Name)
                     .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
                     // Add [ClusterRPC] attribute.
                     .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(clusterRPCAttribute)))
                     .WithParameterList(SyntaxFactory.ParameterList(parametersList))
-                    .WithExpressionBody(SyntaxFactory.ArrowExpressionClause(invocationExpression))
-                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+                    .WithBody(SyntaxFactory.Block(tryGetIfStatement, emptyOrReturnStatement));
         }
 
         private static bool TryGetExistingCompilationUnit (string folderPath, string filePath, out CompilationUnitSyntax compilationUnit)
