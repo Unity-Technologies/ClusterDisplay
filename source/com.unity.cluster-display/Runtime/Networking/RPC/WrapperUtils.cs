@@ -54,5 +54,10 @@ namespace Unity.ClusterDisplay.RPC
             wrapperType = ReflectionUtils.GetTypeByFullName(wrapperFullName);
             return wrapperType != null;
         }
+
+        public static bool TryFindWrapperImplementationType<WrappedType, WrapperType> (out System.Type wrapperImplementation)
+            where WrappedType : Component
+            where WrapperType : ComponentWrapper<WrappedType> =>
+            ReflectionUtils.TryFindFirstDerrivedTypeFromBaseType(typeof(WrapperType), out wrapperImplementation);
     }
 }

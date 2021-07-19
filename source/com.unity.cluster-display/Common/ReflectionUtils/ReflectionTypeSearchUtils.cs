@@ -120,5 +120,8 @@ namespace Unity.ClusterDisplay
                     .Where(type => includeGenerics ? true : !type.IsGenericType)
                     .ToArray();
         }
+
+        public static bool TryFindFirstDerrivedTypeFromBaseType(Type baseType, out Type derrivedType) =>
+            (derrivedType = CachedTypes.FirstOrDefault(type => type.IsSubclassOf(baseType))) != null;
     }
 }

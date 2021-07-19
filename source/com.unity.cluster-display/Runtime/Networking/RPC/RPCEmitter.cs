@@ -66,6 +66,9 @@ namespace Unity.ClusterDisplay.RPC
                 }
                 #endif
 
+                if (rpcId == 0)
+                    UnityEngine.Debug.Log("TEST");
+
                 ParseRPCExecutionStage(ref bufferPos, out var rpcExecutionStage);
 
                 ParsePipeID(ref bufferPos, out var bufferPipeId);

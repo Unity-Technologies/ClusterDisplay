@@ -160,8 +160,11 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             {
                 if (wrapperInstance == null)
                 {
-                    wrapperInstance = instance.gameObject.AddComponent<WrapperType>();
-                    wrapperInstance.SetInstance(instance);
+                    if (WrapperUtils.TryFindWrapperImplementationType<InstanceType, WrapperType>(out var wrapperImplementationType))
+                    {
+                        wrapperInstance = instance.gameObject.AddComponent(wrapperImplementationType) as WrapperType;
+                        wrapperInstance.SetInstance(instance);
+                    }
                 }
 
                 else DestroyImmediate(wrapperInstance);

@@ -94,9 +94,9 @@ namespace Unity.ClusterDisplay.RPC
 
                 methodName = methodInfo.Name,
 
-                declaringParameterTypeAssemblyNames = new string[0],
-                parameterTypeFullNames = new string[0],
-                parameterNames = new string[0],
+                declaringParameterTypeAssemblyNames = parameterTypeAssemblyNames,
+                parameterTypeFullNames = parameterTypeNames,
+                parameterNames = parameterNames,
             };
         }
     }
