@@ -287,7 +287,7 @@ namespace Unity.ClusterDisplay
 
         private static NamespaceDeclarationSyntax NewNamespace () => SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName(WrapperUtils.WrapperNamespace));
 
-        private static CompilationUnitSyntax CreateNewCompilationUnit (System.Type wrappedType, string wrapperName)
+        private static CompilationUnitSyntax CreateNewCompilationUnit (System.Type wrappedType, MemberDeclarationSyntax wrappingMember, string wrapperName)
         {
              var compilationUnit = SyntaxFactory.CompilationUnit();
 
@@ -299,8 +299,33 @@ namespace Unity.ClusterDisplay
             for (int ui = 0; ui < usingDirectives.Count; ui++)
                 compilationUnit = compilationUnit.AddUsings(usingDirectives[ui]);
 
-            return compilationUnit;
+            return compilationUnit
+                    .AddMembers(
+                        NewNamespace()
+                            .AddMembers(
+                                NewWrapperClass(wrappedType, wrapperName)
+                                    .AddMembers(wrappingMember)));
         }
+
+        private static CompilationUnitSyntax UpdateWrapperClass (
+            CompilationUnitSyntax compilationUnit, 
+            NamespaceDeclarationSyntax nsDecl, 
+            ClassDeclarationSyntax classDecl, 
+            MemberDeclarationSyntax memberDecl) =>
+                compilationUnit
+                    .AddMembers(nsDecl
+                        .AddMembers(classDecl
+                            .AddMembers(memberDecl)));
+
+        private static CompilationUnitSyntax UpdateWrapperClass (
+            CompilationUnitSyntax compilationUnit, 
+            NamespaceDeclarationSyntax nsDecl, 
+            ClassDeclarationSyntax classDecl, 
+            SyntaxList<MemberDeclarationSyntax> members) =>
+                compilationUnit
+                    .AddMembers(nsDecl
+                        .AddMembers(classDecl
+                            .WithMembers(members)));
 
         public static bool TryWrapProperty (PropertyInfo propertyToWrap)
         {
@@ -324,35 +349,10 @@ namespace Unity.ClusterDisplay
                                 .AddMembers(NewProperty(propertyToWrap))));
             }
 
-            else compilationUnit = CreateNewCompilationUnit(propertyToWrap.DeclaringType, wrapperName)
-                    .AddMembers(
-                        NewNamespace()
-                            .AddMembers(
-                                NewWrapperClass(propertyToWrap.DeclaringType, wrapperName)
-                                    .AddMembers(NewProperty(propertyToWrap))));
+            else compilationUnit = CreateNewCompilationUnit(propertyToWrap.DeclaringType, NewProperty(propertyToWrap), wrapperName);
 
             return TryWriteCompilationUnit(filePath, compilationUnit);
         }
-
-        private static CompilationUnitSyntax UpdateWrapperClass (
-            CompilationUnitSyntax compilationUnit, 
-            NamespaceDeclarationSyntax nsDecl, 
-            ClassDeclarationSyntax classDecl, 
-            MemberDeclarationSyntax memberDecl) =>
-                compilationUnit
-                    .AddMembers(nsDecl
-                        .AddMembers(classDecl
-                            .AddMembers(memberDecl)));
-
-        private static CompilationUnitSyntax UpdateWrapperClass (
-            CompilationUnitSyntax compilationUnit, 
-            NamespaceDeclarationSyntax nsDecl, 
-            ClassDeclarationSyntax classDecl, 
-            SyntaxList<MemberDeclarationSyntax> members) =>
-                compilationUnit
-                    .AddMembers(nsDecl
-                        .AddMembers(classDecl
-                            .WithMembers(members)));
 
         public static bool TryWrapMethod (MethodInfo methodToWrap)
         {
@@ -373,12 +373,7 @@ namespace Unity.ClusterDisplay
                     compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, methodDecl);
             }
 
-            else compilationUnit = CreateNewCompilationUnit(methodToWrap.DeclaringType, wrapperName)
-                    .AddMembers(
-                        NewNamespace()
-                            .AddMembers(
-                                NewWrapperClass(methodToWrap.DeclaringType, wrapperName)
-                                    .AddMembers(NewMethod(methodToWrap))));
+            else compilationUnit = CreateNewCompilationUnit(methodToWrap.DeclaringType, NewMethod(methodToWrap), wrapperName);
 
             return TryWriteCompilationUnit(filePath, compilationUnit);
         }
