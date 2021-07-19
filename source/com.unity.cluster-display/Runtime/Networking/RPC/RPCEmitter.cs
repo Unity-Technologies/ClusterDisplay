@@ -26,8 +26,6 @@ namespace Unity.ClusterDisplay.RPC
         {
             rpcBuffer = new NativeArray<byte>((int)maxRpcByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             rpcBufferSize = 0;
-
-            RPCRegistry.Setup();
         }
 
         public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)

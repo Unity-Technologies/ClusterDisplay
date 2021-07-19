@@ -261,7 +261,7 @@ namespace Unity.ClusterDisplay.RPC
                         }
 
                         sceneObjectsRegistry.Add(path, sceneRegistry);
-                        sceneRegistry.DeserializeInstance();
+                        sceneRegistry.DeserializeSceneSingletonInstance();
                     }
 
                     if (sceneRegistry.Registered(component))

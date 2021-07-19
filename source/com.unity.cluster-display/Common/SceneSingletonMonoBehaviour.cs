@@ -104,12 +104,12 @@ namespace Unity.ClusterDisplay
             sceneInstances.Add(serializedScenePath, instance);
         }
 
-        protected void DeserializeInstance () 
+        protected void DeserializeSceneSingletonInstance () 
         {
             Register(serializedScenePath, this as SceneInstanceType, throwException: false);
         }
 
-        protected void SerializeInstance () 
+        protected void SerializeSceneSingletonInstance () 
         {
             serializedScenePath = gameObject.scene.path;
             sceneInstances.Clear();

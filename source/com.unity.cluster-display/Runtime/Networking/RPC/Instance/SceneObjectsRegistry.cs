@@ -24,12 +24,12 @@ namespace Unity.ClusterDisplay.RPC
 
         public bool Registered(Component instance) => m_SceneInstances.Contains(instance);
 
-        private void Awake() => Load();
+        private void Awake() => RegisterRPCSceneInstances();
 
         public void UpdateRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
             SetRPCConfig(pipeId, rpcId, ref rpcConfig);
-            Save();
+            SerializeRPCSceneInstances();
         }
 
         private void Dirty ()
@@ -44,7 +44,10 @@ namespace Unity.ClusterDisplay.RPC
             where InstanceType : Component
         {
             if (sceneObject == null)
+            {
+                Debug.LogError($"Refusing to register NULL instance with RPC ID: ({rpcId}).");
                 return;
+            }
 
             if (!m_SceneInstances.Contains(sceneObject))
                 m_SceneInstances.Add(sceneObject);
@@ -57,7 +60,10 @@ namespace Unity.ClusterDisplay.RPC
             where InstanceType : Component
         {
             if (sceneObject == null)
+            {
+                Debug.LogError($"Refusing to register NULL instance with RPC ID: ({rpcId}) with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
                 return;
+            }
 
             if (!m_SceneInstances.Contains(sceneObject))
                 m_SceneInstances.Add(sceneObject);
@@ -69,6 +75,12 @@ namespace Unity.ClusterDisplay.RPC
         public void Unregister<InstanceType> (InstanceType sceneObject)
             where InstanceType : Component
         {
+            if (sceneObject == null)
+            {
+                Debug.LogError($"Refusing to unregister NULL instance with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
+                return;
+            }
+
             m_SceneInstances.Remove(sceneObject);
             UnregisterInstanceAccessor(sceneObject);
 
@@ -82,7 +94,7 @@ namespace Unity.ClusterDisplay.RPC
             Dirty();
         }
 
-        private void Save ()
+        private void SerializeRPCSceneInstances ()
         {
             if (m_SceneInstances.Count == 0)
                 return;
@@ -113,35 +125,33 @@ namespace Unity.ClusterDisplay.RPC
         public void OnBeforeSerialize() 
         {
             IsSerializing = true;
-            Save();
+            SerializeRPCSceneInstances();
             IsSerializing = false;
-            SerializeInstance();
+            SerializeSceneSingletonInstance();
         }
 
-        public void OnAfterDeserialize()
-        {
-            // IsSerializing = true;
-            // Load();
-            // IsSerializing = false;
-            DeserializeInstance();
-        }
+        public void OnAfterDeserialize() => DeserializeSceneSingletonInstance();
 
-        private void Load ()
+        private void RegisterRPCSceneInstances ()
         {
+            RPCRegistry.Setup();
             if (m_SceneObjectsRegistered)
                 return;
+
             m_SceneObjectsRegistered = true;
 
-            Debug.Log($"Loading serialized scene instance RPCs.");
-
             if (m_SerializedInstances == null)
+            {
+                Debug.LogWarning($"There are no serialized RPC scene instances registered with: \"{nameof(SceneObjectsRegistry)}\" attached to: \"{gameObject.name}\" in scene: \"{gameObject.scene.name}\".");
                 return;
+            }
+
+            Debug.Log($"Registering serialized RPC instances for scene: \"{gameObject.scene.name}\".");
             m_SceneInstances.Clear();
 
             for (int i = 0; i < m_SerializedInstances.Length; i++)
             {
                 var rpcConfigs = m_SerializedInstances[i].pipeConfig.configs;
-
                 var type = m_SerializedInstances[i].instance.GetType();
 
                 if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs))
@@ -152,13 +162,11 @@ namespace Unity.ClusterDisplay.RPC
                     if (rpcConfigs == null || rpcs[ri].rpcId >= rpcConfigs.Length)
                     {
                         Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId);
-                        // Register(m_SerializedInstances[i].instance, m_SerializedInstances[i].pipeId, rpcs[ri].rpcId);
                         continue;
                     }
 
                     var instanceRPCConfig = rpcConfigs[rpcs[ri].rpcId];
                     Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId, ref instanceRPCConfig);
-                    // Register(m_SerializedInstances[i].instance, m_SerializedInstances[i].pipeId, rpcs[ri].rpcId, ref instanceRPCConfig);
                 }
             }
 

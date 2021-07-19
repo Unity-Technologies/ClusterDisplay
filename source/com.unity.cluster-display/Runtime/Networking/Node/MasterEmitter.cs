@@ -20,7 +20,6 @@ namespace Unity.ClusterDisplay
         public bool ValidRawStateData => m_PreviousStateSubBuffer != default;
 
         public IMasterNodeSyncState nodeState;
-        private bool firstFrame = true;
 
         public MasterEmitter (IMasterNodeSyncState nodeState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
         {

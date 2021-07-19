@@ -256,7 +256,6 @@ namespace Unity.ClusterDisplay.RPC
                 RPCRegistry.TryAddNewRPC(selectedMethodInfo);
             }
 
-            private bool changed = false;
             public override void OnInspectorGUI()
             {
                 RPCRegistry rpcRegistry = target as RPCRegistry;
@@ -306,38 +305,11 @@ namespace Unity.ClusterDisplay.RPC
                 }
 
                 ListRegisteredMethods();
-                /*
-                if (changed)
-                    serializedObject.ApplyModifiedProperties();
-                */
             }
 
             private void OnEnable()
             {
                 UpdateAssemblySearch(assemblySearchStr, forceUpdate: true);
-                /*
-                assemblyList = new ReorderableList(
-                    serializedObject,
-                    serializedObject.FindProperty("targetAssemblies"),
-                    true, true, true, true);
-
-                assemblyList.drawHeaderCallback = (Rect rect) => 
-                {
-                    EditorGUI.LabelField(rect, "Assemblies to Post Process");
-                };
-
-                assemblyList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) =>
-                {
-                    var rpcRegistry = target as RPCRegistry;
-                    int selectedIndex = Array.IndexOf(cachedAllAssemblies, cachedAllAssemblies.FirstOrDefault(assembly => assembly.FullName == rpcRegistry.targetAssemblies[index]));
-                    EditorGUI.Popup(rect, selectedIndex, cachedSearchedAssemblyNames);
-                };
-
-                assemblyList.onChangedCallback = (ReorderableList list) =>
-                {
-                    serializedObject.ApplyModifiedProperties();
-                };
-                */
             }
         }
     }

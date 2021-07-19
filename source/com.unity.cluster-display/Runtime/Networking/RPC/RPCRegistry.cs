@@ -90,6 +90,7 @@ namespace Unity.ClusterDisplay.RPC
         {
             if (!m_TypeToRPCIds.TryGetValue(type, out var rpcIds))
             {
+                Debug.LogError($"There are no registered RPCs declared in type: \"{type.FullName}\".");
                 rpcs = null;
                 return false;
             }
