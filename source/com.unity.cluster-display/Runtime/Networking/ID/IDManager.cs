@@ -51,17 +51,19 @@ public class IDManager
     /// </summary>
     /// <param name="id">The ID we want to register as in use.</param>
     /// <returns></returns>
-    public bool TryPushId (ushort id)
+    public bool TryPushId (ushort id, bool throwError = true)
     {
         if (m_ReturnedIDs[id])
         {
-            Debug.LogError($"The ID: {id} was used previously, so you should be using TryPopId instead due to internal structure.");
+            if (throwError)
+                Debug.LogError($"The ID: {id} was used previously, so you should be using TryPopId instead due to internal structure.");
             return false;
         }
 
         if (m_IDStates[id])
         {
-            Debug.LogError($"The ID: {id} is already in use.");
+            if (throwError)
+                Debug.LogError($"The ID: {id} is already in use.");
             return false;
         }
 
@@ -75,7 +77,7 @@ public class IDManager
     /// </summary>
     /// <param name="id">The ID we are pushing or returning if we pop a new one.</param>
     /// <returns></returns>
-    public bool TryPushOrPopId (ref ushort id) => TryPushId(id) || TryPopId(out id);
+    public bool TryPushOrPopId (ref ushort id) => TryPushId(id, throwError: false) || TryPopId(out id);
 
     public void OverwriteSetOfIds (ushort[] ids, ushort largestId)
     {
