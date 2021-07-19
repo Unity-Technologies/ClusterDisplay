@@ -10,31 +10,34 @@ namespace Unity.ClusterDisplay.RPC
         /// All wrappers are placed inside this namespace.
         /// </summary>
         public const string WrapperNamespace = "Unity.ClusterDisplay.RPC.Wrappers";
+        public const string WrapperPostfix = "Wrapper";
 
         /// <summary>
         /// This method uses the type's namespace to determine whether the type is a wrapper.
         /// </summary>
-        /// <param name="type">The type we are determining.</param>
+        /// <param name="wrapperType">The type we are determining.</param>
         /// <returns></returns>
-        public static bool IsWrapper (System.Type type) => type.Namespace == WrapperNamespace;
+        public static bool IsWrapper (System.Type wrapperType) => wrapperType.Namespace == WrapperNamespace;
 
         /// <summary>
         /// Simply returns "{Wrapped Type Name}Wrapper"
         /// </summary>
         /// <param name="wrappedType"></param>
         /// <returns></returns>
-        public static string GetWrapperName(System.Type wrappedType) => $"{wrappedType.Name}Wrapper";
+        public static string GetWrapperName(System.Type wrappedType) => $"{wrappedType.Name}{WrapperPostfix}";
 
         /// <summary>
         /// This returns the wrapper's full name which is: "{Namespace}.{Wrapped Type Name}Wrapper"
         /// </summary>
         /// <param name="wrappedType"></param>
         /// <returns></returns>
-        public static string GetWrapperFullName(System.Type wrappedType) => $"{WrapperNamespace}.{wrappedType.Name}Wrapper";
+        public static string GetWrapperFullName(System.Type wrappedType) => $"{WrapperNamespace}.{wrappedType.Name}{WrapperPostfix}";
 
-        public static void GetCompilationUnitPath (System.Type wrappedType, out string wrapperName, out string folderPath, out string filePath)
+        public static void GetCompilationUnitPath (System.Type type, bool typeIsWrapper, out string wrapperName, out string folderPath, out string filePath)
         {
-            wrapperName = GetWrapperName(wrappedType);
+            if (!typeIsWrapper)
+                wrapperName = GetWrapperName(type);
+            else wrapperName = type.Name;
             folderPath = $"{Application.dataPath}/ClusterDisplay/Wrappers";
             filePath = $"{folderPath}/{wrapperName}.cs";
         }

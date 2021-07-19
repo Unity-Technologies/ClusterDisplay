@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay.RPC
         public readonly string methodUniqueId;
         public readonly ushort rpcId;
         public RPCExecutionStage rpcExecutionStage;
+        public readonly bool usingWrapper;
 
         public bool IsValid => methodInfo != null;
         public bool IsStatic => methodInfo != null ? methodInfo.IsStatic : false;
@@ -19,12 +20,14 @@ namespace Unity.ClusterDisplay.RPC
             ushort rpcId, 
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo, 
-            string methodUniqueId)
+            string methodUniqueId,
+            bool usingWrapper)
         {
             this.rpcId = rpcId;
             this.rpcExecutionStage = rpcExecutionStage;
             this.methodInfo = methodInfo;
             this.methodUniqueId = methodUniqueId;
+            this.usingWrapper = usingWrapper;
         }
     }
 }

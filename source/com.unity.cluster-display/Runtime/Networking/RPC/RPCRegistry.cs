@@ -58,11 +58,17 @@ namespace Unity.ClusterDisplay.RPC
         public delegate void OnTriggerRecompileDelegate();
         public static OnTriggerRecompileDelegate onTriggerRecompile;
 
-        public delegate bool OnStageNonPostProcessableMethodDelegate(MethodInfo methodInfo);
-        public static OnStageNonPostProcessableMethodDelegate generateWrapperForMethod;
+        public delegate bool OnAddWrappableMethodDelegate(MethodInfo methodInfo);
+        public delegate bool OnAddWrappablePropertyDelegate(PropertyInfo propertyInfo);
 
-        public delegate bool OnStageNonPostProcessablePropertyDelegate(PropertyInfo propertyInfo);
-        public static OnStageNonPostProcessablePropertyDelegate generateWrapperForProperty;
+        public delegate bool OnRemoveMethodWrapperDelegate(MethodInfo methodInfo);
+        public delegate bool OnRemovePropertyWrapperDelegate(PropertyInfo propertyInfo);
+
+        public static OnAddWrappableMethodDelegate onAddWrappableMethod;
+        public static OnAddWrappablePropertyDelegate onAddWrappableProperty;
+
+        public static OnRemoveMethodWrapperDelegate onRemoveMethodWrapper;
+        public static OnRemovePropertyWrapperDelegate onRemovePropertyWrapper;
 
         public static bool MethodRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
         public static bool MethodRegistered(MethodInfo methodInfo) => m_MethodUniqueIdToRPCId.ContainsKey(MethodToUniqueId(methodInfo));
@@ -200,6 +206,19 @@ namespace Unity.ClusterDisplay.RPC
             m_MethodUniqueIdToRPCId.Remove(rpcMethodInfo.methodUniqueId);
             m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
 
+            if (WrapperUtils.IsWrapper(rpcMethodInfo.methodInfo.DeclaringType))
+            {
+                if (rpcMethodInfo.methodInfo.IsSpecialName)
+                {
+                    if (ReflectionUtils.TryGetPropertyViaAccessor(rpcMethodInfo.methodInfo, out var property))
+                        if (onRemovePropertyWrapper != null)
+                            onRemovePropertyWrapper(property);
+                }
+
+                else if (onRemoveMethodWrapper != null)
+                onRemoveMethodWrapper(rpcMethodInfo.methodInfo);
+            }
+
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
             #endif
@@ -220,13 +239,13 @@ namespace Unity.ClusterDisplay.RPC
 
         private bool TryStageNonPostProcessableMethod (MethodInfo methodInfo)
         {
-            if (generateWrapperForMethod == null)
+            if (onAddWrappableMethod == null)
             {
-                Debug.LogError($"No wrapper generator instances registered their callbacks with {nameof(RPCRegistry)}'s \"{nameof(OnStageNonPostProcessableMethodDelegate)}\" instance.");
+                Debug.LogError($"No wrapper generator instances registered their callbacks with {nameof(RPCRegistry)}'s \"{nameof(OnAddWrappableMethodDelegate)}\" instance.");
                 return false;
             }
 
-            if (!generateWrapperForMethod(methodInfo))
+            if (!onAddWrappableMethod(methodInfo))
                 return false;
 
             StageRPCToRegister(methodInfo);
@@ -250,7 +269,8 @@ namespace Unity.ClusterDisplay.RPC
                 rpcId, 
                 RPCExecutionStage.Automatic, 
                 methodInfo, 
-                methodUniqueId);
+                methodUniqueId,
+                usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);
             return true;
@@ -258,13 +278,13 @@ namespace Unity.ClusterDisplay.RPC
 
         private bool TryStageNonPostProcessableMethod (PropertyInfo propertyInfo)
         {
-            if (generateWrapperForProperty == null)
+            if (onAddWrappableProperty == null)
             {
-                Debug.LogError($"No wrapper generator instances registered their callbacks with {nameof(RPCRegistry)}'s \"{nameof(OnStageNonPostProcessableMethodDelegate)}\" instance.");
+                Debug.LogError($"No wrapper generator instances registered their callbacks with {nameof(RPCRegistry)}'s \"{nameof(OnAddWrappableMethodDelegate)}\" instance.");
                 return false;
             }
 
-            if (!generateWrapperForProperty(propertyInfo))
+            if (!onAddWrappableProperty(propertyInfo))
                 return false;
 
             StageRPCToRegister(propertyInfo.SetMethod);
@@ -430,7 +450,8 @@ namespace Unity.ClusterDisplay.RPC
                 rpcId, 
                 rpcExecutionStage, 
                 methodInfo, 
-                methodUniqueId);
+                methodUniqueId,
+                usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);
 
@@ -453,7 +474,8 @@ namespace Unity.ClusterDisplay.RPC
                 rpcId, 
                 RPCExecutionStage.Automatic, 
                 stagedMethod, 
-                methodUniqueId);
+                methodUniqueId,
+                usingWrapper: WrapperUtils.IsWrapper(stagedMethod.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);
             return true;

@@ -8,6 +8,10 @@ namespace Unity.ClusterDisplay
 {
     public static partial class ReflectionUtils
     {
+        public static bool TryGetPropertyViaAccessor (MethodInfo methodInfo, out PropertyInfo outPropertyInfo) => 
+            (outPropertyInfo = methodInfo.DeclaringType.GetProperties().FirstOrDefault(propertyInfo => 
+                propertyInfo.GetMethod == methodInfo || propertyInfo.SetMethod == methodInfo)) != null;
+
         public static bool PropertySignaturesAreEqual (PropertyInfo a, PropertyInfo b, bool matchGetSetters)
         {
             if (a.PropertyType.Assembly != b.PropertyType.Assembly ||
