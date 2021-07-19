@@ -15,8 +15,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (!ReflectionUtils.TypeIsInPostProcessableAssembly(instance.GetType()))
             {
                 TryGetWrapperInstance(instance, ref cachedWrapper);
-                if (hasRegistered)
-                    WrapperButton(instance, ref cachedWrapper);
+                // if (hasRegistered)
+                WrapperButton(instance, ref cachedWrapper);
             }
         }
     }
@@ -30,8 +30,8 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         protected override void OnPollWrapperGUI (InstanceType instance, bool anyStreamablesRegistered)
         {
             TryGetWrapperInstance(instance, ref cachedWrapper);
-            if (anyStreamablesRegistered)
-                WrapperButton(instance, ref cachedWrapper);
+            // if (anyStreamablesRegistered)
+            WrapperButton(instance, ref cachedWrapper);
         }
     }
 
