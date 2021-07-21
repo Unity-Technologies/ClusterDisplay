@@ -9,7 +9,7 @@ using Unity.ClusterDisplay.RPC;
 using UnityEditor;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay
+namespace Unity.ClusterDisplay.Editor.SourceGenerators
 {
     [InitializeOnLoad]
     public static class WrapperGenerator
@@ -135,35 +135,6 @@ namespace Unity.ClusterDisplay
                     .WithBody(SyntaxFactory.Block(tryGetIfStatement, emptyOrReturnStatement));
         }
 
-        private static bool TryGetExistingCompilationUnit (string folderPath, string filePath, out CompilationUnitSyntax compilationUnit)
-        {
-            Microsoft.CodeAnalysis.SyntaxTree syntaxTree = null;
-            compilationUnit = null;
-            try
-            {
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                    return false;
-                }
-
-                if (File.Exists(filePath))
-                {
-                    File.SetAttributes(filePath, FileAttributes.Normal);
-                    var text = File.ReadAllText(filePath);
-                    syntaxTree = CSharpSyntaxTree.ParseText(text);
-                }
-            }
-
-            catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                return false;
-            }
-
-            return syntaxTree != null && (compilationUnit = syntaxTree.GetCompilationUnitRoot()) != null;
-        }
-
         private static bool TryGetPropertyViaMethod (MethodInfo methodInfo, out PropertyInfo propertyInfo, out bool methodIsSetter)
         {
             propertyInfo = null;
@@ -197,24 +168,6 @@ namespace Unity.ClusterDisplay
         }
 
         private static bool PollMethodWrappability (MethodInfo methodInfo) => methodInfo.DeclaringType.IsSubclassOf(typeof(Component));
-
-        private static bool TryWriteCompilationUnit (string filePath, CompilationUnitSyntax compilationUnit)
-        {
-            try
-            {
-                var formattedCode = Formatter.Format(compilationUnit, new AdhocWorkspace());
-                File.WriteAllText(filePath, formattedCode.ToFullString());
-                File.SetAttributes(filePath, FileAttributes.ReadOnly);
-            }
-
-            catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                return false;
-            }
-
-            return true;
-        }
 
         private static void ExtractWrapperClassDeclaration (ref CompilationUnitSyntax compilationUnit, out NamespaceDeclarationSyntax nsDecl, out ClassDeclarationSyntax classDecl)
         {
@@ -275,14 +228,15 @@ namespace Unity.ClusterDisplay
 
             var requireComponentAttributeArgumentExpression = SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"typeof({wrappedType.Name})"));
 
-            return SyntaxFactory.ClassDeclaration(SyntaxFactory.ParseToken(wrapperName))
-                .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
-                    SyntaxFactory.Attribute(
-                        SyntaxFactory.ParseName(typeof(RequireComponent).Name),
-                        SyntaxFactory.AttributeArgumentList(
-                            SyntaxFactory.SingletonSeparatedList(requireComponentAttributeArgumentExpression))))))
-                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
-                .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(wrapperTypeName, consumeFullText: true)));
+            return
+                SyntaxFactory.ClassDeclaration(SyntaxFactory.ParseToken(wrapperName))
+                    .AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(
+                        SyntaxFactory.Attribute(
+                            SyntaxFactory.ParseName(typeof(RequireComponent).Name),
+                            SyntaxFactory.AttributeArgumentList(
+                                SyntaxFactory.SingletonSeparatedList(requireComponentAttributeArgumentExpression))))))
+                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+                    .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(wrapperTypeName, consumeFullText: true)));
         }
 
         private static NamespaceDeclarationSyntax NewNamespace () => SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName(WrapperUtils.WrapperNamespace));
@@ -327,57 +281,6 @@ namespace Unity.ClusterDisplay
                         .AddMembers(classDecl
                             .WithMembers(members)));
 
-        public static bool TryWrapProperty (PropertyInfo propertyToWrap)
-        {
-            if (!PollMethodWrappability(propertyToWrap.SetMethod))
-                return false;
-
-            WrapperUtils.GetCompilationUnitPath(
-                propertyToWrap.SetMethod.DeclaringType,
-                typeIsWrapper: false,
-                out var wrapperName, 
-                out var folderPath, 
-                out var filePath);
-
-            if (TryGetExistingCompilationUnit(folderPath, filePath, out var compilationUnit))
-            {
-                ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
-                if (!TryGetExistingPropertyDeclaration(propertyToWrap, classDecl, out var propertyDecl))
-                    compilationUnit = compilationUnit
-                        .AddMembers(nsDecl
-                            .AddMembers(classDecl
-                                .AddMembers(NewProperty(propertyToWrap))));
-            }
-
-            else compilationUnit = CreateNewCompilationUnit(propertyToWrap.DeclaringType, NewProperty(propertyToWrap), wrapperName);
-
-            return TryWriteCompilationUnit(filePath, compilationUnit);
-        }
-
-        public static bool TryWrapMethod (MethodInfo methodToWrap)
-        {
-            if (!PollMethodWrappability(methodToWrap))
-                return false;
-
-            WrapperUtils.GetCompilationUnitPath(
-                methodToWrap.DeclaringType, 
-                typeIsWrapper: false,
-                out var wrapperName, 
-                out var folderPath, 
-                out var filePath);
-
-            if (TryGetExistingCompilationUnit(folderPath, filePath, out var compilationUnit))
-            {
-                ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
-                if (!TryGetExistingMethodDeclaration(methodToWrap, classDecl, out var methodDecl))
-                    compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, methodDecl);
-            }
-
-            else compilationUnit = CreateNewCompilationUnit(methodToWrap.DeclaringType, NewMethod(methodToWrap), wrapperName);
-
-            return TryWriteCompilationUnit(filePath, compilationUnit);
-        }
-
         private static void PollFoldersToCleanUp (string wrapperFolderPath)
         {
             // Clean up the folders if there are no remaining wrappers.
@@ -404,29 +307,6 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public static void RemoveCompilationUnit (string wrapperFolderPath, string wrapperFilePath, string wrapperName)
-        {
-            try
-            {
-                if (File.Exists(wrapperFilePath))
-                    File.Delete(wrapperFilePath);
-
-                var metaFilePath = $"{wrapperFilePath}.meta";
-                if (File.Exists(metaFilePath))
-                    File.Delete(metaFilePath);
-
-                PollFoldersToCleanUp(wrapperFolderPath);
-            }
-
-            catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                return;
-            }
-
-            Debug.Log($"Deleted wrapper: \"{wrapperName}\" at file path: \"{wrapperFilePath}\".");
-        }
-
         public static bool TryRemoveWrapper (PropertyInfo wrappingProperty)
         {
             WrapperUtils.GetCompilationUnitPath(
@@ -436,7 +316,7 @@ namespace Unity.ClusterDisplay
                 out var wrapperFolderPath, 
                 out var wrapperFilePath);
 
-            if (!TryGetExistingCompilationUnit(wrapperFolderPath, wrapperFilePath, out var compilationUnit))
+            if (!SourceGeneratorUtils.TryGetExistingCompilationUnit(wrapperFilePath, out var compilationUnit))
                 return true;
 
             ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
@@ -456,12 +336,13 @@ namespace Unity.ClusterDisplay
             members = members.RemoveAt(indexOfProperty);
             if (members.Count == 0)
             {
-                RemoveCompilationUnit(wrapperFolderPath, wrapperFilePath, wrapperName);
+                SourceGeneratorUtils.RemoveCompilationUnit(wrapperFilePath, wrapperName);
+                PollFoldersToCleanUp(wrapperFolderPath);
                 return true;
             }
 
             compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, members);
-            return TryWriteCompilationUnit(wrapperFilePath, compilationUnit);
+            return SourceGeneratorUtils.TryWriteCompilationUnit(wrapperFilePath, compilationUnit);
         }
 
         public static bool TryRemoveWrapper (MethodInfo wrappingMethod)
@@ -472,7 +353,8 @@ namespace Unity.ClusterDisplay
                 out var wrapperName, 
                 out var wrapperFolderPath, 
                 out var wrapperFilePath);
-            if (!TryGetExistingCompilationUnit(wrapperFolderPath, wrapperFilePath, out var compilationUnit))
+
+            if (!SourceGeneratorUtils.TryGetExistingCompilationUnit(wrapperFilePath, out var compilationUnit))
                 return true;
 
             ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
@@ -492,12 +374,64 @@ namespace Unity.ClusterDisplay
             members = members.RemoveAt(indexOfMethod);
             if (members.Count == 0)
             {
-                RemoveCompilationUnit(wrapperFolderPath, wrapperFilePath, wrapperName);
+                SourceGeneratorUtils.RemoveCompilationUnit(wrapperFilePath, wrapperName);
+                PollFoldersToCleanUp(wrapperFolderPath);
                 return true;
             }
 
             compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, members);
-            return TryWriteCompilationUnit(wrapperFilePath, compilationUnit);
+            return SourceGeneratorUtils.TryWriteCompilationUnit(wrapperFilePath, compilationUnit);
+        }
+
+        public static bool TryWrapProperty (PropertyInfo propertyToWrap)
+        {
+            if (!PollMethodWrappability(propertyToWrap.SetMethod))
+                return false;
+
+            WrapperUtils.GetCompilationUnitPath(
+                propertyToWrap.SetMethod.DeclaringType,
+                typeIsWrapper: false,
+                out var wrapperName, 
+                out var folderPath, 
+                out var filePath);
+
+            if (SourceGeneratorUtils.TryGetExistingCompilationUnit(filePath, out var compilationUnit))
+            {
+                ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
+                if (!TryGetExistingPropertyDeclaration(propertyToWrap, classDecl, out var propertyDecl))
+                    compilationUnit = compilationUnit
+                        .AddMembers(nsDecl
+                            .AddMembers(classDecl
+                                .AddMembers(NewProperty(propertyToWrap))));
+            }
+
+            else compilationUnit = CreateNewCompilationUnit(propertyToWrap.DeclaringType, NewProperty(propertyToWrap), wrapperName);
+
+            return SourceGeneratorUtils.TryWriteCompilationUnit(filePath, compilationUnit);
+        }
+
+        public static bool TryWrapMethod (MethodInfo methodToWrap)
+        {
+            if (!PollMethodWrappability(methodToWrap))
+                return false;
+
+            WrapperUtils.GetCompilationUnitPath(
+                methodToWrap.DeclaringType, 
+                typeIsWrapper: false,
+                out var wrapperName, 
+                out var folderPath, 
+                out var filePath);
+
+            if (SourceGeneratorUtils.TryGetExistingCompilationUnit(filePath, out var compilationUnit))
+            {
+                ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
+                if (!TryGetExistingMethodDeclaration(methodToWrap, classDecl, out var methodDecl))
+                    compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, methodDecl);
+            }
+
+            else compilationUnit = CreateNewCompilationUnit(methodToWrap.DeclaringType, NewMethod(methodToWrap), wrapperName);
+
+            return SourceGeneratorUtils.TryWriteCompilationUnit(filePath, compilationUnit);
         }
     }
 }

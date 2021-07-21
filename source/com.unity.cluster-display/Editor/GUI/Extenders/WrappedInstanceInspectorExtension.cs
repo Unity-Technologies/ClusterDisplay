@@ -2,9 +2,11 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.Editor.Extensions
+using UnityEngine.Rendering.Universal;
+
+namespace Unity.ClusterDisplay.Editor.Inspectors
 {
-    public abstract class UserWrapperInspectorExtension<InstanceType, WrapperType> : UserInspectorExtension<InstanceType>
+    public abstract class UserWrapperInspectorExtension<InstanceType, WrapperType> : MonoBehaviourInspectorExtension<InstanceType>
         where InstanceType : MonoBehaviour
         where WrapperType : ComponentWrapper<InstanceType>
     {
@@ -21,11 +23,12 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         }
     }
 
-    public abstract class UnityWrapperInspectorExtension<InstanceType, WrapperType> : UnityInspectorExtension<InstanceType>
+    public abstract class UnityWrapperInspectorExtension<InstanceType, WrapperType> : BuiltInInstanceInspectorExtension<InstanceType>
         where InstanceType : Component
         where WrapperType : ComponentWrapper<InstanceType>
     {
         protected WrapperType cachedWrapper;
+        public UnityWrapperInspectorExtension(bool useDefaultInspector = true) : base(useDefaultInspector) {}
 
         protected override void OnPollWrapperGUI (InstanceType instance, bool anyStreamablesRegistered)
         {
@@ -36,20 +39,5 @@ namespace Unity.ClusterDisplay.Editor.Extensions
     }
 
     [CustomEditor(typeof(MonoBehaviour), editorForChildClasses: true)]
-    public class MonoBehaviourExtension : UserWrapperInspectorExtension<MonoBehaviour, ComponentWrapper<MonoBehaviour>>
-    {
-        protected override void OnExtendInspectorGUI(MonoBehaviour instance) {}
-    }
-
-    [CustomEditor(typeof(Transform))]
-    public class TransformExtension : UnityWrapperInspectorExtension<Transform, ComponentWrapper<Transform>>
-    {
-        protected override void OnExtendInspectorGUI(Transform instance) {}
-    }
-
-    [CustomEditor(typeof(Light), editorForChildClasses: true)]
-    public class LightExtension : UnityWrapperInspectorExtension<Light, ComponentWrapper<Light>>
-    {
-        protected override void OnExtendInspectorGUI(Light instance) {}
-    }
+    public class MonoBehaviourExtension : MonoBehaviourInspectorExtension<MonoBehaviour> {}
 }

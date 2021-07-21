@@ -5,7 +5,7 @@ using UnityEngine;
 
 using Unity.ClusterDisplay.RPC;
 
-namespace Unity.ClusterDisplay.Editor.Extensions
+namespace Unity.ClusterDisplay.Editor.Inspectors
 {
     [CustomPropertyDrawer(typeof(int))]
     public class IntPropertyDrawerExtension : PropertyDrawerExtension<int> {}

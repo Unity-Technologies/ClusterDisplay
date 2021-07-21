@@ -4,13 +4,13 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace Unity.ClusterDisplay.Editor.Extensions
+namespace Unity.ClusterDisplay.Editor.Inspectors
 {
-    public abstract class UserInspectorExtension<InstanceType> : InspectorExtension, IInspectorExtension<InstanceType>
+    public abstract class MonoBehaviourInspectorExtension<InstanceType> : ClusterDisplayInspectorExtension, IInspectorExtension<InstanceType>
         where InstanceType : MonoBehaviour
     {
-        protected abstract void OnExtendInspectorGUI(InstanceType instance);
-        protected abstract void OnPollWrapperGUI(InstanceType instance, bool anyStreamablesRegistered);
+        protected virtual void OnExtendInspectorGUI(InstanceType instance) {}
+        protected virtual void OnPollWrapperGUI(InstanceType instance, bool anyStreamablesRegistered) {}
 
         public void PollReflectorGUI(InstanceType instance, bool hasRegistered) => OnPollWrapperGUI(instance, hasRegistered);
         public void ExtendInspectorGUI(InstanceType instance) => OnExtendInspectorGUI(instance);
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
             if (UseDefaultInspector)
                 base.OnInspectorGUI();
 
-            PollExtendInspectorGUI<IInspectorExtension<InstanceType>, InstanceType>(this);
+            ExtendInspectorGUIWithClusterDisplay<IInspectorExtension<InstanceType>, InstanceType>(this);
         }
     }
 }

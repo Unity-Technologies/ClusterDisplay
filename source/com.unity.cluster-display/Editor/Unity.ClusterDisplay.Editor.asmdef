@@ -1,8 +1,11 @@
 {
-    "name": "Unity.ClusterDisplay.Networking.Editor.SourceGenerators",
+    "name": "Unity.ClusterDisplay.Editor.SourceGenerators",
     "references": [
         "Unity.ClusterDisplay.Common",
-        "Unity.ClusterDisplay.Networking"
+        "Unity.ClusterDisplay.Networking",
+        "Unity.ClusterDisplay.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [
         "Editor"
@@ -16,7 +19,9 @@
         "Microsoft.CodeAnalysis.Scripting.dll",
         "Microsoft.CodeAnalysis.CSharp.Scripting.dll",
         "Microsoft.CodeAnalysis.Workspaces.dll",
-        "Microsoft.CodeAnalysis.CSharp.Workspaces.dll"
+        "Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+        "Mono.Cecil.dll",
+        "Unity.CompilationPipeline.Common.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

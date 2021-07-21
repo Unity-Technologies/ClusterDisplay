@@ -8,7 +8,7 @@ using Unity.ClusterDisplay;
 using UnityEngine.UIElements;
 using System;
 
-namespace Unity.ClusterDisplay.Editor.Extensions
+namespace Unity.ClusterDisplay.Editor.Inspectors
 {
     public abstract class PropertyDrawerExtension<T> : PropertyDrawer
     {

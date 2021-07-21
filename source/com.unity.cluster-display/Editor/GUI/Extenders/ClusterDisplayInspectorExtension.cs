@@ -5,7 +5,7 @@ using Unity.ClusterDisplay.RPC;
 using UnityEditor;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.Editor.Extensions
+namespace Unity.ClusterDisplay.Editor.Inspectors
 {
     public interface IInspectorExtension<InstanceType>
         where InstanceType : Component
@@ -14,8 +14,10 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
     }
 
-    public abstract class InspectorExtension : UnityEditor.Editor
+    public abstract class ClusterDisplayInspectorExtension : UnityEditor.Editor
     {
+        public const string GeneratedInspectorNamespace = "Unity.ClusterDisplay.Editor.Inspectors.Generated";
+
         protected enum SelectedState
         {
             None,
@@ -51,7 +53,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         private Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)> cachedPropertyDescriptors = new Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)>();
         private Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)> cachedMethodDescriptors = new Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)>();
 
-        public InspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
+        public ClusterDisplayInspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
 
         private void SelectMonoScriptViaType (System.Type type) =>
             Selection.objects = new Object[1] { AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(AssetDatabase
@@ -67,7 +69,7 @@ namespace Unity.ClusterDisplay.Editor.Extensions
         /// <typeparam name="EditorType">The custom editor type for our instance.</typeparam>
         /// <typeparam name="InstanceType">The instance type we are extending the inspector for.</typeparam>
         /// <param name="interfaceInstance"></param>
-        protected void PollExtendInspectorGUI<EditorType, InstanceType> (EditorType interfaceInstance)
+        protected void ExtendInspectorGUIWithClusterDisplay<EditorType, InstanceType> (EditorType interfaceInstance)
             where EditorType : IInspectorExtension<InstanceType>
             where InstanceType : Component
         {
