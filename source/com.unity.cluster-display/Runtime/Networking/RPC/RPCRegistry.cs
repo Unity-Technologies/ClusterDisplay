@@ -536,7 +536,11 @@ namespace Unity.ClusterDisplay.RPC
             List<string> renamedRPCs)
         {
             if (cachedMethodsWithRPCAttribute == null)
+            #if UNITY_EDITOR
+                cachedMethodsWithRPCAttribute = UnityEditor.TypeCache.GetMethodsWithAttribute<ClusterRPC>().ToArray();
+            #else
                 ReflectionUtils.TryGetAllMethodsWithAttribute<ClusterRPC>(out cachedMethodsWithRPCAttribute);
+            #endif
 
             foreach (var methodInfo in cachedMethodsWithRPCAttribute)
             {
