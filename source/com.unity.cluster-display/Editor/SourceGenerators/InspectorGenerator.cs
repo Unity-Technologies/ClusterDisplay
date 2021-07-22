@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
         }
 
         private static string GetGeneratedInspectorTypeName (System.Type targetType, System.Type customEditorAttributeType) =>
-            customEditorAttributeType == typeof(CustomEditor) ? $"{targetType.Name}Extension" : $"{targetType.Name}RenderPipelineExtension";
+            customEditorAttributeType == typeof(CustomEditor) ? $"A{targetType.Name}Extension" : $"A{targetType.Name}RenderPipelineExtension";
 
         private static bool TryGetCustomEditorTargetType (
             System.Type customEditorType, 
@@ -108,12 +108,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
         [MenuItem("Unity/Cluster Display/Generate Inspectors")]
         public static void Generate ()
         {
-            var customEditorTypes = ReflectionUtils.GetAllTypes().Where(type =>
-            {
-                return
-                    (type.GetCustomAttributes<CustomEditor>().Count() > 0 ||
-                    type.GetCustomAttributes<CustomEditorForRenderPipelineAttribute>().Count() > 0);
-            }).Distinct();
+            var customEditorTypes = TypeCache.GetTypesWithAttribute<CustomEditorForRenderPipelineAttribute>().Concat(TypeCache.GetTypesWithAttribute<CustomEditor>());
 
             var asmdefFilePath = AssetDatabase.FindAssets(BuiltInInspectorExtension.GeneratedInspectorNamespace).Select(guid => AssetDatabase.GUIDToAssetPath(guid)).FirstOrDefault(assetPath => Path.GetExtension(assetPath) == ".asmdef");
             if (asmdefFilePath == null)

@@ -49,8 +49,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         static BuiltInInspectorExtension ()
         {
             if (cachedTypesWithCustomEditorAttribute == null)
-                cachedTypesWithCustomEditorAttribute = ReflectionUtils
-                    .GetAllTypes()
+                cachedTypesWithCustomEditorAttribute = UnityEditor.TypeCache.GetTypesWithAttribute<CustomEditor>()
                     .Where(type =>
                     {
                         if (type == null)
@@ -66,8 +65,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     .ToArray();
 
             if (cachedTypesWithCustomEditorForRenderPipelineAttribute == null)
-                cachedTypesWithCustomEditorForRenderPipelineAttribute = ReflectionUtils
-                        .GetAllTypes()
+                cachedTypesWithCustomEditorForRenderPipelineAttribute = UnityEditor.TypeCache.GetTypesWithAttribute<CustomEditorForRenderPipelineAttribute>()
                         .Where(type =>
                         {
                             if (type == null)
