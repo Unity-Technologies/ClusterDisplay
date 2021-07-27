@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Unity.ClusterDisplay.RPC;
 using UnityEditor;
@@ -12,6 +14,34 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
     {
         void ExtendInspectorGUI(InstanceType instance);
         void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
+    }
+
+    public struct MemberGUIState
+    {
+        public bool expandInvocationGroup;
+        public Action<UnityEngine.Component> onInvocationGUI;
+    }
+
+    public struct MethodMemberData
+    {
+        public MethodInfo methodInfo;
+        public string methodString;
+
+        public UnityEngine.Component instance;
+        public MethodInfo wrapperEquivalentMethodInfo;
+
+        public MemberGUIState guiState;
+    }
+
+    public struct PropertyMemberData
+    {
+        public PropertyInfo propertyInfo;
+        public string propertyString;
+
+        public UnityEngine.Component instance;
+        public PropertyInfo wrapperEquivalentProperty;
+
+        public MemberGUIState guiState;
     }
 
     public abstract class ClusterDisplayInspectorExtension : UnityEditor.Editor
@@ -50,13 +80,13 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         private (PropertyInfo property, MethodInfo setMethod)[] cachedProperties;
 
         private Dictionary<SerializedProperty, string> cachedFieldDescriptors = new Dictionary<SerializedProperty, string>();
-        private Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)> cachedPropertyDescriptors = new Dictionary<PropertyInfo, (PropertyInfo wrapperEquivalentProperty, string propertyString)>();
-        private Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)> cachedMethodDescriptors = new Dictionary<MethodInfo, (MethodInfo wrapperEquivalentMethod, string methodString)>();
+        private Dictionary<PropertyInfo, PropertyMemberData> cachedPropertyData = new Dictionary<PropertyInfo, PropertyMemberData>();
+        private Dictionary<MethodInfo, MethodMemberData> cachedMethodData = new Dictionary<MethodInfo, MethodMemberData>();
 
         public ClusterDisplayInspectorExtension(bool useDefaultInspector = true) => this.useDefaultInspector = useDefaultInspector;
 
         private void SelectMonoScriptViaType (System.Type type) =>
-            Selection.objects = new Object[1] { AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(AssetDatabase
+            Selection.objects = new UnityEngine.Object[1] { AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(AssetDatabase
                 .FindAssets("t:MonoScript")
                 .FirstOrDefault(ms =>
                     AssetDatabase.LoadAssetAtPath<MonoScript>(
@@ -254,14 +284,44 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             EditorGUILayout.EndHorizontal();
         }
 
-        private bool ButtonGUI (bool registered)
+        private bool ExpandButtonGUI (bool eventRegistered)
         {
+            if (!eventRegistered)
+                return false;
+
             var cachedPreviousColor = GUI.backgroundColor;
-            GUI.backgroundColor = registered ? Color.green : Color.red;
-            bool selected = GUILayout.Button(registered ? "→" : "→", GUILayout.Width(20));
+            // GUI.backgroundColor = eventRegistered ? Color.green : Color.red;
+            var selected = GUILayout.Button(new GUIContent("", "Expand event invocation menu"), EditorStyles.foldout, GUILayout.Width(20));
             GUI.backgroundColor = cachedPreviousColor;
 
             return selected;
+        }
+
+        private bool EventButtonGUI (bool eventRegistered)
+        {
+            var cachedPreviousColor = GUI.backgroundColor;
+            bool selected = false;
+
+            if (Application.isPlaying)
+            {
+                GUI.backgroundColor = eventRegistered ? Color.green * 0.65f : Color.red * 0.65f;
+                GUILayout.Button(new GUIContent(eventRegistered ? "X" : "→", "Stop the game to edit."), GUILayout.Width(20));
+            }
+
+            else
+            {
+                GUI.backgroundColor = eventRegistered ? Color.green : Color.red;
+                selected = GUILayout.Button(new GUIContent(eventRegistered ? "X" : "→", eventRegistered ? "Remove as cluster display event" : "Add as cluster display event."), GUILayout.Width(20));
+            }
+
+            GUI.backgroundColor = cachedPreviousColor;
+
+            return selected;
+        }
+
+        private bool MethodInvocationUI (MethodInfo MethodInfo, UnityEngine.Object instance)
+        {
+            return false;
         }
 
         private string PrettyMethodString (MethodInfo methodInfo)
@@ -338,7 +398,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 {
                     var fieldDescriptor = cachedFieldDescriptors[cachedFields[i]];
                     EditorGUILayout.BeginHorizontal();
-                    if (ButtonGUI(false))
+                    if (EventButtonGUI(false))
                     {
                     }
                     InfoGUI(fieldDescriptor, false, null);
@@ -364,7 +424,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
                 // Create a <MethodInfo, <MethodInfo, string>> dictionary from the methods we find.
-                cachedMethodDescriptors = cachedMethods.ToDictionary(
+                cachedMethodData = cachedMethods.ToDictionary(
                     cachedMethod => cachedMethod,
                     cachedMethod => 
                     {
@@ -372,28 +432,30 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                         ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod);
 
                         // Store the nullable wrapper method and method string in this tuple as a value in our dictionary.
-                        (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
-                        (
-                            wrapperMethod,
-                            PrettyMethodString(cachedMethod)
-                        );
-                        return tuple;
+                        return new MethodMemberData
+                        {
+                            methodInfo = cachedMethod,
+                            wrapperEquivalentMethodInfo = wrapperMethod,
+                            methodString = PrettyMethodString(cachedMethod),
+                            guiState = new MemberGUIState()
+                        };
                     });
 
                 return;
             }
 
             // If our wrapper does not exist, then we just use our target type methods instead.
-            cachedMethodDescriptors = cachedMethods.ToDictionary(
+            cachedMethodData = cachedMethods.ToDictionary(
                 cachedMethod => cachedMethod,
                 cachedMethod => 
                 {
-                    (MethodInfo wrapperEquivalentMethod, string parameters) tuple =
-                    (
-                        null,
-                        PrettyMethodString(cachedMethod)
-                    );
-                    return tuple;
+                    return new MethodMemberData
+                    {
+                        methodInfo = cachedMethod,
+                        wrapperEquivalentMethodInfo = null,
+                        methodString = PrettyMethodString(cachedMethod),
+                        guiState = new MemberGUIState()
+                    };
                 });
         }
 
@@ -419,18 +481,18 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 BeginScrollView(cachedMethods.Length, ref methodScrollPosition);
                 for (int i = 0; i < cachedMethods.Length; i++)
                 {
-                    var methodDescriptor = cachedMethodDescriptors[cachedMethods[i]];
+                    var methodData = cachedMethodData[cachedMethods[i]];
 
                     // Determine whether a wrapper method exists, and if it does, use that one instead, otherwise use the target instance method.
-                    bool usingWrapper = methodDescriptor.wrapperEquivalentMethod != null;
-                    var method = usingWrapper ? methodDescriptor.wrapperEquivalentMethod : cachedMethods[i];
+                    bool usingWrapper = methodData.wrapperEquivalentMethodInfo != null;
+                    var method = usingWrapper ? methodData.wrapperEquivalentMethodInfo : cachedMethods[i];
 
                     bool registered = RPCRegistry.TryGetRPC(method, out var rpcMethodInfo);
                     hasRegistered |= registered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (ButtonGUI(registered))
+                    if (EventButtonGUI(registered))
                     {
                         if (registered)
                         {
@@ -448,8 +510,10 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     if (registered)
                         RPCToggleGUI(targetInstance, ref rpcMethodInfo);
-                    InfoGUI(methodDescriptor.methodString, usingWrapper, method.DeclaringType);
+                    InfoGUI(methodData.methodString, usingWrapper, method.DeclaringType);
                     EditorGUILayout.EndHorizontal();
+
+                    cachedMethodData[cachedMethods[i]] = methodData;
                 }
 
                 EndScrollView();
@@ -461,6 +525,178 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             return selectedState != SelectedState.None && selectedMethodInfo != null;
         }
 
+        private static void FieldLabel (string label) =>
+            EditorGUILayout.LabelField(label.ToUpper(), GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(label)).x));
+
+        private class FloatFieldAttribute : DedicatedAttribute {}
+        private class DoubleFieldAttribute : DedicatedAttribute {}
+        private class IntFieldAttribute : DedicatedAttribute {}
+        private class LongFieldAttribute : DedicatedAttribute {}
+        private class TextFieldAttribute : DedicatedAttribute {}
+
+        private class BeginHorizontalAttrikbute : DedicatedAttribute {}
+        private class EndHorizontalAttrikbute : DedicatedAttribute {}
+
+        private class InvokeMethodButtonAttribute : DedicatedAttribute {}
+
+        [BeginHorizontalAttrikbute]
+        private static void BeginHorizontal () => EditorGUILayout.BeginHorizontal();
+
+        [EndHorizontalAttrikbute]
+        private static void EndHorizontal () => EditorGUILayout.EndHorizontal();
+
+        [InvokeMethodButton]
+        private static bool InvokeMethodButton() =>
+            GUILayout.Button("Invoke", GUILayout.Width(50f));
+
+        [FloatField]
+        private static float FloatField(string label, float value)
+        {
+            FieldLabel(label);
+            return EditorGUILayout.FloatField(value, GUILayout.Width(50f));
+        }
+
+        [DoubleField]
+        private static double DoubleField(string label, double value)
+        {
+            FieldLabel(label);
+            return EditorGUILayout.DoubleField(value, GUILayout.Width(50f));
+        }
+
+        [IntField]
+        private static int IntField(string label, int value)
+        {
+            FieldLabel(label);
+            return EditorGUILayout.IntField(value, GUILayout.Width(50f));
+        }
+
+        [LongField]
+        private static long LongField(string label, long value)
+        {
+            FieldLabel(label);
+            return EditorGUILayout.LongField(value, GUILayout.Width(50f));
+        }
+
+        [TextField]
+        private static string TextField(string label, string value)
+        {
+            FieldLabel(label);
+            return EditorGUILayout.TextField(value, GUILayout.Width(50f));
+        }
+
+        private bool TryCreateGUIForStructMember (
+            ParameterExpression instanceParameter, 
+            PropertyInfo propertyInfo, 
+            FieldInfo propertyTypeFieldInfo, 
+            ParameterExpression localPropertyValueVariable,
+            out ParameterExpression newFieldValueVariable,
+            out Expression setPropertyOnValueChange)
+        {
+            setPropertyOnValueChange = null;
+            newFieldValueVariable = null;
+
+            Type attributeType = null;
+            if (propertyTypeFieldInfo.FieldType == typeof(float))
+                attributeType = typeof(FloatFieldAttribute);
+            else if (propertyTypeFieldInfo.FieldType == typeof(double))
+                attributeType = typeof(DoubleFieldAttribute);
+            else if (propertyTypeFieldInfo.FieldType == typeof(int))
+                attributeType = typeof(IntFieldAttribute);
+            else if (propertyTypeFieldInfo.FieldType == typeof(long))
+                attributeType = typeof(LongFieldAttribute);
+            else if (propertyTypeFieldInfo.FieldType == typeof(string))
+                attributeType = typeof(TextFieldAttribute);
+
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute(attributeType, out var fieldMethod))
+                return false;
+
+            var fieldAccess = Expression.Field(localPropertyValueVariable, propertyTypeFieldInfo);
+            newFieldValueVariable = Expression.Variable(propertyTypeFieldInfo.FieldType, "newFieldValue");
+            var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, Expression.Call(fieldMethod, Expression.Constant(propertyTypeFieldInfo.Name), fieldAccess));
+
+            setPropertyOnValueChange = Expression.IfThen(
+                Expression.NotEqual(fieldAccess, newFieldAssignemntExpression),
+                Expression.Block(
+                    Expression.Assign(fieldAccess, newFieldValueVariable),
+                    Expression.Assign(Expression.Property(instanceParameter, propertyInfo.SetMethod), localPropertyValueVariable)));
+
+            return true;
+        }
+
+        private bool TryCreatePropertyGUI (
+            PropertyInfo propertyInfo, 
+            Component targetInstance, 
+            System.Type targetType,
+            out Action<Component> method)
+        {
+            method = null;
+            if (propertyInfo == null)
+                return false;
+
+            var propertyGetMethod = propertyInfo.GetGetMethod();
+            if (propertyGetMethod == null || !propertyGetMethod.IsPublic)
+                return false;
+
+            bool isStruct = !(propertyInfo.PropertyType.IsPrimitive || propertyInfo.PropertyType.IsEnum);
+            if (!isStruct)
+                return false;
+
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<BeginHorizontalAttrikbute>(out var beginHorizontalMethodInfo) || 
+                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<EndHorizontalAttrikbute>(out var endHorizontalMethodInfo))
+                return false;
+
+            var componentParameter = Expression.Parameter(typeof(Component), "component");
+            var castedInstanceVariable = Expression.Variable(targetInstance.GetType(), "instance");
+
+            var instanceAssignementExpression = Expression.Assign(castedInstanceVariable, Expression.Convert(componentParameter, targetType));
+
+            var localPropertyValueVariable = Expression.Variable(propertyInfo.PropertyType, "propertyValue");
+            var localPropertyValueVariableAssignment = Expression.Assign(localPropertyValueVariable, Expression.Property(castedInstanceVariable, propertyGetMethod));
+
+            var localVariables = new List<ParameterExpression>() { castedInstanceVariable, localPropertyValueVariable };
+
+            var instructions = new List<Expression>() {
+                instanceAssignementExpression,
+                localPropertyValueVariableAssignment,
+                Expression.Call(null, beginHorizontalMethodInfo),
+            };
+
+            var propertyFields = propertyInfo.PropertyType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            for (int fi = 0; fi < propertyFields.Length; fi++)
+            {
+                if (!TryCreateGUIForStructMember(
+                    castedInstanceVariable,
+                    propertyInfo,
+                    propertyFields[fi],
+                    localPropertyValueVariable,
+                    out var newFieldValueVariable,
+                    out var setPropertyOnValueChange))
+                    return false;
+
+                localVariables.Add(newFieldValueVariable);
+                instructions.Add(setPropertyOnValueChange);
+            }
+
+            instructions.Add(Expression.Call(null, endHorizontalMethodInfo));
+
+            var block = Expression.Block(
+                localVariables,
+                instructions);
+
+            var lambda = Expression.Lambda<Action<Component>>(block, componentParameter);
+
+            try
+            {
+                method = lambda.Compile();
+                return true;
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+                return false;
+            }
+        }
+
         private void CachePropertiesAndDescriptors<InstanceType> (InstanceType targetInstance)
             where InstanceType : Component
         {
@@ -469,37 +705,56 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             // If our wrapper type exists, then we should be using our wrapper properties instead.
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
-                // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
-                cachedPropertyDescriptors = cachedProperties.ToDictionary(
-                    cachedPropertyData => cachedPropertyData.property,
-                    cachedPropertyData => {
+                var wrapperInstance = targetInstance.gameObject.GetComponent(wrapperType);
+                if (wrapperInstance != null)
+                {
+                    // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
+                    cachedPropertyData = cachedProperties.ToDictionary(
+                        cachedPropertyData => cachedPropertyData.property,
+                        cachedPropertyData => {
 
-                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
-                        ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty);
+                            // Using the property in our target instance, find equivalent property in the type that wraps our target type.
+                            ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty);
+                            TryCreatePropertyGUI(wrapperProperty, wrapperInstance, wrapperType, out var onPropertyInvocationGUI);
 
-                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
-                        (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
-                        (
-                            wrapperProperty,
-                            PrettyPropertyName(cachedPropertyData.property)
-                        );
+                            // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
+                            return new PropertyMemberData
+                            {
+                                propertyInfo = cachedPropertyData.property,
+                                propertyString = PrettyPropertyName(cachedPropertyData.property),
+                                instance = wrapperInstance,
+                                wrapperEquivalentProperty = wrapperProperty,
+                                guiState = new MemberGUIState()
+                                {
+                                    onInvocationGUI = onPropertyInvocationGUI,
+                                    expandInvocationGroup = false,
+                                }
+                            };
+                        });
 
-                        return tuple;
-                    });
-
-                return;
+                    return;
+                }
             }
 
             // If our wrapper does not exist, then we just use our target type properties instead.
-            cachedPropertyDescriptors = cachedProperties.ToDictionary(
+            cachedPropertyData = cachedProperties.ToDictionary(
                 cachedPropertyData => cachedPropertyData.property,
                 cachedPropertyData => {
-                    (PropertyInfo wrapperEquivalentProperty, string parameters) tuple =
-                    (
-                        null,
-                        PrettyPropertyName(cachedPropertyData.property)
-                    );
-                    return tuple;
+                    TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, targetInstance.GetType(), out var onPropertyInvocationGUI);
+                    return new PropertyMemberData
+                    {
+                        propertyInfo = cachedPropertyData.property,
+                        propertyString = PrettyPropertyName(cachedPropertyData.property),
+
+                        instance = null,
+                        wrapperEquivalentProperty = null,
+
+                        guiState = new MemberGUIState
+                        {
+                            onInvocationGUI = onPropertyInvocationGUI,
+                            expandInvocationGroup = false
+                        }
+                    };
                 });
         }
 
@@ -526,18 +781,21 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                 for (int i = 0; i < cachedProperties.Length; i++)
                 {
-                    var propertyDescriptor = cachedPropertyDescriptors[cachedProperties[i].property];
+                    var propertyData = cachedPropertyData[cachedProperties[i].property];
 
                     // Determine whether a wrapper property exists, and if it does, use that one instead, otherwise use the target instance property.
-                    bool usingWrapper = propertyDescriptor.wrapperEquivalentProperty != null;
-                    var property = usingWrapper ? propertyDescriptor.wrapperEquivalentProperty : cachedProperties[i].property;
+                    bool usingWrapper = propertyData.wrapperEquivalentProperty != null;
+                    var property = usingWrapper ? propertyData.wrapperEquivalentProperty : cachedProperties[i].property;
 
                     bool registered = RPCRegistry.TryGetRPC(property.SetMethod, out var rpcMethodInfo);
                     hasRegistered |= registered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (ButtonGUI(registered))
+                    if (propertyData.guiState.onInvocationGUI != null && ExpandButtonGUI(registered))
+                        propertyData.guiState.expandInvocationGroup = !propertyData.guiState.expandInvocationGroup;
+
+                    if (EventButtonGUI(registered))
                     {
                         if (registered)
                         {
@@ -555,8 +813,13 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     if (registered)
                         RPCToggleGUI(targetInstance, ref rpcMethodInfo);
-                    InfoGUI(propertyDescriptor.propertyString, usingWrapper, property.DeclaringType);
+                    InfoGUI(propertyData.propertyString, usingWrapper, property.DeclaringType);
                     EditorGUILayout.EndHorizontal();
+
+                    if (propertyData.guiState.expandInvocationGroup)
+                        propertyData.guiState.onInvocationGUI(usingWrapper ? propertyData.instance : targetInstance);
+
+                    cachedPropertyData[cachedProperties[i].property] = propertyData;
                 }
 
                 EndScrollView();

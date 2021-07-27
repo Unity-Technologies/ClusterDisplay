@@ -6,8 +6,13 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    public class DedicatedAttribute : Attribute {}
+
     public static partial class ReflectionUtils
     {
+        private readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
+
         public static MethodInfo[] GetMethodsWithRPCCompatibleParamters (
             System.Type type, 
             string filter) =>
@@ -79,11 +84,67 @@ namespace Unity.ClusterDisplay
 
                         }).ToArray();
 
-        public static bool TryGetAllMethodsWithAttribute<T> (
+        public static bool TryGetMethodWithDedicatedAttribute<AttributeType>(out MethodInfo methodInfo)
+            where AttributeType : DedicatedAttribute =>
+            TryGetMethodWithDedicatedAttribute(typeof(AttributeType), out methodInfo);
+
+        public static bool TryGetMethodWithDedicatedAttribute (System.Type attributeType, out MethodInfo methodInfo)
+        {
+            if (attributeType == null)
+            {
+                Debug.LogError("Cannot get method with null attribute!");
+                methodInfo = null;
+                return false;
+            }
+
+            if (cachedMethodsWithDedicatedAttributes.TryGetValue(attributeType, out methodInfo))
+                return true;
+
+            #if UNITY_EDITOR
+
+            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType);
+
+            #else
+
+            if (!TryGetAllMethodsWithAttribute(attributeType, out var methods))
+                return false;
+
+            #endif
+
+            if (methods.Count == 0)
+                return false;
+
+            if (methods.Count > 1)
+            {
+                Debug.LogError($"There is more than one method with attribute: \"{attributeType.Name}\", this dedicated attribute should only be applied to one method.");
+                return false;
+            }
+
+            methodInfo = methods.FirstOrDefault();
+            if (methodInfo == null)
+                return false;
+
+            cachedMethodsWithDedicatedAttributes.Add(attributeType, methodInfo);
+            return true;
+        }
+
+        public static bool TryGetAllMethodsWithAttribute<AttributeType>(
+            out MethodInfo[] methodInfos,
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            where AttributeType : Attribute =>
+            TryGetAllMethodsWithAttribute(typeof(AttributeType), out methodInfos);
+
+        public static bool TryGetAllMethodsWithAttribute (
+            System.Type attributeType,
             out MethodInfo[] methodInfos, 
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-            where T : Attribute
         {
+            #if UNITY_EDITOR
+
+            methodInfos = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType).ToArray();
+            return methodInfos.Length > 0;
+
+            #else
 
             List<MethodInfo> list = new List<MethodInfo>();
             for (int ti = 0; ti < CachedTypes.Length; ti++)
@@ -106,6 +167,8 @@ namespace Unity.ClusterDisplay
 
             methodInfos = list.ToArray();
             return methodInfos.Length > 0;
+
+            #endif
         }
 
         public static bool TryFindMethodWithMatchingSignature (Type type, MethodInfo methodToMatch, out MethodInfo matchedMethod) =>

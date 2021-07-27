@@ -135,6 +135,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (rpc.method.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
                     var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.method.declaryingTypeFullName);
+                    if (typeDefinition == null)
+                    {
+                        Debug.Log($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeFullName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
+                        continue;
+                    }
+
                     MethodReference targetMethodRef = null;
 
                     if (!TryFindMethodWithMatchingFormalySerializedAs(
@@ -143,10 +149,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         rpc.method.methodName,
                         out targetMethodRef) &&
                         !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
-                    {
-                        Debug.LogError($"Unable to find method signature: \"{rpc.method.methodName}\".");
-                        return false;
-                    }
+                        continue;
 
                     if (MethodAlreadyProcessed(targetMethodRef))
                         continue;

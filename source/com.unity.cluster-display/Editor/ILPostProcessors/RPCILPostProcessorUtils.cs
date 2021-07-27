@@ -81,6 +81,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             string serializedMethodName, 
             out MethodReference outMethodRef)
         {
+            if (typeDefinition == null)
+            {
+                Debug.LogError($"Unable to find serialized method: \"{serializedMethodName}\", the type definition is null!");
+                outMethodRef = null;
+                return false;
+            }
+
             var rpcMethodAttributeType = typeof(ClusterRPC);
             var stringType = typeof(string);
 
@@ -116,6 +123,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 }
             }
 
+            Debug.LogError($"Unable to find method signature: \"{serializedMethodName}\" declared in type: \"{typeDefinition.Name}\".");
             outMethodRef = null;
             return false;
         }
