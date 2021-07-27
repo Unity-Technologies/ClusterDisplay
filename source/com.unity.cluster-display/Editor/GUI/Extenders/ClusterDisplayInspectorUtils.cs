@@ -2,9 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+
+using MethodGUIFunc = System.Func<UnityEngine.Component, System.Object[], System.Object[]>;
 
 namespace Unity.ClusterDisplay.Editor.Inspectors
 {
@@ -21,11 +24,17 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         private class Vector2FieldAttribute : DedicatedAttribute {}
         private class Vector3FieldAttribute : DedicatedAttribute {}
         private class Vector4FieldAttribute : DedicatedAttribute {}
+        private class QuaternionFieldAttribute : DedicatedAttribute {}
         private class BeginHorizontalAttrikbute : DedicatedAttribute {}
         private class EndHorizontalAttrikbute : DedicatedAttribute {}
         private class FoldoutAttribute : DedicatedAttribute {}
         private class GetIndentAttribute : DedicatedAttribute {}
         private class SetIndentAttribute : DedicatedAttribute {}
+        private class InvokeButtonAttribute : DedicatedAttribute {}
+
+        [InvokeButton]
+        private static bool InvokeButton (string methodName) =>
+            GUILayout.Button(new GUIContent(methodName, "Invoke the selected method")/*, GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(methodName)).x + 10)*/);
 
         private class InvokeMethodButtonAttribute : DedicatedAttribute {}
         private static string PrettyFieldLabel (string label) =>
@@ -37,21 +46,26 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             EditorGUILayout.LabelField(label, GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(label)).x));
         }
 
-        [BeginHorizontalAttrikbute] private static void BeginHorizontal () =>                   EditorGUILayout.BeginHorizontal();
-        [EndHorizontalAttrikbute] private static void EndHorizontal () =>                       EditorGUILayout.EndHorizontal();
-        [Foldout] private static void Foldout (string label) =>                                 EditorGUILayout.Foldout(true, label);
-        [GetIndent] private static int GetIndent() =>                                           EditorGUI.indentLevel;
-        [SetIndent] private static void SetIndent(int indentLevel) =>                           EditorGUI.indentLevel = indentLevel;
-        [FloatField] private static float FloatField(string label, float value) =>              EditorGUILayout.FloatField(PrettyFieldLabel(label), value);
-        [DoubleField] private static double DoubleField(string label, double value) =>          EditorGUILayout.DoubleField(PrettyFieldLabel(label), value);
-        [IntField] private static int IntField(string label, int value) =>                      EditorGUILayout.IntField(PrettyFieldLabel(label), value);
-        [BoolField] private static bool BoolField(string label, bool value) =>                  EditorGUILayout.Toggle(PrettyFieldLabel(label), value);
-        [LongField] private static long LongField(string label, long value) =>                  EditorGUILayout.LongField(PrettyFieldLabel(label), value);
-        [TextField] private static string TextField(string label, string value) =>              EditorGUILayout.TextField(PrettyFieldLabel(label), value);
-        [ColorField] private static Color ColorField(string label, Color value) =>              EditorGUILayout.ColorField(PrettyFieldLabel(label), value);
-        [Vector2Field] private static Vector2 Vector2Field(string label, Vector2 value) =>      EditorGUILayout.Vector2Field(PrettyFieldLabel(label), value);
-        [Vector3Field] private static Vector3 Vector3Field(string label, Vector3 value) =>      EditorGUILayout.Vector3Field(PrettyFieldLabel(label), value);
-        [Vector4Field] private static Vector4 Vector4Field(string label, Vector4 value) =>      EditorGUILayout.Vector4Field(PrettyFieldLabel(label), value);
+        [BeginHorizontalAttrikbute] private static void BeginHorizontal () =>                           EditorGUILayout.BeginHorizontal();
+        [EndHorizontalAttrikbute] private static void EndHorizontal () =>                               EditorGUILayout.EndHorizontal();
+        [Foldout] private static void Foldout (string label) =>                                         EditorGUILayout.Foldout(true, label);
+        [GetIndent] private static int GetIndent() =>                                                   EditorGUI.indentLevel;
+        [SetIndent] private static void SetIndent(int indentLevel) =>                                   EditorGUI.indentLevel = indentLevel;
+        [FloatField] private static float FloatField(string label, float value) =>                      EditorGUILayout.FloatField(PrettyFieldLabel(label), value);
+        [DoubleField] private static double DoubleField(string label, double value) =>                  EditorGUILayout.DoubleField(PrettyFieldLabel(label), value);
+        [IntField] private static int IntField(string label, int value) =>                              EditorGUILayout.IntField(PrettyFieldLabel(label), value);
+        [BoolField] private static bool BoolField(string label, bool value) =>                          EditorGUILayout.Toggle(PrettyFieldLabel(label), value);
+        [LongField] private static long LongField(string label, long value) =>                          EditorGUILayout.LongField(PrettyFieldLabel(label), value);
+        [TextField] private static string TextField(string label, string value) =>                      EditorGUILayout.TextField(PrettyFieldLabel(label), value);
+        [ColorField] private static Color ColorField(string label, Color value) =>                      EditorGUILayout.ColorField(PrettyFieldLabel(label), value);
+        [Vector2Field] private static Vector2 Vector2Field(string label, Vector2 value) =>              EditorGUILayout.Vector2Field(PrettyFieldLabel(label), value);
+        [Vector3Field] private static Vector3 Vector3Field(string label, Vector3 value) =>              EditorGUILayout.Vector3Field(PrettyFieldLabel(label), value);
+        [Vector4Field] private static Vector4 Vector4Field(string label, Vector4 value) =>              EditorGUILayout.Vector4Field(PrettyFieldLabel(label), value);
+        [QuaternionField] private static Quaternion QuaternionField(string label, Quaternion value)
+        {
+            var newValue = EditorGUILayout.Vector3Field(PrettyFieldLabel(label), value.eulerAngles);
+            return Quaternion.Euler(newValue);
+        }
         [EnumField] private static EnumType EnumField<EnumType>(string label, EnumType value)
             where EnumType : Enum =>                                                            (EnumType)EditorGUILayout.EnumPopup(PrettyFieldLabel(label), value);
 
@@ -82,6 +96,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 attributeType = typeof(Vector3FieldAttribute);
             else if (type == typeof(Vector4))
                 attributeType = typeof(Vector4FieldAttribute);
+            else if (type == typeof(Quaternion))
+                attributeType = typeof(QuaternionFieldAttribute);
             else return false;
 
             return ReflectionUtils.TryGetMethodWithDedicatedAttribute(attributeType, out methodInfo);
@@ -259,10 +275,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 localVariables,
                 instructions);
 
-            var lambda = Expression.Lambda<Action<Component>>(block, componentParameter);
-
             try
             {
+                var lambda = Expression.Lambda<Action<Component>>(block, componentParameter);
                 guiMethod = lambda.Compile();
                 return true;
             }
@@ -276,7 +291,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         public static bool TryCreateMethodGUI (
             MethodInfo methodInfo, 
             Component targetInstance, 
-            out Func<Component, object, object> guiMethod)
+            out MethodGUIFunc guiMethod)
         {
             guiMethod = null;
 
@@ -286,36 +301,81 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 return false;
 
             var componentParameter = Expression.Parameter(typeof(Component), "component");
-            var cachedArgumentsParameter = Expression.Parameter(typeof(object), "cachedArguments");
+            var cachedArgumentsParameter = Expression.Parameter(typeof(object[]), "cachedArguments");
             var castedInstanceVariable = Expression.Variable(targetInstance.GetType(), "instance");
             var instanceAssignementExpression = Expression.Assign(castedInstanceVariable, Expression.Convert(componentParameter, targetInstance.GetType()));
 
             var localVariables = new List<ParameterExpression>() { castedInstanceVariable };
             var instructions = new List<Expression>() { instanceAssignementExpression };
 
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<InvokeButtonAttribute>(out var invokeButtonMethod))
+                return false;
+
             var parameters = methodInfo.GetParameters();
             if (parameters.Length == 0)
             {
-                for (int pi = 0; pi < parameters.Length; pi++)
-                {
-                }
+
+                instructions.Add(Expression.IfThen(Expression.Call(invokeButtonMethod, Expression.Constant($"Invoke: \"{methodInfo.Name}\"")), Expression.Call(castedInstanceVariable, methodInfo)));
+                instructions.Add(Expression.Convert(Expression.Constant(null), typeof(object[])));
             }
 
             else
             {
+                var valueTypeArrayType = typeof(object[]);
+                var valueTypeArrayLengthProperty = valueTypeArrayType
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(property => property.Name == "Length");
 
+                var initExpressions = parameters.Select(parameter => Expression.Convert(Expression.Default(parameter.ParameterType), typeof(object)));
+                instructions.Add(
+                    Expression.IfThen(
+                        Expression.Equal(
+                            cachedArgumentsParameter,
+                            Expression.Constant(null)),
+                        Expression.Assign(cachedArgumentsParameter, Expression.NewArrayInit(typeof(object), initExpressions))));
+
+                ParameterExpression[] arguments = new ParameterExpression[parameters.Length];
+                for (int pi = 0; pi < parameters.Length; pi++)
+                {
+                    var localParameterVariable = Expression.Variable(parameters[pi].ParameterType);
+                    arguments[pi] = localParameterVariable;
+                    localVariables.Add(localParameterVariable);
+
+                    var cachedArgumentsArrayAccess = Expression.ArrayAccess(cachedArgumentsParameter, Expression.Constant(pi));
+                    instructions.Add(
+                        Expression.IfThen(
+                            Expression.Equal(cachedArgumentsArrayAccess, Expression.Constant(null)),
+                            Expression.Assign(cachedArgumentsArrayAccess, Expression.Constant(Expression.Default(parameters[pi].ParameterType), typeof(object)))));
+
+                    instructions.Add(Expression.Assign(arguments[pi], Expression.Convert(cachedArgumentsArrayAccess, parameters[pi].ParameterType)));
+                }
+
+                instructions.Add(Expression.IfThen(Expression.Call(invokeButtonMethod, Expression.Constant($"Invoke: \"{methodInfo.Name}\"")), Expression.Call(castedInstanceVariable, methodInfo, arguments)));
+
+                for (int pi = 0; pi < parameters.Length; pi++)
+                {
+                    var cachedArgumentsArrayAccess = Expression.ArrayAccess(cachedArgumentsParameter, Expression.Constant(pi));
+                    if (!TryRecursivelyBuildGUIInstructionsForType(
+                        arguments[pi],
+                        parameters[pi].ParameterType,
+                        parameters[pi].Name,
+                        localVariables,
+                        instructions))
+                        return false;
+
+                    instructions.Add(Expression.Assign(cachedArgumentsArrayAccess, Expression.Convert(arguments[pi], typeof(object))));
+                }
+
+                instructions.Add(cachedArgumentsParameter);
             }
-
-            instructions.Add(Expression.Constant(null));
 
             var block = Expression.Block(
                 localVariables,
                 instructions);
 
-            var lambda = Expression.Lambda<Func<Component, object, object>>(block, componentParameter, cachedArgumentsParameter);
-
             try
             {
+                var lambda = Expression.Lambda<MethodGUIFunc>(block, componentParameter, cachedArgumentsParameter);
                 guiMethod = lambda.Compile();
                 return true;
             }

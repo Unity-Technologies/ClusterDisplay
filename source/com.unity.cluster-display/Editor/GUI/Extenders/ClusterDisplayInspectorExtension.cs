@@ -7,6 +7,8 @@ using Unity.ClusterDisplay.RPC;
 using UnityEditor;
 using UnityEngine;
 
+using MethodGUIFunc = System.Func<UnityEngine.Component, System.Object[], System.Object[]>;
+
 namespace Unity.ClusterDisplay.Editor.Inspectors
 {
     public interface IInspectorExtension<InstanceType>
@@ -18,7 +20,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
     public struct MethodMemberData
     {
-        public UnityEngine.Component wrappedInstance; 
+        public bool isRegistered;
+
+        public UnityEngine.Component wrappedInstance;
 
         public MethodInfo methodInfo;
         public string methodString;
@@ -27,11 +31,13 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         public MethodInfo wrapperEquivalentMethodInfo;
 
         public bool expand;
-        public Func<UnityEngine.Component, object, object> onGUI;
+        public MethodGUIFunc onGUI;
     }
 
     public struct PropertyMemberData
     {
+        public bool isRegistered;
+
         public UnityEngine.Component targetInstance; 
 
         public PropertyInfo propertyInfo;
@@ -430,13 +436,24 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     cachedMethod =>
                     {
                         // Using the property in our target instance, find equivalent property in the type that wraps our target type.
-                        Func<Component, object, object> onMethodInvocationGUI = null;
+
+                        MethodGUIFunc onGUI = null;
+                        bool isRegistered = false;
+
                         if (ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod))
-                            ClusterDisplayInspectorUtils.TryCreateMethodGUI(wrapperMethod, wrapperInstance, out onMethodInvocationGUI);
+                        {
+                            isRegistered = RPCRegistry.MethodRegistered(wrapperMethod);
+                            if (isRegistered)
+                                ClusterDisplayInspectorUtils.TryCreateMethodGUI(wrapperMethod, wrapperInstance, out onGUI);
+                        }
+
+                        else isRegistered = RPCRegistry.MethodRegistered(cachedMethod);
 
                         // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
                         return new MethodMemberData
                         {
+                            isRegistered = isRegistered,
+
                             wrappedInstance = targetInstance,
 
                             methodInfo = cachedMethod,
@@ -445,7 +462,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                             wrapperInstance = wrapperInstance,
                             wrapperEquivalentMethodInfo = wrapperMethod,
 
-                            onGUI = onMethodInvocationGUI,
+                            onGUI = onGUI,
                             expand = false,
                         };
                     });
@@ -458,9 +475,14 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 cachedMethod => cachedMethod,
                 cachedMethod => 
                 {
-                    ClusterDisplayInspectorUtils.TryCreateMethodGUI(cachedMethod, targetInstance, out var onMethodInvocationGUI);
+                    bool isRegistered = RPCRegistry.MethodRegistered(cachedMethod);
+                    MethodGUIFunc onGUI = null;
+                    if (isRegistered)
+                        ClusterDisplayInspectorUtils.TryCreateMethodGUI(cachedMethod, targetInstance, out onGUI);
+
                     return new MethodMemberData
                     {
+                        isRegistered = isRegistered,
                         wrappedInstance = targetInstance,
 
                         methodInfo = cachedMethod,
@@ -469,21 +491,97 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                         wrapperInstance = null,
                         wrapperEquivalentMethodInfo = null,
 
-                        onGUI = onMethodInvocationGUI,
+                        onGUI = onGUI,
                         expand = false,
                     };
                 });
         }
 
-        private readonly Dictionary<Component, Dictionary<MethodInfo, object>> cachedArgs = new Dictionary<Component, Dictionary<MethodInfo, object>>();
+        private void CachePropertiesAndDescriptors<InstanceType> (InstanceType targetInstance)
+            where InstanceType : Component
+        {
+            cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
+
+            // If our wrapper type exists, then we should be using our wrapper properties instead.
+            if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
+            {
+                var wrapperInstance = targetInstance.gameObject.GetComponent(wrapperType);
+
+                // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
+                cachedPropertyData = cachedProperties.ToDictionary(
+                    cachedPropertyData => cachedPropertyData.property,
+                    cachedPropertyData => {
+
+                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
+                        Action<Component> onGUI = null;
+                        bool isRegistered = false;
+
+                        if (ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty))
+                        {
+                            isRegistered = RPCRegistry.MethodRegistered(wrapperProperty.SetMethod);
+                            if (isRegistered)
+                                ClusterDisplayInspectorUtils.TryCreatePropertyGUI(wrapperProperty, wrapperInstance, out onGUI);
+                        }
+
+                        else isRegistered = RPCRegistry.MethodRegistered(cachedPropertyData.property.SetMethod);
+
+                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
+                        return new PropertyMemberData
+                        {
+                            isRegistered = isRegistered,
+
+                            targetInstance = targetInstance,
+
+                            propertyInfo = cachedPropertyData.property,
+                            propertyString = PrettyPropertyName(cachedPropertyData.property),
+
+                            wrapperInstance = wrapperInstance,
+                            wrapperEquivalentProperty = wrapperProperty,
+
+                            onGUI = onGUI,
+                            expand = false,
+                        };
+                    });
+
+                return;
+            }
+
+            // If our wrapper does not exist, then we just use our target type properties instead.
+            cachedPropertyData = cachedProperties.ToDictionary(
+                cachedPropertyData => cachedPropertyData.property,
+                cachedPropertyData => {
+
+                    bool isRegistered = RPCRegistry.MethodRegistered(cachedPropertyData.property.SetMethod);
+                    Action<Component> onGUI = null;
+                    if (isRegistered)
+                        ClusterDisplayInspectorUtils.TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, out onGUI);
+
+                    return new PropertyMemberData
+                    {
+                        isRegistered = isRegistered,
+                        targetInstance = targetInstance,
+
+                        propertyInfo = cachedPropertyData.property,
+                        propertyString = PrettyPropertyName(cachedPropertyData.property),
+
+                        wrapperInstance = null,
+                        wrapperEquivalentProperty = null,
+
+                        onGUI = onGUI,
+                        expand = false
+                    };
+                });
+        }
+
+        private readonly Dictionary<Component, Dictionary<MethodInfo, object[]>> cachedArgs = new Dictionary<Component, Dictionary<MethodInfo, object[]>>();
         protected bool PollMethods<InstanceType> (
             InstanceType targetInstance, 
-            out System.Reflection.MethodInfo selectedMethodInfo, 
+            out System.Reflection.MethodInfo methodToRegister, 
             out SelectedState selectedState, 
             ref bool hasRegistered)
             where InstanceType : Component
         {
-            selectedMethodInfo = null;
+            methodToRegister = null;
             selectedState = SelectedState.None;
 
             if (targetInstance == null)
@@ -502,35 +600,38 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     // Determine whether a wrapper method exists, and if it does, use that one instead, otherwise use the target instance method.
                     bool usingWrapper = methodData.wrapperEquivalentMethodInfo != null;
-                    var method = usingWrapper ? methodData.wrapperEquivalentMethodInfo : cachedMethods[i];
+                    var selectedMethod = usingWrapper ? methodData.wrapperEquivalentMethodInfo : cachedMethods[i];
 
-                    bool registered = RPCRegistry.TryGetRPC(method, out var rpcMethodInfo);
-                    hasRegistered |= registered;
+                    hasRegistered |= methodData.isRegistered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (methodData.onGUI != null && ExpandButtonGUI(registered))
+                    if (methodData.onGUI != null && ExpandButtonGUI(methodData.isRegistered))
                         methodData.expand = !methodData.expand;
 
-                    if (EventButtonGUI(registered))
+                    if (EventButtonGUI(methodData.isRegistered))
                     {
-                        if (registered)
+                        if (methodData.isRegistered)
                         {
-                            RPCRegistry.RemoveRPC(method);
-                            selectedMethodInfo = method;
+                            RPCRegistry.RemoveRPC(selectedMethod);
+                            methodToRegister = selectedMethod;
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(method))
+                        else if (RPCRegistry.TryAddNewRPC(selectedMethod))
                         {
-                            selectedMethodInfo = method;
+                            methodToRegister = selectedMethod;
                             selectedState = SelectedState.Added;
                         }
                     }
 
-                    if (registered)
-                        RPCToggleGUI(targetInstance, ref rpcMethodInfo);
-                    InfoGUI(methodData.methodString, usingWrapper, method.DeclaringType);
+                    if (methodData.isRegistered)
+                    {
+                        if (RPCRegistry.TryGetRPC(selectedMethod, out var rpcMethodInfo))
+                            RPCToggleGUI(targetInstance, ref rpcMethodInfo);
+                    }
+
+                    InfoGUI(methodData.methodString, usingWrapper, selectedMethod.DeclaringType);
                     EditorGUILayout.EndHorizontal();
 
                     if (methodData.expand)
@@ -557,7 +658,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                             {
                                 var args = methodData.onGUI(usingWrapper ? methodData.wrapperInstance : targetInstance, null);
                                 if (args != null)
-                                    cachedArgs.Add(targetInstance, new Dictionary<MethodInfo, object>() {{methodData.methodInfo, args}});
+                                    cachedArgs.Add(targetInstance, new Dictionary<MethodInfo, object[]>() {{methodData.methodInfo, args}});
                             }
                         }
                     }
@@ -571,79 +672,17 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             else EditorGUILayout.LabelField("No Methods Available");
             EndTab();
 
-            return selectedState != SelectedState.None && selectedMethodInfo != null;
-        }
-
-        private void CachePropertiesAndDescriptors<InstanceType> (InstanceType targetInstance)
-            where InstanceType : Component
-        {
-            cachedProperties = ReflectionUtils.GetAllPropertySetMethods(targetInstance.GetType(), propertySearchStr, valueTypesOnly: true, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static);
-
-            // If our wrapper type exists, then we should be using our wrapper properties instead.
-            if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
-            {
-                var wrapperInstance = targetInstance.gameObject.GetComponent(wrapperType);
-
-                // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
-                cachedPropertyData = cachedProperties.ToDictionary(
-                    cachedPropertyData => cachedPropertyData.property,
-                    cachedPropertyData => {
-
-                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
-                        Action<Component> onPropertyInvocationGUI = null;
-                        if (ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty))
-                            ClusterDisplayInspectorUtils.TryCreatePropertyGUI(wrapperProperty, wrapperInstance, out onPropertyInvocationGUI);
-
-                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
-                        return new PropertyMemberData
-                        {
-                            targetInstance = targetInstance,
-
-                            propertyInfo = cachedPropertyData.property,
-                            propertyString = PrettyPropertyName(cachedPropertyData.property),
-
-                            wrapperInstance = wrapperInstance,
-                            wrapperEquivalentProperty = wrapperProperty,
-
-                            onGUI = onPropertyInvocationGUI,
-                            expand = false,
-                        };
-                    });
-
-                return;
-            }
-
-            // If our wrapper does not exist, then we just use our target type properties instead.
-            cachedPropertyData = cachedProperties.ToDictionary(
-                cachedPropertyData => cachedPropertyData.property,
-                cachedPropertyData => {
-
-                    ClusterDisplayInspectorUtils.TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, out var onPropertyInvocationGUI);
-
-                    return new PropertyMemberData
-                    {
-                        targetInstance = targetInstance,
-
-                        propertyInfo = cachedPropertyData.property,
-                        propertyString = PrettyPropertyName(cachedPropertyData.property),
-
-                        wrapperInstance = null,
-                        wrapperEquivalentProperty = null,
-
-                        onGUI = onPropertyInvocationGUI,
-                        expand = false
-                    };
-                });
+            return selectedState != SelectedState.None && methodToRegister != null;
         }
 
         protected bool PollProperties<InstanceType> (
             InstanceType targetInstance, 
-            out (PropertyInfo property, MethodInfo setMethod) selectedProperty, 
+            out PropertyInfo propertyToRegister, 
             out SelectedState selectedState,
             ref bool hasRegistered)
             where InstanceType : Component
         {
-            selectedProperty = (null, null);
+            propertyToRegister = null;
             selectedState = SelectedState.None;
 
             if (targetInstance == null)
@@ -663,35 +702,37 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     // Determine whether a wrapper property exists, and if it does, use that one instead, otherwise use the target instance property.
                     bool usingWrapper = propertyData.wrapperEquivalentProperty != null;
-                    var property = usingWrapper ? propertyData.wrapperEquivalentProperty : cachedProperties[i].property;
-
-                    bool registered = RPCRegistry.TryGetRPC(property.SetMethod, out var rpcMethodInfo);
-                    hasRegistered |= registered;
+                    var selectedProperty = usingWrapper ? propertyData.wrapperEquivalentProperty : cachedProperties[i].property;
+                    hasRegistered |= propertyData.isRegistered;
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (propertyData.onGUI != null && ExpandButtonGUI(registered))
+                    if (propertyData.onGUI != null && ExpandButtonGUI(propertyData.isRegistered))
                         propertyData.expand = !propertyData.expand;
 
-                    if (EventButtonGUI(registered))
+                    if (EventButtonGUI(propertyData.isRegistered))
                     {
-                        if (registered)
+                        if (propertyData.isRegistered)
                         {
-                            RPCRegistry.RemoveRPC(property.SetMethod);
-                            selectedProperty = (property, property.SetMethod);
+                            RPCRegistry.RemoveRPC(selectedProperty.SetMethod);
+                            propertyToRegister = selectedProperty;
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(property))
+                        else if (RPCRegistry.TryAddNewRPC(selectedProperty))
                         {
-                            selectedProperty = (property, property.SetMethod);
+                            propertyToRegister = selectedProperty;
                             selectedState = SelectedState.Added;
                         }
                     }
 
-                    if (registered)
-                        RPCToggleGUI(targetInstance, ref rpcMethodInfo);
-                    InfoGUI(propertyData.propertyString, usingWrapper, property.DeclaringType);
+                    if (propertyData.isRegistered)
+                    {
+                        if (RPCRegistry.TryGetRPC(selectedProperty.SetMethod, out var rpcMethodInfo))
+                            RPCToggleGUI(targetInstance, ref rpcMethodInfo);
+                    }
+
+                    InfoGUI(propertyData.propertyString, usingWrapper, selectedProperty.DeclaringType);
 
                     EditorGUILayout.EndHorizontal();
 
@@ -708,7 +749,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             else EditorGUILayout.LabelField("No Properties Available");
             EndTab();
 
-            return selectedState != SelectedState.None && selectedProperty.property != null && selectedProperty.setMethod != null;
+            return selectedState != SelectedState.None && propertyToRegister != null && propertyToRegister.SetMethod != null;
         }
     }
 }
