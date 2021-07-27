@@ -16,41 +16,39 @@ namespace Unity.ClusterDisplay
         public static MethodInfo[] GetMethodsWithRPCCompatibleParamters (
             System.Type type, 
             string filter) =>
+
                 string.IsNullOrEmpty(filter) ?
+
                     type
                         .GetMethods(BindingFlags.Instance | BindingFlags.Public)
                         .Where(method => DetermineIfMethodIsRPCCompatible(method)).ToArray()
+
                     :
+
                     type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                         .Where(method =>
                                 (method.Name.Contains(filter)) &&
                                 DetermineIfMethodIsRPCCompatible(method)).ToArray();
 
-        public static FieldInfo[] GetAllFieldsFromType (
-            System.Type type, 
-            string filter, 
+        public static FieldInfo[] GetAllFieldsFromType(
+            System.Type type,
+            string filter,
             bool valueTypesOnly = false,
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static) =>
+
                 string.IsNullOrEmpty(filter) ?
 
                     type.GetFields(bindingFlags)
-                        .Where(field =>
-                        {
-                            return
-                                (valueTypesOnly ? field.FieldType.IsValueType : true);
-                        })
+                        .Where(field => (valueTypesOnly ? field.FieldType.IsValueType : true))
                         .ToArray()
 
                     :
 
                     type.GetFields(bindingFlags)
                         .Where(field =>
-                        {
-                            return
                                 (valueTypesOnly ? field.FieldType.IsValueType : true) &&
-                                field.Name.Contains(filter);
-
-                        }).ToArray();
+                                field.Name.Contains(filter))
+                        .ToArray();
 
         public static MethodInfo[] GetAllMethodsFromType (
             System.Type type, 
@@ -58,31 +56,25 @@ namespace Unity.ClusterDisplay
             bool valueTypeParametersOnly = false,
             bool includeGenerics = true,
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static) => 
+
                 string.IsNullOrEmpty(filter) ?
 
                     type.GetMethods(bindingFlags)
                         .Where(method =>
-                        {
-                            return
                                 !method.IsSpecialName &&
                                 (!includeGenerics ? !method.IsGenericMethod : true) &&
-                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
-
-                        })
+                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true))
                         .ToArray()
 
                     :
 
                     type.GetMethods(bindingFlags)
                         .Where(method =>
-                        {
-                            return
                                 !method.IsSpecialName &&
                                 (!includeGenerics ? !method.IsGenericMethod : true) &&
                                 (method.Name.Contains(filter)) &&
-                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
-
-                        }).ToArray();
+                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true))
+                        .ToArray();
 
         public static bool TryGetMethodWithDedicatedAttribute<AttributeType>(out MethodInfo methodInfo)
             where AttributeType : DedicatedAttribute =>

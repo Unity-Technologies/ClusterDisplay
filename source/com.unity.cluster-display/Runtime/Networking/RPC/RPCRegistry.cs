@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.RPC
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         private static readonly Dictionary<ushort, RPCMethodInfo> m_RPCs = new Dictionary<ushort, RPCMethodInfo>();
-        private static readonly Dictionary<string, ushort> m_MethodUniqueIdToRPCId = new Dictionary<string, ushort>();
+        private static readonly Dictionary<MethodInfo, ushort> m_MethodUniqueIdToRPCId = new Dictionary<MethodInfo, ushort>();
         private static readonly Dictionary<System.Type, List<ushort>> m_TypeToRPCIds = new Dictionary<System.Type, List<ushort>>();
         public static int RPCCount => m_RPCs.Count;
 
@@ -71,13 +71,12 @@ namespace Unity.ClusterDisplay.RPC
         public static OnRemovePropertyWrapperDelegate onRemovePropertyWrapper;
 
         public static bool MethodRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
-        public static bool MethodRegistered(MethodInfo methodInfo) => m_MethodUniqueIdToRPCId.ContainsKey(MethodToUniqueId(methodInfo));
-        public static bool MethodRegistered(string methodUniqueId) => m_MethodUniqueIdToRPCId.ContainsKey(methodUniqueId);
+        public static bool MethodRegistered(MethodInfo methodInfo) => m_MethodUniqueIdToRPCId.ContainsKey(methodInfo);
 
         public static bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo) => m_RPCs.TryGetValue(rpcId, out rpcMethodInfo);
         public static bool TryGetRPC(MethodInfo methodInfo, out RPCMethodInfo rpcMethodInfo)
         {
-            if (!m_MethodUniqueIdToRPCId.TryGetValue(MethodToUniqueId(methodInfo), out var rpcId))
+            if (!m_MethodUniqueIdToRPCId.TryGetValue(methodInfo, out var rpcId))
             {
                 rpcMethodInfo = default(RPCMethodInfo);
                 return false;
@@ -139,15 +138,15 @@ namespace Unity.ClusterDisplay.RPC
 
         private bool AssemblyIsRegistered(Assembly assembly) => targetAssemblies.Contains(assembly);
 
-        private void RegisterRPCIdWithMethodUniqueId (string methodUniqueId, ushort rpcId)
+        private void RegisterRPCIdWithMethodUniqueId (MethodInfo methodInfo, ushort rpcId)
         {
-            if (m_MethodUniqueIdToRPCId.ContainsKey(methodUniqueId))
+            if (m_MethodUniqueIdToRPCId.ContainsKey(methodInfo))
             {
-                m_MethodUniqueIdToRPCId[methodUniqueId] = rpcId;
+                m_MethodUniqueIdToRPCId[methodInfo] = rpcId;
                 return;
             }
 
-            m_MethodUniqueIdToRPCId.Add(methodUniqueId, rpcId);
+            m_MethodUniqueIdToRPCId.Add(methodInfo, rpcId);
         }
 
         private void RegisterRPCIdWithType (System.Type type, ushort rpcId)
@@ -180,7 +179,7 @@ namespace Unity.ClusterDisplay.RPC
                 targetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
 
             m_RPCs.Add(rpcMethodInfo.rpcId, rpcMethodInfo);
-            RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodUniqueId, rpcMethodInfo.rpcId);
+            RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
 
             #if UNITY_EDITOR
@@ -193,7 +192,7 @@ namespace Unity.ClusterDisplay.RPC
             var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
 
             m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
-            RegisterRPCIdWithMethodUniqueId(MethodToUniqueId(rpcMethodInfo.methodInfo), rpcMethodInfo.rpcId);
+            RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
 
             #if UNITY_EDITOR
@@ -204,7 +203,7 @@ namespace Unity.ClusterDisplay.RPC
         private void UnregisterRPC (ref RPCMethodInfo rpcMethodInfo)
         {
             m_RPCs.Remove(rpcMethodInfo.rpcId);
-            m_MethodUniqueIdToRPCId.Remove(rpcMethodInfo.methodUniqueId);
+            m_MethodUniqueIdToRPCId.Remove(rpcMethodInfo.methodInfo);
             m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
 
             if (WrapperUtils.IsWrapper(rpcMethodInfo.methodInfo.DeclaringType))
@@ -257,7 +256,7 @@ namespace Unity.ClusterDisplay.RPC
         private bool TryAddPostProcessableRPC (MethodInfo methodInfo)
         {
             var methodUniqueId = MethodToUniqueId(methodInfo);
-            if (m_MethodUniqueIdToRPCId.TryGetValue(methodUniqueId, out var rpcId))
+            if (m_MethodUniqueIdToRPCId.TryGetValue(methodInfo, out var rpcId))
             {
                 Debug.LogError($"Cannot add RPC method: \"{methodInfo.Name}\" from declaring type: \"{methodInfo.DeclaringType}\", it has already been registered!");
                 return false;
@@ -270,7 +269,6 @@ namespace Unity.ClusterDisplay.RPC
                 rpcId, 
                 RPCExecutionStage.Automatic, 
                 methodInfo, 
-                methodUniqueId,
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);
@@ -341,7 +339,7 @@ namespace Unity.ClusterDisplay.RPC
         public static void RemoveRPC (MethodInfo methodInfo)
         {
             var methodUniqueId = MethodToUniqueId(methodInfo);
-            if (!m_MethodUniqueIdToRPCId.TryGetValue(methodUniqueId, out var rpcId))
+            if (!m_MethodUniqueIdToRPCId.TryGetValue(methodInfo, out var rpcId))
                 return;
             RemoveRPC(rpcId);
         }
@@ -443,15 +441,13 @@ namespace Unity.ClusterDisplay.RPC
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo)
         {
-            var methodUniqueId = MethodToUniqueId(methodInfo);
-            if (MethodRegistered(methodUniqueId))
+            if (MethodRegistered(methodInfo))
                 return false;
 
             var rpcMethodInfo = new RPCMethodInfo(
                 rpcId, 
                 rpcExecutionStage, 
                 methodInfo, 
-                methodUniqueId,
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);
@@ -461,8 +457,7 @@ namespace Unity.ClusterDisplay.RPC
 
         private bool TryRegisterStagedMethod (MethodInfo stagedMethod)
         {
-            var methodUniqueId = MethodToUniqueId(stagedMethod);
-            if (m_MethodUniqueIdToRPCId.TryGetValue(methodUniqueId, out var rpcId))
+            if (m_MethodUniqueIdToRPCId.TryGetValue(stagedMethod, out var rpcId))
             {
                 Debug.LogError($"Attempted to re-register already registered method as an RPC: \"{stagedMethod.Name}\" delcared in: \"{stagedMethod.DeclaringType.FullName}\".");
                 return false;
@@ -475,7 +470,6 @@ namespace Unity.ClusterDisplay.RPC
                 rpcId, 
                 RPCExecutionStage.Automatic, 
                 stagedMethod, 
-                methodUniqueId,
                 usingWrapper: WrapperUtils.IsWrapper(stagedMethod.DeclaringType));
 
             RegisterRPC(ref rpcMethodInfo);

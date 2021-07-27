@@ -8,7 +8,6 @@ namespace Unity.ClusterDisplay.RPC
     public struct RPCMethodInfo
     {
         public readonly MethodInfo methodInfo;
-        public readonly string methodUniqueId;
         public readonly ushort rpcId;
         public RPCExecutionStage rpcExecutionStage;
         public readonly bool usingWrapper;
@@ -20,13 +19,11 @@ namespace Unity.ClusterDisplay.RPC
             ushort rpcId, 
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo, 
-            string methodUniqueId,
             bool usingWrapper)
         {
             this.rpcId = rpcId;
             this.rpcExecutionStage = rpcExecutionStage;
             this.methodInfo = methodInfo;
-            this.methodUniqueId = methodUniqueId;
             this.usingWrapper = usingWrapper;
         }
     }

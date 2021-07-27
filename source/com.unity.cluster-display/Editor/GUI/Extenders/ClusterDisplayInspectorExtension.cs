@@ -35,10 +35,12 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
     public struct PropertyMemberData
     {
+        public UnityEngine.Component targetInstance; 
+
         public PropertyInfo propertyInfo;
         public string propertyString;
 
-        public UnityEngine.Component instance;
+        public UnityEngine.Component wrapperInstance;
         public PropertyInfo wrapperEquivalentProperty;
 
         public MemberGUIState guiState;
@@ -160,7 +162,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             }
 
             RPCEditorGUICommon.HorizontalLine();
-            if ((foldOutProperties = EditorGUILayout.Foldout(foldOutProperties, "Properties")) && PollProperties(
+            if ((foldOutProperties = EditorGUILayout.Foldout(foldOutProperties, "Properties with Setters")) && PollProperties(
                 instance, 
                 out var selectedProperty, 
                 out selectedState, 
@@ -525,159 +527,252 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             return selectedState != SelectedState.None && selectedMethodInfo != null;
         }
 
-        private static void FieldLabel (string label) =>
-            EditorGUILayout.LabelField(label.ToUpper(), GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(label)).x));
+        private static string PrettyFieldLabel (string label) =>
+            !string.IsNullOrEmpty(label) ? char.ToUpper(label[0]) + label.Substring(1): "";
+
+        private static void FieldLabel (string label)
+        {
+            label = PrettyFieldLabel(label);
+            EditorGUILayout.LabelField(label, GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(label)).x));
+        }
 
         private class FloatFieldAttribute : DedicatedAttribute {}
         private class DoubleFieldAttribute : DedicatedAttribute {}
         private class IntFieldAttribute : DedicatedAttribute {}
+        private class BoolFieldAttribute : DedicatedAttribute {}
         private class LongFieldAttribute : DedicatedAttribute {}
+        private class EnumFieldAttribute : DedicatedAttribute {}
         private class TextFieldAttribute : DedicatedAttribute {}
+        private class ColorFieldAttribute : DedicatedAttribute {}
+        private class Vector2FieldAttribute : DedicatedAttribute {}
+        private class Vector3FieldAttribute : DedicatedAttribute {}
+        private class Vector4FieldAttribute : DedicatedAttribute {}
 
         private class BeginHorizontalAttrikbute : DedicatedAttribute {}
         private class EndHorizontalAttrikbute : DedicatedAttribute {}
 
+        private class FoldoutAttribute : DedicatedAttribute {}
+        private class GetIndentAttribute : DedicatedAttribute {}
+        private class SetIndentAttribute : DedicatedAttribute {}
+
         private class InvokeMethodButtonAttribute : DedicatedAttribute {}
 
-        [BeginHorizontalAttrikbute]
-        private static void BeginHorizontal () => EditorGUILayout.BeginHorizontal();
+        [BeginHorizontalAttrikbute] private static void BeginHorizontal () =>                   EditorGUILayout.BeginHorizontal();
+        [EndHorizontalAttrikbute] private static void EndHorizontal () =>                       EditorGUILayout.EndHorizontal();
+        [Foldout] private static void Foldout (string label) =>                                 EditorGUILayout.Foldout(true, label);
+        [GetIndent] private static int GetIndent() =>                                           EditorGUI.indentLevel;
+        [SetIndent] private static void SetIndent(int indentLevel) =>                           EditorGUI.indentLevel = indentLevel;
+        [FloatField] private static float FloatField(string label, float value) =>              EditorGUILayout.FloatField(PrettyFieldLabel(label), value);
+        [DoubleField] private static double DoubleField(string label, double value) =>          EditorGUILayout.DoubleField(PrettyFieldLabel(label), value);
+        [IntField] private static int IntField(string label, int value) =>                      EditorGUILayout.IntField(PrettyFieldLabel(label), value);
+        [BoolField] private static bool BoolField(string label, bool value) =>                  EditorGUILayout.Toggle(PrettyFieldLabel(label), value);
+        [LongField] private static long LongField(string label, long value) =>                  EditorGUILayout.LongField(PrettyFieldLabel(label), value);
+        [TextField] private static string TextField(string label, string value) =>              EditorGUILayout.TextField(PrettyFieldLabel(label), value);
+        [ColorField] private static Color ColorField(string label, Color value) =>              EditorGUILayout.ColorField(PrettyFieldLabel(label), value);
+        [Vector2Field] private static Vector2 Vector2Field(string label, Vector2 value) =>      EditorGUILayout.Vector2Field(PrettyFieldLabel(label), value);
+        [Vector3Field] private static Vector3 Vector3Field(string label, Vector3 value) =>      EditorGUILayout.Vector3Field(PrettyFieldLabel(label), value);
+        [Vector4Field] private static Vector4 Vector4Field(string label, Vector4 value) =>      EditorGUILayout.Vector4Field(PrettyFieldLabel(label), value);
+        [EnumField] private static EnumType EnumField<EnumType>(string label, EnumType value)
+            where EnumType : Enum =>                                                            (EnumType)EditorGUILayout.EnumPopup(PrettyFieldLabel(label), value);
 
-        [EndHorizontalAttrikbute]
-        private static void EndHorizontal () => EditorGUILayout.EndHorizontal();
-
-        [InvokeMethodButton]
-        private static bool InvokeMethodButton() =>
-            GUILayout.Button("Invoke", GUILayout.Width(50f));
-
-        [FloatField]
-        private static float FloatField(string label, float value)
+        private bool TryGetExistingEditorGUIMethodForType (System.Type type, out MethodInfo methodInfo)
         {
-            FieldLabel(label);
-            return EditorGUILayout.FloatField(value, GUILayout.Width(50f));
-        }
-
-        [DoubleField]
-        private static double DoubleField(string label, double value)
-        {
-            FieldLabel(label);
-            return EditorGUILayout.DoubleField(value, GUILayout.Width(50f));
-        }
-
-        [IntField]
-        private static int IntField(string label, int value)
-        {
-            FieldLabel(label);
-            return EditorGUILayout.IntField(value, GUILayout.Width(50f));
-        }
-
-        [LongField]
-        private static long LongField(string label, long value)
-        {
-            FieldLabel(label);
-            return EditorGUILayout.LongField(value, GUILayout.Width(50f));
-        }
-
-        [TextField]
-        private static string TextField(string label, string value)
-        {
-            FieldLabel(label);
-            return EditorGUILayout.TextField(value, GUILayout.Width(50f));
-        }
-
-        private bool TryCreateGUIForStructMember (
-            ParameterExpression instanceParameter, 
-            PropertyInfo propertyInfo, 
-            FieldInfo propertyTypeFieldInfo, 
-            ParameterExpression localPropertyValueVariable,
-            out ParameterExpression newFieldValueVariable,
-            out Expression setPropertyOnValueChange)
-        {
-            setPropertyOnValueChange = null;
-            newFieldValueVariable = null;
-
             Type attributeType = null;
-            if (propertyTypeFieldInfo.FieldType == typeof(float))
-                attributeType = typeof(FloatFieldAttribute);
-            else if (propertyTypeFieldInfo.FieldType == typeof(double))
-                attributeType = typeof(DoubleFieldAttribute);
-            else if (propertyTypeFieldInfo.FieldType == typeof(int))
-                attributeType = typeof(IntFieldAttribute);
-            else if (propertyTypeFieldInfo.FieldType == typeof(long))
-                attributeType = typeof(LongFieldAttribute);
-            else if (propertyTypeFieldInfo.FieldType == typeof(string))
-                attributeType = typeof(TextFieldAttribute);
+            methodInfo = null;
 
-            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute(attributeType, out var fieldMethod))
+            if (type == typeof(float))
+                attributeType = typeof(FloatFieldAttribute);
+            else if (type == typeof(double))
+                attributeType = typeof(DoubleFieldAttribute);
+            else if (type == typeof(bool))
+                attributeType = typeof(BoolFieldAttribute);
+            else if (type == typeof(int))
+                attributeType = typeof(IntFieldAttribute);
+            else if (type == typeof(long))
+                attributeType = typeof(LongFieldAttribute);
+            else if (type.IsEnum)
+                attributeType = typeof(EnumFieldAttribute);
+            else if (type == typeof(string))
+                attributeType = typeof(TextFieldAttribute);
+            else if (type == typeof(Color))
+                attributeType = typeof(ColorFieldAttribute);
+            else if (type == typeof(Vector2))
+                attributeType = typeof(Vector2FieldAttribute);
+            else if (type == typeof(Vector3))
+                attributeType = typeof(Vector3FieldAttribute);
+            else if (type == typeof(Vector4))
+                attributeType = typeof(Vector4FieldAttribute);
+            else return false;
+
+            return ReflectionUtils.TryGetMethodWithDedicatedAttribute(attributeType, out methodInfo);
+        }
+
+        private static bool TypeIsStruct (Type type) =>
+            !(type.IsPrimitive || type.IsEnum);
+
+        private static bool TryBuildFoldoutInstructions (
+            string foldoutName,
+            List<Expression> instructions)
+        {
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<FoldoutAttribute>(out var foldoutMethod))
                 return false;
 
-            var fieldAccess = Expression.Field(localPropertyValueVariable, propertyTypeFieldInfo);
-            newFieldValueVariable = Expression.Variable(propertyTypeFieldInfo.FieldType, "newFieldValue");
-            var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, Expression.Call(fieldMethod, Expression.Constant(propertyTypeFieldInfo.Name), fieldAccess));
-
-            setPropertyOnValueChange = Expression.IfThen(
-                Expression.NotEqual(fieldAccess, newFieldAssignemntExpression),
-                Expression.Block(
-                    Expression.Assign(fieldAccess, newFieldValueVariable),
-                    Expression.Assign(Expression.Property(instanceParameter, propertyInfo.SetMethod), localPropertyValueVariable)));
-
+            instructions.Add(Expression.Call(null, foldoutMethod, Expression.Constant(PrettyFieldLabel(foldoutName))));
             return true;
+        }
+
+        private static bool TryBuildBeginIndention (
+            out ParameterExpression cachedIndentionDepthVariable,
+            List<ParameterExpression> localVariables,
+            List<Expression> instructions)
+        {
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<FoldoutAttribute>(out var foldoutMethod) ||
+                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<GetIndentAttribute>(out var getIndentionMethod) ||
+                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<SetIndentAttribute>(out var setIndentionMethod))
+            {
+                cachedIndentionDepthVariable = null;
+                return false;
+            }
+
+            cachedIndentionDepthVariable = Expression.Variable(typeof(int));
+            localVariables.Add(cachedIndentionDepthVariable);
+
+            instructions.Add(Expression.Assign(cachedIndentionDepthVariable, Expression.Call(null, getIndentionMethod)));
+            instructions.Add(Expression.Call(null, setIndentionMethod, Expression.Add(cachedIndentionDepthVariable, Expression.Constant(1))));
+            return true;
+        }
+
+        private static void BuildEndIndentationInstructions (
+            ParameterExpression cachedIndentionDepthVariable,
+            List<Expression> instructions)
+        {
+            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<SetIndentAttribute>(out var setIndentionMethod))
+                return;
+            instructions.Add(Expression.Call(null, setIndentionMethod, cachedIndentionDepthVariable));
+        }
+
+        private bool TryRecursivelyCreateGUIForStructMembers (
+            ParameterExpression targetPropertyField,
+            FieldInfo fieldInfo, 
+            List<ParameterExpression> localVariables,
+            List<Expression> instructions)
+        {
+            if (TryGetExistingEditorGUIMethodForType(fieldInfo.FieldType, out var editorGUIMethod))
+            {
+                var newFieldValueVariable = Expression.Variable(fieldInfo.FieldType);
+                var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, Expression.Call(editorGUIMethod, Expression.Constant(fieldInfo.Name), targetPropertyField));
+
+                var setPropertyOnValueChange = Expression.IfThen(
+                    Expression.NotEqual(targetPropertyField, newFieldAssignemntExpression),
+                    Expression.Assign(targetPropertyField, newFieldValueVariable));
+
+                localVariables.Add(newFieldValueVariable);
+                instructions.Add(setPropertyOnValueChange);
+                return true;
+            }
+
+            else if (TypeIsStruct(fieldInfo.FieldType))
+            {
+                if (!TryBuildBeginIndention(out var cachedIndentionDepthVariable, localVariables, instructions))
+                    return false;
+
+                if (!TryBuildFoldoutInstructions(fieldInfo.Name, instructions))
+                    return false;
+
+                var fields = fieldInfo.FieldType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                for (int fi = 0; fi < fields.Length; fi++)
+                {
+                    var fieldExpression = Expression.Field(targetPropertyField, fields[fi]);
+                    var fieldVariable = Expression.Variable(fields[fi].FieldType);
+
+                    localVariables.Add(fieldVariable);
+                    instructions.Add(Expression.Assign(fieldVariable, fieldExpression));
+
+                    if (!TryRecursivelyCreateGUIForStructMembers(
+                        fieldVariable,
+                        fields[fi],
+                        localVariables,
+                        instructions))
+                        return false;
+
+                    instructions.Add(Expression.Assign(fieldExpression, fieldVariable));
+                }
+
+                BuildEndIndentationInstructions(cachedIndentionDepthVariable, instructions);
+                return true;
+            }
+
+            return false;
         }
 
         private bool TryCreatePropertyGUI (
             PropertyInfo propertyInfo, 
             Component targetInstance, 
-            System.Type targetType,
             out Action<Component> method)
         {
             method = null;
-            if (propertyInfo == null)
+            if (propertyInfo == null || targetInstance == null)
                 return false;
 
-            var propertyGetMethod = propertyInfo.GetGetMethod();
-            if (propertyGetMethod == null || !propertyGetMethod.IsPublic)
+            if ((propertyInfo.GetMethod == null || !propertyInfo.GetMethod.IsPublic) || 
+                (propertyInfo.SetMethod == null || !propertyInfo.SetMethod.IsPublic))
                 return false;
 
-            bool isStruct = !(propertyInfo.PropertyType.IsPrimitive || propertyInfo.PropertyType.IsEnum);
-            if (!isStruct)
-                return false;
-
-            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<BeginHorizontalAttrikbute>(out var beginHorizontalMethodInfo) || 
-                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<EndHorizontalAttrikbute>(out var endHorizontalMethodInfo))
-                return false;
+            var targetType = targetInstance.GetType();
 
             var componentParameter = Expression.Parameter(typeof(Component), "component");
             var castedInstanceVariable = Expression.Variable(targetInstance.GetType(), "instance");
 
             var instanceAssignementExpression = Expression.Assign(castedInstanceVariable, Expression.Convert(componentParameter, targetType));
+            var instancePropertyExpression = Expression.Property(castedInstanceVariable, propertyInfo);
 
             var localPropertyValueVariable = Expression.Variable(propertyInfo.PropertyType, "propertyValue");
-            var localPropertyValueVariableAssignment = Expression.Assign(localPropertyValueVariable, Expression.Property(castedInstanceVariable, propertyGetMethod));
+            var localPropertyValueVariableAssignment = Expression.Assign(localPropertyValueVariable, instancePropertyExpression);
 
             var localVariables = new List<ParameterExpression>() { castedInstanceVariable, localPropertyValueVariable };
 
             var instructions = new List<Expression>() {
                 instanceAssignementExpression,
                 localPropertyValueVariableAssignment,
-                Expression.Call(null, beginHorizontalMethodInfo),
             };
 
-            var propertyFields = propertyInfo.PropertyType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            for (int fi = 0; fi < propertyFields.Length; fi++)
-            {
-                if (!TryCreateGUIForStructMember(
-                    castedInstanceVariable,
-                    propertyInfo,
-                    propertyFields[fi],
-                    localPropertyValueVariable,
-                    out var newFieldValueVariable,
-                    out var setPropertyOnValueChange))
-                    return false;
+            if (!TryBuildBeginIndention(out var cachedIndentionDepthVariable, localVariables, instructions))
+                return false;
 
-                localVariables.Add(newFieldValueVariable);
-                instructions.Add(setPropertyOnValueChange);
+            if (TryGetExistingEditorGUIMethodForType(propertyInfo.PropertyType, out var editorGUIMethod))
+            {
+                if (propertyInfo.PropertyType.IsEnum)
+                    editorGUIMethod = editorGUIMethod.MakeGenericMethod(propertyInfo.PropertyType);
+                instructions.Add(Expression.Assign(localPropertyValueVariable, Expression.Call(null, editorGUIMethod, Expression.Constant(""), localPropertyValueVariable)));
+                instructions.Add(Expression.IfThen(
+                    Expression.NotEqual(localPropertyValueVariable, instancePropertyExpression),
+                    Expression.Assign(instancePropertyExpression, localPropertyValueVariable)));
             }
 
-            instructions.Add(Expression.Call(null, endHorizontalMethodInfo));
+            else if (TypeIsStruct(propertyInfo.PropertyType))
+            {
+                var fields = propertyInfo.PropertyType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+                for (int fi = 0; fi < fields.Length; fi++)
+                {
+                    var fieldExpression = Expression.Field(localPropertyValueVariable, fields[fi]);
+                    var fieldsVariable = Expression.Variable(fields[fi].FieldType);
+
+                    localVariables.Add(fieldsVariable);
+                    instructions.Add(Expression.Assign(fieldsVariable, fieldExpression));
+
+                    if (!TryRecursivelyCreateGUIForStructMembers(
+                        fieldsVariable,
+                        fields[fi],
+                        localVariables,
+                        instructions))
+                        return false;
+
+                    instructions.Add(Expression.Assign(fieldExpression, fieldsVariable));
+                    instructions.Add(Expression.Assign(instancePropertyExpression, localPropertyValueVariable));
+                }
+            }
+
+            BuildEndIndentationInstructions(cachedIndentionDepthVariable, instructions);
 
             var block = Expression.Block(
                 localVariables,
@@ -706,47 +801,54 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
                 var wrapperInstance = targetInstance.gameObject.GetComponent(wrapperType);
-                if (wrapperInstance != null)
-                {
-                    // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
-                    cachedPropertyData = cachedProperties.ToDictionary(
-                        cachedPropertyData => cachedPropertyData.property,
-                        cachedPropertyData => {
 
-                            // Using the property in our target instance, find equivalent property in the type that wraps our target type.
-                            ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty);
-                            TryCreatePropertyGUI(wrapperProperty, wrapperInstance, wrapperType, out var onPropertyInvocationGUI);
+                // Create a <PropertyInfo, <PropertyInfo, string>> dictionary from the properties we find.
+                cachedPropertyData = cachedProperties.ToDictionary(
+                    cachedPropertyData => cachedPropertyData.property,
+                    cachedPropertyData => {
 
-                            // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
-                            return new PropertyMemberData
+                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
+                        Action<Component> onPropertyInvocationGUI = null;
+                        if (ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty))
+                            TryCreatePropertyGUI(wrapperProperty, wrapperInstance, out onPropertyInvocationGUI);
+
+                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
+                        return new PropertyMemberData
+                        {
+                            targetInstance = targetInstance,
+
+                            propertyInfo = cachedPropertyData.property,
+                            propertyString = PrettyPropertyName(cachedPropertyData.property),
+
+                            wrapperInstance = wrapperInstance,
+                            wrapperEquivalentProperty = wrapperProperty,
+
+                            guiState = new MemberGUIState()
                             {
-                                propertyInfo = cachedPropertyData.property,
-                                propertyString = PrettyPropertyName(cachedPropertyData.property),
-                                instance = wrapperInstance,
-                                wrapperEquivalentProperty = wrapperProperty,
-                                guiState = new MemberGUIState()
-                                {
-                                    onInvocationGUI = onPropertyInvocationGUI,
-                                    expandInvocationGroup = false,
-                                }
-                            };
-                        });
+                                onInvocationGUI = onPropertyInvocationGUI,
+                                expandInvocationGroup = false,
+                            }
+                        };
+                    });
 
-                    return;
-                }
+                return;
             }
 
             // If our wrapper does not exist, then we just use our target type properties instead.
             cachedPropertyData = cachedProperties.ToDictionary(
                 cachedPropertyData => cachedPropertyData.property,
                 cachedPropertyData => {
-                    TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, targetInstance.GetType(), out var onPropertyInvocationGUI);
+
+                    TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, out var onPropertyInvocationGUI);
+
                     return new PropertyMemberData
                     {
+                        targetInstance = targetInstance,
+
                         propertyInfo = cachedPropertyData.property,
                         propertyString = PrettyPropertyName(cachedPropertyData.property),
 
-                        instance = null,
+                        wrapperInstance = null,
                         wrapperEquivalentProperty = null,
 
                         guiState = new MemberGUIState
@@ -814,10 +916,14 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     if (registered)
                         RPCToggleGUI(targetInstance, ref rpcMethodInfo);
                     InfoGUI(propertyData.propertyString, usingWrapper, property.DeclaringType);
+
                     EditorGUILayout.EndHorizontal();
 
                     if (propertyData.guiState.expandInvocationGroup)
-                        propertyData.guiState.onInvocationGUI(usingWrapper ? propertyData.instance : targetInstance);
+                    {
+                        if (propertyData.guiState.onInvocationGUI != null)
+                            propertyData.guiState.onInvocationGUI(usingWrapper ? propertyData.wrapperInstance : targetInstance);
+                    }
 
                     cachedPropertyData[cachedProperties[i].property] = propertyData;
                 }
