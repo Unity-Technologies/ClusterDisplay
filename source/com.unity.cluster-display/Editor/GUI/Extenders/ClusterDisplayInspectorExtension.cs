@@ -16,21 +16,18 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
     }
 
-    public struct MemberGUIState
-    {
-        public bool expandInvocationGroup;
-        public Action<UnityEngine.Component> onInvocationGUI;
-    }
-
     public struct MethodMemberData
     {
+        public UnityEngine.Component wrappedInstance; 
+
         public MethodInfo methodInfo;
         public string methodString;
 
-        public UnityEngine.Component instance;
+        public UnityEngine.Component wrapperInstance;
         public MethodInfo wrapperEquivalentMethodInfo;
 
-        public MemberGUIState guiState;
+        public bool expand;
+        public Func<UnityEngine.Component, object, object> onGUI;
     }
 
     public struct PropertyMemberData
@@ -43,7 +40,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         public UnityEngine.Component wrapperInstance;
         public PropertyInfo wrapperEquivalentProperty;
 
-        public MemberGUIState guiState;
+        public bool expand;
+        public Action<UnityEngine.Component> onGUI;
     }
 
     public abstract class ClusterDisplayInspectorExtension : UnityEditor.Editor
@@ -425,21 +423,30 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             // If our wrapper type exists, then we should be using our wrapper methods instead.
             if (TryGetDirectOrWrapperType(targetInstance, out var wrapperType))
             {
+                var wrapperInstance = targetInstance.gameObject.GetComponent(wrapperType);
                 // Create a <MethodInfo, <MethodInfo, string>> dictionary from the methods we find.
                 cachedMethodData = cachedMethods.ToDictionary(
                     cachedMethod => cachedMethod,
-                    cachedMethod => 
+                    cachedMethod =>
                     {
-                        // Using the method in our target instance, find equivalent method in the type that wraps our target type.
-                        ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod);
+                        // Using the property in our target instance, find equivalent property in the type that wraps our target type.
+                        Func<Component, object, object> onMethodInvocationGUI = null;
+                        if (ReflectionUtils.TryFindMethodWithMatchingSignature(wrapperType, cachedMethod, out var wrapperMethod))
+                            ClusterDisplayInspectorUtils.TryCreateMethodGUI(wrapperMethod, wrapperInstance, out onMethodInvocationGUI);
 
-                        // Store the nullable wrapper method and method string in this tuple as a value in our dictionary.
+                        // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
                         return new MethodMemberData
                         {
+                            wrappedInstance = targetInstance,
+
                             methodInfo = cachedMethod,
-                            wrapperEquivalentMethodInfo = wrapperMethod,
                             methodString = PrettyMethodString(cachedMethod),
-                            guiState = new MemberGUIState()
+
+                            wrapperInstance = wrapperInstance,
+                            wrapperEquivalentMethodInfo = wrapperMethod,
+
+                            onGUI = onMethodInvocationGUI,
+                            expand = false,
                         };
                     });
 
@@ -451,16 +458,24 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 cachedMethod => cachedMethod,
                 cachedMethod => 
                 {
+                    ClusterDisplayInspectorUtils.TryCreateMethodGUI(cachedMethod, targetInstance, out var onMethodInvocationGUI);
                     return new MethodMemberData
                     {
+                        wrappedInstance = targetInstance,
+
                         methodInfo = cachedMethod,
-                        wrapperEquivalentMethodInfo = null,
                         methodString = PrettyMethodString(cachedMethod),
-                        guiState = new MemberGUIState()
+
+                        wrapperInstance = null,
+                        wrapperEquivalentMethodInfo = null,
+
+                        onGUI = onMethodInvocationGUI,
+                        expand = false,
                     };
                 });
         }
 
+        private readonly Dictionary<Component, Dictionary<MethodInfo, object>> cachedArgs = new Dictionary<Component, Dictionary<MethodInfo, object>>();
         protected bool PollMethods<InstanceType> (
             InstanceType targetInstance, 
             out System.Reflection.MethodInfo selectedMethodInfo, 
@@ -494,6 +509,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     EditorGUILayout.BeginHorizontal();
 
+                    if (methodData.onGUI != null && ExpandButtonGUI(registered))
+                        methodData.expand = !methodData.expand;
+
                     if (EventButtonGUI(registered))
                     {
                         if (registered)
@@ -515,6 +533,35 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     InfoGUI(methodData.methodString, usingWrapper, method.DeclaringType);
                     EditorGUILayout.EndHorizontal();
 
+                    if (methodData.expand)
+                    {
+                        if (methodData.onGUI != null)
+                        {
+                            if (cachedArgs.TryGetValue(targetInstance, out var instanceArgs))
+                            {
+                                if (instanceArgs.TryGetValue(methodData.methodInfo, out var args))
+                                {
+                                    args = methodData.onGUI(usingWrapper ? methodData.wrapperInstance : targetInstance, args);
+                                    if (args != null)
+                                        instanceArgs[methodData.methodInfo] = args;
+                                }
+
+                                else
+                                {
+                                    args = methodData.onGUI(usingWrapper ? methodData.wrapperInstance : targetInstance, null);
+                                    if (args != null)
+                                        instanceArgs.Add(methodData.methodInfo, args);
+                                }
+                            }
+                            else
+                            {
+                                var args = methodData.onGUI(usingWrapper ? methodData.wrapperInstance : targetInstance, null);
+                                if (args != null)
+                                    cachedArgs.Add(targetInstance, new Dictionary<MethodInfo, object>() {{methodData.methodInfo, args}});
+                            }
+                        }
+                    }
+
                     cachedMethodData[cachedMethods[i]] = methodData;
                 }
 
@@ -525,271 +572,6 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             EndTab();
 
             return selectedState != SelectedState.None && selectedMethodInfo != null;
-        }
-
-        private static string PrettyFieldLabel (string label) =>
-            !string.IsNullOrEmpty(label) ? char.ToUpper(label[0]) + label.Substring(1): "";
-
-        private static void FieldLabel (string label)
-        {
-            label = PrettyFieldLabel(label);
-            EditorGUILayout.LabelField(label, GUILayout.Width(GUI.skin.label.CalcSize(new GUIContent(label)).x));
-        }
-
-        private class FloatFieldAttribute : DedicatedAttribute {}
-        private class DoubleFieldAttribute : DedicatedAttribute {}
-        private class IntFieldAttribute : DedicatedAttribute {}
-        private class BoolFieldAttribute : DedicatedAttribute {}
-        private class LongFieldAttribute : DedicatedAttribute {}
-        private class EnumFieldAttribute : DedicatedAttribute {}
-        private class TextFieldAttribute : DedicatedAttribute {}
-        private class ColorFieldAttribute : DedicatedAttribute {}
-        private class Vector2FieldAttribute : DedicatedAttribute {}
-        private class Vector3FieldAttribute : DedicatedAttribute {}
-        private class Vector4FieldAttribute : DedicatedAttribute {}
-
-        private class BeginHorizontalAttrikbute : DedicatedAttribute {}
-        private class EndHorizontalAttrikbute : DedicatedAttribute {}
-
-        private class FoldoutAttribute : DedicatedAttribute {}
-        private class GetIndentAttribute : DedicatedAttribute {}
-        private class SetIndentAttribute : DedicatedAttribute {}
-
-        private class InvokeMethodButtonAttribute : DedicatedAttribute {}
-
-        [BeginHorizontalAttrikbute] private static void BeginHorizontal () =>                   EditorGUILayout.BeginHorizontal();
-        [EndHorizontalAttrikbute] private static void EndHorizontal () =>                       EditorGUILayout.EndHorizontal();
-        [Foldout] private static void Foldout (string label) =>                                 EditorGUILayout.Foldout(true, label);
-        [GetIndent] private static int GetIndent() =>                                           EditorGUI.indentLevel;
-        [SetIndent] private static void SetIndent(int indentLevel) =>                           EditorGUI.indentLevel = indentLevel;
-        [FloatField] private static float FloatField(string label, float value) =>              EditorGUILayout.FloatField(PrettyFieldLabel(label), value);
-        [DoubleField] private static double DoubleField(string label, double value) =>          EditorGUILayout.DoubleField(PrettyFieldLabel(label), value);
-        [IntField] private static int IntField(string label, int value) =>                      EditorGUILayout.IntField(PrettyFieldLabel(label), value);
-        [BoolField] private static bool BoolField(string label, bool value) =>                  EditorGUILayout.Toggle(PrettyFieldLabel(label), value);
-        [LongField] private static long LongField(string label, long value) =>                  EditorGUILayout.LongField(PrettyFieldLabel(label), value);
-        [TextField] private static string TextField(string label, string value) =>              EditorGUILayout.TextField(PrettyFieldLabel(label), value);
-        [ColorField] private static Color ColorField(string label, Color value) =>              EditorGUILayout.ColorField(PrettyFieldLabel(label), value);
-        [Vector2Field] private static Vector2 Vector2Field(string label, Vector2 value) =>      EditorGUILayout.Vector2Field(PrettyFieldLabel(label), value);
-        [Vector3Field] private static Vector3 Vector3Field(string label, Vector3 value) =>      EditorGUILayout.Vector3Field(PrettyFieldLabel(label), value);
-        [Vector4Field] private static Vector4 Vector4Field(string label, Vector4 value) =>      EditorGUILayout.Vector4Field(PrettyFieldLabel(label), value);
-        [EnumField] private static EnumType EnumField<EnumType>(string label, EnumType value)
-            where EnumType : Enum =>                                                            (EnumType)EditorGUILayout.EnumPopup(PrettyFieldLabel(label), value);
-
-        private bool TryGetExistingEditorGUIMethodForType (System.Type type, out MethodInfo methodInfo)
-        {
-            Type attributeType = null;
-            methodInfo = null;
-
-            if (type == typeof(float))
-                attributeType = typeof(FloatFieldAttribute);
-            else if (type == typeof(double))
-                attributeType = typeof(DoubleFieldAttribute);
-            else if (type == typeof(bool))
-                attributeType = typeof(BoolFieldAttribute);
-            else if (type == typeof(int))
-                attributeType = typeof(IntFieldAttribute);
-            else if (type == typeof(long))
-                attributeType = typeof(LongFieldAttribute);
-            else if (type.IsEnum)
-                attributeType = typeof(EnumFieldAttribute);
-            else if (type == typeof(string))
-                attributeType = typeof(TextFieldAttribute);
-            else if (type == typeof(Color))
-                attributeType = typeof(ColorFieldAttribute);
-            else if (type == typeof(Vector2))
-                attributeType = typeof(Vector2FieldAttribute);
-            else if (type == typeof(Vector3))
-                attributeType = typeof(Vector3FieldAttribute);
-            else if (type == typeof(Vector4))
-                attributeType = typeof(Vector4FieldAttribute);
-            else return false;
-
-            return ReflectionUtils.TryGetMethodWithDedicatedAttribute(attributeType, out methodInfo);
-        }
-
-        private static bool TypeIsStruct (Type type) =>
-            !(type.IsPrimitive || type.IsEnum);
-
-        private static bool TryBuildFoldoutInstructions (
-            string foldoutName,
-            List<Expression> instructions)
-        {
-            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<FoldoutAttribute>(out var foldoutMethod))
-                return false;
-
-            instructions.Add(Expression.Call(null, foldoutMethod, Expression.Constant(PrettyFieldLabel(foldoutName))));
-            return true;
-        }
-
-        private static bool TryBuildBeginIndention (
-            out ParameterExpression cachedIndentionDepthVariable,
-            List<ParameterExpression> localVariables,
-            List<Expression> instructions)
-        {
-            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<FoldoutAttribute>(out var foldoutMethod) ||
-                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<GetIndentAttribute>(out var getIndentionMethod) ||
-                !ReflectionUtils.TryGetMethodWithDedicatedAttribute<SetIndentAttribute>(out var setIndentionMethod))
-            {
-                cachedIndentionDepthVariable = null;
-                return false;
-            }
-
-            cachedIndentionDepthVariable = Expression.Variable(typeof(int));
-            localVariables.Add(cachedIndentionDepthVariable);
-
-            instructions.Add(Expression.Assign(cachedIndentionDepthVariable, Expression.Call(null, getIndentionMethod)));
-            instructions.Add(Expression.Call(null, setIndentionMethod, Expression.Add(cachedIndentionDepthVariable, Expression.Constant(1))));
-            return true;
-        }
-
-        private static void BuildEndIndentationInstructions (
-            ParameterExpression cachedIndentionDepthVariable,
-            List<Expression> instructions)
-        {
-            if (!ReflectionUtils.TryGetMethodWithDedicatedAttribute<SetIndentAttribute>(out var setIndentionMethod))
-                return;
-            instructions.Add(Expression.Call(null, setIndentionMethod, cachedIndentionDepthVariable));
-        }
-
-        private bool TryRecursivelyCreateGUIForStructMembers (
-            ParameterExpression targetPropertyField,
-            FieldInfo fieldInfo, 
-            List<ParameterExpression> localVariables,
-            List<Expression> instructions)
-        {
-            if (TryGetExistingEditorGUIMethodForType(fieldInfo.FieldType, out var editorGUIMethod))
-            {
-                var newFieldValueVariable = Expression.Variable(fieldInfo.FieldType);
-                var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, Expression.Call(editorGUIMethod, Expression.Constant(fieldInfo.Name), targetPropertyField));
-
-                var setPropertyOnValueChange = Expression.IfThen(
-                    Expression.NotEqual(targetPropertyField, newFieldAssignemntExpression),
-                    Expression.Assign(targetPropertyField, newFieldValueVariable));
-
-                localVariables.Add(newFieldValueVariable);
-                instructions.Add(setPropertyOnValueChange);
-                return true;
-            }
-
-            else if (TypeIsStruct(fieldInfo.FieldType))
-            {
-                if (!TryBuildBeginIndention(out var cachedIndentionDepthVariable, localVariables, instructions))
-                    return false;
-
-                if (!TryBuildFoldoutInstructions(fieldInfo.Name, instructions))
-                    return false;
-
-                var fields = fieldInfo.FieldType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                for (int fi = 0; fi < fields.Length; fi++)
-                {
-                    var fieldExpression = Expression.Field(targetPropertyField, fields[fi]);
-                    var fieldVariable = Expression.Variable(fields[fi].FieldType);
-
-                    localVariables.Add(fieldVariable);
-                    instructions.Add(Expression.Assign(fieldVariable, fieldExpression));
-
-                    if (!TryRecursivelyCreateGUIForStructMembers(
-                        fieldVariable,
-                        fields[fi],
-                        localVariables,
-                        instructions))
-                        return false;
-
-                    instructions.Add(Expression.Assign(fieldExpression, fieldVariable));
-                }
-
-                BuildEndIndentationInstructions(cachedIndentionDepthVariable, instructions);
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool TryCreatePropertyGUI (
-            PropertyInfo propertyInfo, 
-            Component targetInstance, 
-            out Action<Component> method)
-        {
-            method = null;
-            if (propertyInfo == null || targetInstance == null)
-                return false;
-
-            if ((propertyInfo.GetMethod == null || !propertyInfo.GetMethod.IsPublic) || 
-                (propertyInfo.SetMethod == null || !propertyInfo.SetMethod.IsPublic))
-                return false;
-
-            var targetType = targetInstance.GetType();
-
-            var componentParameter = Expression.Parameter(typeof(Component), "component");
-            var castedInstanceVariable = Expression.Variable(targetInstance.GetType(), "instance");
-
-            var instanceAssignementExpression = Expression.Assign(castedInstanceVariable, Expression.Convert(componentParameter, targetType));
-            var instancePropertyExpression = Expression.Property(castedInstanceVariable, propertyInfo);
-
-            var localPropertyValueVariable = Expression.Variable(propertyInfo.PropertyType, "propertyValue");
-            var localPropertyValueVariableAssignment = Expression.Assign(localPropertyValueVariable, instancePropertyExpression);
-
-            var localVariables = new List<ParameterExpression>() { castedInstanceVariable, localPropertyValueVariable };
-
-            var instructions = new List<Expression>() {
-                instanceAssignementExpression,
-                localPropertyValueVariableAssignment,
-            };
-
-            if (!TryBuildBeginIndention(out var cachedIndentionDepthVariable, localVariables, instructions))
-                return false;
-
-            if (TryGetExistingEditorGUIMethodForType(propertyInfo.PropertyType, out var editorGUIMethod))
-            {
-                if (propertyInfo.PropertyType.IsEnum)
-                    editorGUIMethod = editorGUIMethod.MakeGenericMethod(propertyInfo.PropertyType);
-                instructions.Add(Expression.Assign(localPropertyValueVariable, Expression.Call(null, editorGUIMethod, Expression.Constant(""), localPropertyValueVariable)));
-                instructions.Add(Expression.IfThen(
-                    Expression.NotEqual(localPropertyValueVariable, instancePropertyExpression),
-                    Expression.Assign(instancePropertyExpression, localPropertyValueVariable)));
-            }
-
-            else if (TypeIsStruct(propertyInfo.PropertyType))
-            {
-                var fields = propertyInfo.PropertyType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-                for (int fi = 0; fi < fields.Length; fi++)
-                {
-                    var fieldExpression = Expression.Field(localPropertyValueVariable, fields[fi]);
-                    var fieldsVariable = Expression.Variable(fields[fi].FieldType);
-
-                    localVariables.Add(fieldsVariable);
-                    instructions.Add(Expression.Assign(fieldsVariable, fieldExpression));
-
-                    if (!TryRecursivelyCreateGUIForStructMembers(
-                        fieldsVariable,
-                        fields[fi],
-                        localVariables,
-                        instructions))
-                        return false;
-
-                    instructions.Add(Expression.Assign(fieldExpression, fieldsVariable));
-                    instructions.Add(Expression.Assign(instancePropertyExpression, localPropertyValueVariable));
-                }
-            }
-
-            BuildEndIndentationInstructions(cachedIndentionDepthVariable, instructions);
-
-            var block = Expression.Block(
-                localVariables,
-                instructions);
-
-            var lambda = Expression.Lambda<Action<Component>>(block, componentParameter);
-
-            try
-            {
-                method = lambda.Compile();
-                return true;
-            }
-            catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                return false;
-            }
         }
 
         private void CachePropertiesAndDescriptors<InstanceType> (InstanceType targetInstance)
@@ -810,7 +592,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                         // Using the property in our target instance, find equivalent property in the type that wraps our target type.
                         Action<Component> onPropertyInvocationGUI = null;
                         if (ReflectionUtils.TryFindPropertyWithMatchingSignature(wrapperType, cachedPropertyData.property, matchGetSetters: false, out var wrapperProperty))
-                            TryCreatePropertyGUI(wrapperProperty, wrapperInstance, out onPropertyInvocationGUI);
+                            ClusterDisplayInspectorUtils.TryCreatePropertyGUI(wrapperProperty, wrapperInstance, out onPropertyInvocationGUI);
 
                         // Store the nullable wrapper property and property string in this tuple as a value in our dictionary.
                         return new PropertyMemberData
@@ -823,11 +605,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                             wrapperInstance = wrapperInstance,
                             wrapperEquivalentProperty = wrapperProperty,
 
-                            guiState = new MemberGUIState()
-                            {
-                                onInvocationGUI = onPropertyInvocationGUI,
-                                expandInvocationGroup = false,
-                            }
+                            onGUI = onPropertyInvocationGUI,
+                            expand = false,
                         };
                     });
 
@@ -839,7 +618,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 cachedPropertyData => cachedPropertyData.property,
                 cachedPropertyData => {
 
-                    TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, out var onPropertyInvocationGUI);
+                    ClusterDisplayInspectorUtils.TryCreatePropertyGUI(cachedPropertyData.property, targetInstance, out var onPropertyInvocationGUI);
 
                     return new PropertyMemberData
                     {
@@ -851,11 +630,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                         wrapperInstance = null,
                         wrapperEquivalentProperty = null,
 
-                        guiState = new MemberGUIState
-                        {
-                            onInvocationGUI = onPropertyInvocationGUI,
-                            expandInvocationGroup = false
-                        }
+                        onGUI = onPropertyInvocationGUI,
+                        expand = false
                     };
                 });
         }
@@ -894,8 +670,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     EditorGUILayout.BeginHorizontal();
 
-                    if (propertyData.guiState.onInvocationGUI != null && ExpandButtonGUI(registered))
-                        propertyData.guiState.expandInvocationGroup = !propertyData.guiState.expandInvocationGroup;
+                    if (propertyData.onGUI != null && ExpandButtonGUI(registered))
+                        propertyData.expand = !propertyData.expand;
 
                     if (EventButtonGUI(registered))
                     {
@@ -919,11 +695,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                     EditorGUILayout.EndHorizontal();
 
-                    if (propertyData.guiState.expandInvocationGroup)
-                    {
-                        if (propertyData.guiState.onInvocationGUI != null)
-                            propertyData.guiState.onInvocationGUI(usingWrapper ? propertyData.wrapperInstance : targetInstance);
-                    }
+                    if (propertyData.expand)
+                        if (propertyData.onGUI != null)
+                            propertyData.onGUI(usingWrapper ? propertyData.wrapperInstance : targetInstance);
 
                     cachedPropertyData[cachedProperties[i].property] = propertyData;
                 }

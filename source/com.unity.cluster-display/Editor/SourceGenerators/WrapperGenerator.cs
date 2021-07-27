@@ -267,9 +267,9 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             ClassDeclarationSyntax classDecl, 
             MemberDeclarationSyntax memberDecl) =>
                 compilationUnit
-                    .AddMembers(nsDecl
+                    .WithMembers(new SyntaxList<MemberDeclarationSyntax>(nsDecl
                         .AddMembers(classDecl
-                            .AddMembers(memberDecl)));
+                            .AddMembers(memberDecl))));
 
         private static CompilationUnitSyntax UpdateWrapperClass (
             CompilationUnitSyntax compilationUnit, 
@@ -277,9 +277,9 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             ClassDeclarationSyntax classDecl, 
             SyntaxList<MemberDeclarationSyntax> members) =>
                 compilationUnit
-                    .AddMembers(nsDecl
+                    .WithMembers(new SyntaxList<MemberDeclarationSyntax>(nsDecl
                         .AddMembers(classDecl
-                            .WithMembers(members)));
+                            .WithMembers(members))));
 
         private static void PollFoldersToCleanUp (string wrapperFolderPath)
         {
@@ -399,10 +399,8 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             {
                 ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
                 if (!TryGetExistingPropertyDeclaration(propertyToWrap, classDecl, out var propertyDecl))
-                    compilationUnit = compilationUnit
-                        .AddMembers(nsDecl
-                            .AddMembers(classDecl
-                                .AddMembers(NewProperty(propertyToWrap))));
+                    compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, NewProperty(propertyToWrap));
+                else compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, propertyDecl);
             }
 
             else compilationUnit = CreateNewCompilationUnit(propertyToWrap.DeclaringType, NewProperty(propertyToWrap), wrapperName);
@@ -426,7 +424,8 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             {
                 ExtractWrapperClassDeclaration(ref compilationUnit, out var nsDecl, out var classDecl);
                 if (!TryGetExistingMethodDeclaration(methodToWrap, classDecl, out var methodDecl))
-                    compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, methodDecl);
+                    compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, NewMethod(methodToWrap));
+                else compilationUnit = UpdateWrapperClass(compilationUnit, nsDecl, classDecl, methodDecl);
             }
 
             else compilationUnit = CreateNewCompilationUnit(methodToWrap.DeclaringType, NewMethod(methodToWrap), wrapperName);
