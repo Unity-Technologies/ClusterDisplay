@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         protected static Type[] cachedTypesWithCustomEditorAttribute = null;
         protected static Type[] cachedTypesWithCustomEditorForRenderPipelineAttribute = null;
 
-        protected readonly static Dictionary<string, MethodInfo> cachedReflectionAccessibleMethods = new Dictionary<string, MethodInfo>();
+        protected readonly Dictionary<string, MethodInfo> cachedReflectionAccessibleMethods = new Dictionary<string, MethodInfo>();
 
         protected Type cachedEditorType;
         protected Type cachedAssignedType;
@@ -134,6 +134,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             if (cachedDefaultCustomEditorType == null)
                 if (!TryFindCustomEditorType(out cachedDefaultCustomEditorType))
                     return;
+
 
             if (cachedReflectionAccessibleMethods.Count == 0)
             {
