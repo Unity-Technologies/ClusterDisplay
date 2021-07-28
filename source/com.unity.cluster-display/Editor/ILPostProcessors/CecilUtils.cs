@@ -214,7 +214,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (typeDefinition.IsPrimitive || typeDefinition.IsEnum)
                 return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
             else if (typeDefinition.IsValueType)
+            {
                 return TryDetermineSizeOfStruct(typeDefinition, ref size);
+            }
 
             Debug.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
             return false;

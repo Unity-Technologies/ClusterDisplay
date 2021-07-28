@@ -1,0 +1,17 @@
+{
+  "name": "com.unity.cluster-display.samples",
+  "displayName": "Cluster Display Samples",
+  "version": "0.0.4-preview",
+  "unity": "2020.1",
+  "keywords": [
+    "cluster rendering",
+    "distributed rendering",
+    "cluster"
+  ],
+  "description": "Cluster display sample projects.",
+  "dependencies": {
+    "com.unity.cluster-display" : "0.0.3-preview",
+    "com.unity.visualscripting" : "1.7.3",
+    "com.unity.collections" : "0.15.0-preview.21"
+  }
+}

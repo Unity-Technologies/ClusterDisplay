@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Unity.Collections;
 
 namespace Unity.ClusterDisplay
 {
@@ -38,6 +39,14 @@ namespace Unity.ClusterDisplay
                     goto dynamicallySizedMemberTypeFailure;
 
                 type = type.GetElementType();
+            }
+
+            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(NativeArray<>))
+            {
+                if (structureDepth > 0)
+                    goto dynamicallySizedMemberTypeFailure;
+
+                type = type.GenericTypeArguments[0];
             }
 
             ushort localDepth = structureDepth;

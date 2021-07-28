@@ -1,11 +1,11 @@
 {
-    "name": "Unity.ClusterDisplay.Editor.SourceGenerators",
+    "name": "Unity.ClusterDisplay.Editor",
     "references": [
-        "Unity.ClusterDisplay.Common",
-        "Unity.ClusterDisplay.Networking",
-        "Unity.ClusterDisplay.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.RenderPipelines.Core.Runtime"
+        "GUID:d17cf94e78b26ac4db1dca31abae1b06",
+        "GUID:b43fac41fad43f5458043d6551bc571e",
+        "GUID:ebda382865f803841bb36f141d251db6",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95"
     ],
     "includePlatforms": [
         "Editor"

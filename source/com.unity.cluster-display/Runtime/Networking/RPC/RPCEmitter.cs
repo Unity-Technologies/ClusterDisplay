@@ -279,6 +279,37 @@ namespace Unity.ClusterDisplay.RPC
             rpcBufferSize += strSize;
         }
 
+        [AppendRPCNativeArrayParameterValueMarker]
+        public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> value) where T : unmanaged
+        {
+            if (!AllowWrites)
+                return;
+
+            int arrayByteCount = Marshal.SizeOf<T>() * value.Length;
+
+            if (arrayByteCount > ushort.MaxValue)
+                throw new System.Exception($"Max string array is: {ushort.MaxValue} characters.");
+
+            if (rpcBufferSize + sizeof(ushort) + arrayByteCount >= rpcBuffer.Length)
+                throw new System.Exception("RPC Buffer is full.");
+
+            ushort arrayLength = (ushort)value.Length;
+            UnsafeUtility.MemCpy(
+                (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
+                UnsafeUtility.AddressOf(ref arrayLength), 
+                sizeof(ushort));
+
+            rpcBufferSize += sizeof(ushort);
+
+            T* ptr = (T*)value.GetUnsafePtr();
+            UnsafeUtility.MemCpy(
+                (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
+                ptr, 
+                arrayByteCount);
+
+            rpcBufferSize += arrayByteCount;
+        }
+
         [AppendRPCArrayParameterValueMarker]
         public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : unmanaged
         {

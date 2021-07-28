@@ -1,5 +1,5 @@
 {
-    "name": "Unity.ClusterDisplay.Networking",
+    "name": "Unity.ClusterDisplay.RPC",
     "references": [
         "GUID:d17cf94e78b26ac4db1dca31abae1b06"
     ],
