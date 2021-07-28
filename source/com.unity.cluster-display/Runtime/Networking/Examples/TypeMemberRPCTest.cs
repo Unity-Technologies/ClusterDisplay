@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Tests
     {
         public int intTest;
         public float floatTest;
-        public string stringTest;
+        // public string stringTest;
         public Vector3 vectorTest;
         public NestedStruct nestedStructTest;
     }
@@ -31,7 +31,11 @@ namespace Unity.ClusterDisplay.Tests
         public float FloatingPoint { get => floatingPoint; set => floatingPoint = value; }
 
         [SerializeField] private Color colorTest;
-        public Color ColorTest { get => colorTest; set => colorTest = value; }
+        public Color ColorTest 
+        { 
+            get => colorTest; 
+            set => colorTest = value; 
+        }
 
         [SerializeField] private Vector2 vector2Test;
         public Vector2 Vector2Test { get => vector2Test; set => vector2Test = value; }

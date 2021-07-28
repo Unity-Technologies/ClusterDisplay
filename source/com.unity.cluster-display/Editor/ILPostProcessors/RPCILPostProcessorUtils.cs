@@ -123,7 +123,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 }
             }
 
-            Debug.LogError($"Unable to find method signature: \"{serializedMethodName}\" declared in type: \"{typeDefinition.Name}\".");
+            // Debug.LogError($"Unable to find method signature: \"{serializedMethodName}\" declared in type: \"{typeDefinition.Name}\".");
             outMethodRef = null;
             return false;
         }

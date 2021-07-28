@@ -143,12 +143,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                     MethodReference targetMethodRef = null;
 
-                    if (!TryFindMethodWithMatchingFormalySerializedAs(
-                        compiledAssemblyDef.MainModule,
-                        typeDefinition,
-                        rpc.method.methodName,
-                        out targetMethodRef) &&
-                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef))
+                    bool unableToFindAnyMethod =
+                        !TryFindMethodWithMatchingFormalySerializedAs(
+                            compiledAssemblyDef.MainModule,
+                            typeDefinition,
+                            rpc.method.methodName,
+                            out targetMethodRef) &&
+                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef);
+
+                    if (unableToFindAnyMethod)
                         continue;
 
                     if (MethodAlreadyProcessed(targetMethodRef))
