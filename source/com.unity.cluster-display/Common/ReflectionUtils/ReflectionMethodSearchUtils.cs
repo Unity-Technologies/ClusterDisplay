@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay
 
             #if UNITY_EDITOR
 
-            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType);
+            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType).ToArray();
 
             #else
 
@@ -103,10 +103,10 @@ namespace Unity.ClusterDisplay
 
             #endif
 
-            if (methods.Count == 0)
+            if (methods.Length == 0)
                 return false;
 
-            if (methods.Count > 1)
+            if (methods.Length > 1)
             {
                 Debug.LogError($"There is more than one method with attribute: \"{attributeType.Name}\", this dedicated attribute should only be applied to one method.");
                 return false;
@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay
                     if (methods[mi].CustomAttributes.Count() == 0)
                         continue;
 
-                    if (methods[mi].GetCustomAttribute<T>() == null)
+                    if (methods[mi].GetCustomAttribute(attributeType) == null)
                         continue;
 
                     list.Add(methods[mi]);
