@@ -17,6 +17,9 @@ namespace Unity.ClusterDisplay.RPC
         public class AppendRPCArrayParameterValueMarker : Attribute {}
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class NativeArrayLengthMarker : Attribute {}
+
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class AppendRPCNativeArrayParameterValueMarker : Attribute {}
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
@@ -25,10 +28,13 @@ namespace Unity.ClusterDisplay.RPC
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class ParseStringMarker : Attribute {}
 
-        [AttributeUsage(AttributeTargets.Method)]
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class ParseArrayMarker : Attribute {}
 
-        [AttributeUsage(AttributeTargets.Method)]
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class ParseNativeArrayMarker : Attribute {}
+
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class ParseStructureMarker : Attribute {}
 
     }

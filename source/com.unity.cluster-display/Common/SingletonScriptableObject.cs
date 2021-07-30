@@ -10,15 +10,19 @@ namespace Unity.ClusterDisplay
     {
         public static T instance;
         [SingletonScriptableObjectTryGetInstanceMarker]
-        public static bool TryGetInstance (out T outInstance, bool throwException = true)
+        public static bool TryGetInstance (out T outInstance, bool throwError = true)
         {
             if (instance == null)
             {
                 var instances = Resources.LoadAll<T>("");
                 if (instances.Length == 0)
                 {
-                    if (throwException)
-                        throw new System.Exception($"There is no instance of: \"{typeof(T)}\" in Resources.");
+                    if (throwError)
+                    {
+                        Debug.LogError($"There is no instance of: \"{typeof(T)}\" in Resources.");
+                        outInstance = null;
+                        return false;
+                    }
 
                     outInstance = null;
                     return false;
@@ -26,8 +30,12 @@ namespace Unity.ClusterDisplay
 
                 if (instances.Length > 1)
                 {
-                    if (throwException)
-                        throw new System.Exception($"There is more than one instance of: \"{typeof(T)}\" in Resources.");
+                    if (throwError)
+                    {
+                        Debug.LogError($"There is more than one instance of: \"{typeof(T)}\" in Resources.");
+                        outInstance = null;
+                        return false;
+                    }
 
                     outInstance = null;
                     return false;

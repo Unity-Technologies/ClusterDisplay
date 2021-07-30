@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay
         {
             if (instance != null)
             {
-                Debug.LogError($"Unable to cache instance to: \"{typeof(T).FullName}\", an instance has already cache!");
+                // Debug.LogError($"Unable to cache instance to: \"{typeof(T).FullName}\", an instance has already cache!");
                 return;
             }
 

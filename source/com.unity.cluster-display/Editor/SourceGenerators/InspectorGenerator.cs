@@ -154,6 +154,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                     var secondGenericArgument = SyntaxFactory.AttributeArgument(SyntaxFactory.ParseExpression($"typeof({typeof(HDRenderPipelineAsset).FullName})"));
                     #endif
 
+                    #if CLUSTER_DISPLAY_URP || CLUSTER_DISPLAY_HDRP
                     generatedInspectorClass = generatedInspectorClass.AddAttributeLists(
                         SyntaxFactory.AttributeList(
                             SyntaxFactory.SeparatedList(
@@ -161,6 +162,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                                     SyntaxFactory.Attribute(
                                         SyntaxFactory.ParseName(customEditorAttributeType.FullName))
                                     .AddArgumentListArguments(firstGenericArgument, secondGenericArgument)))));
+                    #endif
                 }
 
                 else

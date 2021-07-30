@@ -227,7 +227,7 @@ namespace Unity.ClusterDisplay.RPC
                 return;
 
             // Debug.Log("Polling for unregistered instance RPCs.");
-            if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwException: false))
+            if (!RPCRegistry.TryGetInstance(out var rpcRegistry, throwError: true))
                 return;
 
             Dictionary<string, SceneObjectsRegistry> sceneObjectsRegistry = new Dictionary<string, SceneObjectsRegistry>();

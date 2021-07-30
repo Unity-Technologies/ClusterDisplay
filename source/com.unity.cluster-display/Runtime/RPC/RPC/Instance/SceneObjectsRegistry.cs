@@ -24,7 +24,17 @@ namespace Unity.ClusterDisplay.RPC
 
         public bool Registered(Component instance) => m_SceneInstances.Contains(instance);
 
-        private void Awake() => RegisterRPCSceneInstances();
+        private void Awake()
+        {
+            if (!RPCRegistry.Deserialized)
+            {
+                RPCRegistry.onRegistryInitialized -= RegisterRPCSceneInstances;
+                RPCRegistry.onRegistryInitialized += RegisterRPCSceneInstances;
+                return;
+            }
+
+            RegisterRPCSceneInstances();
+        }
 
         public void UpdateRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
@@ -134,7 +144,8 @@ namespace Unity.ClusterDisplay.RPC
 
         private void RegisterRPCSceneInstances ()
         {
-            RPCRegistry.Setup();
+            RPCRegistry.onRegistryInitialized -= RegisterRPCSceneInstances;
+
             if (m_SceneObjectsRegistered)
                 return;
 

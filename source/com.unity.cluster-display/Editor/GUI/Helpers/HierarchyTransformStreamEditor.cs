@@ -8,5 +8,9 @@ namespace Unity.ClusterDisplay
     [CustomEditor(typeof(HierarchyTransformStream))]
     public class HierarchyTransformStreamEditor : UnityEditor.Editor
     {
+        public override void OnInspectorGUI()
+        {
+            DrawDefaultInspector();
+        }
     }
 }

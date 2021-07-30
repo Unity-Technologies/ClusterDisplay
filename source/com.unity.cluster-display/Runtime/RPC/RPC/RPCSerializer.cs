@@ -8,14 +8,14 @@ namespace Unity.ClusterDisplay.RPC
 {
     public static class RPCSerializer
     {
-        public static bool TryDeserializeType (string assemblyString, string typeString, out System.Type type)
+        public static bool TryDeserializeType (string assemblyString, string namespaceString, string typeString, out System.Type type)
         {
             type = null;
 
             if (!ReflectionUtils.TryGetAssemblyByName(assemblyString, out var assembly))
                 return false;
 
-            return (type = assembly.GetType(typeString)) != null;
+            return (type = assembly.GetType(string.IsNullOrEmpty(namespaceString) ? typeString : $"{namespaceString}.{typeString}")) != null;
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
@@ -23,15 +23,15 @@ namespace Unity.ClusterDisplay.RPC
         {
             outMethodInfo = null;
 
-            if (!TryDeserializeType(method.declaringAssemblyName, method.declaryingTypeFullName, out var declaringType))
+            if (!TryDeserializeType(method.declaringAssemblyName, method.declaringTypeNamespace, method.declaryingTypeName, out var declaringType))
             {
-                Debug.LogError($"Unable to find serialized method's declaring type: \"{method.declaryingTypeFullName}\" in assembly: \"{method.declaringAssemblyName}\".");
+                Debug.LogError($"Unable to find serialized method's declaring type: \"{method.declaryingTypeName}\" in assembly: \"{method.declaringAssemblyName}\".");
                 return false;
             }
 
-            if (!TryDeserializeType(method.declaringReturnTypeAssemblyName, method.returnTypeFullName, out var returnType))
+            if (!TryDeserializeType(method.declaringReturnTypeAssemblyName, method.returnTypeNamespace, method.returnTypeName, out var returnType))
             {
-                Debug.LogError($"Unable to find serialized method's return type: \"{method.returnTypeFullName}\" in assembly: \"{method.declaringReturnTypeAssemblyName}\".");
+                Debug.LogError($"Unable to find serialized method's return type: \"{method.returnTypeName}\" in assembly: \"{method.declaringReturnTypeAssemblyName}\".");
                 return false;
             }
 
@@ -41,9 +41,9 @@ namespace Unity.ClusterDisplay.RPC
                 for (int i = 0; i < method.ParameterCount; i++)
                 {
                     var parameterString = method[i];
-                    if (!TryDeserializeType(parameterString.declaringParameterTypeAssemblyName, parameterString.parameterTypeFullName, out var parameterType))
+                    if (!TryDeserializeType(parameterString.declaringParameterTypeAssemblyName, parameterString.parameterTypeNamespace, parameterString.parameterTypeName, out var parameterType))
                     {
-                        Debug.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeFullName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
+                        Debug.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
                         return false;
                     }
 
@@ -59,11 +59,15 @@ namespace Unity.ClusterDisplay.RPC
                 cachedTypeMethodInfos.Add(declaringType, methods);
             }
 
-            IEnumerable<MethodInfo> filteredMethods = methods.Where(methodInfo => methodInfo.ReturnType == returnType);
+            IEnumerable<MethodInfo> filteredMethods = methods.Where(methodInfo =>
+            {
+                bool match = methodInfo.ReturnType == returnType;
+                return match;
+            });
             var matchingNameMethods = filteredMethods.Where(methodInfo => methodInfo.Name == method.methodName);
             if (parameterList.Count > 0)
             {
-                filteredMethods = filteredMethods.Where(methodInfo =>
+                filteredMethods = matchingNameMethods.Where(methodInfo =>
                 {
                     var parameters = methodInfo.GetParameters();
                     if (parameters.Length != parameterList.Count)
@@ -72,7 +76,12 @@ namespace Unity.ClusterDisplay.RPC
                     bool allMatching = true;
                     for (int i = 0; i < parameters.Length; i++)
                     {
-                        allMatching &=
+                        if (parameters[i].ParameterType.IsGenericType)
+                            allMatching &=
+                                parameters[i].ParameterType.GetGenericTypeDefinition() == parameterList[i].parameterType &&
+                                parameters[i].Name == parameterList[i].parameterName;
+
+                        else allMatching &=
                             parameters[i].ParameterType == parameterList[i].parameterType &&
                             parameters[i].Name == parameterList[i].parameterName;
                     }
@@ -124,20 +133,19 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryReadRegisteredAssemblies (string path, out string[] registeredAssemblyFullNames)
+        public static void ReadRegisteredAssemblies (string path, out string[] registeredAssemblyFullNames)
         {
+            registeredAssemblyFullNames = new string[0];
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogError("Unable to read registered assemblies, the path is invalid.");
-                registeredAssemblyFullNames = null;
-                return false;
+                Debug.LogWarning("Unable to read registered assemblies, the path is invalid.");
+                return;
             }
 
             if (!System.IO.File.Exists(path))
             {
-                Debug.LogError($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
-                registeredAssemblyFullNames = null;
-                return false;
+                Debug.LogWarning($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
+                return;
             }
 
             try
@@ -149,12 +157,10 @@ namespace Unity.ClusterDisplay.RPC
             {
                 Debug.LogError($"Unable to read registered assemblies from path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
-                registeredAssemblyFullNames = null;
-                return false;
             }
 
             // Debug.Log($"Registered assemblies was read from path: \"{path}\".");
-            return true;
+            return;
         }
 
         public static bool TryDeserializeRegisteredAssemblies (string serializedRegisteredAssemblies, out List<Assembly> registeredAssemblies)
@@ -188,11 +194,7 @@ namespace Unity.ClusterDisplay.RPC
 
         public static bool TryReadRegisteredAssemblies (string path, out List<Assembly> registeredAssemblies)
         {
-            if (!TryReadRegisteredAssemblies(path, out string[] registeredAssemblyFullNames))
-            {
-                registeredAssemblies = null;
-                return false;
-            }
+            ReadRegisteredAssemblies(path, out var registeredAssemblyFullNames);
 
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             registeredAssemblies = new List<Assembly>();
@@ -236,29 +238,27 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs, out SerializedMethod[] stagedMethods)
+        public static void ReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs, out SerializedMethod[] stagedMethods)
         {
+            serializedInstanceRPCs = new SerializedRPC[0];
+            stagedMethods = new SerializedMethod[0];
             if (string.IsNullOrEmpty(path))
             {
                 Debug.LogError("Unable to read RPC stubs, the path is invalid.");
-                serializedInstanceRPCs = null;
-                stagedMethods = null;
-                return false;
+                return;
             }
 
             if (!System.IO.File.Exists(path))
             {
                 Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
-                serializedInstanceRPCs = null;
-                stagedMethods = null;
-                return false;
+                return;
             }
 
             try
             {
                 var text = System.IO.File.ReadAllText(path);
                 if (!TryDeserializeRPCStubsJson(text, out serializedInstanceRPCs, out stagedMethods))
-                    return false;
+                    return;
 
             }
 
@@ -266,14 +266,8 @@ namespace Unity.ClusterDisplay.RPC
             {
                 Debug.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
                 Debug.LogException(exception);
-                serializedInstanceRPCs = null;
-                stagedMethods = null;
-                return false;
+                return;
             }
-
-
-            // Debug.Log($"RPC Stubs was read from path: \"{path}\".");
-            return true;
         }
 
         public static bool TryDeserializeRPCStubsJson (string jsonStr, out SerializedRPC[] rpcs, out SerializedMethod[] stagedMethods)

@@ -2,8 +2,6 @@
 using UnityEditor;
 using UnityEngine;
 
-using UnityEngine.Rendering.Universal;
-
 namespace Unity.ClusterDisplay.Editor.Inspectors
 {
     public abstract class UserWrapperInspectorExtension<InstanceType, WrapperType> : MonoBehaviourInspectorExtension<InstanceType>

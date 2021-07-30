@@ -613,12 +613,12 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     {
                         if (methodData.isRegistered)
                         {
-                            RPCRegistry.RemoveRPC(selectedMethod);
+                            RPCRegistry.UnmarkRPC(selectedMethod);
                             methodToRegister = selectedMethod;
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(selectedMethod))
+                        else if (RPCRegistry.MarkMethodAsRPC(selectedMethod))
                         {
                             methodToRegister = selectedMethod;
                             selectedState = SelectedState.Added;
@@ -714,12 +714,12 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                     {
                         if (propertyData.isRegistered)
                         {
-                            RPCRegistry.RemoveRPC(selectedProperty.SetMethod);
+                            RPCRegistry.UnmarkRPC(selectedProperty.SetMethod);
                             propertyToRegister = selectedProperty;
                             selectedState = SelectedState.Removed;
                         }
 
-                        else if (RPCRegistry.TryAddNewRPC(selectedProperty))
+                        else if (RPCRegistry.MarkPropertyAsRPC(selectedProperty))
                         {
                             propertyToRegister = selectedProperty;
                             selectedState = SelectedState.Added;

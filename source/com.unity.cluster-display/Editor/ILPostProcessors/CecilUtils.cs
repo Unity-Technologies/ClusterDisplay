@@ -267,30 +267,32 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             MethodDefinition methodDef = null;
             bool found = (methodDef = typeDef.Methods.Where(method =>
             {
-                // Debug.Log($"Method Signature: {methodDef.Name} == {rpcTokenizer.MethodName} &&\n{methodDef.ReturnType.Resolve().Module.Assembly.Name.Name} == {rpcTokenizer.DeclaringReturnTypeAssemblyName} &&\n{methodDef.HasParameters} == {rpcTokenizer.ParameterCount > 0} &&\n{methodDef.Parameters.Count} == {rpcTokenizer.ParameterCount}");
-                bool allMatch = 
-                    method.HasParameters == rpcTokenizer.method.ParameterCount > 0 &&
-                    method.Parameters.Count == rpcTokenizer.method.ParameterCount &&
-                    method.Name == rpcTokenizer.method.methodName &&
-                    method.ReturnType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method.declaringReturnTypeAssemblyName &&
-                    method.Parameters.All(parameterDefinition =>
+                if (method.Name != rpcTokenizer.method.methodName ||
+                    method.ReturnType.Namespace != rpcTokenizer.method.returnTypeNamespace ||
+                    method.ReturnType.Resolve().Module.Assembly.Name.Name != rpcTokenizer.method.declaringReturnTypeAssemblyName)
+                    return false;
+
+                if (method.HasParameters == (rpcTokenizer.method.ParameterCount > 0))
+                {
+                    if (method.Parameters.Count != rpcTokenizer.method.ParameterCount)
+                        return false;
+
+                    bool allParametersMatch = true;
+                    for (int pi = 0; pi < method.Parameters.Count; pi++)
                     {
-                        if (rpcTokenizer.method.ParameterCount == 0)
-                            return true;
+                        if (!(allParametersMatch &= method.Parameters[pi].Name == rpcTokenizer.method[pi].parameterName))
+                            return false;
 
-                        bool any = false;
-                        for (int i = 0; i < rpcTokenizer.method.ParameterCount; i++)
-                        {
-                            // Debug.Log($"Method Parameters: {parameterDefinition.Name} == {rpcTokenizer[i].parameterName} &&\n{parameterDefinition.ParameterType.FullName} == {rpcTokenizer[i].parameterTypeFullName} &&\n{parameterDefinition.ParameterType.Module.Assembly.Name.Name} == {rpcTokenizer[i].declaringParameterTypeAssemblyName}");
-                            any |=
-                                parameterDefinition.Name == rpcTokenizer.method[i].parameterName &&
-                                parameterDefinition.ParameterType.FullName == rpcTokenizer.method[i].parameterTypeFullName &&
-                                parameterDefinition.ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method[i].declaringParameterTypeAssemblyName;
-                        }
-                        return any;
-                    });
+                        allParametersMatch &= 
+                            method.Parameters[pi].ParameterType.Namespace == rpcTokenizer.method[pi].parameterTypeNamespace &&
+                            method.Parameters[pi].ParameterType.Name == rpcTokenizer.method[pi].parameterTypeName &&
+                            method.Parameters[pi].ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method[pi].declaringParameterTypeAssemblyName;
+                    }
 
-                return allMatch;
+                    return allParametersMatch;
+                }
+
+                return true;
 
             }).FirstOrDefault()) != null;
 

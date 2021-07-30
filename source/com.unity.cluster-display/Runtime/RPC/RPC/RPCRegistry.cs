@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay.RPC
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
     #if UNITY_EDITOR
     [InitializeOnLoad]
+    [DefaultExecutionOrder(-1)]
     #endif
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
@@ -25,29 +26,29 @@ namespace Unity.ClusterDisplay.RPC
         /// them and those specific assemblies are stored here. We need to do this to serialize
         /// these assembly names into a text file so we can read them by the ILPostProcessor.
         /// </summary>
-        private static readonly List<Assembly> targetAssemblies = new List<Assembly>();
-        public Assembly[] GetTargetAssemblies() => targetAssemblies.ToArray();
+        private static readonly List<Assembly> m_TargetAssemblies = new List<Assembly>();
+        public Assembly[] GetTargetAssemblies() => m_TargetAssemblies.ToArray();
 
         /// <summary>
         /// When we receive an RPC over the network, we need to identify which assembly were supposed to
         /// execute the RPC in. Foreach assembly a derrived instance of RPCInstanceRegistry is created and
         /// we use the assembly index to determine which delegate we call. See RPCInstanceRegistry's constructor.
         /// </summary>
-        private static readonly Dictionary<ushort, ushort> assemblyIndexLookUp = new Dictionary<ushort, ushort>();
+        private static readonly Dictionary<ushort, ushort> m_AssemblyIndexLookUp = new Dictionary<ushort, ushort>();
 
-        public static bool TryGetAssemblyIndex(ushort rpcId, out ushort assemblyIndex) => assemblyIndexLookUp.TryGetValue(rpcId, out assemblyIndex);
+        public static bool TryGetAssemblyIndex(ushort rpcId, out ushort assemblyIndex) => m_AssemblyIndexLookUp.TryGetValue(rpcId, out assemblyIndex);
         [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
 
-        public const string RPCStubsPath = "./RPCStubs.json";
+        public const string k_RPCStubsPath = "./RPCStubs.json";
 
         /// <summary>
         /// This is where our assembly names are serialized to so they can be read
         /// by the ILPostProcessor when recompiling.
         /// </summary>
-        public const string RegisteredAssembliesJsonPath = "./RegisteredAssemblies.txt";
+        public const string k_RegisteredAssembliesJsonPath = "./RegisteredAssemblies.txt";
 
-        [SerializeField][HideInInspector] private string serializedRegisteredAssemblies;
-        [SerializeField][HideInInspector] private string jsonString;
+        [SerializeField][HideInInspector] private string m_SerializedRegisteredAssemblies;
+        [SerializeField][HideInInspector] private string m_JSONString;
 
         public static string MethodToUniqueId(MethodInfo methodInfo)
         {
@@ -69,6 +70,28 @@ namespace Unity.ClusterDisplay.RPC
 
         public static OnRemoveMethodWrapperDelegate onRemoveMethodWrapper;
         public static OnRemovePropertyWrapperDelegate onRemovePropertyWrapper;
+
+        private bool m_Deserialized = false;
+        public static bool Deserialized
+        {
+            get
+            {
+                if (!TryGetInstance(out var instance))
+                    return false;
+                return instance.m_Deserialized;
+            }
+        }
+
+        public delegate void OnRegistryInitialized();
+        public static OnRegistryInitialized onRegistryInitialized;
+
+        private void Awake()
+        {
+            Deserialize();
+            m_Deserialized = true;
+            if (onRegistryInitialized != null)
+                onRegistryInitialized();
+        }
 
         public static bool MethodRegistered(ushort rpcId) => m_RPCs.ContainsKey(rpcId);
         public static bool MethodRegistered(MethodInfo methodInfo) => m_MethodUniqueIdToRPCId.ContainsKey(methodInfo);
@@ -104,39 +127,25 @@ namespace Unity.ClusterDisplay.RPC
 
         public static RPCMethodInfo[] CopyRPCs () => m_RPCs.Values.ToArray();
 
-        public static bool Setup ()
-        {
-            if (!TryGetInstance(out var rpcRegistry))
-            {
-                Debug.LogError($"Unable to retrieve instance of \"{nameof(RPCRegistry)}\".");
-                return false;
-            }
-
-            if (m_RPCs.Count == 0)
-                rpcRegistry.Deserialize();
-
-            return true;
-        }
-
         private void RegisterAssembly (Assembly assembly)
         {
             var name = assembly.FullName;
-            if (targetAssemblies.Contains(assembly))
+            if (m_TargetAssemblies.Contains(assembly))
                 return;
-            targetAssemblies.Add(assembly);
+            m_TargetAssemblies.Add(assembly);
             SerializeRegisteredAssemblies();
         }
 
         private void UnregisterAssembly (Assembly assembly)
         {
             var name = assembly.FullName;
-            if (!targetAssemblies.Contains(assembly))
+            if (!m_TargetAssemblies.Contains(assembly))
                 return;
-            targetAssemblies.Remove(assembly);
+            m_TargetAssemblies.Remove(assembly);
             SerializeRegisteredAssemblies();
         }
 
-        private bool AssemblyIsRegistered(Assembly assembly) => targetAssemblies.Contains(assembly);
+        private bool AssemblyIsRegistered(Assembly assembly) => m_TargetAssemblies.Contains(assembly);
 
         private void RegisterRPCIdWithMethodUniqueId (MethodInfo methodInfo, ushort rpcId)
         {
@@ -165,42 +174,44 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="rpcMethodInfo">The RPC information.</param>
         /// <param name="serialize">If the RPC is flagged using the [RPC] attribute, then we don't need to serialize it.</param>
-        private void RegisterRPC (ref RPCMethodInfo rpcMethodInfo)
+        private bool TryRegisterRPC (ref RPCMethodInfo rpcMethodInfo)
         {
             if (m_RPCs.TryGetValue(rpcMethodInfo.rpcId, out var registeredRPCMethodInfo))
             {
                 Debug.LogError($"Unable to register RPC: \"{rpcMethodInfo.methodInfo.Name}\" with ID: \"{rpcMethodInfo.rpcId}\", there is an already RPC registered with that ID.");
-                return;
+                return false;
             }
 
-            var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
+            // var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
 
-            if (!targetAssemblies.Contains(rpcMethodInfo.methodInfo.Module.Assembly))
-                targetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
+            if (!m_TargetAssemblies.Contains(rpcMethodInfo.methodInfo.Module.Assembly))
+                m_TargetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
 
             m_RPCs.Add(rpcMethodInfo.rpcId, rpcMethodInfo);
             RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
 
+            /*
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
             #endif
+            */
+            return true;
         }
 
-        public void UpdateRPC (ref RPCMethodInfo rpcMethodInfo)
+        public bool TryUpdateRPC (ref RPCMethodInfo rpcMethodInfo)
         {
-            var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
+            // var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
 
             m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
             RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
 
-            #if UNITY_EDITOR
             SetDirtyAndRecompile();
-            #endif
+            return true;
         }
 
-        private void UnregisterRPC (ref RPCMethodInfo rpcMethodInfo)
+        private bool UnregisterRPC (ref RPCMethodInfo rpcMethodInfo)
         {
             m_RPCs.Remove(rpcMethodInfo.rpcId);
             m_MethodUniqueIdToRPCId.Remove(rpcMethodInfo.methodInfo);
@@ -219,9 +230,12 @@ namespace Unity.ClusterDisplay.RPC
                 onRemoveMethodWrapper(rpcMethodInfo.methodInfo);
             }
 
+            /*
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
             #endif
+            */
+            return true;
         }
 
         private void UnregisterRPCOnDeserialize (ushort rpcId)
@@ -249,7 +263,9 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
 
             StageRPCToRegister(methodInfo);
+            /*
             SetDirtyAndRecompile();
+            */
             return true;
         }
 
@@ -271,8 +287,7 @@ namespace Unity.ClusterDisplay.RPC
                 methodInfo, 
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
-            RegisterRPC(ref rpcMethodInfo);
-            return true;
+            return TryRegisterRPC(ref rpcMethodInfo);
         }
 
         private bool TryStageNonPostProcessableMethod (PropertyInfo propertyInfo)
@@ -287,11 +302,12 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
 
             StageRPCToRegister(propertyInfo.SetMethod);
-            SetDirtyAndRecompile();
+            /*
+            */
             return true;
         }
 
-        public static bool TryAddNewRPC (PropertyInfo propertyInfo)
+        public static bool MarkPropertyAsRPC (PropertyInfo propertyInfo)
         {
             if (!TryGetInstance(out var rpcRegistry))
                 return false;
@@ -303,12 +319,21 @@ namespace Unity.ClusterDisplay.RPC
             }
 
             if (!ReflectionUtils.IsAssemblyPostProcessable(propertyInfo.Module.Assembly))
-                return rpcRegistry.TryStageNonPostProcessableMethod(propertyInfo);
+            {
+                if (!rpcRegistry.TryStageNonPostProcessableMethod(propertyInfo))
+                    return false;
+                goto success;
+            }
 
-            return rpcRegistry.TryAddPostProcessableRPC(propertyInfo.SetMethod);
+            if (!rpcRegistry.TryAddPostProcessableRPC(propertyInfo.SetMethod))
+                return false;
+
+            success:
+            rpcRegistry.SetDirtyAndRecompile();
+            return true;
         }
 
-        public static bool TryAddNewRPC (MethodInfo methodInfo)
+        public static bool MarkMethodAsRPC (MethodInfo methodInfo)
         {
             if (!TryGetInstance(out var rpcRegistry))
                 return false;
@@ -320,12 +345,21 @@ namespace Unity.ClusterDisplay.RPC
             }
 
             if (!ReflectionUtils.IsAssemblyPostProcessable(methodInfo.Module.Assembly))
-                return rpcRegistry.TryStageNonPostProcessableMethod(methodInfo);
+            {
+                if (!rpcRegistry.TryStageNonPostProcessableMethod(methodInfo))
+                    return false;
+                goto success;
+            }
 
-            return rpcRegistry.TryAddPostProcessableRPC(methodInfo);
+            if (!rpcRegistry.TryAddPostProcessableRPC(methodInfo))
+                return false;
+
+            success:
+            rpcRegistry.SetDirtyAndRecompile();
+            return true;
         }
 
-        public static void RemoveRPC (ushort rpcId)
+        public static void UnmarkRPC (ushort rpcId)
         {
             if (!TryGetRPC(rpcId, out var rpcMethodInfo))
                 return;
@@ -336,12 +370,12 @@ namespace Unity.ClusterDisplay.RPC
             rpcRegistry.UnregisterRPC(ref rpcMethodInfo);
         }
 
-        public static void RemoveRPC (MethodInfo methodInfo)
+        public static void UnmarkRPC (MethodInfo methodInfo)
         {
             var methodUniqueId = MethodToUniqueId(methodInfo);
             if (!m_MethodUniqueIdToRPCId.TryGetValue(methodInfo, out var rpcId))
                 return;
-            RemoveRPC(rpcId);
+            UnmarkRPC(rpcId);
         }
 
         /// <summary>
@@ -350,7 +384,7 @@ namespace Unity.ClusterDisplay.RPC
         private void SetDirtyAndRecompile ()
         {
             #if UNITY_EDITOR
-            if (IsSerializing)
+            if (IsSerializing || Application.isPlaying)
                 return;
 
             EditorUtility.SetDirty(this);
@@ -393,11 +427,11 @@ namespace Unity.ClusterDisplay.RPC
                 rpcs.Add(SerializedRPC.Create(ref rpc));
             }
 
-            if (!RPCSerializer.TryPrepareRPCStubsForSerialization(rpcs.ToArray(), stagedMethods.Values.ToArray(), out jsonString))
+            if (!RPCSerializer.TryPrepareRPCStubsForSerialization(rpcs.ToArray(), stagedMethods.Values.ToArray(), out m_JSONString))
                 return;
 
             #if UNITY_EDITOR
-            RPCSerializer.TryWriteRPCStubs(RPCStubsPath, jsonString);
+            RPCSerializer.TryWriteRPCStubs(k_RPCStubsPath, m_JSONString);
             #endif
 
             m_IsDirty = true;
@@ -405,10 +439,10 @@ namespace Unity.ClusterDisplay.RPC
 
         private void SerializeRegisteredAssemblies ()
         {
-            RPCSerializer.PrepareRegisteredAssembliesForSerialization(targetAssemblies, out serializedRegisteredAssemblies);
+            RPCSerializer.PrepareRegisteredAssembliesForSerialization(m_TargetAssemblies, out m_SerializedRegisteredAssemblies);
 
             #if UNITY_EDITOR
-            RPCSerializer.TryWriteRegisteredAssemblies(RegisteredAssembliesJsonPath, serializedRegisteredAssemblies);
+            RPCSerializer.TryWriteRegisteredAssemblies(k_RegisteredAssembliesJsonPath, m_SerializedRegisteredAssemblies);
             #endif
 
             m_IsDirty = true;
@@ -419,19 +453,19 @@ namespace Unity.ClusterDisplay.RPC
             if (!RPCInterfaceRegistry.TryCreateImplementationInstance(assembly, out ushort assemblyIndex))
                 return;
 
-            if (!assemblyIndexLookUp.ContainsKey(rpcId))
-                assemblyIndexLookUp.Add(rpcId, assemblyIndex);
+            if (!m_AssemblyIndexLookUp.ContainsKey(rpcId))
+                m_AssemblyIndexLookUp.Add(rpcId, assemblyIndex);
         }
 
         private void DeserializeData (out List<Assembly> registeredAssemblies, out SerializedRPC[] serializedRPCs, out SerializedMethod[] serializedStagedMethods)
         {
             if (Application.isEditor)
-                RPCSerializer.TryReadRegisteredAssemblies(RegisteredAssembliesJsonPath, out registeredAssemblies);
-            else RPCSerializer.TryDeserializeRegisteredAssemblies(serializedRegisteredAssemblies, out registeredAssemblies);
+                RPCSerializer.TryReadRegisteredAssemblies(k_RegisteredAssembliesJsonPath, out registeredAssemblies);
+            else RPCSerializer.TryDeserializeRegisteredAssemblies(m_SerializedRegisteredAssemblies, out registeredAssemblies);
 
             if (Application.isEditor)
-                RPCSerializer.TryReadRPCStubs(RPCStubsPath, out serializedRPCs, out serializedStagedMethods);
-            else RPCSerializer.TryDeserializeRPCStubsJson(jsonString, out serializedRPCs, out serializedStagedMethods);
+                RPCSerializer.ReadRPCStubs(k_RPCStubsPath, out serializedRPCs, out serializedStagedMethods);
+            else RPCSerializer.TryDeserializeRPCStubsJson(m_JSONString, out serializedRPCs, out serializedStagedMethods);
 
             Debug.Log($"Deserialized: (Registered Assemblies: {(registeredAssemblies != null ? registeredAssemblies.Count : 0)}, RPCs: {(serializedRPCs != null ? serializedRPCs.Length : 0)})");
         }
@@ -450,9 +484,7 @@ namespace Unity.ClusterDisplay.RPC
                 methodInfo, 
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
 
-            RegisterRPC(ref rpcMethodInfo);
-
-            return true;
+            return TryRegisterRPC(ref rpcMethodInfo);
         }
 
         private bool TryRegisterStagedMethod (MethodInfo stagedMethod)
@@ -472,8 +504,7 @@ namespace Unity.ClusterDisplay.RPC
                 stagedMethod, 
                 usingWrapper: WrapperUtils.IsWrapper(stagedMethod.DeclaringType));
 
-            RegisterRPC(ref rpcMethodInfo);
-            return true;
+            return TryRegisterRPC(ref rpcMethodInfo);
         }
 
         private bool TryGetWrapperMethod (MethodInfo stagedMethod, out MethodInfo wrapperMethod)
@@ -505,7 +536,7 @@ namespace Unity.ClusterDisplay.RPC
             {
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedStagedMethods[i], out var stagedMethod))
                 {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedStagedMethods[i].methodName}\", declared in type: \"{serializedStagedMethods[i].declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                    Debug.LogError($"Unable to deserialize method: \"{serializedStagedMethods[i].methodName}\", declared in type: \"{serializedStagedMethods[i].declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                     continue;
                 }
 
@@ -538,8 +569,10 @@ namespace Unity.ClusterDisplay.RPC
 
             foreach (var methodInfo in cachedMethodsWithRPCAttribute)
             {
+                /*
                 if (!registeredAssemblies.Contains(methodInfo.Module.Assembly))
                     continue;
+                */
 
                 var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
 
@@ -604,7 +637,7 @@ namespace Unity.ClusterDisplay.RPC
 
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPCs[i], out rpcExecutionStage, out var methodInfo))
                 {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedRPCs[i].method.methodName}\", declared in type: \"{serializedRPCs[i].method.declaryingTypeFullName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                    Debug.LogError($"Unable to deserialize method: \"{serializedRPCs[i].method.methodName}\", declared in type: \"{serializedRPCs[i].method.declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                     continue;
                 }
 
@@ -634,9 +667,9 @@ namespace Unity.ClusterDisplay.RPC
             {
                 if (!RPCInterfaceRegistry.TryCreateImplementationInstance(rpcIdAndInfo.Value.methodInfo.Module.Assembly, out var assemblyIndex))
                     continue;
-                if (assemblyIndexLookUp.ContainsKey(rpcIdAndInfo.Key))
-                    assemblyIndexLookUp[rpcIdAndInfo.Key] = assemblyIndex;
-                else assemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
+                if (m_AssemblyIndexLookUp.ContainsKey(rpcIdAndInfo.Key))
+                    m_AssemblyIndexLookUp[rpcIdAndInfo.Key] = assemblyIndex;
+                else m_AssemblyIndexLookUp.Add(rpcIdAndInfo.Key, assemblyIndex);
             }
         }
 

@@ -134,10 +134,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
                 if (rpc.method.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    var typeDefinition = compiledAssemblyDef.MainModule.GetType(rpc.method.declaryingTypeFullName);
+                    var typeDefinition = compiledAssemblyDef.MainModule.GetType($"{rpc.method.declaringTypeNamespace}.{rpc.method.declaryingTypeName}");
                     if (typeDefinition == null)
                     {
-                        Debug.Log($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeFullName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
+                        Debug.LogError($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
                         continue;
                     }
 
@@ -184,7 +184,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private bool TryPollSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
             if (cachedSerializedRPCS == null)
-                RPCSerializer.TryReadRPCStubs(RPCRegistry.RPCStubsPath, out cachedSerializedRPCS, out var serializedStagedMethods);
+                RPCSerializer.ReadRPCStubs(RPCRegistry.k_RPCStubsPath, out cachedSerializedRPCS, out var serializedStagedMethods);
 
             if (cachedSerializedRPCS != null && cachedSerializedRPCS.Length > 0)
                 if (!TryProcessSerializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray()))

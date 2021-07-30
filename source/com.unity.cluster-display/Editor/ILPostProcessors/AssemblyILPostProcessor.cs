@@ -96,13 +96,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
             if (cachedRegisteredAssemblyFullNames == null)
-                if (!RPCSerializer.TryReadRegisteredAssemblies(RPCRegistry.RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames))
-                    goto failure;
+                RPCSerializer.ReadRegisteredAssemblies(RPCRegistry.k_RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames);
 
+            AssemblyDefinition compiledAssemblyDef = null;
             if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Split(',')[0] == compiledAssembly.Name))
                 goto ignoreAssembly;
 
-            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out var compiledAssemblyDef))
+            if (!TryGetAssemblyDefinitionFor(compiledAssembly, out compiledAssemblyDef))
                 goto failure;
 
             RPCILPostProcessor postProcessor = new RPCILPostProcessor();
@@ -116,6 +116,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 SymbolWriterProvider = new PortablePdbWriterProvider(), 
                 SymbolStream = pdb, 
                 WriteSymbols = true,
+                
             };
 
             try

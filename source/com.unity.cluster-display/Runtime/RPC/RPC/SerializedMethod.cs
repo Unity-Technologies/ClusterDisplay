@@ -12,28 +12,32 @@ namespace Unity.ClusterDisplay.RPC
 
         [SerializeField] public bool declaringAssemblyIsPostProcessable;
         [SerializeField] public string declaringAssemblyName;
-        [SerializeField] public string declaryingTypeFullName;
+        [SerializeField] public string declaringTypeNamespace;
+        [SerializeField] public string declaryingTypeName;
 
         [SerializeField] public string declaringReturnTypeAssemblyName;
-        [SerializeField] public string returnTypeFullName;
+        [SerializeField] public string returnTypeNamespace;
+        [SerializeField] public string returnTypeName;
 
         [SerializeField] public string methodName;
 
         [SerializeField] public string[] declaringParameterTypeAssemblyNames;
-        [SerializeField] public string[] parameterTypeFullNames;
+        [SerializeField] public string[] parameterTypeNamespaces;
+        [SerializeField] public string[] parameterTypeName;
         [SerializeField] public string[] parameterNames;
 
         public int ParameterCount => parameterNames.Length;
 
-        public (string declaringParameterTypeAssemblyName, string parameterTypeFullName, string parameterName) this[int parameterIndex]
+        public (string declaringParameterTypeAssemblyName, string parameterTypeNamespace, string parameterTypeName, string parameterName) this[int parameterIndex]
         {
             get =>
-                parameterTypeFullNames != null ? (
+                parameterTypeName != null ? (
                     declaringParameterTypeAssemblyNames[parameterIndex],
-                    parameterTypeFullNames[parameterIndex], 
+                    parameterTypeNamespaces[parameterIndex], 
+                    parameterTypeName[parameterIndex], 
                     parameterNames[parameterIndex]) 
 
-                : (null, null, null);
+                : (null, null, null, null);
         }
 
         public static SerializedMethod Create (MethodInfo methodInfo)
@@ -41,7 +45,8 @@ namespace Unity.ClusterDisplay.RPC
             var declaringType = methodInfo.DeclaringType;
             var declaringAssembly = declaringType.Assembly;
 
-            string declaringTypeStr = declaringType.FullName;
+            string declaringTypeNamespace = declaringType.Namespace;
+            string declaringTypeStr = declaringType.Name;
             string declaringAssemblystr = declaringAssembly.GetName().Name;
 
             var parameters = methodInfo.GetParameters();
@@ -57,15 +62,18 @@ namespace Unity.ClusterDisplay.RPC
                 return new SerializedMethod
                 {
                     declaringAssemblyName = declaringAssemblystr,
-                    declaryingTypeFullName = declaringTypeStr,
+                    declaringTypeNamespace = declaringType.Namespace,
+                    declaryingTypeName = declaringType.Name,
 
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,
-                    returnTypeFullName = returnType.FullName,
+                    returnTypeNamespace = returnType.Namespace,
+                    returnTypeName = returnType.Name,
 
                     methodName = methodInfo.Name,
 
                     declaringParameterTypeAssemblyNames = new string[0],
-                    parameterTypeFullNames = new string[0],
+                    parameterTypeNamespaces = new string[0],
+                    parameterTypeName = new string[0],
                     parameterNames = new string[0],
                 };
             }
@@ -74,28 +82,33 @@ namespace Unity.ClusterDisplay.RPC
             returnTypeAssemblyName = returnType.Assembly.GetName().Name;
 
             var parameterTypeAssemblyNames = new string[parameters.Length];
+            var parameterTypeNamespaces = new string[parameters.Length];
             var parameterTypeNames = new string[parameters.Length];
             var parameterNames = new string[parameters.Length];
 
             for (int i = 0; i < parameters.Length; i++)
             {
                 parameterTypeAssemblyNames[i] = parameters[i].ParameterType.Assembly.GetName().Name;
-                parameterTypeNames[i] = parameters[i].ParameterType.FullName;
+                parameterTypeNamespaces[i] = parameters[i].ParameterType.Namespace;
+                parameterTypeNames[i] = parameters[i].ParameterType.Name;
                 parameterNames[i] = parameters[i].Name;
             }
 
             return new SerializedMethod
             {
                 declaringAssemblyName = declaringAssemblystr,
-                declaryingTypeFullName = declaringTypeStr,
+                declaringTypeNamespace = declaringType.Namespace,
+                declaryingTypeName = declaringType.Name,
 
                 declaringReturnTypeAssemblyName = returnTypeAssemblyName,
-                returnTypeFullName = returnType.FullName,
+                returnTypeNamespace = returnType.Namespace,
+                returnTypeName = returnType.Name,
 
                 methodName = methodInfo.Name,
 
                 declaringParameterTypeAssemblyNames = parameterTypeAssemblyNames,
-                parameterTypeFullNames = parameterTypeNames,
+                parameterTypeNamespaces = parameterTypeNamespaces,
+                parameterTypeName = parameterTypeNames,
                 parameterNames = parameterNames,
             };
         }

@@ -10,8 +10,6 @@
   ],
   "description": "Cluster display sample projects.",
   "dependencies": {
-    "com.unity.cluster-display" : "0.0.3-preview",
-    "com.unity.visualscripting" : "1.7.3",
-    "com.unity.collections" : "0.15.0-preview.21"
+    "com.unity.cluster-display" : "0.0.3-preview"
   }
 }

@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay.RPC
                     SceneObjectsRegistry.TryCreateNewInstance(scene.Value, out sceneObjectsRegistry);
 
                 if (sceneObjectsRegistry != null)
-                    RPCRegistry.TryAddNewRPC(selectedMethodInfo);
+                    RPCRegistry.MarkMethodAsRPC(selectedMethodInfo);
             }
         }
 

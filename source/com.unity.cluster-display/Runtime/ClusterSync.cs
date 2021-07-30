@@ -51,7 +51,8 @@ namespace Unity.ClusterDisplay
         [SerializeField] private bool m_IgnoreEditorCmdLine = false;
 #endif
 
-        internal ClusterNode LocalNode { get; set; }
+        internal ClusterNode m_LocalNode;
+        internal ClusterNode LocalNode => m_LocalNode;
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
@@ -111,6 +112,7 @@ namespace Unity.ClusterDisplay
 
         private void OnEnable()
         {
+            Debug.Log("HELLO");
             stateSetter.SetIsTerminated(false);
             stateSetter.SetCLusterLogicEnabled(false);
             NodeState.Debugging = m_Debugging;
@@ -248,11 +250,10 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    var master =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
-                    if (!master.Start())
-                        return false;
+                    m_LocalNode =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
                     stateSetter.SetIsMaster(true);
-                    LocalNode = master;
+                    if (!m_LocalNode.Start())
+                        return false;
                 }
                 
 
@@ -271,11 +272,10 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    var slave = new SlavedNode(id, ip, rxport, txport, 30, adapterName );
-                    if (!slave.Start())
-                        return false;
-                    LocalNode = slave;
+                    m_LocalNode = new SlavedNode(id, ip, rxport, txport, 30, adapterName );
                     stateSetter.SetIsMaster(false);
+                    if (!m_LocalNode.Start())
+                        return false;
                 }
 
                 return true;

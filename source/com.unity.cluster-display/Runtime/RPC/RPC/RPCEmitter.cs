@@ -38,9 +38,6 @@ namespace Unity.ClusterDisplay.RPC
 
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
-            if (!RPCRegistry.Setup())
-                return false;
-
             ushort bufferPos = 0;
             if (buffer.Length < MinimumRPCPayloadSize)
                 goto success;
@@ -63,9 +60,6 @@ namespace Unity.ClusterDisplay.RPC
                     goto failure;
                 }
                 #endif
-
-                if (rpcId == 0)
-                    UnityEngine.Debug.Log("TEST");
 
                 ParseRPCExecutionStage(ref bufferPos, out var rpcExecutionStage);
 
@@ -213,6 +207,23 @@ namespace Unity.ClusterDisplay.RPC
             return array;
         }
 
+        [ParseNativeArrayMarker]
+        public static unsafe NativeArray<T> ParseNativeArray<T>(ref ushort startPos) where T : struct
+        {
+            var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
+
+            ushort arrayLength = Marshal.PtrToStructure<ushort>(ptr);
+            ptr += sizeof(ushort);
+
+            ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
+
+            NativeArray<T> nativeArray = new NativeArray<T>(arrayLength, Allocator.Persistent);
+            UnsafeUtility.MemCpy(nativeArray.GetUnsafePtr(), ptr.ToPointer(), arrayByteCount);
+
+            startPos += (ushort)(sizeof(ushort) + arrayByteCount);
+            return nativeArray;
+        }
+
         [ParseStructureMarker]
         public static unsafe T ParseStructure<T> (ref ushort startPos)
         {
@@ -278,6 +289,10 @@ namespace Unity.ClusterDisplay.RPC
 
             rpcBufferSize += strSize;
         }
+
+        [NativeArrayLengthMarker]
+        public static int GetNativeArrayLength<T>(NativeArray<T> nativeArray) where T : unmanaged =>
+            nativeArray.Length;
 
         [AppendRPCNativeArrayParameterValueMarker]
         public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> value) where T : unmanaged

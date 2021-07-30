@@ -98,25 +98,25 @@ namespace Unity.ClusterDisplay.RPC
                     return;
 
                 var rpcRegistery = target as RPCRegistry;
-                if (RPCRegistry.targetAssemblies != null && RPCRegistry.targetAssemblies.Count > 0)
+                if (RPCRegistry.m_TargetAssemblies != null && RPCRegistry.m_TargetAssemblies.Count > 0)
                 {
                     EditorGUILayout.LabelField("Registered Post Processable Assemblies", EditorStyles.boldLabel);
                     registeredAssemblyListScrollPosition = EditorGUILayout.BeginScrollView(registeredAssemblyListScrollPosition, GUILayout.Height(150));
 
-                    for (int i = 0; i < RPCRegistry.targetAssemblies.Count; i++)
+                    for (int i = 0; i < RPCRegistry.m_TargetAssemblies.Count; i++)
                     {
                         EditorGUILayout.BeginHorizontal();
 
                         if (GUILayout.Button("Select", GUILayout.Width(60)))
                         {
-                            selectedAssembly = RPCRegistry.targetAssemblies[i];
+                            selectedAssembly = RPCRegistry.m_TargetAssemblies[i];
                             UpdateTypeSearch(typeSearchStr, forceUpdate: true);
                         }
 
                         if (GUILayout.Button("Unregister", GUILayout.Width(70)))
-                            rpcRegistery.UnregisterAssembly(RPCRegistry.targetAssemblies[i]);
+                            rpcRegistery.UnregisterAssembly(RPCRegistry.m_TargetAssemblies[i]);
 
-                        EditorGUILayout.LabelField(RPCRegistry.targetAssemblies[i].GetName().Name);
+                        EditorGUILayout.LabelField(RPCRegistry.m_TargetAssemblies[i].GetName().Name);
                         EditorGUILayout.EndHorizontal();
                     }
 
@@ -226,7 +226,7 @@ namespace Unity.ClusterDisplay.RPC
                         if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage)
                         {
                             rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
-                            rpcRegistry.UpdateRPC(ref rpcMethodInfo);
+                            rpcRegistry.TryUpdateRPC(ref rpcMethodInfo);
                         }
 
                         EditorGUILayout.EndHorizontal();
@@ -239,7 +239,7 @@ namespace Unity.ClusterDisplay.RPC
                 else EditorGUILayout.LabelField("No methods reigstered.");
 
                 if (rpcMethodToRemove != null)
-                    RPCRegistry.RemoveRPC(rpcMethodToRemove.Value.rpcId);
+                    RPCRegistry.UnmarkRPC(rpcMethodToRemove.Value.rpcId);
             }
 
             private void OnChangeSearch (string newMethodSearchStr)
@@ -253,7 +253,7 @@ namespace Unity.ClusterDisplay.RPC
 
             private void OnSelectMethod (MethodInfo selectedMethodInfo)
             {
-                RPCRegistry.TryAddNewRPC(selectedMethodInfo);
+                RPCRegistry.MarkMethodAsRPC(selectedMethodInfo);
             }
 
             public override void OnInspectorGUI()

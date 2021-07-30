@@ -41,6 +41,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         private void ProcessMessages(CancellationToken ctk)
         {
+            Debug.Log("TEST FOR ALL CLIENTS.");
             try
             {
                 while (!ctk.IsCancellationRequested && !m_MasterFound)

@@ -152,6 +152,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
         private void TryCallCachedMethod (string methodName, bool throwError = true)
         {
+            if (cachedDefaultCustomEditorType == null)
+                goto failure;
+
             if (!cachedReflectionAccessibleMethods.TryGetValue(methodName, out var method))
                 goto failure;
 

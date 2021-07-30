@@ -40,6 +40,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
         private void ProcessMessages(CancellationToken ctk)
         {
+            Debug.Log("PLZ FOR ALL CLIENTS.");
             try
             {
                 do

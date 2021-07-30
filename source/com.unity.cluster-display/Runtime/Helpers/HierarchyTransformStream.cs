@@ -8,47 +8,50 @@ using Unity.ClusterDisplay.RPC;
 
 namespace Unity.ClusterDisplay
 {
+    public struct Data
+    {
+        public Vector3 localPosition;
+        public Quaternion localRotation;
+        public Vector3 localScale;
+    }
+
     [RequireComponent(typeof(Transform))]
     public class HierarchyTransformStream : MonoBehaviour
     {
-        [HideInInspector][SerializeField] private Transform rootTransform;
-        public Transform RootTransform
+        private Transform[] cachedChildTransforms;
+        private Transform[] CachedChildTransforms
         {
             get
             {
-                if (rootTransform == null)
-                {
-                    rootTransform = GetComponent<Transform>();
+                if (cachedChildTransforms == null)
                     cachedChildTransforms = GetComponentsInChildren<Transform>();
-                }
 
-                return rootTransform;
+                return cachedChildTransforms;
             }
         }
 
-        private Transform[] cachedChildTransforms;
-
-        public int TransformCount => cachedChildTransforms == null ? 1 : cachedChildTransforms.Length + 1;
+        public int TransformCount => CachedChildTransforms == null ? 1 : CachedChildTransforms.Length + 1;
         private NativeArray<Data> cachedTransformData;
 
-        public struct Data
+        private void Test (NativeArray<Data> test)
         {
-            public Vector3 localPosition;
-            public Quaternion localRotation;
-            public Vector3 localScale;
+            if (test.Length == 0)
+                Debug.Log("TEST");
+
+            RPCEmitter.AppendRPCNativeArrayParameterValues<Data>(test);
         }
 
         private void CacheHierarchyTransformations ()
         {
-            if (cachedTransformData == null || cachedTransformData.Length != cachedChildTransforms.Length)
-                cachedTransformData = new NativeArray<Data>(cachedChildTransforms.Length, Allocator.Persistent);
+            if (cachedTransformData == null || cachedTransformData.Length != CachedChildTransforms.Length)
+                cachedTransformData = new NativeArray<Data>(CachedChildTransforms.Length, Allocator.Persistent);
 
-            for (int i = 0; i < cachedChildTransforms.Length; i++)
+            for (int i = 0; i < CachedChildTransforms.Length; i++)
                 cachedTransformData[i] = new Data
                 {
-                    localPosition = cachedChildTransforms[i].localPosition,
-                    localRotation = cachedChildTransforms[i].localRotation,
-                    localScale = cachedChildTransforms[i].localScale
+                    localPosition = CachedChildTransforms[i].localPosition,
+                    localRotation = CachedChildTransforms[i].localRotation,
+                    localScale = CachedChildTransforms[i].localScale
                 };
         }
 
@@ -64,14 +67,16 @@ namespace Unity.ClusterDisplay
         [ClusterRPC(RPCExecutionStage.AfterUpdate)]
         public void ApplyHierarchyTransformations (NativeArray<Data> transformations)
         {
+            /*
             if (ClusterDisplayState.IsMaster)
                 return;
+            */
 
-            for (int i = 0; i < cachedChildTransforms.Length; i++)
+            for (int i = 0; i < CachedChildTransforms.Length; i++)
             {
-                cachedChildTransforms[i].localPosition = transformations[i].localPosition;
-                cachedChildTransforms[i].localRotation = transformations[i].localRotation;
-                cachedChildTransforms[i].localScale = transformations[i].localScale;
+                CachedChildTransforms[i].localPosition = transformations[i].localPosition;
+                CachedChildTransforms[i].localRotation = transformations[i].localRotation;
+                CachedChildTransforms[i].localScale = transformations[i].localScale;
             }
         }
     }
