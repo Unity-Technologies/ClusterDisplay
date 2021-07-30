@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
                     generatedRPCILTypeRef.Resolve(),
-                    generatedRPCILTypeRef.Module.ImportReference(typeof(RPCInterfaceRegistry.ExecuteQueuedRPC)),
+                    CecilUtils.Import(generatedRPCILTypeRef.Module, typeof(RPCInterfaceRegistry.ExecuteQueuedRPC)),
                     out var methodRef))
                 {
                     ilProcessor = null;

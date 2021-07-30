@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 Type markerAttribute, 
                 out ILProcessor il)
             {
-                var onTryCallMarkerAttributeTypeRef = assemblyDef.MainModule.ImportReference(markerAttribute);
+                var onTryCallMarkerAttributeTypeRef = CecilUtils.Import(assemblyDef.MainModule, markerAttribute);
 
                 if (!TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 var il = targetMethodDef.Body.GetILProcessor();
 
                 var rpcEmitterType = typeof(RPCEmitter);
-                var rpcEmitterTypeReference = targetMethodRef.Module.ImportReference(rpcEmitterType);
+                var rpcEmitterTypeReference = CecilUtils.Import(targetMethodRef.Module, rpcEmitterType);
 
                 MethodInfo appendRPCMethodInfo = null;
                 if (!targetMethodDef.IsStatic)
@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 else if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
 
-                var appendRPCCMethodRef = targetMethodRef.Module.ImportReference(appendRPCMethodInfo);
+                var appendRPCCMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCMethodInfo);
 
                 if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
                     return false;
@@ -119,7 +119,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     out var hasDynamicallySizedRPCParameters))
                     return false;
 
-                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, targetMethodRef.Module.ImportReference(getIsMasterMethod));
+                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, CecilUtils.Import(targetMethodRef.Module, getIsMasterMethod));
                 CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
 
                 return !hasDynamicallySizedRPCParameters ?
@@ -198,7 +198,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 RPCExecutionStage rpcExecutionStage,
                 out MethodReference methodRef)
             {
-                var rpcInterfaceRegistryRef = moduleDef.ImportReference(typeof(RPCInterfaceRegistry));
+                var rpcInterfaceRegistryRef = CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry));
 
                 switch (rpcExecutionStage)
                 {
@@ -206,7 +206,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                                 rpcInterfaceRegistryRef.Module,
                                 rpcInterfaceRegistryRef.Resolve(), 
-                                moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeFixedUpdateRPCMarker)), 
+                                CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeFixedUpdateRPCMarker)), 
                                 out methodRef);
                         break;
 
@@ -214,7 +214,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                             rpcInterfaceRegistryRef.Module,
                             rpcInterfaceRegistryRef.Resolve(),
-                            moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterFixedUpdateRPCMarker)),
+                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterFixedUpdateRPCMarker)),
                             out methodRef);
                         break;
 
@@ -222,7 +222,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                             rpcInterfaceRegistryRef.Module,
                             rpcInterfaceRegistryRef.Resolve(),
-                            moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeUpdateRPCMarker)),
+                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeUpdateRPCMarker)),
                             out methodRef);
                         break;
 
@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                             rpcInterfaceRegistryRef.Module,
                             rpcInterfaceRegistryRef.Resolve(),
-                            moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterUpdateRPCMarker)),
+                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterUpdateRPCMarker)),
                             out methodRef);
                         break;
 
@@ -238,7 +238,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                             rpcInterfaceRegistryRef.Module,
                             rpcInterfaceRegistryRef.Resolve(), 
-                            moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueBeforeLateUpdateRPCMarker)), 
+                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeLateUpdateRPCMarker)), 
                             out methodRef);
                         break;
 
@@ -246,7 +246,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         TryFindMethodReferenceWithAttributeInModule(
                             rpcInterfaceRegistryRef.Module,
                             rpcInterfaceRegistryRef.Resolve(), 
-                            moduleDef.ImportReference(typeof(RPCInterfaceRegistry.QueueAfterLateUpdateRPCMarker)), 
+                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterLateUpdateRPCMarker)), 
                             out methodRef);
                         break;
 

@@ -7,6 +7,6 @@ public class TestScript : MonoBehaviour
     [Unity.ClusterDisplay.RPC.ClusterRPC]
     private void Awake()
     {
-        Debug.Log("HELLO WORLD 59");
+        Debug.Log("HELLO WORLD 9");
     }
 }

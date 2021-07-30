@@ -62,9 +62,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             out Instruction lastInstruction)
         {
             var debugType = typeof(Debug);
-            var debugTypeRef = moduleDef.ImportReference(debugType);
+            var debugTypeRef = CecilUtils.Import(moduleDef, debugType);
             var debugTypeDef = debugTypeRef.Resolve();
-            var logMethodRef = moduleDef.ImportReference(debugTypeDef.Methods.Where(method => {
+            var logMethodRef = CecilUtils.Import(moduleDef, debugTypeDef.Methods.Where(method => {
                 return
                     method.Name == "Log" &&
                     method.Parameters.Count == 1;
@@ -117,7 +117,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         if (serializedMethodName != formarlySerializedAs)
                             continue;
 
-                        outMethodRef = moduleDef.ImportReference(methodDef);
+                        outMethodRef = CecilUtils.Import(moduleDef, methodDef);
                         Debug.LogFormat($"Found renamed method: \"{outMethodRef.Name}\" that was previously named as: \"{serializedMethodName}\".");
                         return true;
                     }
@@ -146,7 +146,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private static bool TryGetNativeArrayLengthGetProperty (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
         {
             lengthPropertyGetMethodReference = null;
-            var parameterTypeRef = moduleDef.ImportReference(param.ParameterType);
+            var parameterTypeRef = CecilUtils.Import(moduleDef, param.ParameterType);
             var lengthPropertyDef = param.ParameterType.Resolve().Properties.FirstOrDefault(propertyDef =>
             {
                 return
@@ -157,14 +157,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (lengthPropertyDef == null || lengthPropertyDef.GetMethod == null)
                 return false;
 
-            lengthPropertyGetMethodReference = CreateMethodReferenceForGenericInstanceType(moduleDef.ImportReference(lengthPropertyDef.GetMethod), param.ParameterType);
+            lengthPropertyGetMethodReference = CreateMethodReferenceForGenericInstanceType(CecilUtils.Import(moduleDef, lengthPropertyDef.GetMethod), param.ParameterType);
             return true;
         }
 
         private static bool TryGetArrayLengthGetProperty (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
         {
             lengthPropertyGetMethodReference = null;
-            var parameterTypeRef = param.ParameterType.Module.ImportReference(param.ParameterType);
+            var parameterTypeRef = CecilUtils.Import(param.ParameterType.Module, param.ParameterType);
             var lengthPropertyDef = parameterTypeRef.Resolve().Properties.FirstOrDefault(propertyDef =>
             {
                 return
@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (lengthPropertyDef == null || lengthPropertyDef.GetMethod == null)
                 return false;
 
-            lengthPropertyGetMethodReference = CreateMethodReferenceForGenericInstanceType(moduleDef.ImportReference(lengthPropertyDef.GetMethod), param.ParameterType);
+            lengthPropertyGetMethodReference = CreateMethodReferenceForGenericInstanceType(CecilUtils.Import(moduleDef, lengthPropertyDef.GetMethod), param.ParameterType);
             return true;
         }
 
@@ -195,10 +195,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 !CecilUtils.TryFindMethodWithAttribute<RPCEmitter.AppendRPCNativeArrayParameterValueMarker>(rpcEmitterType, out var appendRPCNativeArrayParameterValueMethodInfo))
                 return false;
 
-            var appendRPCValueTypeParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
-            var appendRPCStringParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCStringParameterValueMethodInfo);
-            var appendRPCArrayParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCArrayParameterValueMethodInfo);
-            var appendRPCNativeArrayParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCNativeArrayParameterValueMethodInfo);
+            var appendRPCValueTypeParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCValueTypeParameterValueMethodInfo);
+            var appendRPCStringParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCStringParameterValueMethodInfo);
+            var appendRPCArrayParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCArrayParameterValueMethodInfo);
+            var appendRPCNativeArrayParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCNativeArrayParameterValueMethodInfo);
 
             var targetMethodDef = targetMethodRef.Resolve();
 
@@ -246,7 +246,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             return false;
                         }
 
-                        CecilUtils.InsertCallAfter(il, ref afterInstruction, targetMethodRef.Module.ImportReference(stringLengthGetterMethodDef)); // Call string length getter with pushes the string length to the stack.
+                        CecilUtils.InsertCallAfter(il, ref afterInstruction, CecilUtils.Import(targetMethodRef.Module, stringLengthGetterMethodDef)); // Call string length getter with pushes the string length to the stack.
                         CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply char size of one byte by the length of the string.
                         CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add string size in bytes to total parameters payload size.
                         CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
@@ -260,7 +260,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                         if (isArray)
                         {
-                            var elementType = targetMethodRef.Module.ImportReference(isNativeArray ? (param.ParameterType as GenericInstanceType).GenericArguments[0] : param.ParameterType.GetElementType());
+                            var elementType = CecilUtils.Import(targetMethodRef.Module, isNativeArray ? (param.ParameterType as GenericInstanceType).GenericArguments[0] : param.ParameterType.GetElementType());
                             MethodReference lengthPropertyGetMethodRef = null;
                             if (isNativeArray)
                             {
@@ -269,7 +269,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                                 /*
                                 if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.NativeArrayLengthMarker>(rpcEmitterType, out var lengthMethod))
                                     return false;
-                                var genericInstanceMethod = new GenericInstanceMethod(targetMethodRef.Module.ImportReference(lengthMethod));
+                                var genericInstanceMethod = new GenericInstanceMethod(CecilUtils.Import(targetMethodRef.Module, lengthMethod));
                                 genericInstanceMethod.GenericArguments.Add(elementType);
                                 lengthPropertyGetMethodRef = genericInstanceMethod;
                                 */
@@ -300,7 +300,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                                 return false;
                             }
 
-                            CecilUtils.InsertCallAfter(il, ref afterInstruction, targetMethodRef.Module.ImportReference(lengthPropertyGetMethodRef)); // Call array length getter which will push array length to stack.
+                            CecilUtils.InsertCallAfter(il, ref afterInstruction, CecilUtils.Import(targetMethodRef.Module, lengthPropertyGetMethodRef)); // Call array length getter which will push array length to stack.
                             CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Mul); // Multiply array element size by array length.
                             CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Add); // Add total array size in bytes to total parameters payload size.
                             CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Ldc_I4_2); // Load "2" as a constant which we designate as the array's byte size.
@@ -371,7 +371,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             var targetMethodDef = targetMethodRef.Resolve();
 
-            var appendRPCValueTypeParameterValueMethodRef = targetMethodRef.Module.ImportReference(appendRPCValueTypeParameterValueMethodInfo);
+            var appendRPCValueTypeParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCValueTypeParameterValueMethodInfo);
 
             if (!TryInjectAppendStaticSizedRPCCall(
                 il,
@@ -409,7 +409,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (cachedNativeArrayTypeRef == null)
             {
-                cachedNativeArrayTypeRef = moduleDef.ImportReference(typeof(NativeArray<>));
+                cachedNativeArrayTypeRef = CecilUtils.Import(moduleDef, typeof(NativeArray<>));
                 if (cachedNativeArrayTypeRef == null)
                     return false;
             }
@@ -431,7 +431,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             foreach (var param in targetMethodRef.Parameters)
             {
-                var typeReference = moduleDef.ImportReference(param.ParameterType);
+                var typeReference = CecilUtils.Import(moduleDef, param.ParameterType);
                 if (typeReference.IsArray || CecilUtils.ParameterIsString(moduleDef, param) || ParameterIsNativeArray(moduleDef, param))
                 {
                     hasDynamicallySizedRPCParameters = true;
@@ -470,7 +470,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             out MethodReference tryGetInstanceMethodRef)
         {
             var type = typeof(T);
-            typeRef = moduleDefinition.ImportReference(type);
+            typeRef = CecilUtils.Import(moduleDefinition, type);
 
             if (typeRef == null)
             {
@@ -485,7 +485,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            var baseTypeRef = moduleDefinition.ImportReference(type.BaseType);
+            var baseTypeRef = CecilUtils.Import(moduleDefinition, type.BaseType);
             if (baseTypeRef == null)
             {
                 tryGetInstanceMethodRef = null;
@@ -501,7 +501,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            var baseGenericMethodRef = moduleDefinition.ImportReference(tryGetInstanceMethod);
+            var baseGenericMethodRef = CecilUtils.Import(moduleDefinition, tryGetInstanceMethod);
 
             return (tryGetInstanceMethodRef = baseGenericMethodRef) != null;
         }
@@ -523,7 +523,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            derrivedTypeRef = assemblyDef.MainModule.ImportReference(derrivedTypeDef);
+            derrivedTypeRef = CecilUtils.Import(assemblyDef.MainModule, derrivedTypeDef);
             return true;
         }
 
@@ -549,7 +549,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            methodRef = moduleDef.ImportReference(methodDef);
+            methodRef = CecilUtils.Import(moduleDef, methodDef);
             return true;
         }
 
@@ -574,7 +574,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             var constructorMethodInfo = typeof(RPCInterfaceRegistry).GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(constructorInfo => constructorInfo.GetCustomAttribute<RPCInterfaceRegistry.RPCInterfaceRegistryConstuctorMarker>() != null);
-            constructorILProcessor.Emit(OpCodes.Call, compiledAssemblyDef.MainModule.ImportReference(constructorMethodInfo));
+            constructorILProcessor.Emit(OpCodes.Call, CecilUtils.Import(compiledAssemblyDef.MainModule, constructorMethodInfo));
             constructorILProcessor.Emit(OpCodes.Nop);
             constructorILProcessor.Emit(OpCodes.Nop);
             constructorILProcessor.Emit(OpCodes.Ret);
@@ -597,7 +597,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseStringMarker>(typeof(RPCEmitter), out var parseStringMethod))
                         return false;
 
-                    var parseStringMethodRef = moduleDef.ImportReference(parseStringMethod);
+                    var parseStringMethodRef = CecilUtils.Import(moduleDef, parseStringMethod);
 
                     CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, parseStringMethodRef);
@@ -609,14 +609,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseNativeArrayMarker>(typeof(RPCEmitter), out var parseNativeArrayMethodInfo))
                         return false;
 
-                    var parseNativeArrayMethodRef = moduleDef.ImportReference(parseNativeArrayMethodInfo);
+                    var parseNativeArrayMethodRef = CecilUtils.Import(moduleDef, parseNativeArrayMethodInfo);
 
                     var genericInstanceMethod = new GenericInstanceMethod(parseNativeArrayMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
-                    var paramRef = moduleDef.ImportReference(elementType);
+                    var paramRef = CecilUtils.Import(moduleDef, elementType);
                     genericInstanceMethod.GenericArguments.Add(paramRef);
 
                     CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
-                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, moduleDef.ImportReference(genericInstanceMethod));
+                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, CecilUtils.Import(moduleDef, genericInstanceMethod));
                 }
 
                 else if (paramDef.ParameterType.IsArray)
@@ -625,27 +625,27 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseArrayMarker>(typeof(RPCEmitter), out var parseArrayMethod))
                         return false;
 
-                    var parseArrayMethodRef = moduleDef.ImportReference(parseArrayMethod);
+                    var parseArrayMethodRef = CecilUtils.Import(moduleDef, parseArrayMethod);
 
                     var genericInstanceMethod = new GenericInstanceMethod(parseArrayMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
-                    var paramRef = moduleDef.ImportReference(elementType);
+                    var paramRef = CecilUtils.Import(moduleDef, elementType);
                     genericInstanceMethod.GenericArguments.Add(paramRef);
 
                     CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
-                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, moduleDef.ImportReference(genericInstanceMethod));
+                    CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, CecilUtils.Import(moduleDef, genericInstanceMethod));
                 }
 
                 else if (paramDef.ParameterType.IsValueType)
                 {
                     if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.ParseStructureMarker>(typeof(RPCEmitter), out var parseStructureMethod))
                         return false;
-                    var parseStructureMethodRef = moduleDef.ImportReference(parseStructureMethod);
+                    var parseStructureMethodRef = CecilUtils.Import(moduleDef, parseStructureMethod);
 
                     var genericInstanceMethod = new GenericInstanceMethod(parseStructureMethodRef); // Create a generic method of RPCEmitter.ParseStructure.
-                    var paramRef = moduleDef.ImportReference(paramDef.ParameterType);
+                    var paramRef = CecilUtils.Import(moduleDef, paramDef.ParameterType);
                     // paramRef.IsValueType = true;
                     genericInstanceMethod.GenericArguments.Add(paramRef);
-                    var genericInstanceMethodRef = moduleDef.ImportReference(genericInstanceMethod);
+                    var genericInstanceMethodRef = CecilUtils.Import(moduleDef, genericInstanceMethod);
 
                     CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethodRef);  // Call generic method to convert bytes into our struct.
@@ -733,7 +733,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             Instruction afterInstruction = null;
 
-            var voidTypeRef = ilProcessor.Body.Method.Module.ImportReference(typeof(void));
+            var voidTypeRef = CecilUtils.Import(ilProcessor.Body.Method.Module, typeof(void));
             if (!targetMethodRef.HasParameters)
             {
                 // Call method on target object without any parameters.
@@ -810,7 +810,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private static bool TryGenerateRPCILTypeInCompiledAssembly (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
         {
             var newTypeDef = new TypeDefinition("Unity.ClusterDisplay.Generated", "RPCIL", Mono.Cecil.TypeAttributes.NestedPrivate);
-            newTypeDef.BaseType = compiledAssemblyDef.MainModule.ImportReference(typeof(RPCInterfaceRegistry));
+            newTypeDef.BaseType = CecilUtils.Import(compiledAssemblyDef.MainModule, typeof(RPCInterfaceRegistry));
 
             var rpcIdParameterDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, rpcIdParameterDef);

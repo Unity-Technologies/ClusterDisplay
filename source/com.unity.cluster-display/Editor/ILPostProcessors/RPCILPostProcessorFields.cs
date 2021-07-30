@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            return (getInstanceMethodRef = cachedGetInstanceMethodRef = moduleDef.ImportReference(methodInfo)) != null;
+            return (getInstanceMethodRef = cachedGetInstanceMethodRef = CecilUtils.Import(moduleDef, methodInfo)) != null;
         }
 
         private static bool TryGetCachedQueuedRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out QueuedRPCILGenerator queuedRPCILGenerator)

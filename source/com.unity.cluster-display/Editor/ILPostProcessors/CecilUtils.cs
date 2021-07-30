@@ -12,6 +12,170 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public static class CecilUtils
     {
+        public static TypeReference Import (ModuleDefinition moduleDef, TypeReference typeRef)
+        {
+            if (moduleDef.Name != typeRef.Module.Name)
+                return moduleDef.ImportReference(typeRef);
+            return typeRef;
+        }
+
+        public static TypeReference Import (ModuleDefinition moduleDef, TypeDefinition typeDef)
+        {
+            if (moduleDef.Name != typeDef.Module.Name)
+                return moduleDef.ImportReference(typeDef);
+            return typeDef;
+        }
+
+        public static bool TypeDefinitionMatchesType (TypeDefinition typeDef, Type type)
+        {
+            if (type.IsNested)
+                return
+                    typeDef.DeclaringType != null &&
+                    typeDef.DeclaringType.Namespace == type.DeclaringType.Namespace &&
+                    typeDef.DeclaringType.Name == type.DeclaringType.Name &&
+                    typeDef.Namespace == type.Namespace &&
+                    typeDef.Name == type.Name;
+
+            return
+                typeDef.Namespace == type.Namespace ||
+                typeDef.Name == type.Name;
+        }
+
+        public static bool TryFindTypeDefinition (ModuleDefinition moduleDef, Type type, out TypeDefinition typeDef)
+        {
+            typeDef = moduleDef.GetTypes().FirstOrDefault(typeDefinition => TypeDefinitionMatchesType(typeDefinition, type));
+            if (typeDef == null)
+                throw new Exception($"Unable to find {nameof(TypeDefinition)} for type: \"{type.Namespace}.{type.Name}\" in assembly: \"{type.Assembly.GetName().Name}\".");
+            return true;
+        }
+
+        public static TypeReference Import (ModuleDefinition moduleDef, Type type)
+        {
+            if (moduleDef.Name != type.Module.Name)
+                return moduleDef.ImportReference(type);
+
+            if (!TryFindTypeDefinition(moduleDef, type, out var typeDef))
+                return null;
+
+            return typeDef;
+        }
+
+        public static MethodReference Import (ModuleDefinition moduleDef, MethodReference methodRef)
+        {
+            if (moduleDef.Name != methodRef.Module.Name)
+                return moduleDef.ImportReference(methodRef);
+            return methodRef;
+        }
+
+        public static MethodReference Import (ModuleDefinition moduleDef, MethodDefinition methodDef)
+        {
+            if (moduleDef.Name != methodDef.Module.Name)
+                return moduleDef.ImportReference(methodDef);
+            return methodDef;
+        }
+
+        public static bool MethodDefinitionMatchesMethod (MethodDefinition methodDef, ConstructorInfo constructorInfo)
+        {
+            if (methodDef.Name != constructorInfo.Name)
+                return false;
+
+            var methodDefParameters = methodDef.Parameters;
+            var methodParameters = constructorInfo.GetParameters();
+
+            bool allMatch = true;
+            for (int i = 0; i < methodDefParameters.Count; i++)
+            {
+                allMatch &=
+                    methodDef.Parameters[i].ParameterType.Module.Assembly.Name.Name == methodParameters[i].ParameterType.Assembly.GetName().Name ||
+                    methodDef.Parameters[i].ParameterType.Namespace == methodParameters[i].ParameterType.Namespace ||
+                    methodDef.Parameters[i].ParameterType.Name == methodParameters[i].ParameterType.Name;
+            }
+
+            return allMatch;
+        }
+
+        public static bool MethodDefinitionMatchesMethod (MethodDefinition methodDef, MethodInfo methodInfo)
+        {
+            if (methodDef.Name != methodInfo.Name)
+                return false;
+
+            var methodDefParameters = methodDef.Parameters;
+            var methodParameters = methodInfo.GetParameters();
+
+            bool allMatch = true;
+            for (int i = 0; i < methodDefParameters.Count; i++)
+            {
+                allMatch &=
+                    methodDef.Parameters[i].ParameterType.Module.Assembly.Name.Name == methodParameters[i].ParameterType.Assembly.GetName().Name ||
+                    methodDef.Parameters[i].ParameterType.Namespace == methodParameters[i].ParameterType.Namespace ||
+                    methodDef.Parameters[i].ParameterType.Name == methodParameters[i].ParameterType.Name;
+            }
+
+            return allMatch;
+        }
+
+        public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, MethodInfo methodInfo, out MethodDefinition methodDef)
+        {
+            methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, methodInfo));
+            if (methodDef == null)
+                throw new Exception($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+            return true;
+        }
+
+        public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, ConstructorInfo constructorInfo, out MethodDefinition methodDef)
+        {
+            methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, constructorInfo));
+            if (methodDef == null)
+                throw new Exception($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+            return true;
+        }
+
+        public static MethodReference Import (ModuleDefinition moduleDef, ConstructorInfo methodInfo)
+        {
+            if (moduleDef.Name != methodInfo.Module.Name)
+                return moduleDef.ImportReference(methodInfo);
+
+            if (!TryFindTypeDefinition(moduleDef, methodInfo.DeclaringType, out var matchingTypeDef))
+                return null;
+
+            if (!TryFindMatchingMethodDefinition(matchingTypeDef, methodInfo, out var matchingMethodDef))
+                return null;
+
+            /*
+            return new MethodReference(matchingTypeDef.Name, matchingMethodDef.ReturnType, matchingTypeDef)
+            {
+                HasThis = matchingMethodDef.HasThis,
+                ExplicitThis = matchingMethodDef.ExplicitThis,
+                CallingConvention = matchingMethodDef.CallingConvention,
+                MetadataToken = matchingMethodDef.MetadataToken,
+            };
+            */
+            return matchingMethodDef;
+        }
+
+        public static MethodReference Import (ModuleDefinition moduleDef, MethodInfo methodInfo)
+        {
+            if (moduleDef.Name != methodInfo.Module.Name)
+                return moduleDef.ImportReference(methodInfo);
+
+            if (!TryFindTypeDefinition(moduleDef, methodInfo.DeclaringType, out var matchingTypeDef))
+                return null;
+
+            if (!TryFindMatchingMethodDefinition(matchingTypeDef, methodInfo, out var matchingMethodDef))
+                return null;
+
+            /*
+            return new MethodReference(matchingTypeDef.Name, matchingMethodDef.ReturnType, matchingTypeDef)
+            {
+                HasThis = matchingMethodDef.HasThis,
+                ExplicitThis = matchingMethodDef.ExplicitThis,
+                CallingConvention = matchingMethodDef.CallingConvention,
+                MetadataToken = matchingMethodDef.MetadataToken,
+            };
+            */
+            return matchingMethodDef;
+        }
+
         public static void InsertCallAfter (ILProcessor il, ref Instruction afterInstruction, MethodReference methodRef)
         {
             Instruction instruction = null;
@@ -150,7 +314,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return instruction;
         }
 
-        public static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == methodDef.Module.ImportReference(typeof(System.Collections.IEnumerator)).MetadataToken;
+        public static bool MethodIsCoroutine (MethodDefinition methodDef) => methodDef.ReturnType.MetadataToken == CecilUtils.Import(methodDef.Module, typeof(System.Collections.IEnumerator)).MetadataToken;
 
         public static bool TryPushMethodRef<DelegateMarker> (AssemblyDefinition compiledAssemblyDef, MethodReference methodRef, ILProcessor constructorILProcessor)
             where DelegateMarker : Attribute
@@ -161,7 +325,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (!TryFindNestedTypeWithAttribute<DelegateMarker>(compiledAssemblyDef.MainModule, typeof(RPCInterfaceRegistry), out var delegateTypeRef))
                 return false;
 
-            constructorILProcessor.Emit(OpCodes.Newobj, compiledAssemblyDef.MainModule.ImportReference(delegateTypeRef.Resolve().Methods.FirstOrDefault(method => method.IsConstructor)));
+            constructorILProcessor.Emit(OpCodes.Newobj, Import(compiledAssemblyDef.MainModule, delegateTypeRef.Resolve().Methods.FirstOrDefault(method => method.IsConstructor)));
             return true;
         }
 
@@ -303,7 +467,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            methodRef = moduleDef.ImportReference(methodDef);
+            methodRef = Import(moduleDef, methodDef);
             return true;
         }
 
@@ -319,7 +483,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            typeRef = moduleDef.ImportReference(typeDef);
+            typeRef = Import(moduleDef, typeDef);
             return true;
         }
 
@@ -364,7 +528,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public static bool TryFindFieldDefinitionWithAttribute<T> (TypeDefinition typeDef, out FieldDefinition fieldDefinition) where T : Attribute
         {
             fieldDefinition = null;
-            var attributeType = typeDef.Module.ImportReference(typeof(T));
+            var attributeType = Import(typeDef.Module, typeof(T));
             bool found = (fieldDefinition = typeDef.Fields
                 .Where(field => field.CustomAttributes.Any(customAttribute => customAttribute.AttributeType == attributeType))
                 .FirstOrDefault()) != null;
@@ -379,7 +543,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             MethodDefinition methodDefinition, 
             out ParameterDefinition parameterDef)
         {
-            var parameterAttributeType = methodDefinition.Module.ImportReference(typeof(T));
+            var parameterAttributeType = Import(methodDefinition.Module, typeof(T));
             bool found = (parameterDef = methodDefinition
                 .Parameters
                 .Where(parameter => parameter.CustomAttributes.Any(customAttributeData => customAttributeData.AttributeType.FullName == parameterAttributeType.FullName))
@@ -393,7 +557,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public static bool TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<T> (CustomAttribute customAttribute, out int customAttributeArgumentIndex)
         {
-            var customAttributeArgumentAttributeType = customAttribute.AttributeType.Module.ImportReference(typeof(T));
+            var customAttributeArgumentAttributeType = Import(customAttribute.AttributeType.Module, typeof(T));
             var constructorMethodDef = customAttribute.Constructor.Resolve();
 
             for (int i = 0; i < customAttribute.Constructor.Parameters.Count; i++)
@@ -448,16 +612,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public static void AddCustomAttributeToParameter<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
         {
-            var onTryCallMarkerAttributeTypeDef = compiledAssemblyDef.MainModule.ImportReference(typeof(Attribute)).Resolve();
+            var onTryCallMarkerAttributeTypeDef = Import(compiledAssemblyDef.MainModule, typeof(Attribute)).Resolve();
             var constructor = onTryCallMarkerAttributeTypeDef.Methods.FirstOrDefault(methodDef => methodDef.IsConstructor);
-            parameterDef.CustomAttributes.Add(new CustomAttribute(compiledAssemblyDef.MainModule.ImportReference(constructor)));
+            parameterDef.CustomAttributes.Add(new CustomAttribute(Import(compiledAssemblyDef.MainModule, constructor)));
         }
 
         public static void AddCustomAttributeToMethod<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
         {
-            var attributeTypeRef = moduleDef.ImportReference(typeof(Attribute)).Resolve();
+            var attributeTypeRef = Import(moduleDef, typeof(Attribute)).Resolve();
             var constructor = attributeTypeRef.Methods.FirstOrDefault(method => method.IsConstructor);
-            var customAttribute = new CustomAttribute(moduleDef.ImportReference(constructor));
+            var customAttribute = new CustomAttribute(Import(moduleDef, constructor));
             methoDef.CustomAttributes.Add(customAttribute);
         }
     }
