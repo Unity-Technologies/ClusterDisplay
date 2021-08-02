@@ -7,10 +7,33 @@ namespace Unity.ClusterDisplay
 {
     public class SingletonMonoBehaviourTryGetInstanceMarker : Attribute {}
 
-    public class SingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SingletonMonoBehaviour<T>
+    /*
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoad]
+#endif
+    */
+    public abstract class SingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SingletonMonoBehaviour<T>
     {
+        /*
+#if UNITY_EDITOR
+        static SingletonMonoBehaviour ()
+        {
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static void OnPlayModeStateChanged (UnityEditor.PlayModeStateChange playModeStateChange) => FlushInstanceReference();
+        private static void FlushInstanceReference () => instance = null;
+#endif
+        */
 
         private static T instance;
+        protected abstract void OnAwake();
+        private void Awake()
+        {
+            instance = this as T;
+            OnAwake();
+        }
 
         [SingletonMonoBehaviourTryGetInstanceMarker]
         public static bool TryGetInstance (out T outInstance, bool throwException = true)
@@ -43,19 +66,7 @@ namespace Unity.ClusterDisplay
         }
 
         protected virtual void OnDeserialize() {}
-        public void OnAfterDeserialize()
-        {
-            if (instance != null)
-            {
-                // Debug.LogError($"Unable to cache instance to: \"{typeof(T).FullName}\", an instance has already cache!");
-                return;
-            }
-
-            Debug.Log($"Cached instance to singleton of type: \"{typeof(T).FullName}\".");
-            instance = this as T;
-            OnDeserialize();
-        }
-
+        public void OnAfterDeserialize() => OnDeserialize();
         protected virtual void OnSerialize() {}
         public void OnBeforeSerialize() => OnSerialize();
     }

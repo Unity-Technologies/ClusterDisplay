@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Setup the canvas for presenting cluster display renders.
         /// </summary>
-        private void Awake()
+        protected override void OnAwake()
         {
             // We could probably replace this initialization code with an instantiation of a prefab.
             if (m_Canvas == null)

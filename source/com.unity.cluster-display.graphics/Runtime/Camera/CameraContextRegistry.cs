@@ -26,6 +26,10 @@ namespace Unity.ClusterDisplay.Graphics
             };
         }
 
+        protected override void OnAwake()
+        {
+        }
+
         /// <summary>
         /// The current camera that's rendering.
         /// </summary>

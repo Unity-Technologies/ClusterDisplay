@@ -56,14 +56,12 @@ namespace Unity.ClusterDisplay
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
+        protected override void OnAwake() {}
+
         /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
         /// </summary>
-        public void ShutdownAllClusterNodes()
-        {
-            LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
-        }
-
+        public void ShutdownAllClusterNodes() => LocalNode.BroadcastShutdownRequest(); // matters not who triggers it
 
         /// <summary>
         /// The Local Cluster Node Id.
@@ -85,10 +83,7 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString()
-        {
-            return LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
-        }
+        public string GetDebugString() => LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
 
 #if UNITY_EDITOR
         private void GetResources ()
@@ -112,7 +107,6 @@ namespace Unity.ClusterDisplay
 
         private void OnEnable()
         {
-            Debug.Log("HELLO");
             stateSetter.SetIsTerminated(false);
             stateSetter.SetCLusterLogicEnabled(false);
             NodeState.Debugging = m_Debugging;

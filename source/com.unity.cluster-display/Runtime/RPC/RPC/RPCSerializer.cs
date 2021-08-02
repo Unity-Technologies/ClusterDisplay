@@ -11,6 +11,11 @@ namespace Unity.ClusterDisplay.RPC
         public static bool TryDeserializeType (string assemblyString, string namespaceString, string typeString, out System.Type type)
         {
             type = null;
+            if (string.IsNullOrEmpty(assemblyString) || string.IsNullOrEmpty(typeString))
+            {
+                Debug.LogError("Unable to deserialize type, either the assembly or type string is null or invalid!");
+                return false;
+            }
 
             if (!ReflectionUtils.TryGetAssemblyByName(assemblyString, out var assembly))
                 return false;

@@ -67,10 +67,8 @@ namespace Unity.ClusterDisplay
         [ClusterRPC(RPCExecutionStage.AfterUpdate)]
         public void ApplyHierarchyTransformations (NativeArray<Data> transformations)
         {
-            /*
             if (ClusterDisplayState.IsMaster)
                 return;
-            */
 
             for (int i = 0; i < CachedChildTransforms.Length; i++)
             {
