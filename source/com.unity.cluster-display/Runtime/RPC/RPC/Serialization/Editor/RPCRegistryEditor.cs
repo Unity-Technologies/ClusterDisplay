@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using System.Reflection;
-using UnityEngine.UIElements;
-using System.IO;
 
 #if UNITY_EDITOR
 using UnityEditorInternal;
@@ -16,7 +12,7 @@ namespace Unity.ClusterDisplay.RPC
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
         [CustomEditor(typeof(RPCRegistry))]
-        private class RPCRegistryEditor : Editor
+        private class RPCRegistryEditor : UnityEditor.Editor
         {
             private Assembly[] cachedAllAssemblies;
             private string assemblySearchStr = "";
@@ -244,7 +240,7 @@ namespace Unity.ClusterDisplay.RPC
 
             private void OnChangeSearch (string newMethodSearchStr)
             {
-                cachedMethods = ReflectionUtils.GetMethodsWithRPCCompatibleParamters(
+                cachedMethods = ReflectionUtils.GetCompatibleRPCMethods(
                     targetType,
                     newMethodSearchStr);
 

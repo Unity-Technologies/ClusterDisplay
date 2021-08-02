@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!cachedTypeMethodInfos.TryGetValue(declaringType, out methods))
             {
-                methods = declaringType.GetMethods((method.isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public);
+                methods = declaringType.GetMethods((method.isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public | BindingFlags.NonPublic);
                 cachedTypeMethodInfos.Add(declaringType, methods);
             }
 
@@ -69,6 +69,7 @@ namespace Unity.ClusterDisplay.RPC
                 bool match = methodInfo.ReturnType == returnType;
                 return match;
             });
+
             var matchingNameMethods = filteredMethods.Where(methodInfo => methodInfo.Name == method.methodName);
             if (parameterList.Count > 0)
             {
@@ -95,7 +96,21 @@ namespace Unity.ClusterDisplay.RPC
                 });
             }
 
-            return (outMethodInfo = filteredMethods.FirstOrDefault()) != null;
+            var foundMethod = filteredMethods.FirstOrDefault();
+            if (foundMethod == null)
+            {
+                Debug.LogError($"Unable to deserialize method: \"{method.methodName}\", declared in type: \"{method.declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                return false;
+            }
+
+            if (!foundMethod.IsPublic)
+            {
+                Debug.LogError($"Unable to use method deserialized method: \"{foundMethod.Name}\" declared in type: \"{foundMethod.DeclaringType.Namespace}.{foundMethod.DeclaringType.Name}\", the method must be public.");
+                return false;
+            }
+
+            outMethodInfo = foundMethod;
+            return true;
         }
 
         public static bool TryDeserializeMethodInfo (SerializedRPC serializedRPC, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)

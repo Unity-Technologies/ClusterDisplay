@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.ClusterDisplay.RPC;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -9,10 +10,7 @@ namespace Unity.ClusterDisplay
     {
         protected struct QueuedRPCCall
         {
-            public ushort assemblyIndex;
-            public ushort rpcId;
-            public ushort pipeId;
-            public ushort parametersPayloadSize;
+            public RPCBufferIO.RPCRequest rpcRequest;
             public ushort rpcsBufferParametersStartPosition;
         }
 
@@ -140,13 +138,13 @@ namespace Unity.ClusterDisplay
             while (beforeFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeFixedUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -166,13 +164,13 @@ namespace Unity.ClusterDisplay
             while (afterFixedUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -192,13 +190,13 @@ namespace Unity.ClusterDisplay
             while (beforeUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -218,13 +216,13 @@ namespace Unity.ClusterDisplay
             while (afterUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -244,13 +242,13 @@ namespace Unity.ClusterDisplay
             while (beforeLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = beforeLateUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -270,13 +268,13 @@ namespace Unity.ClusterDisplay
             while (afterLateUpdateRPCQueue.Count > 0)
             {
                 var queuedRPCCall = afterLateUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex] == null)
+                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
 
-                m_ExecuteQueuedRPCDelegate[queuedRPCCall.assemblyIndex](
-                    queuedRPCCall.rpcId, 
-                    queuedRPCCall.pipeId, 
-                    queuedRPCCall.parametersPayloadSize, 
+                m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    queuedRPCCall.rpcRequest.rpcId, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
                     queuedRPCCall.rpcsBufferParametersStartPosition);
             }
         }
@@ -290,114 +288,78 @@ namespace Unity.ClusterDisplay
 
         [QueueBeforeFixedUpdateRPCMarker]
         public static void QueueBeforeFixedUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest parsedRPC,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = parsedRPC,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }
 
         [QueueAfterFixedUpdateRPCMarker]
         public static void QueueAfterFixedUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest rpcRequest,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = rpcRequest,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }
 
         [QueueBeforeUpdateRPCMarker]
         public static void QueueBeforeUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest rpcRequest,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = rpcRequest,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }
 
         [QueueAfterUpdateRPCMarker]
         public static void QueueAfterUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest rpcRequest,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = rpcRequest,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }
 
         [QueueBeforeLateUpdateRPCMarker]
         public static void QueueBeforeLateUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest rpcRequest,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeLateUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = rpcRequest,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }
 
         [QueueAfterLateUpdateRPCMarker]
         public static void QueueAfterLateUpdateRPC (
-            ushort assemblyIndex,
-            ushort rpcId, 
-            ushort pipeId, 
-            ushort parametersPayloadSize, 
+            ref RPCBufferIO.RPCRequest rpcRequest,
             ushort rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterLateUpdateRPCQueue.Enqueue(new QueuedRPCCall
             {
-                assemblyIndex = assemblyIndex,
-                rpcId = rpcId,
-                pipeId = pipeId,
-                parametersPayloadSize = parametersPayloadSize,
+                rpcRequest = rpcRequest,
                 rpcsBufferParametersStartPosition = rpcsBufferParametersStartPosition
             });
         }

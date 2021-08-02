@@ -3,17 +3,13 @@ using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
 
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
-
 namespace Unity.ClusterDisplay.RPC
 {
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
     #if UNITY_EDITOR
-    [InitializeOnLoad]
-    [DefaultExecutionOrder(-1)]
+    [UnityEditor.InitializeOnLoad]
     #endif
+    [DefaultExecutionOrder(-1)]
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         private static readonly Dictionary<ushort, RPCMethodInfo> m_RPCs = new Dictionary<ushort, RPCMethodInfo>();
@@ -182,8 +178,6 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            // var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
-
             if (!m_TargetAssemblies.Contains(rpcMethodInfo.methodInfo.Module.Assembly))
                 m_TargetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
 
@@ -191,18 +185,11 @@ namespace Unity.ClusterDisplay.RPC
             RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
 
-            /*
-            #if UNITY_EDITOR
-            SetDirtyAndRecompile();
-            #endif
-            */
             return true;
         }
 
         public bool TryUpdateRPC (ref RPCMethodInfo rpcMethodInfo)
         {
-            // var serializedRPC = SerializedRPC.Create(ref rpcMethodInfo);
-
             m_RPCs[rpcMethodInfo.rpcId] = rpcMethodInfo;
             RegisterRPCIdWithMethodUniqueId(rpcMethodInfo.methodInfo, rpcMethodInfo.rpcId);
             RegisterRPCIdWithType(rpcMethodInfo.methodInfo.DeclaringType, rpcMethodInfo.rpcId);
@@ -230,11 +217,6 @@ namespace Unity.ClusterDisplay.RPC
                 onRemoveMethodWrapper(rpcMethodInfo.methodInfo);
             }
 
-            /*
-            #if UNITY_EDITOR
-            SetDirtyAndRecompile();
-            #endif
-            */
             return true;
         }
 
@@ -263,9 +245,6 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
 
             StageRPCToRegister(methodInfo);
-            /*
-            SetDirtyAndRecompile();
-            */
             return true;
         }
 
@@ -302,8 +281,6 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
 
             StageRPCToRegister(propertyInfo.SetMethod);
-            /*
-            */
             return true;
         }
 
@@ -387,13 +364,13 @@ namespace Unity.ClusterDisplay.RPC
             if (IsSerializing || Application.isPlaying)
                 return;
 
-            EditorUtility.SetDirty(this);
+            UnityEditor.EditorUtility.SetDirty(this);
 
             if (onTriggerRecompile != null)
                 onTriggerRecompile();
 
-            AssetDatabase.Refresh();
-            if (!EditorApplication.isCompiling)
+            UnityEditor.AssetDatabase.Refresh();
+            if (!UnityEditor.EditorApplication.isCompiling)
                 UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
             m_IsDirty = true;
             #endif
@@ -636,10 +613,7 @@ namespace Unity.ClusterDisplay.RPC
                     return;
 
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPCs[i], out rpcExecutionStage, out var methodInfo))
-                {
-                    Debug.LogError($"Unable to deserialize method: \"{serializedRPCs[i].method.methodName}\", declared in type: \"{serializedRPCs[i].method.declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                     continue;
-                }
 
                 if (!registeredAssemblies.Contains(methodInfo.Module.Assembly))
                     continue;

@@ -233,24 +233,12 @@ namespace Unity.ClusterDisplay.RPC
             Dictionary<string, SceneObjectsRegistry> sceneObjectsRegistry = new Dictionary<string, SceneObjectsRegistry>();
             Component[] components = FindObjectsOfType<Component>();
 
-            rpcRegistry.Foreach((rpcMethodInfo) =>
+            rpcRegistry.Foreach(((rpcMethodInfo) =>
             {
-                var type = rpcMethodInfo.methodInfo.DeclaringType;
-                if (type.IsAbstract)
-                    return;
+                var componentsWithRPCs = components.Where(component => component.GetType() == rpcMethodInfo.methodInfo.DeclaringType);
 
-                var objs = components.Where(component => component.GetType().FullName == type.FullName).ToArray();
-                // var objs = FindObjectsOfType(type);
-
-                if (objs.Length == 0)
-                    return;
-
-                foreach (var obj in objs)
+                foreach (var component in componentsWithRPCs)
                 {
-                    var component = obj as Component;
-                    if (component == null)
-                        continue;
-
                     if (!sceneObjectsRegistry.TryGetValue(component.gameObject.scene.path, out var sceneRegistry))
                     {
                         var path = component.gameObject.scene.path;
@@ -267,13 +255,13 @@ namespace Unity.ClusterDisplay.RPC
                     if (sceneRegistry.Registered(component))
                         continue;
 
-                    if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs))
+                    if (!RPCRegistry.TryGetRPCsForType(rpcMethodInfo.methodInfo.DeclaringType, out var rpcs))
                         continue;
 
                     for (int ri = 0; ri < rpcs.Length; ri++)
                         sceneRegistry.Register(component, rpcs[ri].rpcId);
                 }
-            });
+            }));
         }
 #endif
     }

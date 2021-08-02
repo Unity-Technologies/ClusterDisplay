@@ -8,7 +8,7 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.RPC
 {
     [System.Serializable]
-    public struct SerializedInstancePRCdata
+    public struct SerializedInstanceRPCData
     {
         // [SerializeField] public ushort pipeId;
         [SerializeField] public Component instance;
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.RPC
         private bool m_SceneObjectsRegistered = false;
 
         private readonly List<Component> m_SceneInstances = new List<Component>();
-        public SerializedInstancePRCdata[] m_SerializedInstances;
+        public SerializedInstanceRPCData[] m_SerializedInstances;
 
         public bool Registered(Component instance) => m_SceneInstances.Contains(instance);
 
@@ -109,7 +109,7 @@ namespace Unity.ClusterDisplay.RPC
             if (m_SceneInstances.Count == 0)
                 return;
 
-            List<SerializedInstancePRCdata> serializedInstances = new List<SerializedInstancePRCdata>();
+            List<SerializedInstanceRPCData> serializedInstances = new List<SerializedInstanceRPCData>();
 
             for (int i = 0; i < m_SceneInstances.Count; i++)
             {
@@ -120,7 +120,7 @@ namespace Unity.ClusterDisplay.RPC
                     continue;
 
                 var pipeConfig = GetPipeConfig(pipeId);
-                serializedInstances.Add(new SerializedInstancePRCdata
+                serializedInstances.Add(new SerializedInstanceRPCData
                 {
                     // pipeId = pipeId,
                     instance = m_SceneInstances[i],

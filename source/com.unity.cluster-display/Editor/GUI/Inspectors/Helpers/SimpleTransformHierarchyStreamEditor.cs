@@ -5,12 +5,12 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    [CustomEditor(typeof(HierarchyTransformStream))]
-    public class HierarchyTransformStreamEditor : UnityEditor.Editor
+    [CustomEditor(typeof(SimpleTransformHierarchyStream))]
+    public class SimpleTransformHierarchyStreamEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
-            DrawDefaultInspector();
+            base.OnInspectorGUI();
         }
     }
 }

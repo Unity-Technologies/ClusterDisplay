@@ -94,17 +94,17 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 var beforeInstruction = targetMethodDef.Body.Instructions.First();
                 var il = targetMethodDef.Body.GetILProcessor();
 
-                var rpcEmitterType = typeof(RPCEmitter);
+                var rpcEmitterType = typeof(RPCBufferIO);
                 var rpcEmitterTypeReference = CecilUtils.Import(targetMethodRef.Module, rpcEmitterType);
 
                 MethodInfo appendRPCMethodInfo = null;
                 if (!targetMethodDef.IsStatic)
                 {
-                    if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                    if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                         return false;
                 }
 
-                else if (!CecilUtils.TryFindMethodWithAttribute<RPCEmitter.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                else if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
 
                 var appendRPCCMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCMethodInfo);

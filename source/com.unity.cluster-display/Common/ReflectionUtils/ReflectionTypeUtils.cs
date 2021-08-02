@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay
                 type = type.GetElementType();
             }
 
-            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(NativeArray<>))
+            else if (type.IsGenericType)
             {
                 if (structureDepth > 0)
                     goto dynamicallySizedMemberTypeFailure;

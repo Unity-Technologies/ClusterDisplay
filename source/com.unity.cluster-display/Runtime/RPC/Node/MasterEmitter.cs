@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay
         {
             m_CurrentStateBuffer = new NativeArray<byte>((int)maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             this.nodeState = nodeState;
-            RPC.RPCEmitter.Initialize(maxRpcByteBufferSize);
+            RPC.RPCBufferIO.Initialize(maxRpcByteBufferSize);
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
@@ -174,15 +174,15 @@ namespace Unity.ClusterDisplay
 
         private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos)
         {
-            if (RPC.RPCEmitter.RPCBufferSize == 0)
+            if (RPC.RPCBufferIO.RPCBufferSize == 0)
                 return true;
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPC.RPCEmitter.RPCBufferSize;
+            *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPC.RPCBufferIO.RPCBufferSize;
             endPos += Marshal.SizeOf<int>();
 
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
 
-            return RPC.RPCEmitter.Latch(buffer, ref endPos);
+            return RPC.RPCBufferIO.Latch(buffer, ref endPos);
         }
 
         private static unsafe int StoreStateID(NativeArray<byte> buffer, int endPos, Guid id, int guidLen)

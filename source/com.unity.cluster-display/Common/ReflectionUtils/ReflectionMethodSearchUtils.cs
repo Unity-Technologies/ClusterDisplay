@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay
     {
         private readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
 
-        public static MethodInfo[] GetMethodsWithRPCCompatibleParamters (
+        public static MethodInfo[] GetCompatibleRPCMethods (
             System.Type type, 
             string filter) =>
 

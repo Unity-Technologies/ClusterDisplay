@@ -10,10 +10,17 @@ namespace Unity.ClusterDisplay
     {
         public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
         {
+            if (methodInfo.IsAbstract)
+            {
+                Debug.LogError($"Instance method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Namespace}.{methodInfo.DeclaringType.Name}\" is unsupported because the type is abstract.");
+                return false;
+            }
+
             ushort depth = 0;
-            return methodInfo
-                .GetParameters()
-                .All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth));
+            return
+                methodInfo
+                    .GetParameters()
+                    .All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth));
         }
 
         // From https://stackoverflow.com/a/1312321

@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.RPC
         
         private void OnChangeSearch (string newMethodSearchStr)
         {
-            cachedMethods = ReflectionUtils.GetMethodsWithRPCCompatibleParamters(
+            cachedMethods = ReflectionUtils.GetCompatibleRPCMethods(
                 targetObjectType,
                 newMethodSearchStr);
 
