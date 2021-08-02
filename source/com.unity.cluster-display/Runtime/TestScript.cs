@@ -4,9 +4,30 @@ using UnityEngine;
 
 public class TestScript : MonoBehaviour
 {
+    private void Start()
+    {
+        StartCoroutine(TestCoroutine());
+    }
+
+    private IEnumerator TestCoroutine ()
+    {
+        yield return null;
+        if (Unity.ClusterDisplay.ClusterDisplayState.IsMaster)
+        {
+            SimpleMethodTest();
+            SimpleStringTest("This is a string.");
+        }
+    }
+
     [Unity.ClusterDisplay.RPC.ClusterRPC]
-    private void Awake()
+    public void SimpleMethodTest ()
     {
         Debug.Log("HELLO WORLD 9");
+    }
+
+    [Unity.ClusterDisplay.RPC.ClusterRPC]
+    public void SimpleStringTest (string message)
+    {
+        Debug.Log(message);
     }
 }

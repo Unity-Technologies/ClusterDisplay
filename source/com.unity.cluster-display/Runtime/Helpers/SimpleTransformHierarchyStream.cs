@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay
 
         protected override void CacheTransforms() => ApplyCachedTransforms(GetComponentsInChildren<Transform>());
 
-        [ClusterRPC] // We want the RPCs for method instances, therefore we declare this method as an RPC, then call up to the base implementation.
+        [ClusterRPC] // We want the RPCs for methods in non-abstract classes, therefore we declare this method as an RPC, then call up to the base implementation.
         public override void ApplyTransformData (NativeSlice<Data> data) => base.ApplyTransformData(data);
     }
 }

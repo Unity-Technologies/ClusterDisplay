@@ -143,7 +143,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 MetadataToken = methodReference.MetadataToken,
             };
 
-        private static bool TryGetNativeCollectionLengthProperty (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
+        private static bool TryGetLengthPropertyGetMethod (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
         {
             lengthPropertyGetMethodReference = null;
             var parameterTypeRef = CecilUtils.Import(moduleDef, param.ParameterType);
@@ -189,17 +189,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             MethodReference appendRPCMethodRef,
             int totalSizeOfStaticallySizedRPCParameters)
         {
-            if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo) ||
-                !CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCStringParameterValueMarker>(rpcEmitterType, out var appendRPCStringParameterValueMethodInfo) ||
-                !CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo) ||
-                !CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCNativeArrayParameterValueMarker>(rpcEmitterType, out var appendRPCNativeArrayParameterValueMethodInfo))
-                return false;
-
-            var appendRPCValueTypeParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCValueTypeParameterValueMethodInfo);
-            var appendRPCStringParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCStringParameterValueMethodInfo);
-            var appendRPCArrayParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCArrayParameterValueMethodInfo);
-            var appendRPCNativeArrayParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCNativeArrayParameterValueMethodInfo);
-
             var targetMethodDef = targetMethodRef.Resolve();
 
             if (targetMethodDef.IsStatic)
@@ -261,7 +250,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         if (isArray)
                         {
                             var elementType = CecilUtils.Import(targetMethodRef.Module, isNativeCollection ? (param.ParameterType as GenericInstanceType).GenericArguments[0] : param.ParameterType.GetElementType());
-                            if (!TryGetNativeCollectionLengthProperty(targetMethodRef.Module, param, out var lengthPropertyGetMethodRef))
+                            if (!TryGetLengthPropertyGetMethod(targetMethodRef.Module, param, out var lengthPropertyGetMethodRef))
                                 return false;
 
                             int arrayElementSize = 0;
@@ -307,32 +296,67 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                     if (CecilUtils.ParameterIsString(targetMethodRef.Module, param))
                     {
+                        if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCStringParameterValueMarker>(rpcEmitterType, out var appendRPCStringParameterValueMethodInfo))
+                            return false;
+                        var appendRPCStringParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCStringParameterValueMethodInfo);
+
                         CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
                         CecilUtils.InsertCallAfter(il, ref afterInstruction, appendRPCStringParameterValueMethodRef);
                     }
-
-                    else if (ParameterIsNativeCollection(param))
-                    {
-                        genericInstanceMethod = new GenericInstanceMethod(appendRPCNativeArrayParameterValueMethodRef);
-                        var elementType = (param.ParameterType as GenericInstanceType).GenericArguments[0]; // Since NativeArray<> has a generic argument, we want a generic instance method with that argument.
-                        genericInstanceMethod.GenericArguments.Add(elementType);
-                    }
-
-                    else if (param.ParameterType.IsArray)
-                    {
-                        genericInstanceMethod = new GenericInstanceMethod(appendRPCArrayParameterValueMethodRef);
-                        var elementType = param.ParameterType.GetElementType(); // Get the array's element type which is the int of the int[].
-                        genericInstanceMethod.GenericArguments.Add(elementType);
-                    }
-
                     else
                     {
-                        genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
-                        genericInstanceMethod.GenericArguments.Add(param.ParameterType);
-                    }
+                        if (ParameterIsNativeCollection(param))
+                        {
+                            MethodInfo appendMethodInfo = null;
+                            if (param.ParameterType.Name == typeof(NativeArray<>).Name)
+                            {
+                                if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCNativeArrayParameterValueMarker>(rpcEmitterType, out appendMethodInfo))
+                                    return false;
+                            }
 
-                    CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
-                    CecilUtils.InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
+                            else if (param.ParameterType.Name == typeof(NativeSlice<>).Name)
+                            {
+                                if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCNativeSliceParameterValueMarker>(rpcEmitterType, out appendMethodInfo))
+                                    return false;
+                            }
+
+                            else
+                            {
+                                Debug.LogError($"Unhandled native collection of type: \"{param.ParameterType.FullName}\".");
+                                return false;
+                            }
+
+                            var appendMethodRef = CecilUtils.Import(targetMethodRef.Module, appendMethodInfo);
+                            genericInstanceMethod = new GenericInstanceMethod(appendMethodRef);
+                            var elementType = (param.ParameterType as GenericInstanceType).GenericArguments[0]; // Since NativeArray<> has a generic argument, we want a generic instance method with that argument.
+                            genericInstanceMethod.GenericArguments.Add(elementType);
+                        }
+
+                        else if (param.ParameterType.IsArray)
+                        {
+                            if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCArrayParameterValueMarker>(rpcEmitterType, out var appendRPCArrayParameterValueMethodInfo))
+                                return false;
+
+                            var appendRPCArrayParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCArrayParameterValueMethodInfo);
+                            genericInstanceMethod = new GenericInstanceMethod(appendRPCArrayParameterValueMethodRef);
+
+                            var elementType = param.ParameterType.GetElementType(); // Get the array's element type which is the int of the int[].
+                            genericInstanceMethod.GenericArguments.Add(elementType);
+                        }
+
+                        else
+                        {
+                            if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.AppendRPCValueTypeParameterValueMarker>(rpcEmitterType, out var appendRPCValueTypeParameterValueMethodInfo))
+                                return false;
+
+                            var appendRPCValueTypeParameterValueMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCValueTypeParameterValueMethodInfo);
+                            genericInstanceMethod = new GenericInstanceMethod(appendRPCValueTypeParameterValueMethodRef);
+                            genericInstanceMethod.GenericArguments.Add(param.ParameterType);
+                        }
+
+                        CecilUtils.InsertPushParameterToStackAfter(il, ref afterInstruction, paramDef, isStaticCaller: targetMethodDef.IsStatic, byReference: paramDef.IsOut || paramDef.IsIn);
+                        CecilUtils.InsertCallAfter(il, ref afterInstruction, genericInstanceMethod);
+                    }
                 }
             }
 

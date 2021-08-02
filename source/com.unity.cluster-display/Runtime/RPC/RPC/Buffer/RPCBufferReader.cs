@@ -63,6 +63,7 @@ namespace Unity.ClusterDisplay.RPC
                     RPCInterfaceRegistry.QueueAfterLateUpdateRPC(ref rpcRequest, bufferPos);
                     break;
             }
+
             bufferPos += rpcRequest.parametersPayloadSize;
         }
 
@@ -263,7 +264,7 @@ namespace Unity.ClusterDisplay.RPC
 
             ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
 
-            NativeArray<T> nativeArray = new NativeArray<T>(arrayLength, Allocator.Persistent);
+            NativeArray<T> nativeArray = new NativeArray<T>(arrayLength, Allocator.Temp);
             UnsafeUtility.MemCpy(nativeArray.GetUnsafePtr(), ptr.ToPointer(), arrayByteCount);
 
             startPos += (ushort)(sizeof(ushort) + arrayByteCount);

@@ -105,7 +105,7 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!foundMethod.IsPublic)
             {
-                Debug.LogError($"Unable to use method deserialized method: \"{foundMethod.Name}\" declared in type: \"{foundMethod.DeclaringType.Namespace}.{foundMethod.DeclaringType.Name}\", the method must be public.");
+                Debug.LogError($"Unable to use method deserialized method: \"{foundMethod.Name}\" declared in type: \"{(string.IsNullOrEmpty(foundMethod.DeclaringType.Namespace) ? foundMethod.DeclaringType.Name  : $"{foundMethod.DeclaringType.Namespace}.{foundMethod.DeclaringType.Name}")}\", the method must be public.");
                 return false;
             }
 

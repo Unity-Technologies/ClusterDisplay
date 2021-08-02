@@ -50,7 +50,7 @@ namespace Unity.ClusterDisplay.RPC
             if (rpcBufferSize + sizeof(ushort) + strSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
-            CopyLengthToRPCBuffer((ushort)strSize);
+            CopyCountToRPCBuffer((ushort)strSize);
             fixed (char* ptr = value)
                 Encoding.ASCII.GetBytes(
                     ptr,
@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static bool CanWriteBufferToRPCBuffer (int elementSize, int length, out int arrayByteCount)
+        private static bool CanWriteBufferToRPCBuffer<T> (int count, out int arrayByteCount) where T : unmanaged
         {
             if (!AllowWrites)
             {
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            arrayByteCount = elementSize * length;
+            arrayByteCount = Marshal.SizeOf<T>() * count;
 
             if (arrayByteCount > ushort.MaxValue)
             {
@@ -104,11 +104,11 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static unsafe void CopyLengthToRPCBuffer (ushort arrayLength)
+        private static unsafe void CopyCountToRPCBuffer (ushort count)
         {
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
-                UnsafeUtility.AddressOf(ref arrayLength), 
+                UnsafeUtility.AddressOf(ref count), 
                 sizeof(ushort));
 
             rpcBufferSize += sizeof(ushort);
@@ -127,20 +127,20 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCNativeArrayParameterValueMarker]
         public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> buffer) where T : unmanaged
         {
-            if (!CanWriteBufferToRPCBuffer(Marshal.SizeOf<T>(), buffer.Length, out var arrayByteCount))
+            if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
                 return;
 
-            CopyLengthToRPCBuffer((ushort)buffer.Length);
+            CopyCountToRPCBuffer((ushort)buffer.Length);
             CopyBufferToRPCBuffer<T>((T*)buffer.GetUnsafePtr(), arrayByteCount);
         }
 
         [AppendRPCNativeSliceParameterValueMarker]
         public static unsafe void AppendRPCNativeSliceParameterValues<T> (NativeSlice<T> buffer) where T : unmanaged
         {
-            if (!CanWriteBufferToRPCBuffer(Marshal.SizeOf<T>(), buffer.Length, out var arrayByteCount))
+            if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
                 return;
 
-            CopyLengthToRPCBuffer((ushort)buffer.Length);
+            CopyCountToRPCBuffer((ushort)buffer.Length);
             CopyBufferToRPCBuffer<T>((T*)buffer.GetUnsafePtr(), arrayByteCount);
         }
 
@@ -150,10 +150,10 @@ namespace Unity.ClusterDisplay.RPC
             if (value == null)
                 return;
 
-            if (!CanWriteBufferToRPCBuffer(Marshal.SizeOf<T>(), value.Length, out var arrayByteCount))
+            if (!CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
                 return;
 
-            CopyLengthToRPCBuffer((ushort)value.Length);
+            CopyCountToRPCBuffer((ushort)value.Length);
 
             fixed (T* ptr = &value[0])
                 CopyBufferToRPCBuffer<T>(ptr, arrayByteCount);
