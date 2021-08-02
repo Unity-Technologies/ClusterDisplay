@@ -7,26 +7,8 @@ namespace Unity.ClusterDisplay
 {
     public class SingletonMonoBehaviourTryGetInstanceMarker : Attribute {}
 
-    /*
-#if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoad]
-#endif
-    */
     public abstract class SingletonMonoBehaviour<T> : MonoBehaviour, ISerializationCallbackReceiver where T : SingletonMonoBehaviour<T>
     {
-        /*
-#if UNITY_EDITOR
-        static SingletonMonoBehaviour ()
-        {
-            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-        }
-
-        private static void OnPlayModeStateChanged (UnityEditor.PlayModeStateChange playModeStateChange) => FlushInstanceReference();
-        private static void FlushInstanceReference () => instance = null;
-#endif
-        */
-
         private static T instance;
         protected abstract void OnAwake();
         private void Awake()
