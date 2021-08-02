@@ -10,25 +10,22 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         public override bool ReadyToProceed => false;
         public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
 
-        private MasterNode testClusterNode = null;
-
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
-            testClusterNode = LocalNode;
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
         protected override NodeState DoFrame(bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (testClusterNode.m_RemoteNodes.Count == testClusterNode.TotalExpectedRemoteNodesCount || timeOut )
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut )
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {testClusterNode.TotalExpectedRemoteNodesCount}, continuing with { testClusterNode.m_RemoteNodes.Count} nodes ");
-                    testClusterNode.TotalExpectedRemoteNodesCount = testClusterNode.m_RemoteNodes.Count;
+                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
                 var newState = new SynchronizeFrame {
@@ -48,10 +45,10 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 do
                 {
                     // Wait for a client to announce itself
-                    if (testClusterNode.UdpAgent.RxWait.WaitOne(1000))
+                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
                     {
                         // Consume messages
-                        while (testClusterNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                         {
                             if (header.MessageType == EMessageType.HelloMaster)
                             {
@@ -67,7 +64,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                         }
                     }
 
-                } while ( (testClusterNode.m_RemoteNodes.Count < testClusterNode.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
+                } while ( (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
             }
             catch (Exception e)
             {
@@ -86,7 +83,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 ID = header.OriginID,
                 Role = roleInfo.NodeRole,
             };
-            testClusterNode.RegisterNode(commCtx);
+            LocalNode.RegisterNode(commCtx);
         }
 
         private void SendResponse(MessageHeader rxHeader)
@@ -97,12 +94,12 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                 DestinationIDs = (UInt64)1 << rxHeader.OriginID,
             };
 
-            testClusterNode.UdpAgent.PublishMessage(response);
+            LocalNode.UdpAgent.PublishMessage(response);
         }
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} : {testClusterNode.m_RemoteNodes.Count}";
+            return $"{base.GetDebugString()} : {LocalNode.m_RemoteNodes.Count}";
         }
 
     }
