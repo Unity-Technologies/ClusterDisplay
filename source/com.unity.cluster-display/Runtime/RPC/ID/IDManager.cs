@@ -4,11 +4,13 @@ using UnityEngine;
 
 public class IDManager
 {
-    private ushort[] m_QueuedReturnedIDs = new ushort[ushort.MaxValue];
-    private bool[] m_ReturnedIDs = new bool[ushort.MaxValue];
+    public const ulong MaxIDCount = ushort.MaxValue;
+
+    private ushort[] m_QueuedReturnedIDs = new ushort[MaxIDCount];
+    private bool[] m_ReturnedIDs = new bool[MaxIDCount];
     private ushort m_ReturnedIDsIndex = 0;
 
-    private bool[] m_IDStates = new bool[ushort.MaxValue];
+    private bool[] m_IDStates = new bool[MaxIDCount];
 
     private ushort m_NewIDIndex = 0;
 
@@ -21,7 +23,7 @@ public class IDManager
             m_ReturnedIDs[id] = false;
         }
 
-        else if (m_NewIDIndex < ushort.MaxValue)
+        else if (m_NewIDIndex < MaxIDCount)
         {
             id = m_NewIDIndex++;
 
@@ -29,7 +31,7 @@ public class IDManager
             while (m_IDStates[id])
             {
                 id = m_NewIDIndex++;
-                if (id >= ushort.MaxValue)
+                if (id >= MaxIDCount)
                     goto allIDsInUse;
             }
         }
@@ -96,9 +98,9 @@ public class IDManager
     protected virtual void OnClear () {}
     public void Clear ()
     {
-        m_QueuedReturnedIDs = new ushort[ushort.MaxValue];
-        m_ReturnedIDs = new bool[ushort.MaxValue];
-        m_IDStates = new bool[ushort.MaxValue];
+        m_QueuedReturnedIDs = new ushort[MaxIDCount];
+        m_ReturnedIDs = new bool[MaxIDCount];
+        m_IDStates = new bool[MaxIDCount];
 
         m_ReturnedIDsIndex = 0;
         m_NewIDIndex = 0;

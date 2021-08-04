@@ -12,11 +12,27 @@ namespace Unity.ClusterDisplay
         public byte NodeID => m_UDPAgent.LocalNodeID;
         public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
-        protected ClusterNode(byte nodeID, string ip, int rxPort, int txPort, int timeOut, string adapterName)
+        protected ClusterNode(
+            byte nodeID, 
+            string ip, 
+            int rxPort, 
+            int txPort, 
+            int timeOut, 
+            int maxMTUSize,
+            string adapterName)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
-            m_UDPAgent = new UDPAgent(nodeID, ip, rxPort, txPort, timeOut, adapterName);
+
+            m_UDPAgent = new UDPAgent(
+                nodeID, 
+                ip, 
+                rxPort, 
+                txPort, 
+                timeOut, 
+                maxMTUSize, 
+                adapterName);
+
             Stopwatch.StartNew();
         }
 

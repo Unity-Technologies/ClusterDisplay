@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.RPC
     {
         public readonly MethodInfo methodInfo;
         public readonly ushort rpcId;
+
         public RPCExecutionStage rpcExecutionStage;
         public readonly bool usingWrapper;
 

@@ -4,32 +4,34 @@ using System.Linq;
 using Unity.ClusterDisplay.RPC;
 using UnityEngine;
 
+using buint = System.UInt32;
+
 namespace Unity.ClusterDisplay
 {
     public abstract partial class RPCInterfaceRegistry
     {
         protected struct QueuedRPCCall
         {
-            public RPCBufferIO.RPCRequest rpcRequest;
-            public ushort rpcsBufferParametersStartPosition;
+            internal RPCRequest rpcRequest;
+            internal buint rpcsBufferParametersStartPosition;
         }
 
          [OnTryCallDelegateMarker] protected delegate bool ExecuteRPCDelegate(
             ushort rpcId, 
             ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcBufferParameterPosition);
+            buint parametersPayloadSize, 
+            ref buint rpcBufferParameterPosition);
 
         [OnTryStaticCallDelegateMarker] protected delegate bool ExecuteStaticRPCDelegate(
             ushort rpcId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcBufferParameterPosition);
+            buint parametersPayloadSize, 
+            ref buint rpcBufferParameterPosition);
 
         [ExecuteQueuedRPCDelegateMarker] protected delegate void ExecuteQueuedRPCDelegate(
             ushort rpcId, 
             ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ushort rpcBufferParameterPosition);
+            buint parametersPayloadSize, 
+            buint rpcBufferParameterPosition);
 
         private static readonly Queue<QueuedRPCCall> beforeFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
         private static readonly Queue<QueuedRPCCall> afterFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
@@ -89,8 +91,8 @@ namespace Unity.ClusterDisplay
             ushort assemblyIndex,
             ushort rpcId, 
             ushort pipeId, 
-            ushort parametersPayloadSize, 
-            ref ushort rpcsBufferPosition)
+            buint parametersPayloadSize, 
+            ref buint rpcsBufferPosition)
         {
             if (m_OnTryCallInstanceDelegate == null || m_OnTryCallInstanceDelegate[assemblyIndex] == null)
             {
@@ -108,8 +110,8 @@ namespace Unity.ClusterDisplay
         public static bool TryCallStatic(
             ushort assemblyIndex,
             ushort rpcId,
-            ushort parametersPayloadSize,
-            ref ushort rpcsBufferPosition)
+            buint parametersPayloadSize,
+            ref buint rpcsBufferPosition)
         {
             if (m_OnTryStaticCallInstanceDelegate == null || m_OnTryStaticCallInstanceDelegate[assemblyIndex] == null)
             {
@@ -282,14 +284,14 @@ namespace Unity.ClusterDisplay
         private static void LogQueuedRPC (
            ushort  pipeId,
             ushort rpcId,
-            ushort parametersPayloadSize,
-            ushort rpcBufferParametersStartPosition) =>
+            buint parametersPayloadSize,
+            buint rpcBufferParametersStartPosition) =>
             Debug.Log($"Queued RPC with pipe ID: {pipeId}, RPC ID: {rpcId}, Parameter Payload Size: {parametersPayloadSize}, RPC Buffer Parameters Start Position: {rpcBufferParametersStartPosition}");
 
         [QueueBeforeFixedUpdateRPCMarker]
-        public static void QueueBeforeFixedUpdateRPC (
-            ref RPCBufferIO.RPCRequest parsedRPC,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueBeforeFixedUpdateRPC (
+            ref RPCRequest parsedRPC,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
@@ -300,9 +302,9 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterFixedUpdateRPCMarker]
-        public static void QueueAfterFixedUpdateRPC (
-            ref RPCBufferIO.RPCRequest rpcRequest,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueAfterFixedUpdateRPC (
+            ref RPCRequest rpcRequest,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterFixedUpdateRPCQueue.Enqueue(new QueuedRPCCall
@@ -313,9 +315,9 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueBeforeUpdateRPCMarker]
-        public static void QueueBeforeUpdateRPC (
-            ref RPCBufferIO.RPCRequest rpcRequest,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueBeforeUpdateRPC (
+            ref RPCRequest rpcRequest,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeUpdateRPCQueue.Enqueue(new QueuedRPCCall
@@ -326,9 +328,9 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterUpdateRPCMarker]
-        public static void QueueAfterUpdateRPC (
-            ref RPCBufferIO.RPCRequest rpcRequest,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueAfterUpdateRPC (
+            ref RPCRequest rpcRequest,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterUpdateRPCQueue.Enqueue(new QueuedRPCCall
@@ -339,9 +341,9 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueBeforeLateUpdateRPCMarker]
-        public static void QueueBeforeLateUpdateRPC (
-            ref RPCBufferIO.RPCRequest rpcRequest,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueBeforeLateUpdateRPC (
+            ref RPCRequest rpcRequest,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             beforeLateUpdateRPCQueue.Enqueue(new QueuedRPCCall
@@ -352,9 +354,9 @@ namespace Unity.ClusterDisplay
         }
 
         [QueueAfterLateUpdateRPCMarker]
-        public static void QueueAfterLateUpdateRPC (
-            ref RPCBufferIO.RPCRequest rpcRequest,
-            ushort rpcsBufferParametersStartPosition)
+        internal static void QueueAfterLateUpdateRPC (
+            ref RPCRequest rpcRequest,
+            buint rpcsBufferParametersStartPosition)
         {
             // LogQueuedRPC(pipeId, rpcId, parametersPayloadSize, rpcsBufferParametersStartPosition);
             afterLateUpdateRPCQueue.Enqueue(new QueuedRPCCall

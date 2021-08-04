@@ -19,7 +19,6 @@ namespace Unity.ClusterDisplay
     /// </summary>
     public partial class ClusterSync : SingletonMonoBehaviour<ClusterSync>
     {
-
         [HideInInspector]
         bool m_Debugging;
         private bool m_NewFrame = true;
@@ -40,11 +39,8 @@ namespace Unity.ClusterDisplay
         // public static bool Active => TryGetInstance(out var instance) && instance.m_ClusterLogicEnabled;
 
 
-        [SerializeField] private ClusterDisplayResources _clusterDisplayResources;
-        public ClusterDisplayResources Resources => _clusterDisplayResources;
-
-        public uint maxFrameNetworkByteBufferSize => _clusterDisplayResources.MaxFrameNetworkByteBufferSize;
-        public uint maxRpcByteBufferSize => _clusterDisplayResources.MaxRpcByteBufferSize;
+        [SerializeField] private ClusterDisplayResources m_clusterDisplayResources;
+        public ClusterDisplayResources Resources => m_clusterDisplayResources;
 
 #if UNITY_EDITOR
         [SerializeField] private string m_EditorCmdLine = "";
@@ -55,8 +51,6 @@ namespace Unity.ClusterDisplay
         internal ClusterNode LocalNode => m_LocalNode;
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
-
-        protected override void OnAwake() {}
 
         /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
@@ -96,14 +90,17 @@ namespace Unity.ClusterDisplay
             if (assets.Length == 0)
                 throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
 
-            _clusterDisplayResources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-            Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{_clusterDisplayResources.name}\" to cluster display settings.");
+            m_clusterDisplayResources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+            Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{m_clusterDisplayResources.name}\" to cluster display settings.");
 
             EditorUtility.SetDirty(this);
         }
 
         private void OnValidate() => GetResources();
 #endif
+
+        protected override void OnAwake() {}
+        // protected override void OnAwake() => ClusterDisplayResources.getActive += () => Resources;
 
         private void OnEnable()
         {
@@ -244,7 +241,7 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    m_LocalNode =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, adapterName );
+                    m_LocalNode =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
                     stateSetter.SetIsMaster(true);
                     if (!m_LocalNode.Start())
                         return false;
@@ -266,7 +263,7 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    m_LocalNode = new SlavedNode(id, ip, rxport, txport, 30, adapterName );
+                    m_LocalNode = new SlavedNode(id, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
                     stateSetter.SetIsMaster(false);
                     if (!m_LocalNode.Start())
                         return false;

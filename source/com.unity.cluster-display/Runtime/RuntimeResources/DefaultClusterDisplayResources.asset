@@ -12,5 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b086624c2c61724ebbd2c7dcb9d0384, type: 3}
   m_Name: DefaultClusterDisplayResources
   m_EditorClassIdentifier: 
-  m_MaxFrameNetworkByteBufferSize: 32768
-  m_MaxRpcByteBufferSize: 16384
+  m_PayloadLimits:
+    maxSingleRPCParameterByteSize: 160000
+    maxSingleRPCByteSize: 160000
+    maxRpcByteBufferSize: 160000
+    maxFrameNetworkByteBufferSize: 160000
+    maxMTUSize: 65535

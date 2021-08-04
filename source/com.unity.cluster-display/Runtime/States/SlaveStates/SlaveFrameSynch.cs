@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
 
-            m_SlaveReceiver = new SlaveReciever(this, clusterSync.maxFrameNetworkByteBufferSize, clusterSync.maxRpcByteBufferSize);
+            m_SlaveReceiver = new SlaveReciever(this, clusterSync.Resources.NetworkPayloadLimits);
         }
 
         protected override NodeState DoFrame(bool newFrame)

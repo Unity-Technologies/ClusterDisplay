@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     generatedRPCILTypeRef.Module,
                     ilProcessor,
                     beforeInstruction: lastInstruction,
-                    targetMethod: targetMethod,
+                    executionTarget: targetMethod,
                     isImmediateRPCExeuction: false,
                     firstInstructionOfInjection: out firstInstructionOfCaseImpl))
                     return false;
@@ -83,10 +83,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     return true;
                 }
 
+                if (!CecilUtils.TryImport(generatedRPCILTypeRef.Module, typeof(RPCInterfaceRegistry.ExecuteQueuedRPC), out var executeQueuedRPCAttributeTypeRef))
+                {
+                    ilProcessor = null;
+                    return false;
+                }
+
                 if (!TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
                     generatedRPCILTypeRef.Resolve(),
-                    CecilUtils.Import(generatedRPCILTypeRef.Module, typeof(RPCInterfaceRegistry.ExecuteQueuedRPC)),
+                    executeQueuedRPCAttributeTypeRef,
                     out var methodRef))
                 {
                     ilProcessor = null;
@@ -95,11 +101,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 var methodDef = methodRef.Resolve();
                 ilProcessor = methodDef.Body.GetILProcessor();
-                /*
-                methodDef.Body.Instructions.Clear();
-                ilProcessor.Emit(OpCodes.Nop);
-                ilProcessor.Emit(OpCodes.Ret);
-                */
 
                 this.ilProcessor = ilProcessor;
 

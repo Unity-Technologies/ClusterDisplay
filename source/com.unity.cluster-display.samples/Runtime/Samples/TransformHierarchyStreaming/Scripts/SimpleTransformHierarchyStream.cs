@@ -15,20 +15,9 @@ namespace Unity.ClusterDisplay
     [RequireComponent(typeof(Transform))]
     public class SimpleTransformHierarchyStream : TransformHierarchyStreamBase
     {
-        private void LateUpdate ()
-        {
-            if (!ClusterDisplayState.IsMaster)
-                return;
-
-            if (!TryGetData(out var data))
-                return;
-
-            ApplyTransformData(data);
-        }
-
         protected override void CacheTransforms() => ApplyCachedTransforms(GetComponentsInChildren<Transform>());
 
         [ClusterRPC] // We want the RPCs for methods in non-abstract classes, therefore we declare this method as an RPC, then call up to the base implementation.
-        public override void ApplyTransformData (NativeSlice<Data> data) => base.ApplyTransformData(data);
+        public override void ApplyTransformData (NativeArray<Data> data) => base.ApplyTransformData(data);
     }
 }

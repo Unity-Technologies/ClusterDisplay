@@ -95,15 +95,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private void InjectDefaultSwitchCases ()
+        private void InjectDefaultSwitchCases (AssemblyDefinition compiledAssemblyDef)
         {
-            if (cachedOnTryCallProcessor != null)
+            if (TryGetCachedRPCILGenerator(compiledAssemblyDef, out var cachedOnTryCallProcessor))
                 cachedOnTryCallProcessor.InjectDefaultSwitchCase();
 
-            if (cachedOnTryStaticCallProcessor != null)
+            if (TryGetCachedStaticRPCILGenerator(compiledAssemblyDef, out var cachedOnTryStaticCallProcessor))
                 cachedOnTryStaticCallProcessor.InjectDefaultSwitchCase();
 
-            if (cachedQueuedRPCILGenerator != null)
+            if (TryGetCachedQueuedRPCILGenerator(compiledAssemblyDef, out var cachedQueuedRPCILGenerator))
                 cachedQueuedRPCILGenerator.InjectDefaultSwitchCase();
         }
 
@@ -256,7 +256,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (!TryProcessMethodsWithRPCAttribute(compiledAssemblyDef))
                 return false;
 
-            InjectDefaultSwitchCases();
+            InjectDefaultSwitchCases(compiledAssemblyDef);
             FlushCache();
             UniqueRPCIdManager.Close();
             return true;

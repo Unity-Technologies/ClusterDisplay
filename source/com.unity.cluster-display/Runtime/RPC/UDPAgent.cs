@@ -37,6 +37,7 @@ namespace Unity.ClusterDisplay
         private int m_TxPort;
         private int m_TotalResendCount;
         private int m_TotalSentCount;
+        private int m_MaxMTUSize;
         string m_AdapterName;
 
         private UInt64 m_NextMessageId;
@@ -99,7 +100,14 @@ namespace Unity.ClusterDisplay
         /// <param name="txPort"></param>
         /// <param name="timeOut"></param>
         /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
-        public UDPAgent(byte localNodeID, string ip, int rxPort, int txPort, int timeOut, string adapterName)
+        public UDPAgent(
+            byte localNodeID, 
+            string ip, 
+            int rxPort, 
+            int txPort, 
+            int timeOut, 
+            int maxMTUSize,
+            string adapterName)
         {
             RxWait = new AutoResetEvent(false);
             LocalNodeID = localNodeID;
@@ -107,6 +115,7 @@ namespace Unity.ClusterDisplay
             m_TxPort = txPort;
             m_MulticastAddress = IPAddress.Parse(ip);
             m_MessageAckTimeout = new TimeSpan(0, 0, 0, timeOut);
+            m_MaxMTUSize = maxMTUSize;
             m_AdapterName = adapterName;
         }
 
@@ -122,6 +131,8 @@ namespace Unity.ClusterDisplay
                 m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
 
                 var conn = new UdpClient();
+                conn.Client.SendBufferSize = m_MaxMTUSize;
+                conn.Client.ReceiveBufferSize = m_MaxMTUSize;
 
                 // Bind a particular NIC
                 if (!string.IsNullOrEmpty(m_AdapterName))
@@ -339,10 +350,11 @@ namespace Unity.ClusterDisplay
                 if (!m_CTS.IsCancellationRequested)
                     m_Connection.BeginReceive(ReceiveMessage, null);
             }
-            catch (ObjectDisposedException)
-            {
 
+            catch (ObjectDisposedException e)
+            {
             }
+
             catch (Exception e)
             {
                 // Trigger some sort of error
@@ -378,6 +390,12 @@ namespace Unity.ClusterDisplay
 
         private void SendMessage(ref Message msg)
         {
+            if (msg.payload.Length > m_MaxMTUSize)
+            {
+                Debug.LogError($"Unable to send message, the message payload is larger then the MTU size: {m_MaxMTUSize}");
+                return;
+            }
+
             if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck) &&
                 !msg.header.Flags.HasFlag(MessageHeader.EFlag.Resending))
             {

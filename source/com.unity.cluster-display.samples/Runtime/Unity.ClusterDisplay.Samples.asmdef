@@ -1,14 +1,12 @@
 {
-    "name": "Unity.ClusterDisplay.RPC",
+    "name": "Unity.ClusterDisplay.Samples",
     "references": [
-        "GUID:d17cf94e78b26ac4db1dca31abae1b06"
+        "GUID:ebda382865f803841bb36f141d251db6",
+        "GUID:2665a8d13d1b3f18800f46e256720795"
     ],
-    "includePlatforms": [
-        "Editor",
-        "WindowsStandalone64"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": true,
+    "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

@@ -4,6 +4,8 @@ using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
+using buint = System.UInt32;
+
 namespace Unity.ClusterDisplay.RPC
 {
     public static partial class RPCBufferIO
@@ -24,12 +26,9 @@ namespace Unity.ClusterDisplay.RPC
         public class AppendRPCNativeArrayParameterValueMarker : Attribute {}
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCNativeSliceParameterValueMarker : Attribute {}
-
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class AppendRPCValueTypeParameterValueMarker : Attribute {}
 
-        public static unsafe bool Latch (NativeArray<byte> buffer, ref int endPos)
+        public static unsafe bool Latch (NativeArray<byte> buffer, ref buint endPos)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
             endPos += rpcBufferSize;
@@ -44,13 +43,10 @@ namespace Unity.ClusterDisplay.RPC
                 return;
 
             int strSize = value.Length;
-            if (strSize > ushort.MaxValue)
-                throw new System.Exception($"Max string size is: {ushort.MaxValue} characters.");
-
-            if (rpcBufferSize + sizeof(ushort) + strSize >= rpcBuffer.Length)
+            if (rpcBufferSize + sizeof(buint) + strSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
-            CopyCountToRPCBuffer((ushort)strSize);
+            CopyCountToRPCBuffer((buint)strSize);
             fixed (char* ptr = value)
                 Encoding.ASCII.GetBytes(
                     ptr,
@@ -58,10 +54,10 @@ namespace Unity.ClusterDisplay.RPC
                     (byte *)rpcBuffer.GetUnsafePtr() + rpcBufferSize,
                     strSize);
 
-            rpcBufferSize += strSize;
+            rpcBufferSize += (buint)strSize;
         }
 
-        private static bool CanWriteValueTypeToRPCBuffer<T> (T value, out int structSize)
+        private static bool CanWriteValueTypeToRPCBuffer<T> (T value, out buint structSize)
         {
             if (!AllowWrites)
             {
@@ -69,7 +65,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            structSize = Marshal.SizeOf<T>(value);
+            structSize = (buint)Marshal.SizeOf<T>(value);
             if (rpcBufferSize + structSize >= rpcBuffer.Length)
             {
                 UnityEngine.Debug.LogError("RPC Buffer is full.");
@@ -79,7 +75,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static bool CanWriteBufferToRPCBuffer<T> (int count, out int arrayByteCount) where T : unmanaged
+        private static bool CanWriteBufferToRPCBuffer<T> (int count, out buint arrayByteCount) where T : unmanaged
         {
             if (!AllowWrites)
             {
@@ -87,34 +83,34 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            arrayByteCount = Marshal.SizeOf<T>() * count;
+            arrayByteCount = (buint)(Marshal.SizeOf<T>() * count);
 
-            if (arrayByteCount > ushort.MaxValue)
+            if (arrayByteCount > m_CachedPayloadLimits.maxSingleRPCParameterByteSize)
             {
-                UnityEngine.Debug.LogError($"Max string array is: {ushort.MaxValue} characters.");
+                UnityEngine.Debug.LogError($"Unable to write parameter buffer of size: {arrayByteCount} to RPC buffer, the max byte size of buffer of RPC parameter is: {m_CachedPayloadLimits.maxSingleRPCParameterByteSize} bytes.");
                 return false;
             }
 
-            if (rpcBufferSize + sizeof(ushort) + arrayByteCount >= rpcBuffer.Length)
+            if (rpcBufferSize + sizeof(buint) + arrayByteCount >= rpcBuffer.Length)
             {
-                UnityEngine.Debug.LogError("RPC Buffer is full.");
+                UnityEngine.Debug.LogError($"Unable to write parameter buffer of size: {arrayByteCount} to RPC Buffer because it's full.");
                 return false;
             }
 
             return true;
         }
 
-        private static unsafe void CopyCountToRPCBuffer (ushort count)
+        private static unsafe void CopyCountToRPCBuffer (buint count)
         {
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
                 UnsafeUtility.AddressOf(ref count), 
-                sizeof(ushort));
+                sizeof(buint));
 
-            rpcBufferSize += sizeof(ushort);
+            rpcBufferSize += sizeof(buint);
         }
 
-        private static unsafe void CopyBufferToRPCBuffer<T>(T* ptr, int arrayByteCount) where T : unmanaged
+        private static unsafe void CopyBufferToRPCBuffer<T>(T* ptr, buint arrayByteCount) where T : unmanaged
         {
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
@@ -130,17 +126,7 @@ namespace Unity.ClusterDisplay.RPC
             if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
                 return;
 
-            CopyCountToRPCBuffer((ushort)buffer.Length);
-            CopyBufferToRPCBuffer<T>((T*)buffer.GetUnsafePtr(), arrayByteCount);
-        }
-
-        [AppendRPCNativeSliceParameterValueMarker]
-        public static unsafe void AppendRPCNativeSliceParameterValues<T> (NativeSlice<T> buffer) where T : unmanaged
-        {
-            if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
-                return;
-
-            CopyCountToRPCBuffer((ushort)buffer.Length);
+            CopyCountToRPCBuffer((buint)buffer.Length);
             CopyBufferToRPCBuffer<T>((T*)buffer.GetUnsafePtr(), arrayByteCount);
         }
 
@@ -153,7 +139,7 @@ namespace Unity.ClusterDisplay.RPC
             if (!CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
                 return;
 
-            CopyCountToRPCBuffer((ushort)value.Length);
+            CopyCountToRPCBuffer((buint)value.Length);
 
             fixed (T* ptr = &value[0])
                 CopyBufferToRPCBuffer<T>(ptr, arrayByteCount);
@@ -176,10 +162,10 @@ namespace Unity.ClusterDisplay.RPC
         [RPCCallMarker]
         public static void AppendRPCCall (
             UnityEngine.Component instance, 
-            int rpcId, 
-            int rpcExecutionStage, 
+            ushort rpcId, 
+            ushort rpcExecutionStage, 
             // int explicitRPCExeuctionStage, // 1 == Explicit RPC Exeuction | 0 == Implicit RPC Execution.
-            int parametersPayloadSize)
+            buint parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
@@ -196,10 +182,10 @@ namespace Unity.ClusterDisplay.RPC
                 return;
             */
 
-            int totalRPCCallSize = MinimumRPCPayloadSize + parametersPayloadSize;
-            if (totalRPCCallSize > ushort.MaxValue)
+            buint totalRPCCallSize = MinimumRPCPayloadSize + (buint)parametersPayloadSize;
+            if (totalRPCCallSize > m_CachedPayloadLimits.maxSingleRPCByteSize)
             {
-                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
+                UnityEngine.Debug.LogError($"Unable to append RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {m_CachedPayloadLimits.maxSingleRPCByteSize}");
                 return;
             }
 
@@ -209,13 +195,13 @@ namespace Unity.ClusterDisplay.RPC
                 return;
             }
 
-            int startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = (/*explicitRPCExeuctionStage == 0 && */rpcExecutionStage > 0) ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+            buint startingBufferPos = rpcBufferSize;
+            rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (int)RPCExecutor.CurrentExecutionStage + 1);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
             AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1));
-            AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
+            AppendRPCValueTypeParameterValue<buint>((buint)parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Sending RPC: (ID: {rpcId}, RPC ExecutionStage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");
@@ -224,18 +210,18 @@ namespace Unity.ClusterDisplay.RPC
 
         [StaticRPCCallMarker]
         public static void AppendStaticRPCCall (
-            int rpcId, 
-            int rpcExecutionStage, 
+            ushort rpcId, 
+            ushort rpcExecutionStage, 
             // int explicitRPCExeuctionStage, // 1 == Explicit RPC Exeuction | 0 == Implicit RPC Execution.
-            int parametersPayloadSize)
+            buint parametersPayloadSize)
         {
             if (!AllowWrites)
                 return;
 
-            int totalRPCCallSize = MinimumRPCPayloadSize + parametersPayloadSize;
-            if (totalRPCCallSize > ushort.MaxValue)
+            buint totalRPCCallSize = MinimumRPCPayloadSize + (buint)parametersPayloadSize;
+            if (totalRPCCallSize > m_CachedPayloadLimits.maxSingleRPCByteSize)
             {
-                UnityEngine.Debug.LogError($"Unable to append static RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {ushort.MaxValue}");
+                UnityEngine.Debug.LogError($"Unable to append static RPC call with ID: {rpcId}, the total RPC byte count: {totalRPCCallSize} is greater then the max RPC call size of: {m_CachedPayloadLimits.maxSingleRPCByteSize}");
                 return;
             }
 
@@ -245,13 +231,13 @@ namespace Unity.ClusterDisplay.RPC
                 return;
             }
 
-            int startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = (/*explicitRPCExeuctionStage == 0 && */rpcExecutionStage > 0) ? rpcExecutionStage : ((int)RPCExecutor.CurrentExecutionStage + 1);
+            buint startingBufferPos = rpcBufferSize;
+            rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (int)RPCExecutor.CurrentExecutionStage + 1);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
             AppendRPCValueTypeParameterValue<ushort>((ushort)0);
-            AppendRPCValueTypeParameterValue<ushort>((ushort)parametersPayloadSize);
+            AppendRPCValueTypeParameterValue<buint>((buint)parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             UnityEngine.Debug.Log($"Sending static RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Parameters Payload Byte Count: {parametersPayloadSize}, Total RPC Byte Count: {totalRPCCallSize}, Starting Buffer Position: {startingBufferPos})");

@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
@@ -14,6 +11,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     {
         sealed class RPCILGenerator
         {
+            public const string GeneratedRPCILNamespace = "Unity.ClusterDisplay.Generated";
+            public const string GeneratedRPCILTypeName = "RPCIL";
+
             private AssemblyDefinition compiledAssemblyDef;
             private ModuleDefinition moduleDef;
             private ILProcessor ilProcessor;
@@ -40,19 +40,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     out ilProcessor))
                     return false;
 
-                /*
-                ilProcessor.Body.Instructions.Clear();
-                ilProcessor.Body.Variables.Clear();
-                ilProcessor.Body.InitLocals = false;
-
-                firstInstruction = Instruction.Create(OpCodes.Nop);
-                ilProcessor.Append(firstInstruction);
-
-                lastInstruction = CecilUtils.PushInt(0);
-                ilProcessor.Append(lastInstruction);
-                ilProcessor.Append(Instruction.Create(OpCodes.Ret));
-                */
-
                 firstInstruction = ilProcessor.Body.Instructions[0];
                 // Last instruction is two instructions before end of method since we are returning false by default.
                 lastInstruction = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
@@ -66,7 +53,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 Type markerAttribute, 
                 out ILProcessor il)
             {
-                var onTryCallMarkerAttributeTypeRef = CecilUtils.Import(assemblyDef.MainModule, markerAttribute);
+                if (!CecilUtils.TryImport(assemblyDef.MainModule, markerAttribute, out var onTryCallMarkerAttributeTypeRef))
+                {
+                    il = null;
+                    return false;
+                }
 
                 if (!TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
@@ -85,20 +76,20 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             private bool TryInjectRPCInterceptIL (
-                int rpcId, 
-                int rpcExecutionStage,
-                MethodReference targetMethodRef)
+                ushort rpcId, 
+                ushort rpcExecutionStage,
+                MethodReference targetMethodRef,
+                out MethodDefinition modifiedTargetMethodDef)
             {
-                var targetMethodDef = targetMethodRef.Resolve();
+                modifiedTargetMethodDef = targetMethodRef.Resolve();
 
-                var beforeInstruction = targetMethodDef.Body.Instructions.First();
-                var il = targetMethodDef.Body.GetILProcessor();
+                var beforeInstruction = modifiedTargetMethodDef.Body.Instructions.First();
+                var il = modifiedTargetMethodDef.Body.GetILProcessor();
 
                 var rpcEmitterType = typeof(RPCBufferIO);
-                var rpcEmitterTypeReference = CecilUtils.Import(targetMethodRef.Module, rpcEmitterType);
 
                 MethodInfo appendRPCMethodInfo = null;
-                if (!targetMethodDef.IsStatic)
+                if (!modifiedTargetMethodDef.IsStatic)
                 {
                     if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                         return false;
@@ -107,19 +98,23 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 else if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
 
-                var appendRPCCMethodRef = CecilUtils.Import(targetMethodRef.Module, appendRPCMethodInfo);
+                if (!CecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
+                    return false;
 
                 if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
                     return false;
 
                 if (!TryPollParameterInformation(
-                    targetMethodRef.Module,
-                    targetMethodRef,
+                    modifiedTargetMethodDef.Module,
+                    modifiedTargetMethodDef,
                     out var totalSizeOfStaticallySizedRPCParameters,
                     out var hasDynamicallySizedRPCParameters))
                     return false;
 
-                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, CecilUtils.Import(targetMethodRef.Module, getIsMasterMethod));
+                if (!CecilUtils.TryImport(targetMethodRef.Module, getIsMasterMethod, out var getIsMasterMethodRef))
+                    return false;
+
+                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsMasterMethodRef);
                 CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
 
                 return !hasDynamicallySizedRPCParameters ?
@@ -128,7 +123,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             rpcEmitterType,
                             rpcId,
                             rpcExecutionStage,
-                            targetMethodRef,
                             il,
                             ref afterInstruction,
                             appendRPCCMethodRef,
@@ -140,7 +134,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             rpcEmitterType,
                             rpcId,
                             rpcExecutionStage,
-                            targetMethodRef,
                             il,
                             ref afterInstruction,
                             appendRPCCMethodRef,
@@ -198,56 +191,36 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 RPCExecutionStage rpcExecutionStage,
                 out MethodReference methodRef)
             {
-                var rpcInterfaceRegistryRef = CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry));
+                if (!CecilUtils.TryImport(moduleDef, typeof(RPCInterfaceRegistry), out var rpcInterfaceRegistryRef))
+                {
+                    methodRef = null;
+                    return false;
+                }
 
+                Type type = null;
                 switch (rpcExecutionStage)
                 {
                     case RPCExecutionStage.BeforeFixedUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                                rpcInterfaceRegistryRef.Module,
-                                rpcInterfaceRegistryRef.Resolve(), 
-                                CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeFixedUpdateRPCMarker)), 
-                                out methodRef);
+                        type = typeof(RPCInterfaceRegistry.QueueBeforeFixedUpdateRPCMarker);
                         break;
 
                     case RPCExecutionStage.AfterFixedUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                            rpcInterfaceRegistryRef.Module,
-                            rpcInterfaceRegistryRef.Resolve(),
-                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterFixedUpdateRPCMarker)),
-                            out methodRef);
                         break;
 
                     case RPCExecutionStage.BeforeUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                            rpcInterfaceRegistryRef.Module,
-                            rpcInterfaceRegistryRef.Resolve(),
-                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeUpdateRPCMarker)),
-                            out methodRef);
+                        type = typeof(RPCInterfaceRegistry.QueueBeforeUpdateRPCMarker);
                         break;
 
                     case RPCExecutionStage.AfterUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                            rpcInterfaceRegistryRef.Module,
-                            rpcInterfaceRegistryRef.Resolve(),
-                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterUpdateRPCMarker)),
-                            out methodRef);
+                        type = typeof(RPCInterfaceRegistry.QueueAfterUpdateRPCMarker);
                         break;
 
                     case RPCExecutionStage.BeforeLateUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                            rpcInterfaceRegistryRef.Module,
-                            rpcInterfaceRegistryRef.Resolve(), 
-                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueBeforeLateUpdateRPCMarker)), 
-                            out methodRef);
+                        type = typeof(RPCInterfaceRegistry.QueueBeforeLateUpdateRPCMarker);
                         break;
 
                     case RPCExecutionStage.AfterLateUpdate:
-                        TryFindMethodReferenceWithAttributeInModule(
-                            rpcInterfaceRegistryRef.Module,
-                            rpcInterfaceRegistryRef.Resolve(), 
-                            CecilUtils.Import(moduleDef, typeof(RPCInterfaceRegistry.QueueAfterLateUpdateRPCMarker)), 
-                            out methodRef);
+                        type = typeof(RPCInterfaceRegistry.QueueAfterLateUpdateRPCMarker);
                         break;
 
                     case RPCExecutionStage.ImmediatelyOnArrival:
@@ -256,6 +229,19 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         methodRef = null;
                         return false;
                 }
+
+                if (!CecilUtils.TryImport(moduleDef, type, out var typeRef))
+                {
+                    methodRef = null;
+                    return false;
+                }
+
+                if (!TryFindMethodReferenceWithAttributeInModule(
+                    rpcInterfaceRegistryRef.Module,
+                    rpcInterfaceRegistryRef.Resolve(),
+                    typeRef,
+                    out methodRef))
+                    return false;
 
                 return true;
             }
@@ -364,7 +350,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             public bool ProcessMethodDef (
-                int rpcId,
+                ushort rpcId,
                 MethodReference targetMethodRef,
                 RPCExecutionStage rpcExecutionStage)
             {
@@ -373,9 +359,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 if (!TryInjectRPCInterceptIL(
                     rpcId,
-                    (int)rpcExecutionStage,
-                    targetMethodRef))
+                    (ushort)rpcExecutionStage,
+                    targetMethodRef,
+                    out var modifiedTargetMethodDef))
                     goto unableToInjectIL;
+
+                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, modifiedTargetMethodDef);
 
                 if (targetMethodDef.IsStatic)
                 {
@@ -383,7 +372,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         generatedRPCILTypeRef.Module,
                         ilProcessor,
                         beforeInstruction: lastInstruction,
-                        targetMethodRef: targetMethodRef,
+                        targetMethodRef: importedTargetMethodRef,
                         isImmediateRPCExeuction: true,
                         firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
                         goto unableToInjectIL;
@@ -393,7 +382,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     generatedRPCILTypeRef.Module,
                     ilProcessor,
                     beforeInstruction: lastInstruction,
-                    targetMethod: targetMethodRef,
+                    executionTarget: importedTargetMethodRef,
                     isImmediateRPCExeuction: true,
                     firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
                     goto unableToInjectIL;

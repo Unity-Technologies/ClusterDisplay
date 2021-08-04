@@ -10,6 +10,16 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
     {
     }
 
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.FilteredTransformHierarchyStream))]
+    public class AFilteredTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.FilteredTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.FilteredTransformHierarchyStream>>
+    {
+    }
+
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
+    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
+    {
+    }
+
     [UnityEditor.CustomEditor(typeof(UnityEngine.UI.AspectRatioFitter))]
     public class AAspectRatioFitterExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.UI.AspectRatioFitter, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.UI.AspectRatioFitter>>
     {
@@ -147,11 +157,6 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
 
     [UnityEditor.CustomEditor(typeof(UnityEngine.VFX.VisualEffect))]
     public class AVisualEffectExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.VFX.VisualEffect, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.VFX.VisualEffect>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
-    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
     {
     }
 

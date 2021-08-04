@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
             base.InitState();
 
-            m_MasterEmitter = new MasterEmitter(this, clusterSync.maxFrameNetworkByteBufferSize, clusterSync.maxRpcByteBufferSize);
+            m_MasterEmitter = new MasterEmitter(this, clusterSync.Resources.NetworkPayloadLimits);
             m_Stage = EStage.StepOneFrameOnInitialization;
 
             m_TsOfStage = m_Time.Elapsed;

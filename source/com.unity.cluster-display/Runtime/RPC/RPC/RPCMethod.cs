@@ -23,9 +23,9 @@ namespace Unity.ClusterDisplay.RPC
 
         private int ValidateRPCId (int id)
         {
-            int clampedId = UnityEngine.Mathf.Clamp(id, -1, (int)ushort.MaxValue);
-            if (rpcId >= ushort.MaxValue)
-                UnityEngine.Debug.LogError($"You should not be overriding the RPC ID with an integer ({rpcId}) that is larger then the max value for an unsigned 16bit integer ({ushort.MaxValue}).");
+            int clampedId = UnityEngine.Mathf.Clamp(id, -1, (int)Constants.MaxRPCID);
+            if ((ulong)rpcId >= Constants.MaxRPCID)
+                UnityEngine.Debug.LogError($"You should not be overriding the RPC ID with: ({rpcId}) when it's larger then the max ID ({Constants.MaxRPCID}).");
             return clampedId;
         }
 

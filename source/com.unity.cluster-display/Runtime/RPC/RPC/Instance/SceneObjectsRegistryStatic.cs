@@ -34,8 +34,8 @@ namespace Unity.ClusterDisplay.RPC
 
         private readonly static IDManager m_PipeIdManager = new IDManager();
 
-        private readonly static Component[] m_Instances = new Component[ushort.MaxValue];
-        private readonly static PipeConfig[] m_PipeIdToInstanceConfig = new PipeConfig[ushort.MaxValue];
+        private readonly static Component[] m_Instances = new Component[IDManager.MaxIDCount];
+        private readonly static PipeConfig[] m_PipeIdToInstanceConfig = new PipeConfig[IDManager.MaxIDCount];
         private readonly static Dictionary<int, ushort> m_InstanceIdToPipeId = new Dictionary<int, ushort>();
 
         public static bool IsSerializing { protected set; get; }

@@ -6,6 +6,8 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
+using buint = System.UInt32;
+
 namespace Unity.ClusterDisplay
 {
     public class MasterEmitter
@@ -13,7 +15,7 @@ namespace Unity.ClusterDisplay
         private NativeArray<byte> m_PreviousStateSubBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
 
-        private int m_CurrentStateBufferEndPos = 0;
+        private buint m_CurrentStateBufferEndPos = 0;
         private bool m_CurrentStateResult = false;
 
         private byte[] m_MsgBuffer = new byte[0];
@@ -21,11 +23,12 @@ namespace Unity.ClusterDisplay
 
         public IMasterNodeSyncState nodeState;
 
-        public MasterEmitter (IMasterNodeSyncState nodeState, uint maxFrameNetworkByteBufferSize, uint maxRpcByteBufferSize)
+        public MasterEmitter (IMasterNodeSyncState nodeState, ClusterDisplayResources.PayloadLimits payloadLimits)
         {
-            m_CurrentStateBuffer = new NativeArray<byte>((int)maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            m_CurrentStateBuffer = new NativeArray<byte>((int)payloadLimits.maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             this.nodeState = nodeState;
-            RPC.RPCBufferIO.Initialize(maxRpcByteBufferSize);
+
+            RPC.RPCBufferIO.Initialize(payloadLimits);
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
@@ -59,7 +62,7 @@ namespace Unity.ClusterDisplay
             if (m_CurrentStateResult)
             {
                 if (StoreRPCs(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) && MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
-                    m_PreviousStateSubBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, m_CurrentStateBufferEndPos), Allocator.Temp);
+                    m_PreviousStateSubBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Temp);
                 else m_PreviousStateSubBuffer = default;
             }
 
@@ -74,53 +77,53 @@ namespace Unity.ClusterDisplay
                 
         }
 
-        private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref int endPos)
+        private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref buint endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
             
-            int sizePos = endPos;
-            endPos += Marshal.SizeOf<int>();
+            buint sizePos = endPos;
+            endPos += (buint)Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreInputStateID, guidLen);
 
-            var bytesWritten = ClusterSerialization.SaveInputManagerState(buffer.GetSubArray(endPos, buffer.Length - endPos));
+            buint bytesWritten = (buint)ClusterSerialization.SaveInputManagerState(buffer.GetSubArray((int)endPos, (int)(buffer.Length - endPos)));
             Debug.Assert(bytesWritten >= 0, "Buffer to small! Input not stored.");
             if (bytesWritten < 0)
                 return false;
 
             endPos += bytesWritten;
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = bytesWritten;
+            *((buint*)((byte*)buffer.GetUnsafePtr() + sizePos)) = bytesWritten;
             return true;
         }
 
-        private static unsafe bool StoreTimeState(NativeArray<byte> buffer, ref int endPos)
+        private static unsafe bool StoreTimeState(NativeArray<byte> buffer, ref buint endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
             
-            int sizePos = endPos;
-            endPos += Marshal.SizeOf<int>();
+            buint sizePos = endPos;
+            endPos += (buint)Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreTimeStateID, guidLen);
 
-            var bytesWritten = ClusterSerialization.SaveTimeManagerState(buffer.GetSubArray(endPos, buffer.Length - endPos));
+            buint bytesWritten = (buint)ClusterSerialization.SaveTimeManagerState(buffer.GetSubArray((int)endPos, (int)(buffer.Length - endPos)));
             Debug.Assert(bytesWritten >= 0, "Buffer to small! Time state not stored.");
             if (bytesWritten < 0)
                 return false;
 
             endPos += bytesWritten;
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = bytesWritten;
+            *((buint*)((byte*)buffer.GetUnsafePtr() + sizePos)) = bytesWritten;
             return true;
         }
         
-        private static unsafe bool StoreClusterInputState(NativeArray<byte> buffer, ref int endPos)
+        private static unsafe bool StoreClusterInputState(NativeArray<byte> buffer, ref buint endPos)
         {
             var guidLen = Marshal.SizeOf<Guid>();
             
-            int startingPos = endPos;
-            endPos += Marshal.SizeOf<int>();
+            buint startingPos = endPos;
+            endPos += (buint)Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.ClusterInputStateID, guidLen);
 
-            var bytesWritten = ClusterSerialization.SaveClusterInputState(buffer.GetSubArray(endPos, buffer.Length - endPos));
+            var bytesWritten = (buint)ClusterSerialization.SaveClusterInputState(buffer.GetSubArray((int)endPos, (int)(buffer.Length - endPos)));
             Debug.Assert(bytesWritten >= 0, "Buffer to small. ClusterInput not stored.");
             if (bytesWritten < 0)
                 return false;
@@ -128,7 +131,7 @@ namespace Unity.ClusterDisplay
             if (bytesWritten > 0)
             {
                 endPos += bytesWritten;
-                *((int*) ((byte*) buffer.GetUnsafePtr() + startingPos)) = bytesWritten;
+                *((buint*) ((byte*) buffer.GetUnsafePtr() + startingPos)) = bytesWritten;
             }
             else
                 endPos = startingPos;
@@ -136,18 +139,18 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static unsafe bool MarkStatesEnd(NativeArray<byte> buffer, ref int endPos)
+        private static unsafe bool MarkStatesEnd(NativeArray<byte> buffer, ref buint endPos)
         {
             Debug.Assert(endPos < buffer.Length, "Buffer to small to store end marker");
             if (endPos >= buffer.Length)
                 return false;
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = 0;
-            endPos += Marshal.SizeOf<int>();
+            *((buint*)((byte*)buffer.GetUnsafePtr() + endPos)) = 0;
+            endPos += (buint)Marshal.SizeOf<int>();
             return true;
         }
 
-        private unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref int endPos)
+        private unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref buint endPos)
         {
             if ((endPos + Marshal.SizeOf<int>() + Marshal.SizeOf<UnityEngine.Random.State>()) >= buffer.Length)
             {
@@ -157,38 +160,38 @@ namespace Unity.ClusterDisplay
 
             var rndState = UnityEngine.Random.state;
 
-            int sizePos = endPos;
-            endPos += Marshal.SizeOf<int>();
+            buint sizePos = endPos;
+            endPos += (buint)Marshal.SizeOf<int>();
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.CoreRandomStateID, Marshal.SizeOf<Guid>());
 
             var rawData = (byte*) &rndState;
             UnsafeUtility.MemCpy((byte*) buffer.GetUnsafePtr() + endPos, rawData, Marshal.SizeOf<UnityEngine.Random.State>());
 
-            int sizeOfRandomState = Marshal.SizeOf<UnityEngine.Random.State>();
+            buint sizeOfRandomState = (buint)Marshal.SizeOf<UnityEngine.Random.State>();
             endPos += sizeOfRandomState;
-            *((int*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
+            *((buint*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
 
             // Debug.Log($"Seed: {UnityEngine.Random.seed}");
             return true;
         }
 
-        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref int endPos)
+        private unsafe bool StoreRPCs (NativeArray<byte> buffer, ref buint endPos)
         {
             if (RPC.RPCBufferIO.RPCBufferSize == 0)
                 return true;
 
-            *((int*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPC.RPCBufferIO.RPCBufferSize;
-            endPos += Marshal.SizeOf<int>();
+            *((buint*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPC.RPCBufferIO.RPCBufferSize;
+            endPos += (buint)Marshal.SizeOf<int>();
 
             endPos = StoreStateID(buffer, endPos, AdvanceFrame.RPCStateID, Marshal.SizeOf<Guid>());
 
             return RPC.RPCBufferIO.Latch(buffer, ref endPos);
         }
 
-        private static unsafe int StoreStateID(NativeArray<byte> buffer, int endPos, Guid id, int guidLen)
+        private static unsafe buint StoreStateID(NativeArray<byte> buffer, buint endPos, Guid id, int guidLen)
         {
             UnsafeUtility.MemCpy((byte*) buffer.GetUnsafePtr() + endPos, (byte*) &id, guidLen);
-            endPos += guidLen;
+            endPos += (buint)guidLen;
             return endPos;
         }
     }

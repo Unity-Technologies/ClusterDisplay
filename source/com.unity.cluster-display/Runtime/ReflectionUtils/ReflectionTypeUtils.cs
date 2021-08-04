@@ -16,6 +16,7 @@ namespace Unity.ClusterDisplay
             return System.IO.File.Exists($"{scriptAssembliesPath}/{type.Assembly.GetName().Name}.dll");
         }
 
+        private static readonly Type NativeArrayType = typeof(NativeArray<>);
         public static bool RecursivelyDetermineIfTypeIsCompatibleRPCParameter (
             MethodInfo methodInfo, 
             ParameterInfo parameterInfo, 
@@ -43,6 +44,15 @@ namespace Unity.ClusterDisplay
 
             else if (type.IsGenericType)
             {
+                if (type.Namespace == NativeArrayType.Namespace)
+                {
+                    if (type.GetGenericTypeDefinition() != NativeArrayType)
+                    {
+                        Debug.LogError($"Only the type: \"{NativeArrayType.Name}\" is supported as a RPC method parameter from: \"{NativeArrayType.Namespace}\" namespace.");
+                        goto dynamicallySizedMemberTypeFailure;
+                    }
+                }
+
                 if (structureDepth > 0)
                     goto dynamicallySizedMemberTypeFailure;
 

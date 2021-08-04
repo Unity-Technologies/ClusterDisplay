@@ -4,6 +4,8 @@ using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
+using buint = System.UInt32;
+
 namespace Unity.ClusterDisplay.RPC
 {
     public static partial class RPCBufferIO
@@ -15,26 +17,14 @@ namespace Unity.ClusterDisplay.RPC
         public class ParseArrayMarker : Attribute {}
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseNativeCollectionMarker : Attribute {}
+        public class ParseNativeArrayMarker : Attribute {}
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class ParseStructureMarker : Attribute {}
 
-        public struct RPCRequest
-        {
-            public ushort rpcId;
-            public RPCExecutionStage rpcExecutionStage;
-
-            public ushort pipeId;
-            public bool isStaticRPC;
-
-            public ushort parametersPayloadSize;
-            public ushort assemblyIndex;
-        }
-
         private static void QueueRPC (
             ref RPCRequest rpcRequest,
-            ref ushort bufferPos)
+            ref buint bufferPos)
         {
             switch (rpcRequest.rpcExecutionStage)
             {
@@ -70,8 +60,8 @@ namespace Unity.ClusterDisplay.RPC
         private static bool TryProcessImmediateRPC (
             ref RPCRequest rpcRequest,
             ulong frame,
-            ushort startingBufferPos,
-            ref ushort bufferPos)
+            buint startingBufferPos,
+            ref buint bufferPos)
         {
             if (rpcRequest.isStaticRPC)
             {
@@ -108,7 +98,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            ushort consumedParameterByteCount = (ushort)((bufferPos - startingBufferPos) - MinimumRPCPayloadSize);
+            buint consumedParameterByteCount = (bufferPos - startingBufferPos) - MinimumRPCPayloadSize;
             if (rpcRequest.parametersPayloadSize > 0 && rpcRequest.parametersPayloadSize != consumedParameterByteCount)
             {
                 UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
@@ -121,8 +111,8 @@ namespace Unity.ClusterDisplay.RPC
         private static bool TryParseRPC (
             out RPCRequest rpcRequest,
             ulong frame,
-            ushort startingBufferPos,
-            ref ushort bufferPos)
+            buint startingBufferPos,
+            ref buint bufferPos)
         {
             ParseRPCId(ref bufferPos, out rpcRequest.rpcId);
 
@@ -158,19 +148,19 @@ namespace Unity.ClusterDisplay.RPC
 
         public static unsafe bool Unlatch (NativeArray<byte> buffer, ulong frame)
         {
-            ushort bufferPos = 0;
+            buint bufferPos = 0;
             if (buffer.Length < MinimumRPCPayloadSize)
                 goto success;
 
             UnsafeUtility.MemCpy((byte*)rpcBuffer.GetUnsafePtr(), (byte*)buffer.GetUnsafePtr(), buffer.Length);
-            rpcBufferSize = buffer.Length;
+            rpcBufferSize = (buint)buffer.Length;
 
             do
             {
                 if (bufferPos > buffer.Length - MinimumRPCPayloadSize)
                     goto success;
 
-                ushort startingBufferPos = bufferPos;
+                buint startingBufferPos = bufferPos;
                 if (!TryParseRPC(
                     out var rpcRequest,
                     frame,
@@ -224,87 +214,87 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         [ParseStringMarker]
-        public static unsafe string ParseString(ref ushort startPos)
+        public static unsafe string ParseString(ref buint startPos)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
 
-            ushort strLen = Marshal.PtrToStructure<ushort>(ptr);
-            ptr += sizeof(ushort);
+            buint strLen = Marshal.PtrToStructure<buint>(ptr);
+            ptr += sizeof(buint);
 
-            var str = Encoding.ASCII.GetString((byte*)ptr.ToPointer(), strLen);
-            startPos += (ushort)(sizeof(ushort) + strLen);
+            var str = Encoding.ASCII.GetString((byte*)ptr.ToPointer(), (int)strLen);
+            startPos += sizeof(buint) + strLen;
             return str;
         }
 
         [ParseArrayMarker]
-        public static unsafe T[] ParseArray<T>(ref ushort startPos) where T : struct
+        public static unsafe T[] ParseArray<T>(ref buint startPos) where T : struct
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
 
-            ushort arrayLength = Marshal.PtrToStructure<ushort>(ptr);
-            ptr += sizeof(ushort);
+            buint arrayLength = Marshal.PtrToStructure<buint>(ptr);
+            ptr += sizeof(buint);
 
-            ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
+           buint arrayByteCount = (buint)(arrayLength * Marshal.SizeOf<T>());
 
             T[] array = new T[arrayLength];
             void * arrayPtr = UnsafeUtility.AddressOf(ref array[0]);
             UnsafeUtility.MemCpy(arrayPtr, ptr.ToPointer(), arrayByteCount);
 
-            startPos += (ushort)(sizeof(ushort) + arrayByteCount);
+            startPos += sizeof(buint) + arrayByteCount;
             return array;
         }
 
-        [ParseNativeCollectionMarker]
-        public static unsafe NativeArray<T> ParseNativeCollection<T>(ref ushort startPos) where T : struct
+        [ParseNativeArrayMarker]
+        public static unsafe NativeArray<T> ParseNativeCollection<T>(ref buint startPos) where T : struct
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
 
-            ushort arrayLength = Marshal.PtrToStructure<ushort>(ptr);
-            ptr += sizeof(ushort);
+            buint arrayLength = Marshal.PtrToStructure<buint>(ptr);
+            ptr += sizeof(buint);
 
-            ushort arrayByteCount = (ushort)(arrayLength * Marshal.SizeOf<T>());
+           buint arrayByteCount = (buint)(arrayLength * Marshal.SizeOf<T>());
 
-            NativeArray<T> nativeArray = new NativeArray<T>(arrayLength, Allocator.Temp);
+            NativeArray<T> nativeArray = new NativeArray<T>((int)arrayLength, Allocator.TempJob);
             UnsafeUtility.MemCpy(nativeArray.GetUnsafePtr(), ptr.ToPointer(), arrayByteCount);
 
-            startPos += (ushort)(sizeof(ushort) + arrayByteCount);
+            startPos += sizeof(buint) + arrayByteCount;
             return nativeArray;
         }
 
         [ParseStructureMarker]
-        public static unsafe T ParseStructure<T> (ref ushort startPos)
+        public static unsafe T ParseStructure<T> (ref buint startPos)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
-            startPos += (ushort)Marshal.SizeOf<T>();
+            startPos += (buint)Marshal.SizeOf<T>();
             return Marshal.PtrToStructure<T>(ptr);
         }
 
-        private static unsafe void ParsePipeID (ref ushort startPos, out ushort pipeId)
+        private static unsafe void ParsePipeID (ref buint startPos, out ushort pipeId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             pipeId = Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
-        private static unsafe void ParseRPCId (ref ushort startPos, out ushort rpcId)
+        private static unsafe void ParseRPCId (ref buint startPos, out ushort rpcId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             rpcId = Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
-        private static unsafe void ParseRPCExecutionStage (ref ushort startPos, out RPCExecutionStage rpcExecutionStage)
+        private static unsafe void ParseRPCExecutionStage (ref buint startPos, out RPCExecutionStage rpcExecutionStage)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
             rpcExecutionStage = (RPCExecutionStage)Marshal.PtrToStructure<ushort>(ptr);
             startPos += sizeof(ushort);
         }
 
-        private static unsafe void ParseParametersPayloadSize (ref ushort startPos, out ushort parametersPayloadSize)
+        private static unsafe void ParseParametersPayloadSize (ref buint startPos, out buint parametersPayloadSize)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos);
-            parametersPayloadSize = Marshal.PtrToStructure<ushort>(ptr);
-            startPos += sizeof(ushort);
+            parametersPayloadSize = Marshal.PtrToStructure<uint>(ptr);
+            startPos += sizeof(uint);
         }
     }
 }
