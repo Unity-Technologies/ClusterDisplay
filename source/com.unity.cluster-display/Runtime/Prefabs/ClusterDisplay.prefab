@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3447312720805938545}
-  - component: {fileID: 3447312720805938544}
   - component: {fileID: 3447312720805938559}
+  - component: {fileID: 3447312720805938544}
   - component: {fileID: 3447312720805938558}
   - component: {fileID: 3447312720805938547}
   m_Layer: 0
@@ -34,6 +34,23 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3447312720805938559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3447312720805938546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 121705c551bbd5b429dee825bdaaa638, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_clusterDisplayResources: {fileID: 11400000, guid: fa7b467492071d24b893e29466b43bb5, type: 2}
+  m_EditorInstanceIsMaster: 1
+  m_EditorInstanceMasterCmdLine: -masterNode 0 1 224.0.1.0:25692,25691
+  m_EditorInstanceSlaveCmdLine: -node 1 224.0.1.0:25691,25692
+  m_IgnoreEditorCmdLine: 1
 --- !u!114 &3447312720805938544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -71,21 +88,6 @@ MonoBehaviour:
     m_SerializedProjectionMatrixC2: {x: 0, y: 0, z: 0, w: 0}
     m_SerializedProjectionMatrixC3: {x: 0, y: 0, z: 0, w: 0}
     m_SerializedProjectionMatrixC4: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &3447312720805938559
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3447312720805938546}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 121705c551bbd5b429dee825bdaaa638, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _clusterDisplayResources: {fileID: 11400000, guid: fa7b467492071d24b893e29466b43bb5, type: 2}
-  m_EditorCmdLine: -masterNode 0 1 224.0.1.0:25692,25691
-  m_IgnoreEditorCmdLine: 1
 --- !u!114 &3447312720805938558
 MonoBehaviour:
   m_ObjectHideFlags: 0

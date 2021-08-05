@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: DefaultClusterDisplayResources
   m_EditorClassIdentifier: 
   m_PayloadLimits:
-    maxSingleRPCParameterByteSize: 160000
-    maxSingleRPCByteSize: 160000
-    maxRpcByteBufferSize: 160000
-    maxFrameNetworkByteBufferSize: 160000
+    maxSingleRPCParameterByteSize: 131070
+    maxSingleRPCByteSize: 131070
+    maxRpcByteBufferSize: 131070
+    maxFrameNetworkByteBufferSize: 131070
     maxMTUSize: 65535

@@ -65,6 +65,7 @@ namespace Unity.ClusterDisplay
             Resending = 1 << 2,
             LoopBackToSender =  1 << 3,
             SentFromEditorProcess = 1 << 4,
+            Fragment = 1 << 5,
         }
 
         public const byte CurrentVersion = 1;

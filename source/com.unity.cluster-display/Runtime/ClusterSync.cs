@@ -43,8 +43,12 @@ namespace Unity.ClusterDisplay
         public ClusterDisplayResources Resources => m_clusterDisplayResources;
 
 #if UNITY_EDITOR
-        [SerializeField] private string m_EditorCmdLine = "";
+        [SerializeField] private bool m_EditorInstanceIsMaster = true;
+        [SerializeField] private string m_EditorInstanceMasterCmdLine = "";
+        [SerializeField] private string m_EditorInstanceSlaveCmdLine = "";
+
         [SerializeField] private bool m_IgnoreEditorCmdLine = false;
+        public void SetupForEditorTesting(bool isMaster) => m_EditorInstanceIsMaster = isMaster;
 #endif
 
         internal ClusterNode m_LocalNode;
@@ -112,7 +116,10 @@ namespace Unity.ClusterDisplay
             var args = System.Environment.GetCommandLineArgs().ToList();
 #if UNITY_EDITOR
             if (!m_IgnoreEditorCmdLine)
-                args = m_EditorCmdLine.Split(' ').ToList();
+            {
+                var editorInstanceCmdLine = m_EditorInstanceIsMaster ? m_EditorInstanceMasterCmdLine : m_EditorInstanceSlaveCmdLine;
+                args = editorInstanceCmdLine.Split(' ').ToList();
+            }
 #endif
             var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
             stateSetter.SetCLusterLogicEnabled(startIndex > -1);

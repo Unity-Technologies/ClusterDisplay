@@ -388,12 +388,25 @@ namespace Unity.ClusterDisplay
             SendMessage(ref ackMsg);
         }
 
+        private Queue<byte[]> queuedFragments = new Queue<byte[]>();
         private void SendMessage(ref Message msg)
         {
             if (msg.payload.Length > m_MaxMTUSize)
             {
                 Debug.LogError($"Unable to send message, the message payload is larger then the MTU size: {m_MaxMTUSize}");
-                return;
+                /*
+                uint fragmentCount = (uint)Mathf.CeilToInt(msg.payload.Length / (float)m_MaxMTUSize);
+                uint remainingByteCount = (uint)msg.payload.Length;
+
+                for (int fi = 0; fi < fragmentCount; fi++)
+                {
+                    uint fragmentSize = remainingByteCount > uint.MaxValue ? uint.MaxValue : remainingByteCount;
+                    remainingByteCount -= fragmentSize;
+
+                    byte[] fragment = new byte[fragmentSize];
+                    Array.Copy(msg.payload, fi * uint.MaxValue, fragment, fragmentSize)
+                }
+                */
             }
 
             if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck) &&

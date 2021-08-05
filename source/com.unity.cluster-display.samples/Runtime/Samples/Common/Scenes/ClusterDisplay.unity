@@ -130,22 +130,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_GridSize.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_TileIndexOverride
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_ViewportSubsection.width
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_ViewportSubsection.x
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3447312720805938545, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -194,13 +178,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: ClusterDisplay
       objectReference: {fileID: 0}
+    - target: {fileID: 3447312720805938547, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
+      propertyPath: m_SerializedCameraContextTargets.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3447312720805938547, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
+      propertyPath: m_SerializedCameraContextTargets.Array.data[0]
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
       propertyPath: m_IgnoreEditorCmdLine
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_EditorCmdLine
-      value: -node 1 224.0.1.0:25691,25692 -communicationTimeout 20000
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
