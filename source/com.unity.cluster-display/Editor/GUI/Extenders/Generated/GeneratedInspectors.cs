@@ -10,16 +10,6 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
     {
     }
 
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.FilteredTransformHierarchyStream))]
-    public class AFilteredTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.FilteredTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.FilteredTransformHierarchyStream>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
-    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
-    {
-    }
-
     [UnityEditor.CustomEditor(typeof(UnityEngine.UI.AspectRatioFitter))]
     public class AAspectRatioFitterExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.UI.AspectRatioFitter, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.UI.AspectRatioFitter>>
     {
@@ -150,13 +140,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
     {
     }
 
-    [UnityEditor.CustomEditor(typeof(UnityEngine.VFX.Utility.VFXPropertyBinder))]
-    public class AVFXPropertyBinderExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.VFX.Utility.VFXPropertyBinder, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.VFX.Utility.VFXPropertyBinder>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(UnityEngine.VFX.VisualEffect))]
-    public class AVisualEffectExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.VFX.VisualEffect, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.VFX.VisualEffect>>
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.ClusterSync))]
+    public class AClusterSyncExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.ClusterSync, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.ClusterSync>>
     {
     }
 
@@ -165,18 +150,18 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
     {
     }
 
-    [UnityEditor.CustomEditor(typeof(UnityEngine.Rendering.PostProcessing.PostProcessDebug))]
-    public class APostProcessDebugExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.Rendering.PostProcessing.PostProcessDebug, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.Rendering.PostProcessing.PostProcessDebug>>
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.RPC.SceneObjectsRegistry))]
+    public class ASceneObjectsRegistryExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.RPC.SceneObjectsRegistry, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.RPC.SceneObjectsRegistry>>
     {
     }
 
-    [UnityEditor.CustomEditor(typeof(UnityEngine.Rendering.PostProcessing.PostProcessLayer))]
-    public class APostProcessLayerExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.Rendering.PostProcessing.PostProcessLayer, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.Rendering.PostProcessing.PostProcessLayer>>
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.FilteredTransformHierarchyStream))]
+    public class AFilteredTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.FilteredTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.FilteredTransformHierarchyStream>>
     {
     }
 
-    [UnityEditor.CustomEditor(typeof(UnityEngine.Rendering.PostProcessing.PostProcessVolume))]
-    public class APostProcessVolumeExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.Rendering.PostProcessing.PostProcessVolume, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.Rendering.PostProcessing.PostProcessVolume>>
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
+    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
     {
     }
 
@@ -262,11 +247,6 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
 
     [UnityEditor.CustomEditor(typeof(UnityEngine.Rendering.UI.UIFoldout))]
     public class AUIFoldoutExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.Rendering.UI.UIFoldout, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.Rendering.UI.UIFoldout>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.RPC.SceneObjectsRegistry))]
-    public class ASceneObjectsRegistryExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.RPC.SceneObjectsRegistry, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.RPC.SceneObjectsRegistry>>
     {
     }
 
@@ -717,6 +697,11 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
 
     [UnityEditor.CustomEditor(typeof(UnityEngine.Video.VideoPlayer))]
     public class AVideoPlayerExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.Video.VideoPlayer, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.Video.VideoPlayer>>
+    {
+    }
+
+    [UnityEditor.CustomEditor(typeof(UnityEngine.VFX.VisualEffect))]
+    public class AVisualEffectExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<UnityEngine.VFX.VisualEffect, Unity.ClusterDisplay.RPC.ComponentWrapper<UnityEngine.VFX.VisualEffect>>
     {
     }
 
