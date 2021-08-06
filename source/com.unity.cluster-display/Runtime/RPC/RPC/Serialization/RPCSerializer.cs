@@ -60,10 +60,10 @@ namespace Unity.ClusterDisplay.RPC
                     return true;
                 }
 
-                return (type = assembly.GetType( $"{namespaceString}.{typeString}")) != null;
+                return (type = ReflectionUtils.GetTypeByName($"{namespaceString}.{typeString}")) != null;
             }
 
-            return (type = assembly.GetType(typeString)) != null;
+            return (type = ReflectionUtils.GetTypeByName(typeString)) != null;
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
@@ -99,60 +99,51 @@ namespace Unity.ClusterDisplay.RPC
                 }
             }
 
-            MethodInfo[] methods = null;
-
-            if (!cachedTypeMethodInfos.TryGetValue(declaringType, out methods))
+            MethodInfo matchingMethod = null;
+            ReflectionUtils.ParallelForeachMethod(declaringType, (methodInfo) =>
             {
-                methods = declaringType.GetMethods((method.isStatic ? BindingFlags.Static : BindingFlags.Instance) | BindingFlags.Public | BindingFlags.NonPublic);
-                cachedTypeMethodInfos.Add(declaringType, methods);
-            }
+                if (methodInfo.Name != method.methodName)
+                    return true;
 
-            IEnumerable<MethodInfo> filteredMethods = methods.Where(methodInfo =>
-            {
-                bool match = methodInfo.ReturnType == returnType;
-                return match;
+                var parameters = methodInfo.GetParameters();
+                if (parameters.Length != parameterList.Count)
+                    return true;
+
+                bool allMatching = true;
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    if (parameters[i].ParameterType.IsGenericType)
+                        allMatching &=
+                            parameters[i].ParameterType.GetGenericTypeDefinition() == parameterList[i].parameterType &&
+                            parameters[i].Name == parameterList[i].parameterName;
+
+                    else allMatching &=
+                        parameters[i].ParameterType == parameterList[i].parameterType &&
+                        parameters[i].Name == parameterList[i].parameterName;
+                }
+
+                if (allMatching)
+                {
+                    matchingMethod = methodInfo;
+                    return false;
+                }
+
+                return true;
             });
 
-            var matchingNameMethods = filteredMethods.Where(methodInfo => methodInfo.Name == method.methodName);
-            if (parameterList.Count > 0)
-            {
-                filteredMethods = matchingNameMethods.Where(methodInfo =>
-                {
-                    var parameters = methodInfo.GetParameters();
-                    if (parameters.Length != parameterList.Count)
-                        return false;
-
-                    bool allMatching = true;
-                    for (int i = 0; i < parameters.Length; i++)
-                    {
-                        if (parameters[i].ParameterType.IsGenericType)
-                            allMatching &=
-                                parameters[i].ParameterType.GetGenericTypeDefinition() == parameterList[i].parameterType &&
-                                parameters[i].Name == parameterList[i].parameterName;
-
-                        else allMatching &=
-                            parameters[i].ParameterType == parameterList[i].parameterType &&
-                            parameters[i].Name == parameterList[i].parameterName;
-                    }
-
-                    return allMatching;
-                });
-            }
-
-            var foundMethod = filteredMethods.FirstOrDefault();
-            if (foundMethod == null)
+            if (matchingMethod == null)
             {
                 Debug.LogError($"Unable to deserialize method: \"{method.methodName}\", declared in type: \"{method.declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                 return false;
             }
 
-            if (!foundMethod.IsPublic)
+            if (!matchingMethod.IsPublic)
             {
-                Debug.LogError($"Unable to use method deserialized method: \"{foundMethod.Name}\" declared in type: \"{(string.IsNullOrEmpty(foundMethod.DeclaringType.Namespace) ? foundMethod.DeclaringType.Name  : $"{foundMethod.DeclaringType.Namespace}.{foundMethod.DeclaringType.Name}")}\", the method must be public.");
+                Debug.LogError($"Unable to use method deserialized method: \"{matchingMethod.Name}\" declared in type: \"{(string.IsNullOrEmpty(matchingMethod.DeclaringType.Namespace) ? matchingMethod.DeclaringType.Name  : $"{matchingMethod.DeclaringType.Namespace}.{matchingMethod.DeclaringType.Name}")}\", the method must be public.");
                 return false;
             }
 
-            outMethodInfo = foundMethod;
+            outMethodInfo = matchingMethod;
             return true;
         }
 

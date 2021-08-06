@@ -26,6 +26,9 @@ namespace Unity.ClusterDisplay
             if (type.IsPrimitive)
                 return true;
 
+            else if (type.IsEnum)
+                return true;
+
             if (type == typeof(string))
             {
                 if (structureDepth > 0)
@@ -39,7 +42,12 @@ namespace Unity.ClusterDisplay
                 if (structureDepth > 0)
                     goto dynamicallySizedMemberTypeFailure;
 
-                type = type.GetElementType();
+                ushort elementArgumentDepth = structureDepth;
+                if (!RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, type.GetElementType(), ref elementArgumentDepth))
+                {
+                    Debug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
+                    goto dynamicallySizedMemberTypeFailure;
+                }
             }
 
             else if (type.IsGenericType)
@@ -56,18 +64,37 @@ namespace Unity.ClusterDisplay
                 if (structureDepth > 0)
                     goto dynamicallySizedMemberTypeFailure;
 
-                type = type.GenericTypeArguments[0];
+                ushort genericLenericArgumentDepth = structureDepth;
+                if (!RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, type.GenericTypeArguments[0], ref genericLenericArgumentDepth))
+                {
+                    Debug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
+                    goto dynamicallySizedMemberTypeFailure;
+                }
+
+                goto skipNativeArrayFieldsCheck;
+            }
+
+            else if (!type.IsValueType)
+            {
+                Debug.LogError($"Parameter: \"{parameterInfo.Name}\" is a reference type. Only primitive, strings, arrays, native arrays and structs are RPC compatible.");
+                goto dynamicallySizedMemberTypeFailure;
             }
 
             ushort localDepth = structureDepth;
 
-            return
-                type.IsValueType &&
-                type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                    .All(fieldInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, fieldInfo.FieldType, ref localDepth));
+            var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            bool allCompatible = true;
+
+            for (int fi = 0; fi < fields.Length; fi++)
+                allCompatible &= RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, fields[fi].FieldType, ref localDepth);
+
+            return allCompatible;
+
+            skipNativeArrayFieldsCheck:
+            return true;
 
             dynamicallySizedMemberTypeFailure:
-            Debug.LogError($"Method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.FullName}\" cannot be used as an RPC, the parameter: \"{parameterInfo.Name}\" is type: \"{parameterInfo.ParameterType.FullName}\" which contains dynamically allocated type: \"{type.FullName}\" somehwere in it's member hierarchy.");
+            Debug.LogError($"Method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Name}\" cannot be used as an RPC, the parameter: \"{parameterInfo.Name}\" is type: \"{parameterInfo.ParameterType.Name}\" which contains dynamically allocated type: \"{type.Name}\" somehwere in it's member hierarchy.");
             return false;
         }
     }

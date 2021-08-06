@@ -22,11 +22,18 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            ushort depth = 0;
-            return
-                methodInfo
-                    .GetParameters()
-                    .All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth));
+            bool allCompatible = true;
+            object lockObj = new object();
+
+            Parallel.ForEach(methodInfo.GetParameters(), (parameterInfo) =>
+            {
+                ushort depth = 0;
+                bool compatible = RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth);
+                lock (lockObj)
+                    allCompatible &= compatible;
+            });
+
+            return allCompatible;
         }
 
         public static MethodInfo[] GetCompatibleRPCMethods (

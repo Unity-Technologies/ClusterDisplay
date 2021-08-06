@@ -487,7 +487,7 @@ namespace Unity.ClusterDisplay.RPC
         private bool TryGetWrapperMethod (MethodInfo stagedMethod, out MethodInfo wrapperMethod)
         {
             var wrapperTypeName = WrapperUtils.GetWrapperFullName(stagedMethod.DeclaringType);
-            var wrapperType = ReflectionUtils.GetTypeByFullName(wrapperTypeName);
+            var wrapperType = ReflectionUtils.GetTypeByName(wrapperTypeName);
             wrapperMethod = null;
 
             if (wrapperType == null)

@@ -38,12 +38,12 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public static System.Type GetTypeByFullName (string typeFullName)
+        public static System.Type GetTypeByName (string typeName)
         {
             System.Type foundType = null;
             ParallelForeachType((type) =>
             {
-                if (type.FullName != typeFullName)
+                if (type.FullName != typeName)
                     return true;
 
                 foundType = type;

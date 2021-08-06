@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.RPC
         public static bool TryGetWrapperForType (System.Type wrappedType, out System.Type wrapperType)
         {
             string wrapperFullName = GetWrapperFullName(wrappedType);
-            wrapperType = ReflectionUtils.GetTypeByFullName(wrapperFullName);
+            wrapperType = ReflectionUtils.GetTypeByName(wrapperFullName);
             return wrapperType != null;
         }
 
