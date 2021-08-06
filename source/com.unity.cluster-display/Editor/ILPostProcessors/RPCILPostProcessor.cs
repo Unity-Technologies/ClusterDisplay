@@ -216,7 +216,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     !CecilUtils.TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<ClusterRPC.RPCIDMarker>(customAttribute, out var rpcIdAttributeArgumentIndex))
                     return false;
 
-                if (!methodDef.IsStatic || methodDef.IsAbstract)
+                if (methodDef.IsAbstract)
                 {
                     Debug.LogError($"Instance method: \"{methodDef.Name}\" declared in type: \"{methodDef.DeclaringType.Namespace}.{methodDef.DeclaringType.Name}\" is unsupported because the type is abstract.");
                     continue;

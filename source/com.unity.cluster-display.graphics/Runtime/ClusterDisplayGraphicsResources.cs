@@ -11,7 +11,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Data", menuName = "Cluster Display/ClusterDisplayGraphicsResources", order = 1)]
 public class ClusterDisplayGraphicsResources : ScriptableObject
 {
-    [SerializeField] private Material m_BlitMaterial;
+    [SerializeField] private Material m_BlitMaterial = null;
 
     /// <summary>
     /// The material used by the standard stitcher/tile layout mode to blit a camera

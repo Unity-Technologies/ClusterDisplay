@@ -103,7 +103,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private static void PollCameraTargets ()
         {
-            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, logError: false))
                 return;
 
             var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();

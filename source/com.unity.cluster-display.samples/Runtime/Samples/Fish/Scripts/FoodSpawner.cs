@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class FoodSpawner : MonoBehaviour
 {
-    [SerializeField] private PoolablePrefab foodPrefab;
+    [SerializeField] private PoolablePrefab foodPrefab = null;
 
     private void Start()
     {

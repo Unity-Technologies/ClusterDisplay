@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PrefabPool : SingletonMonoBehaviour<PrefabPool>
 {
-    [SerializeField] private PoolablePrefab[] prefabs;
+    [SerializeField] private PoolablePrefab[] prefabs = null;
 
     private class Pool
     {

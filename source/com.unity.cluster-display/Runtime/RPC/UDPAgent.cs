@@ -351,7 +351,7 @@ namespace Unity.ClusterDisplay
                     m_Connection.BeginReceive(ReceiveMessage, null);
             }
 
-            catch (ObjectDisposedException e)
+            catch (ObjectDisposedException)
             {
             }
 

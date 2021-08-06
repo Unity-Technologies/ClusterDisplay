@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay
         [SerializeField] private string compositionName = "StagedComposition";
         public string CompositionName => compositionName;
 
-        [SerializeField] private SceneAsset baseScene;
+        [SerializeField] private SceneAsset baseScene = null;
         [SerializeField] private List<SceneAsset> additions = new List<SceneAsset>();
 
         public string StagedScenePath => $"Assets/Cluster Display/Scenes/Staged/{compositionName}.unity";

@@ -7,7 +7,7 @@ public class PoolablePrefab : ScriptableObject
 {
     public string PoolName => name;
 
-    [SerializeField] private GameObject prefab;
+    [SerializeField] private GameObject prefab = null;
     public GameObject Prefab => prefab;
     public int initialPoolSize = 10;
     public int poolIncreaseSize = 5;

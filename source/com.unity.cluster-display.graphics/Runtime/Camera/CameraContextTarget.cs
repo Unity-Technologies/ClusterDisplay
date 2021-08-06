@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnDestroy()
         {
-            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, throwException: false))
+            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, logError: false))
                 cameraContextRegistry.UnRegister(this);
         }
 
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             CacheCamera();
 
-            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, logError: false))
                 cameraContextRegistry.Register(m_TargetCamera, logError: false);
 
             if (onCameraEnabled != null)

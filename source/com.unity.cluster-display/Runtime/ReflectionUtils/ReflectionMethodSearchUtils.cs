@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay
 {
@@ -13,22 +14,47 @@ namespace Unity.ClusterDisplay
     {
         private readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
 
+        public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
+        {
+            if (methodInfo.IsAbstract)
+            {
+                Debug.LogError($"Instance method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Namespace}.{methodInfo.DeclaringType.Name}\" is unsupported because the type is abstract.");
+                return false;
+            }
+
+            ushort depth = 0;
+            return
+                methodInfo
+                    .GetParameters()
+                    .All(parameterInfo => RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, parameterInfo.ParameterType, ref depth));
+        }
+
         public static MethodInfo[] GetCompatibleRPCMethods (
             System.Type type, 
-            string filter) =>
+            string filter)
+        {
+            List<MethodInfo> methods = new List<MethodInfo>(100);
+            if (string.IsNullOrEmpty(filter))
+                ParallelForeachMethod(type, (method) => 
+                {
+                    if (DetermineIfMethodIsRPCCompatible(method))
+                        lock (methods)
+                            methods.Add(method);
 
-                string.IsNullOrEmpty(filter) ?
+                    return true;
+                });
 
-                    type
-                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(method => DetermineIfMethodIsRPCCompatible(method)).ToArray()
+            else ParallelForeachMethod(type, (method) => 
+                {
+                    if (method.Name.Contains(filter) && DetermineIfMethodIsRPCCompatible(method))
+                        lock (methods)
+                            methods.Add(method);
 
-                    :
+                    return true;
+                });
 
-                    type.GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(method =>
-                                (method.Name.Contains(filter)) &&
-                                DetermineIfMethodIsRPCCompatible(method)).ToArray();
+            return methods.ToArray();
+        }
 
         public static FieldInfo[] GetAllFieldsFromType(
             System.Type type,
@@ -55,26 +81,41 @@ namespace Unity.ClusterDisplay
             string filter, 
             bool valueTypeParametersOnly = false,
             bool includeGenerics = true,
-            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static) => 
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
+        {
+            List<MethodInfo> methods = new List<MethodInfo>(100);
+            if (string.IsNullOrEmpty(filter))
+                ParallelForeachMethod(type, (method) =>
+                {
+                    bool matchesCriteria =
+                        !method.IsSpecialName && // Ignore properties.
+                        (!includeGenerics ? !method.IsGenericMethod : true) && // Ignore generics.
+                        (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
 
-                string.IsNullOrEmpty(filter) ?
+                    if (matchesCriteria)
+                        lock (methods)
+                            methods.Add(method);
 
-                    type.GetMethods(bindingFlags)
-                        .Where(method =>
-                                !method.IsSpecialName &&
-                                (!includeGenerics ? !method.IsGenericMethod : true) &&
-                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true))
-                        .ToArray()
+                    return true;
+                }, bindingFlags);
 
-                    :
+            else ParallelForeachMethod(type, (method) =>
+                {
+                    bool matchesCriteria =
+                        !method.IsSpecialName && // Ignore properties.
+                        (!includeGenerics ? !method.IsGenericMethod : true) && // Ignore generics.
+                        (method.Name.Contains(filter)) &&
+                        (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true);
 
-                    type.GetMethods(bindingFlags)
-                        .Where(method =>
-                                !method.IsSpecialName &&
-                                (!includeGenerics ? !method.IsGenericMethod : true) &&
-                                (method.Name.Contains(filter)) &&
-                                (valueTypeParametersOnly ? method.GetParameters().All(parameterInfo => parameterInfo.ParameterType.IsValueType) : true))
-                        .ToArray();
+                    if (matchesCriteria)
+                        lock (methods)
+                            methods.Add(method);
+
+                    return true;
+                }, bindingFlags);
+
+            return methods.ToArray();
+        }
 
         public static bool TryGetMethodWithDedicatedAttribute<AttributeType>(out MethodInfo methodInfo)
             where AttributeType : DedicatedAttribute =>
@@ -163,14 +204,39 @@ namespace Unity.ClusterDisplay
             #endif
         }
 
-        public static bool TryFindMethodWithMatchingSignature (Type type, MethodInfo methodToMatch, out MethodInfo matchedMethod) =>
-            (matchedMethod = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance).FirstOrDefault(method =>
+        public static void ParallelForeachMethod (
+            Type type, 
+            Func<MethodInfo, bool> callback, 
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
+        {
+            Parallel.ForEach(type.GetMethods(bindingFlags), (methodInfo, loopState) =>
             {
-                return
+                if (!callback(methodInfo))
+                    loopState.Break();
+            });
+        }
+
+        public static bool TryFindMethodWithMatchingSignature (Type type, MethodInfo methodToMatch, out MethodInfo matchedMethod)
+        {
+            MethodInfo foundMethod = null;
+            ParallelForeachMethod(type, (method) =>
+            {
+                bool matching =
                     method.ReturnType.Assembly == methodToMatch.ReturnType.Assembly &&
                     method.ReturnType.FullName == methodToMatch.ReturnType.FullName &&
                     method.Name == methodToMatch.Name &&
                     MethodSignaturesAreEqual(method, methodToMatch);
-            })) != null;
+
+                if(matching)
+                {
+                    foundMethod = method;
+                    return false;
+                }
+
+                return true;
+            });
+
+            return (matchedMethod = foundMethod) != null;
+        }
     }
 }

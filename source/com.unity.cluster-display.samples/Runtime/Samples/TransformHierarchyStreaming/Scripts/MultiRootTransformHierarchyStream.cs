@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay
 {
     public class MultiRootTransformHierarchyStream : TransformHierarchyStreamBase
     {
-        [SerializeField] private Transform[] rootTransforms;
+        [SerializeField] private Transform[] rootTransforms = null;
 
         [ClusterRPC]
         public override void ApplyTransformData(NativeArray<Data> data) => base.ApplyTransformData(data);

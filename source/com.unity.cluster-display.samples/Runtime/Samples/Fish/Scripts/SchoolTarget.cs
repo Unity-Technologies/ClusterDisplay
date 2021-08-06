@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SchoolTarget : MonoBehaviour
 {
-    [SerializeField] private Transform target;
+    [SerializeField] private Transform target = null;
     public Vector3 Position => target.position;
     public Quaternion Rotation => target.rotation;
 

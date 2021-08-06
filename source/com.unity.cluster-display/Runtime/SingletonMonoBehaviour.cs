@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -18,7 +16,7 @@ namespace Unity.ClusterDisplay
         }
 
         [SingletonMonoBehaviourTryGetInstanceMarker]
-        public static bool TryGetInstance (out T outInstance, bool throwException = true)
+        public static bool TryGetInstance (out T outInstance, bool logError = true)
         {
             if (instance != null)
             {
@@ -29,16 +27,16 @@ namespace Unity.ClusterDisplay
             var instances = FindObjectsOfType<T>();
             if (instances.Length == 0)
             {
-                if (throwException)
-                    throw new System.Exception($"Unable to retrieve instance of: {typeof(T).FullName}, there are no instances of that type.");
+                if (logError)
+                    Debug.LogError($"Unable to retrieve instance of: {typeof(T).FullName}, there are no instances of that type.");
                 outInstance = null;
                 return false;
             }
 
             if (instances.Length > 1)
             {
-                if (throwException)
-                    throw new System.Exception($"Unable to retrieve instance of: {typeof(T).FullName}, there is more than one instance of that type!");
+                if (logError)
+                    Debug.LogError($"Unable to retrieve instance of: {typeof(T).FullName}, there is more than one instance of that type!");
                 outInstance = null;
                 return false;
             }

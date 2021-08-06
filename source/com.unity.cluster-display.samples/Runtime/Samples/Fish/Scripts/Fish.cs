@@ -5,15 +5,15 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class Fish : MonoBehaviour
 {
-    [SerializeField] private Rigidbody rigidbody;
+    [SerializeField] private Rigidbody rb;
     [SerializeField] private TextMesh textMesh;
     public Rigidbody RB
     {
         get
         {
-            if (rigidbody == null)
-                rigidbody = GetComponent<Rigidbody>();
-            return rigidbody;
+            if (rb == null)
+                rb = GetComponent<Rigidbody>();
+            return rb;
         }
     }
 
@@ -26,6 +26,6 @@ public class Fish : MonoBehaviour
     private void OnValidate()
     {
         textMesh = GetComponentInChildren<TextMesh>();
-        rigidbody = GetComponent<Rigidbody>();
+        rb = GetComponent<Rigidbody>();
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay
 {
@@ -32,11 +33,25 @@ namespace Unity.ClusterDisplay
                         return types;
 
                     }).ToArray();
+
                 return cachedAllTypes;
             }
         }
 
-        public static System.Type GetTypeByFullName (string typeFullName) => CachedTypes.FirstOrDefault(type => type.FullName == typeFullName);
+        public static System.Type GetTypeByFullName (string typeFullName)
+        {
+            System.Type foundType = null;
+            ParallelForeachType((type) =>
+            {
+                if (type.FullName != typeFullName)
+                    return true;
+
+                foundType = type;
+                return false;
+            });
+
+            return foundType;
+        }
 
         public static Type[] GetAllTypes (Assembly assembly)
         {
@@ -49,11 +64,98 @@ namespace Unity.ClusterDisplay
 
         public static Type[] GetAllTypes (string filter, Assembly targetAssembly, bool includeGenerics = true)
         {
-            Type[] types = new Type[1] {
-                typeof(UnityEngine.Object)
-            };
+            var unityEngineObjectType = typeof(UnityEngine.Object);
+            List<Type> filteredTypes = new List<Type>(100);
 
             string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
+            if (filterLower == null)
+                ParallelForeachType(targetAssembly, (type) =>
+                {
+                    if (type.IsSubclassOf(unityEngineObjectType) && 
+                        (includeGenerics ? true : !type.IsGenericType))
+                        lock (filteredTypes)
+                            filteredTypes.Add(type);
+                    return true;
+                });
+
+            else ParallelForeachType(targetAssembly, (type) =>
+                {
+                    if (type.IsSubclassOf(unityEngineObjectType) && 
+                        type.FullName.ToLower().Contains(filterLower) &&
+                        (includeGenerics ? true : !type.IsGenericType))
+                        lock (filteredTypes)
+                            filteredTypes.Add(type);
+                    return true;
+                });
+                
+            return filteredTypes.ToArray();
+        }
+
+        public static Type[] GetAllTypes (string filter, bool includeGenerics = true)
+        {
+            var unityEngineObjectType = typeof(UnityEngine.Object);
+            List<Type> filteredTypes = new List<Type>(100);
+
+            string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
+            if (filterLower == null)
+                ParallelForeachType((type) =>
+                {
+                    if (type.IsSubclassOf(unityEngineObjectType) && 
+                        (includeGenerics ? true : !type.IsGenericType))
+                        lock (filteredTypes)
+                            filteredTypes.Add(type);
+                    return true;
+                });
+
+            else ParallelForeachType((type) =>
+                {
+                    if (type.IsSubclassOf(unityEngineObjectType) && 
+                        type.FullName.ToLower().Contains(filterLower) &&
+                        (includeGenerics ? true : !type.IsGenericType))
+                        lock (filteredTypes)
+                            filteredTypes.Add(type);
+                    return true;
+                });
+                
+            return filteredTypes.ToArray();
+        }
+
+        public static bool TryFindFirstDerrivedTypeFromBaseType(Type baseType, out Type derrivedType) =>
+            (derrivedType = CachedTypes.FirstOrDefault(type => type.IsSubclassOf(baseType))) != null;
+
+        private static bool RecursivelyForeachNestedType (Type containerType, Func<System.Type, bool> callback)
+        {
+            var nestedTypes = containerType.GetNestedTypes();
+            if (nestedTypes == null || nestedTypes.Length == 0)
+                return true;
+
+            for (int nti = 0; nti < nestedTypes.Length; nti++)
+                if (!callback(nestedTypes[nti]) || !RecursivelyForeachNestedType(nestedTypes[nti], callback))
+                    return false;
+
+            return true;
+        }
+
+        public static void ParallelForeachType (Func<System.Type, bool> callback)
+        {
+            var types = CachedTypes;
+            try
+            {
+                Parallel.ForEach(types, (type, loopState) =>
+                {
+                    if (!callback(type) || !RecursivelyForeachNestedType(type, callback))
+                        loopState.Break();
+                });
+            }
+
+            catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        public static void ParallelForeachType (Assembly targetAssembly, Func<System.Type, bool> callback)
+        {
 
             Type[] assemblyTypes = null;
             if (!cachedAssemblyTypes.TryGetValue(targetAssembly, out assemblyTypes))
@@ -61,67 +163,21 @@ namespace Unity.ClusterDisplay
                 assemblyTypes = targetAssembly.GetTypes();
                 cachedAssemblyTypes.Add(targetAssembly, assemblyTypes);
             }
+            try
+            {
+                Parallel.ForEach(assemblyTypes, (type, loopState) =>
+                {
+                    if (!callback(type) || !RecursivelyForeachNestedType(type, callback))
+                        loopState.Break();
+                });
+            }
 
-            return filterLower == null ?
-
-                assemblyTypes
-                    .Where(type =>
-                    {
-                        bool found = false;
-                        for (int i = 0; i < types.Length; i++)
-                            found |= type.IsSubclassOf(types[i]);
-                        return found;
-                    })
-                    .Where(type => includeGenerics ? true : !type.IsGenericType)
-                    .ToArray() :
-
-                assemblyTypes
-                    .Where(type =>
-                    {
-                        bool found = false;
-                        for (int i = 0; i < types.Length; i++)
-                            found |= type.IsSubclassOf(types[i]);
-                        return found;
-                    })
-                    .Where(type => type.FullName.ToLower().Contains(filterLower))
-                    .Where(type => includeGenerics ? true : !type.IsGenericType)
-                    .ToArray();
+            catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
+            }
         }
 
-        public static Type[] GetAllTypes (string filter, bool includeGenerics = true)
-        {
-            Type[] types = new Type[1] {
-                typeof(UnityEngine.Object)
-            };
-
-            string filterLower = !string.IsNullOrEmpty(filter) ? filter.ToLower() : null;
-            return filterLower == null ?
-
-                CachedTypes
-                    .Where(type =>
-                    {
-                        bool found = false;
-                        for (int i = 0; i < types.Length; i++)
-                            found |= type.IsSubclassOf(types[i]);
-                        return found;
-                    })
-                    .Where(type => includeGenerics ? true : !type.IsGenericType)
-                    .ToArray() :
-
-                CachedTypes
-                    .Where(type =>
-                    {
-                        bool found = false;
-                        for (int i = 0; i < types.Length; i++)
-                            found |= type.IsSubclassOf(types[i]);
-                        return found;
-                    })
-                    .Where(type => type.FullName.ToLower().Contains(filterLower))
-                    .Where(type => includeGenerics ? true : !type.IsGenericType)
-                    .ToArray();
-        }
-
-        public static bool TryFindFirstDerrivedTypeFromBaseType(Type baseType, out Type derrivedType) =>
-            (derrivedType = CachedTypes.FirstOrDefault(type => type.IsSubclassOf(baseType))) != null;
+        public static void ForeachNestedType(System.Type containerType, Func<System.Type, bool> callback) => RecursivelyForeachNestedType(containerType, callback);
     }
 }

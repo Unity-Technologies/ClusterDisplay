@@ -12,10 +12,10 @@ using System.Threading;
 
 public class School : SingletonMonoBehaviour<School>
 {
-    [SerializeField] private PoolablePrefab fishPrefab;
+    [SerializeField] private PoolablePrefab fishPrefab = null;
     [SerializeField] private int startingSchoolSize = 5;
 
-    [SerializeField] private SchoolTarget schoolTarget;
+    [SerializeField] private SchoolTarget schoolTarget = null;
 
     private Fish[] fish = new Fish[0];
     private int fishCount = 0;

@@ -49,6 +49,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_RawImage.rectTransform.anchorMax = Vector2.one;
                 m_RawImage.rectTransform.offsetMin = Vector2.zero;
                 m_RawImage.rectTransform.offsetMax = Vector2.zero;
+                m_RawImage.raycastTarget = false;
             }
         }
     }

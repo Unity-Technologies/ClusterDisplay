@@ -20,7 +20,50 @@ namespace Unity.ClusterDisplay.RPC
             if (!ReflectionUtils.TryGetAssemblyByName(assemblyString, out var assembly))
                 return false;
 
-            return (type = assembly.GetType(string.IsNullOrEmpty(namespaceString) ? typeString : $"{namespaceString}.{typeString}")) != null;
+            if (!string.IsNullOrEmpty(namespaceString))
+            {
+                var nestedSplit = namespaceString.Split('/'); // Nested types are embedded in the namespace and separated by the "/" character.
+
+                if (nestedSplit.Length > 1) // Type is nested, so we need to walk up the nesting hierarchy finding types.
+                {
+                    var containerTypes = new System.Type[nestedSplit.Length - 1];
+
+                    var nestedHierarchy = namespaceString;
+                    namespaceString = nestedSplit[0]; // The first element should always be the namespace.
+
+                    containerTypes[0] = assembly.GetType(!string.IsNullOrEmpty(namespaceString) ? $"{namespaceString}.{nestedSplit[1]}" : nestedSplit[1]);
+                    if (containerTypes[0] == null)
+                    {
+                        Debug.LogError($"Unable to find nested type: \"{typeString}\", cannot find the root type: \"{nestedSplit[1]}\" in our nested type hierarchy: \"{nestedHierarchy}\".");
+                        return false;
+                    }
+
+                    for (int i = 0; i < containerTypes.Length; i++)
+                    {
+                        ReflectionUtils.ForeachNestedType(containerTypes[i], (nestedType) =>
+                        {
+                            if (nestedType.Name != nestedSplit[i + 1])
+                                return true;
+
+                            containerTypes[i] = nestedType;
+                            return false;
+                        });
+
+                        if (containerTypes[i] == null)
+                        {
+                            Debug.LogError($"Unable to find nested type: \"{typeString}\", cannot find container type: \"{nestedSplit[i + 1]} from nested type hierarchy: \"{nestedHierarchy}\".");
+                            return false;
+                        }
+                    }
+
+                    type = containerTypes[containerTypes.Length - 1];
+                    return true;
+                }
+
+                return (type = assembly.GetType( $"{namespaceString}.{typeString}")) != null;
+            }
+
+            return (type = assembly.GetType(typeString)) != null;
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();

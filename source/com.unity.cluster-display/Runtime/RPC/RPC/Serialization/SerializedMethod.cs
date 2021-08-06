@@ -10,21 +10,24 @@ namespace Unity.ClusterDisplay.RPC
     {
         [SerializeField] public bool isStatic;
 
-        [SerializeField] public bool declaringAssemblyIsPostProcessable;
-        [SerializeField] public string declaringAssemblyName;
-        [SerializeField] public string declaringTypeNamespace;
-        [SerializeField] public string declaryingTypeName;
+        // Where the assembly is IL post processable or not.
+        [SerializeField] public bool        declaringAssemblyIsPostProcessable;
+        [SerializeField] public string      declaringAssemblyName;
 
-        [SerializeField] public string declaringReturnTypeAssemblyName;
-        [SerializeField] public string returnTypeNamespace;
-        [SerializeField] public string returnTypeName;
+        // The type that declares the method -->
+        [SerializeField] public string      declaringTypeNamespace;
+        [SerializeField] public string      declaryingTypeName;
 
-        [SerializeField] public string methodName;
+        [SerializeField] public string      declaringReturnTypeAssemblyName;
+        [SerializeField] public string      returnTypeNamespace;
+        [SerializeField] public string      returnTypeName;
 
-        [SerializeField] public string[] declaringParameterTypeAssemblyNames;
-        [SerializeField] public string[] parameterTypeNamespaces;
-        [SerializeField] public string[] parameterTypeName;
-        [SerializeField] public string[] parameterNames;
+        [SerializeField] public string      methodName;
+
+        [SerializeField] public string[]    declaringParameterTypeAssemblyNames;
+        [SerializeField] public string[]    parameterTypeNamespaces;
+        [SerializeField] public string[]    parameterTypeName;
+        [SerializeField] public string[]    parameterNames;
 
         public int ParameterCount => parameterNames.Length;
 
@@ -40,13 +43,28 @@ namespace Unity.ClusterDisplay.RPC
                 : (null, null, null, null);
         }
 
+        private static string BuildTypeNamespace (System.Type type)
+        {
+            if (!type.IsNested)
+                return type.Namespace;
+
+            var containingType = type;
+            string nestedAddressStr = $"{containingType.Name}";
+
+            while (containingType.DeclaringType != null)
+            {
+                containingType = containingType.DeclaringType;
+                nestedAddressStr = $"{containingType.Name}/{nestedAddressStr}";
+            }
+
+            return !string.IsNullOrEmpty(containingType.Namespace) ? $"{containingType.Namespace}.{nestedAddressStr}" : nestedAddressStr;
+        }
+
         public static SerializedMethod Create (MethodInfo methodInfo)
         {
             var declaringType = methodInfo.DeclaringType;
             var declaringAssembly = declaringType.Assembly;
 
-            string declaringTypeNamespace = declaringType.Namespace;
-            string declaringTypeStr = declaringType.Name;
             string declaringAssemblystr = declaringAssembly.GetName().Name;
 
             var parameters = methodInfo.GetParameters();
@@ -62,11 +80,11 @@ namespace Unity.ClusterDisplay.RPC
                 return new SerializedMethod
                 {
                     declaringAssemblyName = declaringAssemblystr,
-                    declaringTypeNamespace = declaringType.Namespace,
+                    declaringTypeNamespace = BuildTypeNamespace(declaringType),
                     declaryingTypeName = declaringType.Name,
 
                     declaringReturnTypeAssemblyName = returnTypeAssemblyName,
-                    returnTypeNamespace = returnType.Namespace,
+                    returnTypeNamespace = BuildTypeNamespace(returnType),
                     returnTypeName = returnType.Name,
 
                     methodName = methodInfo.Name,
@@ -89,7 +107,7 @@ namespace Unity.ClusterDisplay.RPC
             for (int i = 0; i < parameters.Length; i++)
             {
                 parameterTypeAssemblyNames[i] = parameters[i].ParameterType.Assembly.GetName().Name;
-                parameterTypeNamespaces[i] = parameters[i].ParameterType.Namespace;
+                parameterTypeNamespaces[i] = BuildTypeNamespace(parameters[i].ParameterType);
                 parameterTypeNames[i] = parameters[i].ParameterType.Name;
                 parameterNames[i] = parameters[i].Name;
             }

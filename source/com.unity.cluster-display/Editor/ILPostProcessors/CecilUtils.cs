@@ -448,8 +448,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public static bool TryDetermineSizeOfValueType (TypeDefinition typeDefinition, ref buint size)
         {
-            if (typeDefinition.IsPrimitive || typeDefinition.IsEnum)
+            if (typeDefinition.IsPrimitive)
                 return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
+
+            else if (typeDefinition.IsEnum)
+            {
+                var fieldDef = typeDefinition.Fields.FirstOrDefault(field => field.Name == "value__");
+                return TryDetermineSizeOfPrimitive(fieldDef.FieldType.Name, ref size);
+            }
+
             else if (typeDefinition.IsValueType)
             {
                 return TryDetermineSizeOfStruct(typeDefinition, ref size);
