@@ -157,6 +157,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             BeginTab();
             anyStreamablesRegistered = false;
 
+            SelectedState selectedState = SelectedState.None;
+
+            /*
             if ((foldOutFields = EditorGUILayout.Foldout(foldOutFields, "Fields")) && PollFields(
                 instance, 
                 out var selectedField, 
@@ -164,6 +167,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 ref anyStreamablesRegistered))
             {
             }
+            */
 
             RPCEditorGUICommon.HorizontalLine();
             if ((foldOutProperties = EditorGUILayout.Foldout(foldOutProperties, "Properties with Setters")) && PollProperties(
@@ -351,6 +355,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             return false;
         }
 
+        /*
         private void CacheFields<InstanceType> (InstanceType targetInstance)
             where InstanceType : Component
         {
@@ -376,7 +381,9 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 serializedProperty => serializedProperty,
                 serializedProperty => $"{serializedProperty.type} {serializedProperty.name}");
         }
+        */
 
+        /*
         protected bool PollFields<InstanceType> (
             InstanceType targetInstance, 
             out SerializedProperty selectedField, 
@@ -420,6 +427,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             hasRegistered = false;
             return true;
         }
+        */
 
         private void CacheMethodsAndDescriptors<InstanceType> (InstanceType targetInstance)
             where InstanceType : Component
