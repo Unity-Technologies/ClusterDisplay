@@ -134,8 +134,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
                 if (rpc.method.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    var typeDefinition = compiledAssemblyDef.MainModule.GetType($"{rpc.method.declaringTypeNamespace}.{rpc.method.declaryingTypeName}");
-                    if (typeDefinition == null)
+                    if (!CecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.method.declaringTypeNamespace, rpc.method.declaryingTypeName, out var declaringTypeDef))
                     {
                         Debug.LogError($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
                         continue;
@@ -146,10 +145,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     bool unableToFindAnyMethod =
                         !TryFindMethodWithMatchingFormalySerializedAs(
                             compiledAssemblyDef.MainModule,
-                            typeDefinition,
+                            declaringTypeDef,
+                            rpc,
                             rpc.method.methodName,
                             out targetMethodRef) &&
-                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, typeDefinition, ref rpc, out targetMethodRef);
+                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, declaringTypeDef, ref rpc, out targetMethodRef);
 
                     if (unableToFindAnyMethod)
                         continue;

@@ -8,53 +8,58 @@ namespace Unity.ClusterDisplay
 {
     public class ClusterDisplayPointerInputModule : PointerInputModule
     {
-        public enum SelectionState : ushort
+
+        public struct PointerInputData
         {
-            None,
-            Down,
-            Hold,
-            Up
+            public enum SelectionState : ushort
+            {
+                None,
+                Down,
+                Hold,
+                Up
+            }
+
+            public Vector2 cachedPointerPosition;
+            public Vector2 previousPointerPosition;
+            public Vector2 deltaPointerPosition;
+
+            public SelectionState cachedSelectionState;
         }
+
+        private PointerInputData cachedPointerInputData;
 
         private PointerEventData pointerEventData;
 
-        private Vector2 cachedPointerPosition;
-        private Vector2 previousPointerPosition;
-        private Vector2 deltaPointerPosition;
-
-        private SelectionState cachedSelectionState;
-
         [ClusterRPC]
-        private void CachePointerState (Vector2 pointerPosition, SelectionState selectionState)
+        public void CachePointerState (PointerInputData pointerInputData)
         {
-            previousPointerPosition = cachedPointerPosition;
-            deltaPointerPosition = pointerPosition - previousPointerPosition;
-            cachedPointerPosition = pointerPosition;
-
-            cachedSelectionState = selectionState;
+            this.cachedPointerInputData = pointerInputData;
         }
 
         private void ProcessMasterInput ()
         {
-            SelectionState selectionState = SelectionState.None;
+            PointerInputData.SelectionState selectionState = PointerInputData.SelectionState.None;
+
+            cachedPointerInputData.previousPointerPosition = cachedPointerInputData.cachedPointerPosition;
+            cachedPointerInputData.cachedPointerPosition = Input.mousePosition;
+            cachedPointerInputData.deltaPointerPosition = (Vector2)Input.mousePosition - cachedPointerInputData.previousPointerPosition;
 
             if (Input.GetMouseButtonDown(0))
-                selectionState = SelectionState.Down;
+                selectionState = PointerInputData.SelectionState.Down;
             else if (Input.GetMouseButton(0))
-                selectionState = SelectionState.Hold;
+                selectionState = PointerInputData.SelectionState.Hold;
             else if (Input.GetMouseButtonUp(0))
-                selectionState = SelectionState.Up;
+                selectionState = PointerInputData.SelectionState.Up;
 
-            CachePointerState(Input.mousePosition, selectionState);
+            cachedPointerInputData.cachedSelectionState = selectionState;
+
+            CachePointerState(cachedPointerInputData);
         }
 
         private void ProcessPosition ()
         {
             if (ClusterDisplayState.IsMaster)
                 ProcessMasterInput();
-
-            pointerEventData.position = cachedPointerPosition;
-            pointerEventData.delta = deltaPointerPosition;
         }
 
         private void ProcessRaycasts ()

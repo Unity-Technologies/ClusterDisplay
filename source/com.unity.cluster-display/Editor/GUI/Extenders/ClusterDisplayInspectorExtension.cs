@@ -604,7 +604,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 BeginScrollView(cachedMethods.Length, ref methodScrollPosition);
                 for (int i = 0; i < cachedMethods.Length; i++)
                 {
-                    var methodData = cachedMethodData[cachedMethods[i]];
+                    if (!cachedMethodData.TryGetValue(cachedMethods[i], out var methodData))
+                        continue;
 
                     // Determine whether a wrapper method exists, and if it does, use that one instead, otherwise use the target instance method.
                     bool usingWrapper = methodData.wrapperEquivalentMethodInfo != null;
@@ -706,7 +707,8 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
                 for (int i = 0; i < cachedProperties.Length; i++)
                 {
-                    var propertyData = cachedPropertyData[cachedProperties[i].property];
+                    if (!cachedPropertyData.TryGetValue(cachedProperties[i].property, out var propertyData))
+                        continue;
 
                     // Determine whether a wrapper property exists, and if it does, use that one instead, otherwise use the target instance property.
                     bool usingWrapper = propertyData.wrapperEquivalentProperty != null;

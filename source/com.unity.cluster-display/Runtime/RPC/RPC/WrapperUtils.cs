@@ -48,12 +48,8 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="wrappedType">The type we are wrapping.</param>
         /// <param name="wrapperType">The wrapper type that this method outputs if we find a valid type.</param>
         /// <returns></returns>
-        public static bool TryGetWrapperForType (System.Type wrappedType, out System.Type wrapperType)
-        {
-            string wrapperFullName = GetWrapperFullName(wrappedType);
-            wrapperType = ReflectionUtils.GetTypeByName(wrapperFullName);
-            return wrapperType != null;
-        }
+        public static bool TryGetWrapperForType (System.Type wrappedType, out System.Type wrapperType) =>
+            ReflectionUtils.TryFindTypeByNamespaceAndName(WrapperNamespace, GetWrapperName(wrappedType), out wrapperType);
 
         public static bool TryFindWrapperImplementationType<WrappedType, WrapperType> (out System.Type wrapperImplementation)
             where WrappedType : Component

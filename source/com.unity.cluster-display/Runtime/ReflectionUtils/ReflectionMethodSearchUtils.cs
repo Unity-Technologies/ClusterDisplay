@@ -63,26 +63,6 @@ namespace Unity.ClusterDisplay
             return methods.ToArray();
         }
 
-        public static FieldInfo[] GetAllFieldsFromType(
-            System.Type type,
-            string filter,
-            bool valueTypesOnly = false,
-            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static) =>
-
-                string.IsNullOrEmpty(filter) ?
-
-                    type.GetFields(bindingFlags)
-                        .Where(field => (valueTypesOnly ? field.FieldType.IsValueType : true))
-                        .ToArray()
-
-                    :
-
-                    type.GetFields(bindingFlags)
-                        .Where(field =>
-                                (valueTypesOnly ? field.FieldType.IsValueType : true) &&
-                                field.Name.Contains(filter))
-                        .ToArray();
-
         public static MethodInfo[] GetAllMethodsFromType (
             System.Type type, 
             string filter, 
@@ -214,7 +194,7 @@ namespace Unity.ClusterDisplay
         public static void ParallelForeachMethod (
             Type type, 
             Func<MethodInfo, bool> callback, 
-            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static)
+            BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
         {
             Parallel.ForEach(type.GetMethods(bindingFlags), (methodInfo, loopState) =>
             {

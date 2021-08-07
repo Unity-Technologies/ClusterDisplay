@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using UnityEngine;
@@ -501,48 +503,160 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static bool TryGetMethodReference (
+        public static void ForeachMethodDef (TypeDefinition declaringTypeDef, Func<MethodDefinition, bool> callback)
+        {
+            Parallel.ForEach(declaringTypeDef.Methods, (methodDef, loopState) =>
+            {
+                if (!callback(methodDef))
+                    loopState.Break();
+            });
+        }
+
+        public static void ForeachNestedType (TypeDefinition containerTypeDef, Func<TypeDefinition, bool> callback)
+        {
+            Parallel.ForEach(containerTypeDef.NestedTypes, (typeDef, loopState) =>
+            {
+                if (!callback(typeDef))
+                    loopState.Break();
+            });
+        }
+
+        public static void ForeachTypeDef (ModuleDefinition moduleDef, Func<TypeDefinition, bool> callback)
+        {
+            Parallel.ForEach(moduleDef.Types, (typeDef, loopState) =>
+            {
+                if (!callback(typeDef))
+                    loopState.Break();
+            });
+        }
+
+        public static bool TryFindTypeDefByName (ModuleDefinition moduleDef, string typeName, out TypeDefinition matchingTypeDef)
+        {
+            TypeDefinition foundTypeDef = null;
+            ForeachTypeDef(moduleDef, (typeDef) =>
+            {
+                if (typeDef.Name != typeName)
+                    return true;
+
+                foundTypeDef = typeDef;
+                return false;
+            });
+
+            return (matchingTypeDef = foundTypeDef) != null;
+        }
+
+        public static bool TryFindTypeDefByNamespaceAndName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
+        {
+            TypeDefinition foundTypeDef = null;
+            ForeachTypeDef(moduleDef, (typeDef) =>
+            {
+                if (typeDef.Namespace != namespaceStr || typeDef.Name != typeName)
+                    return true;
+
+                foundTypeDef = typeDef;
+                return false;
+            });
+
+            return (matchingTypeDef = foundTypeDef) != null;
+        }
+
+        public static bool TryGetTypeDefByName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
+        {
+            if (typeName == typeof(void).Name)
+            {
+                matchingTypeDef = moduleDef.TypeSystem.Void.Resolve();
+                return true;
+            }
+
+            if (RPCSerializer.TryParseNestedAddressIfAvailable(namespaceStr, out var rootTypeNamespace, out var nestedTypeNames))
+            {
+                TypeDefinition[] nestedTypes = new TypeDefinition[nestedTypeNames.Length];
+                if (!TryFindTypeDefByName(moduleDef, nestedTypeNames[0], out var rootContainerTypeDef))
+                {
+                    matchingTypeDef = null;
+                    return false;
+                }
+
+                nestedTypes[0] = rootContainerTypeDef;
+
+                for (int nti = 1; nti < nestedTypeNames.Length; nti++)
+                {
+                    ForeachNestedType(rootContainerTypeDef, (nestedType) =>
+                    {
+                        if (nestedType.Name != nestedTypeNames[nti])
+                            return true;
+
+                        nestedTypes[nti] = nestedType;
+                        return false;
+                    });
+                }
+
+                return (matchingTypeDef = nestedTypes[nestedTypes.Length - 1]) != null;
+            }
+
+            if (string.IsNullOrEmpty(namespaceStr))
+                return TryFindTypeDefByNamespaceAndName(moduleDef, namespaceStr, typeName, out matchingTypeDef);
+            return TryFindTypeDefByName(moduleDef, typeName, out matchingTypeDef);
+        }
+        public static bool TryFindMatchingMethodInTypeDef (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
-            ref SerializedRPC inRPCTokenizer, 
-            out MethodReference methodRef)
+            ref SerializedRPC serializedRPC, 
+            out MethodDefinition outMethodDef)
         {
-            var rpcTokenizer = inRPCTokenizer;
             MethodDefinition methodDef = null;
-            bool found = (methodDef = typeDef.Methods.Where(method =>
-            {
-                if (method.Name != rpcTokenizer.method.methodName ||
-                    method.ReturnType.Namespace != rpcTokenizer.method.returnTypeNamespace ||
-                    method.ReturnType.Resolve().Module.Assembly.Name.Name != rpcTokenizer.method.declaringReturnTypeAssemblyName)
-                    return false;
+            outMethodDef = null;
 
-                if (method.HasParameters == (rpcTokenizer.method.ParameterCount > 0))
+            var rpc = serializedRPC;
+
+            ForeachMethodDef(typeDef, (method) =>
+            {
+                if (method.Name != rpc.method.methodName || method.ReturnType.Name != rpc.method.returnTypeName)
+                    return true;
+
+                if (rpc.method.ParameterCount > 0)
                 {
-                    if (method.Parameters.Count != rpcTokenizer.method.ParameterCount)
-                        return false;
+                    if (method.Parameters.Count == 0 || method.Parameters.Count != rpc.method.ParameterCount)
+                        return true;
 
                     bool allParametersMatch = true;
                     for (int pi = 0; pi < method.Parameters.Count; pi++)
                     {
-                        if (!(allParametersMatch &= method.Parameters[pi].Name == rpcTokenizer.method[pi].parameterName))
-                            return false;
+                        if (!(allParametersMatch &= method.Parameters[pi].Name == rpc.method[pi].parameterName))
+                            return true;
 
-                        allParametersMatch &= 
-                            method.Parameters[pi].ParameterType.Namespace == rpcTokenizer.method[pi].parameterTypeNamespace &&
-                            method.Parameters[pi].ParameterType.Name == rpcTokenizer.method[pi].parameterTypeName &&
-                            method.Parameters[pi].ParameterType.Resolve().Module.Assembly.Name.Name == rpcTokenizer.method[pi].declaringParameterTypeAssemblyName;
+                        allParametersMatch &=
+                            method.Parameters[pi].ParameterType.Name == rpc.method.parameterTypeName[pi] &&
+                            method.Parameters[pi].Name == rpc.method.parameterNames[pi];
                     }
 
-                    return allParametersMatch;
+                    if (allParametersMatch)
+                        goto found;
                 }
+
+                else if (!method.HasParameters)
+                    goto found;
 
                 return true;
 
-            }).FirstOrDefault()) != null;
+                found:
+                methodDef = method;
+                return false;
 
-            if (!found)
+            });
+
+            return (outMethodDef = methodDef) != null;
+        }
+
+        public static bool TryGetMethodReference (
+            ModuleDefinition moduleDef,
+            TypeDefinition typeDef, 
+            ref SerializedRPC serializedRPC, 
+            out MethodReference methodRef)
+        {
+            if (!TryFindMatchingMethodInTypeDef(moduleDef, typeDef, ref serializedRPC, out var methodDef))
             {
-                Debug.LogError($"Unable to find method reference for serialized RPC: \"{inRPCTokenizer.method.methodName}\" declared in: \"{typeDef.FullName}\".");
+                Debug.LogError($"Unable to find method reference for serialized RPC: \"{serializedRPC.method.methodName}\" declared in: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }

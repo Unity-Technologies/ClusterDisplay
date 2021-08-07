@@ -8,41 +8,60 @@ namespace Unity.ClusterDisplay.RPC
 {
     public static class RPCSerializer
     {
-        public static bool TryDeserializeType (string assemblyString, string namespaceString, string typeString, out System.Type type)
+        // Nested address are formatted in the following way: {root type namespace}.{root type}/{nested type}/{nested nested type}/{nested nested nested type}
+        public static bool TryParseNestedAddressIfAvailable (string addressStr, out string rootTypeNamespace, out string[] nestedTypeNames)
+        {
+            var nestedSplit = addressStr.Split('/'); // Nested types are embedded in the namespace and separated by the "/" character.
+            if (nestedSplit.Length == 1) // Type is nested, so we need to walk up the nesting hierarchy finding types.
+            {
+                rootTypeNamespace = null;
+                nestedTypeNames = null;
+                return false;
+            }
+
+            rootTypeNamespace = nestedSplit[0]; // The first element should always be the {namespace}.{root type}
+            nestedTypeNames = new string[nestedSplit.Length];
+
+            int lastIndexOfDot = rootTypeNamespace.LastIndexOf('.');
+            nestedTypeNames[0] = rootTypeNamespace.Substring(lastIndexOfDot + 1, rootTypeNamespace.Length - (lastIndexOfDot + 1));
+            rootTypeNamespace = rootTypeNamespace.Substring(0, lastIndexOfDot);
+
+            System.Array.Copy(nestedSplit, 1, nestedTypeNames, 1, nestedTypeNames.Length - 1);
+            return true;
+        }
+
+        public static bool TryDeserializeType (string assemblyStr, string namespaceStr, string typeStr, out System.Type type)
         {
             type = null;
-            if (string.IsNullOrEmpty(assemblyString) || string.IsNullOrEmpty(typeString))
+            if (string.IsNullOrEmpty(assemblyStr) || string.IsNullOrEmpty(typeStr))
             {
                 Debug.LogError("Unable to deserialize type, either the assembly or type string is null or invalid!");
                 return false;
             }
 
-            if (!ReflectionUtils.TryGetAssemblyByName(assemblyString, out var assembly))
+            if (!ReflectionUtils.TryGetAssemblyByName(assemblyStr, out var assembly))
                 return false;
 
-            if (!string.IsNullOrEmpty(namespaceString))
+            if (!string.IsNullOrEmpty(namespaceStr))
             {
-                var nestedSplit = namespaceString.Split('/'); // Nested types are embedded in the namespace and separated by the "/" character.
-
-                if (nestedSplit.Length > 1) // Type is nested, so we need to walk up the nesting hierarchy finding types.
+                if (TryParseNestedAddressIfAvailable(namespaceStr, out var rootNamespace, out var nestedTypeNames))
                 {
-                    var containerTypes = new System.Type[nestedSplit.Length - 1];
+                    System.Type[] containerTypes = new Type[nestedTypeNames.Length];
+                    if (string.IsNullOrEmpty(rootNamespace))
+                        ReflectionUtils.TryFindTypeByName(nestedTypeNames[0], out containerTypes[0]);
+                    else ReflectionUtils.TryFindTypeByNamespaceAndName(rootNamespace, nestedTypeNames[0], out containerTypes[0]);
 
-                    var nestedHierarchy = namespaceString;
-                    namespaceString = nestedSplit[0]; // The first element should always be the namespace.
-
-                    containerTypes[0] = assembly.GetType(!string.IsNullOrEmpty(namespaceString) ? $"{namespaceString}.{nestedSplit[1]}" : nestedSplit[1]);
                     if (containerTypes[0] == null)
                     {
-                        Debug.LogError($"Unable to find nested type: \"{typeString}\", cannot find the root type: \"{nestedSplit[1]}\" in our nested type hierarchy: \"{nestedHierarchy}\".");
+                        Debug.LogError($"Unable to find nested type: \"{typeStr}\", cannot find the root type: \"{nestedTypeNames[0]}\" in our nested type hierarchy: \"{namespaceStr}\".");
                         return false;
                     }
 
-                    for (int i = 0; i < containerTypes.Length; i++)
+                    for (int i = 1; i < containerTypes.Length; i++)
                     {
-                        ReflectionUtils.ForeachNestedType(containerTypes[i], (nestedType) =>
+                        ReflectionUtils.ForeachNestedType(containerTypes[i - 1], (nestedType) =>
                         {
-                            if (nestedType.Name != nestedSplit[i + 1])
+                            if (nestedType.Name != nestedTypeNames[i])
                                 return true;
 
                             containerTypes[i] = nestedType;
@@ -51,7 +70,7 @@ namespace Unity.ClusterDisplay.RPC
 
                         if (containerTypes[i] == null)
                         {
-                            Debug.LogError($"Unable to find nested type: \"{typeString}\", cannot find container type: \"{nestedSplit[i + 1]} from nested type hierarchy: \"{nestedHierarchy}\".");
+                            Debug.LogError($"Unable to find nested type: \"{typeStr}\", cannot find container type: \"{nestedTypeNames[i]} from nested type hierarchy: \"{namespaceStr}\".");
                             return false;
                         }
                     }
@@ -60,10 +79,10 @@ namespace Unity.ClusterDisplay.RPC
                     return true;
                 }
 
-                return (type = ReflectionUtils.GetTypeByName($"{namespaceString}.{typeString}")) != null;
+                return ReflectionUtils.TryFindTypeByNamespaceAndName(namespaceStr, typeStr, out type);
             }
 
-            return (type = ReflectionUtils.GetTypeByName(typeString)) != null;
+            return ReflectionUtils.TryFindTypeByName(typeStr, out type);
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
@@ -106,29 +125,38 @@ namespace Unity.ClusterDisplay.RPC
                     return true;
 
                 var parameters = methodInfo.GetParameters();
-                if (parameters.Length != parameterList.Count)
-                    return true;
-
-                bool allMatching = true;
-                for (int i = 0; i < parameters.Length; i++)
+                if (parameterList.Count > 0)
                 {
-                    if (parameters[i].ParameterType.IsGenericType)
-                        allMatching &=
-                            parameters[i].ParameterType.GetGenericTypeDefinition() == parameterList[i].parameterType &&
-                            parameters[i].Name == parameterList[i].parameterName;
+                    if (parameters.Length != parameterList.Count)
+                        return true;
 
-                    else allMatching &=
-                        parameters[i].ParameterType == parameterList[i].parameterType &&
-                        parameters[i].Name == parameterList[i].parameterName;
+                    bool allMatching = true;
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        if (parameters[i].ParameterType.IsGenericType)
+                            allMatching &=
+                                parameters[i].ParameterType.GetGenericTypeDefinition() == parameterList[i].parameterType &&
+                                parameters[i].Name == parameterList[i].parameterName;
+
+                        else
+                            allMatching &=
+                           parameters[i].ParameterType == parameterList[i].parameterType &&
+                           parameters[i].Name == parameterList[i].parameterName;
+                    }
+
+                    if (allMatching)
+                        goto found;
                 }
 
-                if (allMatching)
-                {
-                    matchingMethod = methodInfo;
-                    return false;
-                }
+                else if (parameters.Length == 0)
+                    goto found;
 
                 return true;
+
+                found:
+                matchingMethod = methodInfo;
+                return false;
+
             });
 
             if (matchingMethod == null)

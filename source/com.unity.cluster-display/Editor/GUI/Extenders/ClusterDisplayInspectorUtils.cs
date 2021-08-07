@@ -157,8 +157,12 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             if (TryGetExistingEditorGUIMethodForType(type, out var editorGUIMethod))
             {
                 var newFieldValueVariable = Expression.Variable(type);
-                var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, Expression.Call(editorGUIMethod, Expression.Constant(name), targetPropertyField));
+                MethodCallExpression callExpression = null;
+                if (!editorGUIMethod.IsGenericMethod)
+                    callExpression = Expression.Call(editorGUIMethod, Expression.Constant(name), targetPropertyField);
+                else callExpression = Expression.Call(editorGUIMethod.MakeGenericMethod(type), Expression.Constant(name), targetPropertyField);
 
+                var newFieldAssignemntExpression = Expression.Assign(newFieldValueVariable, callExpression);
                 var setPropertyOnValueChange = Expression.IfThen(
                     Expression.NotEqual(targetPropertyField, newFieldAssignemntExpression),
                     Expression.Assign(targetPropertyField, newFieldValueVariable));

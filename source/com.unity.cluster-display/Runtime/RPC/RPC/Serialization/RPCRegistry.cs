@@ -487,10 +487,9 @@ namespace Unity.ClusterDisplay.RPC
         private bool TryGetWrapperMethod (MethodInfo stagedMethod, out MethodInfo wrapperMethod)
         {
             var wrapperTypeName = WrapperUtils.GetWrapperFullName(stagedMethod.DeclaringType);
-            var wrapperType = ReflectionUtils.GetTypeByName(wrapperTypeName);
             wrapperMethod = null;
 
-            if (wrapperType == null)
+            if (!ReflectionUtils.TryFindTypeByNamespaceAndName(WrapperUtils.WrapperNamespace, WrapperUtils.GetWrapperName(stagedMethod.DeclaringType), out var wrapperType))
             {
                 Debug.LogError($"Unable to find wrapper type: \"{wrapperTypeName}\", verify whether the wrapper exists in the Assembly-CSharp assembly.");
                 return false;
@@ -546,11 +545,6 @@ namespace Unity.ClusterDisplay.RPC
 
             foreach (var methodInfo in cachedMethodsWithRPCAttribute)
             {
-                /*
-                if (!registeredAssemblies.Contains(methodInfo.Module.Assembly))
-                    continue;
-                */
-
                 var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
 
                 if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))

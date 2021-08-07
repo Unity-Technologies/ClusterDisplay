@@ -85,54 +85,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private bool TryFindMethodWithMatchingFormalySerializedAs (
             ModuleDefinition moduleDef, 
             TypeDefinition typeDefinition, 
+            SerializedRPC serializedRPC,
             string serializedMethodName, 
             out MethodReference outMethodRef)
         {
-            if (typeDefinition == null)
-            {
-                Debug.LogError($"Unable to find serialized method: \"{serializedMethodName}\", the type definition is null!");
-                outMethodRef = null;
-                return false;
-            }
-
-            var rpcMethodAttributeType = typeof(ClusterRPC);
-            var stringType = typeof(string);
-
-            foreach (var methodDef in typeDefinition.Methods)
-            {
-                if (!methodDef.HasCustomAttributes)
-                    continue;
-
-                foreach (var customAttribute in methodDef.CustomAttributes)
-                {
-                    if (!customAttribute.HasConstructorArguments ||
-                        customAttribute.AttributeType.Namespace != rpcMethodAttributeType.Namespace ||
-                        customAttribute.AttributeType.Name != rpcMethodAttributeType.Name)
-                        continue;
-
-                    foreach (var constructorArgument in customAttribute.ConstructorArguments)
-                    {
-                        if (constructorArgument.Type.Namespace != stringType.Namespace || 
-                            constructorArgument.Type.Name != stringType.Name)
-                            continue;
-
-                        string formarlySerializedAs = constructorArgument.Value as string;
-                        if (string.IsNullOrEmpty(formarlySerializedAs))
-                            continue;
-
-                        if (serializedMethodName != formarlySerializedAs)
-                            continue;
-
-                        outMethodRef = CecilUtils.Import(moduleDef, methodDef);
-                        Debug.LogFormat($"Found renamed method: \"{outMethodRef.Name}\" that was previously named as: \"{serializedMethodName}\".");
-                        return true;
-                    }
-                }
-            }
-
-            // Debug.LogError($"Unable to find method signature: \"{serializedMethodName}\" declared in type: \"{typeDefinition.Name}\".");
-            outMethodRef = null;
-            return false;
+            serializedRPC.method.methodName = serializedMethodName;
+            return CecilUtils.TryGetMethodReference(moduleDef, typeDefinition, ref serializedRPC, out outMethodRef);
         }
 
         public static MethodReference CreateMethodReferenceForGenericInstanceType (

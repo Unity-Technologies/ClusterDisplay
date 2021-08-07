@@ -197,7 +197,9 @@ namespace Unity.ClusterDisplay.Graphics
                 m_SerializedCameraContextTargets[i].onCameraEnabled += OnCameraEnabled;
                 m_SerializedCameraContextTargets[i].onCameraDisabled += OnCameraDisabled;
 
-                k_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
+                if (!k_CameraContextTargets.ContainsKey(m_SerializedCameraContextTargets[i].TargetCamera))
+                    k_CameraContextTargets.Add(m_SerializedCameraContextTargets[i].TargetCamera, m_SerializedCameraContextTargets[i]);
+                else k_CameraContextTargets[m_SerializedCameraContextTargets[i].TargetCamera] = m_SerializedCameraContextTargets[i];
             }
         }
 

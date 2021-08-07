@@ -56,27 +56,44 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public static System.Type GetTypeByName (string typeName)
+        public static bool TryFindTypeByName (string typeName, out System.Type outType)
         {
             System.Type foundType = null;
             ParallelForeachType((type) =>
             {
-                if (type.FullName != typeName)
+                if (type.Name != typeName)
                     return true;
 
                 foundType = type;
                 return false;
             });
 
-            return foundType;
+            return (outType = foundType) != null;
+        }
+
+        public static bool TryFindTypeByNamespaceAndName (string namespaceStr, string typeName, out System.Type outType)
+        {
+            System.Type foundType = null;
+            ParallelForeachType((type) =>
+            {
+                if (type.Namespace != namespaceStr || type.Name != typeName)
+                    return true;
+
+                foundType = type;
+                return false;
+            });
+
+            return (outType = foundType) != null;
         }
 
         public static Type[] GetAllTypes (Assembly assembly)
         {
             if (cachedAssemblyTypes.TryGetValue(assembly, out var types))
                 return types;
+
             types = assembly.GetTypes();
             cachedAssemblyTypes.Add(assembly, types);
+
             return types;
         }
 
