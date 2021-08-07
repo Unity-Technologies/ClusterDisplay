@@ -19,39 +19,40 @@ namespace Unity.ClusterDisplay
                 Up
             }
 
-            public Vector2 cachedPointerPosition;
-            public Vector2 previousPointerPosition;
-            public Vector2 deltaPointerPosition;
+            public Vector2 screenPosition;
+            public Vector2 previousScreenPosition;
+            public Vector2 deltaScreenPosition;
 
-            public SelectionState cachedSelectionState;
+            public SelectionState selectionState;
         }
 
         private PointerInputData cachedPointerInputData;
-
         private PointerEventData pointerEventData;
 
         [ClusterRPC]
         public void CachePointerState (PointerInputData pointerInputData)
         {
             this.cachedPointerInputData = pointerInputData;
+
+            pointerEventData.position = pointerInputData.screenPosition;
+            pointerEventData.delta = pointerInputData.deltaScreenPosition;
+            pointerEventData.button = PointerEventData.InputButton.Left;
         }
 
         private void ProcessMasterInput ()
         {
+            cachedPointerInputData.previousScreenPosition = cachedPointerInputData.screenPosition;
+            cachedPointerInputData.screenPosition = Input.mousePosition;
+            cachedPointerInputData.deltaScreenPosition = (Vector2)Input.mousePosition - cachedPointerInputData.previousScreenPosition;
+
             PointerInputData.SelectionState selectionState = PointerInputData.SelectionState.None;
-
-            cachedPointerInputData.previousPointerPosition = cachedPointerInputData.cachedPointerPosition;
-            cachedPointerInputData.cachedPointerPosition = Input.mousePosition;
-            cachedPointerInputData.deltaPointerPosition = (Vector2)Input.mousePosition - cachedPointerInputData.previousPointerPosition;
-
             if (Input.GetMouseButtonDown(0))
                 selectionState = PointerInputData.SelectionState.Down;
             else if (Input.GetMouseButton(0))
                 selectionState = PointerInputData.SelectionState.Hold;
             else if (Input.GetMouseButtonUp(0))
                 selectionState = PointerInputData.SelectionState.Up;
-
-            cachedPointerInputData.cachedSelectionState = selectionState;
+            cachedPointerInputData.selectionState = selectionState;
 
             CachePointerState(cachedPointerInputData);
         }
@@ -75,7 +76,12 @@ namespace Unity.ClusterDisplay
             if (pointerEventData.pointerEnter != null)
             {
                 var handler = ExecuteEvents.GetEventHandler<IPointerClickHandler>(pointerEventData.pointerEnter);
-                ExecuteEvents.ExecuteHierarchy(handler, pointerEventData, ExecuteEvents.pointerClickHandler);
+                if (cachedPointerInputData.selectionState == PointerInputData.SelectionState.Down)
+                    ExecuteEvents.ExecuteHierarchy(handler, pointerEventData, ExecuteEvents.pointerDownHandler);
+                else if (cachedPointerInputData.selectionState == PointerInputData.SelectionState.Hold)
+                    ExecuteEvents.ExecuteHierarchy(handler, pointerEventData, ExecuteEvents.pointerClickHandler);
+                else if (cachedPointerInputData.selectionState == PointerInputData.SelectionState.Up)
+                    ExecuteEvents.ExecuteHierarchy(handler, pointerEventData, ExecuteEvents.pointerUpHandler);
             }
         }
 
