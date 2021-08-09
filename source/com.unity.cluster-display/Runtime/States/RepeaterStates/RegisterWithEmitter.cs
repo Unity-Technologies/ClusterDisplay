@@ -5,15 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterDisplay.SlaveStateMachine
+namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    internal class RegisterWithMaster : SlaveState
+    internal class RegisterWithEmitter : RepeaterState
     {
-        private bool m_MasterFound;
+        private bool m_EmitterFound;
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        public RegisterWithMaster(SlavedNode node)
+        public RegisterWithEmitter(RepeaterNode node)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         protected override NodeState DoFrame( bool frameAdvance)
         {
-            if (m_MasterFound)
+            if (m_EmitterFound)
             {
                 var nextState = new SynchronizeFrame{MaxTimeOut = ClusterParams.CommunicationTimeout};
                 nextState.EnterState(this);
@@ -43,19 +43,19 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
         {
             try
             {
-                while (!ctk.IsCancellationRequested && !m_MasterFound)
+                while (!ctk.IsCancellationRequested && !m_EmitterFound)
                 {
                     // Periodically broadcast presence
                     if (m_Timer.Elapsed - m_LastSend > TimeSpan.FromSeconds(1))
                     {
                         var header = new MessageHeader()
                         {
-                            MessageType = EMessageType.HelloMaster,
+                            MessageType = EMessageType.HelloEmitter,
                             DestinationIDs = UInt64.MaxValue, // Shout it out! make sure to also use DoesNotRequireAck
                             Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                         };
 
-                        var roleInfo = new RolePublication { NodeRole = ENodeRole.Slave };
+                        var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
                         var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
                         roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
 
@@ -70,14 +70,14 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                         // Consume messages
                         while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                         {
-                            if (header.MessageType == EMessageType.WelcomeSlave)
+                            if (header.MessageType == EMessageType.WelcomeRepeater)
                             {
                                 if ((header.DestinationIDs & LocalNode.NodeIDMask) == LocalNode.NodeIDMask)
                                 {
-                                    Debug.Log("Accepted by master: " + header.OriginID);
-                                    m_MasterFound = true;
-                                    LocalNode.MasterNodeId = header.OriginID;
-                                    LocalNode.UdpAgent.NewNodeNotification(LocalNode.MasterNodeId);
+                                    Debug.Log("Accepted by emitter: " + header.OriginID);
+                                    m_EmitterFound = true;
+                                    LocalNode.EmitterNodeId = header.OriginID;
+                                    LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
                                     return;
                                 }
                             }
@@ -88,7 +88,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
                     if (m_Timer.Elapsed > MaxTimeOut)
                     {
-                        throw new Exception($"Master not found after {MaxTimeOut.TotalMilliseconds}ms.");
+                        throw new Exception($"Emitter not found after {MaxTimeOut.TotalMilliseconds}ms.");
                     }
                 }
             }
@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
             }
             catch (Exception e)
             {
-                var err = new FatalError( $"Error occured while registering with master node: {e.Message}");
+                var err = new FatalError( $"Error occured while registering with emitter node: {e.Message}");
                 PendingStateChange = err;
             }
         }

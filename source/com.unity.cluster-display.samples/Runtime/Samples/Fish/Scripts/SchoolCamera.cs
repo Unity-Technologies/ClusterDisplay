@@ -38,7 +38,7 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
         m_Camera.transform.position = targetCameraPos;
         m_Camera.transform.rotation = Quaternion.Slerp(m_Camera.transform.rotation, Quaternion.LookRotation((schoolBounds.center - targetCameraPos).normalized, Vector3.up), Time.deltaTime / 0.1f);
 
-        if (ClusterDisplayState.IsMaster)
+        if (ClusterDisplayState.IsEmitter)
         {
             if (Input.GetMouseButton(1))
             {

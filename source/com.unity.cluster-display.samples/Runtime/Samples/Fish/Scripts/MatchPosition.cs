@@ -21,7 +21,7 @@ public class MatchPosition : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (ClusterDisplayState.IsMaster)
+        if (ClusterDisplayState.IsEmitter)
         {
         }
     }

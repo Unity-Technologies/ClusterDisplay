@@ -69,7 +69,7 @@ namespace Unity.ClusterDisplay
 
         private void LateUpdate ()
         {
-            if (!ClusterDisplayState.IsMaster)
+            if (!ClusterDisplayState.IsEmitter)
                 return;
 
             if (!TryGetData(out var data))
@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay
 
         public virtual void ApplyTransformData(NativeArray<Data> data)
         {
-            if (ClusterDisplayState.IsMaster)
+            if (ClusterDisplayState.IsEmitter)
                 return;
 
             ValidateCachedData();

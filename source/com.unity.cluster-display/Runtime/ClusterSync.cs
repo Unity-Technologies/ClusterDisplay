@@ -43,12 +43,12 @@ namespace Unity.ClusterDisplay
         public ClusterDisplayResources Resources => m_clusterDisplayResources;
 
 #if UNITY_EDITOR
-        [SerializeField] private bool m_EditorInstanceIsMaster = true;
-        [SerializeField] private string m_EditorInstanceMasterCmdLine = "";
-        [SerializeField] private string m_EditorInstanceSlaveCmdLine = "";
+        [SerializeField] private bool m_EditorInstanceIsEmitter = true;
+        [SerializeField] private string m_EditorInstanceEmitterCmdLine = "";
+        [SerializeField] private string m_EditorInstanceRepeaterCmdLine = "";
 
         [SerializeField] private bool m_IgnoreEditorCmdLine = false;
-        public void SetupForEditorTesting(bool isMaster) => m_EditorInstanceIsMaster = isMaster;
+        public void SetupForEditorTesting(bool isEmitter) => m_EditorInstanceIsEmitter = isEmitter;
 #endif
 
         internal ClusterNode m_LocalNode;
@@ -117,17 +117,17 @@ namespace Unity.ClusterDisplay
 #if UNITY_EDITOR
             if (!m_IgnoreEditorCmdLine)
             {
-                var editorInstanceCmdLine = m_EditorInstanceIsMaster ? m_EditorInstanceMasterCmdLine : m_EditorInstanceSlaveCmdLine;
+                var editorInstanceCmdLine = m_EditorInstanceIsEmitter ? m_EditorInstanceEmitterCmdLine : m_EditorInstanceRepeaterCmdLine;
                 args = editorInstanceCmdLine.Split(' ').ToList();
             }
 #endif
-            var startIndex = args.FindIndex((x) => x == "-masterNode" || x == "-node");
+            var startIndex = args.FindIndex((x) => x == "-emitterNode" || x == "-node");
             stateSetter.SetCLusterLogicEnabled(startIndex > -1);
 
             if (!ClusterDisplayState.IsClusterLogicEnabled)
             {
                 Debug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
-                stateSetter.SetIsMaster(true);
+                stateSetter.SetIsEmitter(true);
                 return;
             }
 
@@ -234,12 +234,12 @@ namespace Unity.ClusterDisplay
                 }
 
                 // Process server logic
-                startIndex = args.FindIndex(x => x == "-masterNode");
+                startIndex = args.FindIndex(x => x == "-emitterNode");
                 if (startIndex >= 0)
                 {
-                    // Master command line format: -masterNode nodeId nodeCount ip:rxport,txport timeOut
+                    // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport timeOut
                     var id = byte.Parse(args[startIndex + 1]);
-                    var slaveCount = int.Parse(args[startIndex+2]);
+                    var repeaterCount = int.Parse(args[startIndex+2]);
                     var ip = args[startIndex+3].Substring(0, args[startIndex+3].IndexOf(":"));
                     var ports = args[startIndex+3].Substring(args[startIndex+3].IndexOf(":")+1);
                     var rxport = int.Parse(ports.Substring(0, ports.IndexOf(',')));
@@ -248,8 +248,8 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 5))
                         m_Debugging = args[startIndex + 5] == "debug";
 
-                    m_LocalNode =  new MasterNode(id, slaveCount, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
-                    stateSetter.SetIsMaster(true);
+                    m_LocalNode =  new EmitterNode(id, repeaterCount, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
+                    stateSetter.SetIsEmitter(true);
                     if (!m_LocalNode.Start())
                         return false;
                 }
@@ -260,7 +260,7 @@ namespace Unity.ClusterDisplay
                 {
                     Debug.Assert(LocalNode == null, "Dual roles not allowed.");
 
-                    // slave command line format: -node id ip:rxport,txport timeOut
+                    // Repeater command line format: -node id ip:rxport,txport timeOut
                     var id = byte.Parse(args[startIndex + 1]);
                     var ip = args[startIndex+2].Substring(0, args[startIndex+2].IndexOf(":"));
                     var ports = args[startIndex + 2].Substring(args[startIndex + 2].IndexOf(":") + 1);
@@ -270,8 +270,8 @@ namespace Unity.ClusterDisplay
                     if (args.Count > (startIndex + 4))
                         m_Debugging = args[startIndex + 4] == "debug";
 
-                    m_LocalNode = new SlavedNode(id, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
-                    stateSetter.SetIsMaster(false);
+                    m_LocalNode = new RepeaterNode(id, ip, rxport, txport, 30, (int)Resources.MaxMTUSize, adapterName );
+                    stateSetter.SetIsEmitter(false);
                     if (!m_LocalNode.Start())
                         return false;
                 }

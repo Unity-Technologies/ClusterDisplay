@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay
             pointerEventData.button = PointerEventData.InputButton.Left;
         }
 
-        private void ProcessMasterInput ()
+        private void ProcessEmitterInput ()
         {
             cachedPointerInputData.previousScreenPosition = cachedPointerInputData.screenPosition;
             cachedPointerInputData.screenPosition = Input.mousePosition;
@@ -59,8 +59,8 @@ namespace Unity.ClusterDisplay
 
         private void ProcessPosition ()
         {
-            if (ClusterDisplayState.IsMaster)
-                ProcessMasterInput();
+            if (ClusterDisplayState.IsEmitter)
+                ProcessEmitterInput();
         }
 
         private void ProcessRaycasts ()

@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
             var sourceRT =  m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
-            if (ClusterDisplay.ClusterDisplayState.IsMaster)
+            if (ClusterDisplay.ClusterDisplayState.IsEmitter)
             {
                 var backBufferRT = m_RTManager.GetBackBufferRT((int)Screen.width, (int)Screen.height);
 

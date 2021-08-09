@@ -8,16 +8,16 @@ namespace Unity.ClusterDisplay.RPC
     /// <summary>
     /// This enum is used to define and RPC's execution stage either implicitly
     /// or explicitly. When an RPC's execution stage is set to RPCExecutionStage.Automatic, the 
-    /// RPC will get executed by slave nodes in the NEXT execution stage that it's called by the
+    /// RPC will get executed by repeater nodes in the NEXT execution stage that it's called by the
     /// since the RPC is essentially the result of that stage. However, when you explicitly set
     /// the execution stage to something else besides RPCExecutionStage.Automatic, this behaviour
-    /// is disabled and slaves will execute the RPC in the stage you've defined.
+    /// is disabled and repeaters will execute the RPC in the stage you've defined.
     /// </summary>
     public enum RPCExecutionStage : int
     {
 
         /// <summary>
-        /// When the method is executed by master, RPCEmitter will determine
+        /// When the method is executed by emitter, RPCEmitter will determine
         /// which execution stage it currently is and send the RPC with that
         /// RPC execution stage.
         /// </summary>

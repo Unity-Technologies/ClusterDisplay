@@ -6,9 +6,9 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.MasterStateMachine
+namespace Unity.ClusterDisplay.EmitterStateMachine
 {
-    internal class SynchronizeFrame : MasterState, IMasterNodeSyncState
+    internal class SynchronizeFrame : EmitterState, IEmitterNodeSyncState
     {
         enum EStage
         {
@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         private EStage m_Stage;
         private TimeSpan m_TsOfStage;
 
-        private MasterEmitter m_MasterEmitter;
+        private EmitterStateWriter m_Emitter;
 
         public override bool ReadyToProceed => m_Stage == EStage.StepOneFrameOnInitialization || m_Stage == EStage.ProcessFrame;
 
@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
 
             base.InitState();
 
-            m_MasterEmitter = new MasterEmitter(this, clusterSync.Resources.NetworkPayloadLimits);
+            m_Emitter = new EmitterStateWriter(this, clusterSync.Resources.NetworkPayloadLimits);
             m_Stage = EStage.StepOneFrameOnInitialization;
 
             m_TsOfStage = m_Time.Elapsed;
@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
-                    m_MasterEmitter.GatherFrameState(CurrentFrameID);
+                    m_Emitter.GatherFrameState(CurrentFrameID);
 
                 // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch ((EStage) m_Stage)
@@ -87,13 +87,13 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                     {
                         using (m_MarkerReadyToSignalStartNewFrame.Auto())
                         {
-                            if (!m_MasterEmitter.ValidRawStateData) // 1st frame only
-                                m_MasterEmitter.GatherFrameState(CurrentFrameID);
+                            if (!m_Emitter.ValidRawStateData) // 1st frame only
+                                m_Emitter.GatherFrameState(CurrentFrameID);
 
-                            if (m_MasterEmitter.ValidRawStateData)
+                            if (m_Emitter.ValidRawStateData)
                             {
                                 using (m_MarkerPublishState.Auto())
-                                    m_MasterEmitter.PublishCurrentState(PreviousFrameID);
+                                    m_Emitter.PublishCurrentState(PreviousFrameID);
 
                                 m_WaitingOnNodes = (Int64) (LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
                                 m_Stage = EStage.ProcessFrame;
@@ -131,9 +131,9 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                             if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
                             {
                                 Debug.Assert(m_WaitingOnNodes != 0,
-                                    "Have been waiting on slave nodes 'frame done' for more than 5 seconds!");
+                                    "Have been waiting on repeaters nodes 'frame done' for more than 5 seconds!");
                                 // One or more clients failed to respond in time!
-                                Debug.LogError("The following slaves are late reporting back: " + m_WaitingOnNodes);
+                                Debug.LogError("The following repeaters are late reporting back: " + m_WaitingOnNodes);
                             }
 
                             break;
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                     case EMessageType.FrameDone:
                     {
                         Debug.Assert(m_Stage != EStage.ReadyToSignalStartNewFrame,
-                            "Master: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
+                            "Emitter: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
 
                         var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
 
@@ -196,7 +196,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         private void KickLateClients()
         {
             Debug.LogError(
-                $"The following slaves are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
+                $"The following repeaters are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
             for (byte id = 0; id < sizeof(UInt64); ++id)
             {
                 if ((1 << id & m_WaitingOnNodes) != 0)

@@ -13,16 +13,16 @@ namespace Unity.ClusterDisplay.Editor
             base.OnInspectorGUI();
             var clusterSync = target as ClusterSync;
 
-            if (GUILayout.Button("Play as Master"))
+            if (GUILayout.Button("Play as Emitter"))
             {
-                clusterSync.SetupForEditorTesting(isMaster: true);
+                clusterSync.SetupForEditorTesting(isEmitter: true);
                 EditorUtility.SetDirty(clusterSync);
                 EditorApplication.EnterPlaymode();
             }
 
-            if (GUILayout.Button("Play as Slave"))
+            if (GUILayout.Button("Play as Repeater"))
             {
-                clusterSync.SetupForEditorTesting(isMaster: false);
+                clusterSync.SetupForEditorTesting(isEmitter: false);
                 EditorUtility.SetDirty(clusterSync);
                 EditorApplication.EnterPlaymode();
             }

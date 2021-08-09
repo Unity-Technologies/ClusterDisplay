@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay
     {
         internal interface IClusterDisplayStateSetter
         {
-            void SetIsMaster(bool isMaster);
+            void SetIsEmitter(bool isEmitter);
             void SetCLusterLogicEnabled(bool clusterLogicEnabled);
             void SetIsTerminated(bool isTerminated);
             void SetFrame(ulong frame);
@@ -17,32 +17,32 @@ namespace Unity.ClusterDisplay
 
         private class ClusterDisplayStateStore : IClusterDisplayStateSetter
         {
-            public bool m_IsMaster = false;
+            public bool m_IsEmitter = false;
             public bool m_IsClusterLogicEnabled = false;
             public bool m_IsTerminated = false;
             public ulong m_Frame = 0;
 
             public void SetCLusterLogicEnabled(bool clusterLogicEnabled) => this.m_IsClusterLogicEnabled = clusterLogicEnabled;
-            public void SetIsMaster(bool isMaster) => this.m_IsMaster = isMaster;
+            public void SetIsEmitter(bool isEmitter) => this.m_IsEmitter = isEmitter;
             public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
             public void SetFrame(ulong frame) => m_Frame = frame;
         }
 
-        public class IsMasterMarker : Attribute {}
+        public class IsEmitterMarker : Attribute {}
 
         private readonly static ClusterDisplayStateStore stateStore = new ClusterDisplayStateStore();
         internal static IClusterDisplayStateSetter GetStateStoreSetter () => stateStore;
 
         /// <summary>
-        /// This property returns true if this running instance is a master node, this is set to true or false in ClusterSync.
+        /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync.
         /// </summary>
-        [IsMasterMarker]
-        public static bool IsMaster => stateStore.m_IsMaster;
+        [IsEmitterMarker]
+        public static bool IsEmitter => stateStore.m_IsEmitter;
 
         /// <summary>
-        /// This property returns true if this running instance is a slave node, this is set to true or false in ClusterSync.
+        /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.
         /// </summary>
-        public static bool IsSlave => !stateStore.m_IsMaster;
+        public static bool IsRepeater => !stateStore.m_IsEmitter;
 
         /// <summary>
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.

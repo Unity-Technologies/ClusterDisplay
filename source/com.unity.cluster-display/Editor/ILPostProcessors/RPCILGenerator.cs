@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!CecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
                     return false;
 
-                if (!TryGetCachedGetIsMasterMarkerMethod(out var getIsMasterMethod))
+                if (!TryGetCachedGetIsEmitterMarkerMethod(out var getIsEmitterMethod))
                     return false;
 
                 if (!TryPollParameterInformation(
@@ -111,10 +111,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     out var hasDynamicallySizedRPCParameters))
                     return false;
 
-                if (!CecilUtils.TryImport(targetMethodRef.Module, getIsMasterMethod, out var getIsMasterMethodRef))
+                if (!CecilUtils.TryImport(targetMethodRef.Module, getIsEmitterMethod, out var getIsEmitterMethodRef))
                     return false;
 
-                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsMasterMethodRef);
+                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsEmitterMethodRef);
                 CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
 
                 return !hasDynamicallySizedRPCParameters ?

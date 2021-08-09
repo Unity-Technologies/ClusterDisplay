@@ -7,13 +7,13 @@ using Unity.Profiling;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace Unity.ClusterDisplay.SlaveStateMachine
+namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    internal class SynchronizeFrame : SlaveState, ISlaveNodeSyncState
+    internal class SynchronizeFrame : RepeaterState, IRepeaterNodeSyncState
     {
         enum EStage
         {
-            WaitingOnGoFromMaster,
+            WaitingOnGoFromEmitter,
             ReadyToProcessFrame,
         }
 
@@ -21,19 +21,19 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         TimeSpan m_TsOfStage;
 
-        public SlaveReciever m_SlaveReceiver;
+        public RepeaterParser m_RepeaterReceiver;
         public UDPAgent NetworkAgent => LocalNode.UdpAgent;
 
         ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
-        ProfilerMarker m_MarkerWaitingOnGoFromMaster = new ProfilerMarker("WaitingOnGoFromMaster");
+        ProfilerMarker m_MarkerWaitingOnGoFromEmitter = new ProfilerMarker("WaitingOnGoFromEmitter");
         ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
         public override bool ReadyToProceed => m_Stage == EStage.ReadyToProcessFrame;
-        public ulong MasterNodeIdMask => LocalNode.MasterNodeIdMask;
+        public ulong EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} / {m_Stage} : {CurrentFrameID}, {m_SlaveReceiver.LastReportedFrameDone}, {m_SlaveReceiver.LastRxFrameStart}, {m_SlaveReceiver.RxCount}, {m_SlaveReceiver.TxCount}" +
-            $"\r\nNetwork: {m_SlaveReceiver.NetworkingOverheadAverage * 1000:000.0}";
+            return $"{base.GetDebugString()} / {m_Stage} : {CurrentFrameID}, {m_RepeaterReceiver.LastReportedFrameDone}, {m_RepeaterReceiver.LastRxFrameStart}, {m_RepeaterReceiver.RxCount}, {m_RepeaterReceiver.TxCount}" +
+            $"\r\nNetwork: {m_RepeaterReceiver.NetworkingOverheadAverage * 1000:000.0}";
         }
         //-------------------------------------------------
 
@@ -42,11 +42,11 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
             if (!ClusterSync.TryGetInstance(out var clusterSync))
                 return;
 
-            m_Stage = EStage.WaitingOnGoFromMaster;
+            m_Stage = EStage.WaitingOnGoFromEmitter;
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
 
-            m_SlaveReceiver = new SlaveReciever(this, clusterSync.Resources.NetworkPayloadLimits);
+            m_RepeaterReceiver = new RepeaterParser(this, clusterSync.Resources.NetworkPayloadLimits);
         }
 
         protected override NodeState DoFrame(bool newFrame)
@@ -56,23 +56,23 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                 // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
                 switch (m_Stage)
                 {
-                    case EStage.WaitingOnGoFromMaster:
+                    case EStage.WaitingOnGoFromEmitter:
                     {
-                        using (m_MarkerWaitingOnGoFromMaster.Auto())
+                        using (m_MarkerWaitingOnGoFromEmitter.Auto())
                         {
-                            m_SlaveReceiver.PumpMsg(CurrentFrameID);
+                            m_RepeaterReceiver.PumpMsg(CurrentFrameID);
                             
                             if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
                             {
                                 PendingStateChange =
                                     new FatalError(
-                                        $"Have not received GO from Master after {MaxTimeOut.TotalMilliseconds}ms.");
+                                        $"Have not received GO from Emitter after {MaxTimeOut.TotalMilliseconds}ms.");
 
                             }
 
                             // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
                             // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
-                            // We will have actually processed a frame and be ready to inform master and wait for next frame start.
+                            // We will have actually processed a frame and be ready to inform emitter and wait for next frame start.
                             break;
                         }
                     }
@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
                     {
                         if (newFrame)
                             using (m_MarkerReadyToProcessFrame.Auto())
-                                m_SlaveReceiver.SignalFrameDone(CurrentFrameID);
+                                m_RepeaterReceiver.SignalFrameDone(CurrentFrameID);
                         break;
                     }
                 }
@@ -106,7 +106,7 @@ namespace Unity.ClusterDisplay.SlaveStateMachine
 
         public void OnPublishingMsg()
         {
-            m_Stage = EStage.WaitingOnGoFromMaster;
+            m_Stage = EStage.WaitingOnGoFromEmitter;
             m_TsOfStage = m_Time.Elapsed;
         }
 

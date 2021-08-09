@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Unity.ClusterDisplay.MasterStateMachine;
+using Unity.ClusterDisplay.EmitterStateMachine;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -11,14 +11,14 @@ namespace Unity.ClusterDisplay
         public ENodeRole Role { get; set; }
     }
 
-    internal class MasterNode : ClusterNode
+    internal class EmitterNode : ClusterNode
     {
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
         public int TotalExpectedRemoteNodesCount { get; set; }
 
-        public MasterNode(byte nodeId, int slaveCount, string ip, int rxport,int txport, int timeOut, int maxMTUSize, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, maxMTUSize, adapterName)
+        public EmitterNode(byte nodeId, int repeaterCount, string ip, int rxport,int txport, int timeOut, int maxMTUSize, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, maxMTUSize, adapterName)
         {
-            TotalExpectedRemoteNodesCount = slaveCount;
+            TotalExpectedRemoteNodesCount = repeaterCount;
         }
 
         public override bool Start()

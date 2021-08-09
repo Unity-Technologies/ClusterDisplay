@@ -13,11 +13,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private readonly static Dictionary<string, RPCILGenerator> cachedOnTryStaticCallProcessors = new Dictionary<string, RPCILGenerator>();
         private readonly static Dictionary<string, QueuedRPCILGenerator> cachedQueuedRPCILGenerators = new Dictionary<string, QueuedRPCILGenerator>();
 
-        private static bool TryGetCachedGetIsMasterMarkerMethod (out MethodInfo getIsMasterMethod)
+        private static bool TryGetCachedGetIsEmitterMarkerMethod (out MethodInfo getIsEmitterMethod)
         {
-            if (!CecilUtils.TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsMasterMarker>(typeof(ClusterDisplayState), out getIsMasterMethod))
+            if (!CecilUtils.TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsEmitterMarker>(typeof(ClusterDisplayState), out getIsEmitterMethod))
             {
-                getIsMasterMethod = null;
+                getIsEmitterMethod = null;
                 return false;
             }
 

@@ -186,13 +186,5 @@ PrefabInstance:
       propertyPath: m_SerializedCameraContextTargets.Array.data[0]
       value: 
       objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_IgnoreEditorCmdLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_EditorInstanceIsMaster
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}

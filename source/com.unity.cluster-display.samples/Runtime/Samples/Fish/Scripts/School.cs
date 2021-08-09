@@ -154,7 +154,7 @@ public class School : SingletonMonoBehaviour<School>
 
     private void Update()
     {
-        if (ClusterDisplayState.IsMaster)
+        if (ClusterDisplayState.IsEmitter)
         {
             if (Input.GetKeyDown(KeyCode.Return))
                 SpawnInitialSchool();

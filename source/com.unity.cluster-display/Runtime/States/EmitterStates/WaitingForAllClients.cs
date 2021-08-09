@@ -3,9 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Unity.ClusterDisplay.MasterStateMachine
+namespace Unity.ClusterDisplay.EmitterStateMachine
 {
-    internal class WaitingForAllClients : MasterState
+    internal class WaitingForAllClients : EmitterState
     {
         public override bool ReadyToProceed => false;
         public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
@@ -50,7 +50,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
                         // Consume messages
                         while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                         {
-                            if (header.MessageType == EMessageType.HelloMaster)
+                            if (header.MessageType == EMessageType.HelloEmitter)
                             {
                                 var roleInfo = RolePublication.FromByteArray(payload, header.OffsetToPayload);
 
@@ -90,7 +90,7 @@ namespace Unity.ClusterDisplay.MasterStateMachine
         {
             var response = new MessageHeader()
             {
-                MessageType = EMessageType.WelcomeSlave,
+                MessageType = EMessageType.WelcomeRepeater,
                 DestinationIDs = (UInt64)1 << rxHeader.OriginID,
             };
 

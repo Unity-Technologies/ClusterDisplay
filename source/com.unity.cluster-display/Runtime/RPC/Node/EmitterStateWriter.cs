@@ -10,7 +10,7 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay
 {
-    public class MasterEmitter
+    public class EmitterStateWriter
     {
         private NativeArray<byte> m_PreviousStateSubBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
@@ -21,9 +21,9 @@ namespace Unity.ClusterDisplay
         private byte[] m_MsgBuffer = new byte[0];
         public bool ValidRawStateData => m_PreviousStateSubBuffer != default;
 
-        public IMasterNodeSyncState nodeState;
+        public IEmitterNodeSyncState nodeState;
 
-        public MasterEmitter (IMasterNodeSyncState nodeState, ClusterDisplayResources.PayloadLimits payloadLimits)
+        public EmitterStateWriter (IEmitterNodeSyncState nodeState, ClusterDisplayResources.PayloadLimits payloadLimits)
         {
             m_CurrentStateBuffer = new NativeArray<byte>((int)payloadLimits.maxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             this.nodeState = nodeState;

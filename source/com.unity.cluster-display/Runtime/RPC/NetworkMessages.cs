@@ -11,8 +11,8 @@ namespace Unity.ClusterDisplay
         AckMsgRx,
         StartFrame,
         FrameDone,
-        HelloMaster,
-        WelcomeSlave,
+        HelloEmitter,
+        WelcomeRepeater,
         GlobalShutdownRequest
     }
 
@@ -25,11 +25,11 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// The source node that broadcasts synchronization data.
         /// </summary>
-        Master,
+        Emitter,
         /// <summary>
         /// The client nodes that receive synchronization data.
         /// </summary>
-        Slave,
+        Repeater,
         //HotStandby,
         //Dead
     }

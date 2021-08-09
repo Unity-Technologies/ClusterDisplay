@@ -47,10 +47,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_clusterDisplayResources: {fileID: 11400000, guid: fa7b467492071d24b893e29466b43bb5, type: 2}
-  m_EditorInstanceIsMaster: 1
-  m_EditorInstanceMasterCmdLine: -masterNode 0 1 224.0.1.0:25692,25691
-  m_EditorInstanceSlaveCmdLine: -node 1 224.0.1.0:25691,25692
-  m_IgnoreEditorCmdLine: 1
+  m_EditorInstanceIsEmitter: 1
+  m_EditorInstanceEmitterCmdLine: -emitterNode 0 1 224.0.1.0:25691,25692
+  m_EditorInstanceRepeaterCmdLine: -node 1 224.0.1.0:25692,25691
+  m_IgnoreEditorCmdLine: 0
 --- !u!114 &3447312720805938544
 MonoBehaviour:
   m_ObjectHideFlags: 0

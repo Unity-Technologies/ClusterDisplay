@@ -24,13 +24,13 @@ namespace Unity.ClusterDisplay
             QuadroSyncInitialize = 0,
 
             /// <summary>
-            /// Queries the actual frame count in Runtime for the Master Sync system
+            /// Queries the actual frame count in Runtime for the Emitter Sync system
             /// or for the custom frame count system.
             /// </summary>
             QuadroSyncQueryFrameCount,
 
             /// <summary>
-            /// Resets the frame count for the Master Sync system (NvAPI) or
+            /// Resets the frame count for the Emitter Sync system (NvAPI) or
             /// for the custom frame count system.
             /// </summary>
             QuadroSyncResetFrameCount,
@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay
             QuadroSyncEnableSwapBarrier,
 
             /// <summary>
-            /// Enables or disables the use of the Master sync counter system (NvAPI).
+            /// Enables or disables the use of the Emitter sync counter system (NvAPI).
             /// </summary>
             QuadroSyncEnableSyncCounter
         };

@@ -80,10 +80,10 @@ namespace Unity.ClusterDisplay
                     break;
                 }
 
-                case EMessageType.HelloMaster:
+                case EMessageType.HelloEmitter:
                     break;
 
-                case EMessageType.WelcomeSlave:
+                case EMessageType.WelcomeRepeater:
                     break;
 
                 default:
@@ -121,8 +121,8 @@ namespace Unity.ClusterDisplay
         }
     }
 
-    // SlaveState state -------------------------------------------------------- 
-    internal abstract class SlaveState : NodeState
+    // RepeaterState state -------------------------------------------------------- 
+    internal abstract class RepeaterState : NodeState
     {
         protected ulong CurrentFrameID
         {
@@ -134,19 +134,19 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        protected SlavedNode LocalNode
+        protected RepeaterNode LocalNode
         {
             get
             {
                 if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return (SlavedNode)clusterSync.LocalNode;
+                    return (RepeaterNode)clusterSync.LocalNode;
                 return null;
             }
         }
     }
 
-    // MasterState state -------------------------------------------------------- 
-    internal abstract class MasterState : NodeState
+    // EmitterState state -------------------------------------------------------- 
+    internal abstract class EmitterState : NodeState
     {
         protected ulong PreviousFrameID => CurrentFrameID - 1;
         protected ulong CurrentFrameID
@@ -159,12 +159,12 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        protected MasterNode LocalNode
+        protected EmitterNode LocalNode
         {
             get
             {
                 if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return (MasterNode)clusterSync.LocalNode;
+                    return (EmitterNode)clusterSync.LocalNode;
                 return null;
             }
         }

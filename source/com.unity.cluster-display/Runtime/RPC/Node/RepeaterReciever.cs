@@ -9,12 +9,12 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public class SlaveReciever
+    public class RepeaterParser
     {
-        private NativeArray<byte> m_MsgFromMaster;
+        private NativeArray<byte> m_MsgFromEmitter;
         private byte[] m_OutBuffer = new byte[0];
 
-        private ISlaveNodeSyncState nodeSyncState;
+        private IRepeaterNodeSyncState nodeSyncState;
         
         // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
@@ -27,11 +27,11 @@ namespace Unity.ClusterDisplay
         public UInt64 LastReportedFrameDone => m_LastReportedFrameDone;
         public UInt64 LastRxFrameStart => m_LastRxFrameStart;
 
-        private ProfilerMarker m_MarkerReceivedGoFromMaster = new ProfilerMarker("ReceivedGoFromMaster");
+        private ProfilerMarker m_MarkerReceivedGoFromEmitter = new ProfilerMarker("ReceivedGoFromEmitter");
         private DebugPerf m_NetworkingOverhead = new DebugPerf();
         public float NetworkingOverheadAverage => m_NetworkingOverhead.Average;
 
-        public SlaveReciever (ISlaveNodeSyncState nodeSyncState, ClusterDisplayResources.PayloadLimits payloadLimits)
+        public RepeaterParser (IRepeaterNodeSyncState nodeSyncState, ClusterDisplayResources.PayloadLimits payloadLimits)
         {
             this.nodeSyncState = nodeSyncState;
             RPC.RPCBufferIO.Initialize(payloadLimits);
@@ -45,20 +45,20 @@ namespace Unity.ClusterDisplay
 
                 if (msgHdr.MessageType == EMessageType.StartFrame)
                 {
-                    using (m_MarkerReceivedGoFromMaster.Auto())
+                    using (m_MarkerReceivedGoFromEmitter.Auto())
                     {
                         m_NetworkingOverhead.SampleNow();
                         if (msgHdr.PayloadSize > 0)
                         {
                             var respMsg = AdvanceFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
 
-                            // The master is on the next frame, so were matching against the previous frame.
+                            // The emitter is on the next frame, so were matching against the previous frame.
                             m_LastRxFrameStart = respMsg.FrameNumber;
 
                             if (m_LastRxFrameStart == currentFrameID)
                             {
                                 Debug.Assert(outBuffer.Length > 0, "invalid buffer!");
-                                m_MsgFromMaster = new NativeArray<byte>(outBuffer, Allocator.Persistent);
+                                m_MsgFromEmitter = new NativeArray<byte>(outBuffer, Allocator.Persistent);
 
                                 RestoreStates();
                                 nodeSyncState.OnPumpedMsg();
@@ -81,13 +81,13 @@ namespace Unity.ClusterDisplay
             try
             {
                 // Read the state from the server
-                var msgHdr = MessageHeader.FromByteArray(m_MsgFromMaster);
+                var msgHdr = MessageHeader.FromByteArray(m_MsgFromEmitter);
 
                 // restore states
                 unsafe
                 {
                     var bufferPos = msgHdr.OffsetToPayload + Marshal.SizeOf<AdvanceFrame>();
-                    var buffer = (byte*) m_MsgFromMaster.GetUnsafePtr();
+                    var buffer = (byte*) m_MsgFromEmitter.GetUnsafePtr();
                     Debug.Assert(buffer != null, "msg buffer is null");
                     do
                     {
@@ -104,7 +104,7 @@ namespace Unity.ClusterDisplay
                         UnsafeUtility.MemCpy(&id, buffer + bufferPos, Marshal.SizeOf<Guid>());
                         bufferPos += Marshal.SizeOf<Guid>();
 
-                        var stateData = m_MsgFromMaster.GetSubArray(bufferPos, stateSize);
+                        var stateData = m_MsgFromEmitter.GetSubArray(bufferPos, stateSize);
                         bufferPos += stateSize;
 
                         if (id == AdvanceFrame.ClusterInputStateID)
@@ -128,18 +128,18 @@ namespace Unity.ClusterDisplay
             }
             finally
             {
-                m_MsgFromMaster.Dispose();
-                m_MsgFromMaster = default;
+                m_MsgFromEmitter.Dispose();
+                m_MsgFromEmitter = default;
             }
         }
 
         public void SignalFrameDone (ulong currentFrameID)
         {
-            // Send out to server that this slave has finished with last requested frame.
+            // Send out to server that this repeater has finished with last requested frame.
             var msgHdr = new MessageHeader()
             {
                 MessageType = EMessageType.FrameDone,
-                DestinationIDs = nodeSyncState.MasterNodeIdMask,
+                DestinationIDs = nodeSyncState.EmitterNodeIdMask,
             };
 
             var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<FrameDone>();

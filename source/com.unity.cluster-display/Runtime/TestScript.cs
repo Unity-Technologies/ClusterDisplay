@@ -12,7 +12,7 @@ public class TestScript : MonoBehaviour
     private IEnumerator TestCoroutine ()
     {
         yield return null;
-        if (Unity.ClusterDisplay.ClusterDisplayState.IsMaster)
+        if (Unity.ClusterDisplay.ClusterDisplayState.IsEmitter)
         {
             SimpleMethodTest();
             SimpleStringTest("This is a string.");
