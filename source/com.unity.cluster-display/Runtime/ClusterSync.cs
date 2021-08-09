@@ -43,8 +43,11 @@ namespace Unity.ClusterDisplay
         public ClusterDisplayResources Resources => m_clusterDisplayResources;
 
 #if UNITY_EDITOR
+        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
         [SerializeField] private bool m_EditorInstanceIsEmitter = true;
+        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceMasterCmdLine")]
         [SerializeField] private string m_EditorInstanceEmitterCmdLine = "";
+        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceSlaveCmdLine")]
         [SerializeField] private string m_EditorInstanceRepeaterCmdLine = "";
 
         [SerializeField] private bool m_IgnoreEditorCmdLine = false;
