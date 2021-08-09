@@ -4,15 +4,15 @@
 
 ### Synchronization method – lockstep
 
-This synchronization method is known as frame locking, or “lockstep” synchronization. This means the master node will propagate an “update” signal with its internal state to all client nodes, signaling them to render a frame. The next “update” is not sent unless all clients reported the completion of their previous workload.
+This synchronization method is known as frame locking, or “lockstep” synchronization. This means the emitter node will propagate an “update” signal with its internal state to all client nodes, signaling them to render a frame. The next “update” is not sent unless all clients reported the completion of their previous workload.
 
 ### Data payload synchronization
 
-The data payload that gets synchronized between the master and client nodes each frame is constant, regardless of the number or complexity of objects in the scene. This means the complexity of the scene does not have an impact on network performance, only the individual rendering performance of each node.
+The data payload that gets synchronized between the emitter and client nodes each frame is constant, regardless of the number or complexity of objects in the scene. This means the complexity of the scene does not have an impact on network performance, only the individual rendering performance of each node.
 
 ### Communication phases and timeouts
 
-The communication between the master and the clients happens in 2 phases:
+The communication between the emitter and the clients happens in 2 phases:
 
 1.  Initial handshake
 
@@ -20,19 +20,19 @@ The communication between the master and the clients happens in 2 phases:
 
 #### Handshake
 
--   The initial handshake occurs at startup between the master and each node:
+-   The initial handshake occurs at startup between the emitter and each node:
 
-    -   When the master node starts, it waits for the specified number of clients to connect.
+    -   When the emitter node starts, it waits for the specified number of clients to connect.
 
-    -   When the client nodes start, they advertise their presence and wait until a master accepts them into the cluster.
+    -   When the client nodes start, they advertise their presence and wait until a emitter accepts them into the cluster.
 
 -   The handshake has a timeout of 30 seconds by default. You can change this value through a [command line argument](cluster-operation.md#timeout-arguments) when launching your application.
 
-    -   The master node waits at most this amount of time for nodes to register and continues with the current set of nodes.
+    -   The emitter node waits at most this amount of time for nodes to register and continues with the current set of nodes.
 
-    -   The master node quits if no client nodes are present by the end of the timeout.
+    -   The emitter node quits if no client nodes are present by the end of the timeout.
 
-    -   The client nodes quit if no master node accepted them in a cluster after this amount of time.
+    -   The client nodes quit if no emitter node accepted them in a cluster after this amount of time.
 
 #### Synchronization
 
@@ -40,11 +40,11 @@ The communication between the master and the clients happens in 2 phases:
 
 -   The regular lockstep rendering phase has a timeout of 5 seconds by default. You can change this value through a [command line argument](cluster-operation.md#timeout-arguments) when launching your application.
 
-    -   The master node waits this amount of time before kicking out an unresponsive node from the cluster.
+    -   The emitter node waits this amount of time before kicking out an unresponsive node from the cluster.
 
-    -   The client nodes wait this amount of time for an unresponsive master node before quitting.
+    -   The client nodes wait this amount of time for an unresponsive emitter node before quitting.
 
-    -   Typically, you should set the communication timeout a bit lower on the master node compared to the client nodes to prevent an avalanche quit phenomenon where the master node needs to kick out unresponsive nodes faster than the client node’s timeout.
+    -   Typically, you should set the communication timeout a bit lower on the emitter node compared to the client nodes to prevent an avalanche quit phenomenon where the emitter node needs to kick out unresponsive nodes faster than the client node’s timeout.
 
 ## Available components
 
@@ -80,7 +80,7 @@ The **Cluster Quit Behaviour** component allows to cleanly quit the cluster.
 
 When you have this component in your project:
 
--   You can press **Q** and **K** at the same time on the keyboard connected to the master when you need to manually quit the whole cluster.
+-   You can press **Q** and **K** at the same time on the keyboard connected to the emitter when you need to manually quit the whole cluster.
 -   The nodes can automatically quit the cluster if the [cluster communication times out](#communication-phases-and-timeouts).
 
 **GfxPluginQuadroSyncCallbacks**
@@ -142,7 +142,7 @@ Every server is connected to two NICs (Network Interface Controller):
 
 -   Resolution set to 1080p60.
 
--   Nvidia Sync Master set to the same machine as Cluster Display master cluster node
+-   Nvidia Sync Emitter set to the same machine as Cluster Display emitter cluster node
 
 -   **NVIDIA Control Panel** settings set to recommended settings for NVIDIA Sync:
 
@@ -152,7 +152,7 @@ Every server is connected to two NICs (Network Interface Controller):
 
 -   For the Nvidia Sync card setup, in the **Nvidia Control Pane**l:
 
-    -   **Synchronize Display** set to **On this System** for the master sync server and set to **On Another System** on all clients
+    -   **Synchronize Display** set to **On this System** for the emitter sync server and set to **On Another System** on all clients
 
     -   Verify the display to sync is set correctly (currently only one display is used on all clients)
 
@@ -168,13 +168,13 @@ Every server is connected to two NICs (Network Interface Controller):
 
 **Multiviewer**
 
--   **Server Settings** in the **Nvidia Control Panel** of the master server set to **An External House Sync Signal**
+-   **Server Settings** in the **Nvidia Control Panel** of the emitter server set to **An External House Sync Signal**
 
 >**Note:** Since both the Multiviewer and Nvidia Quadro Sync have reference input capability, we are using a tri-level sync generator from Black Magic to feed the reference signal to both the Multiviewer and Sync card. The tri-level sync is set to 59.94Hz.
 
 
 ![](images/synchronize-displays.png)
 
->**Important:** To initialize the sync, or reinitialize after a reboot, all clients MUST be rebooted BEFORE the master sync server
+>**Important:** To initialize the sync, or reinitialize after a reboot, all clients MUST be rebooted BEFORE the emitter sync server
 
 -   Since we use a Multiviewer, every server is output through DisplayPort and then converted to HDMI. The HDMI signal then goes to a Black Magic Design mini-converter and converted to SDI which goes directly in the Multiviewer.

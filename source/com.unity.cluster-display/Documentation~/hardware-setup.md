@@ -11,11 +11,11 @@ To summarize:
 
 -   A node in the cluster consists of a workstation and a display output.
 
--   There is one Master Node and multiple client nodes (here, 1 master and 3 clients).
+-   There is one Emitter Node and multiple client nodes (here, 1 emitter and 3 clients).
 
--   You can set up the Master as a rendering node to optimize the use of your hardware resources.
+-   You can set up the Emitter as a rendering node to optimize the use of your hardware resources.
 
--   The client nodes connect to the Master Node via a wired Local Area Network.
+-   The client nodes connect to the Emitter Node via a wired Local Area Network.
 
 Additional recommendations:
 

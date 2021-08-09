@@ -28,16 +28,16 @@ If you are using VFX Graph Particles effects in HDRP, make sure to *disable* the
 
 ### Input for Cluster Display
 
-You should use only synchronized data types to update the client state. This ensures the application simulates identically across the master and all client nodes.
+You should use only synchronized data types to update the client state. This ensures the application simulates identically across the emitter and all client nodes.
 
-For reference, the master node automatically synchronizes the following data across the network:
+For reference, the emitter node automatically synchronizes the following data across the network:
 
 -   TimeManager data: Time.deltaTime, Time.unscaledDeltaTime, etc.
     <br />**Note:** Time.realTimeSinceStartup is not synchronized. You should avoid using it.
 
 -   Random number internal state
 
--   Input events from the master: keyboard, mouse, etc.
+-   Input events from the emitter: keyboard, mouse, etc.
 
 **Important:** Input events cannot be properly processed by UI elements spanning multiple displays.
 

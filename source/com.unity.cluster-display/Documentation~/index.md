@@ -10,7 +10,7 @@ Note that Unity Cluster Display does not prevent the use of multiple displays pe
 
 ## Clustering and synchronization
 
-A Cluster Display setup typically consists of **one master node** and **several client nodes**:
+A Cluster Display setup typically consists of **one emitter node** and **several client nodes**:
 
 -   A single client node consists of a workstation and a display output.
 
@@ -18,16 +18,16 @@ A Cluster Display setup typically consists of **one master node** and **several 
 
     -   All the nodes run the same interactive content in lockstep, but each one only renders a subsection of the total display surface.
 
--   The master is responsible for synchronizing the state for all client nodes.
+-   The emitter is responsible for synchronizing the state for all client nodes.
 
-    -   The client nodes connect to the master node via a **wired** Local Area Network.
+    -   The client nodes connect to the emitter node via a **wired** Local Area Network.
 
-    -   The master node does not technically need to be connected to a display, unless you configure it to also take the role of a client node.
+    -   The emitter node does not technically need to be connected to a display, unless you configure it to also take the role of a client node.
 
-**Recommended setup:** To optimize the use of your hardware, you can set up one of the nodes to take both the roles of master and client. This does not affect the cluster functionality.
+**Recommended setup:** To optimize the use of your hardware, you can set up one of the nodes to take both the roles of emitter and client. This does not affect the cluster functionality.
 
 ![](images/cluster-display-setup-example.png)
-<br />*Cluster Display setup example for 2x2 matrix display: 4 nodes, one of which is also the master.*
+<br />*Cluster Display setup example for 2x2 matrix display: 4 nodes, one of which is also the emitter.*
 
 ## Documentation overview
 
