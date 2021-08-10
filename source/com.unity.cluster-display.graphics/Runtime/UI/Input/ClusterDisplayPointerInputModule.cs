@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using Unity.ClusterDisplay.RPC;
+using Unity.ClusterDisplay.Graphics;
 
 namespace Unity.ClusterDisplay
 {
@@ -41,9 +42,13 @@ namespace Unity.ClusterDisplay
 
         private void ProcessEmitterInput ()
         {
+            if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
+                return;
+
+            var clusterDisplayMousePosition = contextCamera.ScreenPointToClusterDisplayScreenPoint(Input.mousePosition);
             cachedPointerInputData.previousScreenPosition = cachedPointerInputData.screenPosition;
-            cachedPointerInputData.screenPosition = Input.mousePosition;
-            cachedPointerInputData.deltaScreenPosition = (Vector2)Input.mousePosition - cachedPointerInputData.previousScreenPosition;
+            cachedPointerInputData.screenPosition = clusterDisplayMousePosition;
+            cachedPointerInputData.deltaScreenPosition = (Vector2)clusterDisplayMousePosition - cachedPointerInputData.previousScreenPosition;
 
             PointerInputData.SelectionState selectionState = PointerInputData.SelectionState.None;
             if (Input.GetMouseButtonDown(0))

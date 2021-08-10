@@ -38,19 +38,6 @@ namespace Unity.ClusterDisplay.Graphics
         public void UploadClusterDisplayParams (Matrix4x4 clusterDisplayParams) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, clusterDisplayParams);
 
         /// <summary>
-        /// Calculate the render size with overscan for post processing.
-        /// </summary>
-        /// <param name="width">This should be Screen.width or similar.</param>
-        /// <param name="height">This should be Screen.height or similar.</param>
-        /// <returns></returns>
-        protected Rect CalculateOverscannedRect (int width, int height)
-        {
-            return new Rect(0, 0, 
-                width + 2 * k_ClusterRenderer.context.overscanInPixels, 
-                height + 2 * k_ClusterRenderer.context.overscanInPixels);
-        }
-
-        /// <summary>
         /// After we render at the screen resolution + the overscan for post processing, we crop down to the actual render
         /// size to provide seamless tiling across the cluster.
         /// </summary>

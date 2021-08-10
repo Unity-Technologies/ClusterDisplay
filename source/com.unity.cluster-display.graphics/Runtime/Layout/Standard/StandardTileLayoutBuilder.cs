@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var camera))
+            if (!ClusterCameraController.TryGetContextCamera(out var camera))
                 return;
 
             if (camera.enabled)

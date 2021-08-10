@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var cmd = CommandBufferPool.Get("ClearRT");
 
-            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
             for (var i = 0; i < numTiles; i++)
             {
                 var sourceRT = m_RTManager.GetSourceRT(numTiles, i, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public override void LateUpdate ()
         {
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var camera))
+            if (!ClusterCameraController.TryGetContextCamera(out var camera))
                 return;
 
             if (camera.enabled)
@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             ClearTiles(numTiles);
 
-            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
             var cachedProjectionMatrix = camera.projectionMatrix;
 
             for (var tileIndex = 0; tileIndex < numTiles; tileIndex++)
@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_QueuedStitcherParameters.Count != numTiles)
                 return;
 
-            var m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            var m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
 

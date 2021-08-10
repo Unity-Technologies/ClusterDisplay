@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Current rendering camera.
         /// </summary>
-        public bool TryGetContextCamera (out Camera contextCamera)
+        public static bool TryGetContextCamera (out Camera contextCamera)
         {
             contextCamera = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
             return (contextCamera = camera) != null;
         }
 
-        public bool TryGetPreviousCameraContext (out Camera previousCameraContext)
+        public static bool TryGetPreviousCameraContext (out Camera previousCameraContext)
         {
             previousCameraContext = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))

@@ -87,5 +87,57 @@ namespace Unity.ClusterDisplay.Graphics
             frustumPlanes.top    = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top,   normalizedViewportSubsection.yMax);
             return Matrix4x4.Frustum(frustumPlanes);
         }
+
+        public static Matrix4x4 CalculateClusterDisplayParams (
+            ClusterRenderer clusterRenderer,
+            int tileId)
+        {
+            var viewportSubsection = clusterRenderer.context.GetViewportSubsection(tileId);
+            if (clusterRenderer.context.physicalScreenSize != Vector2Int.zero && clusterRenderer.context.bezel != Vector2Int.zero)
+                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, clusterRenderer.context.physicalScreenSize, clusterRenderer.context.bezel);
+            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, clusterRenderer.context.overscanInPixels);
+            return GraphicsUtil.GetClusterDisplayParams(viewportSubsection, clusterRenderer.context.globalScreenSize, clusterRenderer.context.gridSize);
+
+        }
+
+        /// <summary>
+        /// Calculate the render size with overscan for post processing.
+        /// </summary>
+        /// <param name="overscanInPixels"></param>
+        /// <returns></returns>
+        public static Rect CalculateOverscannedRect (int overscanInPixels) =>
+            new Rect(0, 0, 
+                Screen.width + 2 * overscanInPixels, 
+                Screen.height + 2 * overscanInPixels);
+
+        public static Vector2 DeviceToClusterFullscreenUV(Matrix4x4 clusterDisplayParams, Vector2 xy) =>
+            new Vector2(clusterDisplayParams[0, 0], clusterDisplayParams[0, 1]) + new Vector2(xy.x * clusterDisplayParams[0, 2], xy.y * clusterDisplayParams[0, 3]);
+
+        public static Vector2 ClusterToDeviceFullscreenUV(Matrix4x4 clusterDisplayParams, Vector2 xy) =>
+            new Vector2(xy.x - clusterDisplayParams[0, 0], xy.y - clusterDisplayParams[0, 1]) / new Vector2(clusterDisplayParams[0, 2], clusterDisplayParams[0, 3]);
+
+        public static Vector2 NdcToNcc(Matrix4x4 clusterDisplayParams, Vector2 xy)
+        {
+            // ndc to device-uv
+            xy.y = -xy.y;
+            xy = (xy + Vector2.one) * 0.5f;
+            xy = DeviceToClusterFullscreenUV(clusterDisplayParams, xy);
+            // cluster-UV to ncc
+            xy = xy * 2 - Vector2.one;
+            xy.y = -xy.y;
+            return xy;
+        }
+
+        public static Vector2 NccToNdc(Matrix4x4 clusterDisplayParams, Vector2 xy)
+        {
+            // ncc to cluster-UV
+            xy.y = -xy.y;
+            xy = (xy + Vector2.one) * 0.5f;
+            xy = ClusterToDeviceFullscreenUV(clusterDisplayParams, xy);
+            // device-UV to ndc
+            xy = xy * 2 - Vector2.one;
+            xy.y = -xy.y;
+            return xy;
+        }
     }
 }

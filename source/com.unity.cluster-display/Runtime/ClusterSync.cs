@@ -120,7 +120,10 @@ namespace Unity.ClusterDisplay
 #if UNITY_EDITOR
             if (!m_IgnoreEditorCmdLine)
             {
-                var editorInstanceCmdLine = m_EditorInstanceIsEmitter ? m_EditorInstanceEmitterCmdLine : m_EditorInstanceRepeaterCmdLine;
+                var editorInstanceCmdLine = m_EditorInstanceIsEmitter ? 
+                    m_EditorInstanceEmitterCmdLine : 
+                    m_EditorInstanceRepeaterCmdLine;
+
                 args = editorInstanceCmdLine.Split(' ').ToList();
             }
 #endif

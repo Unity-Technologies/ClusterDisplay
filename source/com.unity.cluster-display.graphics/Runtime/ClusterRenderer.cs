@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : 
-        MonoBehaviour, 
+        SingletonMonoBehaviour<ClusterRenderer>, 
         IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
@@ -246,7 +246,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Setup = false;
         }
 
-        private void Awake() => Setup();
+        protected override void OnAwake() => Setup();
         private void OnEnable() => Setup();
         private void OnDisable() => TearDown();
         private void OnDestroy() => TearDown();

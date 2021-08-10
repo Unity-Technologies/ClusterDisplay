@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
             }
 
-            overscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            overscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
             viewportSubsection = k_ClusterRenderer.context.GetViewportSubsection();
             if (k_ClusterRenderer.context.physicalScreenSize != Vector2Int.zero && k_ClusterRenderer.context.bezel != Vector2Int.zero)
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
