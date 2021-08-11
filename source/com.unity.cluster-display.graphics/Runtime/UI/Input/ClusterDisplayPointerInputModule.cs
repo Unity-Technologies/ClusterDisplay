@@ -1,35 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Graphics;
 using Unity.ClusterDisplay.RPC;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 using static UnityEngine.UI.GraphicRaycaster;
 
 namespace Unity.ClusterDisplay
 {
     public abstract class ClusterDisplayPointerInputModule : PointerInputModule
     {
-        [StructLayout(LayoutKind.Explicit, Size = 58)]
+        [StructLayout(LayoutKind.Explicit, Size = 32)]
         public struct ReplicatedPointerEventData
         {
-            
             [FieldOffset(0)] public int pointerId;
             [FieldOffset(4)] public Vector2 position;
-            [FieldOffset(12)] public Vector2 previousPosition;
-            [FieldOffset(20)] public Vector2 delta;
-            [FieldOffset(28)] public Vector2 pressPosition;
-            [FieldOffset(36)] public float clickTime;
-            [FieldOffset(40)] public int clickCount;
-            [FieldOffset(44)] public Vector2 scrollDelta;
-            [FieldOffset(52)] public bool useDragThreshold;
-            [FieldOffset(53)] public bool dragging;
-            [FieldOffset(54)] public PointerEventData.InputButton button;
+            [FieldOffset(12)] public Vector2 delta;
+            [FieldOffset(20)] public Vector2 scrollDelta;
+            [FieldOffset(28)] public PointerEventData.InputButton button;
         }
 
-        [StructLayout(LayoutKind.Explicit, Size = 62)]
+        [StructLayout(LayoutKind.Explicit, Size = 36)]
         public struct ReplicatedMouseButtonEventData
         {
             
@@ -37,15 +27,15 @@ namespace Unity.ClusterDisplay
             [FieldOffset(4)] public ReplicatedPointerEventData buttonData;
         }
 
-        [StructLayout(LayoutKind.Explicit, Size = 66)]
+        [StructLayout(LayoutKind.Explicit, Size = 40)]
         public struct ReplicatedButtonState
         {
             
-            [FieldOffset(0)] public ReplicatedMouseButtonEventData eventData;
-            [FieldOffset(62)] public PointerEventData.InputButton button;
+            [FieldOffset(0)] public PointerEventData.InputButton button;
+            [FieldOffset(4)] public ReplicatedMouseButtonEventData eventData;
         }
 
-        [StructLayout(LayoutKind.Explicit, Size = 66)]
+        [StructLayout(LayoutKind.Explicit, Size = 40)]
         public struct ReplicatedMouseState
         {
             [FieldOffset(0)] public ReplicatedButtonState leftButtonState;
@@ -53,15 +43,13 @@ namespace Unity.ClusterDisplay
         }
 
         private ReplicatedMouseState replicatedMouseState;
-        private PointerEventData m_InputPointerEvent;
-
-        private MouseState m_MouseState = new MouseState();
-        private PointerEventData m_PointerEventData;
+        private MouseState m_CachedMouseState = new MouseState();
+        private PointerEventData m_CachedPointerEventData;
 
         // This is where we receive the input data from the emitter, we want to receive
         // this before we start processing UI events, so we executes this before Update.
         [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
-        public void CachePointerState (ReplicatedMouseState replicatedMouseState) => 
+        public void ApplyPointerData (ReplicatedMouseState replicatedMouseState) => 
             this.replicatedMouseState = replicatedMouseState;
 
         public abstract Vector2 GetPointerScreenSpacePosition();
@@ -71,66 +59,53 @@ namespace Unity.ClusterDisplay
         public override bool ShouldActivateModule() => true;
         public override bool IsModuleSupported() => true;
 
-        protected static void CopyTo (PointerEventData pointerEventData, ReplicatedPointerEventData replicatedPointerEventData, EventSystem eventSystem)
+        protected void DeserializePointerEventData (ReplicatedPointerEventData replicatedPointerEventData, EventSystem eventSystem)
         {
-            pointerEventData.pointerId = replicatedPointerEventData.pointerId;
-            pointerEventData.position = replicatedPointerEventData.position;
-            pointerEventData.delta = replicatedPointerEventData.delta;
-            pointerEventData.pressPosition = replicatedPointerEventData.pressPosition;
-            pointerEventData.clickTime = replicatedPointerEventData.clickTime;
-            pointerEventData.clickCount = replicatedPointerEventData.clickCount;
-            pointerEventData.scrollDelta = replicatedPointerEventData.scrollDelta;
-            pointerEventData.useDragThreshold = replicatedPointerEventData.useDragThreshold;
-            pointerEventData.dragging = replicatedPointerEventData.dragging;
-            pointerEventData.button = replicatedPointerEventData.button;
+            m_CachedPointerEventData.pointerId = replicatedPointerEventData.pointerId;
+            m_CachedPointerEventData.position = replicatedPointerEventData.position;
+            m_CachedPointerEventData.delta = replicatedPointerEventData.delta;
+            m_CachedPointerEventData.scrollDelta = replicatedPointerEventData.scrollDelta;
+            m_CachedPointerEventData.button = replicatedPointerEventData.button;
         }
 
-        protected static ReplicatedPointerEventData CopyTo (PointerEventData pointerEventData)
+        protected void DeserializeForRepeat (ReplicatedMouseState replicatedMouseState, EventSystem eventSystem)
+        {
+            DeserializePointerEventData(replicatedMouseState.leftButtonState.eventData.buttonData, eventSystem);
+            m_CachedMouseState.SetButtonState(PointerEventData.InputButton.Left, replicatedMouseState.leftButtonState.eventData.buttonState, m_CachedPointerEventData);
+        }
+
+        protected ReplicatedPointerEventData SerializePointerEventData ()
         {
             var replicatedPointerEventData = new ReplicatedPointerEventData();
 
-            replicatedPointerEventData.pointerId = pointerEventData.pointerId;
-            replicatedPointerEventData.position = pointerEventData.position;
-            replicatedPointerEventData.delta = pointerEventData.delta;
-            replicatedPointerEventData.pressPosition = pointerEventData.pressPosition;
-            replicatedPointerEventData.clickTime = pointerEventData.clickTime;
-            replicatedPointerEventData.clickCount = pointerEventData.clickCount;
-            replicatedPointerEventData.scrollDelta = pointerEventData.scrollDelta;
-            replicatedPointerEventData.useDragThreshold = pointerEventData.useDragThreshold;
-            replicatedPointerEventData.dragging = pointerEventData.dragging;
-            replicatedPointerEventData.button = pointerEventData.button;
+            replicatedPointerEventData.pointerId = m_CachedPointerEventData.pointerId;
+            replicatedPointerEventData.position = m_CachedPointerEventData.position;
+            replicatedPointerEventData.delta = m_CachedPointerEventData.delta;
+            replicatedPointerEventData.scrollDelta = m_CachedPointerEventData.scrollDelta;
+            replicatedPointerEventData.button = m_CachedPointerEventData.button;
 
             return replicatedPointerEventData;
         }
 
-        protected static void CopyTo (MouseState mouseState, PointerEventData pointerEventData, ReplicatedMouseState replicatedMouseState, EventSystem eventSystem)
-        {
-            CopyTo(pointerEventData, replicatedMouseState.leftButtonState.eventData.buttonData, eventSystem);
-            mouseState.SetButtonState(PointerEventData.InputButton.Left, replicatedMouseState.leftButtonState.eventData.buttonState, pointerEventData);
-        }
-
-        protected static ReplicatedMouseState CopyTo (MouseState mouseState)
+        protected ReplicatedMouseState SerializeForEmit ()
         {
             var replicatedMouseState = new ReplicatedMouseState();
 
-            var leftButtonState = mouseState.GetButtonState(PointerEventData.InputButton.Left);
+            var leftButtonState = m_CachedMouseState.GetButtonState(PointerEventData.InputButton.Left);
             replicatedMouseState.leftButtonState.button = leftButtonState.button;
             replicatedMouseState.leftButtonState.eventData.buttonState = leftButtonState.eventData.buttonState;
-            replicatedMouseState.leftButtonState.eventData.buttonData = CopyTo(leftButtonState.eventData.buttonData);
+            replicatedMouseState.leftButtonState.eventData.buttonData = SerializePointerEventData();
 
             return replicatedMouseState;
         }
 
-        [SerializeField] private Canvas canvas;
-        [SerializeField] protected LayerMask m_BlockingMask = -1;
-        [SerializeField] private BlockingObjects m_BlockingObjects = BlockingObjects.None;
-        [SerializeField] private bool m_IgnoreReversedGraphics = true;
-
         public override void UpdateModule()
         {
+            /*
             if (m_InputPointerEvent != null && m_InputPointerEvent.pointerDrag != null && m_InputPointerEvent.dragging)
                 ReleaseMouse(m_InputPointerEvent, m_InputPointerEvent.pointerCurrentRaycast.gameObject);
             m_InputPointerEvent = null;
+            */
         }
 
         public override void ActivateModule()
@@ -159,10 +134,9 @@ namespace Unity.ClusterDisplay
                 DeselectIfSelectionChanged(currentOverGo, pointerEvent);
 
                 var newPressed = ExecuteEvents.ExecuteHierarchy(currentOverGo, pointerEvent, ExecuteEvents.pointerDownHandler);
-                var newClick = ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentOverGo);
-
                 if (newPressed == null)
-                    newPressed = newClick;
+                    newPressed = ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentOverGo);
+
                 float time = Time.unscaledTime;
 
                 if (newPressed == pointerEvent.lastPress)
@@ -178,14 +152,11 @@ namespace Unity.ClusterDisplay
 
                 pointerEvent.pointerPress = newPressed;
                 pointerEvent.rawPointerPress = currentOverGo;
-                pointerEvent.pointerClick = newClick;
                 pointerEvent.clickTime = time;
                 pointerEvent.pointerDrag = ExecuteEvents.GetEventHandler<IDragHandler>(currentOverGo);
 
                 if (pointerEvent.pointerDrag != null)
                     ExecuteEvents.Execute(pointerEvent.pointerDrag, pointerEvent, ExecuteEvents.initializePotentialDrag);
-
-                m_InputPointerEvent = pointerEvent;
             }
 
             if (data.ReleasedThisFrame())
@@ -197,90 +168,75 @@ namespace Unity.ClusterDisplay
             if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
                 return;
 
-            ClusterDisplayUIRaycaster.Raycast(
-                canvas, 
-                contextCamera, 
-                m_BlockingMask,
-                m_BlockingObjects,
-                m_IgnoreReversedGraphics,
-                pointerEventData, 
-                m_RaycastResultCache);
-
-            // eventSystem.RaycastAll(pointerEventData, m_RaycastResultCache);
+            eventSystem.RaycastAll(pointerEventData, m_RaycastResultCache);
             
             var raycast = FindFirstRaycast(m_RaycastResultCache);
             pointerEventData.pointerCurrentRaycast = raycast;
+            #if UNITY_EDITOR
+            if (raycast.gameObject != null)
+                UnityEditor.Selection.objects = new[] { raycast.gameObject };
+            #endif
             m_RaycastResultCache.Clear();
         }
 
-        private void GetEmitterMouseEventdata (out PointerEventData pointerEventData)
+        private void PollEmitterPointerEventData ()
         {
-            var created = GetPointerData(kMouseLeftId, out pointerEventData, true);
-            pointerEventData.Reset();
-
-            if (created)
-                pointerEventData.position = GetPointerScreenSpacePosition();
+            if (m_CachedPointerEventData == null)
+            {
+                m_CachedPointerEventData = new PointerEventData(eventSystem);
+                m_CachedPointerEventData.position = GetPointerScreenSpacePosition();
+            }
 
             Vector2 pos = GetPointerScreenSpacePosition();
-            pointerEventData.delta = pos - pointerEventData.position;
-            pointerEventData.position = pos;
+            m_CachedPointerEventData.delta = pos - m_CachedPointerEventData.position;
+            m_CachedPointerEventData.position = pos;
 
-            pointerEventData.scrollDelta = GetScrollDelta();
-            pointerEventData.button = PointerEventData.InputButton.Left;
+            m_CachedPointerEventData.scrollDelta = GetScrollDelta();
+            m_CachedPointerEventData.button = PointerEventData.InputButton.Left;
         }
 
-        private void GetRepeaterMouseEventData (out PointerEventData pointerEventData, out PointerEventData.FramePressState framePressState)
+        private void PollRepeaterPointerEventData (out PointerEventData.FramePressState framePressState)
         {
             // Copy the data we received from the emitter, and create a MouseState object.
-            if (m_PointerEventData == null)
-                m_PointerEventData = new PointerEventData(eventSystem);
-            CopyTo(m_MouseState, m_PointerEventData, replicatedMouseState, eventSystem);
-            var buttonState = m_MouseState.GetButtonState(PointerEventData.InputButton.Left);
+            if (m_CachedPointerEventData == null)
+                m_CachedPointerEventData = new PointerEventData(eventSystem);
 
-            pointerEventData = buttonState.eventData.buttonData;
+            DeserializeForRepeat(replicatedMouseState, eventSystem);
+            var buttonState = m_CachedMouseState.GetButtonState(PointerEventData.InputButton.Left);
+
             framePressState = buttonState.eventData.buttonState;
         }
 
-        protected override MouseState GetMousePointerEventData()
+        private void PollInput()
         {
             if (ClusterDisplayState.IsEmitter)
             {
                 // Push the data to repeater nodes.
-                GetEmitterMouseEventdata(out var pointerEventData);
-                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), pointerEventData);
-                CachePointerState(CopyTo(m_MouseState));
-                PerformRaycast(pointerEventData);
+                PollEmitterPointerEventData();
+                m_CachedMouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), m_CachedPointerEventData);
+                ApplyPointerData(SerializeForEmit());
+                PerformRaycast(m_CachedPointerEventData);
 
-                m_InputPointerEvent = pointerEventData;
-                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), pointerEventData);
+                m_CachedMouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), m_CachedPointerEventData);
             }
 
             else
             {
-                GetRepeaterMouseEventData(out var pointerEventData, out var framePressState);
-                PerformRaycast(pointerEventData);
+                PollRepeaterPointerEventData(out var framePressState);
+                PerformRaycast(m_CachedPointerEventData);
 
-                m_InputPointerEvent = pointerEventData;
-                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, framePressState, pointerEventData);
+                m_CachedMouseState.SetButtonState(PointerEventData.InputButton.Left, framePressState, m_CachedPointerEventData);
             }
-
-            return m_MouseState;
         }
 
         public override void Process()
         {
-            if (canvas == null)
-            {
-                Debug.LogError($"Unable to process UGUI input for cluster display, the Canvas property on: \"{nameof(ClusterDisplayPointerInputModule)}\" attached to: \"{gameObject.name}\" is null!");
-                return;
-            }
-
             if (eventSystem.currentSelectedGameObject != null)
                 ExecuteEvents.Execute(eventSystem.currentSelectedGameObject, GetBaseEventData(), ExecuteEvents.updateSelectedHandler);
 
-            MouseState mouseData = GetMousePointerEventData();
-            var pointerEventData = mouseData.GetButtonState(PointerEventData.InputButton.Left).eventData;
+            var pointerEventData = m_CachedMouseState.GetButtonState(PointerEventData.InputButton.Left).eventData;
 
+            PollInput();
             ProcessMousePress(pointerEventData);
             ProcessMove(pointerEventData.buttonData);
             ProcessDrag(pointerEventData.buttonData);
@@ -320,8 +276,6 @@ namespace Unity.ClusterDisplay
                 HandlePointerExitAndEnter(pointerEvent, null);
                 HandlePointerExitAndEnter(pointerEvent, currentOverGo);
             }
-
-            m_InputPointerEvent = pointerEvent;
         }
     }
 }

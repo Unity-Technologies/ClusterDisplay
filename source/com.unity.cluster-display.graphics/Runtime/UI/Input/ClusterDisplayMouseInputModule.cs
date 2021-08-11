@@ -16,11 +16,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override PointerEventData.FramePressState GetPressState()
         {
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
                 return PointerEventData.FramePressState.Pressed;
-            else if (Input.GetMouseButton(0))
+            else if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space))
                 return PointerEventData.FramePressState.NotChanged;
-            else if (Input.GetMouseButtonUp(0))
+            else if (Input.GetMouseButtonUp(0) || Input.GetKeyUp(KeyCode.Space))
                 return PointerEventData.FramePressState.Released;
 
             return PointerEventData.FramePressState.NotChanged;

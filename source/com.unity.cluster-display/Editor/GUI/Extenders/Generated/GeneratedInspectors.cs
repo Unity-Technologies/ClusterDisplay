@@ -140,6 +140,16 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
     {
     }
 
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.FilteredTransformHierarchyStream))]
+    public class AFilteredTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.FilteredTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.FilteredTransformHierarchyStream>>
+    {
+    }
+
+    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
+    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
+    {
+    }
+
     [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.ClusterSync))]
     public class AClusterSyncExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.ClusterSync, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.ClusterSync>>
     {
@@ -152,16 +162,6 @@ namespace Unity.ClusterDisplay.Editor.Inspectors.Generated
 
     [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.RPC.SceneObjectsRegistry))]
     public class ASceneObjectsRegistryExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.RPC.SceneObjectsRegistry, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.RPC.SceneObjectsRegistry>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.FilteredTransformHierarchyStream))]
-    public class AFilteredTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.FilteredTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.FilteredTransformHierarchyStream>>
-    {
-    }
-
-    [UnityEditor.CustomEditor(typeof(Unity.ClusterDisplay.SimpleTransformHierarchyStream))]
-    public class ASimpleTransformHierarchyStreamExtension : Unity.ClusterDisplay.Editor.Inspectors.UnityWrapperInspectorExtension<Unity.ClusterDisplay.SimpleTransformHierarchyStream, Unity.ClusterDisplay.RPC.ComponentWrapper<Unity.ClusterDisplay.SimpleTransformHierarchyStream>>
     {
     }
 
