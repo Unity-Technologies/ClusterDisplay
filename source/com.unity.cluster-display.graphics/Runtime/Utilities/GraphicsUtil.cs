@@ -88,14 +88,19 @@ namespace Unity.ClusterDisplay.Graphics
             return Matrix4x4.Frustum(frustumPlanes);
         }
 
-        public static Matrix4x4 CalculateClusterDisplayParams (
-            ClusterRenderer clusterRenderer,
-            int tileId)
+        public static Rect CalculateNormalizedViewport (ClusterRenderer clusterRenderer, int tileId)
         {
             var viewportSubsection = clusterRenderer.context.GetViewportSubsection(tileId);
             if (clusterRenderer.context.physicalScreenSize != Vector2Int.zero && clusterRenderer.context.bezel != Vector2Int.zero)
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, clusterRenderer.context.physicalScreenSize, clusterRenderer.context.bezel);
-            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, clusterRenderer.context.overscanInPixels);
+            return GraphicsUtil.ApplyOverscan(viewportSubsection, clusterRenderer.context.overscanInPixels);
+        }
+
+        public static Matrix4x4 CalculateClusterDisplayParams (
+            ClusterRenderer clusterRenderer,
+            int tileId)
+        {
+            var viewportSubsection = CalculateNormalizedViewport(clusterRenderer, tileId);
             return GraphicsUtil.GetClusterDisplayParams(viewportSubsection, clusterRenderer.context.globalScreenSize, clusterRenderer.context.gridSize);
 
         }

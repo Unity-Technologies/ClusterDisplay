@@ -165,19 +165,28 @@ namespace Unity.ClusterDisplay.RPC
                 var rpcConfigs = m_SerializedInstances[i].pipeConfig.configs;
                 var type = m_SerializedInstances[i].instance.GetType();
 
-                if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs))
-                    continue;
-
-                for (int ri = 0; ri < rpcs.Length; ri++)
+                var baseType = type;
+                // Walk up inheritance tree getting RPCs for each type in the chain.
+                while (baseType != null)
                 {
-                    if (rpcConfigs == null || rpcs[ri].rpcId >= rpcConfigs.Length)
+                    if (!RPCRegistry.TryGetRPCsForType(baseType, out var rpcs, logError: false))
+                        goto next;
+
+
+                    for (int ri = 0; ri < rpcs.Length; ri++)
                     {
-                        Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId);
-                        continue;
+                        if (rpcConfigs == null || rpcs[ri].rpcId >= rpcConfigs.Length)
+                        {
+                            Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId);
+                            goto next;
+                        }
+
+                        var instanceRPCConfig = rpcConfigs[rpcs[ri].rpcId];
+                        Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId, ref instanceRPCConfig);
                     }
 
-                    var instanceRPCConfig = rpcConfigs[rpcs[ri].rpcId];
-                    Register(m_SerializedInstances[i].instance, rpcs[ri].rpcId, ref instanceRPCConfig);
+                    next:
+                    baseType = baseType.BaseType;
                 }
             }
 

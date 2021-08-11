@@ -104,11 +104,12 @@ namespace Unity.ClusterDisplay.RPC
             return m_RPCs.TryGetValue(rpcId, out rpcMethodInfo);
         }
 
-        public static bool TryGetRPCsForType(System.Type type, out RPCMethodInfo[] rpcs)
+        public static bool TryGetRPCsForType(System.Type type, out RPCMethodInfo[] rpcs, bool logError = true)
         {
             if (!m_TypeToRPCIds.TryGetValue(type, out var rpcIds))
             {
-                Debug.LogError($"There are no registered RPCs declared in type: \"{type.FullName}\".");
+                if (logError)
+                    Debug.LogError($"There are no registered RPCs declared in type: \"{type.FullName}\".");
                 rpcs = null;
                 return false;
             }

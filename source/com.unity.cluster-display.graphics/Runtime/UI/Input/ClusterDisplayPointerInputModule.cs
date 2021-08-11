@@ -1,10 +1,12 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Unity.ClusterDisplay.Graphics;
+using Unity.ClusterDisplay.RPC;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using Unity.ClusterDisplay.RPC;
-using Unity.ClusterDisplay.Graphics;
-using System.Runtime.InteropServices;
+using UnityEngine.UI;
+using static UnityEngine.UI.GraphicRaycaster;
 
 namespace Unity.ClusterDisplay
 {
@@ -50,10 +52,27 @@ namespace Unity.ClusterDisplay
 
         }
 
-        protected static PointerEventData CopyTo (ReplicatedPointerEventData replicatedPointerEventData, EventSystem eventSystem)
-        {
-            var pointerEventData = new PointerEventData(eventSystem);
+        private ReplicatedMouseState replicatedMouseState;
+        private PointerEventData m_InputPointerEvent;
 
+        private MouseState m_MouseState = new MouseState();
+        private PointerEventData m_PointerEventData;
+
+        // This is where we receive the input data from the emitter, we want to receive
+        // this before we start processing UI events, so we executes this before Update.
+        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+        public void CachePointerState (ReplicatedMouseState replicatedMouseState) => 
+            this.replicatedMouseState = replicatedMouseState;
+
+        public abstract Vector2 GetPointerScreenSpacePosition();
+        public abstract Vector2 GetScrollDelta();
+        public abstract PointerEventData.FramePressState GetPressState();
+
+        public override bool ShouldActivateModule() => true;
+        public override bool IsModuleSupported() => true;
+
+        protected static void CopyTo (PointerEventData pointerEventData, ReplicatedPointerEventData replicatedPointerEventData, EventSystem eventSystem)
+        {
             pointerEventData.pointerId = replicatedPointerEventData.pointerId;
             pointerEventData.position = replicatedPointerEventData.position;
             pointerEventData.delta = replicatedPointerEventData.delta;
@@ -64,8 +83,6 @@ namespace Unity.ClusterDisplay
             pointerEventData.useDragThreshold = replicatedPointerEventData.useDragThreshold;
             pointerEventData.dragging = replicatedPointerEventData.dragging;
             pointerEventData.button = replicatedPointerEventData.button;
-
-            return pointerEventData;
         }
 
         protected static ReplicatedPointerEventData CopyTo (PointerEventData pointerEventData)
@@ -86,14 +103,10 @@ namespace Unity.ClusterDisplay
             return replicatedPointerEventData;
         }
 
-        protected static MouseState CopyTo (ReplicatedMouseState replicatedMouseState, EventSystem eventSystem)
+        protected static void CopyTo (MouseState mouseState, PointerEventData pointerEventData, ReplicatedMouseState replicatedMouseState, EventSystem eventSystem)
         {
-            var mouseState = new MouseState();
-
-            var leftPointerEventData = CopyTo(replicatedMouseState.leftButtonState.eventData.buttonData, eventSystem);
-            mouseState.SetButtonState(PointerEventData.InputButton.Left, replicatedMouseState.leftButtonState.eventData.buttonState, leftPointerEventData);
-
-            return mouseState;
+            CopyTo(pointerEventData, replicatedMouseState.leftButtonState.eventData.buttonData, eventSystem);
+            mouseState.SetButtonState(PointerEventData.InputButton.Left, replicatedMouseState.leftButtonState.eventData.buttonState, pointerEventData);
         }
 
         protected static ReplicatedMouseState CopyTo (MouseState mouseState)
@@ -108,22 +121,10 @@ namespace Unity.ClusterDisplay
             return replicatedMouseState;
         }
 
-        private ReplicatedMouseState replicatedMouseState;
-        private PointerEventData m_InputPointerEvent;
-        private MouseState m_MouseState;
-
-        // This is where we receive the input data from the emitter, we want to receive
-        // this before we start processing UI events, so we executes this before Update.
-        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
-        public void CachePointerState (ReplicatedMouseState replicatedMouseState) => 
-            this.replicatedMouseState = replicatedMouseState;
-
-        public abstract Vector2 GetPointerScreenSpacePosition();
-        public abstract Vector2 GetScrollDelta();
-        public abstract PointerEventData.FramePressState GetPressState();
-
-        public override bool ShouldActivateModule() => true;
-        public override bool IsModuleSupported() => true;
+        [SerializeField] private Canvas canvas;
+        [SerializeField] protected LayerMask m_BlockingMask = -1;
+        [SerializeField] private BlockingObjects m_BlockingObjects = BlockingObjects.None;
+        [SerializeField] private bool m_IgnoreReversedGraphics = true;
 
         public override void UpdateModule()
         {
@@ -191,38 +192,52 @@ namespace Unity.ClusterDisplay
                 ReleaseMouse(pointerEvent, currentOverGo);
         }
 
-        private void PerformRaycast (PointerEventData leftData)
+        private void PerformRaycast (PointerEventData pointerEventData)
         {
-            eventSystem.RaycastAll(leftData, m_RaycastResultCache);
+            if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
+                return;
+
+            ClusterDisplayUIRaycaster.Raycast(
+                canvas, 
+                contextCamera, 
+                m_BlockingMask,
+                m_BlockingObjects,
+                m_IgnoreReversedGraphics,
+                pointerEventData, 
+                m_RaycastResultCache);
+
+            // eventSystem.RaycastAll(pointerEventData, m_RaycastResultCache);
+            
             var raycast = FindFirstRaycast(m_RaycastResultCache);
-            leftData.pointerCurrentRaycast = raycast;
+            pointerEventData.pointerCurrentRaycast = raycast;
             m_RaycastResultCache.Clear();
         }
 
-        private void GetEmitterMouseEventdata (out PointerEventData leftData)
+        private void GetEmitterMouseEventdata (out PointerEventData pointerEventData)
         {
-            var created = GetPointerData(kMouseLeftId, out leftData, true);
-
-            leftData.Reset();
+            var created = GetPointerData(kMouseLeftId, out pointerEventData, true);
+            pointerEventData.Reset();
 
             if (created)
-                leftData.position = GetPointerScreenSpacePosition();
+                pointerEventData.position = GetPointerScreenSpacePosition();
 
             Vector2 pos = GetPointerScreenSpacePosition();
-            leftData.delta = pos - leftData.position;
-            leftData.position = pos;
+            pointerEventData.delta = pos - pointerEventData.position;
+            pointerEventData.position = pos;
 
-            leftData.scrollDelta = GetScrollDelta();
-            leftData.button = PointerEventData.InputButton.Left;
+            pointerEventData.scrollDelta = GetScrollDelta();
+            pointerEventData.button = PointerEventData.InputButton.Left;
         }
 
-        private void GetRepeaterMouseEventData (out PointerEventData leftData, out PointerEventData.FramePressState framePressState)
+        private void GetRepeaterMouseEventData (out PointerEventData pointerEventData, out PointerEventData.FramePressState framePressState)
         {
             // Copy the data we received from the emitter, and create a MouseState object.
-            m_MouseState = CopyTo(replicatedMouseState, eventSystem);
+            if (m_PointerEventData == null)
+                m_PointerEventData = new PointerEventData(eventSystem);
+            CopyTo(m_MouseState, m_PointerEventData, replicatedMouseState, eventSystem);
             var buttonState = m_MouseState.GetButtonState(PointerEventData.InputButton.Left);
 
-            leftData = buttonState.eventData.buttonData;
+            pointerEventData = buttonState.eventData.buttonData;
             framePressState = buttonState.eventData.buttonState;
         }
 
@@ -231,20 +246,22 @@ namespace Unity.ClusterDisplay
             if (ClusterDisplayState.IsEmitter)
             {
                 // Push the data to repeater nodes.
-                GetEmitterMouseEventdata(out var leftData);
-
+                GetEmitterMouseEventdata(out var pointerEventData);
+                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), pointerEventData);
                 CachePointerState(CopyTo(m_MouseState));
-                PerformRaycast(leftData);
+                PerformRaycast(pointerEventData);
 
-                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), leftData);
+                m_InputPointerEvent = pointerEventData;
+                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, GetPressState(), pointerEventData);
             }
 
             else
             {
-                GetRepeaterMouseEventData(out var leftData, out var framePressState);
-                PerformRaycast(leftData);
+                GetRepeaterMouseEventData(out var pointerEventData, out var framePressState);
+                PerformRaycast(pointerEventData);
 
-                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, framePressState, leftData);
+                m_InputPointerEvent = pointerEventData;
+                m_MouseState.SetButtonState(PointerEventData.InputButton.Left, framePressState, pointerEventData);
             }
 
             return m_MouseState;
@@ -252,23 +269,27 @@ namespace Unity.ClusterDisplay
 
         public override void Process()
         {
+            if (canvas == null)
+            {
+                Debug.LogError($"Unable to process UGUI input for cluster display, the Canvas property on: \"{nameof(ClusterDisplayPointerInputModule)}\" attached to: \"{gameObject.name}\" is null!");
+                return;
+            }
+
             if (eventSystem.currentSelectedGameObject != null)
                 ExecuteEvents.Execute(eventSystem.currentSelectedGameObject, GetBaseEventData(), ExecuteEvents.updateSelectedHandler);
 
-            MouseState mouseData = GetMousePointerEventData(0);
-            var leftButtonData = mouseData.GetButtonState(PointerEventData.InputButton.Left).eventData;
+            MouseState mouseData = GetMousePointerEventData();
+            var pointerEventData = mouseData.GetButtonState(PointerEventData.InputButton.Left).eventData;
 
-            ProcessMousePress(leftButtonData);
-            m_InputPointerEvent = leftButtonData.buttonData;
+            ProcessMousePress(pointerEventData);
+            ProcessMove(pointerEventData.buttonData);
+            ProcessDrag(pointerEventData.buttonData);
 
-            ProcessMove(leftButtonData.buttonData);
-            ProcessDrag(leftButtonData.buttonData);
-
-            if (!Mathf.Approximately(leftButtonData.buttonData.scrollDelta.sqrMagnitude, 0.0f))
+            if (!Mathf.Approximately(pointerEventData.buttonData.scrollDelta.sqrMagnitude, 0.0f))
             {
-                var m_CurrentFocusedGameObject = leftButtonData.buttonData.pointerCurrentRaycast.gameObject;
-                var scrollHandler = ExecuteEvents.GetEventHandler<IScrollHandler>(leftButtonData.buttonData.pointerCurrentRaycast.gameObject);
-                ExecuteEvents.ExecuteHierarchy(scrollHandler, leftButtonData.buttonData, ExecuteEvents.scrollHandler);
+                var m_CurrentFocusedGameObject = pointerEventData.buttonData.pointerCurrentRaycast.gameObject;
+                var scrollHandler = ExecuteEvents.GetEventHandler<IScrollHandler>(pointerEventData.buttonData.pointerCurrentRaycast.gameObject);
+                ExecuteEvents.ExecuteHierarchy(scrollHandler, pointerEventData.buttonData, ExecuteEvents.scrollHandler);
             }
         }
 

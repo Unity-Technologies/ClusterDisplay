@@ -22,6 +22,7 @@ namespace Unity.ClusterDisplay.RPC
         [GetInstanceMarker] public static Object GetInstance(ushort pipeId)
         {
             // TODO: Wrap this null check in a verbose logging #if to improve performance.
+
             var obj = m_Instances[pipeId];
             if (obj == null)
             {
@@ -235,9 +236,18 @@ namespace Unity.ClusterDisplay.RPC
 
             rpcRegistry.Foreach(((rpcMethodInfo) =>
             {
-                var componentsWithRPCs = components.Where(component => component.GetType() == rpcMethodInfo.methodInfo.DeclaringType);
+                List<Component> componentsWithRPC = new List<Component>();
+                for (int ci = 0; ci < components.Length; ci++)
+                {
+                    var type = components[ci].GetType();
+                    if (type != rpcMethodInfo.methodInfo.DeclaringType &&
+                        !type.IsSubclassOf(rpcMethodInfo.methodInfo.DeclaringType))
+                        continue;
 
-                foreach (var component in componentsWithRPCs)
+                    componentsWithRPC.Add(components[ci]);
+                }
+
+                foreach (var component in componentsWithRPC)
                 {
                     if (!sceneObjectsRegistry.TryGetValue(component.gameObject.scene.path, out var sceneRegistry))
                     {
