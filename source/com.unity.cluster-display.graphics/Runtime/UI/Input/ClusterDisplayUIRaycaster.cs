@@ -110,6 +110,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Ray ray = eventCamera.ClusterDisplayScreenPointToRay(pointerEventData.position);
             Ray ray = eventCamera.ScreenPointToRay(eventData.position);
+            Debug.DrawRay(ray.origin, ray.direction * 100, Color.red, 0.1f);
 
             float hitDistance = float.MaxValue;
             float projectionDirection = ray.direction.z;

@@ -8,10 +8,10 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public static Vector2 ScreenPointToClusterDisplayScreenPoint (this Camera camera, Vector2 screenPoint)
         {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
-                !ClusterSync.TryGetInstance(out var clusterSync) || 
+            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) ||
+                !ClusterSync.TryGetInstance(out var clusterSync) ||
                 !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return Vector2.zero;
+                return screenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
             return GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint);
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
         public static Vector2 ScreenPointToClusterDisplayScreenPoint (this Camera camera, int tileIndex, Vector2 screenPoint)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return Vector2.zero;
+                return screenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
             return GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint);
@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
                 !ClusterSync.TryGetInstance(out var clusterSync) || 
                 !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return Vector2.zero;
+                return screenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
             return camera.ScreenToWorldPoint(GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint));
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
                 !ClusterSync.TryGetInstance(out var clusterSync) || 
                 !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return default(Ray);
+                return camera.ScreenPointToRay(screenPoint);
 
             var normalizedViewport = GraphicsUtil.CalculateNormalizedViewport(clusterRenderer, tileId);
             var asymmetricProjection = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, normalizedViewport);
@@ -53,17 +53,10 @@ namespace Unity.ClusterDisplay.Graphics
             return new Ray(camera.transform.position, (worldPoint - camera.transform.position).normalized);
         }
 
-        /*
-        public static Vector2 WorldPointToClusterDisplayScreenPoint (this Camera camera, Vector3 worldPoint)
-        {
-            var localPoint = camera.transform.worldToLocalMatrix.MultiplyPoint(worldPoint);
-        }
-        */
-
         public static Vector2 ScreenPointToClusterDisplayWorldPoint (this Camera camera, int tileIndex, Vector2 screenPoint)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return Vector2.zero;
+                return screenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
             return camera.ScreenToWorldPoint(GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint));
@@ -74,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
                 !ClusterSync.TryGetInstance(out var clusterSync) || 
                 !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return Vector2.zero;
+                return clusterDisplayScreenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
             return GraphicsUtil.NccToNdc(clusterDisplayParams, clusterDisplayScreenPoint);
@@ -83,7 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
         public static Vector2 ClusterDisplayScreenPointToScreenPoint (this Camera camera, int tileIndex, Vector2 clusterDisplayScreenPoint)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return Vector2.zero;
+                return clusterDisplayScreenPoint;
 
             var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
             return GraphicsUtil.NccToNdc(clusterDisplayParams, clusterDisplayScreenPoint);

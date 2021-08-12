@@ -76,11 +76,11 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] private ClusterRenderContext m_Context = new ClusterRenderContext();
 
         #if CLUSTER_DISPLAY_HDRP
-        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
-        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
+        private readonly ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
+        private readonly IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
         #else
-        [HideInInspector][SerializeField] private ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
-        [HideInInspector][SerializeField] private IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
+        private readonly ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
+        private readonly IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
         #endif
 
         /// <summary>
@@ -215,7 +215,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             RegisterRendererEvents(m_ClusterCameraController);
             RegisterModule(m_ClusterRendererModule);
+
             m_Context.debugSettings.RegisterDebugSettingsReceiver(this);
+
+            if (ClusterDisplayState.IsClusterLogicEnabled && Application.isPlaying)
+                debugSettings.currentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
+            else debugSettings.currentLayoutMode = ClusterRenderer.LayoutMode.StandardStitcher;
+
+            ToggleShaderKeywords(debugSettings.enableKeyword);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
