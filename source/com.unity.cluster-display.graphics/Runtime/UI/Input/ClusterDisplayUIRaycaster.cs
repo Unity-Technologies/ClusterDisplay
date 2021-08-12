@@ -7,60 +7,9 @@ using static UnityEngine.UI.GraphicRaycaster;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class ClusterDisplayUIRaycaster : BaseRaycaster
+    public class ClusterDisplayUIRaycaster : GraphicRaycaster
     {
         readonly List<Graphic> s_SortedGraphics = new List<Graphic>();
-
-        private static int RaycastComparer(RaycastResult lhs, RaycastResult rhs)
-        {
-            if (lhs.module != rhs.module)
-            {
-                var lhsEventCamera = lhs.module.eventCamera;
-                var rhsEventCamera = rhs.module.eventCamera;
-                if (lhsEventCamera != null && rhsEventCamera != null && lhsEventCamera.depth != rhsEventCamera.depth)
-                {
-                    // need to reverse the standard compareTo
-                    if (lhsEventCamera.depth < rhsEventCamera.depth)
-                        return 1;
-                    if (lhsEventCamera.depth == rhsEventCamera.depth)
-                        return 0;
-
-                    return -1;
-                }
-
-                if (lhs.module.sortOrderPriority != rhs.module.sortOrderPriority)
-                    return rhs.module.sortOrderPriority.CompareTo(lhs.module.sortOrderPriority);
-
-                if (lhs.module.renderOrderPriority != rhs.module.renderOrderPriority)
-                    return rhs.module.renderOrderPriority.CompareTo(lhs.module.renderOrderPriority);
-            }
-
-            if (lhs.sortingLayer != rhs.sortingLayer)
-            {
-                // Uses the layer value to properly compare the relative order of the layers.
-                var rid = SortingLayer.GetLayerValueFromID(rhs.sortingLayer);
-                var lid = SortingLayer.GetLayerValueFromID(lhs.sortingLayer);
-                return rid.CompareTo(lid);
-            }
-
-            if (lhs.sortingOrder != rhs.sortingOrder)
-                return rhs.sortingOrder.CompareTo(lhs.sortingOrder);
-
-            // comparing depth only makes sense if the two raycast results have the same root canvas (case 912396)
-            if (lhs.depth != rhs.depth)
-                return rhs.depth.CompareTo(lhs.depth);
-
-            if (lhs.distance != rhs.distance)
-                return lhs.distance.CompareTo(rhs.distance);
-
-            return lhs.index.CompareTo(rhs.index);
-        }
-
-        private readonly Comparison<RaycastResult> s_RaycastComparer = RaycastComparer;
-
-        [SerializeField] protected LayerMask m_BlockingMask = -1;
-        [SerializeField] private BlockingObjects m_BlockingObjects = BlockingObjects.None;
-        [SerializeField] private bool m_IgnoreReversedGraphics = true;
 
         private Canvas m_Canvas;
         private Canvas canvas
@@ -102,7 +51,6 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList)
         {
             List<Graphic> m_RaycastResults = new List<Graphic>();
-            resultAppendList.Clear();
 
             var canvasGraphics = GraphicRegistry.GetGraphicsForCanvas(canvas);
             if (canvasGraphics == null || canvasGraphics.Count == 0)
@@ -118,14 +66,14 @@ namespace Unity.ClusterDisplay.Graphics
                 ? Mathf.Infinity
                 : Mathf.Abs((eventCamera.farClipPlane - eventCamera.nearClipPlane) / projectionDirection);
 
-            if (m_BlockingObjects == BlockingObjects.ThreeD || m_BlockingObjects == BlockingObjects.All)
+            if (blockingObjects == BlockingObjects.ThreeD || blockingObjects == BlockingObjects.All)
             {
                 var hits = Physics.RaycastAll(ray, distanceToClipPlane, (int)m_BlockingMask);
                 if (hits.Length > 0)
                     hitDistance = hits[0].distance;
             }
 
-            if (m_BlockingObjects == BlockingObjects.TwoD || m_BlockingObjects == BlockingObjects.All)
+            if (blockingObjects == BlockingObjects.TwoD || blockingObjects == BlockingObjects.All)
             {
                 var hits = Physics2D.GetRayIntersectionAll(ray, distanceToClipPlane, (int)m_BlockingMask);
                 if (hits.Length > 0)
@@ -158,7 +106,7 @@ namespace Unity.ClusterDisplay.Graphics
                 var go = m_RaycastResults[index].gameObject;
                 bool appendGraphic = true;
 
-                if (m_IgnoreReversedGraphics)
+                if (ignoreReversedGraphics)
                 {
                     var cameraFoward = eventCamera.transform.rotation * Vector3.forward;
                     var dir = go.transform.rotation * Vector3.forward;
@@ -190,8 +138,6 @@ namespace Unity.ClusterDisplay.Graphics
                     resultAppendList.Add(castResult);
                 }
             }
-
-            resultAppendList.Sort(s_RaycastComparer);
         }
     }
 }

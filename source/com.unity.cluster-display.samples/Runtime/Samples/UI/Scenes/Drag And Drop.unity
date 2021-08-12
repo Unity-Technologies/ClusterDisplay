@@ -212,13 +212,13 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 93313321}
   m_CullTransparentMesh: 0
---- !u!84 &133168571
+--- !u!84 &165063245
 RenderTexture:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Tile-1-RT-(1278X793)
+  m_Name: Tile-1-RT-(1278X805)
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
@@ -226,7 +226,7 @@ RenderTexture:
   m_DownscaleFallback: 0
   serializedVersion: 3
   m_Width: 1278
-  m_Height: 793
+  m_Height: 805
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthFormat: 1
@@ -582,7 +582,7 @@ PrefabInstance:
     - target: {fileID: 2000000, guid: 7461a7b0cf97947fd9b9e4502fd2d07b, type: 3}
       propertyPath: m_TargetTexture
       value: 
-      objectReference: {fileID: 133168571}
+      objectReference: {fileID: 165063245}
     - target: {fileID: 21200000, guid: 7461a7b0cf97947fd9b9e4502fd2d07b, type: 3}
       propertyPath: m_WasSpriteAssigned
       value: 1
