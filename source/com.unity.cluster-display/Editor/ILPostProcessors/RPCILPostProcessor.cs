@@ -127,7 +127,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             AssemblyDefinition compiledAssemblyDef, 
             SerializedRPC[] serializedRPCs)
         {
-            foreach (var serializedRPC in serializedRPCs)
+            var orderedSerializedRPCs = serializedRPCs.OrderBy(serializedRPC => serializedRPC.method.methodName);
+            foreach (var serializedRPC in orderedSerializedRPCs)
             {
                 var rpc = serializedRPC;
 
