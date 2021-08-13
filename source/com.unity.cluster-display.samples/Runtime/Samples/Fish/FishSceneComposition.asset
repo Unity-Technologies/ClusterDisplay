@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: FishSceneComposition
   m_EditorClassIdentifier: 
   compositionName: MultiRootTransformHierarchyStreaming
-  baseScene: {fileID: 102900000, guid: 6adc8101cf8ad754a8ffb0e83e67d023, type: 3}
+  baseScene: {fileID: 102900000, guid: 9fc0d4010bbf28b4594072e72b8655ab, type: 3}
   additions:
   - {fileID: 102900000, guid: a87a6b9d896ea004da5d1e02aebd1fd9, type: 3}
-  - {fileID: 102900000, guid: 9fc0d4010bbf28b4594072e72b8655ab, type: 3}

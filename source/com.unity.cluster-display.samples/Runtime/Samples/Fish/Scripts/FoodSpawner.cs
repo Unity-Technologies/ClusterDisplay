@@ -1,7 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Unity.ClusterDisplay;
 using UnityEngine;
+using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.Graphics;
 
 public class FoodSpawner : MonoBehaviour
 {
@@ -11,26 +12,14 @@ public class FoodSpawner : MonoBehaviour
     {
         World.SetFoodParent(transform);
         World.SetFoodPrefab(foodPrefab);
-
-        StartCoroutine(FoodSpawnerCoroutine());
     }
 
-    private IEnumerator FoodSpawnerCoroutine ()
+    private void Update()
     {
-        WaitForSeconds waitForSeconds = new WaitForSeconds(0.5f);
-        while (true)
-        {
-            yield return waitForSeconds;
-
-            World.SpawnFood(new Vector3(
-                RandomWrapper.Range(-10, 10),
-                RandomWrapper.Range(-10, 10),
-                RandomWrapper.Range(-10, 10)));
-        }
+        if (ClusterDisplayState.IsEmitter)
+            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+                World.SpawnFood(FishUtils.GetWorldInteractionPosition());
     }
 
-    private void OnDestroy()
-    {
-        World.Dispose();
-    }
+    private void OnDestroy() => World.Dispose();
 }

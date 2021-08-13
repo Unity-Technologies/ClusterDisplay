@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    static class GraphicsUtil
+    public static class GraphicsUtil
     {
         public static Matrix4x4 GetClusterDisplayParams(Rect overscannedViewportSubsection, Vector2 globalScreenSize, Vector2Int gridSize)
         {

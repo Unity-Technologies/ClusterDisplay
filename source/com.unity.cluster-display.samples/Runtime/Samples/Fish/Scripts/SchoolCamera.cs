@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.RPC;
 
 [RequireComponent(typeof(Camera))]
 public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
@@ -28,15 +29,14 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
             return;
 
         var schoolBounds = school.SchoolBounds;
-        float boundSizeMag = schoolBounds.size.magnitude;
-        if (boundSizeMag <= 0f || float.IsNaN(boundSizeMag) || float.IsInfinity(boundSizeMag))
-            return;
+        Vector3 min = Vector3.Min(FishUtils.CheckForNANs(schoolBounds.min), -Vector3.one), max = Vector3.Max(FishUtils.CheckForNANs(schoolBounds.max), Vector3.one);
+        Vector3 center = FishUtils.CheckForNANs(schoolBounds.center);
 
-        var pos = schoolBounds.center + m_LookAtDirection.normalized * (schoolBounds.max - schoolBounds.min).magnitude * m_OffsetDistance;
-        var targetCameraPos = Vector3.Slerp(m_Camera.transform.position, pos, Time.deltaTime);
+        var pos = center + m_LookAtDirection.normalized * (max - min).magnitude * m_OffsetDistance;
+        var targetCameraPos = Vector3.Lerp(m_Camera.transform.position, pos, Time.deltaTime / 0.05f);
 
         m_Camera.transform.position = targetCameraPos;
-        m_Camera.transform.rotation = Quaternion.Slerp(m_Camera.transform.rotation, Quaternion.LookRotation((schoolBounds.center - targetCameraPos).normalized, Vector3.up), Time.deltaTime / 0.1f);
+        m_Camera.transform.rotation = Quaternion.Lerp(m_Camera.transform.rotation, Quaternion.LookRotation((center - targetCameraPos).normalized, Vector3.up), Time.deltaTime / 0.05f);
 
         if (ClusterDisplayState.IsEmitter)
         {
@@ -51,7 +51,7 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
         }
     }
 
-    [Unity.ClusterDisplay.RPC.ClusterRPC]
+    [ClusterRPC]
     public void SetLookAtDirection (float pitch, float yaw)
     {
         DeterministicUtils.LogCall(pitch, yaw);
@@ -66,8 +66,8 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
         m_Yaw = yaw;
 
         var currentRotation = Quaternion.LookRotation(m_LookAtDirection, Vector3.up);
-        currentRotation = Quaternion.AngleAxis(pitch, Vector3.right);
-        currentRotation *= Quaternion.AngleAxis(yaw, Vector3.up);
+        currentRotation = Quaternion.AngleAxis(yaw, Vector3.up);
+        currentRotation *= Quaternion.AngleAxis(pitch, Vector3.right);
         m_LookAtDirection = currentRotation * Vector3.forward;
     }
 }

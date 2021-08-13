@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.RPC;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -23,7 +24,7 @@ public static class World
     public static void SetFoodPrefab(PoolablePrefab foodPrefab) => World.foodPrefab = foodPrefab;
     public static void SetFoodParent(Transform parent) => foodInstanceParent = parent;
 
-    // [RPC]
+    [ClusterRPC]
     public static void SpawnFood (Vector3 foodPosition)
     {
         DeterministicUtils.LogCall(foodPosition);
@@ -37,6 +38,7 @@ public static class World
         if (eatenFoodIndices.Count > 0)
         {
             foodIndex = eatenFoodIndices[eatenFoodIndices.Count - 1];
+            eatenFoodIndices.RemoveAt(eatenFoodIndices.Count - 1);
             food[foodIndex] = go;
         }
 
@@ -70,7 +72,6 @@ public static class World
         foodPositions[foodIndex] = foodPosition;
     }
 
-    // [RPC]
     public static bool EatFood (int foodIndex)
     {
         DeterministicUtils.LogCall(foodIndex);

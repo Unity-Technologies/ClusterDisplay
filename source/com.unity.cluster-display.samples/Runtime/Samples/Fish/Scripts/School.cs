@@ -1,14 +1,11 @@
-﻿using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.ClusterDisplay;
+﻿using Unity.ClusterDisplay;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 using Unity.Mathematics;
 using Unity.Burst;
 using UnityEngine.Jobs;
-using System.Threading;
+using Unity.ClusterDisplay.RPC;
 
 public class School : SingletonMonoBehaviour<School>
 {
@@ -28,8 +25,8 @@ public class School : SingletonMonoBehaviour<School>
     private Bounds schoolBounds;
 
     public Bounds SchoolBounds => schoolBounds;
-    public Vector3 Center => schoolBounds.center;
-    public Vector3 Velocity => schoolBounds.center - previousSchoolBounds.center;
+    public Vector3 Center => FishUtils.CheckForNANs(schoolBounds.center);
+    public Vector3 Velocity => Center - FishUtils.CheckForNANs(previousSchoolBounds.center);
 
     private SchoolJob schoolJob = new SchoolJob();
     private JobHandle ? schoolJobHandle = null;
@@ -37,10 +34,7 @@ public class School : SingletonMonoBehaviour<School>
     private UpdateMatricesJob updateMatricesJob = new UpdateMatricesJob();
     private NativeList<int> eatenFood;
 
-    private void Awake()
-    {
-        UnityEngine.Random.InitState(100);
-    }
+    private void Awake() => UnityEngine.Random.InitState(100);
 
     private void OnDestroy()
     {
@@ -71,8 +65,10 @@ public class School : SingletonMonoBehaviour<School>
         System.Array.Copy(tempArray, array, tempArray.Length);
     }
 
-    // [RPC]
-    public void Spawn (Vector3 position, Quaternion rotation)
+    [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+    public void Spawn(Vector3 position, Quaternion rotation) => SpawnLocally(position, rotation);
+
+    public void SpawnLocally (Vector3 position, Quaternion rotation)
     {
         if (!PrefabPool.TryGetInstance(out var prefabPool))
             return;
@@ -90,12 +86,8 @@ public class School : SingletonMonoBehaviour<School>
         fish[fishCount] = newFish.GetComponent<Fish>();
         fishTransforms[fishCount] = newFish.transform;
         fishCount++;
-    }
 
-    public void NameFish (int fishIndex, string fishName)
-    {
-        Debug.Log($"Naming fish: {fishIndex} to: {fishName}");
-        fish[fishIndex].FishName = fishName;
+        PollSchoolBuffers();
     }
 
     public void SetFishPositions (Vector3[] positions)
@@ -103,8 +95,16 @@ public class School : SingletonMonoBehaviour<School>
         for (int i = 0; i < positions.Length; i++)
             fish[i].transform.position = positions[i];
     }
+
+    private void ResetFishPositions ()
+    {
+        var startingFishPositions = new Vector3[startingSchoolSize];
+        for (int i = 0; i < startingFishPositions.Length; i++)
+            startingFishPositions[i] = Vector3.one;
+
+        SetFishPositions(startingFishPositions);
+    }
     
-    // [RPC]
     public void PollSchoolBuffers()
     {
         schoolJob.fishCount = fishCount;
@@ -131,36 +131,15 @@ public class School : SingletonMonoBehaviour<School>
         schoolJob.bufferSize = fishCount + preallocatedCount;
     }
 
-    [Unity.ClusterDisplay.RPC.ClusterRPC]
-    public void SpawnInitialSchool ()
-    {
-        for (int i = 0; i < startingSchoolSize; i++)
-            Spawn(
-                new Vector3(RandomWrapper.Range(-10f, 10f), RandomWrapper.Range(-10f, 10f), RandomWrapper.Range(-10f, 10f)),
-                Quaternion.AngleAxis((RandomWrapper.value * 2.0f - 1.0f) * 180.0f, Vector3.forward));
-
-
-        PollSchoolBuffers();
-    }
-
-    private void ResetFishPositions ()
-    {
-        var startingFishPositions = new Vector3[startingSchoolSize];
-        for (int i = 0; i < startingFishPositions.Length; i++)
-            startingFishPositions[i] = Vector3.one;
-
-        SetFishPositions(startingFishPositions);
-    }
-
     private void Update()
     {
         if (ClusterDisplayState.IsEmitter)
         {
-            if (Input.GetKeyDown(KeyCode.Return))
-                SpawnInitialSchool();
-
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.R))
                 ResetFishPositions();
+
+            if ((Input.GetKey(KeyCode.LeftShift) && Input.GetMouseButtonDown(0)) || (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.Space)))
+                Spawn(FishUtils.GetWorldInteractionPosition(), Quaternion.identity);
         }
     }
 
@@ -226,7 +205,7 @@ public class School : SingletonMonoBehaviour<School>
             {
                 float3 position = schoolJob.foodPositions[eatenFood[i]];
                 if (World.EatFood(eatenFood[i]))
-                    Spawn(position, Quaternion.AngleAxis((RandomWrapper.untrackedValue * 2.0f - 1.0f) * 180.0f, Vector3.forward));
+                    SpawnLocally(position, Quaternion.AngleAxis((RandomWrapper.value * 2.0f - 1.0f) * 180.0f, Vector3.forward));
             }
 
             PollSchoolBuffers();
@@ -239,11 +218,7 @@ public class School : SingletonMonoBehaviour<School>
     public struct UpdateMatricesJob : IJobParallelForTransform
     {
         public NativeArray<float4x4> fishMatrices;
-
-        public void Execute(int index, TransformAccess transform)
-        {
-            fishMatrices[index] = transform.localToWorldMatrix;
-        }
+        public void Execute(int index, TransformAccess transform) => fishMatrices[index] = transform.localToWorldMatrix;
     }
 
     [BurstCompile(CompileSynchronously = true, FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.High)]
@@ -319,7 +294,7 @@ public class School : SingletonMonoBehaviour<School>
                 if (foodDistance > 6f)
                     continue;
 
-                if (foodDistance < 2.5f)
+                if (foodDistance < 1f)
                 {
                     eatenFood.AddNoResize(foodIndex);
                     break;
