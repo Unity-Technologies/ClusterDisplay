@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
@@ -159,6 +160,15 @@ namespace Unity.ClusterDisplay.RPC
             rpcBufferSize += structSize;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ushort ShiftRPCExecutionStage (ushort rpcExecutionStage)
+        {
+            rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (ushort)RPCExecutor.CurrentExecutionStage + 1);
+            if (rpcExecutionStage >= (ushort)RPCExecutionStage.AfterLateUpdate)
+                rpcExecutionStage = (ushort)RPCExecutionStage.AfterLateUpdate;
+            return rpcExecutionStage;
+        }
+
         [RPCCallMarker]
         public static void AppendRPCCall (
             UnityEngine.Component instance, 
@@ -169,6 +179,8 @@ namespace Unity.ClusterDisplay.RPC
         {
             if (!AllowWrites)
                 return;
+            if (instance.GetType().Name == "TransformWrapper")
+                UnityEngine.Debug.Log("TEST");
 
             if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
             {
@@ -196,7 +208,7 @@ namespace Unity.ClusterDisplay.RPC
             }
 
             buint startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (int)RPCExecutor.CurrentExecutionStage + 1);
+            rpcExecutionStage = ShiftRPCExecutionStage(rpcExecutionStage);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
@@ -232,7 +244,7 @@ namespace Unity.ClusterDisplay.RPC
             }
 
             buint startingBufferPos = rpcBufferSize;
-            rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (int)RPCExecutor.CurrentExecutionStage + 1);
+            rpcExecutionStage = ShiftRPCExecutionStage(rpcExecutionStage);
 
             AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));

@@ -14,13 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SerializedRegisteredAssemblies: '
 
-    Unity.ClusterDisplay.Graphics, Version=0.0.0.0,
+    Unity.ClusterDisplay.Samples, Version=0.0.0.0,
     Culture=neutral, PublicKeyToken=null
 
     Unity.ClusterDisplay.Runtime, Version=0.0.0.0,
     Culture=neutral, PublicKeyToken=null
 
-    Unity.ClusterDisplay.Samples, Version=0.0.0.0,
+    Unity.ClusterDisplay.Graphics, Version=0.0.0.0,
+    Culture=neutral, PublicKeyToken=null
+
+    Assembly-CSharp, Version=0.0.0.0,
     Culture=neutral, PublicKeyToken=null'
   m_JSONString: "{\n    \"rpcs\": [\n        {\n            \"rpcId\": 2,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 5,\n            \"method\":
@@ -34,7 +37,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.ClusterDisplayPointerInputModule/ReplicatedMouseState\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"ReplicatedMouseState\"\n               
     ],\n                \"parameterNames\": [\n                    \"replicatedMouseState\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 5,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 0,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
@@ -46,7 +49,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 6,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 5,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
@@ -58,6 +61,18 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
+    ]\n            }\n        },\n        {\n            \"rpcId\": 8,\n           
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
+    {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Assembly-CSharp\",\n               
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay.RPC.Wrappers\",\n               
+    \"declaryingTypeName\": \"TransformWrapper\",\n                \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
+    \"returnTypeName\": \"Void\",\n                \"methodName\": \"set_position\",\n               
+    \"declaringParameterTypeAssemblyNames\": [\n                    \"UnityEngine.CoreModule\"\n               
+    ],\n                \"parameterTypeNamespaces\": [\n                    \"UnityEngine\"\n               
+    ],\n                \"parameterTypeName\": [\n                    \"Vector3\"\n               
+    ],\n                \"parameterNames\": [\n                    \"value\"\n               
     ]\n            }\n        },\n        {\n            \"rpcId\": 4,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
@@ -71,7 +86,7 @@ MonoBehaviour:
     \"System\"\n                ],\n                \"parameterTypeName\": [\n                   
     \"Single\",\n                    \"Single\"\n                ],\n               
     \"parameterNames\": [\n                    \"pitch\",\n                    \"yaw\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 0,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 1,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
@@ -81,7 +96,7 @@ MonoBehaviour:
     \"SimpleMethodTest\",\n                \"declaringParameterTypeAssemblyNames\":
     [],\n                \"parameterTypeNamespaces\": [],\n                \"parameterTypeName\":
     [],\n                \"parameterNames\": []\n            }\n        },\n       
-    {\n            \"rpcId\": 1,\n            \"isStatic\": false,\n            \"rpcExecutionStage\":
+    {\n            \"rpcId\": 6,\n            \"isStatic\": false,\n            \"rpcExecutionStage\":
     0,\n            \"method\": {\n                \"isStatic\": false,\n               
     \"declaringAssemblyIsPostProcessable\": false,\n                \"declaringAssemblyName\":
     \"Unity.ClusterDisplay.Runtime\",\n                \"declaringTypeNamespace\":

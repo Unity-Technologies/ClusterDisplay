@@ -45,6 +45,6 @@ namespace Unity.ClusterDisplay.RPC
         AfterUpdate = 6,
 
         BeforeLateUpdate = 7,
-        AfterLateUpdate = 8
+        AfterLateUpdate = 8,
     }
 }

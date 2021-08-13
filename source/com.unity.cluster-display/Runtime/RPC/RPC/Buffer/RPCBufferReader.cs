@@ -168,6 +168,9 @@ namespace Unity.ClusterDisplay.RPC
                     ref bufferPos))
                     goto failure;
 
+                if (rpcRequest.rpcId == 8)
+                    UnityEngine.Debug.Log("TEST");
+
                 switch (rpcRequest.rpcExecutionStage)
                 {
                     case RPCExecutionStage.ImmediatelyOnArrival:
