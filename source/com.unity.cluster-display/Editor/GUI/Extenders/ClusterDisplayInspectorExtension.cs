@@ -204,8 +204,16 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
                 {
                     if (WrapperUtils.TryFindWrapperImplementationType<InstanceType, WrapperType>(out var wrapperImplementationType))
                     {
-                        wrapperInstance = instance.gameObject.AddComponent(wrapperImplementationType) as WrapperType;
+                        if (PrefabUtility.IsPartOfAnyPrefab(instance.gameObject))
+                        {
+                            wrapperInstance = instance.gameObject.AddComponent(wrapperImplementationType) as WrapperType;
+                            PrefabUtility.RecordPrefabInstancePropertyModifications(instance.gameObject);
+                        }
+
+                        else wrapperInstance = instance.gameObject.AddComponent(wrapperImplementationType) as WrapperType;
+
                         wrapperInstance.SetInstance(instance);
+                        EditorUtility.SetDirty(instance);
                     }
                 }
 

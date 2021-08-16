@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System.IO;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 namespace Unity.ClusterDisplay.RPC
 {
@@ -33,13 +35,24 @@ namespace Unity.ClusterDisplay.RPC
         /// <returns></returns>
         public static string GetWrapperFullName(System.Type wrappedType) => $"{WrapperNamespace}.{wrappedType.Name}{WrapperPostfix}";
 
-        public static void GetCompilationUnitPath (System.Type type, bool typeIsWrapper, out string wrapperName, out string folderPath, out string filePath)
+        public static bool TryGetCompilationUnitPath (System.Type type, bool typeIsWrapper, out string wrapperName, out string folderPath, out string filePath)
         {
+            if (!GeneratedWrappers.TryGetInstance(out var generatedWrappers))
+            {
+                wrapperName = null;
+                folderPath = null;
+                filePath = null;
+                return false;
+            }
+
             if (!typeIsWrapper)
                 wrapperName = GetWrapperName(type);
             else wrapperName = type.Name;
-            folderPath = $"{Application.dataPath}/ClusterDisplay/Wrappers";
+            var registryPath = AssetDatabase.GetAssetPath(generatedWrappers);
+
+            folderPath = $"{Path.GetDirectoryName(registryPath)}/Wrappers";
             filePath = $"{folderPath}/{wrapperName}.cs";
+            return true;
         }
 
         /// <summary>

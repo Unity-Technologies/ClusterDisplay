@@ -309,7 +309,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
         public static bool TryRemoveWrapper (PropertyInfo wrappingProperty)
         {
-            WrapperUtils.GetCompilationUnitPath(
+            WrapperUtils.TryGetCompilationUnitPath(
                 wrappingProperty.DeclaringType, 
                 typeIsWrapper: true, 
                 out var wrapperName, 
@@ -347,7 +347,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
         public static bool TryRemoveWrapper (MethodInfo wrappingMethod)
         {
-            WrapperUtils.GetCompilationUnitPath(
+            WrapperUtils.TryGetCompilationUnitPath(
                 wrappingMethod.DeclaringType, 
                 typeIsWrapper: true,
                 out var wrapperName, 
@@ -388,7 +388,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             if (!PollMethodWrappability(propertyToWrap.SetMethod))
                 return false;
 
-            WrapperUtils.GetCompilationUnitPath(
+            WrapperUtils.TryGetCompilationUnitPath(
                 propertyToWrap.SetMethod.DeclaringType,
                 typeIsWrapper: false,
                 out var wrapperName, 
@@ -413,7 +413,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             if (!PollMethodWrappability(methodToWrap))
                 return false;
 
-            WrapperUtils.GetCompilationUnitPath(
+            WrapperUtils.TryGetCompilationUnitPath(
                 methodToWrap.DeclaringType, 
                 typeIsWrapper: false,
                 out var wrapperName, 
