@@ -179,8 +179,6 @@ namespace Unity.ClusterDisplay.RPC
         {
             if (!AllowWrites)
                 return;
-            if (instance.GetType().Name == "TransformWrapper")
-                UnityEngine.Debug.Log("TEST");
 
             if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
             {

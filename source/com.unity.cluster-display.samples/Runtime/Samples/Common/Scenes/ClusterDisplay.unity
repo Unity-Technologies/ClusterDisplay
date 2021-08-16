@@ -123,21 +123,21 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!84 &1029096649
+--- !u!84 &519089273
 RenderTexture:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PresentRT-(1278X793)
+  m_Name: PresentRT-(1183X694)
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
   m_ForcedFallbackFormat: 4
   m_DownscaleFallback: 0
   serializedVersion: 3
-  m_Width: 1278
-  m_Height: 793
+  m_Width: 1183
+  m_Height: 694
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthFormat: 1
@@ -292,7 +292,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 1029096649}
+  m_Texture: {fileID: 519089273}
   m_UVRect:
     serializedVersion: 2
     x: 0
