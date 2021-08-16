@@ -50,7 +50,7 @@ namespace Unity.ClusterDisplay.RPC
             else wrapperName = type.Name;
             var registryPath = AssetDatabase.GetAssetPath(generatedWrappers);
 
-            folderPath = $"{Path.GetDirectoryName(registryPath)}/Wrappers";
+            folderPath = $"{Path.GetDirectoryName(registryPath)}/../Wrappers";
             filePath = $"{folderPath}/{wrapperName}.cs";
             return true;
         }
