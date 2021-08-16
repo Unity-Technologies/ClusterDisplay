@@ -105,23 +105,52 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                     .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(wrapperTypeName)));
         }
 
+        private struct BasicAssemblyDefinition
+        {
+            public string name;
+            public string[] references;
+            public string[] includePlatforms;
+        }
+
         [MenuItem("Unity/Cluster Display/Generate Inspectors")]
         public static void Generate ()
         {
             var customEditorTypes = TypeCache.GetTypesWithAttribute<CustomEditorForRenderPipelineAttribute>().Concat(TypeCache.GetTypesWithAttribute<CustomEditor>());
+            string asmdefFilePath = $"Assets/Cluster Display/Editor/{BuiltInInspectorExtension.GeneratedInspectorNamespace}.asmdef";
+            string asemblyDefinitionGuid = null;
+            if (File.Exists(asmdefFilePath))
+                asemblyDefinitionGuid = AssetDatabase.AssetPathToGUID(asmdefFilePath);
 
-            var asmdefFilePath = AssetDatabase.FindAssets(BuiltInInspectorExtension.GeneratedInspectorNamespace).Select(guid => AssetDatabase.GUIDToAssetPath(guid)).FirstOrDefault(assetPath => Path.GetExtension(assetPath) == ".asmdef");
-            if (asmdefFilePath == null)
+            var assemblyDefinitionsGuids = AssetDatabase.FindAssets("")
+                .Where(guid => 
+                    Path.GetExtension(AssetDatabase.GUIDToAssetPath(guid)) == ".asmdef" && 
+                    (string.IsNullOrEmpty(asemblyDefinitionGuid) ? true : guid != asemblyDefinitionGuid));
+
+            BasicAssemblyDefinition basicAssemblyDef;
+            basicAssemblyDef.name = BuiltInInspectorExtension.GeneratedInspectorNamespace;
+            basicAssemblyDef.references = assemblyDefinitionsGuids.Select(guid => $"GUID:{guid}").ToArray();
+            basicAssemblyDef.includePlatforms = new[] { "Editor" };
+
+            var generatedFolderPath = Path.GetDirectoryName(asmdefFilePath);
+            try
             {
-                Debug.LogError($"Unable to find assembly definition for generated inspectors under name: \"{BuiltInInspectorExtension.GeneratedInspectorNamespace}\".");
+                var jsonStr = JsonUtility.ToJson(basicAssemblyDef);
+
+                Debug.Log($"Attempting to write wrapper assembly definition to path: \"{asmdefFilePath}\".");
+
+                if (!Directory.Exists(generatedFolderPath))
+                    Directory.CreateDirectory(generatedFolderPath);
+
+                File.WriteAllText(asmdefFilePath, jsonStr);
+            } catch (System.Exception exception)
+            {
+                Debug.LogException(exception);
                 return;
             }
 
-            var generatedFolderPath = Path.GetDirectoryName(asmdefFilePath);
             var generatedFilePath = $"{generatedFolderPath}/GeneratedInspectors.cs";
 
             NamespaceDeclarationSyntax nsDecl = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.ParseName(ClusterDisplayInspectorExtension.GeneratedInspectorNamespace));
-
             SyntaxList<MemberDeclarationSyntax> nsMembers = new SyntaxList<MemberDeclarationSyntax>();
 
             HashSet<string> generatedInspectorClassNames = new HashSet<string>();

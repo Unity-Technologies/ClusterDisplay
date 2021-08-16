@@ -21,7 +21,7 @@
         "Microsoft.CodeAnalysis.Workspaces.dll",
         "Microsoft.CodeAnalysis.CSharp.Workspaces.dll"
     ],
-    "autoReferenced": false,
+    "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
