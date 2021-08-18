@@ -61,10 +61,42 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 9,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 11,\n           
     \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
+    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Paused\",\n               
+    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
+    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
+    []\n            }\n        },\n        {\n            \"rpcId\": 12,\n           
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
+    {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
+    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Played\",\n               
+    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
+    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
+    []\n            }\n        },\n        {\n            \"rpcId\": 10,\n           
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
+    {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
+    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"SpectrumVisualizer\",\n               
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
+    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
+    \"PropagateSpectrum\",\n                \"declaringParameterTypeAssemblyNames\":
+    [\n                    \"mscorlib\"\n                ],\n                \"parameterTypeNamespaces\":
+    [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
+    [\n                    \"Single[]\"\n                ],\n                \"parameterNames\":
+    [\n                    \"spectrum\"\n                ]\n            }\n       
+    },\n        {\n            \"rpcId\": 9,\n            \"isStatic\": false,\n           
+    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
+    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
+    \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
     \"declaringTypeNamespace\": \"Unity.ClusterDisplay.RPC.Wrappers\",\n               
     \"declaryingTypeName\": \"CameraWrapper\",\n                \"declaringReturnTypeAssemblyName\":
     \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
@@ -145,4 +177,26 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"UnityEngine\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"Vector3\"\n               
     ],\n                \"parameterNames\": [\n                    \"foodPosition\"\n               
+    ]\n            }\n        },\n        {\n            \"rpcId\": 13,\n           
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 0,\n            \"method\":
+    {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
+    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Stopped\",\n               
+    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
+    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
+    []\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 3,\n            \"method\":
+    {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
+    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Sync\",\n               
+    \"declaringParameterTypeAssemblyNames\": [\n                    \"Unity.ClusterDisplay.Runtime\"\n               
+    ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.SynchronizePlayableDirector/PlayableDirectorState\"\n               
+    ],\n                \"parameterTypeName\": [\n                    \"PlayableDirectorState\"\n               
+    ],\n                \"parameterNames\": [\n                    \"playableDirectorState\"\n               
     ]\n            }\n        }\n    ],\n    \"stagedMethods\": []\n}"

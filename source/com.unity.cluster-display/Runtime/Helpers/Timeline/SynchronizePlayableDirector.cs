@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay
         private void OnPause(PlayableDirector playableDirector) => Paused();
         private void OnStop(PlayableDirector playableDirector) => Stopped();
 
-        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
         public void Played ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay
                 instance.Play();
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
         public void Paused ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay
                 instance.Pause();
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
         public void Stopped ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -125,7 +125,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
+        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
         public void Sync (PlayableDirectorState playableDirectorState)
         {
             if (ClusterDisplayState.IsEmitter)

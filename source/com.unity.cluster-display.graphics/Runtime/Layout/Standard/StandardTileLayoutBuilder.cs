@@ -108,18 +108,20 @@ namespace Unity.ClusterDisplay.Graphics
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
             var sourceRT =  m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
-            if (ClusterDisplay.ClusterDisplayState.IsEmitter)
+            // Whether we are the emitter or cluster display is inactive, we always want to present to the user one frame behind.
+            if (ClusterDisplay.ClusterDisplayState.IsEmitter || !ClusterDisplay.ClusterDisplayState.IsClusterLogicEnabled)
             {
                 var backBufferRT = m_RTManager.GetBackBufferRT((int)Screen.width, (int)Screen.height);
 
                 cmd.SetRenderTarget(presentRT);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
                 Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
 
                 cmd.SetRenderTarget(backBufferRT);
                 Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
             }
 
-            else
+            else // If this node is a repeater, then DO NOT present one frame behind.
             {
                 cmd.SetRenderTarget(presentRT);
                 cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
@@ -127,13 +129,8 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
-
-            Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
-
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
-
-            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();

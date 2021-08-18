@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_SourceRTs[tileIndex].Release();
 
                 m_SourceRTs[tileIndex] = new RenderTexture(width, height, 1, format);
-                m_SourceRTs[tileIndex].name = $"Tile-{tileIndex}-RT-({m_SourceRTs[tileIndex].width}X{m_SourceRTs[tileIndex].height})";
+                m_SourceRTs[tileIndex].name = $"Source-{tileIndex}-RT-({m_SourceRTs[tileIndex].width}X{m_SourceRTs[tileIndex].height})";
             }
 
             return m_SourceRTs[tileIndex];

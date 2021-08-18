@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_SourceRT.Release();
 
                 m_SourceRT = new RenderTexture(width, height, 1, format, 0);
-                m_SourceRT.name = $"Tile-RT-({m_SourceRT.width}X{m_SourceRT.height})";
+                m_SourceRT.name = $"Source-RT-({m_SourceRT.width}X{m_SourceRT.height})";
                 // Debug.Log("Resizing tile RT.");
             }
 
@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_BackBufferRT.Release();
 
                 m_BackBufferRT = new RenderTexture(width, height, 1, format, 0);
-                m_BackBufferRT.name = $"Present-RT-({m_BackBufferRT.width}X{m_BackBufferRT.height})";
+                m_BackBufferRT.name = $"BackBuffer-RT-({m_BackBufferRT.width}X{m_BackBufferRT.height})";
                 // Debug.Log("Resizing back buffer RT.");
             }
 

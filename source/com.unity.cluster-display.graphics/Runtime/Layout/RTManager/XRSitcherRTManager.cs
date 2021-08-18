@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.Graphics
                     filterMode: FilterMode.Trilinear,
                     anisoLevel: 8,
                     // msaaSamples: MSAASamples.MSAA8x,
-                    name: $"Tile-{tileIndex}-RT-({width}X{height})");
+                    name: $"Source-{tileIndex}-RT-({width}X{height})");
             }
 
             return m_SourceRTs[tileIndex];
