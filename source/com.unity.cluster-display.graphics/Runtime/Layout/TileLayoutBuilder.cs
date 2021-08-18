@@ -8,12 +8,12 @@ namespace Unity.ClusterDisplay.Graphics
         protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
 
         protected bool SetupTiledLayout (
-            Camera camera, 
+            Matrix4x4 currentProjectionMatrix,
             out Matrix4x4 asymmetricProjectionMatrix,
             out Rect viewportSubsection,
             out Rect overscannedRect)
         {
-            if (!ValidGridSize(out var numTiles) || camera.cameraType != CameraType.Game)
+            if (!ValidGridSize(out var numTiles))
             {
                 asymmetricProjectionMatrix = Matrix4x4.identity;
                 viewportSubsection = Rect.zero;
@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
             viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
 
-            asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+            asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(currentProjectionMatrix, viewportSubsection);
             return true;
         }
     }

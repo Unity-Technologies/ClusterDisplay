@@ -8,8 +8,16 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
+    /// <summary>
+    /// This class asynchronously loads in recently compiled assemblies 
+    /// and determines whether we should manipulate them.
+    /// </summary>
     public class AssemblyILPostProcessor : ILPostProcessor
     {
+        /// <summary>
+        /// This class builds a path to the assembly location, loads the DLL bytes and
+        /// converts those bytes into a Cecil AssemblyDefinition which we manipulate.
+        /// </summary>
         internal sealed class AssemblyResolver : BaseAssemblyResolver
         {
             private DefaultAssemblyResolver _defaultResolver;
@@ -39,6 +47,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         private string[] cachedRegisteredAssemblyFullNames = null;
 
+        /// <summary>
+        /// Loads the assembly into memory and builds a Cecil AssemblyDefinition.
+        /// </summary>
+        /// <param name="compiledAssembly"></param>
+        /// <param name="assemblyDef"></param>
+        /// <returns></returns>
         public static bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
         {
             var readerParameters = new ReaderParameters
@@ -62,30 +76,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static bool TryGetAssemblyDefinitionFor(Assembly compiledAssembly, bool readSymbols, out AssemblyDefinition assemblyDef)
-        {
-            var readerParameters = new ReaderParameters
-            {
-                AssemblyResolver = new AssemblyResolver(),
-                // SymbolStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PdbData.ToArray()),
-                SymbolReaderProvider = readSymbols ? new PortablePdbReaderProvider() : null,
-                ReadSymbols = readSymbols,
-                ReadingMode = ReadingMode.Immediate,
-            };
-
-            // var peStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PeData.ToArray());
-            try
-            {
-                assemblyDef = AssemblyDefinition.ReadAssembly(compiledAssembly.Location, readerParameters);
-                return true;
-            } catch (System.Exception exception)
-            {
-                Debug.LogException(exception);
-                assemblyDef = null;
-                return false;
-            }
-        }
-
+        /// <summary>
+        /// Load in the assembly debugging information if it exists.
+        /// </summary>
+        /// <param name="assemblyLocation"></param>
+        /// <returns></returns>
         private static MemoryStream CreatePdbStreamFor(string assemblyLocation)
         {
             string pdbFilePath = Path.ChangeExtension(assemblyLocation, ".pdb");
@@ -95,28 +90,32 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public override ILPostProcessor GetInstance() => this;
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
+            // Determine which assemblies we are allowed to manipulate.
             if (cachedRegisteredAssemblyFullNames == null)
                 RPCSerializer.ReadRegisteredAssemblies(RPCRegistry.k_RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames);
 
+            // Determine whether the assembly we are about to process is allowed to be manipulated.
             AssemblyDefinition compiledAssemblyDef = null;
             if (!cachedRegisteredAssemblyFullNames.Any(registeredAssembly => registeredAssembly.Split(',')[0] == compiledAssembly.Name))
                 goto ignoreAssembly;
 
+            // Get the Cecil AssemblyDefinition for the assembly.
             if (!TryGetAssemblyDefinitionFor(compiledAssembly, out compiledAssemblyDef))
                 goto failure;
 
+            // Now we manipulate the assembly's IL.
             RPCILPostProcessor postProcessor = new RPCILPostProcessor();
             if (!postProcessor.TryProcess(compiledAssemblyDef))
                 goto failure;
 
             var pe = new MemoryStream();
             var pdb = new MemoryStream();
+
             var writerParameters = new WriterParameters
             {
                 SymbolWriterProvider = new PortablePdbWriterProvider(), 
                 SymbolStream = pdb, 
                 WriteSymbols = true,
-                
             };
 
             try

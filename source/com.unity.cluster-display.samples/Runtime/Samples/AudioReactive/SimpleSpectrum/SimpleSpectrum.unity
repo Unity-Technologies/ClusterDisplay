@@ -218,7 +218,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc068aa799418194f97b961f9f32f64e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serializedScenePath: Packages/com.unity.cluster-display.samples/Runtime/Samples/AudioReactive/SimpleSpectrum/SimpleMicrophone.unity
+  serializedScenePath: Packages/com.unity.cluster-display.samples/Runtime/Samples/AudioReactive/SimpleSpectrum/SimpleSpectrum.unity
   m_SerializedInstances:
   - instance: {fileID: 687309669}
     pipeConfig:
@@ -374,21 +374,21 @@ Texture2D:
     offset: 0
     size: 0
     path: 
---- !u!84 &519089273
+--- !u!84 &453969507
 RenderTexture:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Tile-1-RT-(1183X694)
+  m_Name: Tile-1-RT-(1373X693)
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
   m_ForcedFallbackFormat: 4
   m_DownscaleFallback: 0
   serializedVersion: 3
-  m_Width: 1183
-  m_Height: 694
+  m_Width: 1373
+  m_Height: 693
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthFormat: 1
@@ -473,7 +473,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 519089273}
+  m_TargetTexture: {fileID: 453969507}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
@@ -551,7 +551,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 1797901574}
+  m_audioClip: {fileID: 1715435157}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -672,6 +672,34 @@ MonoBehaviour:
   frequencyShaderProperty: _frequency
   spectrumTexture: {fileID: 182590355}
   cachedMicrophoneListener: {fileID: 687309668}
+--- !u!83 &1715435157
+AudioClip:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Microphone
+  m_LoadType: 0
+  m_Channels: 0
+  m_Frequency: 0
+  m_BitsPerSample: 0
+  m_Length: 0
+  m_IsTrackerFormat: 0
+  m_Ambisonic: 0
+  m_SubsoundIndex: 0
+  m_PreloadAudioData: 1
+  m_LoadInBackground: 0
+  m_Legacy3D: 0
+  m_Resource:
+    m_Source: 
+    m_Offset: 0
+    m_Size: 0
+  m_CompressionFormat: 0
+  m_EditorResource:
+    m_Source: 
+    m_Offset: 0
+    m_Size: 0
+  m_EditorCompressionFormat: 0
 --- !u!1 &1789632139
 GameObject:
   m_ObjectHideFlags: 0
@@ -744,31 +772,3 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1789632139}
   m_CullTransparentMesh: 0
---- !u!83 &1797901574
-AudioClip:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Microphone
-  m_LoadType: 0
-  m_Channels: 0
-  m_Frequency: 0
-  m_BitsPerSample: 0
-  m_Length: 0
-  m_IsTrackerFormat: 0
-  m_Ambisonic: 0
-  m_SubsoundIndex: 0
-  m_PreloadAudioData: 1
-  m_LoadInBackground: 0
-  m_Legacy3D: 0
-  m_Resource:
-    m_Source: 
-    m_Offset: 0
-    m_Size: 0
-  m_CompressionFormat: 0
-  m_EditorResource:
-    m_Source: 
-    m_Offset: 0
-    m_Size: 0
-  m_EditorCompressionFormat: 0

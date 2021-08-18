@@ -101,42 +101,47 @@ public void TestMethod (float valueA, int valueB) {}
 ### Struct & ValueType Method Parameters
 [C# structs](!https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct) can be used as RPC parameters as long as **all** of the struct members and nested members are primitive types:
 ```
+[StructLayout(LayoutKind.Explicit, Size = 8)]
 public struct NestedContainerType
 {
-    public double valueC;
+    [FieldOffset(0)] public double valueC;
 }
 
+[StructLayout(LayoutKind.Explicit, Size = 28)]
 public struct ContainerType
 {
-    public float valueA;
-    public int valueB
+    [FieldOffset(0)] public float valueA;
+    [FieldOffset(4)] public int valueB
 
     // Nested struct instances are supported.
-    public Vector3 vector; // Common Unity structs are supported.
-    public NestedContainerType nested; // Custom structs are supported. 
+    [FieldOffset(8)] public Vector3 vector; // Common Unity structs are supported.
+    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported. 
 }
 
 [ClusterRPC]
 public void TestMethod (ContainerType container, Vector3 vector) {}
 ```
+**You MUST declare the struct layout if your using a custom struct as a RPC argument.** Otherwise Cluster Display may interpret the struct incorrectly when converting the structure into bytes.
 
 ### Array Method Parameters
 C# arrays are supported as long as the element type is a primitive or struct type:
 
 ```
+[StructLayout(LayoutKind.Explicit, Size = 8)]
 public struct NestedContainerType
 {
     public double valueC;
 }
 
+[StructLayout(LayoutKind.Explicit, Size = 28)]
 public struct ContainerType
 {
-    public float valueA;
-    public int valueB
+    [FieldOffset(0)] public float valueA;
+    [FieldOffset(4)] public int valueB
 
     // Nested struct instances are supported.
-    public Vector3 vector; // Common Unity structs are supported.
-    public NestedContainerType nested; // Custom structs are supported. 
+    [FieldOffset(8)] public Vector3 vector; // Common Unity structs are supported.
+    [FieldOffset(20)] public NestedContainerType nested; // Custom structs are supported. 
 }
 
 [ClusterRPC]

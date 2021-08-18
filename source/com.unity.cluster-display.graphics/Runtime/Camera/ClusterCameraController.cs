@@ -12,10 +12,59 @@ namespace Unity.ClusterDisplay.Graphics
     public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
     {
         // Matrix4x4 does not serialize so we need to serialize to Vector4s.
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC1 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC2 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
+
+        private PushedProjectionMatrix[] pushedCustomProjectionMatrices;
+        private struct PushedProjectionMatrix
+        {
+            public bool pushed;
+            public Matrix4x4 projectionMatrix;
+        }
+
+        public bool CustomProjectionMatrixPushed(int targetTileIndex) => 
+            pushedCustomProjectionMatrices != null && pushedCustomProjectionMatrices.Length > targetTileIndex ? pushedCustomProjectionMatrices[targetTileIndex].pushed : false;
+
+        public void PushCustomProjectionMatrix (Matrix4x4 customProjectionMatrix, int targetTileIndex)
+        {
+            if (pushedCustomProjectionMatrices == null || pushedCustomProjectionMatrices.Length - 1 < targetTileIndex)
+            {
+                if (pushedCustomProjectionMatrices != null && pushedCustomProjectionMatrices.Length > 0)
+                {
+                    PushedProjectionMatrix[] tempArray = new PushedProjectionMatrix[pushedCustomProjectionMatrices.Length];
+                    System.Array.Copy(pushedCustomProjectionMatrices, tempArray, pushedCustomProjectionMatrices.Length);
+
+                    pushedCustomProjectionMatrices = new PushedProjectionMatrix[targetTileIndex + 1];
+                    System.Array.Copy(tempArray, pushedCustomProjectionMatrices, tempArray.Length);
+                }
+
+                else pushedCustomProjectionMatrices = new PushedProjectionMatrix[targetTileIndex + 1];
+            }
+
+            pushedCustomProjectionMatrices[targetTileIndex] = new PushedProjectionMatrix
+            {
+                pushed = true,
+                projectionMatrix = customProjectionMatrix
+            };
+        }
+
+        public Matrix4x4 PopCustomProjectionMatrix (int targetTileIndex)
+        {
+            if (pushedCustomProjectionMatrices == null || targetTileIndex > pushedCustomProjectionMatrices.Length - 1)
+            {
+                Debug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\".");
+                return Matrix4x4.identity;
+            }
+
+            var pushMatrix = pushedCustomProjectionMatrices[targetTileIndex];
+            if (!pushMatrix.pushed)
+            {
+                Debug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\", verify whether the matrix was ever pushed or consumed before necessary.");
+                return Matrix4x4.identity;
+            }
+
+            pushMatrix.pushed = false;
+            pushedCustomProjectionMatrices[targetTileIndex] = pushMatrix;
+            return pushMatrix.projectionMatrix;
+        }
 
         /// <summary>
         /// Current rendering camera.

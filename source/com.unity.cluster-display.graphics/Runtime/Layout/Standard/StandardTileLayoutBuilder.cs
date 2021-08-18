@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.Rendering;
 using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
@@ -16,40 +17,89 @@ namespace Unity.ClusterDisplay.Graphics
         public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
         public override void Dispose() {}
 
+        private bool TryPrepareRender (
+            Matrix4x4 worldToCameraMatrix,
+            Matrix4x4 currentProjectionMatrix, 
+            out RenderTexture targetTexture, 
+            out Matrix4x4 projectionMatrix, 
+            out Matrix4x4 cullingMatrix)
+        {
+            if (!SetupTiledLayout(
+                currentProjectionMatrix,
+                out var asymmetricProjectionMatrix, 
+                out var viewportSubsection,
+                out m_OverscannedRect))
+            {
+                targetTexture = null;
+                projectionMatrix = currentProjectionMatrix;
+                cullingMatrix = currentProjectionMatrix * worldToCameraMatrix;
+                return false;
+            }
+
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
+            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+
+            targetTexture = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            projectionMatrix = asymmetricProjectionMatrix;
+            cullingMatrix = asymmetricProjectionMatrix * worldToCameraMatrix;
+            return true;
+        }
+
         public override void LateUpdate()
         {
             if (!ClusterCameraController.TryGetContextCamera(out var camera))
                 return;
 
             if (camera.enabled)
-                camera.enabled = false;
-
-            if (!SetupTiledLayout(
-                camera, 
-                out var asymmetricProjectionMatrix, 
-                out var viewportSubsection,
-                out m_OverscannedRect))
                 return;
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
-            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+            if (!TryPrepareRender(
+                camera.worldToCameraMatrix, 
+                camera.projectionMatrix, 
+                out var targetTexture, 
+                out var projectionMatrix, 
+                out var cullingMatrix))
+                return;
 
-            camera.targetTexture = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            camera.projectionMatrix = asymmetricProjectionMatrix;
-            camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
+            camera.targetTexture = targetTexture;
+            camera.projectionMatrix = projectionMatrix;
+            camera.cullingMatrix = cullingMatrix;
 
             camera.Render();
-            camera.ResetProjectionMatrix();
-            camera.ResetCullingMatrix();
         }
 
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
-        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) 
+        {
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
+                return;
+
+            if (!camera.enabled)
+                return;
+
+            if (!TryPrepareRender(
+                camera.worldToCameraMatrix, 
+                camera.projectionMatrix, 
+                out var targetTexture, 
+                out var projectionMatrix, 
+                out var cullingMatrix))
+                return;
+
+            camera.targetTexture = targetTexture;
+            camera.projectionMatrix = projectionMatrix;
+            camera.cullingMatrix = cullingMatrix;
+        }
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
+
+            if (camera.enabled)
+                camera.enabled = false;
+
+            camera.ResetProjectionMatrix();
+            camera.ResetCullingMatrix();
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
             cmd.Clear();
