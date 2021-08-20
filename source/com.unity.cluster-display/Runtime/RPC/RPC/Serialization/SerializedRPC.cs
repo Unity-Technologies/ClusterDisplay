@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.RPC
     {
         [SerializeField] public ushort rpcId;
         [SerializeField] public bool isStatic;
+        [SerializeField] public bool overrideRPCExecutionStage;
         [SerializeField] public int rpcExecutionStage;
         [SerializeField] public SerializedMethod method;
 
@@ -17,6 +18,7 @@ namespace Unity.ClusterDisplay.RPC
             {
                 rpcId = rpcMethodInfo.rpcId,
                 isStatic = rpcMethodInfo.IsStatic,
+                overrideRPCExecutionStage = rpcMethodInfo.overrideRPCExecutionStage,
                 rpcExecutionStage = (int)rpcMethodInfo.rpcExecutionStage,
                 method = SerializedMethod.Create(rpcMethodInfo.methodInfo)
             };

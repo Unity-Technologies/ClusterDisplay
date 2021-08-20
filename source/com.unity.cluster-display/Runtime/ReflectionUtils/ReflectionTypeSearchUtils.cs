@@ -74,6 +74,12 @@ namespace Unity.ClusterDisplay
         public static bool TryFindTypeByNamespaceAndName (string namespaceStr, string typeName, out System.Type outType)
         {
             System.Type foundType = null;
+            int indexorIndex = typeName.IndexOf("[]");
+
+            bool isArray = indexorIndex != -1;
+            if (isArray)
+                typeName = typeName.Replace("[]", "");
+
             ParallelForeachType((type) =>
             {
                 if (type.Namespace != namespaceStr || type.Name != typeName)
@@ -82,6 +88,9 @@ namespace Unity.ClusterDisplay
                 foundType = type;
                 return false;
             });
+
+            if (isArray)
+                foundType = foundType.MakeArrayType();
 
             return (outType = foundType) != null;
         }

@@ -307,6 +307,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_LayoutBuilder == null)
                 return;
 
+            // Application.targetFrameRate = 144;
             m_LayoutBuilder.LateUpdate();
         }
 

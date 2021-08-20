@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 12daba082b06f1040a1bdf963b0bab50, type: 3}
-  m_Name: SimpleSpectrumSceneComposition
+  m_Name: OSCSceneComposition
   m_EditorClassIdentifier: 
   compositionName: SimpleSpectrum
   baseScene: {fileID: 102900000, guid: 1865e78969abbe64f9eba9f29ac92ce3, type: 3}

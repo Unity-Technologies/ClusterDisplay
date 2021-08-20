@@ -102,7 +102,6 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetCullingMatrix();
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
-            cmd.Clear();
 
             Vector4 texBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
             var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);

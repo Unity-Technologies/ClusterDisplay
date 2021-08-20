@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay.RPC
             }
             #endif
 
-            ParseParametersPayloadSize(ref bufferPos, out rpcRequest.parametersPayloadSize);
+            // ParseParametersPayloadSize(ref bufferPos, out rpcRequest.parametersPayloadSize);
             if (!RPCInterfaceRegistry.TryCallInstance(
                 rpcRequest.assemblyIndex,
                 rpcRequest.rpcId, 

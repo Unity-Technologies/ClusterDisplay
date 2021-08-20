@@ -263,6 +263,7 @@ namespace Unity.ClusterDisplay.RPC
 
             var rpcMethodInfo = new RPCMethodInfo(
                 rpcId, 
+                false,
                 RPCExecutionStage.Automatic, 
                 methodInfo, 
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
@@ -453,6 +454,7 @@ namespace Unity.ClusterDisplay.RPC
 
         private bool TryRegisterDeserializedMethod (
             ushort rpcId, 
+            bool overrideRPCExecutionStage,
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo)
         {
@@ -461,6 +463,7 @@ namespace Unity.ClusterDisplay.RPC
 
             var rpcMethodInfo = new RPCMethodInfo(
                 rpcId, 
+                overrideRPCExecutionStage,
                 rpcExecutionStage, 
                 methodInfo, 
                 usingWrapper: WrapperUtils.IsWrapper(methodInfo.DeclaringType));
@@ -485,6 +488,7 @@ namespace Unity.ClusterDisplay.RPC
 
             rpcMethodInfo = new RPCMethodInfo(
                 rpcId, 
+                false,
                 RPCExecutionStage.Automatic, 
                 stagedMethod, 
                 usingWrapper: WrapperUtils.IsWrapper(stagedMethod.DeclaringType));
@@ -555,7 +559,7 @@ namespace Unity.ClusterDisplay.RPC
                 ReflectionUtils.TryGetAllMethodsWithAttribute<ClusterRPC>(out cachedMethodsWithRPCAttribute);
             #endif
 
-            var list = new List<(ushort rpcId, RPCExecutionStage rpcExecutionStage, MethodInfo methodInfo)>();
+            var list = new List<(ushort rpcId, bool overrideRPCExecutionStage, RPCExecutionStage rpcExecutionStage, MethodInfo methodInfo)>();
             foreach (var methodInfo in cachedMethodsWithRPCAttribute)
             {
                 var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
@@ -595,17 +599,19 @@ namespace Unity.ClusterDisplay.RPC
                 if (!m_IDManager.TryPushOrPopId(ref rpcId))
                     continue;
 
-                var rpcExecutionStage = nullableSerializedRPC != null ? (RPCExecutionStage)nullableSerializedRPC.Value.rpcExecutionStage : rpcMethodAttribute.rpcExecutionStage;
+                bool overrideRPCExecutionStage = nullableSerializedRPC != null && nullableSerializedRPC.Value.overrideRPCExecutionStage;
+                var rpcExecutionStage = overrideRPCExecutionStage ? (RPCExecutionStage)nullableSerializedRPC.Value.rpcExecutionStage : rpcMethodAttribute.rpcExecutionStage;
                 if (!string.IsNullOrEmpty(rpcMethodAttribute.formarlySerializedAs))
                     renamedRPCs.Add(rpcMethodAttribute.formarlySerializedAs);
 
-                list.Add((rpcId, rpcExecutionStage, methodInfo));
+                list.Add((rpcId, overrideRPCExecutionStage, rpcExecutionStage, methodInfo));
             }
 
             var orderedList = list.OrderBy(item => item.rpcId);
             foreach (var methodData in orderedList)
                 TryRegisterDeserializedMethod(
                     methodData.rpcId,
+                    methodData.overrideRPCExecutionStage,
                     methodData.rpcExecutionStage,
                     methodData.methodInfo);
         }
@@ -615,7 +621,7 @@ namespace Unity.ClusterDisplay.RPC
             SerializedRPC[] serializedRPCs,
             List<string> renamedRPCs)
         {
-            var list = new List<(ushort rpcId, RPCExecutionStage rpcExecutionStage, MethodInfo methodInfo)>();
+            var list = new List<(ushort rpcId, bool overrideRPCExecutionStage, RPCExecutionStage rpcExecutionStage, MethodInfo methodInfo)>();
 
             for (int i = 0; i < serializedRPCs.Length; i++)
             {
@@ -638,13 +644,14 @@ namespace Unity.ClusterDisplay.RPC
                 if (!m_IDManager.TryPushOrPopId(ref rpcId))
                     continue;
 
-                list.Add((rpcId, rpcExecutionStage, methodInfo));
+                list.Add((rpcId, serializedRPCs[i].overrideRPCExecutionStage, rpcExecutionStage, methodInfo));
             }
 
             var orderedList = list.OrderBy(item => item.rpcId);
             foreach (var methodData in orderedList)
                 TryRegisterDeserializedMethod(
                     methodData.rpcId,
+                    methodData.overrideRPCExecutionStage,
                     methodData.rpcExecutionStage,
                     methodData.methodInfo);
         }

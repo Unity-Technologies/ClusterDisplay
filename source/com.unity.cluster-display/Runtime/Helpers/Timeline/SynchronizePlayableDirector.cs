@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay
         private void OnPause(PlayableDirector playableDirector) => Paused();
         private void OnStop(PlayableDirector playableDirector) => Stopped();
 
-        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
+        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
         public void Played ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -75,11 +75,14 @@ namespace Unity.ClusterDisplay
             if (instance == null)
                 return;
 
+            if (instance.timeUpdateMode != DirectorUpdateMode.Manual)
+                instance.timeUpdateMode = DirectorUpdateMode.Manual;
+
             if (instance.state != PlayState.Playing)
                 instance.Play();
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
+        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
         public void Paused ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -89,11 +92,14 @@ namespace Unity.ClusterDisplay
             if (instance == null)
                 return;
 
+            if (instance.timeUpdateMode != DirectorUpdateMode.Manual)
+                instance.timeUpdateMode = DirectorUpdateMode.Manual;
+
             if (instance.state != PlayState.Paused)
                 instance.Pause();
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
+        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
         public void Stopped ()
         {
             if (ClusterDisplayState.IsEmitter)
@@ -102,6 +108,9 @@ namespace Unity.ClusterDisplay
             var instance = playableDirector;
             if (instance == null)
                 return;
+
+            if (instance.timeUpdateMode != DirectorUpdateMode.Manual)
+                instance.timeUpdateMode = DirectorUpdateMode.Manual;
 
             instance.Stop();
         }
@@ -118,14 +127,14 @@ namespace Unity.ClusterDisplay
                 cachedPlayableDirectorState.extrapolationMode = instance.extrapolationMode;
                 cachedPlayableDirectorState.initialTime = instance.initialTime;
                 cachedPlayableDirectorState.time = instance.time;
-                cachedPlayableDirectorState.timeUpdateMode = instance.timeUpdateMode;
                 cachedPlayableDirectorState.state = instance.state;
 
                 Sync(cachedPlayableDirectorState);
+                return;
             }
         }
 
-        [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
+        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
         public void Sync (PlayableDirectorState playableDirectorState)
         {
             if (ClusterDisplayState.IsEmitter)
@@ -144,14 +153,13 @@ namespace Unity.ClusterDisplay
             if (instance.initialTime != playableDirectorState.initialTime)
                 instance.initialTime = playableDirectorState.initialTime;
 
-            if (instance.timeUpdateMode != playableDirectorState.timeUpdateMode)
-                instance.timeUpdateMode = playableDirectorState.timeUpdateMode;
+            if (instance.timeUpdateMode != DirectorUpdateMode.Manual)
+                instance.timeUpdateMode = DirectorUpdateMode.Manual;
 
             if (instance.time != playableDirectorState.time)
             {
                 instance.time = playableDirectorState.time;
-                if (instance.state == PlayState.Paused)
-                    instance.Evaluate();
+                instance.Evaluate();
             }
         }
     }

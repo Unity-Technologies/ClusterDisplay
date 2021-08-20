@@ -2,8 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
@@ -122,6 +124,114 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             hash.Add(methodRef.MetadataToken.RID);
         }
+        private bool TryInjectRPCInterceptIL (
+            ushort rpcId, 
+            ushort rpcExecutionStage,
+            MethodReference targetMethodRef,
+            out MethodDefinition modifiedTargetMethodDef)
+        {
+            modifiedTargetMethodDef = targetMethodRef.Resolve();
+
+            var beforeInstruction = modifiedTargetMethodDef.Body.Instructions.First();
+            var il = modifiedTargetMethodDef.Body.GetILProcessor();
+
+            var rpcEmitterType = typeof(RPCBufferIO);
+
+            MethodInfo appendRPCMethodInfo = null;
+            if (!modifiedTargetMethodDef.IsStatic)
+            {
+                if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                    return false;
+            }
+
+            else if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                return false;
+
+            if (!CecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
+                return false;
+
+            if (!TryGetCachedGetIsEmitterMarkerMethod(out var getIsEmitterMethod))
+                return false;
+
+            if (!TryPollParameterInformation(
+                modifiedTargetMethodDef.Module,
+                modifiedTargetMethodDef,
+                out var totalSizeOfStaticallySizedRPCParameters,
+                out var hasDynamicallySizedRPCParameters))
+                return false;
+
+            if (!CecilUtils.TryImport(targetMethodRef.Module, getIsEmitterMethod, out var getIsEmitterMethodRef))
+                return false;
+
+            var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsEmitterMethodRef);
+            CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
+
+            return !hasDynamicallySizedRPCParameters ?
+
+                    TryInjectBridgeToStaticallySizedRPCPropagation(
+                        rpcEmitterType,
+                        rpcId,
+                        rpcExecutionStage,
+                        il,
+                        ref afterInstruction,
+                        appendRPCCMethodRef,
+                        totalSizeOfStaticallySizedRPCParameters)
+
+                    :
+
+                    TryInjectBridgeToDynamicallySizedRPCPropagation(
+                        rpcEmitterType,
+                        rpcId,
+                        rpcExecutionStage,
+                        il,
+                        ref afterInstruction,
+                        appendRPCCMethodRef,
+                        totalSizeOfStaticallySizedRPCParameters);
+        }
+
+        private bool ProcessMethodDef (
+            AssemblyDefinition compiledAssemblyDef,
+            ushort rpcId,
+            MethodReference targetMethodRef,
+            RPCExecutionStage rpcExecutionStage)
+        {
+            if (!TryInjectRPCInterceptIL(
+                rpcId,
+                (ushort)rpcExecutionStage,
+                targetMethodRef,
+                out var modifiedTargetMethodDef))
+                goto failure;
+
+            if (modifiedTargetMethodDef.IsStatic)
+            {
+                if (!TryGetCachedStaticRPCILGenerator(compiledAssemblyDef, out var cachedOnTryStaticCallProcessor))
+                    goto failure;
+
+                if (!cachedOnTryStaticCallProcessor.TryAppendStaticRPCExecution(modifiedTargetMethodDef, rpcId))
+                    goto failure;
+            }
+
+            else
+            {
+                if (!TryGetCachedRPCILGenerator(compiledAssemblyDef, out var cachedOnTryCallProcessor))
+                    goto failure;
+
+                if (!cachedOnTryCallProcessor.TryAppendInstanceRPCExecution(modifiedTargetMethodDef, rpcId))
+                    goto failure;
+            }
+
+            if (!TryGetCachedQueuedRPCILGenerator(compiledAssemblyDef, out var queuedRPCILGenerator))
+                goto failure;
+
+            if (!queuedRPCILGenerator.TryInjectILToExecuteQueuedRPC(targetMethodRef, rpcExecutionStage, rpcId))
+                goto failure;
+
+            return true;
+
+            failure:
+            Debug.LogError($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
+            return false;
+        }
 
         private bool TryProcessSerializedRPCs (
             AssemblyDefinition compiledAssemblyDef, 
@@ -158,19 +268,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (MethodAlreadyProcessed(targetMethodRef))
                         continue;
 
-                    if (!TryGetRPCILGenerators(compiledAssemblyDef, targetMethodRef.Resolve(), out var rpcILGenerator, out var queuedRPCILGenerator))
-                        return false;
-
                     var executionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
-                    if (!rpcILGenerator.ProcessMethodDef(
+
+                    if (!ProcessMethodDef(
+                        compiledAssemblyDef,
                         serializedRPC.rpcId,
                         targetMethodRef,
                         executionStage))
                         return false;
-
-                    if (executionStage != RPCExecutionStage.ImmediatelyOnArrival)
-                        if (!queuedRPCILGenerator.TryInjectILToExecuteQueuedRPC(targetMethodRef, executionStage, serializedRPC.rpcId))
-                            return false;
 
                     AddProcessedMethod(targetMethodRef);
                 }
@@ -229,18 +334,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 SetRPCAttributeRPCIDArgument(customAttribute, rpcIdAttributeArgumentIndex, newRPCId);
 
                 RPCExecutionStage executionStage = (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value;
-                if (!TryGetRPCILGenerators(compiledAssemblyDef, methodDef, out var rpcILGenerator, out var queuedRPCILGenerator))
-                    return false;
 
-                if (!rpcILGenerator.ProcessMethodDef(
+                if (!ProcessMethodDef(
+                    compiledAssemblyDef,
                     newRPCId,
                     methodDef,
                     executionStage))
                     return false;
-
-                if (executionStage != RPCExecutionStage.ImmediatelyOnArrival)
-                    if (!queuedRPCILGenerator.TryInjectILToExecuteQueuedRPC(methodDef, executionStage, newRPCId))
-                        return false;
 
                 AddProcessedMethod(methodDef);
             }

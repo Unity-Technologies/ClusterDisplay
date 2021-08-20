@@ -43,8 +43,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 firstInstruction = ilProcessor.Body.Instructions[0];
                 // Last instruction is two instructions before end of method since we are returning false by default.
                 lastInstruction = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
-
-                lastSwitchJmpInstruction = firstInstruction;
+                lastSwitchJmpInstruction = ilProcessor.Body.Instructions.LastOrDefault(instruction => instruction.OpCode == OpCodes.Beq);
+                if (lastSwitchJmpInstruction == null)
+                    lastSwitchJmpInstruction = firstInstruction;
                 return true;
             }
 
@@ -333,6 +334,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             public void InjectDefaultSwitchCase ()
             {
+                if (lastSwitchJmpInstruction == null)
+                    return;
+
+                var isntructionToJmpTo = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
+                var newInstruction = Instruction.Create(OpCodes.Br, isntructionToJmpTo);
+                ilProcessor.InsertAfter(lastSwitchJmpInstruction, newInstruction);
+                return;
+
+                /*
                 var afterInstruction = lastSwitchJmpInstruction;
                 if (afterInstruction == null)
                 {
@@ -347,38 +357,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 }
 
                 CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Br, lastInstruction);
+                */
             }
 
-            public bool ProcessMethodDef (
-                ushort rpcId,
-                MethodReference targetMethodRef,
-                RPCExecutionStage rpcExecutionStage)
+            public bool TryAppendInstanceRPCExecution (MethodDefinition targetMethodDef, ushort rpcId)
             {
                 Instruction firstInstructionOfSwitchCaseImpl = null;
-                var targetMethodDef = targetMethodRef.Resolve();
+                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
 
-                if (!TryInjectRPCInterceptIL(
-                    rpcId,
-                    (ushort)rpcExecutionStage,
-                    targetMethodRef,
-                    out var modifiedTargetMethodDef))
-                    goto unableToInjectIL;
-
-                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, modifiedTargetMethodDef);
-
-                if (targetMethodDef.IsStatic)
-                {
-                    if (!TryInjectStaticRPCExecution(
-                        generatedRPCILTypeRef.Module,
-                        ilProcessor,
-                        beforeInstruction: lastInstruction,
-                        targetMethodRef: importedTargetMethodRef,
-                        isImmediateRPCExeuction: true,
-                        firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
-                        goto unableToInjectIL;
-                }
-
-                else if (!TryInjectInstanceRPCExecution(
+                if (!TryInjectInstanceRPCExecution(
                     generatedRPCILTypeRef.Module,
                     ilProcessor,
                     beforeInstruction: lastInstruction,
@@ -387,6 +374,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
                     goto unableToInjectIL;
 
+                if (!TryInjectSwitchCaseForRPC(
+                    ilProcessor,
+                    afterInstruction: lastSwitchJmpInstruction,
+                    valueToPushForBeq: rpcId,
+                    jmpToInstruction: firstInstructionOfSwitchCaseImpl,
+                    lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
+                    return false;
+
+                /*
                 if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     afterInstruction: lastSwitchJmpInstruction,
@@ -394,15 +390,52 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
                     goto unableToInjectIL;
+                */
 
-                // Debug.Log($"Injected RPC intercept assembly into method: \"{targetRPCMethodDef.Name}\" in class: \"{targetRPCMethodDef.DeclaringType.FullName}\".");
                 return true;
 
                 unableToInjectIL:
-                Debug.LogError($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
-                goto cleanup;
+                Debug.LogError($"Failure occurred while attempting to append instance method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
+                ilProcessor.Body.Instructions.Clear();
+                return false;
+            }
 
-                cleanup:
+            public bool TryAppendStaticRPCExecution (MethodDefinition targetMethodDef, ushort rpcId)
+            {
+                Instruction firstInstructionOfSwitchCaseImpl = null;
+                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
+
+                if (!TryInjectStaticRPCExecution(
+                    generatedRPCILTypeRef.Module,
+                    ilProcessor,
+                    beforeInstruction: lastInstruction,
+                    targetMethodRef: importedTargetMethodRef,
+                    isImmediateRPCExeuction: true,
+                    firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl))
+                    goto unableToInjectIL;
+
+                if (!TryInjectSwitchCaseForRPC(
+                    ilProcessor,
+                    afterInstruction: lastSwitchJmpInstruction,
+                    valueToPushForBeq: rpcId,
+                    jmpToInstruction: firstInstructionOfSwitchCaseImpl,
+                    lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
+                    return false;
+
+                /*
+                if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
+                    ilProcessor,
+                    afterInstruction: lastSwitchJmpInstruction,
+                    valueToPushForBeq: rpcId,
+                    jmpToInstruction: firstInstructionOfSwitchCaseImpl,
+                    lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
+                    goto unableToInjectIL;
+                */
+
+                return true;
+
+                unableToInjectIL:
+                Debug.LogError($"Failure occurred while attempting to append static method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
                 ilProcessor.Body.Instructions.Clear();
                 return false;
             }

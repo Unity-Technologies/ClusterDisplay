@@ -739,16 +739,20 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             MethodDefinition methodDefinition, 
             out ParameterDefinition parameterDef)
         {
+            parameterDef = null;
             if (!TryImport(methodDefinition.Module, typeof(T), out var parameterAttributeType))
-            {
-                parameterDef = null;
                 return false;
+
+            for (int pi = 0; pi < methodDefinition.Parameters.Count; pi++)
+            {
+                if (!methodDefinition.Parameters[pi].CustomAttributes.Any(customAttributeData => customAttributeData.AttributeType.FullName == parameterAttributeType.FullName))
+                    continue;
+
+                parameterDef = methodDefinition.Parameters[pi];
+                break;
             }
 
-            bool found = (parameterDef = methodDefinition
-                .Parameters
-                .Where(parameter => parameter.CustomAttributes.Any(customAttributeData => customAttributeData.AttributeType.FullName == parameterAttributeType.FullName))
-                .FirstOrDefault()) != null;
+            bool found = parameterDef != null;
 
             if (!found)
                 Debug.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");

@@ -188,7 +188,7 @@ MonoBehaviour:
     \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
     [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
     []\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
-    \"isStatic\": false,\n            \"rpcExecutionStage\": 3,\n            \"method\":
+    \"isStatic\": false,\n            \"rpcExecutionStage\": 8,\n            \"method\":
     {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
     \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":

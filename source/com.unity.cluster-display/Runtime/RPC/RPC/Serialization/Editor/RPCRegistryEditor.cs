@@ -217,14 +217,26 @@ namespace Unity.ClusterDisplay.RPC
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
                         EditorGUILayout.LabelField("Execution Stage:", GUILayout.Width(125));
+                        EditorGUILayout.EndHorizontal();
 
-                        var newRPCExecutionStage = (RPCExecutionStage)EditorGUILayout.EnumPopup(rpcMethodInfo.rpcExecutionStage);
-                        if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage)
+                        EditorGUILayout.BeginHorizontal();
+                        GUILayout.Space(30);
+                        EditorGUILayout.LabelField("Override:", GUILayout.Width(55));
+                        var newOverrideRPCExecutionStage = EditorGUILayout.Toggle(rpcMethodInfo.overrideRPCExecutionStage, GUILayout.Width(15));
+
+                        if (newOverrideRPCExecutionStage)
                         {
-                            rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
-                            rpcRegistry.TryUpdateRPC(ref rpcMethodInfo);
+                            var newRPCExecutionStage = (RPCExecutionStage)EditorGUILayout.EnumPopup(rpcMethodInfo.rpcExecutionStage);
+                            if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage || newOverrideRPCExecutionStage != rpcMethodInfo.overrideRPCExecutionStage)
+                            {
+                                rpcMethodInfo.overrideRPCExecutionStage = newOverrideRPCExecutionStage;
+                                rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
+
+                                rpcRegistry.TryUpdateRPC(ref rpcMethodInfo);
+                            }
                         }
 
+                        else EditorGUILayout.LabelField(rpcMethodInfo.rpcExecutionStage.ToString());
                         EditorGUILayout.EndHorizontal();
                     }));
 

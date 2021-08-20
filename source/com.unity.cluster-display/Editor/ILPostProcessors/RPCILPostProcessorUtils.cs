@@ -527,7 +527,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             ILProcessor ilProcessor,
             MethodReference executionTarget,
             ParameterDefinition bufferPosParamDef,
-            bool isImmediateRPCExeuction,
             ref Instruction afterInstruction)
         {
             foreach (var paramDef in executionTarget.Parameters)
@@ -540,7 +539,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (!CecilUtils.TryImport(moduleDef, parseStringMethod, out var parseStringMethodRef))
                         return false;
 
-                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !bufferPosParamDef.ParameterType.IsByReference);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, parseStringMethodRef);
                 }
 
@@ -557,7 +556,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     var paramRef = CecilUtils.Import(moduleDef, elementType);
                     genericInstanceMethod.GenericArguments.Add(paramRef);
 
-                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !bufferPosParamDef.ParameterType.IsByReference);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, CecilUtils.Import(moduleDef, genericInstanceMethod));
                 }
 
@@ -574,7 +573,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     var paramRef = CecilUtils.Import(moduleDef, elementType);
                     genericInstanceMethod.GenericArguments.Add(paramRef);
 
-                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !bufferPosParamDef.ParameterType.IsByReference);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, CecilUtils.Import(moduleDef, genericInstanceMethod));
                 }
 
@@ -592,7 +591,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     genericInstanceMethod.GenericArguments.Add(paramRef);
                     var genericInstanceMethodRef = CecilUtils.Import(moduleDef, genericInstanceMethod);
 
-                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !isImmediateRPCExeuction);
+                    CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, bufferPosParamDef, isStaticCaller: ilProcessor.Body.Method.IsStatic, byReference: !bufferPosParamDef.ParameterType.IsByReference);
                     CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, genericInstanceMethodRef);  // Call generic method to convert bytes into our struct.
                 }
             }
@@ -649,7 +648,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 ilProcessor,
                 executionTarget,
                  bufferPosParamDef,
-                 isImmediateRPCExeuction,
                  ref afterInstruction);
 
             CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, executionTarget);
@@ -706,7 +704,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 ilProcessor,
                 targetMethodRef,
                  bufferPosParamDef,
-                 isImmediateRPCExeuction,
                  ref afterInstruction);
 
             CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, targetMethodRef);
@@ -776,6 +773,41 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return false;
         }
 
+        private static ParameterDefinition NewRPCIdParameter (AssemblyDefinition compiledAssemblyDef)
+        {
+            var paramDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, paramDef);
+            return paramDef;
+        }
+
+        private static ParameterDefinition NewPipeIdParameter (AssemblyDefinition compiledAssemblyDef)
+        {
+            var paramDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, paramDef);
+            return paramDef;
+        }
+
+        private static ParameterDefinition NewParameterPayloadSizeParameter (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        {
+            var paramDef = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, paramDef);
+            return paramDef;
+        }
+
+        private static ParameterDefinition NewPCBufferParameterPosition (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        {
+            var paramDef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, paramDef);
+            return paramDef;
+        }
+
+        private static ParameterDefinition NewRPCBufferParameterPositionRef (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        {
+            var paramDef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, new ByReferenceType(bufferIndexTypeRef));
+            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, paramDef);
+            return paramDef;
+        }
+
         private static bool TryGenerateRPCILTypeInCompiledAssembly (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
         {
             var newTypeDef = new TypeDefinition(RPCILGenerator.GeneratedRPCILNamespace, RPCILGenerator.GeneratedRPCILTypeName, Mono.Cecil.TypeAttributes.NestedPrivate);
@@ -789,11 +821,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             newTypeDef.BaseType = baseTypeRef;
 
-            var rpcIdParameterDef = new ParameterDefinition("rpcId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCIdMarker>(compiledAssemblyDef, rpcIdParameterDef);
-
-            var pipeParameterDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
-            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, pipeParameterDef);
+            var rpcIdParameterDef = NewRPCIdParameter(compiledAssemblyDef);
+            var pipeParameterDef = NewPipeIdParameter(compiledAssemblyDef);
 
             if (!TryGetTypeSystemPrimitiveFromAlias(compiledAssemblyDef, out var bufferIndexTypeRef))
             {
@@ -801,14 +830,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            var parametersPayloadSize = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
-            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, parametersPayloadSize);
-
-            var rpcBufferParameterPositionRef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.In, bufferIndexTypeRef);
-            var rpcBufferParameterPosition = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
-
-            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPositionRef);
-            CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, rpcBufferParameterPosition);
+            var parametersPayloadSize = NewParameterPayloadSizeParameter(compiledAssemblyDef, bufferIndexTypeRef);
+            var rpcBufferParameterPositionRef = NewRPCBufferParameterPositionRef(compiledAssemblyDef, bufferIndexTypeRef);
+            var rpcBufferParameterPosition = NewPCBufferParameterPosition(compiledAssemblyDef, bufferIndexTypeRef);
 
             var onTryCallInstanceMethodDef = new MethodDefinition("OnTryCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
             onTryCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
@@ -821,6 +845,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             il.Emit(OpCodes.Ldc_I4_0);
             il.Emit(OpCodes.Ret);
 
+            rpcIdParameterDef = NewRPCIdParameter(compiledAssemblyDef);
+            parametersPayloadSize = NewParameterPayloadSizeParameter(compiledAssemblyDef, bufferIndexTypeRef);
+            rpcBufferParameterPositionRef = NewRPCBufferParameterPositionRef(compiledAssemblyDef, bufferIndexTypeRef);
+
             var onTryStaticCallInstanceMethodDef = new MethodDefinition("OnTryStaticCallInstance", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
             onTryStaticCallInstanceMethodDef.Parameters.Add(rpcIdParameterDef);
             onTryStaticCallInstanceMethodDef.Parameters.Add(parametersPayloadSize);
@@ -830,6 +858,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             il.Emit(OpCodes.Nop);
             il.Emit(OpCodes.Ldc_I4_0);
             il.Emit(OpCodes.Ret);
+
+            rpcIdParameterDef = NewRPCIdParameter(compiledAssemblyDef);
+            pipeParameterDef = NewPipeIdParameter(compiledAssemblyDef);
+            parametersPayloadSize = NewParameterPayloadSizeParameter(compiledAssemblyDef, bufferIndexTypeRef);
+            rpcBufferParameterPosition = NewPCBufferParameterPosition(compiledAssemblyDef, bufferIndexTypeRef);
 
             var executeQueuedRPCMethodDef = new MethodDefinition("ExecuteQueuedRPC", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
             executeQueuedRPCMethodDef.Parameters.Add(rpcIdParameterDef);

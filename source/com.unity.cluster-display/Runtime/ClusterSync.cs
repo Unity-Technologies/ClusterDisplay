@@ -168,6 +168,9 @@ namespace Unity.ClusterDisplay
                 stateSetter.SetCLusterLogicEnabled(false);
                 return;
             }
+
+            if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
+                ShutdownAllClusterNodes();
         }
 
         private void InjectSynchPointInPlayerLoop()
