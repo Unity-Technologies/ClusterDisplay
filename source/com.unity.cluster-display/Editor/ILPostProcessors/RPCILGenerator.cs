@@ -76,71 +76,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool TryInjectRPCInterceptIL (
-                ushort rpcId, 
-                ushort rpcExecutionStage,
-                MethodReference targetMethodRef,
-                out MethodDefinition modifiedTargetMethodDef)
-            {
-                modifiedTargetMethodDef = targetMethodRef.Resolve();
-
-                var beforeInstruction = modifiedTargetMethodDef.Body.Instructions.First();
-                var il = modifiedTargetMethodDef.Body.GetILProcessor();
-
-                var rpcEmitterType = typeof(RPCBufferIO);
-
-                MethodInfo appendRPCMethodInfo = null;
-                if (!modifiedTargetMethodDef.IsStatic)
-                {
-                    if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
-                        return false;
-                }
-
-                else if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
-                    return false;
-
-                if (!CecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
-                    return false;
-
-                if (!TryGetCachedGetIsEmitterMarkerMethod(out var getIsEmitterMethod))
-                    return false;
-
-                if (!TryPollParameterInformation(
-                    modifiedTargetMethodDef.Module,
-                    modifiedTargetMethodDef,
-                    out var totalSizeOfStaticallySizedRPCParameters,
-                    out var hasDynamicallySizedRPCParameters))
-                    return false;
-
-                if (!CecilUtils.TryImport(targetMethodRef.Module, getIsEmitterMethod, out var getIsEmitterMethodRef))
-                    return false;
-
-                var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsEmitterMethodRef);
-                CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
-
-                return !hasDynamicallySizedRPCParameters ?
-
-                        TryInjectBridgeToStaticallySizedRPCPropagation(
-                            rpcEmitterType,
-                            rpcId,
-                            rpcExecutionStage,
-                            il,
-                            ref afterInstruction,
-                            appendRPCCMethodRef,
-                            totalSizeOfStaticallySizedRPCParameters)
-
-                        :
-
-                        TryInjectBridgeToDynamicallySizedRPCPropagation(
-                            rpcEmitterType,
-                            rpcId,
-                            rpcExecutionStage,
-                            il,
-                            ref afterInstruction,
-                            appendRPCCMethodRef,
-                            totalSizeOfStaticallySizedRPCParameters);
-            }
-
             private bool TryGetTryCallParameters (
                 out ParameterDefinition pipeIdParamDef,
                 out ParameterDefinition rpcIdParamDef,
@@ -272,66 +207,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool TryInjectQueueStaticRPCCall (
-                Instruction beforeInstruction,
-                RPCExecutionStage rpcExecutionStage,
-                out Instruction firstInstruction)
-            {
-                var newInstruction = Instruction.Create(OpCodes.Nop);
-                ilProcessor.InsertBefore(beforeInstruction, newInstruction);
-                var afterInstruction = firstInstruction = newInstruction;
-
-                if (!TryGetTryStaticCallParameters(
-                    out var rpcIdParamDef,
-                    out var parametersPayloadSizeParamDef,
-                    out var rpcBufferPositionParamDef))
-                    return false;
-
-                // Pipe ID = 0 when the method we want to call is static.
-                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 0);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldind_U2);
-
-                TryInjectQueueCall(
-                    rpcExecutionStage,
-                    rpcBufferPositionParamDef,
-                    parametersPayloadSizeParamDef,
-                    ref afterInstruction);
-
-                return true;
-            }
-
-            private bool TryInjectQueueInstanceRPCCall (
-                Instruction beforeInstruction,
-                RPCExecutionStage rpcExecutionStage,
-                out Instruction firstInstruction)
-            {
-                var afterInstruction = firstInstruction = CecilUtils.InsertBefore(ilProcessor, beforeInstruction, OpCodes.Nop);
-
-                if (!TryGetTryCallParameters(
-                    out var pipeIdParamDef,
-                    out var rpcIdParamDef,
-                    out var parametersPayloadSizeParamDef,
-                    out var rpcBufferPositionParamDef))
-                    return false;
-
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, pipeIdParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcIdParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, parametersPayloadSizeParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertPushParameterToStackAfter(ilProcessor, ref afterInstruction, rpcBufferPositionParamDef, isStaticCaller: false, byReference: false);
-                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ldind_U2);
-
-                TryInjectQueueCall(
-                    rpcExecutionStage,
-                    rpcBufferPositionParamDef,
-                    parametersPayloadSizeParamDef,
-                    ref afterInstruction);
-
-                return true;
-            }
-
             public void InjectDefaultSwitchCase ()
             {
                 if (lastSwitchJmpInstruction == null)
@@ -340,24 +215,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 var isntructionToJmpTo = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
                 var newInstruction = Instruction.Create(OpCodes.Br, isntructionToJmpTo);
                 ilProcessor.InsertAfter(lastSwitchJmpInstruction, newInstruction);
-                return;
-
-                /*
-                var afterInstruction = lastSwitchJmpInstruction;
-                if (afterInstruction == null)
-                {
-                    Debug.LogError("Unable to inject default switch return instructions, the instruction we want to inject after is null!");
-                    return;
-                }
-
-                if (lastInstruction == null)
-                {
-                    Debug.LogError("Unable to inject default switch return instructions, the failure instruction that we want to jump to is null!");
-                    return;
-                }
-
-                CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Br, lastInstruction);
-                */
             }
 
             public bool TryAppendInstanceRPCExecution (MethodDefinition targetMethodDef, ushort rpcId)
@@ -381,16 +238,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
                     return false;
-
-                /*
-                if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
-                    ilProcessor,
-                    afterInstruction: lastSwitchJmpInstruction,
-                    valueToPushForBeq: rpcId,
-                    jmpToInstruction: firstInstructionOfSwitchCaseImpl,
-                    lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
-                    goto unableToInjectIL;
-                */
 
                 return true;
 
@@ -421,16 +268,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
                     return false;
-
-                /*
-                if (firstInstructionOfSwitchCaseImpl != null && !TryInjectSwitchCaseForRPC(
-                    ilProcessor,
-                    afterInstruction: lastSwitchJmpInstruction,
-                    valueToPushForBeq: rpcId,
-                    jmpToInstruction: firstInstructionOfSwitchCaseImpl,
-                    lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
-                    goto unableToInjectIL;
-                */
 
                 return true;
 

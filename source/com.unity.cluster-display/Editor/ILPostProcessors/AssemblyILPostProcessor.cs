@@ -90,6 +90,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public override ILPostProcessor GetInstance() => this;
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
+            Debug.Log($"Post processing assembly: \"{compiledAssembly.Name}\".");
+
             // Determine which assemblies we are allowed to manipulate.
             if (cachedRegisteredAssemblyFullNames == null)
                 RPCSerializer.ReadRegisteredAssemblies(RPCRegistry.k_RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames);

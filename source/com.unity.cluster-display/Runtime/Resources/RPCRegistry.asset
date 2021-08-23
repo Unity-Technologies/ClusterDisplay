@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SerializedRegisteredAssemblies: '
 
-    Unity.ClusterDisplay.Samples, Version=0.0.0.0,
-    Culture=neutral, PublicKeyToken=null
-
-    Unity.ClusterDisplay.Runtime, Version=0.0.0.0,
-    Culture=neutral, PublicKeyToken=null
-
-    Unity.ClusterDisplay.Graphics, Version=0.0.0.0,
-    Culture=neutral, PublicKeyToken=null
-
     Unity.ClusterDisplay.GeneratedWrappers,
+    Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+
+    Unity.ClusterDisplay.Graphics,
+    Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+
+    Unity.ClusterDisplay.Runtime,
+    Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+
+    Unity.ClusterDisplay.Samples,
     Version=0.0.0.0, Culture=neutral, PublicKeyToken=null'
   m_JSONString: "{\n    \"rpcs\": [\n        {\n            \"rpcId\": 2,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
@@ -38,7 +38,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.ClusterDisplayPointerInputModule/ReplicatedMouseState\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"ReplicatedMouseState\"\n               
     ],\n                \"parameterNames\": [\n                    \"replicatedMouseState\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 0,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 13,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -51,7 +51,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 5,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -64,7 +64,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 11,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 6,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -75,7 +75,7 @@ MonoBehaviour:
     \"returnTypeName\": \"Void\",\n                \"methodName\": \"Paused\",\n               
     \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
     [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 12,\n           
+    []\n            }\n        },\n        {\n            \"rpcId\": 5,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -86,7 +86,7 @@ MonoBehaviour:
     \"returnTypeName\": \"Void\",\n                \"methodName\": \"Played\",\n               
     \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
     [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 10,\n           
+    []\n            }\n        },\n        {\n            \"rpcId\": 9,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 7,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -99,7 +99,7 @@ MonoBehaviour:
     [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
     [\n                    \"Single[]\"\n                ],\n                \"parameterNames\":
     [\n                    \"spectrum\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 9,\n            \"isStatic\": false,\n           
+    },\n        {\n            \"rpcId\": 0,\n            \"isStatic\": false,\n           
     \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 0,\n           
     \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
@@ -111,7 +111,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"System\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"Single\"\n               
     ],\n                \"parameterNames\": [\n                    \"value\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 8,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 1,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -124,7 +124,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"UnityEngine\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"Vector3\"\n               
     ],\n                \"parameterNames\": [\n                    \"value\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 4,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 11,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -138,7 +138,7 @@ MonoBehaviour:
     \"System\"\n                ],\n                \"parameterTypeName\": [\n                   
     \"Single\",\n                    \"Single\"\n                ],\n               
     \"parameterNames\": [\n                    \"pitch\",\n                    \"yaw\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 1,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 3,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -149,7 +149,7 @@ MonoBehaviour:
     \"SimpleMethodTest\",\n                \"declaringParameterTypeAssemblyNames\":
     [],\n                \"parameterTypeNamespaces\": [],\n                \"parameterTypeName\":
     [],\n                \"parameterNames\": []\n            }\n        },\n       
-    {\n            \"rpcId\": 6,\n            \"isStatic\": false,\n            \"overrideRPCExecutionStage\":
+    {\n            \"rpcId\": 4,\n            \"isStatic\": false,\n            \"overrideRPCExecutionStage\":
     false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
     \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
@@ -161,7 +161,7 @@ MonoBehaviour:
     [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
     [\n                    \"String\"\n                ],\n                \"parameterNames\":
     [\n                    \"message\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 3,\n            \"isStatic\": false,\n           
+    },\n        {\n            \"rpcId\": 10,\n            \"isStatic\": false,\n           
     \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 5,\n           
     \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
@@ -175,7 +175,7 @@ MonoBehaviour:
     \"Vector3\",\n                    \"Quaternion\"\n                ],\n               
     \"parameterNames\": [\n                    \"position\",\n                   
     \"rotation\"\n                ]\n            }\n        },\n        {\n           
-    \"rpcId\": 7,\n            \"isStatic\": true,\n            \"overrideRPCExecutionStage\":
+    \"rpcId\": 12,\n            \"isStatic\": true,\n            \"overrideRPCExecutionStage\":
     false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
     \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
@@ -187,7 +187,7 @@ MonoBehaviour:
     [\n                    \"UnityEngine\"\n                ],\n                \"parameterTypeName\":
     [\n                    \"Vector3\"\n                ],\n                \"parameterNames\":
     [\n                    \"foodPosition\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 13,\n            \"isStatic\": false,\n           
+    },\n        {\n            \"rpcId\": 7,\n            \"isStatic\": false,\n           
     \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 3,\n           
     \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
@@ -197,8 +197,8 @@ MonoBehaviour:
     \"returnTypeName\": \"Void\",\n                \"methodName\": \"Stopped\",\n               
     \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
     [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": true,\n           
+    []\n            }\n        },\n        {\n            \"rpcId\": 8,\n           
+    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
     \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               

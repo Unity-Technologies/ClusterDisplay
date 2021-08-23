@@ -60,12 +60,6 @@ namespace Unity.ClusterDisplay.RPC
 
         private static bool CanWriteValueTypeToRPCBuffer<T> (T value, out buint structSize)
         {
-            if (!AllowWrites)
-            {
-                structSize = 0;
-                return false;
-            }
-
             structSize = (buint)Marshal.SizeOf<T>(value);
             if (rpcBufferSize + structSize >= rpcBuffer.Length)
             {
@@ -78,12 +72,6 @@ namespace Unity.ClusterDisplay.RPC
 
         private static bool CanWriteBufferToRPCBuffer<T> (int count, out buint arrayByteCount) where T : unmanaged
         {
-            if (!AllowWrites)
-            {
-                arrayByteCount = 0;
-                return false;
-            }
-
             arrayByteCount = (buint)(Marshal.SizeOf<T>() * count);
 
             if (arrayByteCount > m_CachedPayloadLimits.maxSingleRPCParameterByteSize)
@@ -124,7 +112,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCNativeArrayParameterValueMarker]
         public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> buffer) where T : unmanaged
         {
-            if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
+            if (!AllowWrites || !CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
                 return;
 
             CopyCountToRPCBuffer((buint)buffer.Length);
@@ -134,10 +122,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCArrayParameterValueMarker]
         public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : unmanaged
         {
-            if (value == null)
-                return;
-
-            if (!CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
+            if (!AllowWrites || value == null || !CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
                 return;
 
             CopyCountToRPCBuffer((buint)value.Length);
@@ -149,7 +134,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCValueTypeParameterValueMarker]
         public static unsafe void AppendRPCValueTypeParameterValue<T>(T value) where T : struct
         {
-            if (!CanWriteValueTypeToRPCBuffer(value, out var structSize))
+            if (!AllowWrites || !CanWriteValueTypeToRPCBuffer(value, out var structSize))
                 return;
 
             UnsafeUtility.MemCpy(

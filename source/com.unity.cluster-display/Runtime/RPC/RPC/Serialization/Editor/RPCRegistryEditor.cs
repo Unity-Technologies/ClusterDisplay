@@ -11,6 +11,29 @@ namespace Unity.ClusterDisplay.RPC
 {
     public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
+        private class RPCRegistrySettingsProvider : SettingsProvider
+        {
+            public RPCRegistrySettingsProvider(string path, SettingsScope scope = SettingsScope.User) : base(path, scope) {}
+
+            [SettingsProvider]
+            public static SettingsProvider CreateMyCustomSettingsProvider()
+            {
+                var provider = new RPCRegistrySettingsProvider("Project/Cluster Display", SettingsScope.Project);
+                return provider;
+            }
+
+            private RPCRegistryEditor cachedRPCRegistryEditor;
+            public override void OnGUI(string searchContext)
+            {
+                if (!TryGetInstance(out var rpcRegistryInstance))
+                    return;
+
+                if (cachedRPCRegistryEditor == null)
+                    cachedRPCRegistryEditor = Editor.CreateEditor(rpcRegistryInstance, typeof(RPCRegistryEditor)) as RPCRegistryEditor;
+                cachedRPCRegistryEditor.OnInspectorGUI();
+            }
+        }
+
         [CustomEditor(typeof(RPCRegistry))]
         private class RPCRegistryEditor : UnityEditor.Editor
         {
@@ -37,6 +60,14 @@ namespace Unity.ClusterDisplay.RPC
             private Vector2 registeredMethodListPosition;
 
             private ReorderableList assemblyList;
+
+            [MenuItem("Unity/Cluster Display/RPC Registry")]
+            private static void SelectRegistry ()
+            {
+                if (!RPCRegistry.TryGetInstance(out var instance))
+                    return;
+                Selection.objects = new[] { instance };
+            }
 
             private void UpdateAssemblySearch (string newAssemblySearchStr, bool forceUpdate = false)
             {
@@ -170,26 +201,8 @@ namespace Unity.ClusterDisplay.RPC
 
                 if (RPCRegistry.RPCCount > 0)
                 {
-                    if (targetType != null && targetMethod != null)
-                    {
-                        EditorGUILayout.LabelField("Selected Method", EditorStyles.boldLabel);
-                        EditorGUILayout.LabelField($"\"{ReflectionUtils.GetMethodSignatureString(targetMethod)}\" in type: \"{targetType.FullName}\".");
-                    }
-
-                    RPCEditorGUICommon.HorizontalLine();
                     EditorGUILayout.BeginHorizontal();
-
                     EditorGUILayout.LabelField("Registered Methods", EditorStyles.boldLabel);
-
-                    if (GUILayout.Button("Clear", GUILayout.Width(60)))
-                    {
-                        if (EditorUtility.DisplayDialog("Unregister ALL Methods?", "Are you sure you to clear ALL registered methods?", "Yes", "Cancel"))
-                        {
-                            rpcRegistry.Clear();
-                            targetMethod = null;
-                        }
-                    }
-
                     EditorGUILayout.EndHorizontal();
 
                     registeredMethodListPosition = EditorGUILayout.BeginScrollView(registeredMethodListPosition, GUILayout.Height(300));
@@ -198,12 +211,6 @@ namespace Unity.ClusterDisplay.RPC
                     {
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
-
-                        if (GUILayout.Button("Select", GUILayout.Width(rpcMethodInfo.IsStatic ? 60 : 90)))
-                        {
-                            targetMethod = rpcMethodInfo.methodInfo;
-                            targetType = targetMethod.DeclaringType;
-                        }
 
                         if (GUILayout.Button("X", GUILayout.Width(25)))
                         {
@@ -222,21 +229,22 @@ namespace Unity.ClusterDisplay.RPC
                         EditorGUILayout.BeginHorizontal();
                         GUILayout.Space(30);
                         EditorGUILayout.LabelField("Override:", GUILayout.Width(55));
-                        var newOverrideRPCExecutionStage = EditorGUILayout.Toggle(rpcMethodInfo.overrideRPCExecutionStage, GUILayout.Width(15));
+
+                        var newOverrideRPCExecutionStage = EditorGUILayout.Toggle(rpcMethodInfo.overrideRPCExecutionStage, GUILayout.Width(25));
+                        RPCExecutionStage newRPCExecutionStage = rpcMethodInfo.rpcExecutionStage;
 
                         if (newOverrideRPCExecutionStage)
-                        {
-                            var newRPCExecutionStage = (RPCExecutionStage)EditorGUILayout.EnumPopup(rpcMethodInfo.rpcExecutionStage);
-                            if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage || newOverrideRPCExecutionStage != rpcMethodInfo.overrideRPCExecutionStage)
-                            {
-                                rpcMethodInfo.overrideRPCExecutionStage = newOverrideRPCExecutionStage;
-                                rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
+                            newRPCExecutionStage = (RPCExecutionStage)EditorGUILayout.EnumPopup(rpcMethodInfo.rpcExecutionStage);
+                        else EditorGUILayout.LabelField(rpcMethodInfo.rpcExecutionStage.ToString());
 
-                                rpcRegistry.TryUpdateRPC(ref rpcMethodInfo);
-                            }
+                        if (newRPCExecutionStage != rpcMethodInfo.rpcExecutionStage || newOverrideRPCExecutionStage != rpcMethodInfo.overrideRPCExecutionStage)
+                        {
+                            rpcMethodInfo.overrideRPCExecutionStage = newOverrideRPCExecutionStage;
+                            rpcMethodInfo.rpcExecutionStage = newRPCExecutionStage;
+
+                            rpcRegistry.TryUpdateRPC(ref rpcMethodInfo);
                         }
 
-                        else EditorGUILayout.LabelField(rpcMethodInfo.rpcExecutionStage.ToString());
                         EditorGUILayout.EndHorizontal();
                     }));
 
@@ -271,48 +279,14 @@ namespace Unity.ClusterDisplay.RPC
                 if (GUILayout.Button("Reset"))
                     rpcRegistry.Clear();
 
-                RPCEditorGUICommon.HorizontalLine();
+                ListRegisteredMethods();
+
                 EditorGUILayout.LabelField("Post Processable Assemblies", EditorStyles.boldLabel);
+                ListRegisteredAssemblies();
                 UpdateAssemblySearch(EditorGUILayout.TextField(assemblySearchStr));
                 ListAssemblies();
-                ListRegisteredAssemblies();
                 RPCEditorGUICommon.HorizontalLine();
 
-                // assemblyList.DoLayoutList();
-
-                EditorGUILayout.LabelField("Types", EditorStyles.boldLabel);
-                UpdateTypeSearch(EditorGUILayout.TextField(typeSearchStr));
-                ListTypes();
-                RPCEditorGUICommon.HorizontalLine();
-
-                if (targetType != null)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button("X", GUILayout.Width(25)))
-                    {
-                        targetType = null;
-                        EditorGUILayout.EndHorizontal();
-                    }
-
-                    else
-                    {
-                        EditorGUILayout.LabelField($"Target Type: \"{targetType.FullName}\"", EditorStyles.boldLabel);
-                        EditorGUILayout.EndHorizontal();
-                        RPCEditorGUICommon.HorizontalLine();
-
-                        RPCEditorGUICommon.ListMethods(
-                            "Static Methods:",
-                            cachedMethods,
-                            methodSearchStr,
-                            ref methodListScrollPosition,
-                            OnChangeSearch,
-                            OnSelectMethod);
-
-                        RPCEditorGUICommon.HorizontalLine();
-                    }
-                }
-
-                ListRegisteredMethods();
             }
 
             private void OnEnable()
