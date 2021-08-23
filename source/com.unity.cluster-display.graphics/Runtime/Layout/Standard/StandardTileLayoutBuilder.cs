@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
 using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
@@ -90,6 +91,20 @@ namespace Unity.ClusterDisplay.Graphics
             camera.cullingMatrix = cullingMatrix;
         }
 
+        private void WriteRTToFile (RenderTexture rt, string filePath, bool overwrite = true)
+        {
+            if (System.IO.File.Exists(filePath) && !overwrite)
+                return;
+
+            var activeRT = RenderTexture.active;
+            RenderTexture.active = rt;
+            Texture2D tempTex = new Texture2D(Screen.width, Screen.height);
+            tempTex.ReadPixels(new Rect(0f, 0f, Screen.width, Screen.height), 0, 0);
+            var bytes = tempTex.EncodeToPNG();
+            System.IO.File.WriteAllBytes(filePath, bytes);
+            RenderTexture.active = activeRT;
+        }
+
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
@@ -104,20 +119,22 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
             Vector4 texBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            var presentRT = m_RTManager.GetPresentRT((int)Screen.width, (int)Screen.height);
+            var presentRT = m_RTManager.GetPresentRT(Screen.width, Screen.height);
             var sourceRT =  m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             // Whether we are the emitter or cluster display is inactive, we always want to present to the user one frame behind.
             if (ClusterDisplay.ClusterDisplayState.IsEmitter || !ClusterDisplay.ClusterDisplayState.IsClusterLogicEnabled)
             {
-                var backBufferRT = m_RTManager.GetBackBufferRT((int)Screen.width, (int)Screen.height);
+                var backBufferRT = m_RTManager.GetBackBufferRT(Screen.width, Screen.height);
 
                 cmd.SetRenderTarget(presentRT);
-                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+                // cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
                 Blit(cmd, backBufferRT, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0));
 
                 cmd.SetRenderTarget(backBufferRT);
                 Blit(cmd, sourceRT, texBias, k_ScaleBiasRT);
+
+                // WriteRTToFile(backBufferRT, $"BackBuffer.png", overwrite: false);
             }
 
             else // If this node is a repeater, then DO NOT present one frame behind.
@@ -129,11 +146,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
 
-#if UNITY_EDITOR
+            // WriteRTToFile(presentRT, $"Present.png", overwrite: false);
+            // WriteRTToFile(sourceRT, $"Next.png", overwrite: false);
+            // Thread.Sleep(100);
+
+            #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
-#endif
+            #endif
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}

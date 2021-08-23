@@ -115,6 +115,9 @@ namespace Unity.ClusterDisplay
             stateSetter.SetCLusterLogicEnabled(false);
             NodeState.Debugging = m_Debugging;
 
+            // QualitySettings.vSyncCount = 0;
+            // Application.targetFrameRate = 60;
+
             // Grab command line args related to cluster config
             var args = System.Environment.GetCommandLineArgs().ToList();
 #if UNITY_EDITOR
