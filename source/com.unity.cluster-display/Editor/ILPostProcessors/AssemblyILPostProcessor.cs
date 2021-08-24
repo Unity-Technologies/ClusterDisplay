@@ -5,6 +5,8 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
 using UnityEngine;
+using UnityEditor;
+using UnityEditor.Compilation;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
@@ -12,8 +14,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     /// This class asynchronously loads in recently compiled assemblies 
     /// and determines whether we should manipulate them.
     /// </summary>
+    [InitializeOnLoad]
     public class AssemblyILPostProcessor : ILPostProcessor
     {
+        // static AssemblyILPostProcessor () => UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
         /// converts those bytes into a Cecil AssemblyDefinition which we manipulate.

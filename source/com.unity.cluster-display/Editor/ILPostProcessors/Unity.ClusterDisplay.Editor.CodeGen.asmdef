@@ -1,0 +1,19 @@
+{
+    "name": "Unity.ClusterDisplay.Editor.CodeGen",
+    "references": [
+        "GUID:ebda382865f803841bb36f141d251db6"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Mono.Cecil.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
