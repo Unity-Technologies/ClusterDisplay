@@ -215,7 +215,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 1065972871}
+  m_TargetTexture: {fileID: 1152254608}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
@@ -252,13 +252,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_TargetCamera: {fileID: 955471514}
---- !u!84 &1065972871
+--- !u!84 &1152254608
 RenderTexture:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Source-1-RT-(1278X769)
+  m_Name: Source-1-RT-(1278X793)
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
@@ -266,7 +266,7 @@ RenderTexture:
   m_DownscaleFallback: 0
   serializedVersion: 3
   m_Width: 1278
-  m_Height: 769
+  m_Height: 793
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthFormat: 1
@@ -426,5 +426,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 041148dc60abf7a478e29c3571d96c11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1490135298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1490135296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b2e6e70b40689b499ada8d43ff4cb66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
