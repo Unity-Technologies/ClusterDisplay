@@ -38,7 +38,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.ClusterDisplayPointerInputModule/ReplicatedMouseState\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"ReplicatedMouseState\"\n               
     ],\n                \"parameterNames\": [\n                    \"replicatedMouseState\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 13,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -51,7 +51,7 @@ MonoBehaviour:
     ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
     ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
     ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
+    ]\n            }\n        },\n        {\n            \"rpcId\": 15,\n           
     \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
     \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
     false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
@@ -99,9 +99,21 @@ MonoBehaviour:
     [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
     [\n                    \"Single[]\"\n                ],\n                \"parameterNames\":
     [\n                    \"spectrum\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 0,\n            \"isStatic\": false,\n           
+    },\n        {\n            \"rpcId\": 13,\n            \"isStatic\": false,\n           
     \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 0,\n           
     \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
+    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
+    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"PushEmitterTime\",\n               
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
+    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
+    \"PushTime\",\n                \"declaringParameterTypeAssemblyNames\": [\n                   
+    \"mscorlib\"\n                ],\n                \"parameterTypeNamespaces\":
+    [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
+    [\n                    \"Single\"\n                ],\n                \"parameterNames\":
+    [\n                    \"time\"\n                ]\n            }\n        },\n       
+    {\n            \"rpcId\": 0,\n            \"isStatic\": false,\n            \"overrideRPCExecutionStage\":
+    false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
+    \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
     false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
     \"declaringTypeNamespace\": \"Unity.ClusterDisplay.RPC.Wrappers\",\n               
     \"declaryingTypeName\": \"CameraWrapper\",\n                \"declaringReturnTypeAssemblyName\":

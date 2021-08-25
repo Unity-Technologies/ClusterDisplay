@@ -40,7 +40,7 @@ uint Hash(uint s)
     return s;
 }
 
-[numthreads(4, 4, 1)]
+[numthreads(16, 16, 1)]
 void TransferData(uint2 id : SV_DispatchThreadID)
 {
     uint si = Hash(id.x + id.y * 65536) % SampleCount;

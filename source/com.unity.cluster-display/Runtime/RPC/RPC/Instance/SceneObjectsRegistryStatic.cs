@@ -232,20 +232,56 @@ namespace Unity.ClusterDisplay.RPC
                 return;
 
             Dictionary<string, SceneObjectsRegistry> sceneObjectsRegistry = new Dictionary<string, SceneObjectsRegistry>();
-            Component[] components = FindObjectsOfType<Component>();
+            List<Component> components = new List<Component>();
+            for (int si = 0; si < SceneManager.sceneCount; si++)
+            {
+                var loadedScene = SceneManager.GetSceneAt(si);
+                if (!loadedScene.isLoaded)
+                    continue;
+
+                var rootGameObjects = loadedScene.GetRootGameObjects();
+                for (int ri = 0; ri < rootGameObjects.Length; ri++)
+                {
+                    var rootGameObjectComponents = rootGameObjects[ri].GetComponents<Component>();
+                    if (rootGameObjectComponents != null && rootGameObjectComponents.Length > 0)
+                    {
+                        for (int ci = 0; ci < rootGameObjectComponents.Length; ci++)
+                        {
+                            if (rootGameObjectComponents[ci] == null)
+                                continue;
+                            components.Add(rootGameObjectComponents[ci]);
+                        }
+                    }
+
+                    var childComponents = rootGameObjects[ri].GetComponentsInChildren<Component>(includeInactive: true);
+                    if (childComponents != null && childComponents.Length > 0)
+                    {
+                        for (int ci = 0; ci < childComponents.Length; ci++)
+                        {
+                            if (childComponents[ci] == null)
+                                continue;
+                            components.Add(childComponents[ci]);
+                        }
+                    }
+                }
+            }
 
             rpcRegistry.Foreach(((rpcMethodInfo) =>
             {
                 List<Component> componentsWithRPC = new List<Component>();
-                for (int ci = 0; ci < components.Length; ci++)
+                for (int ci = 0; ci < components.Count; ci++)
                 {
                     var type = components[ci].GetType();
+
                     if (type != rpcMethodInfo.methodInfo.DeclaringType &&
                         !type.IsSubclassOf(rpcMethodInfo.methodInfo.DeclaringType))
                         continue;
 
                     componentsWithRPC.Add(components[ci]);
                 }
+
+                if (componentsWithRPC.Count == 0)
+                    return;
 
                 foreach (var component in componentsWithRPC)
                 {

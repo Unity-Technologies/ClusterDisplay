@@ -134,7 +134,7 @@ namespace Unity.ClusterDisplay.RPC
             ParseParametersPayloadSize(ref bufferPos, out rpcRequest.parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
-            UnityEngine.Debug.Log($"Processing RPC: (ID: {rpcId}, RPC Execution Stage: {rpcExecutionStage}, Pipe ID: {pipeId}, Parameters Payload Size: {parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
+            UnityEngine.Debug.Log($"Processing RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Size: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}, Frame: {frame})");
             #endif
 
             if (!RPCRegistry.TryGetAssemblyIndex(rpcRequest.rpcId, out rpcRequest.assemblyIndex))
@@ -167,9 +167,6 @@ namespace Unity.ClusterDisplay.RPC
                     startingBufferPos,
                     ref bufferPos))
                     goto failure;
-
-                if (rpcRequest.rpcId == 8)
-                    UnityEngine.Debug.Log("TEST");
 
                 switch (rpcRequest.rpcExecutionStage)
                 {

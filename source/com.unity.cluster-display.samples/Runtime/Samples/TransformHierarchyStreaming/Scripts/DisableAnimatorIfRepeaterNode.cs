@@ -11,5 +11,5 @@ public class DisableAnimatorIfRepeaterNode : MonoBehaviour
         animator = GetComponent<Animator>();
 
     private void OnEnable() =>
-        animator.enabled = !ClusterDisplayState.IsClusterLogicEnabled || ClusterDisplayState.IsRepeater;
+        animator.enabled = !ClusterDisplayState.IsClusterLogicEnabled || !ClusterDisplayState.IsRepeater;
 }
