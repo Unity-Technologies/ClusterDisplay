@@ -12,7 +12,12 @@ namespace Unity.ClusterDisplay.RPC
     {
         private static NativeArray<byte> rpcBuffer;
 
+        /// <summary>
+        /// This is the current size of our RPC buffer which grows as were writing it. The actual RPC 
+        /// buffer is a fixed size. So this can also be considered as the RPC buffer write head.
+        /// </summary>
         private static buint rpcBufferSize;
+
         public static buint RPCBufferSize => rpcBufferSize;
 
         // The RPC header is represented by 3 unsigned shorts and a byte:
@@ -22,6 +27,9 @@ namespace Unity.ClusterDisplay.RPC
         //  Parameter payload size: uint (4 bytes).
         private const buint MinimumRPCPayloadSize = sizeof(ushort) * 3 + sizeof(buint);
 
+        /// <summary>
+        /// This does not become true until we've connected to the cluster display network.
+        /// </summary>
         public static bool AllowWrites = false;
 
         private static ClusterDisplayResources.PayloadLimits m_CachedPayloadLimits;

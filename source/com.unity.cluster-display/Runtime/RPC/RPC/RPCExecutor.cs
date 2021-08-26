@@ -7,9 +7,18 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay.RPC
 {
+    /// <summary>
+    /// The purpose of this class is to manage and insert the player loop and execute queued 
+    /// RPCs sent by the emitter node. When an RPC's RPCExecutionStage is set to Automatic,
+    /// we get the current RPCExecutionStage + 1 within the frame from this class and embed
+    /// into the RPC's header.
+    /// </summary>
     public static class RPCExecutor
     {
         public static RPCExecutionStage CurrentExecutionStage => m_CurrentExecutionStage;
+        /// <summary>
+        /// Throughout the frame, this is modified depending on the stage we are in: FixedUpdate, Update or LateUpdate.
+        /// </summary>
         private static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.AfterInitialization;
 
         public class BeforeFixedUpdateType {}
@@ -102,6 +111,10 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
+        /// <summary>
+        /// Inserts our callbacks throughout the player loop.
+        /// </summary>
+        /// <returns></returns>
         public static bool TrySetup ()
         {
             var defaultPlayerSystemLoop = PlayerLoop.GetCurrentPlayerLoop();

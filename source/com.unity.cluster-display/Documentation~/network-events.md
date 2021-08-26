@@ -32,6 +32,28 @@ You can call/invoke RPC methods from the editor while cluster display is running
 
 ![Cluster Display Method Invocation](./images/cluster-display-ui-invocation-example.gif)
 
+## Inspector Generation
+In order to display the cluster display UI on almost all component inspectors, we generate code automatically in the user space:
+
+![Generated Inspectors Location](./images/generated-inspectors-location.png)
+
+This generated source code contains the necessary stubs to extend components that cannot easily be extended. We use Rosyln source generators to perform this task.
+
+![Generated Inspector Code](./images/generated-inspectors-code.png)
+
+How this works and why:
+- Built in component inspectors are not easy to extend as many of them have complex inspectors.
+- By generating these stubs, the internal GUI logic instantiates an instance of the built in inspector and wraps it's methods with our extension inspector.
+- This code needs to be generated in Assets/ allowing certain [CustomEditor] decorated classes to be picked up first when Unity internally attempts to find the first Editor for a class.
+This approach is not perfect and we are exploring other options on how to improve this.
+
+### How to Generate Them
+When you add a new package to the project or change Unity versions, you may need to re-generate them via:
+
+![Regenerating Inspectors](./images/generated-inspectors-regenerate.png)
+
+Furthermore, if you remove a package or change to a Unity version where a deprecated type has been removed, you may get some compile time errors complaining about missing types in **GeneratedInspectors.cs**. Therefore, you will need to delete this file, and regenerate them.
+
 # IL Post Processing
 In order to intercept method an properties calls for propagation to repeater nodes, we inject IL into your compiled assembly after your assembly is compiled. Generally the following is injected:
 - Intercept Instructions:
@@ -65,7 +87,7 @@ Now when you manipulate and invoke the RPC, it's invoking through the wrapper:
 
 ![Cluster Display Method Invocation](./images/cluster-display-ui-wrapper-invocation-example.gif)
 
-## **[ClusterRPC]** Attribute
+# **[ClusterRPC]** Attribute
 The ClusterRPC attribute is a handy way of flagging a method as an RPC, and you can declaring it above or before your method declaration:
 ```
 [ClusterRPC]
@@ -78,13 +100,24 @@ This attribute also provides several optional but handy arguments:
 public ClusterRPC (RPCExecutionStage rpcExecutionStage = RPCExecutionStage.Automatic, int rpcId = -1, string formarlySerializedAs = "")
 ```
 
-### **RPCExecutionStage**
-By default, cluster display will automatically determine the order which the RPC event was called within the [order of events](https://docs.unity3d.com/Manual/ExecutionOrder.html). You can override the order of **when** this RPC gets executed by the repeater nodes within the frame by using this optional argument. You can read more about this [here]().
+## **RPCExecutionStage**
+By default, cluster display will automatically determine the order which the RPC event was called within the [order of events](https://docs.unity3d.com/Manual/ExecutionOrder.html). You can override the order of **when** this RPC gets executed by the repeater nodes within the frame by using this optional argument. Here is a diagram of the execution stage timings:
 
-### **rpcId**
+![Execution Stage Timings](./images/execution-stage-graph-0.png)
+
+When an RPC has it's execution stage set to **RPCExecutionStage.Automatic**, cluster display will know when the RPC was invoked. This is determined through **RPCExecutor.cs** which inserts decorates several callbacks throughout the player loop to:
+1. The current state of the frame within the player loop.
+2. To execute queued RPCs on the repeater nodes throughout the player loop.
+
+### Why RPCExecutionStage?
+Keeping deterministic behaviour between the nodes is challenging, and often even simple differences in execution timing can cause logical forks between the emitter and repeater nodes. Consider the following issues:
+- I want a network event to manipulate physics objects. Therefore, I need to make sure I stage the received data before FixedUpdate so that FixedUpdate can use the data.
+- I have a GUI event invoking a network event. Therefore, I need to make sure that the network event executes after LateUpdate on repeater nodes which is where those types of events are invoked.
+
+## **rpcId**
 Cluster display usually automatically determines the IDs of RPCs for you. However, this option allows you to override that ID for whatever reason.
 
-### **formarlySerializedAs**
+## **formarlySerializedAs**
 When you rename a method cluster display will not be able to deserialize the method's signature and setting this string to what the method was previously named as will allow cluster display to deserialize the renamed method.
 
 # RPC Method Parameters

@@ -2,4 +2,5 @@
 * [Project setup](project-setup.md)
 * [Hardware setup](hardware-setup.md)
 * [Cluster operation](cluster-operation.md)
+* [Network Events](network-events.md)
 * [Reference](reference.md)
