@@ -199,7 +199,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <summary>
         /// Using Latch & Unlatch terminology where the emitter latches after it finishes writing to the RPC buffer, 
         /// and the repeater unlatches when it begins reading the received RPC buffer. In this case, we are unlatching
-        /// and interpreting the RPC buffer.
+        /// and interpreting the RPC buffer. However, there is no latch indicator in the byte buffer.
         /// </summary>
         /// <param name="buffer">This is a copy of the network frame buffer slice of bytes that represents the RPC buffer.</param>
         /// <param name="frame">The current frame were on for logging/debugging purposes.</param>
