@@ -60,27 +60,9 @@ Note that **Cluster Sync** requires specific command line arguments to function.
 
 For debugging purposes, you can run the Unity Editor as a cluster node. To do so, populate the **Editor Cmd Line** field on the **ClusterSync** component with the command line arguments that you would normally use to run a standalone build. Otherwise, you can leave this field blank. Note that if other cluster nodes fail to respond, the editor might hang.
 
-### Camera Control
+The **ClusterSync** component als provides the following functionality:
 
-The **Camera Control** component is responsible for managing domain decomposition in projects that don’t use HDRP.
-
-Typically, in that case, each rendering node maps its ID to a subsection of the global camera frustum. The **Camera Control** component is a script that implements the asymmetric frustum projection used in typical LED wall applications.
-
-![](images/component-camera-control.png)
-
-This component is a script that alters the main camera’s projection matrix to match the desired frustum. The parameters are the number of tiles along X and Y (2x2 by default). The tiles are ordered from left to right and top to bottom, as shown in the following example:
-
-![](images/camera-control-tiles.png)
-
-### Cluster Quit Behaviour
-
-The **Cluster Quit Behaviour** component allows to cleanly quit the cluster.
-
-![](images/component-cluster-quit-behaviour.png)
-
-When you have this component in your project:
-
--   You can press **Q** and **K** at the same time on the keyboard connected to the emitter when you need to manually quit the whole cluster.
+-   You can press **Q** on a keyboard connected to the emitter when you need to manually quit the whole cluster.
 -   The nodes can automatically quit the cluster if the [cluster communication times out](#communication-phases-and-timeouts).
 
 **GfxPluginQuadroSyncCallbacks**

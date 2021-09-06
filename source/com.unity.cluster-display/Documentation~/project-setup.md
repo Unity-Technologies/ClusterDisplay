@@ -39,15 +39,21 @@ For reference, the emitter node automatically synchronizes the following data ac
 
 -   Input events from the emitter: keyboard, mouse, etc.
 
-**Important:** Input events cannot be properly processed by UI elements spanning multiple displays.
+-   Input events for UI*
+
+\*Setting up UGUI to work with cluster display takes some additional steps, see the following: [Cluster Display & UGUI](cluster-display-and-ugui.md).
 
 ## Project setup
 
 1.  Open your project in the Unity Editor.
 
-2.  Create an empty GameObject to the main Scene of your project and name it, for example, **ClusterDisplayConfig**.
+2. In the cluster display graphics package, find the ClusterDisplay prefab in: **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab** and drag it into your desired scene.
 
-3.  Add the 3 following components to this **ClusterDisplayConfig** GameObject:
+![Cluster Display Prefab](images/cluster-display-prefab.png)
+
+3.  Create an empty GameObject to the main Scene of your project and name it, for example, **ClusterDisplayConfig**.
+
+4.  Add the 3 following components to this **ClusterDisplayConfig** GameObject:
 
     -  **Cluster Sync** – to enable internal state synchronization.
 
@@ -57,11 +63,7 @@ For reference, the emitter node automatically synchronizes the following data ac
 
     >**Important:** You must use only a *single instance* of each of these components in your entire Unity project.
 
-1.  In the **Camera Control** component, set up the **Num Tiles X** and **Num Tiles Y** values according to your display grid size (horizontal x vertical numbers of physical screens).
-
-    ![](images/component-camera-control.png)
-
-2.  Edit your **Project Settings** as per the following recommendations:
+5.  Edit your **Project Settings** as per the following recommendations:
 
     -  In **Quality > Other**, set **VSync Count** to **Every V Blank**.
 
