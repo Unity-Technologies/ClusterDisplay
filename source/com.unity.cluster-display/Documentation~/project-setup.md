@@ -26,23 +26,6 @@ If you are using VFX Graph Particles effects in HDRP, make sure to *disable* the
 
 ![](images/component-visual-effect.png)
 
-### Input for Cluster Display
-
-You should use only synchronized data types to update the client state. This ensures the application simulates identically across the emitter and all client nodes.
-
-For reference, the emitter node automatically synchronizes the following data across the network:
-
--   TimeManager data: Time.deltaTime, Time.unscaledDeltaTime, etc.
-    <br />**Note:** Time.realTimeSinceStartup is not synchronized. You should avoid using it.
-
--   Random number internal state
-
--   Input events from the emitter: keyboard, mouse, etc.
-
--   Input events for UI*
-
-\*Setting up UGUI to work with cluster display takes some additional steps, see the following: [Cluster Display & UGUI](cluster-display-and-ugui.md).
-
 ## Project setup
 
 1.  Open your project in the Unity Editor.
@@ -51,19 +34,7 @@ For reference, the emitter node automatically synchronizes the following data ac
 
 ![Cluster Display Prefab](images/cluster-display-prefab.png)
 
-3.  Create an empty GameObject to the main Scene of your project and name it, for example, **ClusterDisplayConfig**.
-
-4.  Add the 3 following components to this **ClusterDisplayConfig** GameObject:
-
-    -  **Cluster Sync** – to enable internal state synchronization.
-
-    -  **Camera Control** – to configure the display grid size and enable the mapping of the rendering node ID to a camera subregion for domain decomposition.
-
-    -  **Cluster Quit Behaviour** – to enable manual and timeout-based cluster shutdown.
-
-    >**Important:** You must use only a *single instance* of each of these components in your entire Unity project.
-
-5.  Edit your **Project Settings** as per the following recommendations:
+3.  Edit your **Project Settings** as per the following recommendations:
 
     -  In **Quality > Other**, set **VSync Count** to **Every V Blank**.
 
