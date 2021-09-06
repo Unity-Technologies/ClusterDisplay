@@ -141,11 +141,17 @@ namespace Unity.ClusterDisplay.Graphics
 
         public CameraContextTarget Register (Camera camera, bool logError = true)
         {
-            if (k_CameraContextTargets.ContainsKey(camera))
+            bool registered = k_CameraContextTargets.ContainsKey(camera);
+            if (registered)
             {
-                if (logError)
-                    Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
-                return null;
+                // If the registered camera target is not null, then it means we are attempting to register
+                // multiple camera context targets per camera component, which is not allowed.
+                if (k_CameraContextTargets[camera] != null)
+                {
+                    if (logError)
+                        Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
+                    return null;
+                }
             }
 
             CameraContextTarget cameraContextTarget = null;
@@ -154,10 +160,17 @@ namespace Unity.ClusterDisplay.Graphics
             if (cameraContextTarget == null)
                 cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
 
+
+            cameraContextTarget.onCameraEnabled -= OnCameraEnabled;
+            cameraContextTarget.onCameraDisabled -= OnCameraDisabled;
+
             cameraContextTarget.onCameraEnabled += OnCameraEnabled;
             cameraContextTarget.onCameraDisabled += OnCameraDisabled;
 
-            k_CameraContextTargets.Add(camera, cameraContextTarget);
+            if (registered)
+                k_CameraContextTargets[camera] = cameraContextTarget; // We could have lost a reference to the previously valid camera context target, so we update the reference here.
+            else k_CameraContextTargets.Add(camera, cameraContextTarget);
+
             return cameraContextTarget;
         }
 

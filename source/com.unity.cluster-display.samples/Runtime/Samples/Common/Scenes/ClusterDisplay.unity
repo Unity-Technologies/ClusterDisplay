@@ -123,21 +123,21 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!84 &396073068
+--- !u!84 &872498483
 RenderTexture:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PresentRT-(1278X856)
+  m_Name: PresentRT-(1080X1920)
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
   m_ForcedFallbackFormat: 4
   m_DownscaleFallback: 0
   serializedVersion: 3
-  m_Width: 1278
-  m_Height: 856
+  m_Width: 1080
+  m_Height: 1920
   m_AntiAliasing: 1
   m_MipCount: -1
   m_DepthFormat: 1
@@ -158,6 +158,23 @@ RenderTexture:
     m_WrapW: 1
   m_Dimension: 2
   m_VolumeDepth: 1
+--- !u!1 &1225720125 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3447312720805938546, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
+  m_PrefabInstance: {fileID: 3447312722038380262}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1225720126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1225720125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 908663046f305224290078c6fc9ba80a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1545035982
 GameObject:
   m_ObjectHideFlags: 0
@@ -196,7 +213,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 396073068}
+  m_Texture: {fileID: 872498483}
   m_UVRect:
     serializedVersion: 2
     x: 0

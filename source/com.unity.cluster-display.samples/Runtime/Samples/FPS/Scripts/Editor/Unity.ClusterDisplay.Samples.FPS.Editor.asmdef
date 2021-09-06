@@ -1,0 +1,19 @@
+{
+    "name": "Unity.ClusterDisplay.Samples.FPS.Editor",
+    "references": [
+        "GUID:443dccf4257fb0047b0164ad133931b5",
+        "GUID:1504ded7eaab5a64bba497bc84c0bde8",
+        "GUID:1da3181ca973adf4a97deaf99caf2d86"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

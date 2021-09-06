@@ -16,6 +16,7 @@ namespace Unity.ClusterDisplay
 
         [SerializeField] private SceneAsset baseScene = null;
         [SerializeField] private List<SceneAsset> additions = new List<SceneAsset>();
+        [SerializeField] private List<PostSceneCompositionTask> postSceneCompositionTasks = new List<PostSceneCompositionTask>();
 
         public string StagedScenePath => $"Assets/Cluster Display/Scenes/Staged/{compositionName}.unity";
 
@@ -41,7 +42,15 @@ namespace Unity.ClusterDisplay
 
             AssetDatabase.Refresh();
 
-            return AssetDatabase.LoadAssetAtPath<SceneAsset>(StagedScenePath);
+            var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(StagedScenePath);
+            for (int i = 0; i < postSceneCompositionTasks.Count; i++)
+            {
+                if (postSceneCompositionTasks[i] == null)
+                    continue;
+                postSceneCompositionTasks[i].Execute(sceneAsset, stageScene);
+            }
+
+            return sceneAsset;
         }
 
         public void Open ()

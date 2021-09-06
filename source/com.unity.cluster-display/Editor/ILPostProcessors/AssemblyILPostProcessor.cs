@@ -93,6 +93,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         }
 
         public override ILPostProcessor GetInstance() => this;
+        /// <summary>
+        /// This is where ILPostProcessing starts for a specific assembly. NOTE: This may be executed multiple times asynchronously per assembly.
+        /// </summary>
+        /// <param name="compiledAssembly">The assembly that was just compiled.</param>
+        /// <returns></returns>
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
             Debug.Log($"Post processing assembly: \"{compiledAssembly.Name}\".");
