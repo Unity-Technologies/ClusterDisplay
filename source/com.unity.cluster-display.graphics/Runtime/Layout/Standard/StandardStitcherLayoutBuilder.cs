@@ -40,8 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!ClusterCameraController.TryGetContextCamera(out var camera))
                 return;
 
-            if (camera.enabled)
-                camera.enabled = false;
+            camera.enabled = !camera.gameObject.activeInHierarchy;
 
             if (!ValidGridSize(out var numTiles))
                 return;

@@ -3208,7 +3208,7 @@ MonoBehaviour:
     m_PreExtrapolationTime: 0
     m_DisplayName: Jog Follow
   - m_Version: 1
-    m_Start: 0.016666666666666666
+    m_Start: 0
     m_ClipIn: 0
     m_Asset: {fileID: -5369861346016694168}
     m_Duration: 3.316666666666667

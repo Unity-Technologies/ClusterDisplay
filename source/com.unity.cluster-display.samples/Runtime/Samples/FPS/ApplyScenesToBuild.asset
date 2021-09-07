@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ApplyScenesToBuild
   m_EditorClassIdentifier: 
   additionalScenesToAddToBuild:
+  - {fileID: 102900000, guid: 56e3faabc5bb30f49a68bb8f1292f988, type: 3}
   - {fileID: 102900000, guid: 72e5c65a45893714484002914e3fd521, type: 3}
   - {fileID: 102900000, guid: d794a2ef8ba31d847ad3c19d03e2ddb9, type: 3}
   - {fileID: 102900000, guid: d14bc1e5c35dd2e42b4774e0bbf3706d, type: 3}

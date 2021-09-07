@@ -23,9 +23,12 @@ namespace Unity.ClusterDisplay.Graphics
             return camera != null;
         }
 
-    #if UNITY_EDITOR
+        #if UNITY_EDITOR
         private void OnValidate() => CacheCamera();
-    #endif
+        #endif
+
+        public void PollEnableState () =>
+            m_TargetCamera.enabled = !m_TargetCamera.gameObject.activeInHierarchy;
 
         private void OnDestroy()
         {
@@ -33,8 +36,10 @@ namespace Unity.ClusterDisplay.Graphics
                 cameraContextRegistry.UnRegister(this);
         }
 
+        private void Start() => m_TargetCamera.enabled = true;
         private void OnDisable()
         {
+            PollEnableState();
             if (onCameraDisabled != null)
                 onCameraDisabled(this);
         }

@@ -110,8 +110,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
-            if (camera.enabled)
-                camera.enabled = false;
+            camera.enabled = !camera.gameObject.activeInHierarchy;
 
             camera.ResetProjectionMatrix();
             camera.ResetCullingMatrix();
