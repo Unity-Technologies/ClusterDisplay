@@ -26,7 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera))
+            if (ClusterCameraController.TryGetContextCamera(out var contextCamera))
                 contextCamera.enabled = true;
         }
 
@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.Graphics
             Assert.IsTrue(m_QueuedStitcherParameters.Count == 0);
             m_HasClearedMirrorView = false;
 
-            m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
+            m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
             var cachedProjectionMatrix = camera.projectionMatrix;
             
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
@@ -121,14 +121,7 @@ namespace Unity.ClusterDisplay.Graphics
                     viewMatrix = camera.worldToCameraMatrix,
                     projMatrix = asymmetricProjectionMatrix,
                     viewport = m_OverscannedRect,
-<<<<<<< HEAD
-                    clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
-                        viewportSubsection, 
-                        m_ClusterRenderer.Context.GlobalScreenSize, 
-                        m_ClusterRenderer.Context.GridSize),
-=======
                     clusterDisplayParams = clusterDisplayParams,
->>>>>>> 2d66b570e0aed08c93a752d6ed14377986100698
                     textureArraySlice = -1
                 };
 
@@ -142,20 +135,16 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-<<<<<<< HEAD
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
-=======
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
->>>>>>> 2d66b570e0aed08c93a752d6ed14377986100698
+            if (!ClusterCameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
                 return;
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
             camera.targetTexture = null;
         }
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) 
         {
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);
         }

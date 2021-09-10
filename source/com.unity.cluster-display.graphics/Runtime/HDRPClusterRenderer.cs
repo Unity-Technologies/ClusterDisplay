@@ -27,19 +27,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnSetCustomLayout(LayoutBuilder layoutBuilder)
         {
-<<<<<<< HEAD
-#if CLUSTER_DISPLAY_XR
-            if (ClusterRenderer.LayoutModeIsXR(layoutBuilder.LayoutMode))
-                XRSystem.SetCustomLayout((layoutBuilder as IXRLayoutBuilder).BuildLayout);
-            else XRSystem.SetCustomLayout(null);
-#endif
-=======
             #if CLUSTER_DISPLAY_XR
             if (ClusterRenderer.LayoutModeIsXR(layoutBuilder.layoutMode))
                 XRSystem.SetCustomLayout((layoutBuilder as IXRLayoutBuilder).BuildLayout);
             else XRSystem.SetCustomLayout(null);
             #endif
->>>>>>> 2d66b570e0aed08c93a752d6ed14377986100698
         }
     }
 }

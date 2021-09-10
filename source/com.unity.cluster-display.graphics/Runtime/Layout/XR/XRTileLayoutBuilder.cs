@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera))
+            if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
                 return;
 
             contextCamera.enabled = true;
@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
 
             if (!SetupTiledLayout(
-                camera, 
+                camera.projectionMatrix, 
                 out var asymmetricProjectionMatrix, 
                 out var viewportSubsection,
                 out m_OverscannedRect))
@@ -96,15 +96,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) 
         {
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
         }
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) 
         {
-            if (!m_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
             ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: false);

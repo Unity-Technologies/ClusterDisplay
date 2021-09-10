@@ -51,6 +51,8 @@ namespace Unity.ClusterDisplay.Graphics
                 m_RawImage.rectTransform.offsetMax = Vector2.zero;
                 m_RawImage.raycastTarget = false;
             }
+
+            m_Canvas.gameObject.layer = LayerMask.NameToLayer("UI");
         }
     }
 }

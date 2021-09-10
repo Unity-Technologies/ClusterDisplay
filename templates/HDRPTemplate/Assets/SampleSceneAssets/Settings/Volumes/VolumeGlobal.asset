@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcf384b154398e341b6b29969c078198, type: 3}
   m_Name: MotionBlur
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   m_AdvancedMode: 0
   quality:
     m_OverrideState: 1
@@ -116,7 +116,7 @@ MonoBehaviour:
   active: 1
   m_AdvancedMode: 0
   rotation:
-    m_OverrideState: 1
+    m_OverrideState: 0
     m_Value: 116
     min: 0
     max: 360
@@ -125,10 +125,10 @@ MonoBehaviour:
     m_Value: 0
   exposure:
     m_OverrideState: 1
-    m_Value: 13.5
+    m_Value: 5
   multiplier:
     m_OverrideState: 0
-    m_Value: 1
+    m_Value: 5
     min: 0
   upperHemisphereLuxValue:
     m_OverrideState: 0
@@ -139,7 +139,7 @@ MonoBehaviour:
     m_Value: {x: 0.18750614, y: 0.29181972, z: 0.5}
   desiredLuxValue:
     m_OverrideState: 1
-    m_Value: 25000
+    m_Value: 250
   updateMode:
     m_OverrideState: 0
     m_Value: 0
@@ -553,7 +553,7 @@ MonoBehaviour:
   m_AdvancedMode: 0
   mode:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 3
   meteringMode:
     m_OverrideState: 1
     m_Value: 0

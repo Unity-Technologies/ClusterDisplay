@@ -165,6 +165,9 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                     out var renderPipeline))
                     continue;
 
+                if (!targetType.IsPublic)
+                    continue;
+
                 if (!targetType.IsSubclassOf(typeof(Component)))
                     continue;
 
