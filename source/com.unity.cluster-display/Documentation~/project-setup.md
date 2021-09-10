@@ -26,13 +26,34 @@ If you are using VFX Graph Particles effects in HDRP, make sure to *disable* the
 
 ![](images/component-visual-effect.png)
 
-## Project setup
+## New Project setup
 
-1.  Open your project in the Unity Editor.
+If you execute the powershell script: **CreateNewProject.ps1** located in the root of the cluster display package, you can setup a project with either render pipelines. Furthermore, it will:
+1. Prompt you whether you want a HDRP or URP project.
+2. Then it will ask you to name your new project.
+3. Then ask you for a path to create the project.
+4. Then it will create a new Unity project at that path with your desired render pipeline.
 
-2. In the cluster display graphics package, find the ClusterDisplay prefab in: **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab** and drag it into your desired scene.
+![](images/new-project-script.png)
 
-![Cluster Display Prefab](images/cluster-display-prefab.png)
+## Setting Up Existing Project with Cluster Display
+
+1. Navigate to your project's **Packages\manifest.json**.
+2. Insert the following in **dependencies**
+    ```
+        "com.unity.render-pipelines.core": "file:{path to package}/com.unity.render-pipelines.core",
+        "com.unity.cluster-display": "file:{path to package}/source/com.unity.cluster-display",
+        "com.unity.cluster-display.graphics": "file:{path to package}/source/com.unity.cluster-display.graphics",
+    ```
+3. Then add **ONE** of the following to import the custom branch of either URP **OR** HDRP:
+    ```
+        "com.unity.render-pipelines.universal": "file:{path to package}/com.unity.render-pipelines.universal",
+        "com.unity.render-pipelines.high-definition": "file:{path to package}/com.unity.render-pipelines.high-definition",
+    ```
+4.  Open your project in the Unity Editor and if you modified your manifest.json correctly, the project should boot without errors.
+5. In the cluster display graphics package, find the ClusterDisplay prefab in: **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab** and drag it into your desired scene.
+
+    ![Cluster Display Prefab](images/cluster-display-prefab.png)
 
 3.  Edit your **Project Settings** as per the following recommendations:
 
