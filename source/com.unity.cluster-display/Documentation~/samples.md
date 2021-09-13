@@ -27,9 +27,12 @@ There are two methods you can use to test:
 
     ![Scene Composition Manager](images/scene-composition-manager.png)
 
-6. Press "Play as Emitter" on the emitter editor instance and "Play as Repeater" on the repeater editor instance:
+6. Press "Play as Emitter" on the emitter (left) editor instance.
 
     ![Scene Composition Manager](images/samples-test-play-0.png)
+
+7. "Play as Repeater" on the repeater (right) editor instance:
+
     ![Scene Composition Manager](images/samples-test-play-1.png)
 
 ## Audio Reactive
