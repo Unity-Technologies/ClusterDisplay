@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: FishSceneComposition
   m_EditorClassIdentifier: 
   compositionName: Fish
-  baseScene: {fileID: 102900000, guid: 9fc0d4010bbf28b4594072e72b8655ab, type: 3}
+  baseScene: {fileID: 102900000, guid: 368fbcc0d8dd53d44968263ef898100e, type: 3}
   additions:
   - {fileID: 102900000, guid: a87a6b9d896ea004da5d1e02aebd1fd9, type: 3}
+  postSceneCompositionTasks: []

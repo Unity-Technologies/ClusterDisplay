@@ -34,7 +34,10 @@ If you execute the powershell script: **CreateNewProject.ps1** located in the ro
 3. Then ask you for a path to create the project.
 4. Then it will create a new Unity project at that path with your desired render pipeline.
 
+**Sometimes on initially opening the project, the scene will be gray and you just need to restart the editor to resolve the issue or re-import the SPR package.**
+
 ![](images/new-project-script.png)
+![](images/new-project-script.gif)
 
 ## Setting Up Existing Project with Cluster Display
 
