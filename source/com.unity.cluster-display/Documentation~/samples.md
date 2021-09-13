@@ -17,11 +17,11 @@ There are two methods you can use to test:
 
 3. Use Start + (Right/Left) arrow to place both editor instances side by side.
 
-    ![Scene Composition Manager](images/cluster-display-layout-1.gif)
+    ![Scene Composition Manager](images/cluster-display-layout-0.gif)
 
 4. By default, the project will be opened in the cluster display layout. However, you may need to drag the game window to the other side of the editor window and scale it accordingly.
 
-    ![Scene Composition Manager](images/cluster-display-layout-2.gif)
+    ![Scene Composition Manager](images/cluster-display-layout-1.gif)
 
 5. You can open each sample via the scene composition manager:
 
