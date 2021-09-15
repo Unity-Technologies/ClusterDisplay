@@ -43,11 +43,11 @@ There are two methods you can use to test:
 
     ![Scene Composition Manager](images/scene-composition-manager.png)
 
-9. Press "Play as Emitter" on the emitter (left) editor instance.
+10. Press "Play as Emitter" on the emitter (left) editor instance.
 
     ![Scene Composition Manager](images/samples-test-play-0.png)
 
-10. "Play as Repeater" on the repeater (right) editor instance:
+11. "Play as Repeater" on the repeater (right) editor instance:
 
     ![Scene Composition Manager](images/samples-test-play-1.png)
 
