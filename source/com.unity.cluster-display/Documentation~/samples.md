@@ -15,23 +15,39 @@ There are two methods you can use to test:
 
     ![Scene Composition Manager](images/samples-open-hub.png)
 
-3. Use Start + (Right/Left) arrow to place both editor instances side by side.
+3. Lets start by loading the cluster display layout from disk from **each** editor instance.
+
+    ![Scene Composition Manager](images/cluster-display-layout-0.png)
+
+4. Navigate to where the layout is located: **{path to package}/com.unity.cluster-display/Editor/ClusterDisplayEditorTestingLayout.wlt**
+
+    ![Scene Composition Manager](images/cluster-display-layout-1.png)
+
+5. Now select the loaded cluster display layout from **each** editor instance.
+
+    ![Scene Composition Manager](images/cluster-display-layout-2.png)
+
+6. Use Start + (Right/Left) arrow to place both editor instances side by side.
 
     ![Scene Composition Manager](images/cluster-display-layout-0.gif)
 
-4. By default, the project will be opened in the cluster display layout. However, you may need to drag the game window to the other side of the editor window and scale it accordingly.
+7. Drag the game window to the other side of the editor window and scale it accordingly.
 
     ![Scene Composition Manager](images/cluster-display-layout-1.gif)
 
-5. You can open each sample via the scene composition manager:
+8. <span style="color:red">You may need to re-import the samples project before you can test.</span>
+
+    ![Scene Composition Manager](images/cluster-display-instructions-9.png)
+
+9. You can open each sample via the scene composition manager:
 
     ![Scene Composition Manager](images/scene-composition-manager.png)
 
-6. Press "Play as Emitter" on the emitter (left) editor instance.
+9. Press "Play as Emitter" on the emitter (left) editor instance.
 
     ![Scene Composition Manager](images/samples-test-play-0.png)
 
-7. "Play as Repeater" on the repeater (right) editor instance:
+10. "Play as Repeater" on the repeater (right) editor instance:
 
     ![Scene Composition Manager](images/samples-test-play-1.png)
 
