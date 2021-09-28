@@ -133,8 +133,10 @@ namespace Unity.ClusterDisplay.RPC
             // Determine whether all arguments were converted from bytes into the expected type instances.
             buint consumedParameterByteCount = (bufferPos - rpcBufferStartPosition) - MinimumRPCPayloadSize;
 
-            // Something went wrong, the current read head is stuck somewhere in the middle of an RPC in the RPC buffer.
-            if (rpcRequest.parametersPayloadSize > 0 && rpcRequest.parametersPayloadSize != consumedParameterByteCount)
+            // Verify that we've consumed the minimum byte count for this RPC. For RPCs with array arguments, the consumed paramter byte count
+            // can be larger then the paramteers payload size embedded as IL in the post processed assembly. If the consumed byte count
+            // is less then the paramter payload size, then we probably failed to consume some of the bytes and we should fail.
+            if (rpcRequest.parametersPayloadSize > 0 && rpcRequest.parametersPayloadSize > consumedParameterByteCount)
             {
                 UnityEngine.Debug.LogError($"RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos}, Frame: {frame})");
                 return false;

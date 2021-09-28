@@ -358,7 +358,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
             var targetInstanceType = targetInstance.GetType();
             wrapperType = null;
 
-            if (!ReflectionUtils.IsAssemblyPostProcessable(targetInstanceType.Assembly))
+            if (!ReflectionUtils.IsAssemblyPostProcessable(Application.dataPath, targetInstanceType.Assembly))
                 return WrapperUtils.TryGetWrapperForType(targetInstanceType, out wrapperType);
             return false;
         }

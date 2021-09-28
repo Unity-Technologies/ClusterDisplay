@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
@@ -22,7 +21,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             {
                 int typeCount = compiledAssemblyDef.Modules[moduleIndex].Types.Count;
 
-                int workerCount = Mathf.Min(Environment.ProcessorCount, typeCount);
+                int workerCount = Environment.ProcessorCount < typeCount ? Environment.ProcessorCount : typeCount;
                 int typeCountPerWorker = typeCount / workerCount;
                 int remainder = typeCount % workerCount;
 
@@ -33,7 +32,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     if (workerId == Environment.ProcessorCount - 1)
                         end += remainder;
 
-                    // Debug.Log($"Worker: {workerId}, Start: {start}, End: {end}, Type Count: {typeCount}");
+                    // LogWriter.Log($"Worker: {workerId}, Start: {start}, End: {end}, Type Count: {typeCount}");
 
                     var types = compiledAssemblyDef.Modules[moduleIndex].Types;
                     for (int typeIndex = start; typeIndex < end; typeIndex++)
@@ -56,11 +55,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                                 if (customAttribute.AttributeType.FullName != attributeFullName)
                                 {
+                                    continue;
                                     // If the custom attribute does not match, then check it's base type as this attribute may be an
                                     // obsolete version of the RPC attribute that derrives from the current one.
+                                    /* This was commented out since it was causing problems in latest version of ILPP.
                                     var attributeType = customAttribute.AttributeType.Resolve();
                                     if (attributeType.BaseType.FullName != attributeFullName)
                                         continue;
+                                    */
                                 }
 
                                 queuedMethodDefs.Enqueue(method);
@@ -229,7 +231,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
 
             failure:
-            Debug.LogError($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
+            LogWriter.LogError($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
             return false;
         }
 
@@ -247,7 +249,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 {
                     if (!CecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.method.declaringTypeNamespace, rpc.method.declaryingTypeName, out var declaringTypeDef))
                     {
-                        Debug.LogError($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
+                        LogWriter.LogError($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
                         continue;
                     }
 
@@ -281,7 +283,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 }
 
                 // Even if an RPC is in another assembly, we still want to store it's RPC ID to flag it's use.
-                UniqueRPCIdManager.Add(rpc.rpcId);
+                UniqueRPCIdManager.Use(rpc.rpcId);
             }
 
             return true;
@@ -296,7 +298,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!TryProcessSerializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray()))
                     return false;
 
-            UniqueRPCIdManager.PollUnused();
             return true;
         }
 
@@ -324,20 +325,32 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 if (methodDef.IsAbstract)
                 {
-                    Debug.LogError($"Instance method: \"{methodDef.Name}\" declared in type: \"{methodDef.DeclaringType.Namespace}.{methodDef.DeclaringType.Name}\" is unsupported because the type is abstract.");
+                    LogWriter.LogError($"Instance method: \"{methodDef.Name}\" declared in type: \"{methodDef.DeclaringType.Namespace}.{methodDef.DeclaringType.Name}\" is unsupported because the type is abstract.");
                     continue;
                 }
 
+                int explicitRPCId = (int)customAttribute.ConstructorArguments[rpcIdAttributeArgumentIndex].Value;
+                
+                ushort rpcId = 0;
+                if (explicitRPCId != -1)
+                {
+                    if (UniqueRPCIdManager.InUse(rpcId))
+                    {
+                        LogWriter.LogError($"There are multiple RPCs declared with an explicit RPC ID of: {explicitRPCId}, we are going to use a random one instead.");
+                        rpcId = UniqueRPCIdManager.GetUnused();
+                    }
+                }
+                
+                else rpcId = UniqueRPCIdManager.GetUnused();
+                
+                SetRPCAttributeRPCIDArgument(customAttribute, rpcIdAttributeArgumentIndex, rpcId);
+                
                 var rpcExecutionStageAttributeArgument = customAttribute.ConstructorArguments[rpcExecutionStageAttributeArgumentIndex];
-
-                ushort newRPCId = UniqueRPCIdManager.Get();
-                SetRPCAttributeRPCIDArgument(customAttribute, rpcIdAttributeArgumentIndex, newRPCId);
-
                 RPCExecutionStage executionStage = (RPCExecutionStage)rpcExecutionStageAttributeArgument.Value;
 
                 if (!ProcessMethodDef(
                     compiledAssemblyDef,
-                    newRPCId,
+                    rpcId,
                     methodDef,
                     executionStage))
                     return false;
@@ -350,7 +363,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public bool TryProcess(AssemblyDefinition compiledAssemblyDef)
         {
-            UniqueRPCIdManager.Read();
             if (!TryPollSerializedRPCs(compiledAssemblyDef))
                 return false;
 
@@ -359,7 +371,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             InjectDefaultSwitchCases(compiledAssemblyDef);
             FlushCache();
-            UniqueRPCIdManager.Close();
             return true;
         }
     }

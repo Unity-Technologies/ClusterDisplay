@@ -1,0 +1,15 @@
+{
+    "name": "Unity.ClusterDisplay.CodeGenUtils",
+    "references": [
+        "GUID:0861eaad4777b824986b7d153336925a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

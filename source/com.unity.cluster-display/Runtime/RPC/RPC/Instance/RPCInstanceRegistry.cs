@@ -153,7 +153,7 @@ namespace Unity.ClusterDisplay
             var rpcILType = assembly.GetTypes().FirstOrDefault(type => type.Name == "RPCIL"); // Attempt to find the generated type.
             if (rpcILType == null)
             {
-                // Debug.LogError($"Unable to create instance of: \"RPCIL\", it does not exist in the assembly: \"{assembly.GetName().Name}\", please verify that you've registered this assembly with RPCRegistry.");
+                Debug.LogError($"Unable to create instance of: \"RPCIL\", it does not exist in the assembly: \"{assembly.GetName().Name}\", please verify that you've registered this assembly with RPCRegistry.");
                 assemblyIndex = 0;
                 return false;
             }

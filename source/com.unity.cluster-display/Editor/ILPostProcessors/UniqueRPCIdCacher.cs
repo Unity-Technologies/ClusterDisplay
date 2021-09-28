@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UnityEngine;
+using System.Threading;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
@@ -16,6 +16,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             private readonly static List<ushort> usedRPCIds = new List<ushort>();
             private readonly static Queue<ushort> unusedRPCIds = new Queue<ushort>();
 
+            private static SharedMutex mutex = new SharedMutex("RPCIDCacheMutex");
+
             public static int Count => usedRPCIds.Count;
             private static int lastRPCId = -1;
 
@@ -24,42 +26,70 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             {
                 try
                 {
+                    mutex.Lock();
                     if (File.Exists(RPCIDsCachePath))
-                    {
                         File.Delete(RPCIDsCachePath);
-                        // Debug.Log($"Deleted RPC ID cache file at path: \"{RPCIDsCachePath}\".");
-                    }
+                    mutex.Release();
 
-                    var folder = Path.GetDirectoryName(RPCIDsCachePath);
-                    if (Directory.Exists(folder))
-                        if (Directory.GetFiles(folder).Length == 0)
-                            Directory.Delete(folder);
-
-                } catch (System.Exception e)
+                }
+                
+                catch (System.Exception e)
                 {
-                    Debug.LogException(e);
-                    return;
+                    LogWriter.LogException(e);
                 }
             }
 
-            public static ushort Get()
+            public static ushort GetUnused ()
             {
+                Open();
+                Poll();
                 var newRPCId = unusedRPCIds.Count > 0 ? unusedRPCIds.Dequeue() : (ushort)++lastRPCId;
-                Add(newRPCId);
+                WriteUse(newRPCId);
+                Close();
+                
                 return newRPCId;
             }
 
-            public static void Add (ushort rpcId)
+            private static void WriteUse(ushort rpcId)
             {
-                usedRPCIds.Add(rpcId);
-                CreateFIleStream();
+                fileStream.Seek(0, SeekOrigin.End);
 
                 fileStream.WriteByte((byte)rpcId);
                 fileStream.WriteByte((byte)(rpcId >> 8));
             }
 
-            public static void PollUnused ()
+            public static void Use (ushort rpcId)
             {
+                Open();
+                WriteUse(rpcId);
+                Close();
+            }
+
+            public static bool InUse(ushort rpcId)
+            {
+                Open();
+                Poll();
+                Close();
+                return usedRPCIds.Contains(rpcId);
+            }
+            
+            private static void Poll ()
+            {
+                usedRPCIds.Clear();
+                unusedRPCIds.Clear();
+                
+                byte[] bytes = new byte[2];
+                
+                while (fileStream.Position < fileStream.Length)
+                {
+                    bytes[0] = (byte)fileStream.ReadByte();
+                    bytes[1] = (byte)fileStream.ReadByte();
+
+                    ushort rpcId = BitConverter.ToUInt16(bytes, 0);
+                    if (!usedRPCIds.Contains(rpcId))
+                        usedRPCIds.Add(rpcId);
+                }
+                
                 if (usedRPCIds.Count > 0)
                 {
                     usedRPCIds.Sort();
@@ -72,22 +102,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     }
                 }
             }
-
-            public static void Read ()
+            
+            private static void Open ()
             {
-                byte[] bytes = new byte[2];
-                CreateFIleStream();
-
-                while (fileStream.Position < fileStream.Length)
-                {
-                    bytes[0] = (byte)fileStream.ReadByte();
-                    bytes[1] = (byte)fileStream.ReadByte();
-                    usedRPCIds.Add(BitConverter.ToUInt16(bytes, 0));
-                }
-            }
-
-            private static void CreateFIleStream ()
-            {
+                mutex.Lock();
                 if (fileStream != null)
                     return;
 
@@ -95,19 +113,19 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!Directory.Exists(folder))
                     Directory.CreateDirectory(folder);
 
-                fileStream = new FileStream(RPCIDsCachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                fileStream = new FileStream(RPCIDsCachePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             }
 
-            public static void Close()
+            private static void Close()
             {
                 if (fileStream != null)
                 {
                     fileStream.Close();
+                    fileStream.Dispose();
                     fileStream = null;
                 }
 
-                usedRPCIds.Clear();
-                unusedRPCIds.Clear();
+                mutex.Release();
             }
         }
     }

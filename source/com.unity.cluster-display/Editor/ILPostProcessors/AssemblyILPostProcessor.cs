@@ -1,24 +1,23 @@
-﻿using System.IO;
+﻿#define CLUSTER_DISPLAY_ILPOSTPROCESSING
+
+using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using NUnit.Framework.Internal;
 using Unity.CompilationPipeline.Common.ILPostProcessing;
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.Compilation;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
+    
     /// <summary>
     /// This class asynchronously loads in recently compiled assemblies 
     /// and determines whether we should manipulate them.
     /// </summary>
-    [InitializeOnLoad]
     public class AssemblyILPostProcessor : ILPostProcessor
     {
-        // static AssemblyILPostProcessor () => UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
         /// converts those bytes into a Cecil AssemblyDefinition which we manipulate.
@@ -33,7 +32,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             public override AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
             {
-                string assemblyLocation = ReflectionUtils.GetAssemblyLocation(name.Name);
+                if (!ReflectionUtils.TryGetAssemblyLocation(name.Name, out var assemblyLocation))
+                {
+                    LogWriter.LogError($"Unable to resolve assembly: \"{name.Name}\", unknown location.");
+                    return null;
+                }
+                
                 try
                 {
 
@@ -44,7 +48,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 } catch (AssemblyResolutionException ex)
                 {
-                    Debug.LogException(ex);
+                    LogWriter.LogException(ex);
                     return null;
                 }
             }
@@ -75,7 +79,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             } catch (System.Exception exception)
             {
-                Debug.LogException(exception);
+                LogWriter.LogException(exception);
                 assemblyDef = null;
                 return false;
             }
@@ -100,8 +104,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// <returns></returns>
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
-            Debug.Log($"Post processing assembly: \"{compiledAssembly.Name}\".");
+            /*
+            string msg = "Defines:";
+            for (int i = 0; i < compiledAssembly.Defines.Length; i++)
+                msg = $"{msg}\n\t{compiledAssembly.Defines[i]}";
+            LogWriter.Log(msg);
+            */
 
+            LogWriter.BeginILPostProcessing();
+            LogWriter.Log($"Post processing assembly: \"{compiledAssembly.Name}\".");
+            
             // Determine which assemblies we are allowed to manipulate.
             if (cachedRegisteredAssemblyFullNames == null)
                 RPCSerializer.ReadRegisteredAssemblies(RPCRegistry.k_RegisteredAssembliesJsonPath, out cachedRegisteredAssemblyFullNames);
@@ -135,7 +147,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 compiledAssemblyDef.Write(pe, writerParameters);
             } catch (System.Exception exception)
             {
-                Debug.LogException(exception);
+                LogWriter.LogException(exception);
                 goto failure;
             }
 
@@ -145,7 +157,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return null;
 
             failure:
-            Debug.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
+            LogWriter.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
             return null;
         }
 

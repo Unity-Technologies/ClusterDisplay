@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using UnityEngine;
-
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
@@ -72,7 +71,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, methodInfo));
             if (methodDef == null)
-                Debug.LogError($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                LogWriter.LogError($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
             return true;
         }
 
@@ -80,7 +79,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, constructorInfo));
             if (methodDef == null)
-                Debug.LogError($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                LogWriter.LogError($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
             return true;
         }
 
@@ -146,7 +145,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     return true;
             }
 
-            Debug.LogError($"Unable to find type definition to import for type: \"{type.Name}\".");
+            LogWriter.LogError($"Unable to find type definition to import for type: \"{type.Name}\".");
             importedTypeRef = null;
             return false;
         }
@@ -161,14 +160,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             if (!TryImport(moduleToImportInto, methodInfo.DeclaringType, out var typeDef))
             {
-                Debug.LogError($"Unable to import method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\", cannot find declaring type reference.");
+                LogWriter.LogError($"Unable to import method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\", cannot find declaring type reference.");
                 importedMethodRef = null;
                 return false;
             }
 
             if (!TryFindMatchingMethodDefinition(typeDef.Resolve(), methodInfo, out var matchingMethodDef))
             {
-                Debug.LogError($"Unable to find matching method definition for method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\" to import.");
+                LogWriter.LogError($"Unable to find matching method definition for method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\" to import.");
                 importedMethodRef = null;
                 return false;
             }
@@ -187,14 +186,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             if (!TryImport(moduleToImportInto, methodToImport.DeclaringType, out var typeDef))
             {
-                Debug.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", cannot find declaring type reference.");
+                LogWriter.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", cannot find declaring type reference.");
                 importedMethodRef = null;
                 return false;
             }
 
             if (!TryFindMatchingMethodDefinition(typeDef.Resolve(), methodToImport, out var matchingMethodDef))
             {
-                Debug.LogError($"Unable to find matching method definition for method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\" to import.");
+                LogWriter.LogError($"Unable to find matching method definition for method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\" to import.");
                 importedMethodRef = null;
                 return false;
             }
@@ -404,32 +403,95 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        public static bool TryDetermineSizeOfPrimitive (string typeName, ref buint size)
+        public static bool TryDetermineSizeOfPrimitive (TypeDefinition typeDef, ref buint size)
         {
-            switch (typeName)
+            if (typeDef.HasCustomAttributes)
+            {
+                var marshalAsAttributeType = typeof(MarshalAsAttribute);
+                
+                var marshalAsAttribute = typeDef.CustomAttributes.FirstOrDefault(customAttribute =>
+                    customAttribute.AttributeType.Namespace == marshalAsAttributeType.Namespace &&
+                    customAttribute.AttributeType.Name == marshalAsAttributeType.Name);
+
+                if (marshalAsAttribute != null)
+                {
+                    var unmanagedTypeType = typeof(UnmanagedType);
+                    var unmanagedTypeArgument = marshalAsAttribute.ConstructorArguments.FirstOrDefault(constructorArgument =>
+                        constructorArgument.Type.Namespace == unmanagedTypeType.Namespace &&
+                        constructorArgument.Type.Name == unmanagedTypeType.Name);
+                    
+                    if (unmanagedTypeArgument.Value == null)
+                        goto missingArgument;
+
+                    var unmanagedType = (UnmanagedType)unmanagedTypeArgument.Value;
+                    switch (unmanagedType)
+                    {
+                        case UnmanagedType.I1:
+                        case UnmanagedType.U1:
+                            size += 1;
+                            return true;
+                        
+                        case UnmanagedType.I2:
+                        case UnmanagedType.U2:
+                            size += 2;
+                            return true;
+                        
+                        case UnmanagedType.Bool:
+                        case UnmanagedType.I4:
+                        case UnmanagedType.U4:
+                            size += 4;
+                            return true;
+                        
+                        case UnmanagedType.I8:
+                        case UnmanagedType.U8:
+                            size += 8;
+                            return true;
+                        
+                        default:
+                            LogWriter.LogError($"Unsupported unmanaged type: \"{unmanagedType}\" declared for primitive type: \"{typeDef.Name}\".");
+                            return false;
+                    }
+                    
+                    missingArgument:
+                    LogWriter.LogError($"Missing: {nameof(UnmanagedType)} argument in: {nameof(MarshalAsAttribute)} attribute constructor argument.");
+                    return false;
+                }
+            }
+            
+            switch (typeDef.Name)
             {
                 case "Byte":
                 case "SByte":
-                case "Boolean":
                     size += 1;
                     return true;
+                
                 case "Int16":
                 case "UInt16":
                 case "Char":
                     size += 2;
                     return true;
+                
+                // In C#, Booleans are 1 byte. However, Marshal.SizeOf<bool> will return 4 bytes as backwards
+                // compatibility for Windows SDK's BOOL which is a typedef for int. The user would need to use:
+                // [MarshalAs(UnmanagedType.I1)] to explicitly flag to Marshal that it should convert the 
+                // bool into a single byte. For now this is the cleaner solution.
+                // https://stackoverflow.com/a/39251864
+                case "Boolean":
+                    
                 case "Int32":
                 case "UInt32":
                 case "Single":
                     size += 4;
                     return true;
+                
                 case "Int64":
                 case "UInt64":
                 case "Double":
                     size += 8;
                     return true;
+                
                 default:
-                    Debug.LogError($"Unable to determine size of assumed primitive type: \"{typeName}\".");
+                    LogWriter.LogError($"Unable to determine size of assumed primitive type: \"{typeDef.Name}\".");
                     return false;
             }
         }
@@ -451,12 +513,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public static bool TryDetermineSizeOfValueType (TypeDefinition typeDefinition, ref buint size)
         {
             if (typeDefinition.IsPrimitive)
-                return TryDetermineSizeOfPrimitive(typeDefinition.Name, ref size);
+                return TryDetermineSizeOfPrimitive(typeDefinition, ref size);
 
             else if (typeDefinition.IsEnum)
             {
                 var fieldDef = typeDefinition.Fields.FirstOrDefault(field => field.Name == "value__");
-                return TryDetermineSizeOfPrimitive(fieldDef.FieldType.Name, ref size);
+                return TryDetermineSizeOfPrimitive(fieldDef.FieldType.Resolve(), ref size);
             }
 
             else if (typeDefinition.IsValueType)
@@ -464,7 +526,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return TryDetermineSizeOfStruct(typeDefinition, ref size);
             }
 
-            Debug.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
+            LogWriter.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
             return false;
         }
 
@@ -656,7 +718,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (!TryFindMatchingMethodInTypeDef(moduleDef, typeDef, ref serializedRPC, out var methodDef))
             {
-                Debug.LogError($"Unable to find method reference for serialized RPC: \"{serializedRPC.method.methodName}\" declared in: \"{typeDef.FullName}\".");
+                LogWriter.LogError($"Unable to find method reference for serialized RPC: \"{serializedRPC.method.methodName}\" declared in: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }
@@ -673,7 +735,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (typeDef == null)
             {
                 typeRef = null;
-                Debug.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                LogWriter.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
                 return false;
             }
 
@@ -687,7 +749,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             var found = (methodInfo = methods.FirstOrDefault(method => method.GetCustomAttribute<T>() != null)) != null;
 
             if (!found)
-                Debug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                LogWriter.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return found;
         }
@@ -699,7 +761,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             var found = (fieldInfo = fields.FirstOrDefault(field => field.GetCustomAttribute<T>() != null)) != null;
 
             if (!found)
-                Debug.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                LogWriter.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return found;
         }
@@ -713,7 +775,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 .FirstOrDefault();
 
             if (propertyInfo == null || (methodInfo = propertyInfo.GetGetMethod()) == null)
-                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                LogWriter.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return methodInfo != null;
         }
@@ -730,7 +792,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 .FirstOrDefault()) != null;
 
             if (!found)
-                Debug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
+                LogWriter.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
 
             return found;
         }
@@ -755,7 +817,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             bool found = parameterDef != null;
 
             if (!found)
-                Debug.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
+                LogWriter.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
 
             return found;
         }
@@ -780,7 +842,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            Debug.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
+            LogWriter.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
             customAttributeArgumentIndex = -1;
             return false;
         }

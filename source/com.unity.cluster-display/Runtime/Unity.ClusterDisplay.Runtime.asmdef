@@ -1,7 +1,9 @@
 {
     "name": "Unity.ClusterDisplay.Runtime",
     "references": [
-        "GUID:d17cf94e78b26ac4db1dca31abae1b06"
+        "GUID:1ca5c4d5109001c4b814f495080de246",
+        "GUID:d17cf94e78b26ac4db1dca31abae1b06",
+        "GUID:0861eaad4777b824986b7d153336925a"
     ],
     "includePlatforms": [
         "Editor",

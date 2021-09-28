@@ -25,201 +25,208 @@ MonoBehaviour:
 
     Unity.ClusterDisplay.Samples,
     Version=0.0.0.0, Culture=neutral, PublicKeyToken=null'
-  m_JSONString: "{\n    \"rpcs\": [\n        {\n            \"rpcId\": 2,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 5,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Graphics\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"ClusterDisplayPointerInputModule\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"ApplyPointerData\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"Unity.ClusterDisplay.Graphics\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.ClusterDisplayPointerInputModule/ReplicatedMouseState\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"ReplicatedMouseState\"\n               
-    ],\n                \"parameterNames\": [\n                    \"replicatedMouseState\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 14,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"MultiRootTransformHierarchyStream\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"ApplyTransformData\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"UnityEngine.CoreModule\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
-    ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 15,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"SimpleTransformHierarchyStream\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"ApplyTransformData\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"UnityEngine.CoreModule\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.Collections\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"NativeArray`1\"\n               
-    ],\n                \"parameterNames\": [\n                    \"data\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 6,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Paused\",\n               
-    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
-    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 5,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Played\",\n               
-    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
-    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 9,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 7,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"SpectrumVisualizer\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"PropagateSpectrum\",\n                \"declaringParameterTypeAssemblyNames\":
-    [\n                    \"mscorlib\"\n                ],\n                \"parameterTypeNamespaces\":
-    [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
-    [\n                    \"Single[]\"\n                ],\n                \"parameterNames\":
-    [\n                    \"spectrum\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 13,\n            \"isStatic\": false,\n           
-    \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 0,\n           
-    \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"PushEmitterTime\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"PushTime\",\n                \"declaringParameterTypeAssemblyNames\": [\n                   
-    \"mscorlib\"\n                ],\n                \"parameterTypeNamespaces\":
-    [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
-    [\n                    \"Single\"\n                ],\n                \"parameterNames\":
-    [\n                    \"time\"\n                ]\n            }\n        },\n       
-    {\n            \"rpcId\": 0,\n            \"isStatic\": false,\n            \"overrideRPCExecutionStage\":
-    false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
-    \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay.RPC.Wrappers\",\n               
-    \"declaryingTypeName\": \"CameraWrapper\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"set_fieldOfView\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"mscorlib\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"System\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"Single\"\n               
-    ],\n                \"parameterNames\": [\n                    \"value\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 1,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.GeneratedWrappers\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay.RPC.Wrappers\",\n               
-    \"declaryingTypeName\": \"TransformWrapper\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"set_position\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"UnityEngine.CoreModule\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"UnityEngine\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"Vector3\"\n               
-    ],\n                \"parameterNames\": [\n                    \"value\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 11,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"SchoolCamera\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"SetLookAtDirection\",\n                \"declaringParameterTypeAssemblyNames\":
-    [\n                    \"mscorlib\",\n                    \"mscorlib\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"System\",\n                   
-    \"System\"\n                ],\n                \"parameterTypeName\": [\n                   
-    \"Single\",\n                    \"Single\"\n                ],\n               
-    \"parameterNames\": [\n                    \"pitch\",\n                    \"yaw\"\n               
-    ]\n            }\n        },\n        {\n            \"rpcId\": 3,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 0,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"TestScript\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"SimpleMethodTest\",\n                \"declaringParameterTypeAssemblyNames\":
-    [],\n                \"parameterTypeNamespaces\": [],\n                \"parameterTypeName\":
-    [],\n                \"parameterNames\": []\n            }\n        },\n       
-    {\n            \"rpcId\": 4,\n            \"isStatic\": false,\n            \"overrideRPCExecutionStage\":
-    false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
-    \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"TestScript\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"SimpleStringTest\",\n                \"declaringParameterTypeAssemblyNames\":
-    [\n                    \"mscorlib\"\n                ],\n                \"parameterTypeNamespaces\":
-    [\n                    \"System\"\n                ],\n                \"parameterTypeName\":
-    [\n                    \"String\"\n                ],\n                \"parameterNames\":
-    [\n                    \"message\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 10,\n            \"isStatic\": false,\n           
-    \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 5,\n           
-    \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"School\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"Spawn\",\n                \"declaringParameterTypeAssemblyNames\": [\n                   
-    \"UnityEngine.CoreModule\",\n                    \"UnityEngine.CoreModule\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"UnityEngine\",\n                   
-    \"UnityEngine\"\n                ],\n                \"parameterTypeName\": [\n                   
-    \"Vector3\",\n                    \"Quaternion\"\n                ],\n               
-    \"parameterNames\": [\n                    \"position\",\n                   
-    \"rotation\"\n                ]\n            }\n        },\n        {\n           
-    \"rpcId\": 12,\n            \"isStatic\": true,\n            \"overrideRPCExecutionStage\":
-    false,\n            \"rpcExecutionStage\": 0,\n            \"method\": {\n               
-    \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\n               
-    \"declaringTypeNamespace\": \"\",\n                \"declaryingTypeName\": \"World\",\n               
-    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\n                \"returnTypeNamespace\":
-    \"System\",\n                \"returnTypeName\": \"Void\",\n                \"methodName\":
-    \"SpawnFood\",\n                \"declaringParameterTypeAssemblyNames\": [\n                   
-    \"UnityEngine.CoreModule\"\n                ],\n                \"parameterTypeNamespaces\":
-    [\n                    \"UnityEngine\"\n                ],\n                \"parameterTypeName\":
-    [\n                    \"Vector3\"\n                ],\n                \"parameterNames\":
-    [\n                    \"foodPosition\"\n                ]\n            }\n       
-    },\n        {\n            \"rpcId\": 7,\n            \"isStatic\": false,\n           
-    \"overrideRPCExecutionStage\": false,\n            \"rpcExecutionStage\": 3,\n           
-    \"method\": {\n                \"isStatic\": false,\n                \"declaringAssemblyIsPostProcessable\":
-    false,\n                \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Stopped\",\n               
-    \"declaringParameterTypeAssemblyNames\": [],\n                \"parameterTypeNamespaces\":
-    [],\n                \"parameterTypeName\": [],\n                \"parameterNames\":
-    []\n            }\n        },\n        {\n            \"rpcId\": 8,\n           
-    \"isStatic\": false,\n            \"overrideRPCExecutionStage\": false,\n           
-    \"rpcExecutionStage\": 3,\n            \"method\": {\n                \"isStatic\":
-    false,\n                \"declaringAssemblyIsPostProcessable\": false,\n               
-    \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\n               
-    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\n                \"declaryingTypeName\":
-    \"SynchronizePlayableDirector\",\n                \"declaringReturnTypeAssemblyName\":
-    \"mscorlib\",\n                \"returnTypeNamespace\": \"System\",\n               
-    \"returnTypeName\": \"Void\",\n                \"methodName\": \"Sync\",\n               
-    \"declaringParameterTypeAssemblyNames\": [\n                    \"Unity.ClusterDisplay.Runtime\"\n               
-    ],\n                \"parameterTypeNamespaces\": [\n                    \"Unity.ClusterDisplay.SynchronizePlayableDirector/PlayableDirectorState\"\n               
-    ],\n                \"parameterTypeName\": [\n                    \"PlayableDirectorState\"\n               
-    ],\n                \"parameterNames\": [\n                    \"playableDirectorState\"\n               
-    ]\n            }\n        }\n    ],\n    \"stagedMethods\": []\n}"
+  m_JSONString: "{\r\n  \"rpcs\": [\r\n    {\r\n      \"rpcId\": 2,\r\n      \"isStatic\":
+    false,\r\n      \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\":
+    5,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Graphics\",\r\n       
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n        \"declaryingTypeName\":
+    \"ClusterDisplayPointerInputModule\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"ApplyPointerData\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"Unity.ClusterDisplay.Graphics\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"Unity.ClusterDisplay.ClusterDisplayPointerInputModule/ReplicatedMouseState\"\r\n       
+    ],\r\n        \"parameterTypeName\": [\r\n          \"ReplicatedMouseState\"\r\n       
+    ],\r\n        \"parameterNames\": [\r\n          \"replicatedMouseState\"\r\n       
+    ],\r\n        \"ParameterCount\": 1\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\":
+    9,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n       
+    \"declaryingTypeName\": \"SimpleTransformHierarchyStream\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"ApplyTransformData\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"Unity.Collections\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"NativeArray`1\"\r\n        ],\r\n        \"parameterNames\":
+    [\r\n          \"data\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 16,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 0,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\r\n       
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n        \"declaryingTypeName\":
+    \"MultiRootTransformHierarchyStream\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"ApplyTransformData\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"Unity.Collections\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"NativeArray`1\"\r\n        ],\r\n        \"parameterNames\":
+    [\r\n          \"data\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 6,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 3,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\r\n       
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n        \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Paused\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [],\r\n        \"parameterTypeNamespaces\": [],\r\n        \"parameterTypeName\":
+    [],\r\n        \"parameterNames\": [],\r\n        \"ParameterCount\": 0\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 5,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 3,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\r\n       
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n        \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Played\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [],\r\n        \"parameterTypeNamespaces\": [],\r\n        \"parameterTypeName\":
+    [],\r\n        \"parameterNames\": [],\r\n        \"ParameterCount\": 0\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 23,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 7,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Samples\",\r\n       
+    \"declaringTypeNamespace\": null,\r\n        \"declaryingTypeName\": \"SpectrumVisualizer\",\r\n       
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\r\n        \"returnTypeNamespace\":
+    \"System\",\r\n        \"returnTypeName\": \"Void\",\r\n        \"methodName\":
+    \"PropagateSpectrum\",\r\n        \"declaringParameterTypeAssemblyNames\": [\r\n         
+    \"mscorlib\"\r\n        ],\r\n        \"parameterTypeNamespaces\": [\r\n         
+    \"System\"\r\n        ],\r\n        \"parameterTypeName\": [\r\n          \"Single[]\"\r\n       
+    ],\r\n        \"parameterNames\": [\r\n          \"spectrum\"\r\n        ],\r\n       
+    \"ParameterCount\": 1\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\": 19,\r\n     
+    \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"PushEmitterTime\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"PushTime\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"mscorlib\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"System\"\r\n        ],\r\n        \"parameterTypeName\": [\r\n         
+    \"Single\"\r\n        ],\r\n        \"parameterNames\": [\r\n          \"time\"\r\n       
+    ],\r\n        \"ParameterCount\": 1\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\":
+    0,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.GeneratedWrappers\",\r\n        \"declaringTypeNamespace\":
+    \"Unity.ClusterDisplay.RPC.Wrappers\",\r\n        \"declaryingTypeName\": \"CameraWrapper\",\r\n       
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\r\n        \"returnTypeNamespace\":
+    \"System\",\r\n        \"returnTypeName\": \"Void\",\r\n        \"methodName\":
+    \"set_fieldOfView\",\r\n        \"declaringParameterTypeAssemblyNames\": [\r\n         
+    \"mscorlib\"\r\n        ],\r\n        \"parameterTypeNamespaces\": [\r\n         
+    \"System\"\r\n        ],\r\n        \"parameterTypeName\": [\r\n          \"Single\"\r\n       
+    ],\r\n        \"parameterNames\": [\r\n          \"value\"\r\n        ],\r\n       
+    \"ParameterCount\": 1\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\": 1,\r\n     
+    \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.GeneratedWrappers\",\r\n        \"declaringTypeNamespace\":
+    \"Unity.ClusterDisplay.RPC.Wrappers\",\r\n        \"declaryingTypeName\": \"TransformWrapper\",\r\n       
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\r\n        \"returnTypeNamespace\":
+    \"System\",\r\n        \"returnTypeName\": \"Void\",\r\n        \"methodName\":
+    \"set_position\",\r\n        \"declaringParameterTypeAssemblyNames\": [\r\n         
+    \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"UnityEngine\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"Vector3\"\r\n        ],\r\n        \"parameterNames\": [\r\n         
+    \"value\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n      }\r\n    },\r\n   
+    {\r\n      \"rpcId\": 18,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\":
+    false,\r\n      \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\":
+    false,\r\n        \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"ColorSetter\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"SetColor\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"UnityEngine\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"Color\"\r\n        ],\r\n        \"parameterNames\": [\r\n         
+    \"color\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n      }\r\n    },\r\n   
+    {\r\n      \"rpcId\": 21,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\":
+    false,\r\n      \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\":
+    false,\r\n        \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"SchoolCamera\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"SetLookAtDirection\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"mscorlib\",\r\n          \"mscorlib\"\r\n        ],\r\n       
+    \"parameterTypeNamespaces\": [\r\n          \"System\",\r\n          \"System\"\r\n       
+    ],\r\n        \"parameterTypeName\": [\r\n          \"Single\",\r\n         
+    \"Single\"\r\n        ],\r\n        \"parameterNames\": [\r\n          \"pitch\",\r\n         
+    \"yaw\"\r\n        ],\r\n        \"ParameterCount\": 2\r\n      }\r\n    },\r\n   
+    {\r\n      \"rpcId\": 3,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\":
+    false,\r\n      \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\":
+    false,\r\n        \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Runtime\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"TestScript\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"SimpleMethodTest\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [],\r\n        \"parameterTypeNamespaces\": [],\r\n        \"parameterTypeName\":
+    [],\r\n        \"parameterNames\": [],\r\n        \"ParameterCount\": 0\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 4,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 0,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\r\n       
+    \"declaringTypeNamespace\": null,\r\n        \"declaryingTypeName\": \"TestScript\",\r\n       
+    \"declaringReturnTypeAssemblyName\": \"mscorlib\",\r\n        \"returnTypeNamespace\":
+    \"System\",\r\n        \"returnTypeName\": \"Void\",\r\n        \"methodName\":
+    \"SimpleStringTest\",\r\n        \"declaringParameterTypeAssemblyNames\": [\r\n         
+    \"mscorlib\"\r\n        ],\r\n        \"parameterTypeNamespaces\": [\r\n         
+    \"System\"\r\n        ],\r\n        \"parameterTypeName\": [\r\n          \"String\"\r\n       
+    ],\r\n        \"parameterNames\": [\r\n          \"message\"\r\n        ],\r\n       
+    \"ParameterCount\": 1\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\": 20,\r\n     
+    \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 5,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"School\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Spawn\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\",\r\n          \"UnityEngine.CoreModule\"\r\n       
+    ],\r\n        \"parameterTypeNamespaces\": [\r\n          \"UnityEngine\",\r\n         
+    \"UnityEngine\"\r\n        ],\r\n        \"parameterTypeName\": [\r\n         
+    \"Vector3\",\r\n          \"Quaternion\"\r\n        ],\r\n        \"parameterNames\":
+    [\r\n          \"position\",\r\n          \"rotation\"\r\n        ],\r\n       
+    \"ParameterCount\": 2\r\n      }\r\n    },\r\n    {\r\n      \"rpcId\": 22,\r\n     
+    \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\": false,\r\n     
+    \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\": false,\r\n       
+    \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"Spawner\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Spawn\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"UnityEngine\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"Vector3\"\r\n        ],\r\n        \"parameterNames\": [\r\n         
+    \"position\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n      }\r\n   
+    },\r\n    {\r\n      \"rpcId\": 24,\r\n      \"isStatic\": true,\r\n      \"overrideRPCExecutionStage\":
+    false,\r\n      \"rpcExecutionStage\": 0,\r\n      \"method\": {\r\n        \"isStatic\":
+    false,\r\n        \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Samples\",\r\n        \"declaringTypeNamespace\": null,\r\n       
+    \"declaryingTypeName\": \"World\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"SpawnFood\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"UnityEngine.CoreModule\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"UnityEngine\"\r\n        ],\r\n        \"parameterTypeName\":
+    [\r\n          \"Vector3\"\r\n        ],\r\n        \"parameterNames\": [\r\n         
+    \"foodPosition\"\r\n        ],\r\n        \"ParameterCount\": 1\r\n      }\r\n   
+    },\r\n    {\r\n      \"rpcId\": 7,\r\n      \"isStatic\": false,\r\n      \"overrideRPCExecutionStage\":
+    false,\r\n      \"rpcExecutionStage\": 3,\r\n      \"method\": {\r\n        \"isStatic\":
+    false,\r\n        \"declaringAssemblyIsPostProcessable\": false,\r\n        \"declaringAssemblyName\":
+    \"Unity.ClusterDisplay.Runtime\",\r\n        \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n       
+    \"declaryingTypeName\": \"SynchronizePlayableDirector\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Stopped\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [],\r\n        \"parameterTypeNamespaces\": [],\r\n        \"parameterTypeName\":
+    [],\r\n        \"parameterNames\": [],\r\n        \"ParameterCount\": 0\r\n     
+    }\r\n    },\r\n    {\r\n      \"rpcId\": 8,\r\n      \"isStatic\": false,\r\n     
+    \"overrideRPCExecutionStage\": false,\r\n      \"rpcExecutionStage\": 3,\r\n     
+    \"method\": {\r\n        \"isStatic\": false,\r\n        \"declaringAssemblyIsPostProcessable\":
+    false,\r\n        \"declaringAssemblyName\": \"Unity.ClusterDisplay.Runtime\",\r\n       
+    \"declaringTypeNamespace\": \"Unity.ClusterDisplay\",\r\n        \"declaryingTypeName\":
+    \"SynchronizePlayableDirector\",\r\n        \"declaringReturnTypeAssemblyName\":
+    \"mscorlib\",\r\n        \"returnTypeNamespace\": \"System\",\r\n        \"returnTypeName\":
+    \"Void\",\r\n        \"methodName\": \"Sync\",\r\n        \"declaringParameterTypeAssemblyNames\":
+    [\r\n          \"Unity.ClusterDisplay.Runtime\"\r\n        ],\r\n        \"parameterTypeNamespaces\":
+    [\r\n          \"Unity.ClusterDisplay.SynchronizePlayableDirector/PlayableDirectorState\"\r\n       
+    ],\r\n        \"parameterTypeName\": [\r\n          \"PlayableDirectorState\"\r\n       
+    ],\r\n        \"parameterNames\": [\r\n          \"playableDirectorState\"\r\n       
+    ],\r\n        \"ParameterCount\": 1\r\n      }\r\n    }\r\n  ],\r\n  \"stagedMethods\":
+    []\r\n}"

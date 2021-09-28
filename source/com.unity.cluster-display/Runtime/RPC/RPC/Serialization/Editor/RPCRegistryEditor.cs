@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.RPC
                     return;
 
                 if (cachedAllAssemblies == null)
-                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => ReflectionUtils.IsAssemblyPostProcessable(assembly)).ToArray();
+                    cachedAllAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(assembly => ReflectionUtils.IsAssemblyPostProcessable(Application.dataPath, assembly)).ToArray();
 
                 assemblySearchStr = newAssemblySearchStr;
                 cachedSearchedAssemblies = cachedAllAssemblies.Where(assembly => string.IsNullOrEmpty(assemblySearchStr) || assembly.FullName.Contains(assemblySearchStr)).ToArray();

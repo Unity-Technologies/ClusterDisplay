@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.Samples",
     "references": [
+        "GUID:0861eaad4777b824986b7d153336925a",
         "GUID:ebda382865f803841bb36f141d251db6",
         "GUID:d430e338f0b6b2c49ba9a2d10ebe07ea",
         "GUID:2665a8d13d1b3f18800f46e256720795",

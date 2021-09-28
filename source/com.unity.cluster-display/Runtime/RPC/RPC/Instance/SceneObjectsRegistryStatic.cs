@@ -141,13 +141,6 @@ namespace Unity.ClusterDisplay.RPC
         private static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
             where InstanceType : Component
         {
-            if (instance == null)
-            {
-                Debug.LogError($"Received NULL object to register.");
-                pipeId = 0;
-                return false;
-            }
-
             if (TryGetPipeId(instance, out pipeId))
                 return true;
 
@@ -160,43 +153,40 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
+        private static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
             where InstanceType : Component
         {
             if (!Validate(instance, out var pipeId))
-                return;
+                return false;
 
             m_Instances[pipeId] = instance;
-            // RegisterPipeIdWithInstanceId(instance, pipeId);
-
             var newInstanceRPCConfig = new RPCConfig();
             newInstanceRPCConfig.enabled = true;
 
             SetRPCConfig(pipeId, rpcId, ref newInstanceRPCConfig);
+            return true;
         }
 
-        private static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
+        private static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
             where InstanceType : Component
         {
             if (!Validate(instance, out var pipeId))
-                return;
+                return false;
 
             m_Instances[pipeId] = instance;
-            // RegisterPipeIdWithInstanceId(instance, pipeId);
-
             SetRPCConfig(pipeId, rpcId, ref instanceRPCConfig);
+            return true;
         }
 
-        private static void UnregisterInstanceAccessor<InstanceType> (InstanceType instance)
+        private static bool TryUnregisterInstanceAccessor<InstanceType> (InstanceType instance)
             where InstanceType : Component
         {
-            if (instance == null)
-                return;
-
             if (!TryGetPipeId(instance, out var pipeId))
-                return;
+                return false;
+            
             m_Instances[pipeId] = null;
             m_PipeIdManager.PushUnutilizedId(pipeId);
+            return true;
         }
 
         public static void ClearAccessors ()
@@ -305,7 +295,7 @@ namespace Unity.ClusterDisplay.RPC
                         continue;
 
                     for (int ri = 0; ri < rpcs.Length; ri++)
-                        sceneRegistry.Register(component, rpcs[ri].rpcId);
+                        sceneRegistry.RegisterWithRPCId(component, rpcs[ri].rpcId);
                 }
             }));
         }

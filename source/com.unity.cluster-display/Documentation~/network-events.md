@@ -123,15 +123,17 @@ When you rename a method cluster display will not be able to deserialize the met
 # RPC Method Parameters
 Cluster Display's networking library will automatically determine if your target method can be used as an RPC. If you attempt to flag a incompatible method as an RPC. Cluster Display will log a error explaining the problem.
 
-## Supported Parameters
-### Primitive Method Parameters
+## Supported Arguments
+### Primitive Method Arguments
 All [C# primitive types](!https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types) can be used as RPC parameters.
 ```
 [ClusterRPC]
-public void TestMethod (float valueA, int valueB) {}
+public void TestMethod (float valueA, int valueB) {}s
 ```
+### Boolean Method Arguments
+C# `Boolean` types are supported. However, in managed memory they are considered as 1 byte. Whereas when they are marshalled by `Marshal` they are implicitly converted into 4 bytes. Therefore `bool` arguments are communicated as 4 bytes to to the repater nodes. If you really need `bool` arguments to be communicated as 1 bytes you can wrap it in a struct and setup the struct in the following way: [Struct Boolean Field Members](network-events#struct-boolean-field-members)
 
-### Struct & ValueType Method Parameters
+### Struct & ValueType Method Arguments
 [C# structs](!https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct) can be used as RPC parameters as long as **all** of the struct members and nested members are primitive types:
 ```
 [StructLayout(LayoutKind.Explicit, Size = 8)]
@@ -156,7 +158,23 @@ public void TestMethod (ContainerType container, Vector3 vector) {}
 ```
 **You MUST declare the struct layout if your using a custom struct as a RPC argument.** Otherwise Cluster Display may interpret the struct incorrectly when converting the structure into bytes.
 
-### Array Method Parameters
+You can use either [`[StructLayout(LayoutKind.Sequential)]` or `[StructLayout(LayoutKind.Explicit)]`](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.structlayoutattribute?view=net-5.0) to define the struct's byte layout. With `LayoutKind.Sequential`. The struct's byte layout will be determined by the struct's field definition order. Whereas `LayoutKind.Explicit` you will need to define the exact byte offset of each field using the `[FieldOffset]` attribute.
+
+### Struct Boolean Field Members
+If you have a struct with a `bool` field as a RPC argument, Cluster Display will convert it to 4 bytes to communicate this field to repeater nodes. This is due to the following:
+
+C# `Boolean`s are only 1 byte, however C#'s Marshal implicitly converts C# booleans to Window SDK `BOOL` which typdefs as an unmanaged int of 4 bytes. If you want to explicitly communicate a `bool` as 1 byte, you can use the [`[MarshalAs(UnmanagedType.I1)]`](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.marshalasattribute?view=net-5.0) field attribute just before the `bool` field definition in the struct like so:
+```
+[StructLayout(LayoutKind.Sequential)]
+public struct Test
+{
+    public int number;
+    [MarshalAs(UnmanagedType.I1)]
+    public bool testBool;
+}
+```
+
+### Array Method Arguments
 C# arrays are supported as long as the element type is a primitive or struct type:
 
 ```
@@ -181,7 +199,7 @@ public struct ContainerType
 public void TestMethod (ContainerType[] containers, float[] floats) {}
 ```
 
-### String Method Parameters
+### String Method Arguments
 String parameters are supported.
 ```
 [ClusterRPC]

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
@@ -242,7 +240,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
 
                 unableToInjectIL:
-                Debug.LogError($"Failure occurred while attempting to append instance method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
+                LogWriter.LogError($"Failure occurred while attempting to append instance method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
                 ilProcessor.Body.Instructions.Clear();
                 return false;
             }
@@ -272,7 +270,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
 
                 unableToInjectIL:
-                Debug.LogError($"Failure occurred while attempting to append static method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
+                LogWriter.LogError($"Failure occurred while attempting to append static method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
                 ilProcessor.Body.Instructions.Clear();
                 return false;
             }

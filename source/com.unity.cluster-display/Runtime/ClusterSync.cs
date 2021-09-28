@@ -111,6 +111,7 @@ namespace Unity.ClusterDisplay
 
         private void OnEnable()
         {
+            stateSetter.SetIsActive(true);
             stateSetter.SetIsTerminated(false);
             stateSetter.SetCLusterLogicEnabled(false);
             NodeState.Debugging = m_Debugging;

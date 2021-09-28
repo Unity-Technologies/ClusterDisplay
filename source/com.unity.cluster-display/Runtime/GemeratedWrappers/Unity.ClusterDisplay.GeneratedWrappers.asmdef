@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.GeneratedWrappers",
     "references": [
+        "GUID:0861eaad4777b824986b7d153336925a",
         "GUID:ebda382865f803841bb36f141d251db6"
     ],
     "includePlatforms": [

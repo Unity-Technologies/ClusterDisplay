@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
@@ -25,14 +24,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (call == null)
             {
-                Debug.LogError($"Unable to inject call into method body: \"{il.Body.Method.Name}\" declared in: \"{il.Body.Method.DeclaringType.Name}\", the call is null!");
+                LogWriter.LogError($"Unable to inject call into method body: \"{il.Body.Method.Name}\" declared in: \"{il.Body.Method.DeclaringType.Name}\", the call is null!");
                 lastInstruction = null;
                 return false;
             }
 
             if (afterInstruction == null)
             {
-                Debug.LogError($"Unable to inject call to: \"{call.Name}\" declared in: \"{call.DeclaringType.FullName}\", the instruction to inject after is null!");
+                LogWriter.LogError($"Unable to inject call to: \"{call.Name}\" declared in: \"{call.DeclaringType.FullName}\", the instruction to inject after is null!");
                 lastInstruction = null;
                 return false;
             }
@@ -53,33 +52,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             lastInstruction = afterInstruction;
 
             return true;
-        }
-
-        private void InsertDebugMessage (
-            ModuleDefinition moduleDef,
-            ILProcessor il,
-            string message,
-            Instruction afterInstruction,
-            out Instruction lastInstruction)
-        {
-            var debugType = typeof(Debug);
-            if (!CecilUtils.TryImport(moduleDef, debugType, out var debugTypeRef))
-            {
-                lastInstruction = afterInstruction;
-                return;
-            }
-
-            var debugTypeDef = debugTypeRef.Resolve();
-            var logMethodRef = CecilUtils.Import(moduleDef, debugTypeDef.Methods.Where(method => {
-                return
-                    method.Name == "Log" &&
-                    method.Parameters.Count == 1;
-            }).FirstOrDefault());
-
-            lastInstruction = null;
-
-            CecilUtils.InsertPushStringAfter(il, ref afterInstruction, message);
-            CecilUtils.InsertCallAfter(il, ref afterInstruction, logMethodRef);
         }
 
         private bool TryFindMethodWithMatchingFormalySerializedAs (
@@ -167,14 +139,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                         if (stringLengthPropertyRef == null)
                         {
-                            Debug.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
+                            LogWriter.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
                             return false;
                         }
 
                         var stringLengthGetterMethodDef = stringLengthPropertyRef.GetMethod;
                         if (stringLengthGetterMethodDef == null)
                         {
-                            Debug.LogError($"Unable to find Length property getter method for parameter type: \"{param.ParameterType.FullName}\".");
+                            LogWriter.LogError($"Unable to find Length property getter method for parameter type: \"{param.ParameterType.FullName}\".");
                             return false;
                         }
 
@@ -213,7 +185,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                             if (lengthPropertyGetMethodRef == null)
                             {
-                                Debug.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
+                                LogWriter.LogError($"Unable to find Length property for parameter type: \"{param.ParameterType.FullName}\".");
                                 return false;
                             }
 
@@ -349,7 +321,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             ParameterDefinition parameterDefinition)
         {
             var nativeArrayType = typeof(NativeArray<>);
-
             return
                 parameterDefinition.ParameterType.IsValueType &&
                 parameterDefinition.ParameterType.Namespace == nativeArrayType.Namespace &&
@@ -382,14 +353,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                     if (sizeOfType > buint.MaxValue)
                     {
-                        Debug.LogError($"Unable to post process method: \"{targetMethodDef.Name}\" declared in: \"{targetMethodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" of type: \"{typeReference.FullName}\" is larger then the max parameter size of: {buint.MaxValue} bytes.");
+                        LogWriter.LogError($"Unable to post process method: \"{targetMethodDef.Name}\" declared in: \"{targetMethodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" of type: \"{typeReference.FullName}\" is larger then the max parameter size of: {buint.MaxValue} bytes.");
                         return false;
                     }
 
                     buint totalBytesNow = totalSizeOfStaticallySizedRPCParameters + sizeOfType;
                     if (totalBytesNow > buint.MaxValue)
                     {
-                        Debug.LogError($"Unable to post process method: \"{targetMethodDef.Name}\" declared in: \"{targetMethodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" pushes the total parameter payload size to: {totalBytesNow} bytes, the max parameters payload size is: {buint.MaxValue} bytes.");
+                        LogWriter.LogError($"Unable to post process method: \"{targetMethodDef.Name}\" declared in: \"{targetMethodDef.DeclaringType.FullName}\", the parameter: \"{param.Name}\" pushes the total parameter payload size to: {totalBytesNow} bytes, the max parameters payload size is: {buint.MaxValue} bytes.");
                         return false;
                     }
 
@@ -481,7 +452,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             if (!found)
             {
-                Debug.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
+                LogWriter.LogError($"Unable to find method definition with attribute: \"{attributeTypeRef.FullName}\" in type: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }
@@ -609,7 +580,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (beforeInstruction == null)
             {
-                Debug.LogError("Unable to inject instance RPC execution IL isntructions, the point at which we want to inject instructions before is null!");
+                LogWriter.LogError("Unable to inject instance RPC execution IL isntructions, the point at which we want to inject instructions before is null!");
                 firstInstructionOfInjection = null;
                 return false;
             }
@@ -727,14 +698,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (afterInstruction == null)
             {
-                Debug.LogError("Unable to inject switch jump instructions, the instruction we want to inject AFTER is null!");
+                LogWriter.LogError("Unable to inject switch jump instructions, the instruction we want to inject AFTER is null!");
                 lastInstructionOfSwitchJmp = null;
                 return false;
             }
 
             if (jmpToInstruction == null)
             {
-                Debug.LogError("Unable to inject switch jump instructions, the target instruction to jump to is null!");
+                LogWriter.LogError("Unable to inject switch jump instructions, the target instruction to jump to is null!");
                 lastInstructionOfSwitchJmp = null;
                 return false;
             }

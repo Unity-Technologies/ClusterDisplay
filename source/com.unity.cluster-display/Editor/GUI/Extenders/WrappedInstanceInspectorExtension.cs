@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
 
         protected override void OnPollWrapperGUI (InstanceType instance, bool hasRegistered)
         {
-            if (!ReflectionUtils.TypeIsInPostProcessableAssembly(instance.GetType()))
+            if (!ReflectionUtils.TypeIsInPostProcessableAssembly(Application.dataPath, instance.GetType()))
             {
                 TryGetWrapperInstance(instance, ref cachedWrapper);
                 // if (hasRegistered)

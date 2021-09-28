@@ -215,7 +215,7 @@ namespace Unity.ClusterDisplay.RPC
                 }
 
                 else if (onRemoveMethodWrapper != null)
-                onRemoveMethodWrapper(rpcMethodInfo.methodInfo);
+                    onRemoveMethodWrapper(rpcMethodInfo.methodInfo);
             }
 
             return true;
@@ -297,7 +297,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            if (!ReflectionUtils.IsAssemblyPostProcessable(propertyInfo.Module.Assembly))
+            if (!ReflectionUtils.IsAssemblyPostProcessable(Application.dataPath, propertyInfo.Module.Assembly))
             {
                 if (!rpcRegistry.TryStageNonPostProcessableMethod(propertyInfo))
                     return false;
@@ -323,7 +323,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            if (!ReflectionUtils.IsAssemblyPostProcessable(methodInfo.Module.Assembly))
+            if (!ReflectionUtils.IsAssemblyPostProcessable(Application.dataPath, methodInfo.Module.Assembly))
             {
                 if (!rpcRegistry.TryStageNonPostProcessableMethod(methodInfo))
                     return false;
@@ -545,7 +545,7 @@ namespace Unity.ClusterDisplay.RPC
                 TryRegisterRPC(ref rpc);
             }
         }
-
+        
         private MethodInfo[] cachedMethodsWithRPCAttribute = null;
         private void PollMethodsWithRPCAttribute (
             List<Assembly> registeredAssemblies,
@@ -584,30 +584,29 @@ namespace Unity.ClusterDisplay.RPC
                     }
                 }
 
-                // If "formarlySerializedAs" has not beend defined, or if the current method matches the former name, then simply register the RPC.
                 ushort rpcId = 0;
-
-                // Are we overriding the RPC id in the method attribute?
-                if (rpcMethodAttribute.rpcId != -1)
+                if (rpcMethodAttribute.rpcId != -1) // Are we overriding the RPC id in the method attribute?
                     rpcId = (ushort)rpcMethodAttribute.rpcId;
-
-                // Is this method already registered under a serialized RPC id? 
-                else if (nullableSerializedRPC != null)
+                else if (nullableSerializedRPC != null) // Is this method already registered under a serialized RPC id?
                     rpcId = nullableSerializedRPC.Value.rpcId;
-
-                // Can we push this ID into the ID manager as an ID in use? If not, can we pop a new one?
+                
+                // Can we push this ID into the ID manager as an ID in use? If it's being used, can we pop a new one?
                 if (!m_IDManager.TryPushOrPopId(ref rpcId))
                     continue;
 
                 bool overrideRPCExecutionStage = nullableSerializedRPC != null && nullableSerializedRPC.Value.overrideRPCExecutionStage;
                 var rpcExecutionStage = overrideRPCExecutionStage ? (RPCExecutionStage)nullableSerializedRPC.Value.rpcExecutionStage : rpcMethodAttribute.rpcExecutionStage;
+                
                 if (!string.IsNullOrEmpty(rpcMethodAttribute.formarlySerializedAs))
                     renamedRPCs.Add(rpcMethodAttribute.formarlySerializedAs);
 
                 list.Add((rpcId, overrideRPCExecutionStage, rpcExecutionStage, methodInfo));
             }
 
+            // Sort the RPCs by the RPC ID.
             var orderedList = list.OrderBy(item => item.rpcId);
+            
+            // After we've sorted, loop through our methods and register them as RPCs.
             foreach (var methodData in orderedList)
                 TryRegisterDeserializedMethod(
                     methodData.rpcId,
@@ -627,7 +626,7 @@ namespace Unity.ClusterDisplay.RPC
             {
                 var rpcExecutionStage = RPCExecutionStage.ImmediatelyOnArrival;
                 if (renamedRPCs.Contains(serializedRPCs[i].method.methodName))
-                    return;
+                    continue;
 
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPCs[i], out rpcExecutionStage, out var methodInfo))
                     continue;
@@ -674,6 +673,7 @@ namespace Unity.ClusterDisplay.RPC
             m_IDManager.Clear();
 
             List<string> renamedRPCs = new List<string>();
+            
             PollMethodsWithRPCAttribute(
                 registeredAssemblies,
                 serializedRPCs,
