@@ -10,6 +10,11 @@ namespace Unity.ClusterDisplay
     {
         [SerializeField] private Transform[] rootTransforms = null;
 
+        private void Awake()
+        {
+            NativeLeakDetection.Mode = NativeLeakDetectionMode.EnabledWithStackTrace;
+        }
+
         [ClusterRPC]
         public override void ApplyTransformData(NativeArray<Data> data) => base.ApplyTransformData(data);
         protected override void CacheTransforms() => 

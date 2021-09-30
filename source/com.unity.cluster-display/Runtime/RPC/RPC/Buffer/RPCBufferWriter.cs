@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-
+using UnityEngine;
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC
@@ -46,6 +46,12 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class AppendRPCValueTypeParameterValueMarker : Attribute {}
+        
+        /// <summary>
+        /// This is used by the ILPostProcessor to find and perform the call.
+        /// </summary>
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class AppendRPCCharParameterValueMarker : Attribute {}
 
         /// <summary>
         /// Were done writing to the RPC buffer, so latching essentialy copies the RPC buffer to our network frame buffer.
@@ -72,18 +78,20 @@ namespace Unity.ClusterDisplay.RPC
                 return;
 
             int strSize = value.Length;
-            if (rpcBufferSize + sizeof(buint) + strSize >= rpcBuffer.Length)
+            if (rpcBufferSize + Marshal.SizeOf<buint>() + strSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
 
             CopyCountToRPCBuffer((buint)strSize);
+            var byteCount = (buint)strSize * 2 /* UTF-16 2 Bytes */;
+            UnityEngine.Debug.Log($"Byte Count:\"{Encoding.Unicode.GetBytes(value).Length}\".");
             fixed (char* ptr = value)
-                Encoding.ASCII.GetBytes(
+                Encoding.Unicode.GetBytes(
                     ptr,
                     strSize,
                     (byte *)rpcBuffer.GetUnsafePtr() + rpcBufferSize,
-                    strSize);
+                    (int)byteCount);
 
-            rpcBufferSize += (buint)strSize;
+            rpcBufferSize += byteCount;
         }
 
         /// <summary>
@@ -122,7 +130,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            if (rpcBufferSize + sizeof(buint) + arrayByteCount >= rpcBuffer.Length)
+            if (rpcBufferSize + Marshal.SizeOf<buint>() + arrayByteCount >= rpcBuffer.Length)
             {
                 UnityEngine.Debug.LogError($"Unable to write parameter buffer of size: {arrayByteCount} to RPC Buffer because it's full.");
                 return false;
@@ -140,9 +148,9 @@ namespace Unity.ClusterDisplay.RPC
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
                 UnsafeUtility.AddressOf(ref count), 
-                sizeof(buint));
+                Marshal.SizeOf<buint>());
 
-            rpcBufferSize += sizeof(buint);
+            rpcBufferSize += (buint)Marshal.SizeOf<buint>();
         }
 
         /// <summary>
@@ -192,6 +200,28 @@ namespace Unity.ClusterDisplay.RPC
             // Get a fixed pointer to the first element in the array.
             fixed (T* ptr = &value[0])
                 CopyBufferToRPCBuffer<T>(ptr, arrayByteCount);
+        }
+        
+        /// <summary>
+        /// Simply append a UTF-16 char RPC argument to the RPC buffer.
+        /// </summary>
+        /// <param name="value">The UTF-16 you want to append.</param>
+        [AppendRPCCharParameterValueMarker]
+        public static unsafe void AppendRPCCharParameterValue(char value)
+        {
+            // In this case we do not use Marshal.SizeOf with charsince Marshal assumes you use the char
+            // in interop unmanaged code which it'll interpret as 1 byte. We need 2 bytes for unicode.
+            buint charSize = sizeof(char);
+            if (!AllowWrites || rpcBufferSize + charSize >= rpcBuffer.Length)
+                return;
+
+            // Perform the copy.
+            UnsafeUtility.MemCpy(
+                (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
+                UnsafeUtility.AddressOf(ref value), 
+                charSize);
+            
+            rpcBufferSize += charSize;
         }
 
         /// <summary>
@@ -279,9 +309,9 @@ namespace Unity.ClusterDisplay.RPC
             rpcExecutionStage = ShiftRPCExecutionStage(rpcExecutionStage);
 
             // Here is where we write the called RPC header to the buffer.
-            AppendRPCValueTypeParameterValue<ushort>((ushort)rpcId);
+            AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcId + 1)); // Adding 1 to RPC ID for stability, see RPCBufferReader.TryParseRPC.
             AppendRPCValueTypeParameterValue<ushort>((ushort)(rpcExecutionStage));
-            AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1));
+            AppendRPCValueTypeParameterValue<ushort>((ushort)(pipeId + 1)); // Adding 1 to Pipe ID to indicate that this is not a static RPC.
             AppendRPCValueTypeParameterValue<buint>((buint)parametersPayloadSize);
 
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING

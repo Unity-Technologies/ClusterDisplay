@@ -92,6 +92,9 @@ namespace Unity.ClusterDisplay
 
             var jobHandle = applyDataJob.Schedule(transformAccessArray);
             jobHandle.Complete();
+            
+            transformAccessArray.Dispose();
+            data.Dispose();
         }
 
         public bool TryGetData (out NativeArray<Data> outCachedData)
@@ -106,6 +109,8 @@ namespace Unity.ClusterDisplay
             var transformAccessArray = new TransformAccessArray(cachedTransforms);
             var jobHandle = cacheDataJob.Schedule(transformAccessArray);
             jobHandle.Complete();
+            
+            transformAccessArray.Dispose();
 
             outCachedData = cacheDataJob.cachedData;
             return true;

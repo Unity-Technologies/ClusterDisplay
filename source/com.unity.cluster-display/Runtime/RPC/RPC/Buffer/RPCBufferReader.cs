@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-
+using UnityEngine;
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC
@@ -35,8 +35,14 @@ namespace Unity.ClusterDisplay.RPC
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseStructureMarker : Attribute {}
+        public class ParseCharMarker : Attribute {}
 
+        /// <summary>
+        /// This is used by the ILPostProcessor to find and perform the call.
+        /// </summary>
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class ParseStructureMarker : Attribute {}
+        
         /// <summary>
         /// Pipe our RPC invocation request into a specific queue to be later executed when we reach that point in the frame.
         /// </summary>
@@ -73,7 +79,7 @@ namespace Unity.ClusterDisplay.RPC
                     RPCInterfaceRegistry.QueueAfterLateUpdateRPC(ref rpcRequest, rpcBufferRPCArgumentsStartPosition);
                     break;
             }
-
+            
              // Shift our RPC read head by the total byte count of the RPC's arguments to the next RPC.
             rpcBufferRPCArgumentsStartPosition += rpcRequest.parametersPayloadSize;
         }
@@ -160,6 +166,14 @@ namespace Unity.ClusterDisplay.RPC
             ref buint bufferPos)
         {
             ParseRPCId(ref bufferPos, out rpcRequest.rpcId);
+            if (rpcRequest.rpcId == 0)
+            {
+                UnityEngine.Debug.LogError($"RPC buffer is invalid or the read head is out of line.");
+                rpcRequest = default(RPCRequest);
+                return false;
+            }
+
+            rpcRequest.rpcId--; // When the RPC ID is written to the buffer, we add 1 
 
             #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
             // Validate whether the received RPC has even been registered with the repeater node. If the RPC buffer is incorrectly read and we lose track of
@@ -298,11 +312,12 @@ namespace Unity.ClusterDisplay.RPC
 
             // Get the string length from the buffer.
             buint strLen = Marshal.PtrToStructure<buint>(ptr);
-            ptr += sizeof(buint);
+            ptr += Marshal.SizeOf<buint>();
 
             // Extract the string using the length we've retrieved.
-            var str = Encoding.ASCII.GetString((byte*)ptr.ToPointer(), (int)strLen);
-            startPos += sizeof(buint) + strLen; // Move our read head.
+            var byteCount = (buint)strLen * 2 /* UTF-16 2 Bytes */;
+            var str = Encoding.Unicode.GetString((byte*)ptr.ToPointer(), (int)byteCount);
+            startPos += (buint)Marshal.SizeOf<buint>() + byteCount; // Move our read head.
 
             // Return our converted string.
             return str;
@@ -321,7 +336,7 @@ namespace Unity.ClusterDisplay.RPC
 
             // Get the array length from the buffer.
             buint arrayLength = Marshal.PtrToStructure<buint>(ptr);
-            ptr += sizeof(buint);
+            ptr += Marshal.SizeOf<buint>();
 
             // Get the total expected byte count of the array.
            buint arrayByteCount = (buint)(arrayLength * Marshal.SizeOf<T>());
@@ -335,7 +350,7 @@ namespace Unity.ClusterDisplay.RPC
             // Copy over the bytes the RPC buffer to our array.
             UnsafeUtility.MemCpy(arrayPtr, ptr.ToPointer(), arrayByteCount);
 
-            startPos += sizeof(buint) + arrayByteCount; // Move our read head.
+            startPos += (buint)Marshal.SizeOf<buint>() + arrayByteCount; // Move our read head.
 
             // Return our converted array.
             return array;
@@ -354,20 +369,32 @@ namespace Unity.ClusterDisplay.RPC
 
             // Get the NativeArray length.
             buint arrayLength = Marshal.PtrToStructure<buint>(ptr);
-            ptr += sizeof(buint);
+            ptr += Marshal.SizeOf<buint>();
 
             // Get the total byte count of the NativeArray of our expected type.
-           buint arrayByteCount = (buint)(arrayLength * Marshal.SizeOf<T>());
+            buint arrayByteCount = (buint)(arrayLength * Marshal.SizeOf<T>());
 
-             // TODO, think about how we can be more explicit about the alloation type. At the moment NativeArray arguments can only be used in jobs.
-            NativeArray<T> nativeArray = new NativeArray<T>((int)arrayLength, Allocator.TempJob);
-            // Copy our bytes into the native array.
+            NativeArray<T> nativeArray = new NativeArray<T>((int)arrayLength, Allocator.Persistent);
             UnsafeUtility.MemCpy(nativeArray.GetUnsafePtr(), ptr.ToPointer(), arrayByteCount);
 
-            startPos += sizeof(buint) + arrayByteCount; // Move our read head.
+            startPos += (buint)Marshal.SizeOf<buint>() + arrayByteCount; // Move our read head.
 
             // Return our converted native array.
             return nativeArray;
+        }
+        
+        /// <summary>
+        /// Simply convert RPC buffer bytes to a UTF-16 char. 
+        /// </summary>
+        /// <param name="startPos">The byte position in our RPC buffer that we expect the char to start.</param>
+        /// <returns>UTF-16 char</returns>
+        [ParseCharMarker]
+        public static unsafe char ParseChar (ref buint startPos)
+        {
+            var ptr = (byte*)rpcBuffer.GetUnsafePtr() + startPos; // Get a pointer to our read head position in the RPC buffer.
+            startPos += (buint)sizeof(char); // Move our read head.
+            char c = (char)((*ptr) | (*(ptr + 1) << 8));
+            return c;
         }
 
         /// <summary>
@@ -395,7 +422,7 @@ namespace Unity.ClusterDisplay.RPC
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             // Convert the bytes to the expected Pipe ID of the RPC.
             pipeId = Marshal.PtrToStructure<ushort>(ptr);
-            startPos += sizeof(ushort); // Move the read head.
+            startPos += (buint)Marshal.SizeOf<ushort>(); // Move the read head.
         }
 
         /// <summary>
@@ -408,7 +435,7 @@ namespace Unity.ClusterDisplay.RPC
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             // Convert the bytes to the expected RPC ID of the RPC.
             rpcId = Marshal.PtrToStructure<ushort>(ptr);
-            startPos += sizeof(ushort); // Move the read head.
+            startPos += (buint)Marshal.SizeOf<ushort>(); // Move the read head.
         }
 
         /// <summary>
@@ -421,7 +448,7 @@ namespace Unity.ClusterDisplay.RPC
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             // Convert the bytes to the expected RPCExecutionStage of the RPC.
             rpcExecutionStage = (RPCExecutionStage)Marshal.PtrToStructure<ushort>(ptr);
-            startPos += sizeof(ushort); // Move the read head.
+            startPos += (buint)Marshal.SizeOf<ushort>(); // Move the read head.
         }
 
         /// <summary>
@@ -434,7 +461,7 @@ namespace Unity.ClusterDisplay.RPC
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             // Convert the bytes to our expected RPC total arguments byte count.
             parametersPayloadSize = Marshal.PtrToStructure<uint>(ptr);
-            startPos += sizeof(uint); // Move the read head.
+            startPos += (buint)Marshal.SizeOf<uint>(); // Move the read head.
         }
     }
 }

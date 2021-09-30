@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Mono.Cecil;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
@@ -20,12 +21,8 @@ namespace Unity.ClusterDisplay.RPC
 
         public static buint RPCBufferSize => rpcBufferSize;
 
-        // The RPC header is represented by 3 unsigned shorts and a byte:
-        //  RPC ID: ushort (2 bytes)
-        //  RPC Execution Stage: ushort (2 bytes).
-        //  Pipe ID: ushort (2 bytes).
-        //  Parameter payload size: uint (4 bytes).
-        private const buint MinimumRPCPayloadSize = sizeof(ushort) * 3 + sizeof(buint);
+        // The RPC header is represented by 3 unsigned shorts and a payload size:
+        private readonly static buint MinimumRPCPayloadSize = (buint)Marshal.SizeOf<ushort>() * 3 + (buint)Marshal.SizeOf<buint>();
 
         /// <summary>
         /// This does not become true until we've connected to the cluster display network.

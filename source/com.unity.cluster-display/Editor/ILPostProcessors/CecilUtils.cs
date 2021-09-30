@@ -461,14 +461,19 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             switch (typeDef.Name)
             {
                 case "Byte":
+                    size += (buint)Marshal.SizeOf<Byte>();
+                    return true;
+                
                 case "SByte":
-                    size += 1;
+                    size += (buint)Marshal.SizeOf<SByte>();
                     return true;
                 
                 case "Int16":
+                    size += (buint)Marshal.SizeOf<Int16>();
+                    return true;
+                
                 case "UInt16":
-                case "Char":
-                    size += 2;
+                    size += (buint)Marshal.SizeOf<UInt16>();
                     return true;
                 
                 // In C#, Booleans are 1 byte. However, Marshal.SizeOf<bool> will return 4 bytes as backwards
@@ -477,17 +482,36 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 // bool into a single byte. For now this is the cleaner solution.
                 // https://stackoverflow.com/a/39251864
                 case "Boolean":
+                    size += (buint)Marshal.SizeOf<Boolean>();
+                    return true;
+                    
+                // We want to use C#'s 2 byte char to respect unicode instead of Marshal casting char to 1 byte.
+                case "Char":
+                    size += sizeof(char);
+                    return true;
                     
                 case "Int32":
+                    size += (buint)Marshal.SizeOf<Int32>();
+                    return true;
+                
                 case "UInt32":
+                    size += (buint)Marshal.SizeOf<UInt32>();
+                    return true;
+                
                 case "Single":
-                    size += 4;
+                    size += (buint)Marshal.SizeOf<Single>();
                     return true;
                 
                 case "Int64":
+                    size += (buint)Marshal.SizeOf<Int64>();
+                    return true;
+                
                 case "UInt64":
+                    size += (buint)Marshal.SizeOf<UInt64>();
+                    return true;
+                
                 case "Double":
-                    size += 8;
+                    size += (buint)Marshal.SizeOf<Double>();
                     return true;
                 
                 default:

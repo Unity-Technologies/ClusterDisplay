@@ -297,6 +297,41 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1470466796935444144, guid: b726da70b3347c24db19311270173dfe, type: 3}
   m_PrefabInstance: {fileID: 279406573}
   m_PrefabAsset: {fileID: 0}
+--- !u!84 &556636659
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Source-1-RT-(1080X1920)
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  serializedVersion: 3
+  m_Width: 1080
+  m_Height: 1920
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthFormat: 1
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
 --- !u!1001 &560756299
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -555,7 +590,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 1280794693}
+  m_TargetTexture: {fileID: 556636659}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
@@ -626,17 +661,6 @@ MonoBehaviour:
   - instance: {fileID: 325596152}
     pipeConfig:
       configs:
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
-      - enabled: 0
       - enabled: 0
       - enabled: 0
       - enabled: 0
@@ -733,41 +757,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b2e6e70b40689b499ada8d43ff4cb66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!84 &1280794693
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Source-1-RT-(1080X1920)
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  serializedVersion: 3
-  m_Width: 1080
-  m_Height: 1920
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthFormat: 1
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
 --- !u!1001 &1303489798
 PrefabInstance:
   m_ObjectHideFlags: 0
