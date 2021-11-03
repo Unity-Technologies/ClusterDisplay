@@ -10,15 +10,15 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRTile;
 
-        XRTileRTManager m_RTManager = new XRTileRTManager();
         Rect m_OverscannedRect;
+        RTHandle m_SourceRTHandle;
 
         public XRTileLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
 
         public override void Dispose()
         {
-            m_RTManager.Release();
+            GraphicsUtil.DeallocateIfNeeded(ref m_SourceRTHandle);
         }
 
         public override void LateUpdate()
@@ -37,8 +37,8 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
             var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            HDUtils.BlitQuad(cmd, sourceRT, scaleBiasTex, k_ScaleBiasRT, 0, true);
+
+            HDUtils.BlitQuad(cmd, m_SourceRTHandle, scaleBiasTex, k_ScaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)
@@ -62,14 +62,15 @@ namespace Unity.ClusterDisplay.Graphics
 
             cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-            var sourceRT = m_RTManager.GetSourceRT((int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRTHandle, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
             {
                 multipassId = 0,
                 cullingPassId = 0,
                 cullingParameters = cullingParams,
-                renderTarget = sourceRT,
+                renderTarget = m_SourceRTHandle,
                 customMirrorView = BuildMirrorView
             };
 

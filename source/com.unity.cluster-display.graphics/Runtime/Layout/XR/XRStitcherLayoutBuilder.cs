@@ -10,8 +10,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         bool m_HasClearedMirrorView = true;
         Rect m_OverscannedRect;
+        RTHandle[] m_SourceRts;
 
-        XRStitcherRTManager m_RTManager = new XRStitcherRTManager();
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRStitcher;
 
         public XRStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Dispose()
         {
             m_QueuedStitcherParameters.Clear();
-            m_RTManager.Release();
+            GraphicsUtil.DeallocateIfNeeded(ref m_SourceRts);
         }
 
         public override void LateUpdate()
@@ -86,10 +86,10 @@ namespace Unity.ClusterDisplay.Graphics
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             var cachedProjectionMatrix = camera.projectionMatrix;
 
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+            
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
-                var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-
                 CalculateStitcherLayout(
                     camera,
                     cachedProjectionMatrix,
@@ -102,7 +102,7 @@ namespace Unity.ClusterDisplay.Graphics
                 cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
                 cullingParams.cullingMatrix = camera.worldToCameraMatrix * asymmetricProjectionMatrix;
 
-                CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
+                CalculcateAndQueueStitcherParameters(tileIndex, m_SourceRts[tileIndex], m_OverscannedRect, percentageViewportSubsection);
 
                 var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                     viewportSubsection,
@@ -114,7 +114,7 @@ namespace Unity.ClusterDisplay.Graphics
                     multipassId = tileIndex,
                     cullingPassId = tileIndex,
                     cullingParameters = cullingParams,
-                    renderTarget = sourceRT,
+                    renderTarget = m_SourceRts[tileIndex],
                     customMirrorView = BuildMirrorView
                 };
 

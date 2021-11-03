@@ -1,12 +1,157 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
+        public static bool AllocateIfNeeded(ref RenderTexture[] rts, int count, string name, int width, int height, GraphicsFormat format)
+        {
+            var changed = false;
+            
+            if (rts == null || count != rts.Length)
+            {
+                changed = true;
+                DeallocateIfNeeded(ref rts);
+                rts = new RenderTexture[count];
+            }
+
+            for (var i = 0; i != count; ++i)
+            {
+                // TODO name rarely used, inefficient
+                // TODO we populate these arrays all at once,
+                // we can assume all tex are similar, just check the 1st
+                changed |= AllocateIfNeeded(ref rts[i], $"{name}-{i}", width, height, format);
+            }
+
+            return changed;
+        }
+        
+        public static bool AllocateIfNeeded(ref RenderTexture rt, string name, int width, int height, GraphicsFormat format)
+        {
+            if (rt == null || 
+                rt.width != width || 
+                rt.height != height || 
+                rt.graphicsFormat != format)
+            {
+                if (rt != null)
+                {
+                    rt.Release();
+                }
+
+                rt = new RenderTexture(width, height, 1, format, 0)
+                {
+                    name = $"{name}-{width}X{height}"
+                };
+                return true;
+            }
+
+            return false;
+        }
+
+        public static void DeallocateIfNeeded(ref RenderTexture[] rts)
+        {
+            if (rts == null)
+            {
+                return;
+            }
+            
+            for (var i = 0; i != rts.Length; ++i)
+            {
+                DeallocateIfNeeded(ref rts[i]);
+            }
+
+            rts = null;
+        }
+
+        public static void DeallocateIfNeeded(ref RenderTexture rt)
+        {
+            if (rt != null)
+            {
+                rt.Release();
+            }
+
+            rt = null;
+        }
+
+        public static bool AllocateIfNeeded(ref RTHandle[] rts, int count, string name, int width, int height)
+        {
+            var changed = false;
+            
+            if (rts == null || count != rts.Length)
+            {
+                changed = true;
+                DeallocateIfNeeded(ref rts);
+                rts = new RTHandle[count];
+            }
+
+            for (var i = 0; i != count; ++i)
+            {
+                // TODO name rarely used, inefficient
+                // TODO we populate these arrays all at once,
+                // we can assume all tex are similar, just check the 1st
+                changed |= AllocateIfNeeded(ref rts[i], $"{name}-{i}", width, height);
+            }
+
+            return changed;
+        }
+
+        public static bool AllocateIfNeeded(ref RTHandle rt, string name, int width, int height)
+        {
+            if (rt == null ||
+                rt.rt.width != width ||
+                rt.rt.height != height)
+            {
+                if (rt != null)
+                {
+                    RTHandles.Release(rt);
+                }
+
+                rt = RTHandles.Alloc(
+                    width,
+                    height,
+                    1,
+                    useDynamicScale: true,
+                    autoGenerateMips: false,
+                    enableRandomWrite: true,
+                    filterMode: FilterMode.Trilinear,
+                    anisoLevel: 8,
+                    name: $"{name}-({width}X{height})");
+
+                return true;
+            }
+
+            return false;
+        }
+        
+        public static void DeallocateIfNeeded(ref RTHandle[] rts)
+        {
+            if (rts == null)
+            {
+                return;
+            }
+            
+            for (var i = 0; i != rts.Length; ++i)
+            {
+                DeallocateIfNeeded(ref rts[i]);
+            }
+
+            rts = null;
+        }
+
+        public static void DeallocateIfNeeded(ref RTHandle rt)
+        {
+            if (rt != null)
+            {
+                RTHandles.Release(rt);
+            }
+
+            rt = null;
+        }
+
         public static Matrix4x4 GetClusterDisplayParams(Rect overscannedViewportSubsection, Vector2 globalScreenSize, Vector2Int gridSize)
         {
             var parms = new Matrix4x4();
