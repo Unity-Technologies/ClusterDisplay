@@ -12,13 +12,19 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
     {
-        private readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
-        [HideInInspector][SerializeField] private CameraContextTarget[] m_SerializedCameraContextTargets;
+        readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
+        [HideInInspector]
+        [SerializeField]
+        CameraContextTarget[] m_SerializedCameraContextTargets;
 
-        [HideInInspector] [SerializeField] private CameraContextTarget m_FocusedCameraContextTarget;
-        [HideInInspector] [SerializeField] private CameraContextTarget m_PreviousFocusedCameraContextTarget;
+        [HideInInspector]
+        [SerializeField]
+        CameraContextTarget m_FocusedCameraContextTarget;
+        [HideInInspector]
+        [SerializeField]
+        CameraContextTarget m_PreviousFocusedCameraContextTarget;
 
-        static CameraContextRegistry ()
+        static CameraContextRegistry()
         {
             SceneManager.sceneLoaded += (scene, mode) =>
             {
@@ -29,7 +35,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// The current camera that's rendering.
         /// </summary>
-        public bool TryGetFocusedCameraContextTarget (out CameraContextTarget cameraContextTarget)
+        public bool TryGetFocusedCameraContextTarget(out CameraContextTarget cameraContextTarget)
         {
             if (m_FocusedCameraContextTarget == null)
             {
@@ -53,7 +59,7 @@ namespace Unity.ClusterDisplay.Graphics
             return (cameraContextTarget = m_FocusedCameraContextTarget) != null;
         }
 
-        public void SetFocusedCameraContextTarget (CameraContextTarget cameraContextTarget)
+        public void SetFocusedCameraContextTarget(CameraContextTarget cameraContextTarget)
         {
             if (cameraContextTarget == m_FocusedCameraContextTarget)
                 return;
@@ -82,14 +88,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public static bool CanChangeContextTo (Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
+        public static bool CanChangeContextTo(Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
 
-        public bool TryGetPreviousFocusedCameraContextTarget (out CameraContextTarget previousCameraContextTarget) => (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
-        public void SetPreviousFocusedCameraContextTarget (CameraContextTarget previousCameraContextTarget) => m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
+        public bool TryGetPreviousFocusedCameraContextTarget(out CameraContextTarget previousCameraContextTarget) => (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
+        public void SetPreviousFocusedCameraContextTarget(CameraContextTarget previousCameraContextTarget) => m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
 
         public CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
 
-        public bool TryGetCameraContextTarget (Camera camera, out CameraContextTarget cameraContextTarget)
+        public bool TryGetCameraContextTarget(Camera camera, out CameraContextTarget cameraContextTarget)
         {
             if (k_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
                 return true;
@@ -97,7 +103,7 @@ namespace Unity.ClusterDisplay.Graphics
             return cameraContextTarget;
         }
 
-        private static void PollCameraTargets ()
+        static void PollCameraTargets()
         {
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
                 return;
@@ -123,19 +129,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// When the level is loaded, automatically find all CameraContextTargets and register them.
         /// </summary>
         /// <param name="level"></param>
-        private void OnLevelWasLoaded(int level) => PollCameraTargets();
+        void OnLevelWasLoaded(int level) => PollCameraTargets();
         */
 
-        private void OnCameraEnabled(CameraContextTarget cameraContextTarget)
+        void OnCameraEnabled(CameraContextTarget cameraContextTarget)
         {
             cameraContextTarget.TargetCamera.enabled = true;
         }
 
-        private void OnCameraDisabled(CameraContextTarget cameraContextTarget)
-        {
-        }
+        void OnCameraDisabled(CameraContextTarget cameraContextTarget) { }
 
-        public CameraContextTarget Register (Camera camera, bool logError = true)
+        public CameraContextTarget Register(Camera camera, bool logError = true)
         {
             if (k_CameraContextTargets.ContainsKey(camera))
             {
@@ -157,7 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
             return cameraContextTarget;
         }
 
-        public void UnRegister (CameraContextTarget cameraContextTarget, bool destroy = false)
+        public void UnRegister(CameraContextTarget cameraContextTarget, bool destroy = false)
         {
             cameraContextTarget.onCameraEnabled -= OnCameraEnabled;
             cameraContextTarget.onCameraDisabled -= OnCameraDisabled;
@@ -224,14 +228,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        private void DestroyCameraContextTarget (CameraContextTarget cameraContextTarget)
+        void DestroyCameraContextTarget(CameraContextTarget cameraContextTarget)
         {
             if (!Application.isPlaying)
                 DestroyImmediate(cameraContextTarget);
             else Destroy(cameraContextTarget);
         }
 
-        public void Flush ()
+        public void Flush()
         {
             k_CameraContextTargets.Clear();
             m_SerializedCameraContextTargets = null;

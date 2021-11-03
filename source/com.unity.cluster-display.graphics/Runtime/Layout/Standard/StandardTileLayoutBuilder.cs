@@ -7,14 +7,17 @@ namespace Unity.ClusterDisplay.Graphics
     /// <summary>
     /// Disables the camera and calls Camera.Render() for a single tile.
     /// </summary>
-    public class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
+    class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
-        private StandardTileRTManager m_RTManager = new StandardTileRTManager();
-        private Rect m_OverscannedRect;
+        StandardTileRTManager m_RTManager = new StandardTileRTManager();
+        Rect m_OverscannedRect;
 
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
-        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
-        public override void Dispose() {}
+
+        protected StandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer) { }
+
+        public override void Dispose() { }
 
         public override void LateUpdate()
         {
@@ -25,8 +28,8 @@ namespace Unity.ClusterDisplay.Graphics
                 camera.enabled = false;
 
             if (!SetupTiledLayout(
-                camera, 
-                out var asymmetricProjectionMatrix, 
+                camera,
+                out var asymmetricProjectionMatrix,
                 out var viewportSubsection,
                 out m_OverscannedRect))
                 return;
@@ -44,15 +47,16 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetCullingMatrix();
         }
 
-        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
-        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) { }
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
 
-            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset); ;
+            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
+            ;
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
@@ -74,6 +78,6 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
     }
 }

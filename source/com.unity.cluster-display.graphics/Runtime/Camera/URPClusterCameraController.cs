@@ -1,4 +1,4 @@
 ﻿namespace Unity.ClusterDisplay.Graphics
 {
-    public class URPClusterCameraController : ClusterCameraController {}
+    public class URPClusterCameraController : ClusterCameraController { }
 }

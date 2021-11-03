@@ -7,9 +7,10 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class HDRPStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
+    class HDRPStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
     {
-        public HDRPStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public HDRPStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer) { }
     }
 }
 #endif

@@ -7,13 +7,16 @@ namespace Unity.ClusterDisplay.Graphics
     [System.Serializable]
     public class ClusterRenderContext
     {
-        [SerializeField] ClusterRendererSettings m_Settings = new ClusterRendererSettings();
+        [SerializeField]
+        ClusterRendererSettings m_Settings = new ClusterRendererSettings();
         public ClusterRendererSettings settings => m_Settings;
 
-        [SerializeField] ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
+        [SerializeField]
+        ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
         public ClusterRendererDebugSettings debugSettings => m_DebugSettings;
-        
-        private bool m_Debug;
+
+        bool m_Debug;
+
         public bool debug
         {
             get => m_Debug;
@@ -36,13 +39,13 @@ namespace Unity.ClusterDisplay.Graphics
                 return ClusterSync.Instance.DynamicLocalNodeId;
             }
         }
-        
+
         // Can pass index otherwise the current tile index will be used.
         public Rect GetViewportSubsection(int tileIndex = -1)
         {
             if (m_Debug && m_DebugSettings.useDebugViewportSubsection)
                 return m_DebugSettings.viewportSubsection;
-            
+
             return GraphicsUtil.TileIndexToViewportSection(gridSize, tileIndex == -1 ? this.tileIndex : tileIndex);
         }
 

@@ -6,16 +6,19 @@ namespace Unity.ClusterDisplay.Graphics
     [RequireComponent(typeof(Camera))]
     public class CameraContextTarget : MonoBehaviour
     {
-        [SerializeField] private Camera m_TargetCamera;
+        [SerializeField]
+        Camera m_TargetCamera;
         public Camera TargetCamera => m_TargetCamera;
         public bool cameraReferenceIsValid => m_TargetCamera != null;
 
         public delegate void CameraActiveDelegate(CameraContextTarget cameraContextTarget);
+
         public CameraActiveDelegate onCameraDisabled;
         public CameraActiveDelegate onCameraEnabled;
 
-        private void CacheCamera() => m_TargetCamera = GetComponent<Camera>();
-        public bool TryGetCamera (out Camera camera)
+        void CacheCamera() => m_TargetCamera = GetComponent<Camera>();
+
+        public bool TryGetCamera(out Camera camera)
         {
             if (m_TargetCamera == null)
                 CacheCamera();
@@ -23,23 +26,23 @@ namespace Unity.ClusterDisplay.Graphics
             return camera != null;
         }
 
-    #if UNITY_EDITOR
-        private void OnValidate() => CacheCamera();
-    #endif
+#if UNITY_EDITOR
+        void OnValidate() => CacheCamera();
+#endif
 
-        private void OnDestroy()
+        void OnDestroy()
         {
             if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, displayError: false))
                 cameraContextRegistry.UnRegister(this);
         }
 
-        private void OnDisable()
+        void OnDisable()
         {
             if (onCameraDisabled != null)
                 onCameraDisabled(this);
         }
 
-        private void OnEnable()
+        void OnEnable()
         {
             CacheCamera();
 

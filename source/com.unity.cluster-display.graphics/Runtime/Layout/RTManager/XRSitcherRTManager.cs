@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class XRStitcherRTManager : StitcherRTManager<RTHandle>
     {
-        private void PollRTs (int tileCount)
+        void PollRTs(int tileCount)
         {
             if (m_SourceRTs != null && m_SourceRTs.Length == tileCount)
                 return;
@@ -19,9 +19,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             PollRTs(tileCount);
 
-            bool resized = m_SourceRTs[tileIndex] != null && 
-                (m_SourceRTs[tileIndex].rt.width != (int)width || 
-                m_SourceRTs[tileIndex].rt.height != (int)height);
+            bool resized = m_SourceRTs[tileIndex] != null &&
+                (m_SourceRTs[tileIndex].rt.width != (int)width ||
+                    m_SourceRTs[tileIndex].rt.height != (int)height);
 
             if (m_SourceRTs[tileIndex] == null || resized)
             {
@@ -38,6 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
                     enableRandomWrite: true,
                     filterMode: FilterMode.Trilinear,
                     anisoLevel: 8,
+
                     // msaaSamples: MSAASamples.MSAA8x,
                     name: $"Tile-{tileIndex}-RT-({width}X{height})");
             }
@@ -47,10 +48,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override RTHandle GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
-            bool resized = 
-                m_PresentRT != null && 
-                (m_PresentRT.rt.width != width || 
-                m_PresentRT.rt.height != height);
+            bool resized =
+                m_PresentRT != null &&
+                (m_PresentRT.rt.width != width ||
+                    m_PresentRT.rt.height != height);
 
             if (m_PresentRT == null || resized)
             {
@@ -58,7 +59,7 @@ namespace Unity.ClusterDisplay.Graphics
                     RTHandles.Release(m_PresentRT);
 
                 m_PresentRT = RTHandles.Alloc(
-                    width: (int)width, 
+                    width: (int)width,
                     height: (int)height,
                     slices: 1,
                     useDynamicScale: true,

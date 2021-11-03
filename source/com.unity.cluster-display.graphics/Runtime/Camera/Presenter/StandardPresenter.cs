@@ -9,9 +9,10 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardPresenter : Presenter
     {
-        private RenderTexture m_PresentRT;
-        public override RenderTexture presentRT 
-        { 
+        RenderTexture m_PresentRT;
+
+        public override RenderTexture presentRT
+        {
             get => m_PresentRT;
             set
             {
@@ -20,10 +21,10 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_PresentRT = value;
                 m_ClusterCanvas.rawImageTexture = m_PresentRT;
-            } 
+            }
         }
 
-        private ClusterCanvas m_ClusterCanvas;
+        ClusterCanvas m_ClusterCanvas;
 
         protected override void InitializeCamera(Camera camera)
         {

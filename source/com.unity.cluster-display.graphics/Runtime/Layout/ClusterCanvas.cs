@@ -6,14 +6,21 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways]
     public class ClusterCanvas : SingletonMonoBehaviour<ClusterCanvas>
     {
-        [HideInInspector][SerializeField] private Canvas m_Canvas;
-        [HideInInspector][SerializeField] private RawImage m_RawImage;
+        [HideInInspector]
+        [SerializeField]
+        Canvas m_Canvas;
+        [HideInInspector]
+        [SerializeField]
+        RawImage m_RawImage;
 
         public RawImage fullScreenRawImage => m_RawImage;
 
-        public RenderTexture rawImageTexture { set => fullScreenRawImage.texture = value; }
+        public RenderTexture rawImageTexture
+        {
+            set => fullScreenRawImage.texture = value;
+        }
 
-        private void Awake()
+        void Awake()
         {
             if (m_Canvas == null)
             {

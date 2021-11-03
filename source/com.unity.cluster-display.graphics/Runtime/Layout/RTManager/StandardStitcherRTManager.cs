@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
 using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -12,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class StandardStitcherRTManager : StitcherRTManager<RenderTexture>
     {
-        private void PollRTs (int tileCount)
+        void PollRTs(int tileCount)
         {
             if (m_SourceRTs != null && m_SourceRTs.Length == tileCount)
                 return;
@@ -23,9 +22,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             PollRTs(tileCount);
 
-            bool resized = m_SourceRTs[tileIndex] != null && 
-                (m_SourceRTs[tileIndex].width != (int)width || 
-                m_SourceRTs[tileIndex].height != (int)height);
+            bool resized = m_SourceRTs[tileIndex] != null &&
+                (m_SourceRTs[tileIndex].width != (int)width ||
+                    m_SourceRTs[tileIndex].height != (int)height);
 
             if (m_SourceRTs[tileIndex] == null || resized | m_SourceRTs[tileIndex].graphicsFormat != format)
             {
@@ -41,10 +40,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
-            bool resized = 
-                m_PresentRT != null && 
-                (m_PresentRT.width != (int)width || 
-                m_PresentRT.height != (int)height);
+            bool resized =
+                m_PresentRT != null &&
+                (m_PresentRT.width != (int)width ||
+                    m_PresentRT.height != (int)height);
 
             if (m_PresentRT == null || resized | m_PresentRT.graphicsFormat != format)
             {

@@ -17,12 +17,13 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public delegate void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
+
         public delegate void OnEnableKeywords(bool keywordsEnabled);
 
-        private OnChangeLayoutMode onChangeLayoutMode;
-        private OnEnableKeywords onEnableKeywords;
+        OnChangeLayoutMode onChangeLayoutMode;
+        OnEnableKeywords onEnableKeywords;
 
-        public void RegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
+        public void RegisterDebugSettingsReceiver(IDebugSettingsReceiver debugSettingsReceiver)
         {
             onChangeLayoutMode += debugSettingsReceiver.OnChangeLayoutMode;
             onEnableKeywords += debugSettingsReceiver.ToggleShaderKeywords;
@@ -31,13 +32,15 @@ namespace Unity.ClusterDisplay.Graphics
             debugSettingsReceiver.ToggleShaderKeywords(m_EnableKeyword);
         }
 
-        public void UnRegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
+        public void UnRegisterDebugSettingsReceiver(IDebugSettingsReceiver debugSettingsReceiver)
         {
             onChangeLayoutMode -= debugSettingsReceiver.OnChangeLayoutMode;
             onEnableKeywords -= debugSettingsReceiver.ToggleShaderKeywords;
         }
 
-        [SerializeField] int m_TileIndexOverride;
+        [SerializeField]
+        int m_TileIndexOverride;
+
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).
         /// </summary>
@@ -47,7 +50,9 @@ namespace Unity.ClusterDisplay.Graphics
             set { m_TileIndexOverride = value; }
         }
 
-        [SerializeField] ClusterRenderer.LayoutMode m_LayoutMode;
+        [SerializeField]
+        ClusterRenderer.LayoutMode m_LayoutMode;
+
         public ClusterRenderer.LayoutMode currentLayoutMode
         {
             get => m_LayoutMode;
@@ -67,7 +72,9 @@ namespace Unity.ClusterDisplay.Graphics
         /// meant to compare original and ported-to-cluster-display shaders,
         /// in order to observe cluster-display specific artefacts.
         /// </summary>
-        [SerializeField] bool m_EnableKeyword;
+        [SerializeField]
+        bool m_EnableKeyword;
+
         public bool enableKeyword
         {
             get => m_EnableKeyword;
@@ -78,11 +85,13 @@ namespace Unity.ClusterDisplay.Graphics
                     onEnableKeywords(m_EnableKeyword);
             }
         }
-        
+
         /// <summary>
         /// Allows direct control of the viewport subsection.
         /// </summary>
-        [SerializeField] Rect m_ViewportSubsection;
+        [SerializeField]
+        Rect m_ViewportSubsection;
+
         public Rect viewportSubsection
         {
             get => m_ViewportSubsection;
@@ -93,14 +102,18 @@ namespace Unity.ClusterDisplay.Graphics
         /// Allows the viewport subsection to be directly controlled from the inspector,
         /// instead of being inferred from tile index and grid size.
         /// </summary>
-        [SerializeField] bool m_UseDebugViewportSubsection;
+        [SerializeField]
+        bool m_UseDebugViewportSubsection;
+
         public bool useDebugViewportSubsection
         {
             set { m_UseDebugViewportSubsection = value; }
             get { return m_UseDebugViewportSubsection; }
         }
 
-        [SerializeField] Vector2 m_ScaleBiasTexOffset;
+        [SerializeField]
+        Vector2 m_ScaleBiasTexOffset;
+
         /// <summary>
         /// Allows visualization of overscanned pixels in the final render.
         /// </summary>
@@ -110,15 +123,20 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_ScaleBiasTexOffset = value;
         }
 
-        [SerializeField] Color m_BezelColor;
+        [SerializeField]
+        Color m_BezelColor;
+
         public Color bezelColor
         {
             get => m_BezelColor;
             set => m_BezelColor = value;
         }
-        
-        public ClusterRendererDebugSettings() { Reset(); }
-        
+
+        public ClusterRendererDebugSettings()
+        {
+            Reset();
+        }
+
         public void Reset()
         {
             m_TileIndexOverride = 0;

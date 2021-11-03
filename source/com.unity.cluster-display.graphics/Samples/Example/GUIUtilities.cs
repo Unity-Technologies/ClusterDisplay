@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             int.TryParse(str, out value);
             return value;
         }
-        
+
         static float GUIFloatField(string label, float value)
         {
             var str = value.ToString("0.00");
@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             value.y = GUIIntField("y", value.y);
             return value;
         }
-        
+
         static Vector2 GUIVector2Field(string label, Vector2 value)
         {
             GUILayout.Label(label);
@@ -76,7 +76,8 @@ namespace Unity.ClusterDisplay.Graphics.Example
             {
                 if (layoutModes[i] == currentLayoutMode)
                 {
-                    if (GUILayout.Button($"{currentLayoutMode} (Active)")) {}
+                    if (GUILayout.Button($"{currentLayoutMode} (Active)")) { }
+
                     continue;
                 }
 
@@ -112,7 +113,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
         public static void KeyboardControls(ClusterRendererSettings settings)
         {
-            #if ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM
             if (Keyboard.current.oKey.isPressed)
             {
                 var overscan = settings.overScanInPixels;
@@ -123,7 +124,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
 
-            #elif ENABLE_LEGACY_INPUT_MANAGER
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.O))
             {
                 var overscan = settings.overScanInPixels;
@@ -133,7 +134,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                     --overscan;
                 settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
-            #endif
+#endif
         }
     }
 }

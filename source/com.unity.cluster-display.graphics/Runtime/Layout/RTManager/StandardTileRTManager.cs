@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using GraphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat;
@@ -13,79 +14,59 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override RenderTexture GetSourceRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
-            bool resized = 
-                m_SourceRT != null && 
-                (m_SourceRT.width != (int)width || 
-                m_SourceRT.height != (int)height);
-
-            if (m_SourceRT == null || resized || m_SourceRT.graphicsFormat != format)
-            {
-                if (m_SourceRT != null)
-                    m_SourceRT.Release();
-
-                m_SourceRT = new RenderTexture(width, height, 1, format, 0);
-                m_SourceRT.name = $"Tile-RT-({m_SourceRT.width}X{m_SourceRT.height})";
-                // Debug.Log("Resizing tile RT.");
-            }
-
+            AllocateIfNeeded(ref m_SourceRT, "Source", width, height, format);
             return m_SourceRT;
         }
 
         public override RenderTexture GetPresentRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
-            bool resized = 
-                m_PresentRT != null && 
-                (m_PresentRT.width != (int)width || 
-                m_PresentRT.height != (int)height);
-
-            if (m_PresentRT == null || resized || m_PresentRT.graphicsFormat != format)
-            {
-                if (m_PresentRT != null)
-                    m_PresentRT.Release();
-
-                m_PresentRT = new RenderTexture(width, height, 1, format, 0);
-                m_PresentRT.name = $"Present-RT-({m_PresentRT.width}X{m_PresentRT.height})";
-                // Debug.Log("Resizing present RT.");
-            }
-
+            AllocateIfNeeded(ref m_PresentRT, "Present", width, height, format);
             return m_PresentRT;
         }
 
         public override RenderTexture GetBackBufferRT(int width, int height, GraphicsFormat format = defaultFormat)
         {
-            bool resized = 
-                m_BackBufferRT != null && 
-                (m_BackBufferRT.width != (int)width || 
-                m_BackBufferRT.height != (int)height);
-
-            if (m_BackBufferRT == null || resized || m_BackBufferRT.graphicsFormat != format)
-            {
-                if (m_BackBufferRT != null)
-                    m_BackBufferRT.Release();
-
-                m_BackBufferRT = new RenderTexture(width, height, 1, format, 0);
-                m_BackBufferRT.name = $"Present-RT-({m_BackBufferRT.width}X{m_BackBufferRT.height})";
-                // Debug.Log("Resizing back buffer RT.");
-            }
-
+            AllocateIfNeeded(ref m_BackBufferRT, "Backbuffer", width, height, format);
             return m_BackBufferRT;
         }
 
         public override void Release()
         {
-            if (m_SourceRT != null)
-                m_SourceRT.Release();
+            DeallocateIfNeeded(ref m_SourceRT);
+            DeallocateIfNeeded(ref m_PresentRT);
+            DeallocateIfNeeded(ref m_BackBufferRT);
+        }
+        
+        static bool AllocateIfNeeded(ref RenderTexture rt, string name, int width, int height, GraphicsFormat format = defaultFormat)
+        {
+            if (rt == null || 
+                rt.width != width || 
+                rt.height != height || 
+                rt.graphicsFormat != format)
+            {
+                if (rt != null)
+                {
+                    rt.Release();
+                }
 
-            if (m_PresentRT != null)
-                m_PresentRT.Release();
+                rt = new RenderTexture(width, height, 1, format, 0)
+                {
+                    name = $"{name}-{width}X{height}"
+                };
+                return true;
+            }
 
-            if (m_BackBufferRT != null)
-                m_BackBufferRT.Release();
-
-            m_SourceRT = null;
-            m_PresentRT = null;
-            m_BackBufferRT = null;
+            return false;
         }
 
+        static void DeallocateIfNeeded(ref RenderTexture rt)
+        {
+            if (rt != null)
+            {
+                rt.Release();
+            }
+
+            rt = null;
+        }
     }
 }

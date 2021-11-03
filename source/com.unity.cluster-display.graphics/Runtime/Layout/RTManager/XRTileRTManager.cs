@@ -10,99 +10,65 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override RTHandle GetSourceRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
-            bool resized = 
-                m_SourceRT != null && 
-                (m_SourceRT.rt.width != (int)width || 
-                m_SourceRT.rt.height != (int)height);
-
-            if (m_SourceRT == null || resized)
-            {
-                if (m_SourceRT != null)
-                    RTHandles.Release(m_SourceRT);
-
-                m_SourceRT = RTHandles.Alloc(
-                    width: (int)width, 
-                    height: (int)height, 
-                    slices: 1, 
-                    useDynamicScale: true, 
-                    autoGenerateMips: false, 
-                    enableRandomWrite: true,
-                    filterMode: FilterMode.Trilinear,
-                    anisoLevel: 8,
-                    name: "Overscanned Target");
-            }
-
+            AllocateIfNeeded(ref m_SourceRT, "Source", width, height);
             return m_SourceRT;
         }
 
         public override RTHandle GetPresentRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
-            bool resized = 
-                m_PresentRT != null && 
-                (m_PresentRT.rt.width != width || 
-                m_PresentRT.rt.height != height);
-
-            if (m_PresentRT == null || resized)
-            {
-                if (m_PresentRT != null)
-                    RTHandles.Release(m_PresentRT);
-
-                m_PresentRT = RTHandles.Alloc(
-                    width: (int)width, 
-                    height: (int)height,
-                    slices: 1,
-                    useDynamicScale: true,
-                    autoGenerateMips: false,
-                    enableRandomWrite: true,
-                    filterMode: FilterMode.Trilinear,
-                    anisoLevel: 8,
-                    name: $"Present-RT-({width}X{height})");
-            }
-
+            AllocateIfNeeded(ref m_PresentRT, "Present", width, height);
             return m_PresentRT;
         }
 
         public override RTHandle GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
-            bool resized = 
-                m_BackBufferRT != null && 
-                (m_BackBufferRT.rt.width != width || 
-                m_BackBufferRT.rt.height != height);
-
-            if (m_BackBufferRT == null || resized)
-            {
-                if (m_BackBufferRT != null)
-                    RTHandles.Release(m_BackBufferRT);
-
-                m_BackBufferRT = RTHandles.Alloc(
-                    width: (int)width, 
-                    height: (int)height,
-                    slices: 1,
-                    useDynamicScale: true,
-                    autoGenerateMips: false,
-                    enableRandomWrite: true,
-                    filterMode: FilterMode.Trilinear,
-                    anisoLevel: 8,
-                    name: $"BackBuffer-RT-({width}X{height})");
-            }
-
+            AllocateIfNeeded(ref m_BackBufferRT, "Backbuffer", width, height);
             return m_BackBufferRT;
         }
 
         public override void Release()
         {
-            if (m_SourceRT != null)
-                RTHandles.Release(m_SourceRT);
+            DeallocateIfNeeded(ref m_SourceRT);
+            DeallocateIfNeeded(ref m_PresentRT);
+            DeallocateIfNeeded(ref m_BackBufferRT);
+        }
+        
+        static bool AllocateIfNeeded(ref RTHandle rt, string name, int width, int height)
+        {
+            if (rt == null || 
+                rt.rt.width != width || 
+                rt.rt.height != height)
+            {
+                if (rt != null)
+                {
+                    RTHandles.Release(rt);
+                }
 
-            if (m_PresentRT != null)
-                RTHandles.Release(m_PresentRT);
+                rt = RTHandles.Alloc(
+                    width,
+                    height,
+                    1,
+                    useDynamicScale: true,
+                    autoGenerateMips: false,
+                    enableRandomWrite: true,
+                    filterMode: FilterMode.Trilinear,
+                    anisoLevel: 8,
+                    name: $"{name}-({width}X{height})");
+                
+                return true;
+            }
+            
+            return false;
+        }
 
-            if (m_BackBufferRT != null)
-                RTHandles.Release(m_BackBufferRT);
+        static void DeallocateIfNeeded(ref RTHandle rt)
+        {
+            if (rt != null)
+            {
+                RTHandles.Release(rt);
+            }
 
-            m_SourceRT = null;
-            m_PresentRT = null;
-            m_BackBufferRT = null;
+            rt = null;
         }
     }
 }

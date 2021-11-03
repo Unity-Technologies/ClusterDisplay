@@ -12,8 +12,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override RenderTexture presentRT { get; set; }
 
-        public override void Dispose() {}
-        protected override void DeinitializeCamera(Camera camera) {}
-        protected override void InitializeCamera(Camera camera) {}
+        public override void Dispose() { }
+        protected override void DeinitializeCamera(Camera camera) { }
+        protected override void InitializeCamera(Camera camera) { }
     }
 }

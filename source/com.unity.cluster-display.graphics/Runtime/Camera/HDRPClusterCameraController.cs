@@ -9,9 +9,15 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class HDRPClusterCameraController : ClusterCameraController
     {
-        [HideInInspector][SerializeField] private bool m_PreviousAsymmetricProjectionSetting;
-        [HideInInspector][SerializeField] private bool m_PreviousCustomFrameSettingsToggled;
-        [HideInInspector][SerializeField] private HDAdditionalCameraData.AntialiasingMode m_PreviousAntiAliasingMode;
+        [HideInInspector]
+        [SerializeField]
+        bool m_PreviousAsymmetricProjectionSetting;
+        [HideInInspector]
+        [SerializeField]
+        bool m_PreviousCustomFrameSettingsToggled;
+        [HideInInspector]
+        [SerializeField]
+        HDAdditionalCameraData.AntialiasingMode m_PreviousAntiAliasingMode;
 
         protected override void OnPollFrameSettings(Camera camera)
         {

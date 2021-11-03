@@ -9,18 +9,22 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [System.Serializable]
-    public class ClusterCameraController : ClusterRenderer.IClusterRendererEventReceiver
+    public class ClusterCameraController : IClusterRendererEventReceiver
     {
         // Matrix4x4 does not serialize so we need to serialize to Vector4s.
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC1 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC2 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
-        [SerializeField] private Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
+        [SerializeField]
+        Vector4 m_SerializedProjectionMatrixC1 = Vector4.zero;
+        [SerializeField]
+        Vector4 m_SerializedProjectionMatrixC2 = Vector4.zero;
+        [SerializeField]
+        Vector4 m_SerializedProjectionMatrixC3 = Vector4.zero;
+        [SerializeField]
+        Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
         /// <summary>
         /// Current rendering camera.
         /// </summary>
-        public bool TryGetContextCamera (out Camera contextCamera)
+        public bool TryGetContextCamera(out Camera contextCamera)
         {
             contextCamera = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
@@ -38,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics
             return (contextCamera = camera) != null;
         }
 
-        public bool TryGetPreviousCameraContext (out Camera previousCameraContext)
+        public bool TryGetPreviousCameraContext(out Camera previousCameraContext)
         {
             previousCameraContext = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
@@ -56,11 +60,12 @@ namespace Unity.ClusterDisplay.Graphics
             return (previousCameraContext = camera) != null;
         }
 
-
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
-        private OnCameraContextChange onCameraChange;
 
-        private Presenter m_Presenter;
+        OnCameraContextChange onCameraChange;
+
+        Presenter m_Presenter;
+
         public Presenter presenter
         {
             get => m_Presenter;
@@ -80,15 +85,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         public bool CameraIsInContext(Camera camera) => TryGetContextCamera(out var contextCamera) && contextCamera == camera;
 
-        public void RegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
-        public void UnRegisterCameraEventReceiver (ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+        public void RegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
+        public void UnRegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
 
-        protected virtual void OnPollFrameSettings (Camera camera) {}
+        protected virtual void OnPollFrameSettings(Camera camera) { }
 
-        public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
-        public void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
+        public void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
 
-        public void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
+        public void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!CameraContextRegistry.CanChangeContextTo(camera))
                 return;
@@ -117,6 +122,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.PollCamera(contextCamera);
         }
 
-        public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) { }
     }
 }

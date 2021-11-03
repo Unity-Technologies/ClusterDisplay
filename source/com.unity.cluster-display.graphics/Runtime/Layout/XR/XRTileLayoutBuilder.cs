@@ -10,10 +10,11 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRTile;
 
-        private XRTileRTManager m_RTManager = new XRTileRTManager();
-        private Rect m_OverscannedRect;
+        XRTileRTManager m_RTManager = new XRTileRTManager();
+        Rect m_OverscannedRect;
 
-        public XRTileLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public XRTileLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer) { }
 
         public override void Dispose()
         {
@@ -53,8 +54,8 @@ namespace Unity.ClusterDisplay.Graphics
                 return false;
 
             if (!SetupTiledLayout(
-                camera, 
-                out var asymmetricProjectionMatrix, 
+                camera,
+                out var asymmetricProjectionMatrix,
                 out var viewportSubsection,
                 out m_OverscannedRect))
                 return false;
@@ -73,8 +74,8 @@ namespace Unity.ClusterDisplay.Graphics
             };
 
             var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
-                viewportSubsection, 
-                k_ClusterRenderer.context.globalScreenSize, 
+                viewportSubsection,
+                k_ClusterRenderer.context.globalScreenSize,
                 k_ClusterRenderer.context.gridSize);
 
             var viewInfo = new XRViewCreateInfo
@@ -92,10 +93,10 @@ namespace Unity.ClusterDisplay.Graphics
             return true;
         }
 
-        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
-        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
-        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
-        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
+        public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) { }
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) { }
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
     }
 }
 #endif

@@ -6,8 +6,9 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public class SingletonMonoBehaviour<T> : MonoBehaviour where T : SingletonMonoBehaviour<T>
     {
-        private static T instance;
-        public static bool TryGetInstance (out T outInstance, bool displayError = true)
+        static T instance;
+
+        public static bool TryGetInstance(out T outInstance, bool displayError = true)
         {
             if (instance != null)
             {

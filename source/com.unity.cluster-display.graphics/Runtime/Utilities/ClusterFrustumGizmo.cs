@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     class ClusterFrustumGizmo
     {
         // indices for tile frustum gizmo
-        readonly static int[] k_Indices = new []
+        readonly static int[] k_Indices = new[]
         {
             0, 1, 1, 2, 2, 3, 3, 0, // front
             4, 5, 5, 6, 6, 7, 7, 4, // back
@@ -18,12 +18,12 @@ namespace Unity.ClusterDisplay.Graphics
         List<Vector3> m_FrustumGizmoVertices = new List<Vector3>();
         List<Vector3> m_FrustumGizmoNormals = new List<Vector3>();
         List<int> m_FrustumGizmoIndices = new List<int>();
-        
+
         // bookkeeping, avoid recomputing gizmo geometry when neither the camera nor grid-size nor tile-index changed
         int m_CachedTileIndex = 0;
         Vector2Int m_CachedGridSize = Vector2Int.zero;
         Matrix4x4 m_CachedViewProjectionInverse = Matrix4x4.identity;
-        
+
         public void Draw(Matrix4x4 viewProjectionInverse, Vector2Int gridSize, int tileIndex)
         {
             if (gridSize.x < 1 || gridSize.y < 1)
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_FrustumGizmoMesh.hideFlags = HideFlags.HideAndDontSave;
             }
 
-            if (m_CachedGridSize != gridSize || 
+            if (m_CachedGridSize != gridSize ||
                 tileIndex != m_CachedTileIndex ||
                 m_CachedViewProjectionInverse != viewProjectionInverse)
             {
@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_FrustumGizmoMesh.SetVertices(m_FrustumGizmoVertices);
                 m_FrustumGizmoMesh.SetIndices(m_FrustumGizmoIndices, MeshTopology.Lines, 0);
             }
-            
+
             // update normals on grid size change only
             if (m_CachedGridSize != gridSize)
             {
@@ -88,13 +88,14 @@ namespace Unity.ClusterDisplay.Graphics
         static void AppendTileFrustumGeometry(Matrix4x4 viewProjectionInverse, Rect viewportSection, List<Vector3> vertices, List<int> indices)
         {
             var baseVertexIndex = vertices.Count;
-            
+
             // Append vertices
             // - front
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMin, 0)));
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMin, 0)));
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMax, 0)));
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMax, 0)));
+
             // - back
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMin, 1)));
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMin, 1)));

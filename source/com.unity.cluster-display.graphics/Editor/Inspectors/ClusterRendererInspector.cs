@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
             using (var check = new EditorGUI.ChangeCheckScope())
             {
                 var adapter = target as ClusterRenderer;
-             
+
                 var settings = adapter.settings;
                 settings.resources = (ClusterDisplayResources)EditorGUILayout.ObjectField(settings.resources, typeof(ClusterDisplayResources), false);
                 settings.gridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.gridSize);
@@ -21,15 +21,15 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 settings.overScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.overScanInPixels, 0, 256);
 
                 adapter.context.debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.context.debug);
-                
+
                 if (adapter.context.debug)
                     EditDebugSettings(adapter.debugSettings);
-                
+
                 if (check.changed)
                     EditorUtility.SetDirty(adapter);
             }
         }
-     
+
         static void EditDebugSettings(ClusterRendererDebugSettings settings)
         {
             //settings.TileIndexOverride = EditorGUILayout.IntField("Tile Index Override", settings.TileIndexOverride);

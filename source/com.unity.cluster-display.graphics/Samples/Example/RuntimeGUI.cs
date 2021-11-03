@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Unity.ClusterDisplay;
+
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -17,10 +18,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
 #pragma warning disable 649
         [Tooltip("ClusterRenderer component whose settings are to be displayed/edited.")]
         [SerializeField]
-        [HideInInspector] 
-        private ClusterRenderer m_ClusterRenderer;
+        [HideInInspector]
+        ClusterRenderer m_ClusterRenderer;
 #pragma warning restore 649
-        
+
         [Tooltip("Show/Hide GUI.")]
         [SerializeField]
         bool m_Show = true;
@@ -28,15 +29,15 @@ namespace Unity.ClusterDisplay.Graphics.Example
         [Tooltip("Update displayed fps every N frames (for readability).")]
         [SerializeField]
         int m_DisplayUpdateRate;
-        
+
         Vector2 m_ScrollPosition;
 
         const int k_FpsBufferSize = 24;
-        
+
         float[] m_FpsBuffer = new float[k_FpsBufferSize];
         float m_FpsMovingAverage;
 
-        private void OnValidate()
+        void OnValidate()
         {
             m_ClusterRenderer = GetComponent<ClusterRenderer>();
         }
@@ -103,7 +104,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             GUILayout.EndScrollView();
             if (GUILayout.Button("Exit GUI"))
                 m_Show = false;
-            
+
             GUILayout.Label($"Press <b>H</b> to show/hide GUI");
         }
 

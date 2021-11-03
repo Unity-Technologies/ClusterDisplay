@@ -8,16 +8,18 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class XRStitcherLayoutBuilder : StitcherLayoutBuilder, IXRLayoutBuilder
     {
-        private bool m_HasClearedMirrorView = true;
-        private Rect m_OverscannedRect;
+        bool m_HasClearedMirrorView = true;
+        Rect m_OverscannedRect;
 
-        private XRStitcherRTManager m_RTManager = new XRStitcherRTManager();
+        XRStitcherRTManager m_RTManager = new XRStitcherRTManager();
         public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRStitcher;
-        public XRStitcherLayoutBuilder (IClusterRenderer clusterRenderer) : base(clusterRenderer) 
+
+        public XRStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer)
         {
             m_HasClearedMirrorView = true;
         }
-        
+
         public override void Dispose()
         {
             m_QueuedStitcherParameters.Clear();
@@ -45,7 +47,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cmd.SetRenderTarget(rt);
             cmd.SetViewport(croppedViewport);
-            
+
             if (!m_HasClearedMirrorView)
             {
                 m_HasClearedMirrorView = true;
@@ -83,29 +85,29 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_OverscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             var cachedProjectionMatrix = camera.projectionMatrix;
-            
+
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
                 var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
                 CalculateStitcherLayout(
-                    camera, 
+                    camera,
                     cachedProjectionMatrix,
-                    tileIndex, 
-                    out var percentageViewportSubsection, 
-                    out var viewportSubsection, 
+                    tileIndex,
+                    out var percentageViewportSubsection,
+                    out var viewportSubsection,
                     out var asymmetricProjectionMatrix);
 
                 cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
                 cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-                cullingParams.cullingMatrix = camera.worldToCameraMatrix * asymmetricProjectionMatrix ;
-               
+                cullingParams.cullingMatrix = camera.worldToCameraMatrix * asymmetricProjectionMatrix;
+
                 CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
 
                 var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
-                        viewportSubsection,
-                        k_ClusterRenderer.context.globalScreenSize,
-                        k_ClusterRenderer.context.gridSize);
+                    viewportSubsection,
+                    k_ClusterRenderer.context.globalScreenSize,
+                    k_ClusterRenderer.context.gridSize);
 
                 var passInfo = new XRPassCreateInfo
                 {
@@ -132,7 +134,8 @@ namespace Unity.ClusterDisplay.Graphics
             return true;
         }
 
-        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
+
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
@@ -141,8 +144,8 @@ namespace Unity.ClusterDisplay.Graphics
             camera.targetTexture = null;
         }
 
-        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
-        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
+        public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) { }
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
     }
 }
 #endif

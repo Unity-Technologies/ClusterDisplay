@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             return false;
         }
-        
+
         public static bool ParseCommandLineArgs(string name, out Vector2 output)
         {
             output = Vector2.zero;
@@ -108,6 +108,7 @@ namespace Unity.ClusterDisplay.Graphics
                 if (int.TryParse(str, out output))
                     return true;
             }
+
             return false;
         }
     }

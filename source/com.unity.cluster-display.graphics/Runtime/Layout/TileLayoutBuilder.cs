@@ -3,12 +3,13 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public abstract class TileLayoutBuilder : LayoutBuilder
+    abstract class TileLayoutBuilder : LayoutBuilder
     {
-        protected TileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        protected TileLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer) { }
 
-        protected bool SetupTiledLayout (
-            Camera camera, 
+        protected bool SetupTiledLayout(
+            Camera camera,
             out Matrix4x4 asymmetricProjectionMatrix,
             out Rect viewportSubsection,
             out Rect overscannedRect)
