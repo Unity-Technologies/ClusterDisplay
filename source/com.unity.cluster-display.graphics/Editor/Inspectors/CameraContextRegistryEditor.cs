@@ -14,14 +14,20 @@ namespace Unity.ClusterDisplay.Graphics
 
             var cameraContextRegistry = target as CameraContextRegistry;
             if (cameraContextRegistry == null)
+            {
                 return;
+            }
 
             if (GUILayout.Button("Flush Registry"))
+            {
                 cameraContextRegistry.Flush();
+            }
 
             var cameraContextTargets = cameraContextRegistry.cameraContextTargets;
             for (var i = 0; i < cameraContextTargets.Length; i++)
+            {
                 EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
+            }
         }
     }
 }

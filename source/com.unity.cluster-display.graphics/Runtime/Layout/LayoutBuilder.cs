@@ -6,11 +6,12 @@ namespace Unity.ClusterDisplay.Graphics
 {
     abstract class LayoutBuilder : IClusterRendererEventReceiver
     {
+        static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
+
         protected static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
-        protected static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
         protected readonly IClusterRenderer k_ClusterRenderer;
 
-        public abstract ClusterRenderer.LayoutMode layoutMode { get; }
+        public abstract ClusterRenderer.LayoutMode LayoutMode { get; }
 
         public LayoutBuilder(IClusterRenderer clusterRenderer)
         {
@@ -26,10 +27,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected bool ValidGridSize(out int numTiles)
         {
-            return (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
+            numTiles = k_ClusterRenderer.Context.GridSize.x * k_ClusterRenderer.Context.GridSize.y;
+            return numTiles > 0;
         }
 
-        public void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
+        protected void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
         {
             Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, clusterDisplayParams);
         }
@@ -37,8 +39,8 @@ namespace Unity.ClusterDisplay.Graphics
         protected Rect CalculateOverscannedRect(int width, int height)
         {
             return new Rect(0, 0,
-                width + 2 * k_ClusterRenderer.context.overscanInPixels,
-                height + 2 * k_ClusterRenderer.context.overscanInPixels);
+                width + 2 * k_ClusterRenderer.Context.OverscanInPixels,
+                height + 2 * k_ClusterRenderer.Context.OverscanInPixels);
         }
 
         protected Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels)

@@ -7,7 +7,7 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class HDRPClusterRendererModule : IClusterRendererModule, IClusterRendererEventReceiver
+    class HdrpClusterRendererModule : IClusterRendererModule, IClusterRendererEventReceiver
     {
         public void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) { }
 
@@ -20,9 +20,14 @@ namespace Unity.ClusterDisplay.Graphics
         public void OnSetCustomLayout(LayoutBuilder layoutBuilder)
         {
 #if CLUSTER_DISPLAY_XR
-            if (ClusterRenderer.LayoutModeIsXR(layoutBuilder.layoutMode))
+            if (ClusterRenderer.LayoutModeIsXR(layoutBuilder.LayoutMode))
+            {
                 XRSystem.SetCustomLayout((layoutBuilder as IXRLayoutBuilder).BuildLayout);
-            else XRSystem.SetCustomLayout(null);
+            }
+            else
+            {
+                XRSystem.SetCustomLayout(null);
+            }
 #endif
         }
     }

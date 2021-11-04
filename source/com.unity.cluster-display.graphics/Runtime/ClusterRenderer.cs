@@ -111,34 +111,38 @@ namespace Unity.ClusterDisplay.Graphics
         ClusterCameraController m_ClusterCameraController = new HdrpClusterCameraController();
         [HideInInspector]
         [SerializeField]
-        IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
+        IClusterRendererModule m_ClusterRendererModule = new HdrpClusterRendererModule();
 #else
-        [HideInInspector][SerializeField] ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
-        [HideInInspector][SerializeField] IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
+        [HideInInspector]
+        [SerializeField] 
+        ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
+        [HideInInspector]
+        [SerializeField] 
+        IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
 #endif
 
         public bool IsDebug
         {
-            get => m_Context.debug;
-            set => m_Context.debug = value;
+            get => m_Context.Debug;
+            set => m_Context.Debug = value;
         }
 
         // TODO sketchy, limits client changes for the time being
         internal ClusterRenderContext context => m_Context;
-        ClusterRenderContext IClusterRenderer.context => m_Context;
+        ClusterRenderContext IClusterRenderer.Context => m_Context;
 
         internal ClusterCameraController cameraController => m_ClusterCameraController;
-        ClusterCameraController IClusterRenderer.cameraController => m_ClusterCameraController;
+        ClusterCameraController IClusterRenderer.CameraController => m_ClusterCameraController;
 
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
-        public ClusterRendererSettings settings => m_Context.settings;
+        public ClusterRendererSettings Settings => m_Context.Settings;
 
         /// <summary>
         /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
         /// </summary>
-        public ClusterRendererDebugSettings debugSettings => m_Context.debugSettings;
+        public ClusterRendererDebugSettings debugSettings => m_Context.DebugSettings;
 
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
 
@@ -158,7 +162,9 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDrawGizmos()
         {
             if (enabled)
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.gridSize, m_Context.tileIndex);
+            {
+                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
+            }
         }
 #endif
 
@@ -194,7 +200,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             RegisterRendererEvents(m_ClusterCameraController);
             RegisterModule(m_ClusterRendererModule);
-            m_Context.debugSettings.RegisterDebugSettingsReceiver(this);
+            m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
@@ -210,7 +216,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             UnRegisterLateUpdateReciever(m_ClusterCameraController);
             UnRegisterModule(m_ClusterRendererModule);
-            m_Context.debugSettings.UnRegisterDebugSettingsReceiver(this);
+            m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
@@ -221,7 +227,9 @@ namespace Unity.ClusterDisplay.Graphics
         void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
             if (onBeginFrameRender != null)
+            {
                 onBeginFrameRender(context, cameras);
+            }
         }
 
         void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
@@ -232,27 +240,33 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            ToggleShaderKeywords(debugSettings.enableKeyword);
+            ToggleShaderKeywords(debugSettings.EnableKeyword);
             onBeginCameraRender(context, camera);
 
-            Assert.IsTrue(m_Context.gridSize.x > 0 && m_Context.gridSize.y > 0);
+            Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
             // Update aspect ratio
-            camera.aspect = m_Context.gridSize.x * Screen.width / (float)(m_Context.gridSize.y * Screen.height);
+            camera.aspect = m_Context.GridSize.x * Screen.width / (float)(m_Context.GridSize.y * Screen.height);
 
             // Reset debug viewport subsection
-            if (m_Context.debug && !m_Context.debugSettings.useDebugViewportSubsection)
-                m_Context.debugSettings.viewportSubsection = GraphicsUtil.TileIndexToViewportSection(
-                    m_Context.gridSize, m_Context.tileIndex);
+            if (m_Context.Debug && !m_Context.DebugSettings.UseDebugViewportSubsection)
+            {
+                m_Context.DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
+                    m_Context.GridSize, m_Context.TileIndex);
+            }
         }
 
         void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!m_ClusterCameraController.CameraIsInContext(camera))
+            {
                 return;
+            }
 
             if (onEndCameraRender != null)
+            {
                 onEndCameraRender(context, camera);
+            }
 
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
@@ -262,13 +276,17 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
             if (onEndFrameRender != null)
+            {
                 onEndFrameRender(context, cameras);
+            }
         }
 
         void LateUpdate()
         {
             if (m_LayoutBuilder == null)
+            {
                 return;
+            }
 
             m_LayoutBuilder.LateUpdate();
         }
@@ -283,10 +301,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_LayoutBuilder = builder;
             if (m_LayoutBuilder != null)
+            {
                 RegisterRendererEvents(m_LayoutBuilder);
+            }
 
             if (m_OnSetCustomLayout != null)
+            {
                 m_OnSetCustomLayout(m_LayoutBuilder);
+            }
         }
 
         public void OnChangeLayoutMode(LayoutMode newLayoutMode)
@@ -307,7 +329,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
 #endif
-                    m_ClusterCameraController.presenter = new StandardPresenter();
+                    m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
@@ -316,18 +338,18 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
 #endif
-                    m_ClusterCameraController.presenter = new StandardPresenter();
+                    m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
 
 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    m_ClusterCameraController.presenter = new XRPresenter();
+                    m_ClusterCameraController.Presenter = new XRPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    m_ClusterCameraController.presenter = new XRPresenter();
+                    m_ClusterCameraController.Presenter = new XRPresenter();
                     break;
 #endif
 
@@ -340,12 +362,19 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled) return;
+            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled)
+            {
+                return;
+            }
 
             if (keywordEnabled)
+            {
                 Shader.EnableKeyword(k_ShaderKeyword);
+            }
             else
+            {
                 Shader.DisableKeyword(k_ShaderKeyword);
+            }
         }
 
         public void ToggleShaderKeywords(bool keywordEnabled)

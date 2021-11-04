@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// Those are both meant to debug the ClusterRenderer itself,
     /// and external graphics related ClusterDisplay code.
     /// </summary>
-    [System.Serializable]
+    [Serializable]
     public class ClusterRendererDebugSettings
     {
         public interface IDebugSettingsReceiver
@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Tile index to be used in debug mode (overriding the one provided by ClusterDisplay.Sync).
         /// </summary>
-        public int tileIndexOverride
+        public int TileIndexOverride
         {
             get => m_TileIndexOverride;
             set => m_TileIndexOverride = value;
@@ -50,17 +50,21 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ClusterRenderer.LayoutMode m_LayoutMode;
 
-        public ClusterRenderer.LayoutMode currentLayoutMode
+        public ClusterRenderer.LayoutMode CurrentLayoutMode
         {
             get => m_LayoutMode;
             set
             {
                 if (value == m_LayoutMode)
+                {
                     return;
+                }
 
                 m_LayoutMode = value;
                 if (onChangeLayoutMode != null)
+                {
                     onChangeLayoutMode(m_LayoutMode);
+                }
             }
         }
 
@@ -72,14 +76,16 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         bool m_EnableKeyword;
 
-        public bool enableKeyword
+        public bool EnableKeyword
         {
             get => m_EnableKeyword;
             set
             {
                 m_EnableKeyword = value;
                 if (onEnableKeywords != null)
+                {
                     onEnableKeywords(m_EnableKeyword);
+                }
             }
         }
 
@@ -89,7 +95,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         Rect m_ViewportSubsection;
 
-        public Rect viewportSubsection
+        public Rect ViewportSubsection
         {
             get => m_ViewportSubsection;
             set => m_ViewportSubsection = value;
@@ -102,7 +108,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         bool m_UseDebugViewportSubsection;
 
-        public bool useDebugViewportSubsection
+        public bool UseDebugViewportSubsection
         {
             set => m_UseDebugViewportSubsection = value;
             get => m_UseDebugViewportSubsection;
@@ -114,7 +120,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Allows visualization of overscanned pixels in the final render.
         /// </summary>
-        public Vector2 scaleBiasTextOffset
+        public Vector2 ScaleBiasTextOffset
         {
             get => m_ScaleBiasTexOffset;
             set => m_ScaleBiasTexOffset = value;
@@ -123,7 +129,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         Color m_BezelColor;
 
-        public Color bezelColor
+        public Color BezelColor
         {
             get => m_BezelColor;
             set => m_BezelColor = value;
@@ -137,7 +143,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Reset()
         {
             m_TileIndexOverride = 0;
-            currentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
+            CurrentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
             m_EnableKeyword = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;

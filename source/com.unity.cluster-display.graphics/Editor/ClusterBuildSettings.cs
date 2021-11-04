@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
             EditorApplication.update += Update;
         }
 
-        public static void Update()
+        static void Update()
         {
             if (QualitySettings.vSyncCount != k_VSyncCount)
             {

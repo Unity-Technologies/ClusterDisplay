@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         Camera m_TargetCamera;
         public Camera TargetCamera => m_TargetCamera;
-        public bool cameraReferenceIsValid => m_TargetCamera != null;
+        public bool CameraReferenceIsValid => m_TargetCamera != null;
 
         public event Action<CameraContextTarget> onCameraDisabled;
         public event Action<CameraContextTarget> onCameraEnabled;
@@ -23,7 +23,10 @@ namespace Unity.ClusterDisplay.Graphics
         public bool TryGetCamera(out Camera camera)
         {
             if (m_TargetCamera == null)
+            {
                 CacheCamera();
+            }
+
             camera = m_TargetCamera;
             return camera != null;
         }
@@ -38,13 +41,17 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDestroy()
         {
             if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, false))
+            {
                 cameraContextRegistry.UnRegister(this);
+            }
         }
 
         void OnDisable()
         {
             if (onCameraDisabled != null)
+            {
                 onCameraDisabled(this);
+            }
         }
 
         void OnEnable()
@@ -52,10 +59,14 @@ namespace Unity.ClusterDisplay.Graphics
             CacheCamera();
 
             if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            {
                 cameraContextRegistry.Register(m_TargetCamera, false);
+            }
 
             if (onCameraEnabled != null)
+            {
                 onCameraEnabled(this);
+            }
         }
     }
 }

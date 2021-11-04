@@ -66,10 +66,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
         public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
         {
-            settings.tileIndexOverride = GUIIntField("Tile Index Override", settings.tileIndexOverride);
-            settings.enableKeyword = GUILayout.Toggle(settings.enableKeyword, "Enable Keyword");
+            settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
+            settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.currentLayoutMode);
+            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.CurrentLayoutMode);
             var layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
             GUILayout.Label("Layout Modes");
             for (var i = 0; i < layoutModes.Length; i++)
@@ -82,15 +82,17 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 }
 
                 if (GUILayout.Button(layoutModes[i]))
-                    settings.currentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+                {
+                    settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+                }
             }
 
-            settings.useDebugViewportSubsection = GUILayout.Toggle(settings.useDebugViewportSubsection, "Debug Viewport Section");
+            settings.UseDebugViewportSubsection = GUILayout.Toggle(settings.UseDebugViewportSubsection, "Debug Viewport Section");
 
-            if (settings.useDebugViewportSubsection)
+            if (settings.UseDebugViewportSubsection)
             {
                 GUILayout.Label("Viewport Section");
-                var rect = settings.viewportSubsection;
+                var rect = settings.ViewportSubsection;
                 var xMin = rect.xMin;
                 var xMax = rect.xMax;
                 var yMin = rect.yMin;
@@ -100,14 +102,14 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 xMax = GUISlider("xMax", xMax, 0, 1);
                 yMin = GUISlider("yMin", yMin, 0, 1);
                 yMax = GUISlider("yMax", yMax, 0, 1);
-                settings.viewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
 
             GUILayout.Label("Scale Bias Offset");
-            var offset = settings.scaleBiasTextOffset;
+            var offset = settings.ScaleBiasTextOffset;
             offset.x = GUISlider("x", offset.x, -1, 1);
             offset.y = GUISlider("y", offset.y, -1, 1);
-            settings.scaleBiasTextOffset = offset;
+            settings.ScaleBiasTextOffset = offset;
         }
 
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
@@ -129,9 +131,14 @@ namespace Unity.ClusterDisplay.Graphics.Example
             {
                 var overscan = settings.OverScanInPixels;
                 if (Input.GetKey(KeyCode.RightArrow))
+                {
                     ++overscan;
+                }
                 else if (Input.GetKey(KeyCode.LeftArrow))
+                {
                     --overscan;
+                }
+
                 settings.OverScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
 #endif

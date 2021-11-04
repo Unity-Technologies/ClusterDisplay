@@ -27,11 +27,15 @@ namespace Unity.ClusterDisplay.Graphics
         public void Draw(Matrix4x4 viewProjectionInverse, Vector2Int gridSize, int tileIndex)
         {
             if (gridSize.x < 1 || gridSize.y < 1)
+            {
                 return;
+            }
 
             var camera = Camera.current;
             if (camera == null)
+            {
                 return;
+            }
 
             // lazy mesh instanciation
             if (m_FrustumGizmoMesh == null)
@@ -73,7 +77,10 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 m_FrustumGizmoNormals.Clear();
                 for (var i = 0; i != m_FrustumGizmoVertices.Count; ++i)
+                {
                     m_FrustumGizmoNormals.Add(Vector3.forward);
+                }
+
                 m_FrustumGizmoMesh.SetNormals(m_FrustumGizmoNormals);
             }
 
@@ -104,7 +111,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Append indices
             for (var i = 0; i != k_Indices.Length; ++i)
+            {
                 indices.Add(k_Indices[i] + baseVertexIndex);
+            }
         }
     }
 }

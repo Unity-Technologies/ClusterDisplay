@@ -21,7 +21,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (instances.Length == 0)
             {
                 if (displayError)
+                {
                     Debug.LogErrorFormat($"Unable to retrieve instance of: {typeof(T).FullName}, there are no instances of that type.");
+                }
+
                 outInstance = null;
                 return false;
             }
@@ -29,7 +32,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (instances.Length > 1)
             {
                 if (displayError)
+                {
                     Debug.LogErrorFormat($"Unable to retrieve instance of: {typeof(T).FullName}, there is more than one instance of that type!");
+                }
+
                 outInstance = null;
                 return false;
             }

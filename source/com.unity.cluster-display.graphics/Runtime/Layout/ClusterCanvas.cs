@@ -13,11 +13,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         RawImage m_RawImage;
 
-        public RawImage fullScreenRawImage => m_RawImage;
-
         public RenderTexture rawImageTexture
         {
-            set => fullScreenRawImage.texture = value;
+            set => m_RawImage.texture = value;
         }
 
         void Awake()

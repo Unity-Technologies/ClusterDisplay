@@ -12,15 +12,12 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector]
         [SerializeField]
         bool m_PreviousCustomFrameSettingsToggled;
-        [HideInInspector]
-        [SerializeField]
-        HDAdditionalCameraData.AntialiasingMode m_PreviousAntiAliasingMode;
 
         protected override void OnPollFrameSettings(Camera camera)
         {
             if (camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
             {
-                if (TryGetPreviousCameraContext(out var previousContextCamera))
+                if (TryGetPreviousCameraContext(out _))
                 {
                     additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
                     additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
@@ -31,7 +28,6 @@ namespace Unity.ClusterDisplay.Graphics
                 {
                     m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
                     m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
-                    m_PreviousAntiAliasingMode = additionalCameraData.antialiasing;
 
                     additionalCameraData.customRenderingSettings = true;
                     additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;

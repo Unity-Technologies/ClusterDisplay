@@ -21,15 +21,16 @@ namespace Unity.ClusterDisplay.Graphics
 
             return s_PropertyBlock;
         }
-        
+
         static Material GetBlitMaterial()
         {
             if (s_BlitMaterial == null)
             {
                 var shader = Shader.Find(k_BlitShaderName);
                 if (shader == null)
-                {
+
                     // TODO we had a utility adding shader to the included list, bring it on.
+                {
                     throw new InvalidOperationException($"Could not find shader \"{k_BlitShaderName}\", " +
                         "make sure it has been added to the list of Always Included shaders");
                 }
@@ -62,7 +63,7 @@ namespace Unity.ClusterDisplay.Graphics
             propertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
             cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), 0, MeshTopology.Quads, 4, 1, propertyBlock);
         }
-        
+
         public static bool AllocateIfNeeded(ref RenderTexture[] rts, int count, string name, int width, int height, GraphicsFormat format)
         {
             var changed = false;
@@ -75,10 +76,11 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             for (var i = 0; i != count; ++i)
-            {
+
                 // TODO name rarely used, inefficient
                 // TODO we populate these arrays all at once,
                 // we can assume all tex are similar, just check the 1st
+            {
                 changed |= AllocateIfNeeded(ref rts[i], $"{name}-{i}", width, height, format);
             }
 
@@ -87,9 +89,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static bool AllocateIfNeeded(ref RenderTexture rt, string name, int width, int height, GraphicsFormat format)
         {
-            if (rt == null || 
-                rt.width != width || 
-                rt.height != height || 
+            if (rt == null ||
+                rt.width != width ||
+                rt.height != height ||
                 rt.graphicsFormat != format)
             {
                 if (rt != null)
@@ -113,7 +115,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 return;
             }
-            
+
             for (var i = 0; i != rts.Length; ++i)
             {
                 DeallocateIfNeeded(ref rts[i]);
@@ -144,10 +146,11 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             for (var i = 0; i != count; ++i)
-            {
+
                 // TODO name rarely used, inefficient
                 // TODO we populate these arrays all at once,
                 // we can assume all tex are similar, just check the 1st
+            {
                 changed |= AllocateIfNeeded(ref rts[i], $"{name}-{i}", width, height);
             }
 
@@ -188,7 +191,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 return;
             }
-            
+
             for (var i = 0; i != rts.Length; ++i)
             {
                 DeallocateIfNeeded(ref rts[i]);
@@ -227,7 +230,10 @@ namespace Unity.ClusterDisplay.Graphics
         public static Rect TileIndexToViewportSection(Vector2Int gridSize, int tileIndex)
         {
             if (gridSize.x * gridSize.y == 0)
+            {
                 return Rect.zero;
+            }
+
             var x = tileIndex % gridSize.x;
             var y = gridSize.y - 1 - tileIndex / gridSize.x; // tile 0 is top-left
             var dx = 1f / (float)gridSize.x;

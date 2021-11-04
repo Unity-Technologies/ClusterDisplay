@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Graphics
         Rect m_OverscannedRect;
         RTHandle[] m_SourceRts;
 
-        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.XRStitcher;
+        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.XRStitcher;
 
         public XRStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer)
@@ -28,8 +28,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera))
+            if (k_ClusterRenderer.CameraController.TryGetContextCamera(out var contextCamera))
+            {
                 contextCamera.enabled = true;
+            }
         }
 
         public void BuildMirrorView(XRPass pass, CommandBuffer cmd, RenderTexture rt, Rect viewport)
@@ -37,8 +39,8 @@ namespace Unity.ClusterDisplay.Graphics
             Assert.IsFalse(m_QueuedStitcherParameters.Count == 0);
             var parms = m_QueuedStitcherParameters.Dequeue();
 
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
-            var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.context.gridSize, parms.tileIndex);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.Context.OverscanInPixels);
+            var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.Context.GridSize, parms.tileIndex);
 
             croppedViewport.x *= croppedSize.x;
             croppedViewport.y *= croppedSize.y;
@@ -51,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (!m_HasClearedMirrorView)
             {
                 m_HasClearedMirrorView = true;
-                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+                cmd.ClearRenderTarget(true, true, k_ClusterRenderer.Context.Debug ? k_ClusterRenderer.Context.BezelColor : Color.black);
             }
 
             var sourceRT = parms.sourceRT as RTHandle;
@@ -67,17 +69,25 @@ namespace Unity.ClusterDisplay.Graphics
         public bool BuildLayout(XRLayout layout)
         {
             if (!ValidGridSize(out var numTiles))
+            {
                 return false;
+            }
 
             var camera = layout.camera;
-            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            {
                 return false;
+            }
 
             if (!camera.enabled)
+            {
                 camera.enabled = true;
+            }
 
             if (!camera.TryGetCullingParameters(false, out var cullingParams))
+            {
                 return false;
+            }
 
             // Whenever we build a new layout we expect previously submitted mirror params to have been consumed.
             Assert.IsTrue(m_QueuedStitcherParameters.Count == 0);
@@ -91,7 +101,6 @@ namespace Unity.ClusterDisplay.Graphics
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
                 CalculateStitcherLayout(
-                    camera,
                     cachedProjectionMatrix,
                     tileIndex,
                     out var percentageViewportSubsection,
@@ -106,8 +115,8 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var clusterDisplayParams = GraphicsUtil.GetClusterDisplayParams(
                     viewportSubsection,
-                    k_ClusterRenderer.context.globalScreenSize,
-                    k_ClusterRenderer.context.gridSize);
+                    k_ClusterRenderer.Context.GlobalScreenSize,
+                    k_ClusterRenderer.Context.GridSize);
 
                 var passInfo = new XRPassCreateInfo
                 {
@@ -138,8 +147,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
+            if (!k_ClusterRenderer.CameraController.TryGetContextCamera(out var contextCamera) || camera != contextCamera)
+            {
                 return;
+            }
 
             camera.targetTexture = null;
         }

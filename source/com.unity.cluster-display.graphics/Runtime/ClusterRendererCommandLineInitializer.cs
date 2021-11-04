@@ -21,10 +21,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
             {
-                ((IClusterRenderer)clusterRenderer).context.debug = true;
+                ((IClusterRenderer)clusterRenderer).Context.Debug = true;
             }
 
-            ParseSettings(clusterRenderer.settings);
+            ParseSettings(clusterRenderer.Settings);
         }
 
         static void ParseSettings(ClusterRendererSettings settings)

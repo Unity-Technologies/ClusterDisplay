@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -8,23 +9,27 @@ namespace Unity.ClusterDisplay.Graphics
     /// modes, one for XR and another for standard which uses
     /// and canvas UI.
     /// </summary>
-    abstract class Presenter : ICameraEventReceiver
+    abstract class Presenter : IDisposable, ICameraEventReceiver
     {
         protected Camera m_Camera;
-        public abstract RenderTexture presentRT { get; set; }
+        public abstract RenderTexture PresentRT { set; }
         public abstract void Dispose();
 
         public void OnCameraContextChange(Camera previousCamera, Camera nextCamera)
         {
             m_Camera = nextCamera;
             if (m_Camera != null)
+            {
                 InitializeCamera(m_Camera);
+            }
         }
 
         public void PollCamera(Camera camera)
         {
             if (camera == m_Camera)
+            {
                 return;
+            }
 
             m_Camera = camera;
             InitializeCamera(camera);

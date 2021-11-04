@@ -23,12 +23,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected void CalculcateAndQueueStitcherParameters<T>(int tileIndex, T targetRT, Rect m_OverscannedRect, Rect percentageViewportSubsection)
         {
-            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
+            var scaleBiasTex = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.Context.OverscanInPixels, k_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+            var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.Context.OverscanInPixels);
 
             var scaleBiasRT = new Vector4(
-                1 - k_ClusterRenderer.context.bezel.x * 2 / croppedSize.x, 1 - k_ClusterRenderer.context.bezel.y * 2 / croppedSize.y, // scale
-                k_ClusterRenderer.context.bezel.x / croppedSize.x, k_ClusterRenderer.context.bezel.y / croppedSize.y); // offset
+                1 - k_ClusterRenderer.Context.Bezel.x * 2 / croppedSize.x, 1 - k_ClusterRenderer.Context.Bezel.y * 2 / croppedSize.y, // scale
+                k_ClusterRenderer.Context.Bezel.x / croppedSize.x, k_ClusterRenderer.Context.Bezel.y / croppedSize.y); // offset
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
             {
@@ -40,24 +40,21 @@ namespace Unity.ClusterDisplay.Graphics
             });
         }
 
-        protected Matrix4x4 CalculateProjectionMatrix(Camera camera, Rect viewportSubsection)
-        {
-            return GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
-        }
-
         protected void CalculateStitcherLayout(
-            Camera camera,
             Matrix4x4 cameraProjectionMatrix,
             int tileIndex,
             out Rect percentageViewportSubsection,
             out Rect viewportSubsection,
             out Matrix4x4 asymmetricProjectionMatrix)
         {
-            percentageViewportSubsection = k_ClusterRenderer.context.GetViewportSubsection(tileIndex);
+            percentageViewportSubsection = k_ClusterRenderer.Context.GetViewportSubsection(tileIndex);
             viewportSubsection = percentageViewportSubsection;
-            if (k_ClusterRenderer.context.physicalScreenSize != Vector2Int.zero && k_ClusterRenderer.context.bezel != Vector2Int.zero)
-                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.context.physicalScreenSize, k_ClusterRenderer.context.bezel);
-            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.context.overscanInPixels);
+            if (k_ClusterRenderer.Context.PhysicalScreenSize != Vector2Int.zero && k_ClusterRenderer.Context.Bezel != Vector2Int.zero)
+            {
+                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, k_ClusterRenderer.Context.PhysicalScreenSize, k_ClusterRenderer.Context.Bezel);
+            }
+
+            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, k_ClusterRenderer.Context.OverscanInPixels);
 
             asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(cameraProjectionMatrix, viewportSubsection);
         }

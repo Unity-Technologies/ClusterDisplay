@@ -53,7 +53,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
             {
                 var sum = 0f;
                 for (var i = 0; i < m_FpsBuffer.Length; i++)
+                {
                     sum += m_FpsBuffer[i];
+                }
+
                 m_FpsMovingAverage = sum / m_FpsBuffer.Length;
             }
 
@@ -62,18 +65,23 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_Show = !m_Show;
 #elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.H))
+            {
                 m_Show = !m_Show;
+            }
 #endif
         }
 
         /// <summary>
         /// Override this method to append project specific GUI code.
         /// </summary>
-        public virtual void OnCustomGUI() { }
+        protected virtual void OnCustomGUI() { }
 
         void OnGUI()
         {
-            if (!m_Show) return;
+            if (!m_Show)
+            {
+                return;
+            }
 
             GUI.color = Color.black * 0.5f;
             GUI.DrawTexture(new Rect(0, 0, Screen.width / 2, Screen.height), Texture2D.whiteTexture);
@@ -85,25 +93,32 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
             GUILayout.Label($"Cluster Sync active [{ClusterSync.Active}]");
             if (ClusterSync.Active && ClusterSync.Instance != null)
+            {
                 GUILayout.Label($"Cluster Sync DynamicNodeId [{ClusterSync.Instance.DynamicLocalNodeId}]");
+            }
+
             GUILayout.Label($"Max Queued Frames [{QualitySettings.maxQueuedFrames}]");
 
             if (m_ClusterRenderer != null)
             {
-                GUIUtilities.DrawSettings(m_ClusterRenderer.settings);
-                GUIUtilities.KeyboardControls(m_ClusterRenderer.settings);
+                GUIUtilities.DrawSettings(m_ClusterRenderer.Settings);
+                GUIUtilities.KeyboardControls(m_ClusterRenderer.Settings);
 
                 var prevDebug = m_ClusterRenderer.IsDebug;
                 m_ClusterRenderer.IsDebug = GUILayout.Toggle(prevDebug, "debug");
                 if (m_ClusterRenderer.IsDebug)
+                {
                     GUIUtilities.DrawDebugSettings(m_ClusterRenderer.debugSettings);
+                }
             }
 
             OnCustomGUI();
 
             GUILayout.EndScrollView();
             if (GUILayout.Button("Exit GUI"))
+            {
                 m_Show = false;
+            }
 
             GUILayout.Label($"Press <b>H</b> to show/hide GUI");
         }

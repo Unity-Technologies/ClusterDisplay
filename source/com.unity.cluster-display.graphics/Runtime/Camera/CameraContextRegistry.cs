@@ -68,12 +68,18 @@ namespace Unity.ClusterDisplay.Graphics
         public void SetFocusedCameraContextTarget(CameraContextTarget cameraContextTarget)
         {
             if (cameraContextTarget == m_FocusedCameraContextTarget)
+            {
                 return;
+            }
 
             if (cameraContextTarget != null)
+            {
                 Debug.Log($"Changing camera context to: \"{cameraContextTarget.gameObject.name}\".");
+            }
             else
+            {
                 Debug.Log($"Changing camera context to: \"NULL\".");
+            }
 
             m_PreviousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
             m_FocusedCameraContextTarget = cameraContextTarget;
@@ -110,7 +116,10 @@ namespace Unity.ClusterDisplay.Graphics
         public bool TryGetCameraContextTarget(Camera camera, out CameraContextTarget cameraContextTarget)
         {
             if (k_CameraContextTargets.TryGetValue(camera, out cameraContextTarget))
+            {
                 return true;
+            }
+
             cameraContextTarget = Register(camera);
             return cameraContextTarget;
         }
@@ -118,19 +127,27 @@ namespace Unity.ClusterDisplay.Graphics
         static void PollCameraTargets()
         {
             if (!TryGetInstance(out var cameraContextRegistry))
+            {
                 return;
+            }
 
             var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
             if (cameraContextTargets.Length == 0)
+            {
                 return;
+            }
 
             for (var i = 0; i < cameraContextTargets.Length; i++)
             {
                 if (!cameraContextTargets[i].TryGetCamera(out var camera))
+                {
                     continue;
+                }
 
                 if (cameraContextRegistry.k_CameraContextTargets.ContainsKey(camera))
+                {
                     continue;
+                }
 
                 cameraContextRegistry.Register(camera);
             }
@@ -156,7 +173,10 @@ namespace Unity.ClusterDisplay.Graphics
             if (k_CameraContextTargets.ContainsKey(camera))
             {
                 if (logError)
+                {
                     Debug.LogError($"Cannot register {nameof(CameraContextTarget)}: \"{camera.gameObject.name}\", it was already registered.");
+                }
+
                 return null;
             }
 
@@ -164,7 +184,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             cameraContextTarget = camera.gameObject.GetComponent<CameraContextTarget>();
             if (cameraContextTarget == null)
+            {
                 cameraContextTarget = camera.gameObject.AddComponent<CameraContextTarget>();
+            }
 
             cameraContextTarget.onCameraEnabled += OnCameraEnabled;
             cameraContextTarget.onCameraDisabled += OnCameraDisabled;
@@ -196,15 +218,21 @@ namespace Unity.ClusterDisplay.Graphics
         public void OnAfterDeserialize()
         {
             if (m_SerializedCameraContextTargets == null)
+            {
                 return;
+            }
 
             for (var i = 0; i < m_SerializedCameraContextTargets.Length; i++)
             {
                 if (m_SerializedCameraContextTargets[i] == null)
+                {
                     continue;
+                }
 
-                if (!m_SerializedCameraContextTargets[i].cameraReferenceIsValid)
+                if (!m_SerializedCameraContextTargets[i].CameraReferenceIsValid)
+                {
                     continue;
+                }
 
                 m_SerializedCameraContextTargets[i].onCameraEnabled += OnCameraEnabled;
                 m_SerializedCameraContextTargets[i].onCameraDisabled += OnCameraDisabled;
@@ -219,7 +247,10 @@ namespace Unity.ClusterDisplay.Graphics
             foreach (var cameraContextPair in k_CameraContextTargets)
             {
                 if (cameraContextPair.Key == null || cameraContextPair.Value == null)
+                {
                     continue;
+                }
+
                 validCameraContextCount++;
             }
 
@@ -234,7 +265,9 @@ namespace Unity.ClusterDisplay.Graphics
             foreach (var cameraContextPair in k_CameraContextTargets)
             {
                 if (cameraContextPair.Value == null)
+                {
                     continue;
+                }
 
                 m_SerializedCameraContextTargets[cameraContextIndex++] = cameraContextPair.Value;
             }
@@ -243,8 +276,13 @@ namespace Unity.ClusterDisplay.Graphics
         void DestroyCameraContextTarget(CameraContextTarget cameraContextTarget)
         {
             if (!Application.isPlaying)
+            {
                 DestroyImmediate(cameraContextTarget);
-            else Destroy(cameraContextTarget);
+            }
+            else
+            {
+                Destroy(cameraContextTarget);
+            }
         }
 
         public void Flush()

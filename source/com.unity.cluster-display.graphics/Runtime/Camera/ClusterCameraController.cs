@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
         void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
     }
 
-    [System.Serializable]
+    [Serializable]
     class ClusterCameraController : IClusterRendererEventReceiver
     {
         // Matrix4x4 does not serialize so we need to serialize to Vector4s.
@@ -29,10 +29,14 @@ namespace Unity.ClusterDisplay.Graphics
         {
             contextCamera = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            {
                 return false;
+            }
 
             if (!cameraContextRegistry.TryGetFocusedCameraContextTarget(out var focusedCameraContextTarget))
+            {
                 return false;
+            }
 
             if (!focusedCameraContextTarget.TryGetCamera(out var camera))
             {
@@ -47,10 +51,14 @@ namespace Unity.ClusterDisplay.Graphics
         {
             previousCameraContext = null;
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            {
                 return false;
+            }
 
             if (!cameraContextRegistry.TryGetPreviousFocusedCameraContextTarget(out var previousFocusedCameraContextTarget))
+            {
                 return false;
+            }
 
             if (!previousFocusedCameraContextTarget.TryGetCamera(out var camera))
             {
@@ -65,7 +73,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         Presenter m_Presenter;
 
-        public Presenter presenter
+        public Presenter Presenter
         {
             get => m_Presenter;
             set
@@ -78,7 +86,9 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_Presenter = value;
                 if (m_Presenter != null)
+                {
                     RegisterCameraEventReceiver(m_Presenter);
+                }
             }
         }
 
@@ -105,7 +115,9 @@ namespace Unity.ClusterDisplay.Graphics
         public void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
         {
             if (!CameraContextRegistry.CanChangeContextTo(camera))
+            {
                 return;
+            }
 
             // If we are beginning to render with our context camera, do nothing.
             if (TryGetContextCamera(out var contextCamera) && camera == contextCamera)
@@ -126,7 +138,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             TryGetPreviousCameraContext(out var previousCameraContext);
             if (onCameraChange != null)
+            {
                 onCameraChange(previousCameraContext, contextCamera);
+            }
 
             m_Presenter.PollCamera(contextCamera);
         }

@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         RenderTexture m_SourceRt;
         RenderTexture m_PresentRt;
 
-        public override ClusterRenderer.LayoutMode layoutMode => ClusterRenderer.LayoutMode.StandardTile;
+        public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
 
         protected StandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
@@ -28,21 +28,27 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void LateUpdate()
         {
-            if (!k_ClusterRenderer.cameraController.TryGetContextCamera(out var camera))
+            if (!k_ClusterRenderer.CameraController.TryGetContextCamera(out var camera))
+            {
                 return;
+            }
 
             if (camera.enabled)
+            {
                 camera.enabled = false;
+            }
 
             if (!SetupTiledLayout(
                 camera,
                 out var asymmetricProjectionMatrix,
                 out var viewportSubsection,
                 out m_OverscannedRect))
+            {
                 return;
+            }
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(k_ClusterRenderer.context.debugSettings.enableKeyword);
-            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(k_ClusterRenderer.Context.DebugSettings.EnableKeyword);
+            UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.Context.GlobalScreenSize, k_ClusterRenderer.Context.GridSize));
 
             AllocateSourceIfNeeded();
             camera.targetTexture = m_SourceRt;
@@ -60,24 +66,26 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
+            if (!k_ClusterRenderer.CameraController.CameraIsInContext(camera))
+            {
                 return;
+            }
 
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
             GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
             cmd.SetRenderTarget(m_PresentRt);
-            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
+            cmd.ClearRenderTarget(true, true, k_ClusterRenderer.Context.Debug ? k_ClusterRenderer.Context.BezelColor : Color.black);
 
-            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            
+            var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.Context.OverscanInPixels, k_ClusterRenderer.Context.DebugScaleBiasTexOffset);
+
             AllocateSourceIfNeeded();
             GraphicsUtil.Blit(cmd, m_SourceRt, scaleBias, k_ScaleBiasRT);
 
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();
 
-            k_ClusterRenderer.cameraController.presenter.presentRT = m_PresentRt;
+            k_ClusterRenderer.CameraController.Presenter.PresentRT = m_PresentRt;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
