@@ -1,15 +1,11 @@
 ﻿#if CLUSTER_DISPLAY_HDRP
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class HDRPStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
+    class HdrpStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
     {
-        public HDRPStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
+        public HdrpStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
     }
 }

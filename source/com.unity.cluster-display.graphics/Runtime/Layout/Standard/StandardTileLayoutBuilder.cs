@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
-        
+
         Rect m_OverscannedRect;
         RenderTexture m_SourceRt;
         RenderTexture m_PresentRt;
@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
                 out m_OverscannedRect))
                 return;
 
-            ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
+            ClusterRenderer.ToggleClusterDisplayShaderKeywords(k_ClusterRenderer.context.debugSettings.enableKeyword);
             UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
             AllocateSourceIfNeeded();
@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (!k_ClusterRenderer.cameraController.CameraIsInContext(camera))
                 return;
-            
+
             var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
 
             GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
@@ -83,7 +83,10 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
-        
-        void AllocateSourceIfNeeded() => GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height, k_DefaultFormat);
+
+        void AllocateSourceIfNeeded()
+        {
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height, k_DefaultFormat);
+        }
     }
 }

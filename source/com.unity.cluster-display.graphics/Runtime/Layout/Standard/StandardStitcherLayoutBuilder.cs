@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get("ClearRT");
             var overscannedRect = CalculateOverscannedRect(Screen.width, Screen.height);
             AllocateSourcesIfNeeded(numTiles, overscannedRect);
-            
+
             for (var i = 0; i < numTiles; i++)
             {
                 cmd.SetRenderTarget(m_SourceRts[i]);
@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.Graphics
                     out var viewportSubsection,
                     out var asymmetricProjectionMatrix);
 
-                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
+                ClusterRenderer.ToggleClusterDisplayShaderKeywords(k_ClusterRenderer.context.debugSettings.enableKeyword);
                 UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
 
                 CalculcateAndQueueStitcherParameters(tileIndex, m_SourceRts[tileIndex], overscannedRect, percentageViewportSubsection);
@@ -118,7 +118,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             for (var i = 0; i < numTiles; i++)
             {
-                Rect croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.context.gridSize, i);
+                var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.context.gridSize, i);
                 var stitcherParameters = m_QueuedStitcherParameters.Dequeue();
 
                 croppedViewport.x *= croppedSize.x;
@@ -147,7 +147,10 @@ namespace Unity.ClusterDisplay.Graphics
             UnityEditor.SceneView.RepaintAll();
 #endif
         }
-        
-        void AllocateSourcesIfNeeded(int numTiles, Rect overscannedRect) =>  GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedRect.width, (int)overscannedRect.height, k_DefaultFormat);
+
+        void AllocateSourcesIfNeeded(int numTiles, Rect overscannedRect)
+        {
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedRect.width, (int)overscannedRect.height, k_DefaultFormat);
+        }
     }
 }

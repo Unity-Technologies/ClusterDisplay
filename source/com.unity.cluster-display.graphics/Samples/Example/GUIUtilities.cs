@@ -70,9 +70,9 @@ namespace Unity.ClusterDisplay.Graphics.Example
             settings.enableKeyword = GUILayout.Toggle(settings.enableKeyword, "Enable Keyword");
 
             var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.currentLayoutMode);
-            string[] layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
+            var layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
             GUILayout.Label("Layout Modes");
-            for (int i = 0; i < layoutModes.Length; i++)
+            for (var i = 0; i < layoutModes.Length; i++)
             {
                 if (layoutModes[i] == currentLayoutMode)
                 {
@@ -91,10 +91,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
             {
                 GUILayout.Label("Viewport Section");
                 var rect = settings.viewportSubsection;
-                float xMin = rect.xMin;
-                float xMax = rect.xMax;
-                float yMin = rect.yMin;
-                float yMax = rect.yMax;
+                var xMin = rect.xMin;
+                var xMax = rect.xMax;
+                var yMin = rect.yMin;
+                var yMax = rect.yMax;
 
                 xMin = GUISlider("xMin", xMin, 0, 1);
                 xMax = GUISlider("xMax", xMax, 0, 1);

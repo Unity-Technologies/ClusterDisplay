@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cullingParams.stereoProjectionMatrix = asymmetricProjectionMatrix;
             cullingParams.stereoViewMatrix = camera.worldToCameraMatrix;
-            
+
             GraphicsUtil.AllocateIfNeeded(ref m_SourceRTHandle, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
 
             var passInfo = new XRPassCreateInfo
@@ -88,7 +88,7 @@ namespace Unity.ClusterDisplay.Graphics
                 textureArraySlice = -1
             };
 
-            XRPass pass = layout.CreatePass(passInfo);
+            var pass = layout.CreatePass(passInfo);
             layout.AddViewToPass(viewInfo, pass);
 
             return true;

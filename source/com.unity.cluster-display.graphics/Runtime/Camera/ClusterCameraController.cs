@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!focusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                cameraContextRegistry.UnRegister(focusedCameraContextTarget, destroy: true);
+                cameraContextRegistry.UnRegister(focusedCameraContextTarget, true);
                 return false;
             }
 
@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!previousFocusedCameraContextTarget.TryGetCamera(out var camera))
             {
-                cameraContextRegistry.UnRegister(previousFocusedCameraContextTarget, destroy: true);
+                cameraContextRegistry.UnRegister(previousFocusedCameraContextTarget, true);
                 return false;
             }
 
@@ -83,10 +83,20 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public bool CameraIsInContext(Camera camera) => TryGetContextCamera(out var contextCamera) && contextCamera == camera;
+        public bool CameraIsInContext(Camera camera)
+        {
+            return TryGetContextCamera(out var contextCamera) && contextCamera == camera;
+        }
 
-        public void RegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver) => onCameraChange += cameraEventReceiver.OnCameraContextChange;
-        public void UnRegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver) => onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+        public void RegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver)
+        {
+            onCameraChange += cameraEventReceiver.OnCameraContextChange;
+        }
+
+        public void UnRegisterCameraEventReceiver(ICameraEventReceiver cameraEventReceiver)
+        {
+            onCameraChange -= cameraEventReceiver.OnCameraContextChange;
+        }
 
         protected virtual void OnPollFrameSettings(Camera camera) { }
 

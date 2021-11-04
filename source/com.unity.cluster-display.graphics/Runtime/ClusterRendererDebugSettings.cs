@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.Graphics
         public int tileIndexOverride
         {
             get => m_TileIndexOverride;
-            set { m_TileIndexOverride = value; }
+            set => m_TileIndexOverride = value;
         }
 
         [SerializeField]
@@ -107,8 +107,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public bool useDebugViewportSubsection
         {
-            set { m_UseDebugViewportSubsection = value; }
-            get { return m_UseDebugViewportSubsection; }
+            set => m_UseDebugViewportSubsection = value;
+            get => m_UseDebugViewportSubsection;
         }
 
         [SerializeField]

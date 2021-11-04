@@ -7,11 +7,11 @@ namespace Unity.ClusterDisplay.Graphics
     class ClusterFrustumGizmo
     {
         // indices for tile frustum gizmo
-        readonly static int[] k_Indices = new[]
+        static readonly int[] k_Indices = new[]
         {
             0, 1, 1, 2, 2, 3, 3, 0, // front
             4, 5, 5, 6, 6, 7, 7, 4, // back
-            0, 4, 1, 5, 2, 6, 3, 7, // sides
+            0, 4, 1, 5, 2, 6, 3, 7 // sides
         };
 
         Mesh m_FrustumGizmoMesh;

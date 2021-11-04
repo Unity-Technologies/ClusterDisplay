@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
         public static bool AllocateIfNeeded(ref RenderTexture[] rts, int count, string name, int width, int height, GraphicsFormat format)
         {
             var changed = false;
-            
+
             if (rts == null || count != rts.Length)
             {
                 changed = true;
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             return changed;
         }
-        
+
         public static bool AllocateIfNeeded(ref RenderTexture rt, string name, int width, int height, GraphicsFormat format)
         {
             if (rt == null || 
@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
         public static bool AllocateIfNeeded(ref RTHandle[] rts, int count, string name, int width, int height)
         {
             var changed = false;
-            
+
             if (rts == null || count != rts.Length)
             {
                 changed = true;
@@ -126,7 +126,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             return false;
         }
-        
+
         public static void DeallocateIfNeeded(ref RTHandle[] rts)
         {
             if (rts == null)

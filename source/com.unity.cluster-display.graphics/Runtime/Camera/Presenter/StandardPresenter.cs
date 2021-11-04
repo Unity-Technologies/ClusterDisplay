@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected override void InitializeCamera(Camera camera)
         {
-            if (!ClusterCanvas.TryGetInstance(out var clusterCanvas, displayError: false))
+            if (!ClusterCanvas.TryGetInstance(out var clusterCanvas, false))
                 m_ClusterCanvas = new GameObject("ClusterCanvas").AddComponent<ClusterCanvas>();
             else m_ClusterCanvas = clusterCanvas.GetComponent<ClusterCanvas>();
 
@@ -46,6 +46,9 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void Dispose() => DeinitializeCamera(m_Camera);
+        public override void Dispose()
+        {
+            DeinitializeCamera(m_Camera);
+        }
     }
 }

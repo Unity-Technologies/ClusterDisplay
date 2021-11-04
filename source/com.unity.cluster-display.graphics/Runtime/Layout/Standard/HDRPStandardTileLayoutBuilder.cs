@@ -1,13 +1,11 @@
 ﻿#if CLUSTER_DISPLAY_HDRP
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class HDRPStandardTileLayoutBuilder : StandardTileLayoutBuilder
+    class HdrpStandardTileLayoutBuilder : StandardTileLayoutBuilder
     {
-        public HDRPStandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
+        public HdrpStandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
     }
 }

@@ -1,13 +1,10 @@
 ﻿#if CLUSTER_DISPLAY_HDRP
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class HDRPClusterCameraController : ClusterCameraController
+    class HdrpClusterCameraController : ClusterCameraController
     {
         [HideInInspector]
         [SerializeField]
@@ -42,8 +39,10 @@ namespace Unity.ClusterDisplay.Graphics
                     additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
                 }
             }
-
-            else Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
+            else
+            {
+                Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
+            }
         }
     }
 }

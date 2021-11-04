@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             if (updateDisplay)
             {
                 var sum = 0f;
-                for (int i = 0; i < m_FpsBuffer.Length; i++)
+                for (var i = 0; i < m_FpsBuffer.Length; i++)
                     sum += m_FpsBuffer[i];
                 m_FpsMovingAverage = sum / m_FpsBuffer.Length;
             }

@@ -50,9 +50,6 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // We assume all cluster screens have the same resolution, otherwise we couldn't just infer global screen size.
-        public Vector2 globalScreenSize
-        {
-            get { return new Vector2(gridSize.x * Screen.width, gridSize.x * Screen.width); }
-        }
+        public Vector2 globalScreenSize => new Vector2(gridSize.x * Screen.width, gridSize.x * Screen.width);
     }
 }

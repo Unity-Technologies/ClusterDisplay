@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         void OnSetCustomLayout(LayoutBuilder layoutBuilder);
     }
-    
+
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -52,8 +52,6 @@ namespace Unity.ClusterDisplay.Graphics
         delegate void OnSetCustomLayout(LayoutBuilder layoutBuilder);
 
         // <---|
-
-        
 
         public enum LayoutMode
         {
@@ -130,7 +128,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
         [HideInInspector]
         [SerializeField]
-        ClusterCameraController m_ClusterCameraController = new HDRPClusterCameraController();
+        ClusterCameraController m_ClusterCameraController = new HdrpClusterCameraController();
         [HideInInspector]
         [SerializeField]
         IClusterRendererModule m_ClusterRendererModule = new HDRPClusterRendererModule();
@@ -144,7 +142,7 @@ namespace Unity.ClusterDisplay.Graphics
             get => m_Context.debug;
             set => m_Context.debug = value;
         }
-        
+
         // TODO sketchy, limits client changes for the time being
         internal ClusterRenderContext context => m_Context;
         ClusterRenderContext IClusterRenderer.context => m_Context;
@@ -168,7 +166,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// Camera projection before its slicing to an asymmetric projection.
         /// </summary>
         public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
-
 
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
 
@@ -238,7 +235,7 @@ namespace Unity.ClusterDisplay.Graphics
             RenderPipelineManager.endFrameRendering += OnEndFrameRender;
 
 #if UNITY_EDITOR
-            UnityEditor.SceneView.RepaintAll();
+            SceneView.RepaintAll();
 #endif
         }
 
@@ -264,7 +261,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (!CameraContextRegistry.CanChangeContextTo(camera))
             {
-                ToggleShaderKeywords(keywordEnabled: false);
+                ToggleShaderKeywords(false);
                 return;
             }
 
@@ -274,7 +271,7 @@ namespace Unity.ClusterDisplay.Graphics
             Assert.IsTrue(m_Context.gridSize.x > 0 && m_Context.gridSize.y > 0);
 
             // Update aspect ratio
-            camera.aspect = (m_Context.gridSize.x * Screen.width) / (float)(m_Context.gridSize.y * Screen.height);
+            camera.aspect = m_Context.gridSize.x * Screen.width / (float)(m_Context.gridSize.y * Screen.height);
 
             // Reset debug viewport subsection
             if (m_Context.debug && !m_Context.debugSettings.useDebugViewportSubsection)
@@ -339,7 +336,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 case LayoutMode.StandardTile:
 #if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HDRPStandardTileLayoutBuilder(this);
+                    newLayoutBuilder = new HdrpStandardTileLayoutBuilder(this);
 #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
 #endif
@@ -348,7 +345,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 case LayoutMode.StandardStitcher:
 #if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HDRPStandardStitcherLayoutBuilder(this);
+                    newLayoutBuilder = new HdrpStandardStitcherLayoutBuilder(this);
 #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
 #endif
@@ -376,21 +373,17 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
         {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled)
-            {
-                return;
-            }
+            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled) return;
 
             if (keywordEnabled)
-            {
                 Shader.EnableKeyword(k_ShaderKeyword);
-            }
             else
-            {
                 Shader.DisableKeyword(k_ShaderKeyword);
-            }
         }
 
-        public void ToggleShaderKeywords(bool keywordEnabled) => ToggleClusterDisplayShaderKeywords(keywordEnabled);
+        public void ToggleShaderKeywords(bool keywordEnabled)
+        {
+            ToggleClusterDisplayShaderKeywords(keywordEnabled);
+        }
     }
 }

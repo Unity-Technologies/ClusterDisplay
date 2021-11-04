@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
                 cameraContextRegistry.Flush();
 
             var cameraContextTargets = cameraContextRegistry.cameraContextTargets;
-            for (int i = 0; i < cameraContextTargets.Length; i++)
+            for (var i = 0; i < cameraContextTargets.Length; i++)
                 EditorGUILayout.LabelField(cameraContextTargets[i].gameObject.name);
         }
     }

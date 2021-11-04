@@ -61,8 +61,8 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public int overScanInPixels
         {
-            get { return m_OverscanInPixels; }
-            set { m_OverscanInPixels = value; }
+            get => m_OverscanInPixels;
+            set => m_OverscanInPixels = value;
         }
     }
 }

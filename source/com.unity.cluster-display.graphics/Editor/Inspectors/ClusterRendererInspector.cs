@@ -5,7 +5,7 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.Graphics.Inspectors
 {
     [CustomEditor(typeof(ClusterRenderer))]
-    class ClusterRendererInspector : UnityEditor.Editor
+    class ClusterRendererInspector : Editor
     {
         public override void OnInspectorGUI()
         {
@@ -47,10 +47,10 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 EditorGUILayout.LabelField("Viewport Section");
 
                 var rect = settings.viewportSubsection;
-                float xMin = rect.xMin;
-                float xMax = rect.xMax;
-                float yMin = rect.yMin;
-                float yMax = rect.yMax;
+                var xMin = rect.xMin;
+                var xMax = rect.xMax;
+                var yMin = rect.yMin;
+                var yMax = rect.yMax;
 
                 xMin = EditorGUILayout.Slider("xMin", xMin, 0, 1);
                 xMax = EditorGUILayout.Slider("xMax", xMax, 0, 1);

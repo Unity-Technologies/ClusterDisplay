@@ -16,7 +16,10 @@ namespace Unity.ClusterDisplay.Graphics
         public CameraActiveDelegate onCameraDisabled;
         public CameraActiveDelegate onCameraEnabled;
 
-        void CacheCamera() => m_TargetCamera = GetComponent<Camera>();
+        void CacheCamera()
+        {
+            m_TargetCamera = GetComponent<Camera>();
+        }
 
         public bool TryGetCamera(out Camera camera)
         {
@@ -27,12 +30,15 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
 #if UNITY_EDITOR
-        void OnValidate() => CacheCamera();
+        void OnValidate()
+        {
+            CacheCamera();
+        }
 #endif
 
         void OnDestroy()
         {
-            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, displayError: false))
+            if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry, false))
                 cameraContextRegistry.UnRegister(this);
         }
 
@@ -47,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
             CacheCamera();
 
             if (CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
-                cameraContextRegistry.Register(m_TargetCamera, logError: false);
+                cameraContextRegistry.Register(m_TargetCamera, false);
 
             if (onCameraEnabled != null)
                 onCameraEnabled(this);

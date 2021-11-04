@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
 
             var scaleBiasRT = new Vector4(
-                1 - (k_ClusterRenderer.context.bezel.x * 2) / croppedSize.x, 1 - (k_ClusterRenderer.context.bezel.y * 2) / croppedSize.y, // scale
+                1 - k_ClusterRenderer.context.bezel.x * 2 / croppedSize.x, 1 - k_ClusterRenderer.context.bezel.y * 2 / croppedSize.y, // scale
                 k_ClusterRenderer.context.bezel.x / croppedSize.x, k_ClusterRenderer.context.bezel.y / croppedSize.y); // offset
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
@@ -36,11 +36,14 @@ namespace Unity.ClusterDisplay.Graphics
                 scaleBiasTex = scaleBiasTex,
                 scaleBiasRT = scaleBiasRT,
                 percentageViewportSubsection = percentageViewportSubsection,
-                sourceRT = targetRT,
+                sourceRT = targetRT
             });
         }
 
-        protected Matrix4x4 CalculateProjectionMatrix(Camera camera, Rect viewportSubsection) => GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+        protected Matrix4x4 CalculateProjectionMatrix(Camera camera, Rect viewportSubsection)
+        {
+            return GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, viewportSubsection);
+        }
 
         protected void CalculateStitcherLayout(
             Camera camera,

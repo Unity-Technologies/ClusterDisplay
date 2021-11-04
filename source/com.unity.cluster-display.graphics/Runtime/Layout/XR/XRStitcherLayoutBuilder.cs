@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
             var parms = m_QueuedStitcherParameters.Dequeue();
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels);
-            Rect croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.context.gridSize, parms.tileIndex);
+            var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.context.gridSize, parms.tileIndex);
 
             croppedViewport.x *= croppedSize.x;
             croppedViewport.y *= croppedSize.y;
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.Graphics
             var cachedProjectionMatrix = camera.projectionMatrix;
 
             GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-            
+
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
                 CalculateStitcherLayout(
@@ -127,7 +127,7 @@ namespace Unity.ClusterDisplay.Graphics
                     textureArraySlice = -1
                 };
 
-                XRPass pass = layout.CreatePass(passInfo);
+                var pass = layout.CreatePass(passInfo);
                 layout.AddViewToPass(viewInfo, pass);
             }
 

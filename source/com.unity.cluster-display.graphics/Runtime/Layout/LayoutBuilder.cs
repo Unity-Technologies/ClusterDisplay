@@ -5,13 +5,17 @@ namespace Unity.ClusterDisplay.Graphics
 {
     abstract class LayoutBuilder : IClusterRendererEventReceiver
     {
-        public static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
-        public static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
+        protected static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
+        protected static readonly string k_ClusterDisplayParamsShaderVariableName = "_ClusterDisplayParams";
         protected readonly IClusterRenderer k_ClusterRenderer;
 
         public abstract ClusterRenderer.LayoutMode layoutMode { get; }
 
-        public LayoutBuilder(IClusterRenderer clusterRenderer) => k_ClusterRenderer = clusterRenderer;
+        public LayoutBuilder(IClusterRenderer clusterRenderer)
+        {
+            k_ClusterRenderer = clusterRenderer;
+        }
+
         public abstract void LateUpdate();
         public abstract void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
@@ -19,8 +23,15 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
         public abstract void Dispose();
 
-        protected bool ValidGridSize(out int numTiles) => (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
-        public void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams) => Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, clusterDisplayParams);
+        protected bool ValidGridSize(out int numTiles)
+        {
+            return (numTiles = k_ClusterRenderer.context.gridSize.x * k_ClusterRenderer.context.gridSize.y) > 0;
+        }
+
+        public void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
+        {
+            Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, clusterDisplayParams);
+        }
 
         protected Rect CalculateOverscannedRect(int width, int height)
         {
@@ -29,7 +40,10 @@ namespace Unity.ClusterDisplay.Graphics
                 height + 2 * k_ClusterRenderer.context.overscanInPixels);
         }
 
-        protected Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels) => new Vector2(rect.width - 2 * overscanInPixels, rect.height - 2 * overscanInPixels);
+        protected Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels)
+        {
+            return new Vector2(rect.width - 2 * overscanInPixels, rect.height - 2 * overscanInPixels);
+        }
 
         protected Vector4 CalculateScaleBias(Rect overscannedRect, int overscanInPixels, Vector2 debugOffset)
         {

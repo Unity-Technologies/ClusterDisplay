@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_MainCameraTag = "MainCamera";
 
         readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
-     
+
         [HideInInspector]
         [SerializeField]
         CameraContextTarget[] m_SerializedCameraContextTargets;
@@ -91,10 +91,20 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public static bool CanChangeContextTo(Camera camera) => camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
+        public static bool CanChangeContextTo(Camera camera)
+        {
+            return camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
+        }
 
-        public bool TryGetPreviousFocusedCameraContextTarget(out CameraContextTarget previousCameraContextTarget) => (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
-        public void SetPreviousFocusedCameraContextTarget(CameraContextTarget previousCameraContextTarget) => m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
+        public bool TryGetPreviousFocusedCameraContextTarget(out CameraContextTarget previousCameraContextTarget)
+        {
+            return (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
+        }
+
+        public void SetPreviousFocusedCameraContextTarget(CameraContextTarget previousCameraContextTarget)
+        {
+            m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
+        }
 
         public CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();
 
@@ -108,14 +118,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void PollCameraTargets()
         {
-            if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry))
+            if (!TryGetInstance(out var cameraContextRegistry))
                 return;
 
             var cameraContextTargets = FindObjectsOfType<CameraContextTarget>();
             if (cameraContextTargets.Length == 0)
                 return;
 
-            for (int i = 0; i < cameraContextTargets.Length; i++)
+            for (var i = 0; i < cameraContextTargets.Length; i++)
             {
                 if (!cameraContextTargets[i].TryGetCamera(out var camera))
                     continue;
@@ -189,7 +199,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_SerializedCameraContextTargets == null)
                 return;
 
-            for (int i = 0; i < m_SerializedCameraContextTargets.Length; i++)
+            for (var i = 0; i < m_SerializedCameraContextTargets.Length; i++)
             {
                 if (m_SerializedCameraContextTargets[i] == null)
                     continue;
@@ -206,7 +216,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnBeforeSerialize()
         {
-            int validCameraContextCount = 0;
+            var validCameraContextCount = 0;
             foreach (var cameraContextPair in k_CameraContextTargets)
             {
                 if (cameraContextPair.Key == null || cameraContextPair.Value == null)
@@ -221,7 +231,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             m_SerializedCameraContextTargets = new CameraContextTarget[validCameraContextCount];
-            int cameraContextIndex = 0;
+            var cameraContextIndex = 0;
             foreach (var cameraContextPair in k_CameraContextTargets)
             {
                 if (cameraContextPair.Value == null)

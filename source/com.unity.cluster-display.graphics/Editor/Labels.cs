@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
             Keyword,
             LayoutMode,
             DebugViewportSubsection,
-            ScaleBiasOffset,
+            ScaleBiasOffset
         }
 
         static string GetName(Field field)
