@@ -139,7 +139,18 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector][SerializeField] IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
 #endif
 
-        public ClusterCameraController cameraController => m_ClusterCameraController;
+        public bool IsDebug
+        {
+            get => m_Context.debug;
+            set => m_Context.debug = value;
+        }
+        
+        // TODO sketchy, limits client changes for the time being
+        internal ClusterRenderContext context => m_Context;
+        ClusterRenderContext IClusterRenderer.context => m_Context;
+
+        internal ClusterCameraController cameraController => m_ClusterCameraController;
+        ClusterCameraController IClusterRenderer.cameraController => m_ClusterCameraController;
 
         /// <summary>
         /// User controlled settings, typically project specific.
@@ -158,7 +169,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
 
-        public ClusterRenderContext context => m_Context;
 
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
 
@@ -274,7 +284,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (!cameraController.CameraIsInContext(camera))
+            if (!m_ClusterCameraController.CameraIsInContext(camera))
                 return;
 
             if (onEndCameraRender != null)
@@ -333,7 +343,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
 #endif
-                    cameraController.presenter = new StandardPresenter();
+                    m_ClusterCameraController.presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
@@ -342,18 +352,18 @@ namespace Unity.ClusterDisplay.Graphics
 #else
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
 #endif
-                    cameraController.presenter = new StandardPresenter();
+                    m_ClusterCameraController.presenter = new StandardPresenter();
                     break;
 
 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    cameraController.presenter = new XRPresenter();
+                    m_ClusterCameraController.presenter = new XRPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    cameraController.presenter = new XRPresenter();
+                    m_ClusterCameraController.presenter = new XRPresenter();
                     break;
 #endif
 

@@ -5,7 +5,7 @@ namespace Unity.ClusterDisplay.Graphics
     // Gives to custom layouts a centralized place to read properties from.
     // Note that some properties are directly forwarded from settings while others are inferred.
     [System.Serializable]
-    public class ClusterRenderContext
+    class ClusterRenderContext
     {
         [SerializeField]
         ClusterRendererSettings m_Settings = new ClusterRendererSettings();

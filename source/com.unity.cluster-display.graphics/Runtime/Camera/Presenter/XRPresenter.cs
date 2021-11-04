@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <summary>
     /// In XR mode, the presenter doesn't really do anything.
     /// </summary>
-    public class XRPresenter : Presenter
+    class XRPresenter : Presenter
     {
         public override RenderTexture presentRT { get; set; }
 

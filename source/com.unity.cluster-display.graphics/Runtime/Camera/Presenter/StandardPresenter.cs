@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// In standard (non-XR), we automatically create a UI Canvas
     /// to present a RT, since the cameras are not rendering.
     /// </summary>
-    public class StandardPresenter : Presenter
+    class StandardPresenter : Presenter
     {
         RenderTexture m_PresentRT;
 

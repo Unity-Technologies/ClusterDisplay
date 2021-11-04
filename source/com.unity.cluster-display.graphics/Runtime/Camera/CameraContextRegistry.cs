@@ -12,17 +12,22 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     public class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
     {
+        const string k_MainCameraTag = "MainCamera";
+
         readonly Dictionary<Camera, CameraContextTarget> k_CameraContextTargets = new Dictionary<Camera, CameraContextTarget>();
+     
         [HideInInspector]
         [SerializeField]
         CameraContextTarget[] m_SerializedCameraContextTargets;
-
         [HideInInspector]
         [SerializeField]
         CameraContextTarget m_FocusedCameraContextTarget;
         [HideInInspector]
         [SerializeField]
         CameraContextTarget m_PreviousFocusedCameraContextTarget;
+
+        [SerializeField]
+        string m_TargetCameraTag = k_MainCameraTag;
 
         static CameraContextRegistry()
         {
@@ -72,8 +77,6 @@ namespace Unity.ClusterDisplay.Graphics
             SetPreviousFocusedCameraContextTarget(m_FocusedCameraContextTarget);
             m_FocusedCameraContextTarget = cameraContextTarget;
         }
-
-        public string m_TargetCameraTag = "MainCamera";
 
         /// <summary>
         /// Only pay attention to cameras with this tag.

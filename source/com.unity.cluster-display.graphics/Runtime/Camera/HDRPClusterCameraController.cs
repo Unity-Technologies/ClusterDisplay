@@ -7,7 +7,7 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class HDRPClusterCameraController : ClusterCameraController
+    class HDRPClusterCameraController : ClusterCameraController
     {
         [HideInInspector]
         [SerializeField]

@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// modes, one for XR and another for standard which uses
     /// and canvas UI.
     /// </summary>
-    public abstract class Presenter : ICameraEventReceiver
+    abstract class Presenter : ICameraEventReceiver
     {
         protected Camera m_Camera;
         public abstract RenderTexture presentRT { get; set; }

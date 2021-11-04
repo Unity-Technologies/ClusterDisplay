@@ -93,9 +93,9 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 GUIUtilities.DrawSettings(m_ClusterRenderer.settings);
                 GUIUtilities.KeyboardControls(m_ClusterRenderer.settings);
 
-                var prevDebug = m_ClusterRenderer.context.debug;
-                m_ClusterRenderer.context.debug = GUILayout.Toggle(prevDebug, "debug");
-                if (m_ClusterRenderer.context.debug)
+                var prevDebug = m_ClusterRenderer.IsDebug;
+                m_ClusterRenderer.IsDebug = GUILayout.Toggle(prevDebug, "debug");
+                if (m_ClusterRenderer.IsDebug)
                     GUIUtilities.DrawDebugSettings(m_ClusterRenderer.debugSettings);
             }
 

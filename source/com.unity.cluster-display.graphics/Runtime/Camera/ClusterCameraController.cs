@@ -3,13 +3,13 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public interface ICameraEventReceiver
+    interface ICameraEventReceiver
     {
         void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
     }
 
     [System.Serializable]
-    public class ClusterCameraController : IClusterRendererEventReceiver
+    class ClusterCameraController : IClusterRendererEventReceiver
     {
         // Matrix4x4 does not serialize so we need to serialize to Vector4s.
         [SerializeField]
