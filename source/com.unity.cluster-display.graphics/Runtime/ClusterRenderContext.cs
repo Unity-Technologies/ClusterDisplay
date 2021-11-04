@@ -23,10 +23,10 @@ namespace Unity.ClusterDisplay.Graphics
             set { m_Debug = value; }
         }
 
-        public int overscanInPixels => m_Settings.overScanInPixels;
-        public Vector2Int gridSize => m_Settings.gridSize;
-        public Vector2 bezel => m_Settings.bezel;
-        public Vector2 physicalScreenSize => m_Settings.physicalScreenSize;
+        public int overscanInPixels => m_Settings.OverScanInPixels;
+        public Vector2Int gridSize => m_Settings.GridSize;
+        public Vector2 bezel => m_Settings.Bezel;
+        public Vector2 physicalScreenSize => m_Settings.PhysicalScreenSize;
         public Vector2 debugScaleBiasTexOffset => m_Debug ? m_DebugSettings.scaleBiasTextOffset : Vector2.zero;
         public Color bezelColor => m_DebugSettings.bezelColor;
 

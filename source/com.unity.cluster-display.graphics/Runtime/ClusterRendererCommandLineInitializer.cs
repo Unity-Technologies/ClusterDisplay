@@ -31,22 +31,22 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out Vector2Int gridSize))
             {
-                settings.gridSize = gridSize;
+                settings.GridSize = gridSize;
             }
 
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out Vector2 bezel))
             {
-                settings.bezel = bezel;
+                settings.Bezel = bezel;
             }
 
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out Vector2 physicalScreenSize))
             {
-                settings.physicalScreenSize = physicalScreenSize;
+                settings.PhysicalScreenSize = physicalScreenSize;
             }
 
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out int overscanInPixels))
             {
-                settings.overScanInPixels = overscanInPixels;
+                settings.OverScanInPixels = overscanInPixels;
             }
         }
     }

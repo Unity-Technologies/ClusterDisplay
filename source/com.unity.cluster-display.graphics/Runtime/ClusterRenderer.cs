@@ -37,22 +37,6 @@ namespace Unity.ClusterDisplay.Graphics
         IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
-        // |---> IClusterRendererEventReceiver delegates for RenderPipelineManager.*
-        public delegate void OnBeginCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
-
-        public delegate void OnEndCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
-
-        public delegate void OnBeginFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
-
-        public delegate void OnEndFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
-
-        // <---|
-
-        // |---> IClusterRendererModule delegates.
-        delegate void OnSetCustomLayout(LayoutBuilder layoutBuilder);
-
-        // <---|
-
         public enum LayoutMode
         {
             None,
@@ -107,18 +91,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        // |---> IClusterRendererEventReceiver delegates instances.
-        OnBeginCameraRenderDelegate onBeginCameraRender;
-        OnEndCameraRenderDelegate onEndCameraRender;
-        OnBeginFrameRenderDelegate onBeginFrameRender;
-        OnEndFrameRenderDelegate onEndFrameRender;
+        // IClusterRendererEventReceiver delegates instances.
+        event Action<ScriptableRenderContext, Camera> onBeginCameraRender;
+        event Action<ScriptableRenderContext, Camera> onEndCameraRender;
+        event Action<ScriptableRenderContext, Camera[]> onBeginFrameRender;
+        event Action<ScriptableRenderContext, Camera[]> onEndFrameRender;
 
-        // <---|
-
-        // |---> IClusterRendererModule delgate instances.
-        OnSetCustomLayout m_OnSetCustomLayout;
-
-        // <---|
+        // IClusterRendererModule delgate instances.
+        event Action<LayoutBuilder> m_OnSetCustomLayout;
 
         LayoutBuilder m_LayoutBuilder;
 
@@ -183,13 +163,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnValidate()
         {
-            if (settings.resources == null)
+            if (settings.Resources == null)
             {
                 var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
                 if (assets.Length == 0)
                     throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
-                settings.resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{settings.resources.name}\" to cluster display settings.");
+                settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
+                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{settings.Resources.name}\" to cluster display settings.");
                 EditorUtility.SetDirty(this);
             }
         }

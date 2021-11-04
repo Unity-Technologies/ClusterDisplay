@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -16,12 +17,8 @@ namespace Unity.ClusterDisplay.Graphics
             void ToggleShaderKeywords(bool keywordEnabled);
         }
 
-        public delegate void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
-
-        public delegate void OnEnableKeywords(bool keywordsEnabled);
-
-        OnChangeLayoutMode onChangeLayoutMode;
-        OnEnableKeywords onEnableKeywords;
+        public event Action<ClusterRenderer.LayoutMode> onChangeLayoutMode;
+        public event Action<bool> onEnableKeywords;
 
         public void RegisterDebugSettingsReceiver(IDebugSettingsReceiver debugSettingsReceiver)
         {

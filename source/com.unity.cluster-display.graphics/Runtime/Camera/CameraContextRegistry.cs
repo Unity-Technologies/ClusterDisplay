@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// OnCameraRender is called. Cameras registered here are automatically accessed by ClusterDisplayRenderer
     /// and this registry manages it's camera context.
     /// </summary>
-    public class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
+    class CameraContextRegistry : SingletonMonoBehaviour<CameraContextRegistry>, ISerializationCallbackReceiver
     {
         const string k_MainCameraTag = "MainCamera";
 
@@ -61,7 +61,8 @@ namespace Unity.ClusterDisplay.Graphics
                 }
             }
 
-            return (cameraContextTarget = m_FocusedCameraContextTarget) != null;
+            cameraContextTarget = m_FocusedCameraContextTarget;
+            return cameraContextTarget != null;
         }
 
         public void SetFocusedCameraContextTarget(CameraContextTarget cameraContextTarget)
@@ -74,36 +75,34 @@ namespace Unity.ClusterDisplay.Graphics
             else
                 Debug.Log($"Changing camera context to: \"NULL\".");
 
-            SetPreviousFocusedCameraContextTarget(m_FocusedCameraContextTarget);
+            m_PreviousFocusedCameraContextTarget = m_FocusedCameraContextTarget;
             m_FocusedCameraContextTarget = cameraContextTarget;
         }
 
         /// <summary>
         /// Only pay attention to cameras with this tag.
         /// </summary>
-        public static string targetCameraTag
+        static string TargetCameraTag
         {
             get
             {
-                if (!TryGetInstance(out var instance))
-                    return null;
-                return instance.m_TargetCameraTag;
+                if (TryGetInstance(out var instance))
+                {
+                    return instance.m_TargetCameraTag;
+                }
+
+                return null;
             }
         }
 
         public static bool CanChangeContextTo(Camera camera)
         {
-            return camera.cameraType == CameraType.Game && camera.gameObject.tag == targetCameraTag;
+            return camera.cameraType == CameraType.Game && camera.gameObject.CompareTag(TargetCameraTag);
         }
 
         public bool TryGetPreviousFocusedCameraContextTarget(out CameraContextTarget previousCameraContextTarget)
         {
             return (previousCameraContextTarget = m_PreviousFocusedCameraContextTarget) != null;
-        }
-
-        public void SetPreviousFocusedCameraContextTarget(CameraContextTarget previousCameraContextTarget)
-        {
-            m_PreviousFocusedCameraContextTarget = previousCameraContextTarget;
         }
 
         public CameraContextTarget[] cameraContextTargets => k_CameraContextTargets.Values.ToArray();

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -60,9 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
             return (previousCameraContext = camera) != null;
         }
 
-        public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
-
-        OnCameraContextChange onCameraChange;
+        event Action<Camera, Camera> onCameraChange;
 
         Presenter m_Presenter;
 

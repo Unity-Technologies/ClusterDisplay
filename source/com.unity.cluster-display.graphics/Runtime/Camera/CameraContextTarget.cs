@@ -1,20 +1,19 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
     [ExecuteAlways]
     [RequireComponent(typeof(Camera))]
-    public class CameraContextTarget : MonoBehaviour
+    class CameraContextTarget : MonoBehaviour
     {
         [SerializeField]
         Camera m_TargetCamera;
         public Camera TargetCamera => m_TargetCamera;
         public bool cameraReferenceIsValid => m_TargetCamera != null;
 
-        public delegate void CameraActiveDelegate(CameraContextTarget cameraContextTarget);
-
-        public CameraActiveDelegate onCameraDisabled;
-        public CameraActiveDelegate onCameraEnabled;
+        public event Action<CameraContextTarget> onCameraDisabled;
+        public event Action<CameraContextTarget> onCameraEnabled;
 
         void CacheCamera()
         {

@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
-            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.Resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
 
         protected void Blit(CommandBuffer cmd, RTHandle target, Vector4 texBias, Vector4 rtBias)
@@ -76,7 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             s_PropertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             s_PropertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
-            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, k_ClusterRenderer.settings.Resources.blitMaterial, 0, MeshTopology.Quads, 4, 1, s_PropertyBlock);
         }
     }
 }

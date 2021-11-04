@@ -14,11 +14,11 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 var adapter = target as ClusterRenderer;
 
                 var settings = adapter.settings;
-                settings.resources = (ClusterDisplayResources)EditorGUILayout.ObjectField(settings.resources, typeof(ClusterDisplayResources), false);
-                settings.gridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.gridSize);
-                settings.physicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.physicalScreenSize);
-                settings.bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.bezel);
-                settings.overScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.overScanInPixels, 0, 256);
+                settings.Resources = (ClusterDisplayResources)EditorGUILayout.ObjectField(settings.Resources, typeof(ClusterDisplayResources), false);
+                settings.GridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.GridSize);
+                settings.PhysicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.PhysicalScreenSize);
+                settings.Bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.Bezel);
+                settings.OverScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.OverScanInPixels, 0, 256);
 
                 adapter.context.debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.context.debug);
 
