@@ -160,19 +160,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (enabled)
                 m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.gridSize, m_Context.tileIndex);
         }
-
-        void OnValidate()
-        {
-            if (settings.Resources == null)
-            {
-                var assets = AssetDatabase.FindAssets($"t:{nameof(ClusterDisplayResources)}");
-                if (assets.Length == 0)
-                    throw new Exception($"No valid instances of: {nameof(ClusterDisplayResources)} exist in the project.");
-                settings.Resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-                Debug.Log($"Applied instance of: {nameof(ClusterDisplayResources)} named: \"{settings.Resources.name}\" to cluster display settings.");
-                EditorUtility.SetDirty(this);
-            }
-        }
 #endif
 
         void RegisterRendererEvents(IClusterRendererEventReceiver clusterRendererEventReceiver)

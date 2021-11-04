@@ -9,15 +9,6 @@ namespace Unity.ClusterDisplay.Graphics
     public sealed class ClusterRendererSettings
     {
         [SerializeField]
-        ClusterDisplayResources m_Resources;
-
-        public ClusterDisplayResources Resources
-        {
-            get => m_Resources;
-            set => m_Resources = value;
-        }
-
-        [SerializeField]
         Vector2Int m_GridSize = new Vector2Int(2, 2);
 
         /// <summary>

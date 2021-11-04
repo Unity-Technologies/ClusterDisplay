@@ -70,7 +70,9 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.ClearRenderTarget(true, true, k_ClusterRenderer.context.debug ? k_ClusterRenderer.context.bezelColor : Color.black);
 
             var scaleBias = CalculateScaleBias(m_OverscannedRect, k_ClusterRenderer.context.overscanInPixels, k_ClusterRenderer.context.debugScaleBiasTexOffset);
-            Blit(cmd, m_SourceRt, scaleBias, k_ScaleBiasRT);
+            
+            AllocateSourceIfNeeded();
+            GraphicsUtil.Blit(cmd, m_SourceRt, scaleBias, k_ScaleBiasRT);
 
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
             cmd.Clear();

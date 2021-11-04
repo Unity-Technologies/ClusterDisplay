@@ -8,6 +8,61 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
+        const string k_BlitShaderName = "ClusterDisplay/PresentBlit";
+        static MaterialPropertyBlock s_PropertyBlock;
+        static Material s_BlitMaterial;
+
+        static MaterialPropertyBlock GetPropertyBlock()
+        {
+            if (s_PropertyBlock == null)
+            {
+                s_PropertyBlock = new MaterialPropertyBlock();
+            }
+
+            return s_PropertyBlock;
+        }
+        
+        static Material GetBlitMaterial()
+        {
+            if (s_BlitMaterial == null)
+            {
+                var shader = Shader.Find(k_BlitShaderName);
+                if (shader == null)
+                {
+                    // TODO we had a utility adding shader to the included list, bring it on.
+                    throw new InvalidOperationException($"Could not find shader \"{k_BlitShaderName}\", " +
+                        "make sure it has been added to the list of Always Included shaders");
+                }
+
+                s_BlitMaterial = new Material(shader)
+                {
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+            }
+
+            return s_BlitMaterial;
+        }
+
+        public static void Blit(CommandBuffer cmd, RenderTexture target, Vector4 texBias, Vector4 rtBias)
+        {
+            var propertyBlock = GetPropertyBlock();
+            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
+            propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
+            propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
+            propertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
+            cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), 0, MeshTopology.Quads, 4, 1, propertyBlock);
+        }
+
+        public static void Blit(CommandBuffer cmd, RTHandle target, Vector4 texBias, Vector4 rtBias)
+        {
+            var propertyBlock = GetPropertyBlock();
+            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
+            propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
+            propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
+            propertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
+            cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), 0, MeshTopology.Quads, 4, 1, propertyBlock);
+        }
+        
         public static bool AllocateIfNeeded(ref RenderTexture[] rts, int count, string name, int width, int height, GraphicsFormat format)
         {
             var changed = false;
