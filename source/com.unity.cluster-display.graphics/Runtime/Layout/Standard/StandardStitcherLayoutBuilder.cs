@@ -137,9 +137,9 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.height *= croppedSize.y;
 
                 cmd.SetViewport(croppedViewport);
-                var sourceRT = stitcherParameters.sourceRT as RenderTexture;
+                var sourceRT = stitcherParameters.SourceRT as RenderTexture;
 
-                GraphicsUtil.Blit(cmd, sourceRT, stitcherParameters.scaleBiasTex, stitcherParameters.scaleBiasRT);
+                GraphicsUtil.Blit(cmd, sourceRT, stitcherParameters.ScaleBiasTex, stitcherParameters.ScaleBiasRT);
             }
 
             m_QueuedStitcherParameters.Clear();

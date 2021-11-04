@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
             return numTiles > 0;
         }
 
-        protected void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
+        protected static void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
         {
             Shader.SetGlobalMatrix(k_ClusterDisplayParamsShaderVariableName, clusterDisplayParams);
         }
@@ -43,12 +43,12 @@ namespace Unity.ClusterDisplay.Graphics
                 height + 2 * k_ClusterRenderer.Context.OverscanInPixels);
         }
 
-        protected Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels)
+        protected static Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels)
         {
             return new Vector2(rect.width - 2 * overscanInPixels, rect.height - 2 * overscanInPixels);
         }
 
-        protected Vector4 CalculateScaleBias(Rect overscannedRect, int overscanInPixels, Vector2 debugOffset)
+        protected static Vector4 CalculateScaleBias(Rect overscannedRect, int overscanInPixels, Vector2 debugOffset)
         {
             var croppedSize = new Vector2(overscannedRect.width - 2 * overscanInPixels, overscannedRect.height - 2 * overscanInPixels);
             var overscannedSize = new Vector2(overscannedRect.width, overscannedRect.height);

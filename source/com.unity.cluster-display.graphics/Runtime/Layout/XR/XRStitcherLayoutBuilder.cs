@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
             var parms = m_QueuedStitcherParameters.Dequeue();
 
             var croppedSize = CalculateCroppedSize(m_OverscannedRect, k_ClusterRenderer.Context.OverscanInPixels);
-            var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.Context.GridSize, parms.tileIndex);
+            var croppedViewport = GraphicsUtil.TileIndexToViewportSection(k_ClusterRenderer.Context.GridSize, parms.TileIndex);
 
             croppedViewport.x *= croppedSize.x;
             croppedViewport.y *= croppedSize.y;
@@ -56,14 +56,14 @@ namespace Unity.ClusterDisplay.Graphics
                 cmd.ClearRenderTarget(true, true, k_ClusterRenderer.Context.Debug ? k_ClusterRenderer.Context.BezelColor : Color.black);
             }
 
-            var sourceRT = parms.sourceRT as RTHandle;
+            var sourceRT = parms.SourceRT as RTHandle;
             if (sourceRT == null)
             {
                 Debug.LogError($"Invalid {nameof(RTHandle)}");
                 return;
             }
 
-            HDUtils.BlitQuad(cmd, sourceRT, parms.scaleBiasTex, parms.scaleBiasRT, 0, true);
+            HDUtils.BlitQuad(cmd, sourceRT, parms.ScaleBiasTex, parms.ScaleBiasRT, 0, true);
         }
 
         public bool BuildLayout(XRLayout layout)

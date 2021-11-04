@@ -153,14 +153,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        /*
-        /// <summary>
-        /// When the level is loaded, automatically find all CameraContextTargets and register them.
-        /// </summary>
-        /// <param name="level"></param>
-        void OnLevelWasLoaded(int level) => PollCameraTargets();
-        */
-
         void OnCameraEnabled(CameraContextTarget cameraContextTarget)
         {
             cameraContextTarget.TargetCamera.enabled = true;

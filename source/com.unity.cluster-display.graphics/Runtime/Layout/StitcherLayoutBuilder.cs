@@ -1,7 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -9,11 +7,10 @@ namespace Unity.ClusterDisplay.Graphics
     {
         protected struct StitcherParameters
         {
-            public int tileIndex;
-            public object sourceRT;
-            public Vector4 scaleBiasTex;
-            public Vector4 scaleBiasRT;
-            public Rect percentageViewportSubsection;
+            public int TileIndex;
+            public object SourceRT;
+            public Vector4 ScaleBiasTex;
+            public Vector4 ScaleBiasRT;
         }
 
         protected Queue<StitcherParameters> m_QueuedStitcherParameters = new Queue<StitcherParameters>();
@@ -32,11 +29,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
             {
-                tileIndex = tileIndex,
-                scaleBiasTex = scaleBiasTex,
-                scaleBiasRT = scaleBiasRT,
-                percentageViewportSubsection = percentageViewportSubsection,
-                sourceRT = targetRT
+                TileIndex = tileIndex,
+                ScaleBiasTex = scaleBiasTex,
+                ScaleBiasRT = scaleBiasRT,
+                SourceRT = targetRT
             });
         }
 
