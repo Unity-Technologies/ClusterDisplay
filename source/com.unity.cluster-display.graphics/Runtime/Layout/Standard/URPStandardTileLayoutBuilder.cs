@@ -3,10 +3,11 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
+{
+    class UrpStandardTileLayoutBuilder : StandardTileLayoutBuilder
     {
-    public class URPStandardTileLayoutBuilder : StandardTileLayoutBuilder
-    {
-        public URPStandardTileLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public UrpStandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
+            : base(clusterRenderer) { }
     }
 }
 #endif

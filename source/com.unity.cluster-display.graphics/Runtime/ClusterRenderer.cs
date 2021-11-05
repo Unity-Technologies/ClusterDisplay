@@ -327,7 +327,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
                     newLayoutBuilder = new HdrpStandardTileLayoutBuilder(this);
 #else
-                    newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
+                    newLayoutBuilder = new UrpStandardTileLayoutBuilder(this);
 #endif
                     m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
@@ -336,7 +336,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
                     newLayoutBuilder = new HdrpStandardStitcherLayoutBuilder(this);
 #else
-                    newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
+                    newLayoutBuilder = new UrpStandardStitcherLayoutBuilder(this);
 #endif
                     m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;

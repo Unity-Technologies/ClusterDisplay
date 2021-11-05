@@ -6,11 +6,9 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class URPStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
+    class UrpStandardStitcherLayoutBuilder : StandardStitcherLayoutBuilder
     {
-        static MaterialPropertyBlock s_PropertyBlock = new MaterialPropertyBlock();
-
-        public URPStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
+        public UrpStandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer) : base(clusterRenderer) {}
     }
 }
 #endif
