@@ -1,6 +1,9 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.Rendering;
+#if CLUSTER_DISPLAY_HDRP
+using UnityEngine.Rendering.HighDefinition;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -22,6 +25,13 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         Vector4 m_SerializedProjectionMatrixC4 = Vector4.zero;
 
+        [HideInInspector]
+        [SerializeField]
+        bool m_PreviousAsymmetricProjectionSetting;
+        [HideInInspector]
+        [SerializeField]
+        bool m_PreviousCustomFrameSettingsToggled;
+        
         /// <summary>
         /// Current rendering camera.
         /// </summary>
@@ -107,7 +117,36 @@ namespace Unity.ClusterDisplay.Graphics
             onCameraChange -= cameraEventReceiver.OnCameraContextChange;
         }
 
-        protected virtual void OnPollFrameSettings(Camera camera) { }
+        void OnPollFrameSettings(Camera camera)
+        {
+#if CLUSTER_DISPLAY_HDRP
+            
+            if (camera.TryGetComponent<HDAdditionalCameraData>(out var additionalCameraData))
+            {
+                if (TryGetPreviousCameraContext(out _))
+                {
+                    additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
+                    additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
+                    additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
+                }
+
+                if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
+                {
+                    m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
+                    m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
+
+                    additionalCameraData.customRenderingSettings = true;
+                    additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
+                    additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
+                    additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
+                }
+            }
+            else
+            {
+                Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
+            }
+#endif
+        }
 
         public void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) { }
         public void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) { }

@@ -17,11 +17,6 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
     }
 
-    interface IClusterRendererModule
-    {
-        void OnSetCustomLayout(LayoutBuilder layoutBuilder);
-    }
-
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -72,21 +67,10 @@ namespace Unity.ClusterDisplay.Graphics
         [HideInInspector]
         [SerializeField]
         ClusterRenderContext m_Context = new ClusterRenderContext();
-#if CLUSTER_DISPLAY_HDRP
-        [HideInInspector]
-        [SerializeField]
-        ClusterCameraController m_ClusterCameraController = new HdrpClusterCameraController();
-        [HideInInspector]
-        [SerializeField]
-        IClusterRendererModule m_ClusterRendererModule = new HdrpClusterRendererModule();
-#else
+        
         [HideInInspector]
         [SerializeField] 
-        ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
-        [HideInInspector]
-        [SerializeField] 
-        IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
-#endif
+        ClusterCameraController m_ClusterCameraController = new ClusterCameraController();
 
         public bool IsDebug
         {
@@ -151,22 +135,11 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        void RegisterModule(IClusterRendererModule module)
-        {
-            m_OnSetCustomLayout += module.OnSetCustomLayout;
-        }
-
-        void UnRegisterModule(IClusterRendererModule module)
-        {
-            m_OnSetCustomLayout -= module.OnSetCustomLayout;
-        }
-
         void OnEnable()
         {
             m_LayoutBuilder = null;
 
             RegisterRendererEvents(m_ClusterCameraController);
-            RegisterModule(m_ClusterRendererModule);
             m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
@@ -182,7 +155,6 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDisable()
         {
             UnRegisterLateUpdateReciever(m_ClusterCameraController);
-            UnRegisterModule(m_ClusterRendererModule);
             m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
