@@ -2,43 +2,52 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    // TODO naming way too vague
+    // TODO Is that component too shallow? Should we promote this to the CLusterRenderer?
     [RequireComponent(typeof(ClusterRenderer))]
     class ClusterRendererCommandLineInitializer : MonoBehaviour
     {
         static class CommandLineArgs
         {
-            internal static readonly string k_Debug = "--debug"; // very common name, collision risk
-            internal static readonly string k_GridSize = "--gridsize";
-            internal static readonly string k_Overscan = "--overscan";
-            internal static readonly string k_Bezel = "--bezel";
-            internal static readonly string k_PhysicalScreenSize = "--physicalscreensize";
+            public const string k_Debug = "--debug"; // very common name, collision risk
+            public const string k_GridSize = "--gridsize";
+            public const string k_Overscan = "--overscan";
+            public const string k_Bezel = "--bezel";
+            public const string k_PhysicalScreenSize = "--physicalscreensize";
         }
 
-        ClusterRenderer m_ClusterRenderer;
-        
         public void OnEnable()
         {
-            m_ClusterRenderer = GetComponent<ClusterRenderer>();
-                
+            var clusterRenderer = GetComponent<ClusterRenderer>();
+
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
-                m_ClusterRenderer.Debug = true;
+            {
+                ((IClusterRenderer)clusterRenderer).Context.Debug = true;
+            }
 
-            Vector2Int gridSize;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out gridSize))
-                m_ClusterRenderer.Settings.GridSize = gridSize;
-           
-            Vector2 bezel;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out bezel))
-                m_ClusterRenderer.Settings.Bezel = bezel;
-            
-            Vector2 physicalScreenSize;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out physicalScreenSize))
-                m_ClusterRenderer.Settings.PhysicalScreenSize = physicalScreenSize;
+            ParseSettings(clusterRenderer.Settings);
+        }
 
-            int overscanInPixels;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out overscanInPixels))
-                m_ClusterRenderer.Settings.OverscanInPixels = overscanInPixels;
+        static void ParseSettings(ClusterRendererSettings settings)
+        {
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out Vector2Int gridSize))
+            {
+                settings.GridSize = gridSize;
+            }
+
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out Vector2 bezel))
+            {
+                settings.Bezel = bezel;
+            }
+
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out Vector2 physicalScreenSize))
+            {
+                settings.PhysicalScreenSize = physicalScreenSize;
+            }
+
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out int overscanInPixels))
+            {
+                settings.OverScanInPixels = overscanInPixels;
+            }
         }
     }
 }

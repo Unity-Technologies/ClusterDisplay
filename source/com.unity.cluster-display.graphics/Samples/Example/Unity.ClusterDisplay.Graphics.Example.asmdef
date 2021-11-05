@@ -2,7 +2,8 @@
     "name": "Unity.ClusterDisplay.Graphics.Example",
     "references": [
         "Unity.ClusterDisplay.Graphics",
-        "Unity.ClusterDisplay.Runtime"
+        "Unity.ClusterDisplay.Runtime",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor",

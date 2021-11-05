@@ -14,7 +14,6 @@
     "name": "Unity"
   },
   "dependencies": {
-    "com.unity.render-pipelines.high-definition": "7.0.1",
     "com.unity.cluster-display": "0.0.3-preview"
   }
 }

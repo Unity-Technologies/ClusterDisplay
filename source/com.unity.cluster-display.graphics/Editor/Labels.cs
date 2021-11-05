@@ -11,48 +11,51 @@ namespace Unity.ClusterDisplay.Graphics
             GridSize,
             PhysicalScreenSize,
             Bezel,
+            BezelColor,
             Overscan,
             Debug,
             TileIndexOverride,
             Keyword,
-            Stitcher,
+            LayoutMode,
             DebugViewportSubsection,
-            ScaleBiasOffset,
+            ScaleBiasOffset
         }
-        
+
         static string GetName(Field field)
         {
             switch (field)
             {
-                case Field.GridSize:                return "Grid Size";
-                case Field.PhysicalScreenSize:      return "Physical Screen Size";
-                case Field.Bezel:                   return "Bezel";
-                case Field.Overscan:                return "Overscan in Pixels";
-                case Field.Debug:                   return "Debug";
-                case Field.TileIndexOverride:       return "Tile Index Override";
-                case Field.Keyword:                 return "Keyword";
-                case Field.Stitcher:                return "Stitcher";
+                case Field.GridSize: return "Grid Size";
+                case Field.PhysicalScreenSize: return "Physical Screen Size";
+                case Field.Bezel: return "Bezel";
+                case Field.BezelColor: return "Bezel Color";
+                case Field.Overscan: return "Overscan in Pixels";
+                case Field.Debug: return "Debug";
+                case Field.TileIndexOverride: return "Tile Index Override";
+                case Field.Keyword: return "Keyword";
+                case Field.LayoutMode: return "Layout Mode";
                 case Field.DebugViewportSubsection: return "Debug Viewport Subsection";
-                case Field.ScaleBiasOffset:         return "Scale Bias Offset";
+                case Field.ScaleBiasOffset: return "Scale Bias Offset";
             }
 
             return string.Empty;
         }
-        
+
         static string GetTooltip(Field field)
         {
             switch (field)
             {
-                case Field.GridSize:                return "Number of displays per row and column.";
-                case Field.PhysicalScreenSize:      return "Physical size of a display (not to be confused with screen size in pixels).";
-                case Field.Bezel:                   return "Physical size of display bezels.";
-                case Field.Overscan:                return "Amount of overscan in pixels.";
-                case Field.Debug:                   return "Activate/Deactivate debug mode.";
-                case Field.TileIndexOverride:       return "Tile index to be used in debug mode, overrides network tile index.";
-                case Field.Keyword:                 return "Activate/Deactivate cluster display shading features.";
-                case Field.Stitcher:                return "Activate/Deactivate stitcher.";
+                case Field.GridSize: return "Number of displays per row and column.";
+                case Field.PhysicalScreenSize: return "Physical size of a display (not to be confused with screen size in pixels).";
+                case Field.Bezel: return "Physical size of display bezels.";
+                case Field.BezelColor: return "Color of bezels in stitcher layout mode.";
+                case Field.Overscan: return "Amount of overscan in pixels.";
+                case Field.Debug: return "Activate/Deactivate debug mode.";
+                case Field.TileIndexOverride: return "Tile index to be used in debug mode, overrides network tile index.";
+                case Field.Keyword: return "Activate/Deactivate cluster display shading features.";
+                case Field.LayoutMode: return "Select various layout modes for visualization.";
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
-                case Field.ScaleBiasOffset:         return "Compositing offset allowing for overscanned pixels visualization.";
+                case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";
             }
 
             return string.Empty;

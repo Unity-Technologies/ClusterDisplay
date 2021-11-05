@@ -11,13 +11,15 @@ namespace Unity.ClusterDisplay.Graphics
             for (var i = 0; i != args.Length; ++i)
             {
                 if (args[i] == arg)
+                {
                     return true;
+                }
             }
 
             return false;
         }
 
-        public static bool TryReadCommandLineArg(string arg, out string output)
+        static bool TryReadCommandLineArg(string arg, out string output)
         {
             var args = Environment.GetCommandLineArgs();
             for (var i = 0; i != args.Length; ++i)
@@ -29,15 +31,14 @@ namespace Unity.ClusterDisplay.Graphics
                 }
             }
 
-            output = String.Empty;
+            output = string.Empty;
             return false;
         }
 
         public static bool ParseCommandLineArgs(string name, out Vector2Int output)
         {
             output = Vector2Int.zero;
-            var str = String.Empty;
-            if (TryReadCommandLineArg(name, out str))
+            if (TryReadCommandLineArg(name, out var str))
             {
                 var dim = str.Split('x');
                 if (dim.Length != 2)
@@ -65,12 +66,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             return false;
         }
-        
+
         public static bool ParseCommandLineArgs(string name, out Vector2 output)
         {
             output = Vector2.zero;
-            var str = String.Empty;
-            if (TryReadCommandLineArg(name, out str))
+            if (TryReadCommandLineArg(name, out var str))
             {
                 var dim = str.Split('x');
                 if (dim.Length != 2)
@@ -102,12 +102,14 @@ namespace Unity.ClusterDisplay.Graphics
         public static bool ParseCommandLineArgs(string name, out int output)
         {
             output = 0;
-            var str = String.Empty;
-            if (TryReadCommandLineArg(name, out str))
+            if (TryReadCommandLineArg(name, out var str))
             {
                 if (int.TryParse(str, out output))
+                {
                     return true;
+                }
             }
+
             return false;
         }
     }
