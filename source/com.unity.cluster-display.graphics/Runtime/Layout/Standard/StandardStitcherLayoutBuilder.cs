@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <summary>
     /// Disables the camera and loops through each tile calling Camera.Render(), then stitches it together.
     /// </summary>
-    class StandardStitcherLayoutBuilder : StitcherLayoutBuilder, ILayoutBuilder
+    class StandardStitcherLayoutBuilder : StitcherLayoutBuilder
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 

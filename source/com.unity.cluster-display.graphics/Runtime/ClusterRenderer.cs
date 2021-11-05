@@ -40,34 +40,8 @@ namespace Unity.ClusterDisplay.Graphics
         public enum LayoutMode
         {
             None,
-
             StandardTile,
-            StandardStitcher,
-
-#if CLUSTER_DISPLAY_XR
-            XRTile,
-            XRStitcher
-#endif
-        }
-
-        public static bool LayoutModeIsXR(LayoutMode layoutMode)
-        {
-            switch (layoutMode)
-            {
-                case LayoutMode.None:
-                case LayoutMode.StandardTile:
-                case LayoutMode.StandardStitcher:
-                    return false;
-
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-                case LayoutMode.XRStitcher:
-                    return true;
-#endif
-
-                default:
-                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
-            }
+            StandardStitcher
         }
 
         public static bool LayoutModeIsStitcher(LayoutMode layoutMode)
@@ -76,16 +50,9 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 case LayoutMode.None:
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-#endif
                     return false;
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRStitcher:
-#endif
                     return true;
-
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
             }
@@ -340,19 +307,6 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
                     m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
-
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-                    newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new XRPresenter();
-                    break;
-
-                case LayoutMode.XRStitcher:
-                    newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new XRPresenter();
-                    break;
-#endif
-
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
             }

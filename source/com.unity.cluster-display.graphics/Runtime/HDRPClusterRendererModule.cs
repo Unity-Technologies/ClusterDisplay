@@ -19,16 +19,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void OnSetCustomLayout(LayoutBuilder layoutBuilder)
         {
-#if CLUSTER_DISPLAY_XR
-            if (ClusterRenderer.LayoutModeIsXR(layoutBuilder.LayoutMode))
-            {
-                XRSystem.SetCustomLayout((layoutBuilder as IXRLayoutBuilder).BuildLayout);
-            }
-            else
-            {
-                XRSystem.SetCustomLayout(null);
-            }
-#endif
         }
     }
 }

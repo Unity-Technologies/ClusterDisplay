@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <summary>
     /// Disables the camera and calls Camera.Render() for a single tile.
     /// </summary>
-    class StandardTileLayoutBuilder : TileLayoutBuilder, ILayoutBuilder
+    class StandardTileLayoutBuilder : TileLayoutBuilder
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
