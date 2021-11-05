@@ -60,9 +60,9 @@ namespace Unity.ClusterDisplay.Graphics
         event Action<ScriptableRenderContext, Camera[]> onEndFrameRender;
 
         // IClusterRendererModule delgate instances.
-        event Action<LayoutBuilder> m_OnSetCustomLayout;
+        // event Action<LayoutBuilder> m_OnSetCustomLayout;
 
-        LayoutBuilder m_LayoutBuilder;
+        ILayoutBuilder m_LayoutBuilder;
 
         [HideInInspector]
         [SerializeField]
@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_LayoutBuilder.LateUpdate();
         }
 
-        void SetLayoutBuilder(LayoutBuilder builder)
+        void SetLayoutBuilder(ILayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
             {
@@ -244,10 +244,10 @@ namespace Unity.ClusterDisplay.Graphics
                 RegisterRendererEvents(m_LayoutBuilder);
             }
 
-            if (m_OnSetCustomLayout != null)
-            {
-                m_OnSetCustomLayout(m_LayoutBuilder);
-            }
+            // if (m_OnSetCustomLayout != null)
+            // {
+            //     m_OnSetCustomLayout(m_LayoutBuilder);
+            // }
         }
 
         public void OnChangeLayoutMode(LayoutMode newLayoutMode)
@@ -258,16 +258,16 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            LayoutBuilder newLayoutBuilder; 
+            ILayoutBuilder newLayoutBuilder; 
             m_ClusterCameraController.Presenter = new Presenter();
 
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
-                    newLayoutBuilder = new StandardTileLayoutBuilder(this);
+                    newLayoutBuilder = new TileLayoutBuilder(this);
                     break;
                 case LayoutMode.StandardStitcher:
-                    newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
+                    newLayoutBuilder = new StitcherLayoutBuilder(this);
                     break;
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
