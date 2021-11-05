@@ -1,9 +1,27 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Assertions;
+using UnityEngine.Rendering;
+#if UNITY_EDITOR
+using UnityEditor;
+
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    interface IClusterRendererEventReceiver
+    {
+        void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
+        void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
+        void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
+        void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
+    }
+
+    interface IClusterRendererModule
+    {
+        void OnSetCustomLayout(LayoutBuilder layoutBuilder);
+    }
+
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -11,57 +29,132 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// We typically expect at most one instance active at a given time.
     /// </remarks>
-    [ExecuteInEditMode]
+    [ExecuteAlways]
     [DisallowMultipleComponent]
-    public class ClusterRenderer : MonoBehaviour
+    [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
+    public class ClusterRenderer :
+        MonoBehaviour,
+        IClusterRenderer,
+        ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
-        ILayoutBuilder m_TileLayoutBuilder = new TileLayoutBuilder();
-        ILayoutBuilder m_StitcherLayoutBuilder = new StitcherLayoutBuilder();
-        ILayoutBuilder m_LayoutBuilder = null;
-        
+        public enum LayoutMode
+        {
+            None,
+
+            StandardTile,
+            StandardStitcher,
+
+#if CLUSTER_DISPLAY_XR
+            XRTile,
+            XRStitcher
+#endif
+        }
+
+        public static bool LayoutModeIsXR(LayoutMode layoutMode)
+        {
+            switch (layoutMode)
+            {
+                case LayoutMode.None:
+                case LayoutMode.StandardTile:
+                case LayoutMode.StandardStitcher:
+                    return false;
+
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRTile:
+                case LayoutMode.XRStitcher:
+                    return true;
+#endif
+
+                default:
+                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
+            }
+        }
+
+        public static bool LayoutModeIsStitcher(LayoutMode layoutMode)
+        {
+            switch (layoutMode)
+            {
+                case LayoutMode.None:
+                case LayoutMode.StandardTile:
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRTile:
+#endif
+                    return false;
+                case LayoutMode.StandardStitcher:
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRStitcher:
+#endif
+                    return true;
+
+                default:
+                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
+            }
+        }
+
+        // IClusterRendererEventReceiver delegates instances.
+        event Action<ScriptableRenderContext, Camera> onBeginCameraRender;
+        event Action<ScriptableRenderContext, Camera> onEndCameraRender;
+        event Action<ScriptableRenderContext, Camera[]> onBeginFrameRender;
+        event Action<ScriptableRenderContext, Camera[]> onEndFrameRender;
+
+        // IClusterRendererModule delgate instances.
+        event Action<LayoutBuilder> m_OnSetCustomLayout;
+
+        LayoutBuilder m_LayoutBuilder;
+
+        [HideInInspector]
         [SerializeField]
-        ClusterRendererSettings m_Settings;
+        ClusterRenderContext m_Context = new ClusterRenderContext();
+#if CLUSTER_DISPLAY_HDRP
+        [HideInInspector]
+        [SerializeField]
+        ClusterCameraController m_ClusterCameraController = new HdrpClusterCameraController();
+        [HideInInspector]
+        [SerializeField]
+        IClusterRendererModule m_ClusterRendererModule = new HdrpClusterRendererModule();
+#else
+        [HideInInspector]
+        [SerializeField] 
+        ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
+        [HideInInspector]
+        [SerializeField] 
+        IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
+#endif
+
+        public bool IsDebug
+        {
+            get => m_Context.Debug;
+            set => m_Context.Debug = value;
+        }
+
+        // TODO sketchy, limits client changes for the time being
+        internal ClusterRenderContext context => m_Context;
+        ClusterRenderContext IClusterRenderer.Context => m_Context;
+
+        internal ClusterCameraController cameraController => m_ClusterCameraController;
+        ClusterCameraController IClusterRenderer.CameraController => m_ClusterCameraController;
+
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
-        public ClusterRendererSettings Settings
-        {
-            get => m_Settings;
-            set => m_Settings = value;
-        }
-        
-        bool m_Debug = false;
-        /// <summary>
-        /// Enable Debug mode.
-        /// </summary>
-        public bool Debug
-        {
-            set { m_Debug = value; }
-            get { return m_Debug; }
-        }
+        public ClusterRendererSettings Settings => m_Context.Settings;
 
-        ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
         /// <summary>
         /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
         /// </summary>
-        public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
-       
+        public ClusterRendererDebugSettings debugSettings => m_Context.DebugSettings;
+
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
+
         /// <summary>
         /// Camera projection before its slicing to an asymmetric projection.
         /// </summary>
-        public Matrix4x4 OriginalProjectionMatrix
-        {
-            get { return m_OriginalProjectionMatrix; }
-        }
-        
-        ClusterRenderContext m_Context = new ClusterRenderContext();
-        bool m_UsesStitcher;
-        
+        public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
+
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        static bool s_EnableKeyword = false;
-        
+
 #if UNITY_EDITOR
+
         // we need a clip-to-world space conversion for gizmo
         Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
         ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
@@ -69,105 +162,224 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDrawGizmos()
         {
             if (enabled)
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
-        }
-#endif
-        
-        /// <summary>
-        /// Controls activation of Cluster Display specific shader features.
-        /// </summary>
-        public static bool EnableKeyword
-        {
-            get => s_EnableKeyword;
-            set
             {
-                if (value == s_EnableKeyword)
-                    return;
-                s_EnableKeyword = value;
-                if (s_EnableKeyword)
-                    Shader.EnableKeyword(k_ShaderKeyword);
-                else
-                    Shader.DisableKeyword(k_ShaderKeyword);
+                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
             }
         }
+#endif
 
-        void Awake()
+        void RegisterRendererEvents(IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
-            m_DebugSettings.Reset();
+            onBeginFrameRender += clusterRendererEventReceiver.OnBeginFrameRender;
+            onBeginCameraRender += clusterRendererEventReceiver.OnBeginCameraRender;
+            onEndCameraRender += clusterRendererEventReceiver.OnEndCameraRender;
+            onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
+        }
+
+        void UnRegisterLateUpdateReciever(IClusterRendererEventReceiver clusterRendererEventReceiver)
+        {
+            onBeginFrameRender -= clusterRendererEventReceiver.OnBeginFrameRender;
+            onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
+            onEndCameraRender -= clusterRendererEventReceiver.OnEndCameraRender;
+            onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
+        }
+
+        void RegisterModule(IClusterRendererModule module)
+        {
+            m_OnSetCustomLayout += module.OnSetCustomLayout;
+        }
+
+        void UnRegisterModule(IClusterRendererModule module)
+        {
+            m_OnSetCustomLayout -= module.OnSetCustomLayout;
         }
 
         void OnEnable()
         {
-            if (m_Settings == null)
-                m_Settings = new ClusterRendererSettings();
-            m_Context.Settings = m_Settings;
-            
-            m_Context.DebugSettings = m_DebugSettings;
-            
-            m_UsesStitcher = false;
-            EnableKeyword = true;
-            
-            SetLayoutBuilder(m_TileLayoutBuilder);
-            XRSystem.SetCustomLayout(BuildLayout);
+            m_LayoutBuilder = null;
+
+            RegisterRendererEvents(m_ClusterCameraController);
+            RegisterModule(m_ClusterRendererModule);
+            m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
+
+            RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
+            RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
+            RenderPipelineManager.endCameraRendering += OnEndCameraRender;
+            RenderPipelineManager.endFrameRendering += OnEndFrameRender;
+
+#if UNITY_EDITOR
+            SceneView.RepaintAll();
+#endif
         }
 
         void OnDisable()
         {
-            XRSystem.SetCustomLayout(null);
-            EnableKeyword = false;
-            m_LayoutBuilder.Dispose();
-            m_LayoutBuilder = null;
+            UnRegisterLateUpdateReciever(m_ClusterCameraController);
+            UnRegisterModule(m_ClusterRendererModule);
+            m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
+
+            RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
+            RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
+            RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
+            RenderPipelineManager.endFrameRendering -= OnEndFrameRender;
         }
 
-        void Update()
+        void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
-            // Update aspect ratio
-            var camera = Camera.main;
-            if (camera != null)
-                camera.aspect = (m_Context.GridSize.x * Screen.width) / (float)(m_Context.GridSize.y * Screen.height);
-
-            m_Context.Debug = m_Debug;
-
-            EnableKeyword = m_DebugSettings.EnableKeyword;
-            
-            // switch layout builder depending on debug params
-            if (m_UsesStitcher != m_DebugSettings.EnableStitcher)
+            if (onBeginFrameRender != null)
             {
-                if (m_DebugSettings.EnableStitcher)
-                    SetLayoutBuilder(m_StitcherLayoutBuilder);
-                else 
-                    SetLayoutBuilder(m_TileLayoutBuilder);
-                m_UsesStitcher = m_DebugSettings.EnableStitcher;
+                onBeginFrameRender(context, cameras);
             }
-            
+        }
+
+        void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
+        {
+            if (!CameraContextRegistry.CanChangeContextTo(camera))
+            {
+                ToggleShaderKeywords(false);
+                return;
+            }
+
+            ToggleShaderKeywords(debugSettings.EnableKeyword);
+            onBeginCameraRender(context, camera);
+
+            Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
+
+            // Update aspect ratio
+            camera.aspect = m_Context.GridSize.x * Screen.width / (float)(m_Context.GridSize.y * Screen.height);
+
             // Reset debug viewport subsection
-            if (m_Debug && !m_DebugSettings.UseDebugViewportSubsection)
-                m_DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
+            if (m_Context.Debug && !m_Context.DebugSettings.UseDebugViewportSubsection)
+            {
+                m_Context.DebugSettings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(
                     m_Context.GridSize, m_Context.TileIndex);
+            }
         }
 
-        void SetLayoutBuilder(ILayoutBuilder builder)
+        void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
         {
-            if (m_LayoutBuilder != null)
-                m_LayoutBuilder.Dispose();
-            
-            m_LayoutBuilder = builder;
-            
-            if (m_LayoutBuilder != null)
-                m_LayoutBuilder.Initialize();
-        }
+            if (!m_ClusterCameraController.CameraIsInContext(camera))
+            {
+                return;
+            }
 
-        bool BuildLayout(XRLayout layout)
-        {
-            var camera = layout.camera;
-            if (!(camera != null && camera.cameraType == CameraType.Game && camera.TryGetCullingParameters(false, out var cullingParams)))
-                return false;
+            if (onEndCameraRender != null)
+            {
+                onEndCameraRender(context, camera);
+            }
 
 #if UNITY_EDITOR
-            // update matrix used for drawing gizmos
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
 #endif
-            return m_LayoutBuilder.BuildLayout(layout, m_Context, cullingParams);
+        }
+
+        void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
+        {
+            if (onEndFrameRender != null)
+            {
+                onEndFrameRender(context, cameras);
+            }
+        }
+
+        void LateUpdate()
+        {
+            if (m_LayoutBuilder == null)
+            {
+                return;
+            }
+
+            m_LayoutBuilder.LateUpdate();
+        }
+
+        void SetLayoutBuilder(LayoutBuilder builder)
+        {
+            if (m_LayoutBuilder != null)
+            {
+                UnRegisterLateUpdateReciever(m_LayoutBuilder);
+                m_LayoutBuilder.Dispose();
+            }
+
+            m_LayoutBuilder = builder;
+            if (m_LayoutBuilder != null)
+            {
+                RegisterRendererEvents(m_LayoutBuilder);
+            }
+
+            if (m_OnSetCustomLayout != null)
+            {
+                m_OnSetCustomLayout(m_LayoutBuilder);
+            }
+        }
+
+        public void OnChangeLayoutMode(LayoutMode newLayoutMode)
+        {
+            if (newLayoutMode == LayoutMode.None)
+            {
+                SetLayoutBuilder(null);
+                return;
+            }
+
+            LayoutBuilder newLayoutBuilder = null;
+
+            switch (newLayoutMode)
+            {
+                case LayoutMode.StandardTile:
+#if CLUSTER_DISPLAY_HDRP
+                    newLayoutBuilder = new HdrpStandardTileLayoutBuilder(this);
+#else
+                    newLayoutBuilder = new UrpStandardTileLayoutBuilder(this);
+#endif
+                    m_ClusterCameraController.Presenter = new StandardPresenter();
+                    break;
+
+                case LayoutMode.StandardStitcher:
+#if CLUSTER_DISPLAY_HDRP
+                    newLayoutBuilder = new HdrpStandardStitcherLayoutBuilder(this);
+#else
+                    newLayoutBuilder = new UrpStandardStitcherLayoutBuilder(this);
+#endif
+                    m_ClusterCameraController.Presenter = new StandardPresenter();
+                    break;
+
+#if CLUSTER_DISPLAY_XR
+                case LayoutMode.XRTile:
+                    newLayoutBuilder = new XRTileLayoutBuilder(this);
+                    m_ClusterCameraController.Presenter = new XRPresenter();
+                    break;
+
+                case LayoutMode.XRStitcher:
+                    newLayoutBuilder = new XRStitcherLayoutBuilder(this);
+                    m_ClusterCameraController.Presenter = new XRPresenter();
+                    break;
+#endif
+
+                default:
+                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
+            }
+
+            SetLayoutBuilder(newLayoutBuilder);
+        }
+
+        public static void ToggleClusterDisplayShaderKeywords(bool keywordEnabled)
+        {
+            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == keywordEnabled)
+            {
+                return;
+            }
+
+            if (keywordEnabled)
+            {
+                Shader.EnableKeyword(k_ShaderKeyword);
+            }
+            else
+            {
+                Shader.DisableKeyword(k_ShaderKeyword);
+            }
+        }
+
+        public void ToggleShaderKeywords(bool keywordEnabled)
+        {
+            ToggleClusterDisplayShaderKeywords(keywordEnabled);
         }
     }
 }

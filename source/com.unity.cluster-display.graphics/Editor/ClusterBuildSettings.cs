@@ -8,13 +8,13 @@ namespace Unity.ClusterDisplay.Graphics
     class ClusterBuildSettings
     {
         const int k_VSyncCount = 1;
-        
+
         static ClusterBuildSettings()
         {
             EditorApplication.update += Update;
         }
 
-        public static void Update()
+        static void Update()
         {
             if (QualitySettings.vSyncCount != k_VSyncCount)
             {

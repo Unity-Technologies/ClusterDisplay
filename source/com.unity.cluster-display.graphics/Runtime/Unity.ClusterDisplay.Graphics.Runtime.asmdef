@@ -1,9 +1,10 @@
 {
     "name": "Unity.ClusterDisplay.Graphics",
     "references": [
-        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.ClusterDisplay.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.ClusterDisplay.Runtime"
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor",
