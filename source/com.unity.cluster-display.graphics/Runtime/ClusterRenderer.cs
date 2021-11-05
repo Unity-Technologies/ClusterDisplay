@@ -291,20 +291,11 @@ namespace Unity.ClusterDisplay.Graphics
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HdrpStandardTileLayoutBuilder(this);
-#else
-                    newLayoutBuilder = new UrpStandardTileLayoutBuilder(this);
-#endif
+                    newLayoutBuilder = new StandardTileLayoutBuilder(this);
                     m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
-
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HdrpStandardStitcherLayoutBuilder(this);
-#else
-                    newLayoutBuilder = new UrpStandardStitcherLayoutBuilder(this);
-#endif
+                    newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
                     m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
                 default:

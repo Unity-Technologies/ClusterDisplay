@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
 
-        protected StandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
+        public StandardStitcherLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
 
         public override void Dispose()

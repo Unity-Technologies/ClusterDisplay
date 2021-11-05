@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
 
-        protected StandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
+        public StandardTileLayoutBuilder(IClusterRenderer clusterRenderer)
             : base(clusterRenderer) { }
 
         public override void Dispose()
