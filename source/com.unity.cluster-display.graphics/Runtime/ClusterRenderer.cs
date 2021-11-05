@@ -258,17 +258,16 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            LayoutBuilder newLayoutBuilder = null;
+            LayoutBuilder newLayoutBuilder; 
+            m_ClusterCameraController.Presenter = new Presenter();
 
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
                     newLayoutBuilder = new StandardTileLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
                 case LayoutMode.StandardStitcher:
                     newLayoutBuilder = new StandardStitcherLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new StandardPresenter();
                     break;
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
