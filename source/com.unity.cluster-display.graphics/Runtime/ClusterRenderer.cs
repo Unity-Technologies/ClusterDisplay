@@ -29,7 +29,6 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer :
         MonoBehaviour,
-        IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
         public enum LayoutMode
@@ -59,9 +58,6 @@ namespace Unity.ClusterDisplay.Graphics
         event Action<ScriptableRenderContext, Camera[]> onBeginFrameRender;
         event Action<ScriptableRenderContext, Camera[]> onEndFrameRender;
 
-        // IClusterRendererModule delgate instances.
-        // event Action<LayoutBuilder> m_OnSetCustomLayout;
-
         ILayoutBuilder m_LayoutBuilder;
 
         [HideInInspector]
@@ -79,12 +75,10 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // TODO sketchy, limits client changes for the time being
-        internal ClusterRenderContext context => m_Context;
-        ClusterRenderContext IClusterRenderer.Context => m_Context;
-
-        internal ClusterCameraController cameraController => m_ClusterCameraController;
-        ClusterCameraController IClusterRenderer.CameraController => m_ClusterCameraController;
-
+        internal ClusterRenderContext Context => m_Context;
+        
+        internal ClusterCameraController CameraController => m_ClusterCameraController;
+        
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
@@ -243,11 +237,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 RegisterRendererEvents(m_LayoutBuilder);
             }
-
-            // if (m_OnSetCustomLayout != null)
-            // {
-            //     m_OnSetCustomLayout(m_LayoutBuilder);
-            // }
         }
 
         public void OnChangeLayoutMode(LayoutMode newLayoutMode)

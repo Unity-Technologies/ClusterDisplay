@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
-        readonly IClusterRenderer m_ClusterRenderer;
+        readonly ClusterRenderer m_ClusterRenderer;
         RenderTexture[] m_SourceRts;
         RenderTexture m_PresentRt;
 
@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardStitcher;
 
-        public StitcherLayoutBuilder(IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
+        public StitcherLayoutBuilder(ClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
 
         public void Dispose()
         {

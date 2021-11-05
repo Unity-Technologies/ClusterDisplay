@@ -8,14 +8,14 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
-        readonly IClusterRenderer m_ClusterRenderer;
+        readonly ClusterRenderer m_ClusterRenderer;
         Rect m_OverscannedRect;
         RenderTexture m_SourceRt;
         RenderTexture m_PresentRt;
 
         public ClusterRenderer.LayoutMode LayoutMode => ClusterRenderer.LayoutMode.StandardTile;
 
-        public TileLayoutBuilder(IClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
+        public TileLayoutBuilder(ClusterRenderer clusterRenderer) => m_ClusterRenderer = clusterRenderer;
 
         public void Dispose()
         {

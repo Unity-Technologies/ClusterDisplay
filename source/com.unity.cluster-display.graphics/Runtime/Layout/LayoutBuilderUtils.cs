@@ -32,13 +32,13 @@ namespace Unity.ClusterDisplay.Graphics
             return scaleBias;
         }
         
-        public static bool ValidGridSize(this IClusterRenderer clusterRenderer, out int numTiles)
+        public static bool ValidGridSize(this ClusterRenderer clusterRenderer, out int numTiles)
         {
             numTiles = clusterRenderer.Context.GridSize.x * clusterRenderer.Context.GridSize.y;
             return numTiles > 0;
         }
 
-        public static Rect CalculateOverscannedRect(this IClusterRenderer clusterRenderer, int width, int height)
+        public static Rect CalculateOverscannedRect(this ClusterRenderer clusterRenderer, int width, int height)
         {
             return new Rect(0, 0,
                 width + 2 * clusterRenderer.Context.OverscanInPixels,
