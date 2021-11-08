@@ -159,10 +159,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
-            if (onBeginFrameRender != null)
-            {
-                onBeginFrameRender(context, cameras);
-            }
+            onBeginFrameRender?.Invoke(context, cameras);
         }
 
         void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
@@ -174,7 +171,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ToggleShaderKeywords(debugSettings.EnableKeyword);
-            onBeginCameraRender(context, camera);
+            onBeginCameraRender?.Invoke(context, camera);
 
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
@@ -196,10 +193,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            if (onEndCameraRender != null)
-            {
-                onEndCameraRender(context, camera);
-            }
+            onEndCameraRender?.Invoke(context, camera);
 
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
@@ -208,20 +202,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
-            if (onEndFrameRender != null)
-            {
-                onEndFrameRender(context, cameras);
-            }
+            onEndFrameRender?.Invoke(context, cameras);
         }
 
         void LateUpdate()
         {
-            if (m_LayoutBuilder == null)
-            {
-                return;
-            }
-
-            m_LayoutBuilder.LateUpdate();
+            m_LayoutBuilder?.LateUpdate();
         }
 
         void SetLayoutBuilder(ILayoutBuilder builder)
