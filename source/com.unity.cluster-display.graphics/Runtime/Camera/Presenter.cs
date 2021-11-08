@@ -5,10 +5,8 @@ using Object = UnityEngine.Object;
 namespace Unity.ClusterDisplay.Graphics
 {
     /// <summary>
-    /// The purpose of the presenter is to automatically setup where
-    /// renders are presented. Currently there are two presenting
-    /// modes, one for XR and another for standard which uses
-    /// and canvas UI.
+    /// The purpose of the <see cref="Presenter"/> is to automatically setup where
+    /// renders are presented.
     /// </summary>
     class Presenter : IDisposable, ICameraEventReceiver
     {
