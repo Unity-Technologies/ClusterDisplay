@@ -9,7 +9,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         struct StitcherParameters
         {
-            public int TileIndex;
             public object SourceRT;
             public Vector4 ScaleBiasTex;
             public Vector4 ScaleBiasRT;
@@ -177,7 +176,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_QueuedStitcherParameters.Enqueue(new StitcherParameters
             {
-                TileIndex = tileIndex,
                 ScaleBiasTex = scaleBiasTex,
                 ScaleBiasRT = scaleBiasRT,
                 SourceRT = targetRT
