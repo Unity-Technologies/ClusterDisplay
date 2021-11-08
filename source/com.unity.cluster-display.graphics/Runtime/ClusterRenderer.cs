@@ -17,11 +17,6 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
     }
 
-    interface IClusterRendererModule
-    {
-        void OnSetCustomLayout(LayoutBuilder layoutBuilder);
-    }
-
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -34,40 +29,13 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer :
         MonoBehaviour,
-        IClusterRenderer,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
         public enum LayoutMode
         {
             None,
-
             StandardTile,
-            StandardStitcher,
-
-#if CLUSTER_DISPLAY_XR
-            XRTile,
-            XRStitcher
-#endif
-        }
-
-        public static bool LayoutModeIsXR(LayoutMode layoutMode)
-        {
-            switch (layoutMode)
-            {
-                case LayoutMode.None:
-                case LayoutMode.StandardTile:
-                case LayoutMode.StandardStitcher:
-                    return false;
-
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-                case LayoutMode.XRStitcher:
-                    return true;
-#endif
-
-                default:
-                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
-            }
+            StandardStitcher
         }
 
         public static bool LayoutModeIsStitcher(LayoutMode layoutMode)
@@ -76,16 +44,9 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 case LayoutMode.None:
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-#endif
                     return false;
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRStitcher:
-#endif
                     return true;
-
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{layoutMode}\".");
             }
@@ -97,29 +58,15 @@ namespace Unity.ClusterDisplay.Graphics
         event Action<ScriptableRenderContext, Camera[]> onBeginFrameRender;
         event Action<ScriptableRenderContext, Camera[]> onEndFrameRender;
 
-        // IClusterRendererModule delgate instances.
-        event Action<LayoutBuilder> m_OnSetCustomLayout;
-
-        LayoutBuilder m_LayoutBuilder;
+        ILayoutBuilder m_LayoutBuilder;
 
         [HideInInspector]
         [SerializeField]
         ClusterRenderContext m_Context = new ClusterRenderContext();
-#if CLUSTER_DISPLAY_HDRP
-        [HideInInspector]
-        [SerializeField]
-        ClusterCameraController m_ClusterCameraController = new HdrpClusterCameraController();
-        [HideInInspector]
-        [SerializeField]
-        IClusterRendererModule m_ClusterRendererModule = new HdrpClusterRendererModule();
-#else
+        
         [HideInInspector]
         [SerializeField] 
-        ClusterCameraController m_ClusterCameraController = new URPClusterCameraController();
-        [HideInInspector]
-        [SerializeField] 
-        IClusterRendererModule m_ClusterRendererModule = new URPClusterRendererModule();
-#endif
+        ClusterCameraController m_ClusterCameraController = new ClusterCameraController();
 
         public bool IsDebug
         {
@@ -128,12 +75,10 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // TODO sketchy, limits client changes for the time being
-        internal ClusterRenderContext context => m_Context;
-        ClusterRenderContext IClusterRenderer.Context => m_Context;
-
-        internal ClusterCameraController cameraController => m_ClusterCameraController;
-        ClusterCameraController IClusterRenderer.CameraController => m_ClusterCameraController;
-
+        internal ClusterRenderContext Context => m_Context;
+        
+        internal ClusterCameraController CameraController => m_ClusterCameraController;
+        
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
@@ -176,7 +121,7 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        void UnRegisterLateUpdateReciever(IClusterRendererEventReceiver clusterRendererEventReceiver)
+        void UnregisterRendererEvents(IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
             onBeginFrameRender -= clusterRendererEventReceiver.OnBeginFrameRender;
             onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
@@ -184,22 +129,11 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        void RegisterModule(IClusterRendererModule module)
-        {
-            m_OnSetCustomLayout += module.OnSetCustomLayout;
-        }
-
-        void UnRegisterModule(IClusterRendererModule module)
-        {
-            m_OnSetCustomLayout -= module.OnSetCustomLayout;
-        }
-
         void OnEnable()
         {
             m_LayoutBuilder = null;
 
             RegisterRendererEvents(m_ClusterCameraController);
-            RegisterModule(m_ClusterRendererModule);
             m_Context.DebugSettings.RegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
@@ -214,8 +148,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
-            UnRegisterLateUpdateReciever(m_ClusterCameraController);
-            UnRegisterModule(m_ClusterRendererModule);
+            UnregisterRendererEvents(m_ClusterCameraController);
             m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
@@ -226,10 +159,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
-            if (onBeginFrameRender != null)
-            {
-                onBeginFrameRender(context, cameras);
-            }
+            onBeginFrameRender?.Invoke(context, cameras);
         }
 
         void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
@@ -241,7 +171,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ToggleShaderKeywords(debugSettings.EnableKeyword);
-            onBeginCameraRender(context, camera);
+            onBeginCameraRender?.Invoke(context, camera);
 
             Assert.IsTrue(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0);
 
@@ -263,10 +193,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            if (onEndCameraRender != null)
-            {
-                onEndCameraRender(context, camera);
-            }
+            onEndCameraRender?.Invoke(context, camera);
 
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (camera.projectionMatrix * camera.worldToCameraMatrix).inverse;
@@ -275,27 +202,19 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
-            if (onEndFrameRender != null)
-            {
-                onEndFrameRender(context, cameras);
-            }
+            onEndFrameRender?.Invoke(context, cameras);
         }
 
         void LateUpdate()
         {
-            if (m_LayoutBuilder == null)
-            {
-                return;
-            }
-
-            m_LayoutBuilder.LateUpdate();
+            m_LayoutBuilder?.Update();
         }
 
-        void SetLayoutBuilder(LayoutBuilder builder)
+        void SetLayoutBuilder(ILayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
             {
-                UnRegisterLateUpdateReciever(m_LayoutBuilder);
+                UnregisterRendererEvents(m_LayoutBuilder);
                 m_LayoutBuilder.Dispose();
             }
 
@@ -303,11 +222,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_LayoutBuilder != null)
             {
                 RegisterRendererEvents(m_LayoutBuilder);
-            }
-
-            if (m_OnSetCustomLayout != null)
-            {
-                m_OnSetCustomLayout(m_LayoutBuilder);
             }
         }
 
@@ -319,40 +233,17 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            LayoutBuilder newLayoutBuilder = null;
+            ILayoutBuilder newLayoutBuilder; 
+            m_ClusterCameraController.Presenter = new Presenter();
 
             switch (newLayoutMode)
             {
                 case LayoutMode.StandardTile:
-#if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HdrpStandardTileLayoutBuilder(this);
-#else
-                    newLayoutBuilder = new UrpStandardTileLayoutBuilder(this);
-#endif
-                    m_ClusterCameraController.Presenter = new StandardPresenter();
+                    newLayoutBuilder = new TileLayoutBuilder(this);
                     break;
-
                 case LayoutMode.StandardStitcher:
-#if CLUSTER_DISPLAY_HDRP
-                    newLayoutBuilder = new HdrpStandardStitcherLayoutBuilder(this);
-#else
-                    newLayoutBuilder = new UrpStandardStitcherLayoutBuilder(this);
-#endif
-                    m_ClusterCameraController.Presenter = new StandardPresenter();
+                    newLayoutBuilder = new StitcherLayoutBuilder(this);
                     break;
-
-#if CLUSTER_DISPLAY_XR
-                case LayoutMode.XRTile:
-                    newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new XRPresenter();
-                    break;
-
-                case LayoutMode.XRStitcher:
-                    newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    m_ClusterCameraController.Presenter = new XRPresenter();
-                    break;
-#endif
-
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
             }
