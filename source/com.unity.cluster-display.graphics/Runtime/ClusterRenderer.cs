@@ -121,7 +121,7 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        void UnRegisterLateUpdateReciever(IClusterRendererEventReceiver clusterRendererEventReceiver)
+        void UnregisterRendererEvents(IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
             onBeginFrameRender -= clusterRendererEventReceiver.OnBeginFrameRender;
             onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
@@ -148,7 +148,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
-            UnRegisterLateUpdateReciever(m_ClusterCameraController);
+            UnregisterRendererEvents(m_ClusterCameraController);
             m_Context.DebugSettings.UnRegisterDebugSettingsReceiver(this);
 
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
@@ -207,14 +207,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         void LateUpdate()
         {
-            m_LayoutBuilder?.LateUpdate();
+            m_LayoutBuilder?.Update();
         }
 
         void SetLayoutBuilder(ILayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
             {
-                UnRegisterLateUpdateReciever(m_LayoutBuilder);
+                UnregisterRendererEvents(m_LayoutBuilder);
                 m_LayoutBuilder.Dispose();
             }
 

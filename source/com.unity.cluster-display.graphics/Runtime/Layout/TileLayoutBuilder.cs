@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.DeallocateIfNeeded(ref m_PresentRt);
         }
         
-        public void LateUpdate()
+        public void Update()
         {
             if (!m_ClusterRenderer.CameraController.TryGetContextCamera(out var camera))
             {

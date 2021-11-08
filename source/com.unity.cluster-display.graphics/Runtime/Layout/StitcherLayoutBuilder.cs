@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Where rendering actually occurs.
         /// </summary>
-        public void LateUpdate()
+        public void Update()
         {
             if (!m_ClusterRenderer.CameraController.TryGetContextCamera(out var camera))
             {
@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay.Graphics
                 ClusterRenderer.ToggleClusterDisplayShaderKeywords(m_ClusterRenderer.Context.DebugSettings.EnableKeyword);
                 LayoutBuilderUtils.UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_ClusterRenderer.Context.GlobalScreenSize, m_ClusterRenderer.Context.GridSize));
 
-                CalculcateAndQueueStitcherParameters(tileIndex, m_SourceRts[tileIndex], overscannedRect, percentageViewportSubsection);
+                CalculateAndQueueStitcherParameters(tileIndex, m_SourceRts[tileIndex], overscannedRect, percentageViewportSubsection);
 
                 camera.targetTexture = m_SourceRts[tileIndex];
                 camera.projectionMatrix = asymmetricProjectionMatrix;
@@ -165,7 +165,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedRect.width, (int)overscannedRect.height, k_DefaultFormat);
         }
 
-        protected void CalculcateAndQueueStitcherParameters<T>(int tileIndex, T targetRT, Rect overscannedRect, Rect percentageViewportSubsection)
+        void CalculateAndQueueStitcherParameters<T>(int tileIndex, T targetRT, Rect overscannedRect, Rect percentageViewportSubsection)
         {
             var scaleBiasTex = LayoutBuilderUtils.CalculateScaleBias(overscannedRect, m_ClusterRenderer.Context.OverscanInPixels, m_ClusterRenderer.Context.DebugScaleBiasTexOffset);
             var croppedSize = LayoutBuilderUtils.CalculateCroppedSize(overscannedRect, m_ClusterRenderer.Context.OverscanInPixels);
@@ -182,7 +182,7 @@ namespace Unity.ClusterDisplay.Graphics
             });
         }
 
-        protected void CalculateStitcherLayout(
+        void CalculateStitcherLayout(
             Matrix4x4 cameraProjectionMatrix,
             int tileIndex,
             out Rect percentageViewportSubsection,

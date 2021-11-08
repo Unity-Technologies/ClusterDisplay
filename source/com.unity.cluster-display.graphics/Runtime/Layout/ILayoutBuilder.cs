@@ -7,6 +7,6 @@ namespace Unity.ClusterDisplay.Graphics
     interface ILayoutBuilder : IDisposable, IClusterRendererEventReceiver
     {
         ClusterRenderer.LayoutMode LayoutMode { get; }
-        void LateUpdate();
+        void Update();
     }
 }
