@@ -32,17 +32,29 @@ namespace Unity.ClusterDisplay.Graphics
             return scaleBias;
         }
         
-        public static bool ValidGridSize(this ClusterRenderer clusterRenderer, out int numTiles)
-        {
-            numTiles = clusterRenderer.Context.GridSize.x * clusterRenderer.Context.GridSize.y;
-            return numTiles > 0;
-        }
-
-        public static Rect CalculateOverscannedRect(this ClusterRenderer clusterRenderer, int width, int height)
+        public static Rect CalculateOverscannedRect(int width, int height, int overscanInPixels)
         {
             return new Rect(0, 0,
-                width + 2 * clusterRenderer.Context.OverscanInPixels,
-                height + 2 * clusterRenderer.Context.OverscanInPixels);
+                width + 2 * overscanInPixels,
+                height + 2 * overscanInPixels);
+        }
+        
+        public static void GetViewportAndProjection(
+            ClusterRenderContext context,
+            Matrix4x4 projectionMatrix,
+            int tileIndex,
+            out Matrix4x4 asymmetricProjectionMatrix,
+            out Rect viewportSubsection)
+        {
+            viewportSubsection = context.GetViewportSubsection(tileIndex);
+            if (context.PhysicalScreenSize != Vector2Int.zero && context.Bezel != Vector2Int.zero)
+            {
+                viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, context.PhysicalScreenSize, context.Bezel);
+            }
+
+            viewportSubsection = GraphicsUtil.ApplyOverscan(viewportSubsection, context.OverscanInPixels);
+
+            asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(projectionMatrix, viewportSubsection);
         }
     }
 }
