@@ -1,11 +1,10 @@
 ﻿#if CLUSTER_DISPLAY_URP
 using System;
-using Unity.ClusterDisplay.Graphics.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
-namespace Unity.LiveCapture.VirtualCamera.Editor
+namespace Unity.ClusterDisplay.Graphics.Editor
 {
     /// <summary>
     /// Utility to add opt-in behavior for URP render features to custom editors.

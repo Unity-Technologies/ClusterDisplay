@@ -9,14 +9,6 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    /*interface IClusterRendererEventReceiver
-    {
-        void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
-        void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
-        void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
-        void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
-    }*/
-
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -168,7 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 TryRenderLayout();
 
-                // TODO Make sur there's's no one-frame offset induced by rendering timing.
+                // TODO Make sur there's no one-frame offset induced by rendering timing.
                 TryPresentLayout();
             }
         }
@@ -185,8 +177,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_ViewProjectionInverse = (m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix).inverse;
 #endif
 
-            // TODO consider a null-object pattern for layout. It is *not* expected to be null while
-            // the cluster-renderer is enabled.
+            // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
             m_LayoutBuilder?.Render(m_Camera);
         }
 

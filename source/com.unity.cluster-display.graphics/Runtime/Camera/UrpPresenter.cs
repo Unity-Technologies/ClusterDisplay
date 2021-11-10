@@ -56,9 +56,13 @@ namespace Unity.ClusterDisplay.Graphics
         public void Initialize(GameObject gameObject)
         {
             m_Camera = ApplicationUtil.GetOrAddComponent<Camera>(gameObject);
-            // We use the camera to blit to screen.
-            m_Camera.targetTexture = null;
             m_Camera.hideFlags = HideFlags.NotEditable;
+            // We use the camera to blit to screen.
+            // Configure it to minimize wasteful rendering.
+            m_Camera.targetTexture = null;
+            m_Camera.cullingMask = 0;
+            m_Camera.clearFlags = CameraClearFlags.Nothing;
+            m_Camera.depthTextureMode = DepthTextureMode.None;
             
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }

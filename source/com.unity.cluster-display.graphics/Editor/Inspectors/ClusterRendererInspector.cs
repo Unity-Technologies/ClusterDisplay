@@ -1,5 +1,4 @@
 ﻿using System;
-using Unity.LiveCapture.VirtualCamera.Editor;
 using UnityEngine;
 using UnityEditor;
 
@@ -23,7 +22,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             using (var check = new EditorGUI.ChangeCheckScope())
             {
+#if CLUSTER_DISPLAY_URP
                 RenderFeatureEditor<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
+#endif
 
                 // TODO GUI Content
                 EditorGUILayout.PropertyField(m_CameraProp);
