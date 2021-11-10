@@ -7,10 +7,22 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
     [CustomEditor(typeof(ClusterRenderer))]
     class ClusterRendererInspector : Editor
     {
+        SerializedProperty m_CameraProp;
+
+        void OnEnable()
+        {
+            m_CameraProp = serializedObject.FindProperty("m_Camera");
+        }
+
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
+
             using (var check = new EditorGUI.ChangeCheckScope())
             {
+                // TODO GUI Content
+                EditorGUILayout.PropertyField(m_CameraProp);
+                
                 var adapter = target as ClusterRenderer;
 
                 var settings = adapter.Settings;
@@ -23,25 +35,41 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
 
                 if (adapter.Context.Debug)
                 {
-                    EditDebugSettings(adapter.debugSettings);
+                    EditDebugSettings(adapter.debugSettings, adapter.Context, adapter);
                 }
 
                 if (check.changed)
                 {
+                    serializedObject.ApplyModifiedProperties();
+                    
+                    // TODO needed?
                     EditorUtility.SetDirty(adapter);
                 }
             }
         }
 
-        static void EditDebugSettings(ClusterRendererDebugSettings settings)
+        // TODO renderer exposes both debug-settings and context, redundant arguments.
+        static void EditDebugSettings(ClusterRendererDebugSettings settings, ClusterRenderContext context, ClusterRenderer renderer)
         {
-            //settings.TileIndexOverride = EditorGUILayout.IntField("Tile Index Override", settings.TileIndexOverride);
             settings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), settings.TileIndexOverride);
-            settings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), settings.EnableKeyword);
-            settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), settings.CurrentLayoutMode);
+
+            var prevEnableKeyword = settings.EnableKeyword;
+            settings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
+            if (settings.EnableKeyword != prevEnableKeyword)
+            {
+                GraphicsUtil.SetShaderKeyword(settings.EnableKeyword);
+            }
+
+            var prevLayoutMode = settings.LayoutMode;
+            settings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), prevLayoutMode);
+            if (settings.LayoutMode != prevLayoutMode)
+            {
+                renderer.SetLayoutMode(settings.LayoutMode);
+            }
+            
             settings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), settings.UseDebugViewportSubsection);
 
-            if (ClusterRenderer.LayoutModeIsStitcher(settings.CurrentLayoutMode))
+            if (settings.LayoutMode == LayoutMode.StandardStitcher)
             {
                 settings.BezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), settings.BezelColor);
             }
@@ -62,6 +90,11 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 yMin = EditorGUILayout.Slider("yMin", yMin, 0, 1);
                 yMax = EditorGUILayout.Slider("yMax", yMax, 0, 1);
                 settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+            }
+            else
+            {
+                // Reset viewport subsection.
+                settings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(context.GridSize, context.TileIndex);
             }
 
             EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));

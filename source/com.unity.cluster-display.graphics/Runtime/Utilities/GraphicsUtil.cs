@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
+        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         const string k_BlitShaderName = "ClusterDisplay/PresentBlit";
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
@@ -44,20 +45,20 @@ namespace Unity.ClusterDisplay.Graphics
             return s_BlitMaterial;
         }
 
-        public static void Blit(CommandBuffer cmd, RenderTexture target, Vector4 texBias, Vector4 rtBias)
+        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias)
         {
             var propertyBlock = GetPropertyBlock();
-            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
+            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), source);
             propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             propertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
             cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), 0, MeshTopology.Quads, 4, 1, propertyBlock);
         }
 
-        public static void Blit(CommandBuffer cmd, RTHandle target, Vector4 texBias, Vector4 rtBias)
+        public static void Blit(CommandBuffer cmd, RTHandle source, Vector4 texBias, Vector4 rtBias)
         {
             var propertyBlock = GetPropertyBlock();
-            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), target);
+            propertyBlock.SetTexture(Shader.PropertyToID("_BlitTexture"), source);
             propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBias"), texBias);
             propertyBlock.SetVector(Shader.PropertyToID("_BlitScaleBiasRt"), rtBias);
             propertyBlock.SetFloat(Shader.PropertyToID("_BlitMipLevel"), 0);
@@ -292,6 +293,23 @@ namespace Unity.ClusterDisplay.Graphics
             frustumPlanes.bottom = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top, normalizedViewportSubsection.yMin);
             frustumPlanes.top = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top, normalizedViewportSubsection.yMax);
             return Matrix4x4.Frustum(frustumPlanes);
+        }
+        
+        public static void SetShaderKeyword(bool enabled)
+        {
+            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
+            {
+                return;
+            }
+
+            if (enabled)
+            {
+                Shader.EnableKeyword(k_ShaderKeyword);
+            }
+            else
+            {
+                Shader.DisableKeyword(k_ShaderKeyword);
+            }
         }
     }
 }

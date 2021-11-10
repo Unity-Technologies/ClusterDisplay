@@ -11,30 +11,6 @@ namespace Unity.ClusterDisplay.Graphics
     [Serializable]
     public class ClusterRendererDebugSettings
     {
-        public interface IDebugSettingsReceiver
-        {
-            void OnChangeLayoutMode(ClusterRenderer.LayoutMode newLayoutMode);
-            void ToggleShaderKeywords(bool keywordEnabled);
-        }
-
-        public event Action<ClusterRenderer.LayoutMode> onChangeLayoutMode;
-        public event Action<bool> onEnableKeywords;
-
-        public void RegisterDebugSettingsReceiver(IDebugSettingsReceiver debugSettingsReceiver)
-        {
-            onChangeLayoutMode += debugSettingsReceiver.OnChangeLayoutMode;
-            onEnableKeywords += debugSettingsReceiver.ToggleShaderKeywords;
-
-            debugSettingsReceiver.OnChangeLayoutMode(m_LayoutMode);
-            debugSettingsReceiver.ToggleShaderKeywords(m_EnableKeyword);
-        }
-
-        public void UnRegisterDebugSettingsReceiver(IDebugSettingsReceiver debugSettingsReceiver)
-        {
-            onChangeLayoutMode -= debugSettingsReceiver.OnChangeLayoutMode;
-            onEnableKeywords -= debugSettingsReceiver.ToggleShaderKeywords;
-        }
-
         [SerializeField]
         int m_TileIndexOverride;
 
@@ -48,24 +24,12 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         [SerializeField]
-        ClusterRenderer.LayoutMode m_LayoutMode;
+        LayoutMode m_LayoutMode;
 
-        public ClusterRenderer.LayoutMode CurrentLayoutMode
+        public LayoutMode LayoutMode
         {
             get => m_LayoutMode;
-            set
-            {
-                if (value == m_LayoutMode)
-                {
-                    return;
-                }
-
-                m_LayoutMode = value;
-                if (onChangeLayoutMode != null)
-                {
-                    onChangeLayoutMode(m_LayoutMode);
-                }
-            }
+            set => m_LayoutMode = value;
         }
 
         /// <summary>
@@ -79,14 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword
         {
             get => m_EnableKeyword;
-            set
-            {
-                m_EnableKeyword = value;
-                if (onEnableKeywords != null)
-                {
-                    onEnableKeywords(m_EnableKeyword);
-                }
-            }
+            set => m_EnableKeyword = value;
         }
 
         /// <summary>
@@ -140,10 +97,11 @@ namespace Unity.ClusterDisplay.Graphics
             Reset();
         }
 
+        // TODO Use static factory?
         public void Reset()
         {
             m_TileIndexOverride = 0;
-            CurrentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
+            LayoutMode = LayoutMode.StandardTile;
             m_EnableKeyword = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;
