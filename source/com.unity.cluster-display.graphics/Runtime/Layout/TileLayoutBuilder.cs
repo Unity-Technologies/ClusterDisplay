@@ -52,21 +52,16 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetCullingMatrix();
         }
 
-        public void Present()
+        public void Present(CommandBuffer commandBuffer)
         {
-            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
-
             GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
-            cmd.SetRenderTarget(m_PresentRt);
-            cmd.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
+            commandBuffer.SetRenderTarget(m_PresentRt);
+            commandBuffer.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
 
             var scaleBias = LayoutBuilderUtils.CalculateScaleBias(m_OverscannedRect, m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
 
             AllocateSourceIfNeeded();
-            GraphicsUtil.Blit(cmd, m_SourceRt, scaleBias, LayoutBuilderUtils.ScaleBiasRT);
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
+            GraphicsUtil.Blit(commandBuffer, m_SourceRt, scaleBias, LayoutBuilderUtils.ScaleBiasRT);
         }
         
         void AllocateSourceIfNeeded()

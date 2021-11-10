@@ -56,7 +56,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public void Render(Camera camera)
         {
-
             var numTiles = m_Context.GridSize.y * m_Context.GridSize.x;
             
             ClearTiles(numTiles);
@@ -91,7 +90,7 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetCullingMatrix();
         }
         
-        public void Present()
+        public void Present(CommandBuffer commandBuffer)
         {
             var numTiles = m_Context.GridSize.y * m_Context.GridSize.x;
 
@@ -102,11 +101,9 @@ namespace Unity.ClusterDisplay.Graphics
             var croppedSize = LayoutBuilderUtils.CalculateCroppedSize(overscannedRect, m_Context.OverscanInPixels);
             GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
 
-            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
-
-            cmd.SetRenderTarget(m_PresentRt);
-            cmd.SetViewport(new Rect(0f, 0f, m_PresentRt.width, m_PresentRt.height));
-            cmd.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
+            commandBuffer.SetRenderTarget(m_PresentRt);
+            commandBuffer.SetViewport(new Rect(0f, 0f, m_PresentRt.width, m_PresentRt.height));
+            commandBuffer.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
 
             for (var i = 0; i < numTiles; i++)
             {
@@ -118,16 +115,13 @@ namespace Unity.ClusterDisplay.Graphics
                 croppedViewport.width *= croppedSize.x;
                 croppedViewport.height *= croppedSize.y;
 
-                cmd.SetViewport(croppedViewport);
+                commandBuffer.SetViewport(croppedViewport);
                 var sourceRT = stitcherParameters.SourceRT as RenderTexture;
 
-                GraphicsUtil.Blit(cmd, sourceRT, stitcherParameters.ScaleBiasTex, stitcherParameters.ScaleBiasRT);
+                GraphicsUtil.Blit(commandBuffer, sourceRT, stitcherParameters.ScaleBiasTex, stitcherParameters.ScaleBiasRT);
             }
 
             m_QueuedStitcherParameters.Clear();
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
         }
 
         void AllocateSourcesIfNeeded(int numTiles, Rect overscannedRect)

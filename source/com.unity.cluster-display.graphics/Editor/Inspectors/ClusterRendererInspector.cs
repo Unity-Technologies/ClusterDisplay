@@ -1,17 +1,20 @@
 ﻿using System;
+using Unity.LiveCapture.VirtualCamera.Editor;
 using UnityEngine;
 using UnityEditor;
 
-namespace Unity.ClusterDisplay.Graphics.Inspectors
+namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(ClusterRenderer))]
-    class ClusterRendererInspector : Editor
+    class ClusterRendererInspector : UnityEditor.Editor
     {
         SerializedProperty m_CameraProp;
-
+        SerializedProperty m_EnableGUIProp;
+        
         void OnEnable()
         {
             m_CameraProp = serializedObject.FindProperty("m_Camera");
+            m_EnableGUIProp = serializedObject.FindProperty("m_EnableGUI");
         }
 
         public override void OnInspectorGUI()
@@ -20,8 +23,11 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
 
             using (var check = new EditorGUI.ChangeCheckScope())
             {
+                RenderFeatureEditor<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
+
                 // TODO GUI Content
                 EditorGUILayout.PropertyField(m_CameraProp);
+                EditorGUILayout.PropertyField(m_EnableGUIProp);
                 
                 var adapter = target as ClusterRenderer;
 

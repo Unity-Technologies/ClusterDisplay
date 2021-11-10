@@ -1,6 +1,6 @@
 ﻿using System;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -10,51 +10,51 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     class Presenter : IDisposable
     {
-        ClusterCanvas m_ClusterCanvas;
+        // TODO Storing a ref to a texture managed externally is not ideal.
+        RenderTexture m_RenderTexture;
+        
+        // TODO Temporary bookkeeping
+        int m_FrameIndex;
+        int m_CallsPerFrame;
+
+        public bool bypass;
         
         public RenderTexture PresentRT
         {
-            set
-            {
-                // TODO remove lazy initialization,
-                // manage lifecycle explicitely.
-                if (m_ClusterCanvas == null)
-                {
-                    Initialize();
-                }
-                m_ClusterCanvas.rawImageTexture = value;
-            }
+            set => m_RenderTexture = value;
         }
 
+        public void Initialize()
+        {
+            RenderPipelineManager.endFrameRendering += OnEndFrameRendering;
+        }
+        
         public void Dispose()
         {
-            if (m_ClusterCanvas != null)
-            {
-                if (Application.isPlaying)
-                {
-                    Object.Destroy(m_ClusterCanvas.gameObject);
-                }
-                else
-                {
-                    Object.DestroyImmediate(m_ClusterCanvas.gameObject);
-                }
-            }
+            RenderPipelineManager.endFrameRendering -= OnEndFrameRendering;
         }
 
-        void Initialize()
+        void OnEndFrameRendering(ScriptableRenderContext context, Camera[] cameras)
         {
-            if (!ClusterCanvas.TryGetInstance(out var clusterCanvas, false))
+            if (bypass) return;
+            
+            var frameIndex = Time.frameCount;
+            if (frameIndex != m_FrameIndex)
             {
-                m_ClusterCanvas = new GameObject("ClusterCanvas").AddComponent<ClusterCanvas>();
-            }
-            else
-            {
-                m_ClusterCanvas = clusterCanvas.GetComponent<ClusterCanvas>();
+                m_FrameIndex = frameIndex;
+                m_CallsPerFrame = 0;
             }
 
-            if (Application.isPlaying)
+            ++m_CallsPerFrame;
+
+            if (m_CallsPerFrame > 1)
             {
-                Object.DontDestroyOnLoad(m_ClusterCanvas.gameObject);
+                Debug.Log($"Present Called {m_CallsPerFrame} times during frame {m_FrameIndex}.");
+            }
+            
+            if (m_RenderTexture != null)
+            {
+                UnityEngine.Graphics.Blit(m_RenderTexture, (RenderTexture)null);
             }
         }
     }

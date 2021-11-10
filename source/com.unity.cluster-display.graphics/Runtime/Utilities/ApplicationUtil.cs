@@ -5,6 +5,18 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class ApplicationUtil
     {
+        // TODO Maybe not the right place for this.
+        public static T GetOrAddComponent<T>(GameObject gameObject) where T : Component
+        {
+            var result = gameObject.GetComponent<T>();
+            if (result != null)
+            {
+                return result;
+            }
+
+            return gameObject.AddComponent<T>();
+        }
+        
         public static bool CommandLineArgExists(string arg)
         {
             var args = Environment.GetCommandLineArgs();

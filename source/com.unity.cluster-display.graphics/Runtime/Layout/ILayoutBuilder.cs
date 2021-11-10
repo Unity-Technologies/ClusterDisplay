@@ -10,6 +10,6 @@ namespace Unity.ClusterDisplay.Graphics
         LayoutMode LayoutMode { get; }
         RenderTexture PresentRT { get; }
         void Render(Camera camera);
-        void Present();
+        void Present(CommandBuffer commandBuffer);
     }
 }
