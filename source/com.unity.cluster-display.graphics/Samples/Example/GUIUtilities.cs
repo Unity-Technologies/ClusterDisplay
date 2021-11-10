@@ -69,8 +69,8 @@ namespace Unity.ClusterDisplay.Graphics.Example
             settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
             settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.CurrentLayoutMode);
-            var layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
+            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), settings.LayoutMode);
+            var layoutModes = Enum.GetNames(typeof(LayoutMode));
             GUILayout.Label("Layout Modes");
             for (var i = 0; i < layoutModes.Length; i++)
             {
@@ -83,7 +83,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
                 if (GUILayout.Button(layoutModes[i]))
                 {
-                    settings.CurrentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+                    settings.LayoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
                 }
             }
 

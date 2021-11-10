@@ -8,23 +8,21 @@ namespace Unity.ClusterDisplay.Graphics
     /// The purpose of the <see cref="Presenter"/> is to automatically setup where
     /// renders are presented.
     /// </summary>
-    class Presenter : IDisposable, ICameraEventReceiver
+    class Presenter : IDisposable
     {
-        Camera m_Camera;
         ClusterCanvas m_ClusterCanvas;
-        RenderTexture m_PresentRT;
         
         public RenderTexture PresentRT
         {
             set
             {
+                // TODO remove lazy initialization,
+                // manage lifecycle explicitely.
                 if (m_ClusterCanvas == null)
                 {
-                    return;
+                    Initialize();
                 }
-
-                m_PresentRT = value;
-                m_ClusterCanvas.rawImageTexture = m_PresentRT;
+                m_ClusterCanvas.rawImageTexture = value;
             }
         }
 
@@ -43,25 +41,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void OnCameraContextChange(Camera previousCamera, Camera nextCamera)
-        {
-            m_Camera = nextCamera;
-            if (m_Camera != null)
-            {
-                Initialize();
-            }
-        }
-
-        public void PollCamera(Camera camera)
-        {
-            if (camera == m_Camera)
-            {
-                return;
-            }
-
-            m_Camera = camera;
-            Initialize();
-        }
         void Initialize()
         {
             if (!ClusterCanvas.TryGetInstance(out var clusterCanvas, false))
