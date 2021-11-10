@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
         
         public void Dispose()
         {
-            // We don;t destroy procedural components, we may reuse them
+            // We don't destroy procedural components, we may reuse them
             // or they'll be destroyed with the ClusterRenderer.
             m_AdditionalCameraData.customRender -= OnCustomRender;
             m_RenderTexture = null;
