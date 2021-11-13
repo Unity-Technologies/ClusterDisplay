@@ -42,6 +42,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 var renderFeatureElt = rendererFeaturesProp.GetArrayElementAtIndex(i);
                 var objRef = renderFeatureElt.objectReferenceValue;
+                // TODO Could get null ref.
                 Assert.IsTrue(objRef is ScriptableRendererFeature);
 
                 if (objRef is T)

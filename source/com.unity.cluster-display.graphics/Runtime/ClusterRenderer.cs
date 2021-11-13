@@ -178,7 +178,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
             // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
-            m_LayoutBuilder?.Render(m_Camera);
+            m_LayoutBuilder?.Render(m_Camera, Screen.width, Screen.height);
         }
 
         void TryPresentLayout()
@@ -187,7 +187,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_LayoutBuilder != null)
             {
                 var cmd = CommandBufferPool.Get(k_LayoutPresentCmdBufferName);
-                m_LayoutBuilder.Present(cmd);
+                m_LayoutBuilder.Present(cmd, Screen.width, Screen.height);
                 UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
