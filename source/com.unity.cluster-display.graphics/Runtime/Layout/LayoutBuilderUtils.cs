@@ -6,22 +6,25 @@ namespace Unity.ClusterDisplay.Graphics
     static class LayoutBuilderUtils
     {
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
-        public static Vector4 ScaleBiasRT { get; } = new Vector4(1, 1, 0, 0);
 
         public static void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
         {
             Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterDisplayParams);
         }
 
-        public static Vector2 CalculateCroppedSize(Rect rect, int overscanInPixels)
+        public static Vector2 CalculateCroppedSize(Vector2 overscannedSize, int overscanInPixels)
         {
-            return new Vector2(rect.width - 2 * overscanInPixels, rect.height - 2 * overscanInPixels);
+            return new Vector2(overscannedSize.x - 2 * overscanInPixels, overscannedSize.y - 2 * overscanInPixels);
+        }
+        
+        public static Vector2 CalculateOverscannedSize(int width, int height, int overscanInPixels)
+        {
+            return new Vector2(width + 2 * overscanInPixels, height + 2 * overscanInPixels);
         }
 
-        public static Vector4 CalculateScaleBias(Rect overscannedRect, int overscanInPixels, Vector2 debugOffset)
+        public static Vector4 CalculateScaleBias(Vector2 overscannedSize, int overscanInPixels, Vector2 debugOffset)
         {
-            var croppedSize = new Vector2(overscannedRect.width - 2 * overscanInPixels, overscannedRect.height - 2 * overscanInPixels);
-            var overscannedSize = new Vector2(overscannedRect.width, overscannedRect.height);
+            var croppedSize = new Vector2(overscannedSize.x - 2 * overscanInPixels, overscannedSize.y - 2 * overscanInPixels);
 
             var scaleBias = new Vector4(
                 croppedSize.x / overscannedSize.x, croppedSize.y / overscannedSize.y, // scale
@@ -32,13 +35,6 @@ namespace Unity.ClusterDisplay.Graphics
             return scaleBias;
         }
         
-        public static Rect CalculateOverscannedRect(int width, int height, int overscanInPixels)
-        {
-            return new Rect(0, 0,
-                width + 2 * overscanInPixels,
-                height + 2 * overscanInPixels);
-        }
-        
         public static void GetViewportAndProjection(
             ClusterRenderContext context,
             Matrix4x4 projectionMatrix,
@@ -46,7 +42,8 @@ namespace Unity.ClusterDisplay.Graphics
             out Matrix4x4 asymmetricProjectionMatrix,
             out Rect viewportSubsection)
         {
-            viewportSubsection = context.GetViewportSubsection(tileIndex);
+            viewportSubsection = GraphicsUtil.TileIndexToViewportSection(context.GridSize, tileIndex);
+            
             if (context.PhysicalScreenSize != Vector2Int.zero && context.Bezel != Vector2Int.zero)
             {
                 viewportSubsection = GraphicsUtil.ApplyBezel(viewportSubsection, context.PhysicalScreenSize, context.Bezel);
@@ -56,5 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(projectionMatrix, viewportSubsection);
         }
+        
+        public static float GetAspect(ClusterRenderContext context, int screenWidth, int screenHeight) => context.GridSize.x * screenWidth / (float)(context.GridSize.y * screenHeight);
     }
 }

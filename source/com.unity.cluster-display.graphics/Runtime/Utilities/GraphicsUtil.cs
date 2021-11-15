@@ -10,6 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         const string k_BlitShaderName = "ClusterDisplay/PresentBlit";
+        static readonly Vector4 k_ScaleBiasRT = new Vector4(1, 1, 0, 0);
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
@@ -43,6 +44,11 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             return s_BlitMaterial;
+        }
+
+        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias)
+        {
+            Blit(cmd, source, texBias, k_ScaleBiasRT);
         }
 
         public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias)
@@ -294,7 +300,7 @@ namespace Unity.ClusterDisplay.Graphics
             frustumPlanes.top = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top, normalizedViewportSubsection.yMax);
             return Matrix4x4.Frustum(frustumPlanes);
         }
-        
+
         public static void SetShaderKeyword(bool enabled)
         {
             if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
