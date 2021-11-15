@@ -92,13 +92,17 @@ namespace Unity.ClusterDisplay.Graphics
             var croppedSize = new Vector2(screenWidth, screenHeight);
             var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
             var scaleBiasTex = LayoutBuilderUtils.CalculateScaleBias(overscannedSize, m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
-  
-            var bezel = m_Context.Bezel;
-            var physicalScreenSize = m_Context.PhysicalScreenSize;
-            var scaleBiasRT = new Vector4(
-                (physicalScreenSize.x - bezel.x * 2) / physicalScreenSize.x, 
-                (physicalScreenSize.y - bezel.y * 2) / physicalScreenSize.y, 
-                bezel.x / physicalScreenSize.x, bezel.y / physicalScreenSize.y); // offset
+            var scaleBiasRT = new Vector4(1, 1, 0, 0);
+            
+            if (m_Context.PhysicalScreenSize != Vector2Int.zero && m_Context.Bezel != Vector2Int.zero)
+            {
+                var bezel = m_Context.Bezel;
+                var physicalScreenSize = m_Context.PhysicalScreenSize;
+                scaleBiasRT = new Vector4(
+                    (physicalScreenSize.x - bezel.x * 2) / physicalScreenSize.x, 
+                    (physicalScreenSize.y - bezel.y * 2) / physicalScreenSize.y, 
+                    bezel.x / physicalScreenSize.x, bezel.y / physicalScreenSize.y); // offset
+            }
             
             GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", screenWidth, screenHeight, k_DefaultFormat);
 
