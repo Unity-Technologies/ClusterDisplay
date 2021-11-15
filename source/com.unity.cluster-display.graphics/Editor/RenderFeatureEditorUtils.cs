@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     /// <summary>
     /// Utility to add opt-in behavior for URP render features to custom editors.
     /// </summary>
-    static class RenderFeatureEditor<TComponent, TRenderFeature> where TRenderFeature : ScriptableRendererFeature
+    static class RenderFeatureEditorUtils<TComponent, TRenderFeature> where TRenderFeature : ScriptableRendererFeature
     {
         static readonly string k_FormatMaskNotAddedMessage = RendererFeatureNotAddedMessage(typeof(TComponent).Name, typeof(TRenderFeature).Name);
         static readonly GUIContent k_AddFormatMaskButtonLabel = AddRenderFeatureButtonLabel(typeof(TRenderFeature).Name);

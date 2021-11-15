@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Render(Camera camera, int screenWidth, int screenHeight)
         {
             // Aspect must be updated before we pull the projection matrix.
-            camera.aspect = m_Context.GetAspect(screenWidth, screenHeight);
+            camera.aspect = LayoutBuilderUtils.GetAspect(m_Context, screenWidth, screenHeight);
 
             LayoutBuilderUtils.GetViewportAndProjection(
                 m_Context,

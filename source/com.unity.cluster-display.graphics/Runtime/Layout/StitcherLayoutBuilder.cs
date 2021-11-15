@@ -26,19 +26,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.DeallocateIfNeeded(ref m_PresentRt);
         }
 
-        void ClearTiles()
-        {
-            var cmd = CommandBufferPool.Get("Clear Sources");
-            for (var i = 0; i != m_SourceRts.Length; ++i)
-            {
-                cmd.SetRenderTarget(m_SourceRts[i]);
-                cmd.ClearRenderTarget(true, true, Color.black);
-            }
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-        }
-
         /// <summary>
         /// Where rendering actually occurs.
         /// </summary>
@@ -47,14 +34,11 @@ namespace Unity.ClusterDisplay.Graphics
             var numTiles = m_Context.GridSize.y * m_Context.GridSize.x;
 
             // Aspect must be updated before we pull the projection matrix.
-            camera.aspect = m_Context.GetAspect(screenWidth, screenHeight);
+            camera.aspect = LayoutBuilderUtils.GetAspect(m_Context, screenWidth, screenHeight);
             var cachedProjectionMatrix = camera.projectionMatrix;
 
             var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
             GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedSize.x, (int)overscannedSize.y, k_DefaultFormat);
-
-            // TODO Is it needed?
-            ClearTiles();
 
             for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {

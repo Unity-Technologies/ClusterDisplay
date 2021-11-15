@@ -132,10 +132,9 @@ namespace Unity.ClusterDisplay.Graphics
             // Sync, will change from inspector as well.
             GraphicsUtil.SetShaderKeyword(m_Context.DebugSettings.EnableKeyword);
             SetLayoutMode(m_Context.DebugSettings.LayoutMode);
-            m_Presenter.Initialize(gameObject);
+            m_Presenter.Enable(gameObject);
 
-            PlayerLoopInjector<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>.Initialize(0);
-            PlayerLoopInjector<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>.Update += InjectedUpdate;
+            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(InjectedUpdate);
 
             // TODO Needed?
 #if UNITY_EDITOR
@@ -145,13 +144,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
-            PlayerLoopInjector<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>.Update -= InjectedUpdate;
-            PlayerLoopInjector<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>.Dispose();
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(InjectedUpdate);
 
             // TODO We assume ONE ClusterRenderer. Enforce it.
             GraphicsUtil.SetShaderKeyword(false);
             SetLayoutMode(LayoutMode.None);
-            m_Presenter.Dispose();
+            m_Presenter.Disable();
         }
 
         void InjectedUpdate()

@@ -53,5 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             asymmetricProjectionMatrix = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(projectionMatrix, viewportSubsection);
         }
+        
+        public static float GetAspect(ClusterRenderContext context, int screenWidth, int screenHeight) => context.GridSize.x * screenWidth / (float)(context.GridSize.y * screenHeight);
     }
 }

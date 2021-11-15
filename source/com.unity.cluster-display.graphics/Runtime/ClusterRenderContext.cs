@@ -31,8 +31,6 @@ namespace Unity.ClusterDisplay.Graphics
         public Vector2 DebugScaleBiasTexOffset => m_Debug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero;
         public Color BezelColor => m_DebugSettings.BezelColor;
         
-        public float GetAspect(int screenWidth, int screenHeight) => GridSize.x * screenWidth / (float)(GridSize.y * screenHeight);
-
         public int TileIndex
         {
             get

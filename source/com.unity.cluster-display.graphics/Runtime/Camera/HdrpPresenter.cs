@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
         HDAdditionalCameraData m_AdditionalCameraData;
         RenderTexture m_RenderTexture;
         
-        public void Dispose()
+        public void Disable()
         {
             // We don't destroy procedural components, we may reuse them
             // or they'll be destroyed with the ClusterRenderer.
@@ -22,14 +22,14 @@ namespace Unity.ClusterDisplay.Graphics
             m_RenderTexture = null;
         }
 
-        public void Initialize(GameObject gameObject)
+        public void Enable(GameObject gameObject)
         {
             // Note: we use procedural components.
             // In edge cases, a user could have added a Camera to the GameObject, and we will modify this Camera.
             // The alternative would be to use a hidden procedural GameObject.
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
-            m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
+            m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
             
             // HDAdditionalCameraData requires a Camera so no need to add it manually.
             var camera = gameObject.GetComponent<Camera>();

@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             using (var check = new EditorGUI.ChangeCheckScope())
             {
 #if CLUSTER_DISPLAY_URP
-                RenderFeatureEditor<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
+                RenderFeatureEditorUtils<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
 
                 // TODO GUI Content

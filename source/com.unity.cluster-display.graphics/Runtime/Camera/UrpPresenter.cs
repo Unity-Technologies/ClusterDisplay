@@ -48,14 +48,14 @@ namespace Unity.ClusterDisplay.Graphics
         Camera m_Camera;
         RenderTexture m_RenderTexture;
         
-        public void Dispose()
+        public void Disable()
         {
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
         }
 
-        public void Initialize(GameObject gameObject)
+        public void Enable(GameObject gameObject)
         {
-            m_Camera = ApplicationUtil.GetOrAddComponent<Camera>(gameObject);
+            m_Camera = gameObject.GetOrAddComponent<Camera>();
             m_Camera.hideFlags = HideFlags.NotEditable;
             // We use the camera to blit to screen.
             // Configure it to minimize wasteful rendering.

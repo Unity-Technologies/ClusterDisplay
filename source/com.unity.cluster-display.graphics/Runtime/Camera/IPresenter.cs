@@ -3,9 +3,10 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    interface IPresenter : IDisposable
+    interface IPresenter
     {
-        void Initialize(GameObject gameObject);
+        void Enable(GameObject gameObject);
+        void Disable();
         void SetSource(RenderTexture texture);
     }
 }
