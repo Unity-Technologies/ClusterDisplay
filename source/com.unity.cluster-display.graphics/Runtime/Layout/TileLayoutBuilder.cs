@@ -9,7 +9,6 @@ namespace Unity.ClusterDisplay.Graphics
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
         readonly ClusterRenderContext m_Context;
-        Rect m_OverscannedRect;
         RenderTexture m_SourceRt;
         RenderTexture m_PresentRt;
 
@@ -25,22 +24,23 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.DeallocateIfNeeded(ref m_PresentRt);
         }
         
-        public void Render(Camera camera)
+        public void Render(Camera camera, int screenWidth, int screenHeight)
         {
-            m_OverscannedRect = LayoutBuilderUtils.CalculateOverscannedRect(Screen.width, Screen.height, m_Context.OverscanInPixels);
+            // Aspect must be updated before we pull the projection matrix.
+            camera.aspect = LayoutBuilderUtils.GetAspect(m_Context, screenWidth, screenHeight);
 
-            // TODO implicit tile index is confusing?
             LayoutBuilderUtils.GetViewportAndProjection(
                 m_Context,
                 camera.projectionMatrix,
-                -1,
+                m_Context.TileIndex,
                 out var asymmetricProjectionMatrix,
                 out var viewportSubsection);
 
             LayoutBuilderUtils.UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_Context.GlobalScreenSize, m_Context.GridSize));
 
-            AllocateSourceIfNeeded();
-            camera.aspect = m_Context.GridSize.x * Screen.width / (float)(m_Context.GridSize.y * Screen.height);
+            var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", (int)overscannedSize.x, (int)overscannedSize.y, k_DefaultFormat);
+
             camera.targetTexture = m_SourceRt;
             camera.projectionMatrix = asymmetricProjectionMatrix;
             camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
@@ -52,26 +52,21 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetCullingMatrix();
         }
 
-        public void Present()
+        public void Present(CommandBuffer commandBuffer, int screenWidth, int screenHeight)
         {
-            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
+            // No render happened, cannot present.
+            if (m_SourceRt == null)
+            {
+                return;
+            }
+            
+            GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", screenWidth, screenHeight, k_DefaultFormat);
+            commandBuffer.SetRenderTarget(m_PresentRt);
+            commandBuffer.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
 
-            GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
-            cmd.SetRenderTarget(m_PresentRt);
-            cmd.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
+            var scaleBias = LayoutBuilderUtils.CalculateScaleBias(new Vector2(m_SourceRt.width, m_SourceRt.height), m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
 
-            var scaleBias = LayoutBuilderUtils.CalculateScaleBias(m_OverscannedRect, m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
-
-            AllocateSourceIfNeeded();
-            GraphicsUtil.Blit(cmd, m_SourceRt, scaleBias, LayoutBuilderUtils.ScaleBiasRT);
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-        }
-        
-        void AllocateSourceIfNeeded()
-        {
-            GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", (int)m_OverscannedRect.width, (int)m_OverscannedRect.height, k_DefaultFormat);
+            GraphicsUtil.Blit(commandBuffer, m_SourceRt, scaleBias);
         }
     }
 }

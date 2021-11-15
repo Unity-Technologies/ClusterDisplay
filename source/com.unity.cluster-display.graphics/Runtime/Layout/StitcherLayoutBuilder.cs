@@ -8,20 +8,11 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class StitcherLayoutBuilder : ILayoutBuilder
     {
-        struct StitcherParameters
-        {
-            public object SourceRT;
-            public Vector4 ScaleBiasTex;
-            public Vector4 ScaleBiasRT;
-        }
-
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
         readonly ClusterRenderContext m_Context;
         RenderTexture[] m_SourceRts;
         RenderTexture m_PresentRt;
-
-        Queue<StitcherParameters> m_QueuedStitcherParameters = new Queue<StitcherParameters>();
 
         public LayoutMode LayoutMode => LayoutMode.StandardStitcher;
 
@@ -35,37 +26,21 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.DeallocateIfNeeded(ref m_PresentRt);
         }
 
-        void ClearTiles(int numTiles)
-        {
-            var cmd = CommandBufferPool.Get("ClearRT");
-            var overscannedRect = LayoutBuilderUtils.CalculateOverscannedRect(Screen.width, Screen.height, m_Context.OverscanInPixels);
-            AllocateSourcesIfNeeded(numTiles, overscannedRect);
-
-            for (var i = 0; i < numTiles; i++)
-            {
-                cmd.SetRenderTarget(m_SourceRts[i]);
-                cmd.ClearRenderTarget(true, true, Color.black);
-            }
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-        }
-
         /// <summary>
         /// Where rendering actually occurs.
         /// </summary>
-        public void Render(Camera camera)
+        public void Render(Camera camera, int screenWidth, int screenHeight)
         {
-
             var numTiles = m_Context.GridSize.y * m_Context.GridSize.x;
-            
-            ClearTiles(numTiles);
 
-            var overscannedRect = LayoutBuilderUtils.CalculateOverscannedRect(Screen.width, Screen.height, m_Context.OverscanInPixels);
+            // Aspect must be updated before we pull the projection matrix.
+            camera.aspect = LayoutBuilderUtils.GetAspect(m_Context, screenWidth, screenHeight);
             var cachedProjectionMatrix = camera.projectionMatrix;
-            AllocateSourcesIfNeeded(numTiles, overscannedRect);
 
-            for (var tileIndex = 0; tileIndex < numTiles; tileIndex++)
+            var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedSize.x, (int)overscannedSize.y, k_DefaultFormat);
+
+            for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
             {
                 LayoutBuilderUtils.GetViewportAndProjection(
                     m_Context,
@@ -74,11 +49,8 @@ namespace Unity.ClusterDisplay.Graphics
                     out var asymmetricProjectionMatrix,
                     out var viewportSubsection);
 
-                    LayoutBuilderUtils.UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_Context.GlobalScreenSize, m_Context.GridSize));
+                LayoutBuilderUtils.UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_Context.GlobalScreenSize, m_Context.GridSize));
 
-                CalculateAndQueueStitcherParameters(tileIndex, m_SourceRts[tileIndex], overscannedRect);
-
-                camera.aspect = m_Context.GridSize.x * Screen.width / (float)(m_Context.GridSize.y * Screen.height);
                 camera.targetTexture = m_SourceRts[tileIndex];
                 camera.projectionMatrix = asymmetricProjectionMatrix;
                 camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
@@ -90,66 +62,52 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetProjectionMatrix();
             camera.ResetCullingMatrix();
         }
-        
-        public void Present()
+
+        public void Present(CommandBuffer commandBuffer, int screenWidth, int screenHeight)
         {
             var numTiles = m_Context.GridSize.y * m_Context.GridSize.x;
 
-            // Should be invoked once all tiles were rendered and enqueued.
-            Assert.IsTrue(m_QueuedStitcherParameters.Count == numTiles);
-
-            var overscannedRect = LayoutBuilderUtils.CalculateOverscannedRect(Screen.width, Screen.height, m_Context.OverscanInPixels);
-            var croppedSize = LayoutBuilderUtils.CalculateCroppedSize(overscannedRect, m_Context.OverscanInPixels);
-            GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", Screen.width, Screen.height, k_DefaultFormat);
-
-            var cmd = CommandBufferPool.Get("BlitToClusteredPresent");
-
-            cmd.SetRenderTarget(m_PresentRt);
-            cmd.SetViewport(new Rect(0f, 0f, m_PresentRt.width, m_PresentRt.height));
-            cmd.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
-
-            for (var i = 0; i < numTiles; i++)
+            // No render happened, or grid size changed, cannot present.
+            if (m_SourceRts == null || m_SourceRts.Length != numTiles)
             {
-                var croppedViewport = GraphicsUtil.TileIndexToViewportSection(m_Context.GridSize, i);
-                var stitcherParameters = m_QueuedStitcherParameters.Dequeue();
+                return;
+            }
+
+            var croppedSize = new Vector2(screenWidth, screenHeight);
+            var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
+            var scaleBiasTex = LayoutBuilderUtils.CalculateScaleBias(overscannedSize, m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
+            var scaleBiasRT = new Vector4(1, 1, 0, 0);
+            
+            if (m_Context.PhysicalScreenSize != Vector2Int.zero && m_Context.Bezel != Vector2Int.zero)
+            {
+                var bezel = m_Context.Bezel;
+                var physicalScreenSize = m_Context.PhysicalScreenSize;
+                scaleBiasRT = new Vector4(
+                    (physicalScreenSize.x - bezel.x * 2) / physicalScreenSize.x, 
+                    (physicalScreenSize.y - bezel.y * 2) / physicalScreenSize.y, 
+                    bezel.x / physicalScreenSize.x, bezel.y / physicalScreenSize.y); // offset
+            }
+            
+            GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", screenWidth, screenHeight, k_DefaultFormat);
+
+            commandBuffer.SetRenderTarget(m_PresentRt);
+            // TODO Is this needed?
+            commandBuffer.SetViewport(new Rect(0f, 0f, m_PresentRt.width, m_PresentRt.height));
+            commandBuffer.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
+
+            for (var tileIndex = 0; tileIndex != numTiles; ++tileIndex)
+            {
+                var croppedViewport = GraphicsUtil.TileIndexToViewportSection(m_Context.GridSize, tileIndex);
 
                 croppedViewport.x *= croppedSize.x;
                 croppedViewport.y *= croppedSize.y;
                 croppedViewport.width *= croppedSize.x;
                 croppedViewport.height *= croppedSize.y;
 
-                cmd.SetViewport(croppedViewport);
-                var sourceRT = stitcherParameters.SourceRT as RenderTexture;
+                commandBuffer.SetViewport(croppedViewport);
 
-                GraphicsUtil.Blit(cmd, sourceRT, stitcherParameters.ScaleBiasTex, stitcherParameters.ScaleBiasRT);
+                GraphicsUtil.Blit(commandBuffer, m_SourceRts[tileIndex], scaleBiasTex, scaleBiasRT);
             }
-
-            m_QueuedStitcherParameters.Clear();
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-        }
-
-        void AllocateSourcesIfNeeded(int numTiles, Rect overscannedRect)
-        {
-            GraphicsUtil.AllocateIfNeeded(ref m_SourceRts, numTiles, "Source", (int)overscannedRect.width, (int)overscannedRect.height, k_DefaultFormat);
-        }
-
-        void CalculateAndQueueStitcherParameters<T>(int tileIndex, T targetRT, Rect overscannedRect)
-        {
-            var scaleBiasTex = LayoutBuilderUtils.CalculateScaleBias(overscannedRect, m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
-            var croppedSize = LayoutBuilderUtils.CalculateCroppedSize(overscannedRect, m_Context.OverscanInPixels);
-
-            var scaleBiasRT = new Vector4(
-                1 - m_Context.Bezel.x * 2 / croppedSize.x, 1 - m_Context.Bezel.y * 2 / croppedSize.y, // scale
-                m_Context.Bezel.x / croppedSize.x, m_Context.Bezel.y / croppedSize.y); // offset
-
-            m_QueuedStitcherParameters.Enqueue(new StitcherParameters
-            {
-                ScaleBiasTex = scaleBiasTex,
-                ScaleBiasRT = scaleBiasRT,
-                SourceRT = targetRT
-            });
         }
     }
 }

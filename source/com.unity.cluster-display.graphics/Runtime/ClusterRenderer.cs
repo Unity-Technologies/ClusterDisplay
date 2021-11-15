@@ -9,14 +9,6 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    /*interface IClusterRendererEventReceiver
-    {
-        void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
-        void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
-        void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras);
-        void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
-    }*/
-
     /// <summary>
     /// This component is responsible for managing projection, layout (tile, stitcher),
     /// and Cluster Display specific shader features such as Global Screen Space.
@@ -29,21 +21,35 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
+        /// <summary>
+        /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
+        /// </summary>
+        struct ClusterDisplayUpdate { }
+
+        const string k_LayoutPresentCmdBufferName = "Layout Present";
+
         // For the time being we ignore any logic to fetch cameras from user scenes.
         // We just serialize a reference. We'll add an alternative to the camera-context-registry later.
         [SerializeField]
         Camera m_Camera;
 
-        ILayoutBuilder m_LayoutBuilder;
+        // TODO Temporary
+        [SerializeField]
+        bool m_EnableGUI;
 
         [HideInInspector]
         [SerializeField]
         ClusterRenderContext m_Context = new ClusterRenderContext();
 
-        Presenter m_Presenter = new Presenter();
-        // TODO consider having layouts expose their target as opposed to having them update the presenter.
-        internal Presenter Presenter => m_Presenter;
-        
+        ILayoutBuilder m_LayoutBuilder;
+
+#if CLUSTER_DISPLAY_HDRP
+        IPresenter m_Presenter = new HdrpPresenter();
+#elif CLUSTER_DISPLAY_URP
+        IPresenter m_Presenter = new UrpPresenter();
+#else // TODO Add support for Legacy render pipeline.
+        IPresenter m_Presenter = new NullPresenter();
+#endif
         public bool IsDebug
         {
             get => m_Context.Debug;
@@ -52,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         // TODO sketchy, limits client changes for the time being
         internal ClusterRenderContext Context => m_Context;
-        
+
         /// <summary>
         /// User controlled settings, typically project specific.
         /// </summary>
@@ -65,6 +71,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
 
+        // TODO Is this needed? Users typically manage the projection.
         /// <summary>
         /// Camera projection before its slicing to an asymmetric projection.
         /// </summary>
@@ -86,6 +93,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnGUI()
         {
+            if (!m_EnableGUI)
+            {
+                return;
+            }
+
             if (m_LayoutBuilder != null)
             {
                 GUI.DrawTexture(new Rect(0, 0, 256, 256), m_LayoutBuilder.PresentRT);
@@ -93,34 +105,38 @@ namespace Unity.ClusterDisplay.Graphics
         }
 #endif
 
-        // TODO we'll need a method to configure additionnal camera data for HDRP
+        // TODO we'll need a method to configure additional camera data for HDRP
         void ____()
         {
             /*if (TryGetPreviousCameraContext(out _))
-{
-    additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
-    additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
-    additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
-}
+            {
+                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
+                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
+                additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
+            }
 
-if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
-{
-    m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
-    m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
+            if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
+            {
+                m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
+                m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
 
-    additionalCameraData.customRenderingSettings = true;
-    additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
-    additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
-    additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
-}*/
+                additionalCameraData.customRenderingSettings = true;
+                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
+                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
+                additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
+            }*/
         }
-        
+
         void OnEnable()
         {
             // Sync, will change from inspector as well.
             GraphicsUtil.SetShaderKeyword(m_Context.DebugSettings.EnableKeyword);
             SetLayoutMode(m_Context.DebugSettings.LayoutMode);
+            m_Presenter.Enable(gameObject);
 
+            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(InjectedUpdate);
+
+            // TODO Needed?
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
@@ -128,21 +144,23 @@ if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(
 
         void OnDisable()
         {
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(InjectedUpdate);
+
             // TODO We assume ONE ClusterRenderer. Enforce it.
             GraphicsUtil.SetShaderKeyword(false);
             SetLayoutMode(LayoutMode.None);
+            m_Presenter.Disable();
         }
 
-        void OnDestroy()
+        void InjectedUpdate()
         {
-            m_Presenter.Dispose();
-        }
+            if (m_Camera != null)
+            {
+                TryRenderLayout();
 
-        void LateUpdate()
-        {
-            TryRenderLayout();
-            // TODO not the right time to invoke this.
-            TryPresentLayout();
+                // TODO Make sur there's no one-frame offset induced by rendering timing.
+                TryPresentLayout();
+            }
         }
 
         // TODO temporary functions, while we figure the right time to invoke it.
@@ -153,15 +171,12 @@ if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(
                 return;
             }
 
-            if (m_Camera != null)
-            {
 #if UNITY_EDITOR
-                m_ViewProjectionInverse = (m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix).inverse;
+            m_ViewProjectionInverse = (m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix).inverse;
 #endif
-                // TODO consider a null-object pattern for layout. It is *not* expected to be null while
-                // the cluster-renderer is enabled.
-                m_LayoutBuilder?.Render(m_Camera);
-            }
+
+            // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
+            m_LayoutBuilder?.Render(m_Camera, Screen.width, Screen.height);
         }
 
         void TryPresentLayout()
@@ -169,12 +184,16 @@ if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(
             // TODO use null-object.
             if (m_LayoutBuilder != null)
             {
-                m_LayoutBuilder.Present();
-                m_Presenter.PresentRT = m_LayoutBuilder.PresentRT;
-            
-                // TODO is it really needed?
+                var cmd = CommandBufferPool.Get(k_LayoutPresentCmdBufferName);
+                m_LayoutBuilder.Present(cmd, Screen.width, Screen.height);
+                UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                m_Presenter.SetSource(m_LayoutBuilder.PresentRT);
+
+// TODO is it really needed?
 #if UNITY_EDITOR
-                UnityEditor.SceneView.RepaintAll();
+                SceneView.RepaintAll();
 #endif
             }
         }
@@ -190,7 +209,7 @@ if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(
             {
                 m_LayoutBuilder.Dispose();
                 m_LayoutBuilder = null;
-            } 
+            }
 
             switch (newLayoutMode)
             {

@@ -2,6 +2,7 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    // TODO would it be clearer to pass plain data structs to the layouts?
     // Gives to custom layouts a centralized place to read properties from.
     // Note that some properties are directly forwarded from settings while others are inferred.
     [System.Serializable]
@@ -29,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
         public Vector2 PhysicalScreenSize => m_Settings.PhysicalScreenSize;
         public Vector2 DebugScaleBiasTexOffset => m_Debug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero;
         public Color BezelColor => m_DebugSettings.BezelColor;
-
+        
         public int TileIndex
         {
             get
@@ -41,17 +42,6 @@ namespace Unity.ClusterDisplay.Graphics
 
                 return ClusterSync.Instance.DynamicLocalNodeId;
             }
-        }
-
-        // Can pass index otherwise the current tile index will be used.
-        public Rect GetViewportSubsection(int tileIndex = -1)
-        {
-            if (m_Debug && m_DebugSettings.UseDebugViewportSubsection)
-            {
-                return m_DebugSettings.ViewportSubsection;
-            }
-
-            return GraphicsUtil.TileIndexToViewportSection(GridSize, tileIndex == -1 ? this.TileIndex : tileIndex);
         }
 
         // We assume all cluster screens have the same resolution, otherwise we couldn't just infer global screen size.

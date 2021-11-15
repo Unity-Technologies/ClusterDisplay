@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
-namespace Unity.ClusterDisplay.Graphics
+namespace Unity.ClusterDisplay.Graphics.Editor
 {
     // we update settings from the editor because we do not want to override build settings silently.
     [InitializeOnLoad]
