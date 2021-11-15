@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 using UnityEditor;
 
@@ -7,12 +8,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     [CustomEditor(typeof(ClusterRenderer))]
     class ClusterRendererInspector : UnityEditor.Editor
     {
-        SerializedProperty m_CameraProp;
+        const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
+        const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
         SerializedProperty m_EnableGUIProp;
         
         void OnEnable()
         {
-            m_CameraProp = serializedObject.FindProperty("m_Camera");
             m_EnableGUIProp = serializedObject.FindProperty("m_EnableGUI");
         }
 
@@ -25,9 +26,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 #if CLUSTER_DISPLAY_URP
                 RenderFeatureEditorUtils<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
-
+                CheckForClusterCameraComponents();
+                
                 // TODO GUI Content
-                EditorGUILayout.PropertyField(m_CameraProp);
                 EditorGUILayout.PropertyField(m_EnableGUIProp);
                 
                 var adapter = target as ClusterRenderer;
@@ -109,6 +110,35 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             offset.x = EditorGUILayout.Slider("x", offset.x, -1, 1);
             offset.y = EditorGUILayout.Slider("y", offset.y, -1, 1);
             settings.ScaleBiasTextOffset = offset;
+        }
+
+        static void CheckForClusterCameraComponents()
+        {
+            if (!SceneUtils.FindAllObjectsInScene<ClusterCamera>().Any())
+            {
+                EditorGUILayout.HelpBox(k_NoCamerasMessage, MessageType.Warning);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button(k_AddCameraScriptText))
+                    {
+                        AddMissingClusterCameraComponents();
+                    }
+                    GUILayout.FlexibleSpace();
+                }
+            }
+        }
+
+        static void AddMissingClusterCameraComponents()
+        {
+            foreach (var camera in SceneUtils.FindAllObjectsInScene<Camera>())
+            {
+                if (camera.GetComponent<ClusterRenderer>() == null && camera.GetComponent<ClusterCamera>() == null)
+                {
+                    camera.gameObject.AddComponent<ClusterCamera>();
+                    Debug.Log($"Added {typeof(ClusterCamera)} component to {camera.name}");
+                }
+            }
         }
     }
 }
