@@ -10,12 +10,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
-        SerializedProperty m_EnableGUIProp;
-        
-        void OnEnable()
-        {
-            m_EnableGUIProp = serializedObject.FindProperty("m_EnableGUI");
-        }
 
         public override void OnInspectorGUI()
         {
@@ -27,9 +21,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
                 CheckForClusterCameraComponents();
-                
-                // TODO GUI Content
-                EditorGUILayout.PropertyField(m_EnableGUIProp);
                 
                 var adapter = target as ClusterRenderer;
 
@@ -102,7 +93,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             else
             {
                 // Reset viewport subsection.
-                settings.ViewportSubsection = GraphicsUtil.TileIndexToViewportSection(context.GridSize, context.TileIndex);
+                settings.ViewportSubsection = Viewport.TileIndexToSubSection(context.GridSize, context.TileIndex);
             }
 
             EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));

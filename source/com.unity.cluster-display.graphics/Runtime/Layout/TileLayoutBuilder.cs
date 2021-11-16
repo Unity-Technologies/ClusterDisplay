@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
@@ -10,63 +11,44 @@ namespace Unity.ClusterDisplay.Graphics
 
         readonly ClusterRenderContext m_Context;
         RenderTexture m_SourceRt;
-        RenderTexture m_PresentRt;
 
         public LayoutMode LayoutMode => LayoutMode.StandardTile;
-
-        public RenderTexture PresentRT => m_PresentRt;
-
+        
         public TileLayoutBuilder(ClusterRenderContext context) => m_Context = context;
 
         public void Dispose()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_SourceRt);
-            GraphicsUtil.DeallocateIfNeeded(ref m_PresentRt);
         }
         
-        public void Render(Camera camera, int screenWidth, int screenHeight)
+        public void Render(Camera camera, RenderContext renderContext)
         {
-            // Aspect must be updated before we pull the projection matrix.
-            camera.aspect = LayoutBuilderUtils.GetAspect(m_Context, screenWidth, screenHeight);
+            var overscannedViewportSubsection = (m_Context.Debug && m_Context.DebugSettings.UseDebugViewportSubsection) ? 
+                m_Context.DebugSettings.ViewportSubsection : 
+                renderContext.viewport.GetSubsectionWithOverscan(renderContext.currentTileIndex);
+            
+            var asymmetricProjectionMatrix = renderContext.asymmetricProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-            LayoutBuilderUtils.GetViewportAndProjection(
-                m_Context,
-                camera.projectionMatrix,
-                m_Context.TileIndex,
-                out var asymmetricProjectionMatrix,
-                out var viewportSubsection);
+            var clusterParams = renderContext.postEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+            
+            GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", 
+                renderContext.overscannedSize.x, 
+                renderContext.overscannedSize.y, k_DefaultFormat);
 
-            LayoutBuilderUtils.UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, m_Context.GlobalScreenSize, m_Context.GridSize));
-
-            var overscannedSize = LayoutBuilderUtils.CalculateOverscannedSize(screenWidth, screenHeight, m_Context.OverscanInPixels);
-            GraphicsUtil.AllocateIfNeeded(ref m_SourceRt, "Source", (int)overscannedSize.x, (int)overscannedSize.y, k_DefaultFormat);
-
-            camera.targetTexture = m_SourceRt;
-            camera.projectionMatrix = asymmetricProjectionMatrix;
-            camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
-
-            camera.Render();
-
-            camera.ResetAspect();
-            camera.ResetProjectionMatrix();
-            camera.ResetCullingMatrix();
+            LayoutBuilderUtils.Render(camera, asymmetricProjectionMatrix, clusterParams, m_SourceRt);
         }
 
-        public void Present(CommandBuffer commandBuffer, int screenWidth, int screenHeight)
+        public IEnumerable<BlitCommand> Present(RenderContext renderContext)
         {
             // No render happened, cannot present.
             if (m_SourceRt == null)
             {
-                return;
+                yield break;
             }
-            
-            GraphicsUtil.AllocateIfNeeded(ref m_PresentRt, "Present", screenWidth, screenHeight, k_DefaultFormat);
-            commandBuffer.SetRenderTarget(m_PresentRt);
-            commandBuffer.ClearRenderTarget(true, true, m_Context.Debug ? m_Context.BezelColor : Color.black);
+        
+            renderContext.blitParams.GetScaleBias(new Rect(0, 0, 1, 1), out var scaleBiasTex, out var scaleBiasRT);
 
-            var scaleBias = LayoutBuilderUtils.CalculateScaleBias(new Vector2(m_SourceRt.width, m_SourceRt.height), m_Context.OverscanInPixels, m_Context.DebugScaleBiasTexOffset);
-
-            GraphicsUtil.Blit(commandBuffer, m_SourceRt, scaleBias);
+            yield return new BlitCommand(m_SourceRt, scaleBiasTex, scaleBiasRT);
         }
     }
 }

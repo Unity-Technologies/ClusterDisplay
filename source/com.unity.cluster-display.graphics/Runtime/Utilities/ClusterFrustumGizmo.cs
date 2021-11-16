@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay.Graphics
                 var numTiles = gridSize.x * gridSize.y;
                 for (var i = 0; i != numTiles; ++i)
                 {
-                    var rect = GraphicsUtil.TileIndexToViewportSection(gridSize, i);
+                    var rect = Viewport.TileIndexToSubSection(gridSize, i);
 
                     // Convert to clip space.
                     var clipRect = Rect.MinMaxRect(

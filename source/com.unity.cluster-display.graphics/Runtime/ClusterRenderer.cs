@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
@@ -37,6 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
         ClusterRenderContext m_Context = new ClusterRenderContext();
 
         ILayoutBuilder m_LayoutBuilder;
+        Stack<BlitCommand> m_BlitCommands = new Stack<BlitCommand>();
 
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
@@ -85,19 +87,6 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
             }
         }
-
-        void OnGUI()
-        {
-            if (!m_EnableGUI)
-            {
-                return;
-            }
-
-            if (m_LayoutBuilder != null)
-            {
-                GUI.DrawTexture(new Rect(0, 0, 256, 256), m_LayoutBuilder.PresentRT);
-            }
-        }
 #endif
 
         // TODO we'll need a method to configure additional camera data for HDRP
@@ -128,6 +117,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.SetShaderKeyword(m_Context.DebugSettings.EnableKeyword);
             SetLayoutMode(m_Context.DebugSettings.LayoutMode);
             m_Presenter.Enable(gameObject);
+            m_Presenter.Present += OnPresent;
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(InjectedUpdate);
         }
@@ -139,23 +129,13 @@ namespace Unity.ClusterDisplay.Graphics
             // TODO We assume ONE ClusterRenderer. Enforce it.
             GraphicsUtil.SetShaderKeyword(false);
             SetLayoutMode(LayoutMode.None);
+            m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
 
         void InjectedUpdate()
         {
-            if (ClusterCameraManager.Instance.ActiveCamera != null)
-            {
-                TryRenderLayout();
-
-                // TODO Make sur there's no one-frame offset induced by rendering timing.
-                TryPresentLayout();
-            }
-        }
-
-        // TODO temporary functions, while we figure the right time to invoke it.
-        void TryRenderLayout()
-        {
+            // Move early return at the Update's top.
             if (!(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0))
             {
                 return;
@@ -166,26 +146,88 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 return;
             }
+
+            // TODO Could remove conditional?
+            m_Presenter.ClearColor = m_Context.Debug ? m_Context.BezelColor : Color.black;
+            
+            // Context will be removed.
+            var settings = m_Context.Settings;
+            var debugSettings = m_Context.DebugSettings;
+            var debug = m_Context.Debug;
+            
+            // Aspect must be updated before we pull the projection matrix.
+            activeCamera.aspect = LayoutBuilderUtils.GetAspect(m_Context, Screen.width, Screen.height);
+            m_OriginalProjectionMatrix = activeCamera.projectionMatrix;
+            
+            var displaySize = new Vector2Int(Screen.width, Screen.height);
+            var overscannedSize = displaySize + settings.OverScanInPixels * 2 * Vector2Int.one;
+            var currentTileIndex = (debug || !ClusterSync.Active) ? debugSettings.TileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
+            var numTiles = settings.GridSize.x * settings.GridSize.y;
+            var displayMatrixSize = new Vector2Int(settings.GridSize.x * displaySize.x, settings.GridSize.y * displaySize.y);
+            
+            // Prepare context properties.
+            var viewport = new Viewport(settings.GridSize, settings.PhysicalScreenSize, settings.Bezel, settings.OverScanInPixels);
+            var asymmetricProjection = new AsymmetricProjection(m_OriginalProjectionMatrix);
+            var blitParams = new BlitParams(displaySize, settings.OverScanInPixels, debugSettings.ScaleBiasTextOffset);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize, settings.GridSize);
+
+            var ctx = new RenderContext
+            {
+                currentTileIndex = currentTileIndex,
+                numTiles = numTiles,
+                overscannedSize = overscannedSize,
+                displayMatrixSize = displayMatrixSize,
+                viewport = viewport,
+                asymmetricProjection = asymmetricProjection,
+                blitParams = blitParams,
+                postEffectsParams = postEffectsParams
+            };
+            
+            TryRenderLayout(ctx);
+
+            // TODO Make sur there's no one-frame offset induced by rendering timing.
+            TryPresentLayout(ctx);
+            
+            
+            // TODO is it really needed?
+#if UNITY_EDITOR
+            SceneView.RepaintAll();
+#endif
+        }
+
+        // TODO temporary functions, while we figure the right time to invoke it.
+        void TryRenderLayout(RenderContext renderContext)
+        {
+            
 #if UNITY_EDITOR
             m_ViewProjectionInverse = (activeCamera.projectionMatrix * activeCamera.worldToCameraMatrix).inverse;
 #endif
 
             // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
-            m_LayoutBuilder?.Render(activeCamera, Screen.width, Screen.height);
+            m_LayoutBuilder?.Render(activeCamera, renderContext);
         }
 
-        void TryPresentLayout()
+        void TryPresentLayout(RenderContext renderContext)
         {
             // TODO use null-object.
             if (m_LayoutBuilder != null)
             {
-                var cmd = CommandBufferPool.Get(k_LayoutPresentCmdBufferName);
-                m_LayoutBuilder.Present(cmd, Screen.width, Screen.height);
-                UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
+                // TODO Check that the stack of commands has been consumed?
+                m_BlitCommands.Clear();
+                foreach (var command in m_LayoutBuilder.Present(renderContext))
+                {
+                    m_BlitCommands.Push(command);
+                }
+            }
+        }
 
-                m_Presenter.SetSource(m_LayoutBuilder.PresentRT);
-
+        void OnPresent(CommandBuffer commandBuffer)
+        {
+            while (m_BlitCommands.Count > 0)
+            {
+                var command = m_BlitCommands.Pop();
+                // We need to flip along the Y axis when blitting to the camera's backbuffer.
+                command.Execute(commandBuffer, true);
             }
         }
 
