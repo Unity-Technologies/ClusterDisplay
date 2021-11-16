@@ -9,13 +9,10 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
-        readonly ClusterRenderContext m_Context;
         RenderTexture m_SourceRt;
 
         public LayoutMode LayoutMode => LayoutMode.StandardTile;
         
-        public TileLayoutBuilder(ClusterRenderContext context) => m_Context = context;
-
         public void Dispose()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_SourceRt);
@@ -23,8 +20,8 @@ namespace Unity.ClusterDisplay.Graphics
         
         public void Render(Camera camera, RenderContext renderContext)
         {
-            var overscannedViewportSubsection = (m_Context.Debug && m_Context.DebugSettings.UseDebugViewportSubsection) ? 
-                m_Context.DebugSettings.ViewportSubsection : 
+            var overscannedViewportSubsection = renderContext.useDebugViewportSubsection ? 
+                renderContext.debugViewportSubsection : 
                 renderContext.viewport.GetSubsectionWithOverscan(renderContext.currentTileIndex);
             
             var asymmetricProjectionMatrix = renderContext.asymmetricProjection.GetFrustumSlice(overscannedViewportSubsection);

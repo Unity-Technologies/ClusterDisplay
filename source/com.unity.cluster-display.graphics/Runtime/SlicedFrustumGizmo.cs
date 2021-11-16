@@ -4,58 +4,73 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class ClusterFrustumGizmo
+    class SlicedFrustumGizmo
     {
         // indices for tile frustum gizmo
-        static readonly int[] k_Indices = new[]
+        readonly static int[] k_Indices = new[]
         {
             0, 1, 1, 2, 2, 3, 3, 0, // front
             4, 5, 5, 6, 6, 7, 7, 4, // back
-            0, 4, 1, 5, 2, 6, 3, 7 // sides
+            0, 4, 1, 5, 2, 6, 3, 7, // sides
         };
 
-        Mesh m_FrustumGizmoMesh;
-        List<Vector3> m_FrustumGizmoVertices = new List<Vector3>();
-        List<Vector3> m_FrustumGizmoNormals = new List<Vector3>();
-        List<int> m_FrustumGizmoIndices = new List<int>();
+        public int tileIndex
+        {
+            set { m_TileIndex = value; }
+        }
+
+        public Vector2Int gridSize
+        {
+            set { m_GridSize = value; }
+        }
+
+        public Matrix4x4 viewProjectionInverse
+        {
+            set { m_ViewProjectionInverse = value; }
+        }
+
+        Mesh m_Mesh;
+        List<Vector3> m_Vertices = new List<Vector3>();
+        List<Vector3> m_Normals = new List<Vector3>();
+        List<int> m_Indices = new List<int>();
+
+        int m_TileIndex;
+        Vector2Int m_GridSize = Vector2Int.zero;
+        Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
 
         // bookkeeping, avoid recomputing gizmo geometry when neither the camera nor grid-size nor tile-index changed
         int m_CachedTileIndex = 0;
         Vector2Int m_CachedGridSize = Vector2Int.zero;
         Matrix4x4 m_CachedViewProjectionInverse = Matrix4x4.identity;
 
-        public void Draw(Matrix4x4 viewProjectionInverse, Vector2Int gridSize, int tileIndex)
+        public void Draw()
         {
-            if (gridSize.x < 1 || gridSize.y < 1)
-            {
+            if (m_GridSize.x < 1 || m_GridSize.y < 1)
                 return;
-            }
 
             var camera = Camera.current;
             if (camera == null)
-            {
                 return;
-            }
 
             // lazy mesh instanciation
-            if (m_FrustumGizmoMesh == null)
+            if (m_Mesh == null)
             {
-                m_FrustumGizmoMesh = new Mesh();
-                m_FrustumGizmoMesh.hideFlags = HideFlags.HideAndDontSave;
+                m_Mesh = new Mesh();
+                m_Mesh.hideFlags = HideFlags.HideAndDontSave;
             }
 
-            if (m_CachedGridSize != gridSize ||
-                tileIndex != m_CachedTileIndex ||
-                m_CachedViewProjectionInverse != viewProjectionInverse)
+            if (m_CachedGridSize != m_GridSize ||
+                m_TileIndex != m_CachedTileIndex ||
+                m_CachedViewProjectionInverse != m_ViewProjectionInverse)
             {
-                m_FrustumGizmoVertices.Clear();
-                m_FrustumGizmoIndices.Clear();
+                m_Vertices.Clear();
+                m_Indices.Clear();
 
                 // visualize sliced frustum
-                var numTiles = gridSize.x * gridSize.y;
+                var numTiles = m_GridSize.x * m_GridSize.y;
                 for (var i = 0; i != numTiles; ++i)
                 {
-                    var rect = Viewport.TileIndexToSubSection(gridSize, i);
+                    var rect = Viewport.TileIndexToSubSection(m_GridSize, i);
 
                     // Convert to clip space.
                     var clipRect = Rect.MinMaxRect(
@@ -64,32 +79,29 @@ namespace Unity.ClusterDisplay.Graphics
                         Mathf.Lerp(-1, 1, rect.xMax),
                         Mathf.Lerp(-1, 1, rect.yMax));
 
-                    AppendTileFrustumGeometry(viewProjectionInverse, clipRect, m_FrustumGizmoVertices, m_FrustumGizmoIndices);
+                    AppendTileFrustumGeometry(m_ViewProjectionInverse, clipRect, m_Vertices, m_Indices);
                 }
 
-                m_FrustumGizmoMesh.Clear();
-                m_FrustumGizmoMesh.SetVertices(m_FrustumGizmoVertices);
-                m_FrustumGizmoMesh.SetIndices(m_FrustumGizmoIndices, MeshTopology.Lines, 0);
+                m_Mesh.Clear();
+                m_Mesh.SetVertices(m_Vertices);
+                m_Mesh.SetIndices(m_Indices, MeshTopology.Lines, 0);
             }
 
             // update normals on grid size change only
-            if (m_CachedGridSize != gridSize)
+            if (m_CachedGridSize != m_GridSize)
             {
-                m_FrustumGizmoNormals.Clear();
-                for (var i = 0; i != m_FrustumGizmoVertices.Count; ++i)
-                {
-                    m_FrustumGizmoNormals.Add(Vector3.forward);
-                }
-
-                m_FrustumGizmoMesh.SetNormals(m_FrustumGizmoNormals);
+                m_Normals.Clear();
+                for (var i = 0; i != m_Vertices.Count; ++i)
+                    m_Normals.Add(Vector3.forward);
+                m_Mesh.SetNormals(m_Normals);
             }
 
             Gizmos.color = Color.cyan;
-            Gizmos.DrawMesh(m_FrustumGizmoMesh, Vector3.zero);
+            Gizmos.DrawMesh(m_Mesh, Vector3.zero);
 
-            m_CachedGridSize = gridSize;
-            m_CachedTileIndex = tileIndex;
-            m_CachedViewProjectionInverse = viewProjectionInverse;
+            m_CachedGridSize = m_GridSize;
+            m_CachedTileIndex = m_TileIndex;
+            m_CachedViewProjectionInverse = m_ViewProjectionInverse;
         }
 
         static void AppendTileFrustumGeometry(Matrix4x4 viewProjectionInverse, Rect viewportSection, List<Vector3> vertices, List<int> indices)
@@ -111,9 +123,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Append indices
             for (var i = 0; i != k_Indices.Length; ++i)
-            {
                 indices.Add(k_Indices[i] + baseVertexIndex);
-            }
         }
     }
 }

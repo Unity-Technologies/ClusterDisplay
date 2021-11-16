@@ -55,7 +55,6 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             
-            // TODO is this needed?
             cmd.SetRenderTarget(k_CameraTargetId);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
 

@@ -29,16 +29,24 @@ namespace Unity.ClusterDisplay.Graphics
 
         const string k_LayoutPresentCmdBufferName = "Layout Present";
 
-        // TODO Temporary
-        [SerializeField]
-        bool m_EnableGUI;
+        // We need to flip along the Y axis when blitting to screen on HDRP,
+        // but not when using URP.
+#if CLUSTER_DISPLAY_HDRP
+        const bool k_FlipWhenBlittingToScreen = true;
+#else
+        const bool k_FlipWhenBlittingToScreen = false;
+#endif
 
-        [HideInInspector]
         [SerializeField]
-        ClusterRenderContext m_Context = new ClusterRenderContext();
+        ClusterRendererSettings m_Settings = new ClusterRendererSettings();
+
+        [SerializeField]
+        ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
 
         ILayoutBuilder m_LayoutBuilder;
         Stack<BlitCommand> m_BlitCommands = new Stack<BlitCommand>();
+        Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
+        bool m_IsDebug;
 
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
@@ -49,24 +57,13 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         public bool IsDebug
         {
-            get => m_Context.Debug;
-            set => m_Context.Debug = value;
+            get => m_IsDebug;
+            set => m_IsDebug = value;
         }
+        
+        public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
 
-        // TODO sketchy, limits client changes for the time being
-        internal ClusterRenderContext Context => m_Context;
-
-        /// <summary>
-        /// User controlled settings, typically project specific.
-        /// </summary>
-        public ClusterRendererSettings Settings => m_Context.Settings;
-
-        /// <summary>
-        /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
-        /// </summary>
-        public ClusterRendererDebugSettings debugSettings => m_Context.DebugSettings;
-
-        Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
+        public ClusterRendererSettings Settings => m_Settings;
 
         // TODO Is this needed? Users typically manage the projection.
         /// <summary>
@@ -77,14 +74,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         // we need a clip-to-world space conversion for gizmo
         Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
-        ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
+        SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
 
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
             if (enabled)
             {
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
+                m_Gizmo.Draw();
             }
         }
 #endif
@@ -114,8 +111,9 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             // Sync, will change from inspector as well.
-            GraphicsUtil.SetShaderKeyword(m_Context.DebugSettings.EnableKeyword);
-            SetLayoutMode(m_Context.DebugSettings.LayoutMode);
+            // TODO We must set the keyword systematically unless in debug mode.
+            GraphicsUtil.SetShaderKeyword(m_DebugSettings.EnableKeyword);
+            SetLayoutMode(m_DebugSettings.LayoutMode);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -136,7 +134,7 @@ namespace Unity.ClusterDisplay.Graphics
         void InjectedUpdate()
         {
             // Move early return at the Update's top.
-            if (!(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0))
+            if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
             {
                 return;
             }
@@ -148,39 +146,42 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             // TODO Could remove conditional?
-            m_Presenter.ClearColor = m_Context.Debug ? m_Context.BezelColor : Color.black;
-            
-            // Context will be removed.
-            var settings = m_Context.Settings;
-            var debugSettings = m_Context.DebugSettings;
-            var debug = m_Context.Debug;
-            
-            // Aspect must be updated before we pull the projection matrix.
-            activeCamera.aspect = LayoutBuilderUtils.GetAspect(m_Context, Screen.width, Screen.height);
-            m_OriginalProjectionMatrix = activeCamera.projectionMatrix;
+            m_Presenter.ClearColor = m_IsDebug ? m_DebugSettings.BezelColor : Color.black;
             
             var displaySize = new Vector2Int(Screen.width, Screen.height);
-            var overscannedSize = displaySize + settings.OverScanInPixels * 2 * Vector2Int.one;
-            var currentTileIndex = (debug || !ClusterSync.Active) ? debugSettings.TileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
-            var numTiles = settings.GridSize.x * settings.GridSize.y;
-            var displayMatrixSize = new Vector2Int(settings.GridSize.x * displaySize.x, settings.GridSize.y * displaySize.y);
+            var overscannedSize = displaySize + m_Settings.OverScanInPixels * 2 * Vector2Int.one;
+            var currentTileIndex = (m_IsDebug || !ClusterSync.Active) ? m_DebugSettings.TileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
+            var numTiles = m_Settings.GridSize.x * m_Settings.GridSize.y;
+            var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
             
+            // Aspect must be updated *before* we pull the projection matrix.
+            m_Camera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
+            m_OriginalProjectionMatrix = m_Camera.projectionMatrix;
+            
+            
+#if UNITY_EDITOR
+            m_Gizmo.tileIndex = currentTileIndex;
+            m_Gizmo.gridSize = m_Settings.GridSize;
+            m_Gizmo.viewProjectionInverse = (originalProjectionMatrix * m_Camera.worldToCameraMatrix).inverse;
+#endif
+
             // Prepare context properties.
-            var viewport = new Viewport(settings.GridSize, settings.PhysicalScreenSize, settings.Bezel, settings.OverScanInPixels);
+            var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, m_Settings.OverScanInPixels);
             var asymmetricProjection = new AsymmetricProjection(m_OriginalProjectionMatrix);
-            var blitParams = new BlitParams(displaySize, settings.OverScanInPixels, debugSettings.ScaleBiasTextOffset);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize, settings.GridSize);
+            var blitParams = new BlitParams(displaySize, m_Settings.OverScanInPixels, m_DebugSettings.ScaleBiasTextOffset);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
 
             var ctx = new RenderContext
             {
                 currentTileIndex = currentTileIndex,
                 numTiles = numTiles,
                 overscannedSize = overscannedSize,
-                displayMatrixSize = displayMatrixSize,
                 viewport = viewport,
                 asymmetricProjection = asymmetricProjection,
                 blitParams = blitParams,
-                postEffectsParams = postEffectsParams
+                postEffectsParams = postEffectsParams,
+                debugViewportSubsection = m_DebugSettings.ViewportSubsection,
+                useDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
             };
             
             TryRenderLayout(ctx);
@@ -226,8 +227,7 @@ namespace Unity.ClusterDisplay.Graphics
             while (m_BlitCommands.Count > 0)
             {
                 var command = m_BlitCommands.Pop();
-                // We need to flip along the Y axis when blitting to the camera's backbuffer.
-                command.Execute(commandBuffer, true);
+                command.Execute(commandBuffer, k_FlipWhenBlittingToScreen);
             }
         }
 
@@ -250,10 +250,10 @@ namespace Unity.ClusterDisplay.Graphics
                     m_LayoutBuilder = null;
                     break;
                 case LayoutMode.StandardTile:
-                    m_LayoutBuilder = new TileLayoutBuilder(m_Context);
+                    m_LayoutBuilder = new TileLayoutBuilder();
                     break;
                 case LayoutMode.StandardStitcher:
-                    m_LayoutBuilder = new StitcherLayoutBuilder(m_Context);
+                    m_LayoutBuilder = new StitcherLayoutBuilder();
                     break;
                 default:
                     throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");

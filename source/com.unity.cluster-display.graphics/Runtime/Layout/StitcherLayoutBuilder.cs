@@ -10,13 +10,10 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
 
-        readonly ClusterRenderContext m_Context;
         RenderTexture[] m_SourceRts;
 
         public LayoutMode LayoutMode => LayoutMode.StandardStitcher;
         
-        public StitcherLayoutBuilder(ClusterRenderContext context) => m_Context = context;
-
         public void Dispose()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_SourceRts);

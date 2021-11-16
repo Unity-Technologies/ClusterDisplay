@@ -22,19 +22,19 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 #endif
                 CheckForClusterCameraComponents();
                 
-                var adapter = target as ClusterRenderer;
+                var clusterRenderer = target as ClusterRenderer;
 
-                var settings = adapter.Settings;
+                var settings = clusterRenderer.Settings;
                 settings.GridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.GridSize);
                 settings.PhysicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.PhysicalScreenSize);
                 settings.Bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.Bezel);
                 settings.OverScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.OverScanInPixels, 0, 256);
 
-                adapter.Context.Debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.Context.Debug);
+                clusterRenderer.IsDebug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), clusterRenderer.IsDebug);
 
-                if (adapter.Context.Debug)
+                if (clusterRenderer.IsDebug)
                 {
-                    EditDebugSettings(adapter.debugSettings, adapter.Context, adapter);
+                    EditDebugSettings(clusterRenderer);
                 }
 
                 if (check.changed)
@@ -42,43 +42,46 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     serializedObject.ApplyModifiedProperties();
                     
                     // TODO needed?
-                    EditorUtility.SetDirty(adapter);
+                    EditorUtility.SetDirty(clusterRenderer);
                 }
             }
         }
 
         // TODO renderer exposes both debug-settings and context, redundant arguments.
-        static void EditDebugSettings(ClusterRendererDebugSettings settings, ClusterRenderContext context, ClusterRenderer renderer)
+        static void EditDebugSettings(ClusterRenderer clusterRenderer)
         {
-            settings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), settings.TileIndexOverride);
+            var debugSettings = clusterRenderer.DebugSettings;
+            var settings = clusterRenderer.Settings;
+            
+            debugSettings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), debugSettings.TileIndexOverride);
 
-            var prevEnableKeyword = settings.EnableKeyword;
-            settings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
-            if (settings.EnableKeyword != prevEnableKeyword)
+            var prevEnableKeyword = debugSettings.EnableKeyword;
+            debugSettings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
+            if (debugSettings.EnableKeyword != prevEnableKeyword)
             {
-                GraphicsUtil.SetShaderKeyword(settings.EnableKeyword);
+                GraphicsUtil.SetShaderKeyword(debugSettings.EnableKeyword);
             }
 
-            var prevLayoutMode = settings.LayoutMode;
-            settings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), prevLayoutMode);
-            if (settings.LayoutMode != prevLayoutMode)
+            var prevLayoutMode = debugSettings.LayoutMode;
+            debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), prevLayoutMode);
+            if (debugSettings.LayoutMode != prevLayoutMode)
             {
-                renderer.SetLayoutMode(settings.LayoutMode);
+                clusterRenderer.SetLayoutMode(debugSettings.LayoutMode);
             }
             
-            settings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), settings.UseDebugViewportSubsection);
+            debugSettings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), debugSettings.UseDebugViewportSubsection);
 
-            if (settings.LayoutMode == LayoutMode.StandardStitcher)
+            if (debugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
-                settings.BezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), settings.BezelColor);
+                debugSettings.BezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), debugSettings.BezelColor);
             }
 
             // Let user manipulate viewport directly instead of inferring it from tile index.
-            if (settings.UseDebugViewportSubsection)
+            if (debugSettings.UseDebugViewportSubsection)
             {
                 EditorGUILayout.LabelField("Viewport Section");
 
-                var rect = settings.ViewportSubsection;
+                var rect = debugSettings.ViewportSubsection;
                 var xMin = rect.xMin;
                 var xMax = rect.xMax;
                 var yMin = rect.yMin;
@@ -88,19 +91,19 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 xMax = EditorGUILayout.Slider("xMax", xMax, 0, 1);
                 yMin = EditorGUILayout.Slider("yMin", yMin, 0, 1);
                 yMax = EditorGUILayout.Slider("yMax", yMax, 0, 1);
-                settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                debugSettings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
             else
             {
                 // Reset viewport subsection.
-                settings.ViewportSubsection = Viewport.TileIndexToSubSection(context.GridSize, context.TileIndex);
+                debugSettings.ViewportSubsection = Viewport.TileIndexToSubSection(settings.GridSize, debugSettings.TileIndexOverride);
             }
 
             EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));
-            var offset = settings.ScaleBiasTextOffset;
+            var offset = debugSettings.ScaleBiasTextOffset;
             offset.x = EditorGUILayout.Slider("x", offset.x, -1, 1);
             offset.y = EditorGUILayout.Slider("y", offset.y, -1, 1);
-            settings.ScaleBiasTextOffset = offset;
+            debugSettings.ScaleBiasTextOffset = offset;
         }
 
         static void CheckForClusterCameraComponents()

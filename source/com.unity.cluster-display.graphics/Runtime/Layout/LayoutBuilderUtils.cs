@@ -7,18 +7,15 @@ namespace Unity.ClusterDisplay.Graphics
     {
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
-        public static void UploadClusterDisplayParams(Matrix4x4 clusterDisplayParams)
-        {
-            Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterDisplayParams);
-        }
-
         public static void Render(Camera camera, Matrix4x4 projection, Matrix4x4 clusterParams, RenderTexture target)
         {
             camera.targetTexture = target;
             camera.projectionMatrix = projection;
             camera.cullingMatrix = projection * camera.worldToCameraMatrix;
             
-            UploadClusterDisplayParams(clusterParams);
+            // TODO Make sure this simple way to pass uniforms is conform to HDRP's expectations.
+            // We could have to pass this data through the pipeline.
+            Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterParams);
 
             camera.Render();
             
@@ -27,7 +24,5 @@ namespace Unity.ClusterDisplay.Graphics
             camera.ResetProjectionMatrix();
             camera.ResetCullingMatrix();
         }
-
-        public static float GetAspect(ClusterRenderContext context, int screenWidth, int screenHeight) => context.GridSize.x * screenWidth / (float)(context.GridSize.y * screenHeight);
     }
 }

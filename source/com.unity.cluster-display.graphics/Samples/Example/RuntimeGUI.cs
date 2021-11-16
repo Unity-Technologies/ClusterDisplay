@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_ClusterRenderer.IsDebug = GUILayout.Toggle(prevDebug, "debug");
                 if (m_ClusterRenderer.IsDebug)
                 {
-                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.debugSettings);
+                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.DebugSettings);
                 }
             }
 
