@@ -62,13 +62,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 GraphicsUtil.SetShaderKeyword(debugSettings.EnableKeyword);
             }
 
-            var prevLayoutMode = debugSettings.LayoutMode;
-            debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), prevLayoutMode);
-            if (debugSettings.LayoutMode != prevLayoutMode)
-            {
-                clusterRenderer.SetLayoutMode(debugSettings.LayoutMode);
-            }
-            
+            debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), debugSettings.LayoutMode);
+
             debugSettings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), debugSettings.UseDebugViewportSubsection);
 
             if (debugSettings.LayoutMode == LayoutMode.StandardStitcher)
