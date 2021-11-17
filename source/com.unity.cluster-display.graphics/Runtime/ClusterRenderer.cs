@@ -28,11 +28,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         const string k_LayoutPresentCmdBufferName = "Layout Present";
 
-        // For the time being we ignore any logic to fetch cameras from user scenes.
-        // We just serialize a reference. We'll add an alternative to the camera-context-registry later.
-        [SerializeField]
-        Camera m_Camera;
-
         // TODO Temporary
         [SerializeField]
         bool m_EnableGUI;
@@ -154,7 +149,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void InjectedUpdate()
         {
-            if (m_Camera != null)
+            if (ClusterCameraManager.Instance.ActiveCamera != null)
             {
                 TryRenderLayout();
 
@@ -171,12 +166,17 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
+            if (activeCamera == null)
+            {
+                return;
+            }
 #if UNITY_EDITOR
-            m_ViewProjectionInverse = (m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix).inverse;
+            m_ViewProjectionInverse = (activeCamera.projectionMatrix * activeCamera.worldToCameraMatrix).inverse;
 #endif
 
             // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
-            m_LayoutBuilder?.Render(m_Camera, Screen.width, Screen.height);
+            m_LayoutBuilder?.Render(activeCamera, Screen.width, Screen.height);
         }
 
         void TryPresentLayout()
