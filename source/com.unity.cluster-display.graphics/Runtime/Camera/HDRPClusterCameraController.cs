@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.Graphics
                 }
             }
 
-            else Debug.LogErrorFormat($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
+            else ClusterDebug.LogError($"{nameof(HDCamera)} does not have {nameof(HDAdditionalCameraData)} component attached, refusing to change context.");
         }
     }
 }

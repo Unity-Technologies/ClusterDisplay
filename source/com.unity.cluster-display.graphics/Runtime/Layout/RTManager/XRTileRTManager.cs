@@ -62,19 +62,23 @@ namespace Unity.ClusterDisplay.Graphics
             return m_PresentRT;
         }
 
-        public override RTHandle GetBackBufferRT(int width, int height, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
+        public override RTHandle GetQueuedFrameRT(int width, int height, int currentQueuedFrameCount, GraphicsFormat format = GraphicsFormat.B8G8R8A8_SRGB)
         {
+            PollQueuedFrameCount(currentQueuedFrameCount);
+            long index = backBufferRTIndex % 2;
+            var backBufferRT = m_QueuedFrameRTs[index];
+
             bool resized = 
-                m_BackBufferRT != null && 
-                (m_BackBufferRT.rt.width != width || 
-                m_BackBufferRT.rt.height != height);
+                backBufferRT != null && 
+                (backBufferRT.rt.width != width || 
+                backBufferRT.rt.height != height);
 
-            if (m_BackBufferRT == null || resized)
+            if (backBufferRT == null || resized)
             {
-                if (m_BackBufferRT != null)
-                    RTHandles.Release(m_BackBufferRT);
+                if (backBufferRT != null)
+                    RTHandles.Release(backBufferRT);
 
-                m_BackBufferRT = RTHandles.Alloc(
+                m_QueuedFrameRTs[index] = backBufferRT = RTHandles.Alloc(
                     width: (int)width, 
                     height: (int)height,
                     slices: 1,
@@ -86,7 +90,8 @@ namespace Unity.ClusterDisplay.Graphics
                     name: $"BackBuffer-RT-({width}X{height})");
             }
 
-            return m_BackBufferRT;
+            backBufferRTIndex++;
+            return backBufferRT;
         }
 
         public override void Release()
@@ -97,12 +102,21 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_PresentRT != null)
                 RTHandles.Release(m_PresentRT);
 
-            if (m_BackBufferRT != null)
-                RTHandles.Release(m_BackBufferRT);
+            if (m_QueuedFrameRTs != null && m_QueuedFrameRTs.Length != 0)
+            {
+                for (int i = 0; i < m_QueuedFrameRTs.Length; i++)
+                {
+                    if (m_QueuedFrameRTs[i] != null)
+                    {
+                        m_QueuedFrameRTs[i].Release();
+                        m_QueuedFrameRTs[i] = null;
+                    }
+                }
+            }
 
             m_SourceRT = null;
             m_PresentRT = null;
-            m_BackBufferRT = null;
+            m_QueuedFrameRTs = null;
         }
     }
 }

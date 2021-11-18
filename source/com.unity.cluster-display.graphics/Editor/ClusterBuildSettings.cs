@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (QualitySettings.vSyncCount != k_VSyncCount)
             {
                 QualitySettings.vSyncCount = k_VSyncCount;
-                Debug.Log("<b>[ClusterDisplay]</b> automatically updated settings: <b>VSync Count</b> has been set to <b>Every V Blank</b>.");
+                ClusterDebug.Log("<b>[ClusterDisplay]</b> automatically updated settings: <b>VSync Count</b> has been set to <b>Every V Blank</b>.");
             }
 
             EditorApplication.update -= Update;

@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay
         internal interface IClusterDisplayStateSetter
         {
             void SetIsEmitter(bool isEmitter);
+            void SetIsRepeater(bool isRepeater);
             void SetIsActive(bool isActive);
             void SetCLusterLogicEnabled(bool clusterLogicEnabled);
             void SetIsTerminated(bool isTerminated);
@@ -20,14 +21,18 @@ namespace Unity.ClusterDisplay
         internal class ClusterDisplayStateStore : IClusterDisplayStateSetter
         {
             public bool m_IsEmitter = false;
+            public bool m_IsRepeater = false;
+
             public bool m_IsActive = false;
             public bool m_IsClusterLogicEnabled = false;
             public bool m_IsTerminated = false;
             public ulong m_Frame = 0;
+            public ushort m_NodeID = 0;
 
             public void SetIsActive(bool isActive) => this.m_IsActive = isActive;
             public void SetCLusterLogicEnabled(bool clusterLogicEnabled) => this.m_IsClusterLogicEnabled = clusterLogicEnabled;
             public void SetIsEmitter(bool isEmitter) => this.m_IsEmitter = isEmitter;
+            public void SetIsRepeater(bool isRepeater) => this.m_IsRepeater = isRepeater;
             public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
             public void SetFrame(ulong frame) => m_Frame = frame;
         }
@@ -46,7 +51,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.
         /// </summary>
-        public static bool IsRepeater => !stateStore.m_IsEmitter;
+        public static bool IsRepeater => stateStore.m_IsRepeater;
 
         /// <summary>
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
@@ -67,5 +72,7 @@ namespace Unity.ClusterDisplay
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
         /// </summary>
         public static ulong Frame => stateStore.m_Frame;
+
+        public static ushort NodeID => CommandLineParser.nodeID;
     }
 }

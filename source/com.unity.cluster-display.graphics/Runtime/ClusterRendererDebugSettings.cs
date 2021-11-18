@@ -24,6 +24,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void RegisterDebugSettingsReceiver (IDebugSettingsReceiver debugSettingsReceiver)
         {
+            onChangeLayoutMode -= debugSettingsReceiver.OnChangeLayoutMode;
+            onEnableKeywords -= debugSettingsReceiver.ToggleShaderKeywords;
+            
             onChangeLayoutMode += debugSettingsReceiver.OnChangeLayoutMode;
             onEnableKeywords += debugSettingsReceiver.ToggleShaderKeywords;
 

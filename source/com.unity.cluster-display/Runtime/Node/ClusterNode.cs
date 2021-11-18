@@ -12,13 +12,15 @@ namespace Unity.ClusterDisplay
         public byte NodeID => m_UDPAgent.LocalNodeID;
         public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
+        protected internal IClusterSyncState clusterSync;
+
         protected ClusterNode(
+            IClusterSyncState clusterSync,
             byte nodeID, 
             string ip, 
             int rxPort, 
             int txPort, 
             int timeOut, 
-            int maxMTUSize,
             string adapterName)
         {
             if(nodeID >= UDPAgent.MaxSupportedNodeCount)
@@ -30,19 +32,19 @@ namespace Unity.ClusterDisplay
                 rxPort, 
                 txPort, 
                 timeOut, 
-                maxMTUSize, 
                 adapterName);
 
+            this.clusterSync = clusterSync;
             Stopwatch.StartNew();
         }
 
-        public virtual bool Start()
+        public virtual bool TryStart()
         {
             try
             {
-                if (!m_UDPAgent.Start())
+                if (!m_UDPAgent.Initialize())
                 {
-                    m_CurrentState = new FatalError("Failed to start UDP Agent");
+                    m_CurrentState = new FatalError(clusterSync, "Failed to start UDP Agent");
                     m_CurrentState.EnterState(null);
                     return false;
                 }
@@ -51,9 +53,10 @@ namespace Unity.ClusterDisplay
 
                 return true;
             }
+            
             catch (Exception e)
             {
-                m_CurrentState = new FatalError( "Failed to start UDP Agent: " + e.Message );
+                ClusterDebug.LogError( $"Failed to start UDP Agent:\n{e.Message}");
                 m_CurrentState.EnterState(null);
                 return false;
             }
@@ -80,7 +83,7 @@ namespace Unity.ClusterDisplay
         public void Exit()
         {
             if(m_CurrentState.GetType() != typeof(Shutdown))
-                m_CurrentState = (new Shutdown()).EnterState(m_CurrentState);
+                m_CurrentState = (new Shutdown(clusterSync)).EnterState(m_CurrentState);
             m_UDPAgent.Stop();
         }
 
@@ -113,7 +116,7 @@ namespace Unity.ClusterDisplay
 
         protected void OnNetworkingError( string message )
         {
-            m_CurrentState.PendingStateChange = new FatalError($"Networking error: {message}");
+            m_CurrentState.PendingStateChange = new FatalError(clusterSync, $"Networking error: {message}");
         }
     }
 

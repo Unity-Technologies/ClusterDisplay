@@ -28,6 +28,7 @@ public static class World
     public static void SpawnFood (Vector3 foodPosition)
     {
         DeterministicUtils.LogCall(foodPosition);
+        Debug.Log(foodPrefab);
         if (!PrefabPool.TryGetInstance(out var prefabPool))
             return;
 

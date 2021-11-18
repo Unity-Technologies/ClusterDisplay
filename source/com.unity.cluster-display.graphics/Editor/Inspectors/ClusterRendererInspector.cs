@@ -19,6 +19,8 @@ namespace Unity.ClusterDisplay.Graphics.Inspectors
                 settings.physicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.physicalScreenSize);
                 settings.bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.bezel);
                 settings.overScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.overScanInPixels, 0, 256);
+                settings.queueEmitterFrames = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.QueueEmitterFrame), settings.queueEmitterFrames);
+                settings.queueEmitterFrameCount = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.QueueEmitterFrameCount), settings.queueEmitterFrameCount);
 
                 adapter.context.debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.context.debug);
                 

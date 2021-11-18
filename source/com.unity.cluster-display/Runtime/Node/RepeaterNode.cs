@@ -8,17 +8,17 @@ namespace Unity.ClusterDisplay
         public byte EmitterNodeId { get; set; }
         public UInt64 EmitterNodeIdMask => (UInt64) 1 << EmitterNodeId;
 
-        public RepeaterNode(byte nodeId, string ip, int rxport, int txport, int timeOut, int maxMTUSize, string adapterName)
-            : base(nodeId, ip, rxport, txport, timeOut, maxMTUSize, adapterName )
+        public RepeaterNode(IClusterSyncState clusterSync, byte nodeId, string ip, int rxport, int txport, int timeOut, string adapterName)
+            : base(clusterSync, nodeId, ip, rxport, txport, timeOut, adapterName )
         {
         }
 
-        public override bool Start()
+        public override bool TryStart()
         {
-            if (!base.Start())
+            if (!base.TryStart())
                 return false;
 
-            m_CurrentState = new RegisterWithEmitter(this) {MaxTimeOut = ClusterParams.RegisterTimeout};
+            m_CurrentState = new RegisterWithEmitter(clusterSync, this) {MaxTimeOut = ClusterParams.RegisterTimeout};
             m_CurrentState.EnterState(null);
 
             return true;

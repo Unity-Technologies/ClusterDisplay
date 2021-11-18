@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics
             get => m_bezel;
             set => m_bezel = value;
         }
-        
+
         [SerializeField]
         Vector2 m_PhysicalScreenSize;
         
@@ -62,6 +62,22 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get { return m_OverscanInPixels; }
             set { m_OverscanInPixels = value; }
+        }
+
+        [SerializeField]
+        bool m_QueueEmitterFrames = true;
+        public bool queueEmitterFrames
+        {
+            get => m_QueueEmitterFrames;
+            set => m_QueueEmitterFrames = value;
+        }
+
+        [SerializeField]
+        int m_QueueEmitterFrameCount = 1;
+        public int queueEmitterFrameCount
+        {
+            get => m_QueueEmitterFrameCount;
+            set => m_QueueEmitterFrameCount = value > 0 ? value : 1;
         }
     }
 }

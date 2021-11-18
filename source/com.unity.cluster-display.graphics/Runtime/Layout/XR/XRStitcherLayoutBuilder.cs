@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay.Graphics
             var sourceRT = parms.sourceRT as RTHandle;
             if (sourceRT == null)
             {
-                Debug.LogError($"Invalid {nameof(RTHandle)}");
+                ClusterDebug.LogError($"Invalid {nameof(RTHandle)}");
                 return;
             }
 

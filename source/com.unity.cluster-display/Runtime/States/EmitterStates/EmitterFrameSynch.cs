@@ -1,30 +1,41 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
 {
-    internal class SynchronizeFrame : EmitterState, IEmitterNodeSyncState
+    internal class EmitterSynchronization : EmitterState, IEmitterNodeSyncState
     {
         enum EStage
         {
-            StepOneFrameOnInitialization,
-            ReadyToSignalStartNewFrame,
-            WaitingOnFramesDoneMsgs,
-            ProcessFrame,
+            WaitOneFrame,
+            WaitOnRepeatersNextFrame,
+            EmitLastFrameData,
+            WaitForRepeatersToACK,
+            ReadyToProceed,
         }
 
-        private Int64 m_WaitingOnNodes; // bit mask of node id's that we are waiting on to say they are ready for work.
+        // Bit mask of node id's that we are waiting on to say they are ready for work.
+        private Int64 m_WaitingOnNodes; 
+
         private EStage m_Stage;
+        private EStage Stage
+        {
+            get => m_Stage;
+            set
+            {
+                ClusterDebug.Log($"(Frame: {CurrentFrameID}): Emitter entering stage: {value}");
+                m_Stage = value;
+            }
+        }
+        
         private TimeSpan m_TsOfStage;
+        private TimeSpan m_FrameDoneTimeout = new TimeSpan(0, 0, 0, 10, 0);
 
         private EmitterStateWriter m_Emitter;
 
-        public override bool ReadyToProceed => m_Stage == EStage.StepOneFrameOnInitialization || m_Stage == EStage.ProcessFrame;
+        public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
 
         public UDPAgent NetworkAgent => LocalNode.UdpAgent;
 
@@ -33,37 +44,30 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         ProfilerMarker m_MarkerWaitingOnFramesDoneMsgs = new ProfilerMarker("WaitingOnFramesDoneMsgs");
         ProfilerMarker m_MarkerProcessFrame = new ProfilerMarker("ProcessFrame");
         ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
+        
+        public EmitterSynchronization(IClusterSyncState clusterSync) : base(clusterSync) {}
 
-        public override string GetDebugString()
+        protected override void ExitState(NodeState newState)
         {
-            return $"{base.GetDebugString()} / {(EStage)m_Stage} : {m_WaitingOnNodes}";
+            base.ExitState(newState);
+            m_Emitter?.Dispose();   
         }
+        public override string GetDebugString() => $"{base.GetDebugString()} / {(EStage)Stage} : {m_WaitingOnNodes}";
 
         public override void InitState()
         {
-            if (!ClusterSync.TryGetInstance(out var clusterSync))
-                return;
-
             base.InitState();
 
-            m_Emitter = new EmitterStateWriter(this, clusterSync.Resources.NetworkPayloadLimits);
-            m_Stage = EStage.StepOneFrameOnInitialization;
+            m_Emitter = new EmitterStateWriter(this);
+            Stage = EStage.ReadyToProceed;
 
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
-
-            RPC.RPCBufferIO.AllowWrites = true;
         }
 
         public override void OnEndFrame()
         {
-            // Debug.Log($"Ended Frame: {LocalNode.CurrentFrameID}");
-            if (m_Stage == EStage.StepOneFrameOnInitialization)
-            {
-                m_Stage = EStage.ReadyToSignalStartNewFrame;
-                return;
-            }
-
+            ClusterDebug.Log($"(Frame: {CurrentFrameID}): Emitter ended frame.");
             base.OnEndFrame();
         }
 
@@ -71,77 +75,97 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             if (LocalNode.TotalExpectedRemoteNodesCount == 0)
             {
-                PendingStateChange = new FatalError("No Clients found. Exiting Cluster.");
+                PendingStateChange = new FatalError(clusterSync, "No Clients found. Exiting Cluster.");
                 return this;
             }
+            
+            // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Current emitter stage: {Stage}");
 
             using (m_MarkerDoFrame.Auto())
             {
                 if (newFrame)
                     m_Emitter.GatherFrameState(CurrentFrameID);
-
-                // Debug.Log($"Stage: {m_Stage}, Frame: {LocalNode.CurrentFrameID}");
-                switch ((EStage) m_Stage)
+                
+                switch ((EStage)Stage)
                 {
-                    case EStage.ReadyToSignalStartNewFrame:
+                    case EStage.WaitOnRepeatersNextFrame:
                     {
-                        using (m_MarkerReadyToSignalStartNewFrame.Auto())
-                        {
-                            if (!m_Emitter.ValidRawStateData) // 1st frame only
-                                m_Emitter.GatherFrameState(CurrentFrameID);
+                        OnWaitOnRepeatersNextFrame();
+                    } break;
 
-                            if (m_Emitter.ValidRawStateData)
-                            {
-                                using (m_MarkerPublishState.Auto())
-                                    m_Emitter.PublishCurrentState(PreviousFrameID);
-
-                                m_WaitingOnNodes = (Int64) (LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
-                                m_Stage = EStage.ProcessFrame;
-                            }
-                            else
-                                Debug.LogError("State buffer is empty!");
-
-                            break;
-                        }
-                    }
-
-                    case EStage.ProcessFrame:
+                    case EStage.EmitLastFrameData:
                     {
-                        using (m_MarkerProcessFrame.Auto())
-                        {
-                            Debug.Assert(newFrame, "this should always be on a new frame.");
-                            m_Stage = EStage.WaitingOnFramesDoneMsgs;
-                            m_TsOfStage = m_Time.Elapsed;
-                            break;
-                        }
-                    }
-
-                    case EStage.WaitingOnFramesDoneMsgs:
+                        OnEmitFrameData();
+                    } break;
+                    
+                    case EStage.WaitForRepeatersToACK:
                     {
-                        using (m_MarkerWaitingOnFramesDoneMsgs.Auto())
-                        {
-                            PumpMessages();
+                        OnWaitForRepeatersToACK(EStage.ReadyToProceed);
+                    } break;
 
-                            if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
-                            {
-                                KickLateClients();
-                                BecomeReadyToSignalStartNewFrame();
-                            }
-
-                            if ((m_Time.Elapsed - m_TsOfStage).TotalSeconds > 5)
-                            {
-                                Debug.Assert(m_WaitingOnNodes != 0,
-                                    "Have been waiting on repeaters nodes 'frame done' for more than 5 seconds!");
-                                // One or more clients failed to respond in time!
-                                Debug.LogError("The following repeaters are late reporting back: " + m_WaitingOnNodes);
-                            }
-
-                            break;
-                        }
-                    }
+                    case EStage.ReadyToProceed:
+                    {
+                        ProceededToNextFrame(newFrame);
+                    } break;
                 }
 
                 return this;
+            }
+        }
+
+        private void OnWaitOnRepeatersNextFrame()
+        {
+            using (m_MarkerWaitingOnFramesDoneMsgs.Auto())
+            {
+                PumpMessages();
+
+                if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
+                    ClusterDebug.Assert(m_WaitingOnNodes != 0, $"(Frame: {CurrentFrameID}): Have been waiting on repeaters nodes for: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} for more than {MaxTimeOut.Seconds} seconds!");
+
+                if ((m_Time.Elapsed - m_TsOfStage) >= m_FrameDoneTimeout)
+                {
+                    ClusterDebug.LogError($"(Frame: {CurrentFrameID}): The following repeaters are late reporting back: {m_WaitingOnNodes}");
+                    // KickLateClients();
+                    // BecomeReadyToSignalStartNewFrame();
+                }
+                
+            }
+        }
+
+        private void OnWaitForRepeatersToACK (EStage nextStage)
+        {
+            if (LocalNode.UdpAgent.AcksPending)
+            {
+                // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for all repeaters to ACK.");
+                return;
+            }
+            
+            Stage = nextStage;
+            m_TsOfStage = m_Time.Elapsed;
+        }
+
+        private void OnEmitFrameData()
+        {
+            if (!m_Emitter.ValidRawStateData) // 1st frame only
+                m_Emitter.GatherFrameState(CurrentFrameID);
+
+            ClusterDebug.Assert(m_Emitter.ValidRawStateData, $"(Frame: {CurrentFrameID}): State buffer is empty!");
+            
+            using (m_MarkerPublishState.Auto())
+                m_Emitter.PublishCurrentState(PreviousFrameID);
+
+            m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
+            
+            Stage = EStage.WaitForRepeatersToACK;
+            m_TsOfStage = m_Time.Elapsed;
+        }
+
+        private void ProceededToNextFrame(bool newFrame)
+        {
+            using (m_MarkerProcessFrame.Auto())
+            {
+                Stage = EStage.WaitOnRepeatersNextFrame;
+                m_TsOfStage = m_Time.Elapsed;
             }
         }
 
@@ -149,59 +173,57 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             while (LocalNode.UdpAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
             {
-                switch (msgHdr.MessageType)
+                if (msgHdr.MessageType == EMessageType.EnterNextFrame)
                 {
-                    case EMessageType.FrameDone:
-                    {
-                        Debug.Assert(m_Stage != EStage.ReadyToSignalStartNewFrame,
-                            "Emitter: received FrameDone msg while not in 'ReadyToSignalStartNewFrame' stage!");
-
-                        var respMsg = FrameDone.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
-
-                        if (respMsg.FrameNumber == CurrentFrameID - 1)
-                        {
-                            var maskOut = ~((Int64) 1 << msgHdr.OriginID);
-                            do
-                            {
-                                var orgMask = m_WaitingOnNodes;
-                                Interlocked.CompareExchange(ref m_WaitingOnNodes, orgMask & maskOut, orgMask);
-                            } while ((m_WaitingOnNodes & ((Int64) 1 << msgHdr.OriginID)) != 0);
-                        }
-                        else
-                            PendingStateChange = new FatalError( $"Received a message from node {msgHdr.OriginID} about a completed Past frame {respMsg.FrameNumber}, when we are at {CurrentFrameID}" );
-
-                        break;
-                    }
-
-                    default:
-                    {
-                        ProcessUnhandledMessage(msgHdr);
-                        break;
-                    }
+                    RepeaterEnteredNextFrame(msgHdr, outBuffer);
+                    continue;
                 }
+                
+                ProcessUnhandledMessage(msgHdr);
             }
             
-            BecomeReadyToSignalStartNewFrame();
+            if (m_WaitingOnNodes != 0)
+                return;
+            
+            Stage = EStage.EmitLastFrameData;
+            m_TsOfStage = m_Time.Elapsed;
         }
 
-        private void BecomeReadyToSignalStartNewFrame()
+        private void RepeaterEnteredNextFrame(MessageHeader msgHdr, byte[] outBuffer)
         {
-            if (m_WaitingOnNodes == 0)
+            ClusterDebug.Assert(Stage != EStage.EmitLastFrameData, $"(Frame: {CurrentFrameID}): Emitter received {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} msg while not in: {EStage.EmitLastFrameData} stage!");
+
+            var respMsg = ClusterDisplay.RepeaterEnteredNextFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+            ClusterDebug.Log($"(Sequence ID: {msgHdr.SequenceID}, Frame: {respMsg.FrameNumber}): Received: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} message.");
+
+            // Repeater nodes will send FrameDone messages one frame behind, since the emitter will always be rendering 1 frame ahead.
+            // Therefore we just need to subtract the emitter's current frame by one to verify that we are still in sync with the repeaters.
+            if (respMsg.FrameNumber != CurrentFrameID - 1)
             {
-                m_Stage = EStage.ReadyToSignalStartNewFrame;
-                m_TsOfStage = m_Time.Elapsed;
+                ClusterDebug.LogWarning( $"Message of type: {msgHdr.MessageType} with sequence ID: {msgHdr.SequenceID} is for frame: {respMsg.FrameNumber} when we are expecting {nameof(RepeaterEnteredNextFrame)} events from the previous frame: {CurrentFrameID - 1}. Any of the following could have occurred:\n\t1. We already interpreted the message, but an ACK was never sent to the repeater.\n\t2. We already interpreted the message, but our ACK never reached the repeater.\n\t3. We some how never received this message. Yet we proceeded to the next frame anyways.");
+                return;
             }
+            
+            // This operation performs: Bitshift + NOT.
+            var repeaterNodeBitMask = ~((Int64) 1 << msgHdr.OriginID);
+            do
+            {
+                var waitingNodesBitField = m_WaitingOnNodes;
+                Interlocked.CompareExchange(ref m_WaitingOnNodes, waitingNodesBitField & repeaterNodeBitMask, waitingNodesBitField);
+                
+            } while ((m_WaitingOnNodes & ((Int64) 1 << msgHdr.OriginID)) != 0); // Wait for all nodes to send FrameDone.
+            
+            ClusterDebug.Log($"(Frame: {CurrentFrameID}): All nodes finished with their frame.");
         }
 
         private void KickLateClients()
         {
-            Debug.LogError(
-                $"The following repeaters are late reporting back:{m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
+            ClusterDebug.LogError($"(Frame: {CurrentFrameID}): The following repeaters are late reporting back: {m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
             for (byte id = 0; id < sizeof(UInt64); ++id)
             {
                 if ((1 << id & m_WaitingOnNodes) != 0)
                 {
-                    Debug.LogError($"Unregistering node {id}");
+                    ClusterDebug.LogError($"(Frame: {CurrentFrameID}): Unregistering node {id}");
                     LocalNode.UnRegisterNode(id);
                 }
             }

@@ -1,0 +1,28 @@
+{
+    "name": "Unity.ClusterDisplay.Editor.CodeGen",
+    "references": [
+        "GUID:0861eaad4777b824986b7d153336925a",
+        "GUID:f28afb295ef18e542af4ecc7441876be",
+        "GUID:207e264bdd21f23458c301d9b19a7dc6",
+        "GUID:c81648620554b7748b172c9c4e35f3bb",
+        "GUID:ea73f805f48068f409cafb2b12726b78"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll",
+        "Mono.Cecil.dll",
+        "Mono.Cecil.Rocks.dll",
+        "Mono.Cecil.Pdb.dll",
+        "Unity.IL2CPP",
+        "Unity.IL2CPP.Common"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

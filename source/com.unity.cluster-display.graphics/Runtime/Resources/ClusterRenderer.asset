@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f262ab233d06b6e47ba3517050e5d678, type: 3}
+  m_Name: ClusterRenderer
+  m_EditorClassIdentifier: 
+  m_Context:
+    m_Settings:
+      m_Resources: {fileID: 11400000, guid: ca15dcbdbb1bb1647b9590b81460d695, type: 2}
+      m_GridSize: {x: 2, y: 1}
+      m_bezel: {x: 0, y: 0}
+      m_PhysicalScreenSize: {x: 0, y: 0}
+      m_OverscanInPixels: 0
+      m_QueueEmitterFrames: 1
+      m_QueueEmitterFrameCount: 1
+    m_DebugSettings:
+      m_TileIndexOverride: 0
+      m_LayoutMode: 2
+      m_EnableKeyword: 1
+      m_ViewportSubsection:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 0.5
+        height: 1
+      m_UseDebugViewportSubsection: 0
+      m_ScaleBiasTexOffset: {x: 0, y: 0}
+      m_BezelColor: {r: 0, g: 0, b: 0, a: 0}

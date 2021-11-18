@@ -1,0 +1,21 @@
+{
+    "name": "Unity.ClusterDisplay.RPC.Runtime",
+    "references": [
+        "GUID:0861eaad4777b824986b7d153336925a",
+        "GUID:ebda382865f803841bb36f141d251db6",
+        "GUID:f28afb295ef18e542af4ecc7441876be",
+        "GUID:c81648620554b7748b172c9c4e35f3bb"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

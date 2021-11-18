@@ -123,23 +123,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1225720125 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3447312720805938546, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-  m_PrefabInstance: {fileID: 3447312722038380262}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1225720126
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1225720125}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 908663046f305224290078c6fc9ba80a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &3447312722038380262
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -147,46 +130,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_TileIndexOverride
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_ViewportSubsection.width
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_ViewportSubsection.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_OverscanInPixels
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_LayoutMode
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_PhysicalScreenSize.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_PhysicalScreenSize.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_bezel.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_Settings.m_bezel.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938544, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_Context.m_DebugSettings.m_EnableKeyword
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 3447312720805938545, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -234,30 +177,6 @@ PrefabInstance:
     - target: {fileID: 3447312720805938546, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
       propertyPath: m_Name
       value: ClusterDisplay
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938547, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_SerializedCameraContextTargets.Array.size
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938547, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_SerializedCameraContextTargets.Array.data[0]
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_EditorInstanceIsEmitter
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_IgnoreEditorCmdLine
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_EditorInstanceEmitterCmdLine
-      value: -emitterNode 0 1 224.0.1.0:25691,25692 -communicationTimeout 1000
-      objectReference: {fileID: 0}
-    - target: {fileID: 3447312720805938559, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}
-      propertyPath: m_EditorInstanceRepeaterCmdLine
-      value: -node 1 224.0.1.0:25692,25691 -communicationTimeout 1000
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 26c5946e9e527214ca5b64aade2c8f13, type: 3}

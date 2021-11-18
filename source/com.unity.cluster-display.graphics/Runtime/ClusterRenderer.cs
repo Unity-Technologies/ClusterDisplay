@@ -16,14 +16,30 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// We typically expect at most one instance active at a given time.
     /// </remarks>
+    [CreateAssetMenu(fileName = "ClusterRenderer", menuName = "Cluster Display/ClusterRenderer", order = 1)]
+    #if UNITY_EDITOR
+    [InitializeOnLoad]
+    #endif
     [ExecuteAlways]
-    [DisallowMultipleComponent]
-    [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : 
-        SingletonMonoBehaviour<ClusterRenderer>, 
+        SingletonScriptableObject<ClusterRenderer>, 
         IClusterRenderer,
+        IClusterDisplayConfigurable,
         ClusterRendererDebugSettings.IDebugSettingsReceiver
     {
+        static ClusterRenderer() => PreInitialize();
+
+        [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
+        public static void PreInitialize()
+        {
+            ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterRenderer)}\".");
+            ClusterDisplayManager.preInitialize += () =>
+            {
+                if (TryGetInstance(out var _this))
+                    _this.RegisterDelegates();
+            };
+        }
+        
         // Any class with this interface that is registered with ClusterRenderer will receive these callbacks.
         public interface IClusterRendererEventReceiver
         {
@@ -106,11 +122,13 @@ namespace Unity.ClusterDisplay.Graphics
         Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
         private ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
 
+        /*
         void OnDrawGizmos()
         {
             if (enabled)
                 m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.gridSize, m_Context.tileIndex);
         }
+        */
 
         /// <summary>
         /// If a reference to an instance of ClusterDisplayGraphicsResources does not exist, this function will automatically
@@ -127,7 +145,7 @@ namespace Unity.ClusterDisplay.Graphics
                 throw new Exception($"No valid instances of: {nameof(ClusterDisplayGraphicsResources)} exist in the project.");
 
             settings.resources = AssetDatabase.LoadAssetAtPath<ClusterDisplayGraphicsResources>(AssetDatabase.GUIDToAssetPath(assets[0]));
-            Debug.Log($"Applied instance of: {nameof(ClusterDisplayGraphicsResources)} named: \"{settings.resources.name}\" to cluster display settings.");
+            ClusterDebug.Log($"Applied instance of: {nameof(ClusterDisplayGraphicsResources)} named: \"{settings.resources.name}\" to cluster display settings.");
 
             EditorUtility.SetDirty(this);
         }
@@ -179,7 +197,31 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        private void RegisterRendererEvents (IClusterRendererEventReceiver clusterRendererEventReceiver)
+        private void RegisterSceneDelegates ()
+        {
+            ClusterDisplayManager.start += Setup;
+            ClusterDisplayManager.onEnable += Setup;
+            ClusterDisplayManager.onBeginFrameRender += OnBeginFrameRender;
+            ClusterDisplayManager.onBeginCameraRender += OnBeginCameraRender;
+            ClusterDisplayManager.onEndCameraRender += OnEndCameraRender;
+            ClusterDisplayManager.onEndFrameRender += OnEndFrameRender;
+            ClusterDisplayManager.lateUpdate += LateUpdate;
+            ClusterDisplayManager.onBeforePresent += OnBeforePresent;
+        }
+
+        private void UnRegisterSceneDelegates ()
+        {
+            ClusterDisplayManager.start -= Setup;
+            ClusterDisplayManager.onEnable -= Setup;
+            ClusterDisplayManager.onBeginFrameRender -= OnBeginFrameRender;
+            ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
+            ClusterDisplayManager.onEndCameraRender -= OnEndCameraRender;
+            ClusterDisplayManager.onEndFrameRender -= OnEndFrameRender;
+            ClusterDisplayManager.lateUpdate -= LateUpdate;
+            ClusterDisplayManager.onBeforePresent -= OnBeforePresent;
+        }
+
+        private void RegisterRendererDelegates (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
             onBeginFrameRender += clusterRendererEventReceiver.OnBeginFrameRender;
             onBeginCameraRender += clusterRendererEventReceiver.OnBeginCameraRender;
@@ -187,7 +229,7 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender += clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        private void UnRegisterLateUpdateReciever (IClusterRendererEventReceiver clusterRendererEventReceiver)
+        private void UnregisterRendererDelegates (IClusterRendererEventReceiver clusterRendererEventReceiver)
         {
             onBeginFrameRender -= clusterRendererEventReceiver.OnBeginFrameRender;
             onBeginCameraRender -= clusterRendererEventReceiver.OnBeginCameraRender;
@@ -195,28 +237,41 @@ namespace Unity.ClusterDisplay.Graphics
             onEndFrameRender -= clusterRendererEventReceiver.OnEndFrameRender;
         }
 
-        private void RegisterModule (IClusterRendererModule module)
+        private void RegisterModule (IClusterRendererModule module) => onSetCustomLayout += module.OnSetCustomLayout;
+        private void UnRegisterModule (IClusterRendererModule module) => onSetCustomLayout -= module.OnSetCustomLayout;
+
+        private void RegisterDelegates()
         {
-            onSetCustomLayout += module.OnSetCustomLayout;
-        }
+            UnregisterDelegates();
 
-        private void UnRegisterModule (IClusterRendererModule module)
-        {
-            onSetCustomLayout -= module.OnSetCustomLayout;
-        }
-
-        private bool m_Setup = false;
-        private void Setup ()
-        {
-            if (m_Setup)
-                return;
-
-            m_LayoutBuilder = null;
-
-            RegisterRendererEvents(m_ClusterCameraController);
+            RegisterSceneDelegates();
+            RegisterRendererDelegates(m_ClusterCameraController);
             RegisterModule(m_ClusterRendererModule);
-
             m_Context.debugSettings.RegisterDebugSettingsReceiver(this);
+        }
+
+        private void UnregisterDelegates ()
+        {
+            UnRegisterSceneDelegates();
+            UnregisterRendererDelegates(m_ClusterCameraController);
+            UnRegisterModule(m_ClusterRendererModule);
+            m_Context.debugSettings.UnRegisterDebugSettingsReceiver(this);
+        }
+
+        private void SetupForVisualization()
+        {
+            if (!Application.isPlaying)
+                Setup();
+        }
+
+        protected override void OnAwake() => SetupForVisualization();
+        private void OnEnable() => SetupForVisualization();
+
+
+        internal void Setup ()
+        {
+            m_LayoutBuilder = null;
+            RegisterDelegates();
 
             if (ClusterDisplayState.IsClusterLogicEnabled && Application.isPlaying)
                 debugSettings.currentLayoutMode = ClusterRenderer.LayoutMode.StandardTile;
@@ -224,47 +279,23 @@ namespace Unity.ClusterDisplay.Graphics
 
             ToggleShaderKeywords(debugSettings.enableKeyword);
 
-            RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
-            RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
-            RenderPipelineManager.endCameraRendering += OnEndCameraRender;
-            RenderPipelineManager.endFrameRendering += OnEndFrameRender;
-
-            m_Setup = true;
-
             #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
             #endif
         }
 
-        private void TearDown ()
+        internal void TearDown ()
         {
-            if (!m_Setup)
-                return;
-
-            UnRegisterLateUpdateReciever(m_ClusterCameraController);
-            UnRegisterModule(m_ClusterRendererModule);
-            m_Context.debugSettings.UnRegisterDebugSettingsReceiver(this);
-
-            RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
-            RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
-            RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
-            RenderPipelineManager.endFrameRendering -= OnEndFrameRender;
-
-            m_Setup = false;
+            UnregisterDelegates();
         }
 
-        protected override void OnAwake() => Setup();
-        private void OnEnable() => Setup();
-        private void OnDisable() => TearDown();
-        private void OnDestroy() => TearDown();
-
-        private void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras) 
+        internal void OnBeginFrameRender (ScriptableRenderContext context, Camera[] cameras) 
         {
             if (onBeginFrameRender != null)
                 onBeginFrameRender(context, cameras);
         }
 
-        private void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
+        internal void OnBeginCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (!CameraContextRegistry.CanChangeContextTo(camera))
                 return;
@@ -283,7 +314,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_Context.gridSize, m_Context.tileIndex);
         }
 
-        private void OnEndCameraRender (ScriptableRenderContext context, Camera camera)
+        internal void OnEndCameraRender (ScriptableRenderContext context, Camera camera)
         {
             if (!cameraController.CameraIsInContext(camera))
                 return;
@@ -296,13 +327,13 @@ namespace Unity.ClusterDisplay.Graphics
             #endif
         }
 
-        private void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras) 
+        internal void OnEndFrameRender (ScriptableRenderContext context, Camera[] cameras) 
         {
             if (onEndFrameRender != null)
                 onEndFrameRender(context, cameras);
         }
 
-        private void LateUpdate()
+        internal void LateUpdate()
         {
             if (m_LayoutBuilder == null)
                 return;
@@ -311,17 +342,25 @@ namespace Unity.ClusterDisplay.Graphics
             m_LayoutBuilder.LateUpdate();
         }
 
+        internal void OnBeforePresent ()
+        {
+            if (m_LayoutBuilder == null)
+                return;
+
+            m_LayoutBuilder.OnBeforePresent();
+        }
+
         void SetLayoutBuilder(LayoutBuilder builder)
         {
             if (m_LayoutBuilder != null)
             {
-                UnRegisterLateUpdateReciever(m_LayoutBuilder);
+                UnregisterRendererDelegates(m_LayoutBuilder);
                 m_LayoutBuilder.Dispose();
             }
 
             m_LayoutBuilder = builder;
             if (m_LayoutBuilder != null)
-                RegisterRendererEvents(m_LayoutBuilder);
+                RegisterRendererDelegates(m_LayoutBuilder);
 
             if (onSetCustomLayout != null)
                 onSetCustomLayout(m_LayoutBuilder);
@@ -347,7 +386,7 @@ namespace Unity.ClusterDisplay.Graphics
                     newLayoutBuilder = new URPStandardTileLayoutBuilder(this);
                     #endif
 
-                    cameraController.presenter = new StandardPresenter();
+                    // cameraController.presenter = new StandardPresenter();
                     break;
 
                 case LayoutMode.StandardStitcher:
@@ -358,19 +397,19 @@ namespace Unity.ClusterDisplay.Graphics
                     newLayoutBuilder = new URPStandardStitcherLayoutBuilder(this);
                     #endif
 
-                    cameraController.presenter = new StandardPresenter();
+                    // cameraController.presenter = new StandardPresenter();
                     break;
 
                  // XR Modes are only supported on the HDRP branch: cluster-display/backport-xr/v8.3.1
                 #if CLUSTER_DISPLAY_XR
                 case LayoutMode.XRTile:
                     newLayoutBuilder = new XRTileLayoutBuilder(this);
-                    cameraController.presenter = new XRPresenter();
+                    // cameraController.presenter = new XRPresenter();
                     break;
 
                 case LayoutMode.XRStitcher:
                     newLayoutBuilder = new XRStitcherLayoutBuilder(this);
-                    cameraController.presenter = new XRPresenter();
+                    // cameraController.presenter = new XRPresenter();
                     break;
                 #endif
 

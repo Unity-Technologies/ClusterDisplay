@@ -1,11 +1,15 @@
 ﻿using UnityEngine;
 using Unity.ClusterDisplay;
 using Unity.ClusterDisplay.RPC;
+using Unity.ClusterDisplay.RPC.Wrappers;
 
 [RequireComponent(typeof(Camera))]
+[RequireComponent(typeof(CameraWrapper))]
 public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
 {
     [SerializeField] private Camera m_Camera;
+    [SerializeField] private CameraWrapper m_CameraWrapper;
+
     public Camera Camera => m_Camera;
 
     [SerializeField] private float m_PitchSpeed = 2f;
@@ -18,14 +22,13 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
 
     private Vector3 m_LookAtDirection;
 
+    [SerializeField] private School school;
+
     private void OnValidate() => m_Camera = GetComponent<Camera>();
 
     private void Update()
     {
         if (m_Camera == null)
-            return;
-
-        if (!School.TryGetInstance(out var school))
             return;
 
         var schoolBounds = school.SchoolBounds;
@@ -40,14 +43,17 @@ public class SchoolCamera : SingletonMonoBehaviour<SchoolCamera>
 
         if (ClusterDisplayState.IsEmitter)
         {
-            if (Input.GetMouseButton(1))
-            {
-                float deltaPitch = Input.GetAxis("Mouse Y") * m_PitchSpeed;
-                float deltaYaw = Input.GetAxis("Mouse X") * m_YawSpeed;
+            float keyboardPitch = ((Input.GetKey(KeyCode.DownArrow) ? -1f : Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) * Time.deltaTime * 45f);
+            float keyboardYaw = ((Input.GetKey(KeyCode.LeftArrow) ? -1f : Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) * Time.deltaTime * 45f);
 
-                if (deltaPitch != 0f || deltaYaw != 0f)
-                    SetLookAtDirection(m_Pitch + deltaPitch, m_Yaw + deltaYaw);
-            }
+            float deltaPitch = (Input.GetAxis("Mouse Y") + keyboardPitch + Random.Range(-0.0001f, 0.0001f)) * m_PitchSpeed;
+            float deltaYaw = (Input.GetAxis("Mouse X") + keyboardYaw + Random.Range(-0.0001f, 0.0001f)) * m_YawSpeed;
+
+            float keyboardZoom = ((Input.GetKey(KeyCode.W) ? -1f : Input.GetKey(KeyCode.S) ? 1f : 0f) * Time.deltaTime * 20f);
+            m_CameraWrapper.fieldOfView = m_CameraWrapper.fieldOfView + keyboardZoom;
+
+            if (deltaPitch != 0f || deltaYaw != 0f)
+                SetLookAtDirection(m_Pitch + deltaPitch, m_Yaw + deltaYaw);
         }
     }
 

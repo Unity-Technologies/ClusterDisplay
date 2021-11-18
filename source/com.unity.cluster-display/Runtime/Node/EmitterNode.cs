@@ -16,17 +16,18 @@ namespace Unity.ClusterDisplay
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
         public int TotalExpectedRemoteNodesCount { get; set; }
 
-        public EmitterNode(byte nodeId, int repeaterCount, string ip, int rxport,int txport, int timeOut, int maxMTUSize, string adapterName) : base(nodeId, ip, rxport, txport, timeOut, maxMTUSize, adapterName)
+        public EmitterNode(IClusterSyncState clusterSync, byte nodeId, int repeaterCount, string ip, int rxport,int txport, int timeOut, string adapterName)
+            : base(clusterSync, nodeId, ip, rxport, txport, timeOut, adapterName)
         {
             TotalExpectedRemoteNodesCount = repeaterCount;
         }
 
-        public override bool Start()
+        public override bool TryStart()
         {
-            if (!base.Start())
+            if (!base.TryStart())
                 return false;
 
-            m_CurrentState = new WaitingForAllClients {
+            m_CurrentState = new WaitingForAllClients(clusterSync) {
                 MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
 
             m_CurrentState.EnterState(null);
@@ -60,7 +61,7 @@ namespace Unity.ClusterDisplay
             // Since we are using UDP, it' possible that a node might attempt to register twice.
             // but it's also possible that a node crashed and is rebooting.
             // in both cases we just ignore it.
-            Debug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {m_RemoteNodes[nodeIndex].Role}.");
+            ClusterDebug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {m_RemoteNodes[nodeIndex].Role}.");
         }
 
         public void UnRegisterNode(byte NodeId)

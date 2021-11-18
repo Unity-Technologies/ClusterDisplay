@@ -21,6 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void OnBeginCameraRender(ScriptableRenderContext context, Camera camera);
         public abstract void OnEndCameraRender(ScriptableRenderContext context, Camera camera);
         public abstract void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras);
+        public abstract void OnBeforePresent();
         public abstract void Dispose();
 
         /// <summary>

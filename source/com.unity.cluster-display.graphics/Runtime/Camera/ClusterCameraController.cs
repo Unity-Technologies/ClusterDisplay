@@ -50,14 +50,14 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (pushedCustomProjectionMatrices == null || targetTileIndex > pushedCustomProjectionMatrices.Length - 1)
             {
-                Debug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\".");
+                ClusterDebug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\".");
                 return Matrix4x4.identity;
             }
 
             var pushMatrix = pushedCustomProjectionMatrices[targetTileIndex];
             if (!pushMatrix.pushed)
             {
-                Debug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\", verify whether the matrix was ever pushed or consumed before necessary.");
+                ClusterDebug.LogError($"There are no pushed custom projection matrices with the tile index: \"{targetTileIndex}\", verify whether the matrix was ever pushed or consumed before necessary.");
                 return Matrix4x4.identity;
             }
 
@@ -109,23 +109,23 @@ namespace Unity.ClusterDisplay.Graphics
         public delegate void OnCameraContextChange(Camera previousCamera, Camera nextCamera);
         private OnCameraContextChange onCameraChange;
 
-        private Presenter m_Presenter;
-        public Presenter presenter
-        {
-            get => m_Presenter;
-            set
-            {
-                if (m_Presenter != null)
-                {
-                    UnRegisterCameraEventReceiver(m_Presenter);
-                    m_Presenter.Dispose();
-                }
+        // private Presenter m_Presenter;
+        // public Presenter presenter
+        // {
+        //     get => m_Presenter;
+        //     set
+        //     {
+        //         if (m_Presenter != null)
+        //         {
+        //             UnRegisterCameraEventReceiver(m_Presenter);
+        //             m_Presenter.Dispose();
+        //         }
 
-                m_Presenter = value;
-                if (m_Presenter != null)
-                    RegisterCameraEventReceiver(m_Presenter);
-            }
-        }
+        //         m_Presenter = value;
+        //         if (m_Presenter != null)
+        //             RegisterCameraEventReceiver(m_Presenter);
+        //     }
+        // }
 
         public bool CameraIsInContext(Camera camera) => TryGetContextCamera(out var contextCamera) && contextCamera == camera;
 
@@ -143,27 +143,27 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             // If we are beginning to render with our context camera, do nothing.
-            if (TryGetContextCamera(out var contextCamera) && camera == contextCamera)
+            if (CameraIsInContext(camera))
             {
-                m_Presenter.PollCamera(contextCamera);
+                // m_Presenter.PollCamera(camera);
                 return;
             }
 
             if (!CameraContextRegistry.TryGetInstance(out var cameraContextRegistry) ||
-                !cameraContextRegistry.TryGetCameraContextTarget(camera, out var cameraContextTarget))
+                !cameraContextRegistry.TryGetCameraContextTarget(camera, out var nextCameraContext))
             {
-                m_Presenter.PollCamera(contextCamera);
+                // m_Presenter.PollCamera(camera);
                 return;
             }
 
-            cameraContextRegistry.SetFocusedCameraContextTarget(cameraContextTarget);
+            cameraContextRegistry.SetFocusedCameraContextTarget(nextCameraContext);
             OnPollFrameSettings(camera);
 
             TryGetPreviousCameraContext(out var previousCameraContext);
             if (onCameraChange != null)
-                onCameraChange(previousCameraContext, contextCamera);
+                onCameraChange(previousCameraContext, camera);
 
-            m_Presenter.PollCamera(contextCamera);
+            // m_Presenter.PollCamera(camera);
         }
 
         public void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}

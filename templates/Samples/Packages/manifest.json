@@ -2,6 +2,8 @@
   "dependencies": {
     "com.unity.cluster-display": "file:../../../source/com.unity.cluster-display",
     "com.unity.cluster-display.graphics": "file:../../../source/com.unity.cluster-display.graphics",
+    "com.unity.cluster-display.rpc": "file:../../../source/com.unity.cluster-display.rpc",
+    "com.unity.cluster-display.helpers": "file:../../../source/com.unity.cluster-display.helpers",
     "com.unity.cluster-display.samples": "file:../../../source/com.unity.cluster-display.samples",
     "com.unity.render-pipelines.core": "file:../../../../Graphics/com.unity.render-pipelines.core",
     "com.unity.render-pipelines.universal": "file:../../../../Graphics/com.unity.render-pipelines.universal",

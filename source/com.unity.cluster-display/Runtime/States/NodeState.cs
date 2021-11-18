@@ -18,6 +18,11 @@ namespace Unity.ClusterDisplay
         public static bool Debugging { get; set; }
         public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,0,1000 * 60 * 5);
 
+        protected internal IClusterSyncState clusterSync;
+
+        public NodeState(IClusterSyncState clusterSync) =>
+            this.clusterSync = clusterSync;
+
         public virtual bool ReadyToProceed => true;
 
         public NodeState EnterState(NodeState oldState)
@@ -59,7 +64,7 @@ namespace Unity.ClusterDisplay
 
                 if (m_Time.ElapsedMilliseconds > MaxTimeOut.Milliseconds)
                 {
-                    var shutdown = new Shutdown();
+                    var shutdown = new Shutdown(clusterSync);
                     return shutdown.EnterState(this);
                 }
             }
@@ -76,7 +81,7 @@ namespace Unity.ClusterDisplay
             {
                 case EMessageType.GlobalShutdownRequest:
                 {
-                    PendingStateChange = new Shutdown();
+                    PendingStateChange = new Shutdown(clusterSync);
                     break;
                 }
 
@@ -95,7 +100,7 @@ namespace Unity.ClusterDisplay
 
         protected virtual void ExitState(NodeState newState)
         {
-            Debug.Log("Exiting State:" + GetType().Name);
+            ClusterDebug.Log("Exiting State:" + GetType().Name);
 
             if (m_Task != null)
             {
@@ -124,61 +129,32 @@ namespace Unity.ClusterDisplay
     // RepeaterState state -------------------------------------------------------- 
     internal abstract class RepeaterState : NodeState
     {
-        protected ulong CurrentFrameID
-        {
-            get
-            {
-                if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return clusterSync.CurrentFrameID;
-                return 0;
-            }
-        }
+        public RepeaterState(IClusterSyncState clusterSync) : base(clusterSync) {}
 
-        protected RepeaterNode LocalNode
-        {
-            get
-            {
-                if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return (RepeaterNode)clusterSync.LocalNode;
-                return null;
-            }
-        }
+        protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
+
+        protected RepeaterNode LocalNode => (RepeaterNode)clusterSync.LocalNode;
     }
 
     // EmitterState state -------------------------------------------------------- 
     internal abstract class EmitterState : NodeState
     {
+        public EmitterState(IClusterSyncState clusterSync) : base(clusterSync) {}
         protected ulong PreviousFrameID => CurrentFrameID - 1;
-        protected ulong CurrentFrameID
-        {
-            get
-            {
-                if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return clusterSync.CurrentFrameID;
-                return 0;
-            }
-        }
-
-        protected EmitterNode LocalNode
-        {
-            get
-            {
-                if (ClusterSync.TryGetInstance(out var clusterSync))
-                    return (EmitterNode)clusterSync.LocalNode;
-                return null;
-            }
-        }
+        protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
+        protected EmitterNode LocalNode => (EmitterNode)clusterSync.LocalNode;
     }
 
     // Shutdown state -------------------------------------------------------- 
     internal class Shutdown : NodeState
     {
+        public Shutdown(IClusterSyncState clusterSync) : base(clusterSync) {}
     }
 
     // FatalError state -------------------------------------------------------- 
     internal class FatalError : NodeState
     {
-        public FatalError(string msg)
+        public FatalError(IClusterSyncState clusterSync, string msg) : base(clusterSync)
         {
             Message = msg;
         }
@@ -186,7 +162,7 @@ namespace Unity.ClusterDisplay
         protected override void ExitState(NodeState newState)
         {
             base.ExitState(newState);
-            Debug.LogError(Message);
+            ClusterDebug.LogError(Message);
         }
 
         public string Message { get;  }

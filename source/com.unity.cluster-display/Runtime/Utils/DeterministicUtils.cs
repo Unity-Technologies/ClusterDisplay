@@ -1,8 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
@@ -16,11 +12,11 @@ namespace Unity.ClusterDisplay
             if (stackTrace.FrameCount > 2)
             {
                 var executionStageMethod = stackTrace.GetFrame(2).GetMethod();
-                UnityEngine.Debug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in execution stage: \"{executionStageMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\".");
+                ClusterDebug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in execution stage: \"{executionStageMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\".");
                 return;
             }
 
-            UnityEngine.Debug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\".");
+            ClusterDebug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\".");
         }
 
         public static void LogCall (params object[] arguments)
@@ -35,11 +31,11 @@ namespace Unity.ClusterDisplay
             if (stackTrace.FrameCount > 2)
             {
                 var executionStageMethod = stackTrace.GetFrame(2).GetMethod();
-                UnityEngine.Debug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in execution stage: \"{executionStageMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\" with arguments:{argsStr}");
+                ClusterDebug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in execution stage: \"{executionStageMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\" with arguments:{argsStr}");
                 return;
             }
 
-            UnityEngine.Debug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\" with arguments:{argsStr}");
+           ClusterDebug.Log($"Frame ({ClusterDisplayState.Frame}): Called: \"{callingMethod.Name}\" in type: \"{callingMethod.DeclaringType.FullName}\" with arguments:{argsStr}");
         }
     }
 }

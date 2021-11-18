@@ -32,61 +32,18 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.Clear();
         }
 
-        /// <summary>
-        /// Where rendering actually occurs.
-        /// </summary>
-        public override void LateUpdate ()
-        {
-            if (!ClusterCameraController.TryGetContextCamera(out var camera))
-                return;
-
-            camera.enabled = !camera.gameObject.activeInHierarchy;
-
-            if (!ValidGridSize(out var numTiles))
-                return;
-            ClearTiles(numTiles);
-
-            var m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
-            var cachedProjectionMatrix = camera.projectionMatrix;
-
-            for (var tileIndex = 0; tileIndex < numTiles; tileIndex++)
-            {
-                CalculateStitcherLayout(
-                    camera, 
-                    cachedProjectionMatrix,
-                    tileIndex, 
-                    out var percentageViewportSubsection, 
-                    out var viewportSubsection, 
-                    out var asymmetricProjectionMatrix);
-
-                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
-                UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
-
-                var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
-                CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
-
-                camera.targetTexture = sourceRT;
-                camera.projectionMatrix = asymmetricProjectionMatrix;
-                camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
-
-                camera.Render();
-            }
-
-            camera.ResetProjectionMatrix();
-            camera.ResetCullingMatrix();
-        }
-
+        public override void LateUpdate () {}
         public override void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) {}
-
         public override void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) {}
         public override void OnEndCameraRender(ScriptableRenderContext context, Camera camera) {}
+        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras){}
 
         /// <summary>
         /// When were done with this frame, stitch the results together.
         /// </summary>
         /// <param name="context"></param>
         /// <param name="cameras"></param>
-        public override void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras) 
+        private void BlitToPresent (Camera camera)
         {
             if (!ValidGridSize(out var numTiles))
                 return;
@@ -128,13 +85,61 @@ namespace Unity.ClusterDisplay.Graphics
             m_QueuedStitcherParameters.Clear();
 
             UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            UnityEngine.Graphics.Blit(presentRT, null as RenderTexture);
+
             cmd.Clear();
 
-            k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
+            // k_ClusterRenderer.cameraController.presenter.presentRT = presentRT;
 
 #if UNITY_EDITOR
             UnityEditor.SceneView.RepaintAll();
 #endif
+        }
+
+        /// <summary>
+        /// Where rendering actually occurs.
+        /// </summary>
+        public override void OnBeforePresent()
+        {
+            if (!ClusterCameraController.TryGetContextCamera(out var camera))
+                return;
+
+            camera.enabled = !camera.gameObject.activeInHierarchy;
+
+            if (!ValidGridSize(out var numTiles))
+                return;
+            ClearTiles(numTiles);
+
+            var m_OverscannedRect = GraphicsUtil.CalculateOverscannedRect(k_ClusterRenderer.context.overscanInPixels);
+            var cachedProjectionMatrix = camera.projectionMatrix;
+
+            for (var tileIndex = 0; tileIndex < numTiles; tileIndex++)
+            {
+                CalculateStitcherLayout(
+                    camera, 
+                    cachedProjectionMatrix,
+                    tileIndex, 
+                    out var percentageViewportSubsection, 
+                    out var viewportSubsection, 
+                    out var asymmetricProjectionMatrix);
+
+                ClusterRenderer.ToggleClusterDisplayShaderKeywords(keywordEnabled: k_ClusterRenderer.context.debugSettings.enableKeyword);
+                UploadClusterDisplayParams(GraphicsUtil.GetClusterDisplayParams(viewportSubsection, k_ClusterRenderer.context.globalScreenSize, k_ClusterRenderer.context.gridSize));
+
+                var sourceRT = m_RTManager.GetSourceRT(numTiles, tileIndex, (int)m_OverscannedRect.width, (int)m_OverscannedRect.height);
+                CalculcateAndQueueStitcherParameters(tileIndex, sourceRT, m_OverscannedRect, percentageViewportSubsection);
+
+                camera.targetTexture = sourceRT;
+                camera.projectionMatrix = asymmetricProjectionMatrix;
+                camera.cullingMatrix = asymmetricProjectionMatrix * camera.worldToCameraMatrix;
+
+                camera.Render();
+            }
+
+            camera.ResetProjectionMatrix();
+            camera.ResetCullingMatrix();
+
+            BlitToPresent(camera);
         }
     }
 }

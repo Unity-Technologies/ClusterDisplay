@@ -6,7 +6,8 @@
       "source": "local",
       "dependencies": {
         "com.unity.code-analysis": "0.1.2-preview",
-        "com.unity.nuget.mono-cecil": "1.10.1"
+        "com.unity.nuget.mono-cecil": "1.10.1",
+        "com.unity.nuget.newtonsoft-json": "2.0.1-preview.1"
       }
     },
     "com.unity.cluster-display.graphics": {
@@ -15,6 +16,25 @@
       "source": "local",
       "dependencies": {
         "com.unity.cluster-display": "0.0.3-preview"
+      }
+    },
+    "com.unity.cluster-display.helpers": {
+      "version": "file:../../../source/com.unity.cluster-display.helpers",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.cluster-display.rpc": "0.0.4-preview"
+      }
+    },
+    "com.unity.cluster-display.rpc": {
+      "version": "file:../../../source/com.unity.cluster-display.rpc",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.cluster-display": "0.0.4-preview",
+        "com.unity.code-analysis": "0.1.2-preview",
+        "com.unity.nuget.mono-cecil": "1.10.1",
+        "com.unity.nuget.newtonsoft-json": "2.0.1-preview.1"
       }
     },
     "com.unity.code-analysis": {
@@ -63,6 +83,13 @@
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.10.1",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "2.0.1-preview.1",
       "depth": 1,
       "source": "registry",
       "dependencies": {},

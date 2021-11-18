@@ -1,0 +1,21 @@
+{
+    "name": "Unity.ClusterDisplay.GeneratedWrappers",
+    "references": [
+        "GUID:0861eaad4777b824986b7d153336925a",
+        "GUID:ebda382865f803841bb36f141d251db6",
+        "GUID:f28afb295ef18e542af4ecc7441876be",
+        "GUID:207e264bdd21f23458c301d9b19a7dc6"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

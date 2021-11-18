@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_SourceRT = new RenderTexture(width, height, 1, format, 0);
                 m_SourceRT.name = $"Source-RT-({m_SourceRT.width}X{m_SourceRT.height})";
-                // Debug.Log("Resizing tile RT.");
+                // ClusterDebug.Log("Resizing tile RT.");
             }
 
             return m_SourceRT;
@@ -45,30 +45,35 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_PresentRT = new RenderTexture(width, height, 1, format, 0);
                 m_PresentRT.name = $"Present-RT-({m_PresentRT.width}X{m_PresentRT.height})";
-                // Debug.Log("Resizing present RT.");
+                // ClusterDebug.Log("Resizing present RT.");
             }
 
             return m_PresentRT;
         }
 
-        public override RenderTexture GetBackBufferRT(int width, int height, GraphicsFormat format = defaultFormat)
+        public override RenderTexture GetQueuedFrameRT(int width, int height, int currentQueuedFrameCount, GraphicsFormat format = defaultFormat)
         {
+            PollQueuedFrameCount(currentQueuedFrameCount);
+            long index = backBufferRTIndex % currentQueuedFrameCount;
+            var backBufferRT = m_QueuedFrameRTs[index];
+
             bool resized = 
-                m_BackBufferRT != null && 
-                (m_BackBufferRT.width != (int)width || 
-                m_BackBufferRT.height != (int)height);
+                backBufferRT != null && 
+                (backBufferRT.width != (int)width || 
+                backBufferRT.height != (int)height);
 
-            if (m_BackBufferRT == null || resized || m_BackBufferRT.graphicsFormat != format)
+            if (backBufferRT == null || resized || backBufferRT.graphicsFormat != format)
             {
-                if (m_BackBufferRT != null)
-                    m_BackBufferRT.Release();
+                if (backBufferRT != null)
+                    backBufferRT.Release();
 
-                m_BackBufferRT = new RenderTexture(width, height, 1, format, 0);
-                m_BackBufferRT.name = $"BackBuffer-RT-({m_BackBufferRT.width}X{m_BackBufferRT.height})";
-                // Debug.Log("Resizing back buffer RT.");
+                m_QueuedFrameRTs[index] = backBufferRT = new RenderTexture(width, height, 1, format, 0);
+                backBufferRT.name = $"BackBuffer-RT-({backBufferRT.width}X{backBufferRT.height})";
+                // ClusterDebug.Log("Resizing back buffer RT.");
             }
 
-            return m_BackBufferRT;
+            backBufferRTIndex++;
+            return backBufferRT;
         }
 
         public override void Release()
@@ -79,12 +84,21 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_PresentRT != null)
                 m_PresentRT.Release();
 
-            if (m_BackBufferRT != null)
-                m_BackBufferRT.Release();
+            if (m_QueuedFrameRTs != null && m_QueuedFrameRTs.Length != 0)
+            {
+                for (int i = 0; i < m_QueuedFrameRTs.Length; i++)
+                {
+                    if (m_QueuedFrameRTs[i] != null)
+                    {
+                        m_QueuedFrameRTs[i].Release();
+                        m_QueuedFrameRTs[i] = null;
+                    }
+                }
+            }
 
             m_SourceRT = null;
             m_PresentRT = null;
-            m_BackBufferRT = null;
+            m_QueuedFrameRTs = null;
         }
 
     }

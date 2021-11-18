@@ -96,10 +96,11 @@ namespace Unity.ClusterDisplay.Graphics
             return GraphicsUtil.ApplyOverscan(viewportSubsection, clusterRenderer.context.overscanInPixels);
         }
 
-        public static Matrix4x4 CalculateClusterDisplayParams (
-            ClusterRenderer clusterRenderer,
-            int tileId)
+        public static Matrix4x4 CalculateClusterDisplayParams (int tileId)
         {
+            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
+                return Matrix4x4.identity;
+
             var viewportSubsection = CalculateNormalizedViewport(clusterRenderer, tileId);
             return GraphicsUtil.GetClusterDisplayParams(viewportSubsection, clusterRenderer.context.globalScreenSize, clusterRenderer.context.gridSize);
 
@@ -120,6 +121,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static Vector2 ClusterToDeviceFullscreenUV(Matrix4x4 clusterDisplayParams, Vector2 xy) =>
             new Vector2(xy.x - clusterDisplayParams[0, 0], xy.y - clusterDisplayParams[0, 1]) / new Vector2(clusterDisplayParams[0, 2], clusterDisplayParams[0, 3]);
+
+        // NDC = normalized device coordinates
+        // NCC = normalized cluster coordinates.
 
         public static Vector2 NdcToNcc(Matrix4x4 clusterDisplayParams, Vector2 xy)
         {

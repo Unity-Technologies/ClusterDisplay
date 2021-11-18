@@ -9,6 +9,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
     {
         public override bool ReadyToProceed => false;
         public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
+        
+        public WaitingForAllClients(IClusterSyncState clusterSync) : base(clusterSync) {}
 
         public override void InitState()
         {
@@ -24,11 +26,11 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    Debug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
-                var newState = new SynchronizeFrame {
+                var newState = new EmitterSynchronization(clusterSync) {
                     MaxTimeOut = ClusterParams.CommunicationTimeout,
                 };
 
@@ -68,15 +70,15 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
-                var err = new FatalError( $"Error occured while processing nodes discovery: {e.Message}");
+                ClusterDebug.LogException(e);
+                var err = new FatalError( clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
                 PendingStateChange = err;
             }
         }
 
         private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo )
         {
-            Debug.Log("Discovered remote node: " + header.OriginID );
+            ClusterDebug.Log("Discovered remote node: " + header.OriginID );
 
             var commCtx = new RemoteNodeComContext
             {
@@ -101,7 +103,6 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             return $"{base.GetDebugString()} : {LocalNode.m_RemoteNodes.Count}";
         }
-
     }
 
 }

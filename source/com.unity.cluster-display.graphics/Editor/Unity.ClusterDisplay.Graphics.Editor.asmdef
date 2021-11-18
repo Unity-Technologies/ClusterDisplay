@@ -1,6 +1,7 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.Editor",
     "references": [
+        "Unity.ClusterDisplay",
         "Unity.ClusterDisplay.Runtime",
         "Unity.ClusterDisplay.Graphics",
         "Unity.RenderPipelines.Core.Runtime",

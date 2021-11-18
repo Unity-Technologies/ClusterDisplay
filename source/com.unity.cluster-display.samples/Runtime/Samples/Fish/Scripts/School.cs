@@ -66,7 +66,7 @@ public class School : SingletonMonoBehaviour<School>
     }
 
     [ClusterRPC(RPCExecutionStage.BeforeUpdate)]
-    public void Spawn(Vector3 position, Quaternion rotation) => SpawnLocally(position, rotation);
+    public void SpawnFish(Vector3 position, Quaternion rotation) => SpawnLocally(position, rotation);
 
     public void SpawnLocally (Vector3 position, Quaternion rotation)
     {
@@ -139,7 +139,7 @@ public class School : SingletonMonoBehaviour<School>
                 ResetFishPositions();
 
             if ((Input.GetKey(KeyCode.LeftShift) && Input.GetMouseButtonDown(0)) || (Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.Space)))
-                Spawn(FishUtils.GetWorldInteractionPosition(), Quaternion.identity);
+                SpawnFish(FishUtils.GetWorldInteractionPosition(), Quaternion.identity);
         }
     }
 

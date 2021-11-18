@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        public RegisterWithEmitter(RepeaterNode node)
+        public RegisterWithEmitter(IClusterSyncState clusterSync, RepeaterNode node) : base(clusterSync)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             if (m_EmitterFound)
             {
-                var nextState = new SynchronizeFrame{MaxTimeOut = ClusterParams.CommunicationTimeout};
+                var nextState = new RepeaterSynchronization(clusterSync){MaxTimeOut = ClusterParams.CommunicationTimeout};
                 nextState.EnterState(this);
                 return nextState;
             }
@@ -74,7 +74,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                             {
                                 if ((header.DestinationIDs & LocalNode.NodeIDMask) == LocalNode.NodeIDMask)
                                 {
-                                    Debug.Log("Accepted by emitter: " + header.OriginID);
+                                    ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
                                     m_EmitterFound = true;
                                     LocalNode.EmitterNodeId = header.OriginID;
                                     LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             }
             catch (Exception e)
             {
-                var err = new FatalError( $"Error occured while registering with emitter node: {e.Message}");
+                var err = new FatalError( clusterSync, $"Error occured while registering with emitter node: {e.Message}");
                 PendingStateChange = err;
             }
         }

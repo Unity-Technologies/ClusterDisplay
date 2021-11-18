@@ -3,8 +3,10 @@
 namespace Unity.ClusterDisplay.Graphics
 {
     // TODO naming way too vague
-    [RequireComponent(typeof(ClusterRenderer))]
-    class ClusterRendererCommandLineInitializer : MonoBehaviour
+    [CreateAssetMenu(fileName = "ClusterRendererCommandLineInitializer", menuName = "Cluster Display/ClusterRendererCommandLineInitializer", order = 1)]
+    class ClusterRendererCommandLineInitializer : 
+        SingletonScriptableObject<ClusterRendererCommandLineInitializer>,
+        IClusterDisplayConfigurable
     {
         static class CommandLineArgs
         {
@@ -19,7 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
         
         public void OnEnable()
         {
-            m_ClusterRenderer = GetComponent<ClusterRenderer>();
+            if (!ClusterRenderer.TryGetInstance(out m_ClusterRenderer))
+                return;
                 
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
                 m_ClusterRenderer.context.debug = true;
@@ -39,6 +42,10 @@ namespace Unity.ClusterDisplay.Graphics
             int overscanInPixels;
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out overscanInPixels))
                 m_ClusterRenderer.settings.overScanInPixels = overscanInPixels;
+        }
+
+        protected override void OnAwake()
+        {
         }
     }
 }

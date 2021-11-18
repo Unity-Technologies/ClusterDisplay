@@ -19,7 +19,6 @@ public class RPCArgumentTestSet : MonoBehaviour
         StringTest("Hello, World!");
         MultiStringTest("Hello", "World");
         
-        
         PrimitivesTest(
             byteValue: 128,
             sbyteValue: -128,

@@ -14,7 +14,7 @@ public class Spawner : MonoBehaviour
         StartCoroutine(SpawnLoop());
 
     [ClusterRPC]
-    public void Spawn(Vector3 position)
+    public void SpawnPrefab(Vector3 position)
     {
         if (!SceneObjectsRegistry.TryGetSceneInstance(gameObject.scene.path, out var sceneObjectsRegistry))
             return;
@@ -45,7 +45,7 @@ public class Spawner : MonoBehaviour
         while (true)
         {
             yield return waitForSeconds;
-            Spawn(new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0f));
+            SpawnPrefab(new Vector3(Random.Range(-10, 10), Random.Range(-10, 10), 0f));
             RecolorAll();
         }
     }

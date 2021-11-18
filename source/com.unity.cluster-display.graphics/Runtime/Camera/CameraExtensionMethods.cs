@@ -6,80 +6,31 @@ namespace Unity.ClusterDisplay.Graphics
 {
     public static class CameraExtensionMethods
     {
-        public static Vector2 ScreenPointToClusterDisplayScreenPoint (this Camera camera, Vector2 screenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) ||
-                !ClusterSync.TryGetInstance(out var clusterSync) ||
-                !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return screenPoint;
+        // NDC = Normalized device coordinates.
+        // NCC = Normalized cluster coordinates.
 
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
-            return GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint);
-        }
+        public static Vector2 NDCToNCC (this Camera camera, Vector2 ndc) =>
+            GraphicsUtil.NdcToNcc(GraphicsUtil.CalculateClusterDisplayParams(ClusterDisplayState.NodeID), ndc);
 
-        public static Vector2 ScreenPointToClusterDisplayScreenPoint (this Camera camera, int tileIndex, Vector2 screenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return screenPoint;
+        public static Vector2 NCCToNDC (this Camera camera, Vector2 ncc) =>
+            GraphicsUtil.NccToNdc(GraphicsUtil.CalculateClusterDisplayParams(ClusterDisplayState.NodeID), ncc);
 
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
-            return GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint);
-        }
+        public static Vector2 NCCToClusterScreenPosition (this Camera camera, Vector2 ncc) =>
+            new Vector2(Screen.width * (ncc.x * 0.5f + 0.5f), Screen.height * (ncc.y * 0.5f + 0.5f));
 
-        public static Vector2 ScreenPointToClusterDisplayWorldPoint (this Camera camera, Vector2 screenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
-                !ClusterSync.TryGetInstance(out var clusterSync) || 
-                !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return screenPoint;
+        public static Vector2 NDCToDeviceScreenPosition (this Camera camera, Vector2 ndc) =>
+            new Vector2(Screen.width * (ndc.x * 0.5f + 0.5f), Screen.height * (ndc.y * 0.5f + 0.5f));
 
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
-            return camera.ScreenToWorldPoint(GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint));
-        }
+        public static Vector2 DeviceScreenPositionToNCC (this Camera camera, Vector2 deviceScreenPosition) =>
+            NDCToNCC(camera, DeviceScreenPositionToNDC(camera, deviceScreenPosition));
 
-        public static Ray ClusterDisplayScreenPointToRay (this Camera camera, Vector2 screenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
-                !ClusterSync.TryGetInstance(out var clusterSync) || 
-                !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return camera.ScreenPointToRay(screenPoint);
+        public static Vector2 DeviceScreenPositionToNDC (this Camera camera, Vector2 deviceScreenPosition) =>
+            new Vector2(deviceScreenPosition.x / Screen.width, deviceScreenPosition.y / Screen.height) * 2f - Vector2.one;
 
-            var normalizedViewport = GraphicsUtil.CalculateNormalizedViewport(clusterRenderer, tileId);
-            var asymmetricProjection = GraphicsUtil.GetFrustumSlicingAsymmetricProjection(camera.projectionMatrix, normalizedViewport);
+        public static Vector2 DeviceScreenPositionToClusterScreenPosition(this Camera camera, Vector2 deviceScreenPosition) =>
+            NCCToClusterScreenPosition(camera, NDCToNCC(camera, DeviceScreenPositionToNDC(camera, deviceScreenPosition)));
 
-            var viewportPoint = camera.ScreenToViewportPoint(screenPoint);
-            var worldPoint = asymmetricProjection.MultiplyPoint(viewportPoint);
-
-            return new Ray(camera.transform.position, (worldPoint - camera.transform.position).normalized);
-        }
-
-        public static Vector2 ScreenPointToClusterDisplayWorldPoint (this Camera camera, int tileIndex, Vector2 screenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return screenPoint;
-
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
-            return camera.ScreenToWorldPoint(GraphicsUtil.NdcToNcc(clusterDisplayParams, screenPoint));
-        }
-
-        public static Vector2 ClusterDisplayScreenPointToScreenPoint (this Camera camera, Vector2 clusterDisplayScreenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer) || 
-                !ClusterSync.TryGetInstance(out var clusterSync) || 
-                !clusterSync.TryGetDynamicLocalNodeId(out var tileId))
-                return clusterDisplayScreenPoint;
-
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileId);
-            return GraphicsUtil.NccToNdc(clusterDisplayParams, clusterDisplayScreenPoint);
-        }
-
-        public static Vector2 ClusterDisplayScreenPointToScreenPoint (this Camera camera, int tileIndex, Vector2 clusterDisplayScreenPoint)
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return clusterDisplayScreenPoint;
-
-            var clusterDisplayParams = GraphicsUtil.CalculateClusterDisplayParams(clusterRenderer, tileIndex);
-            return GraphicsUtil.NccToNdc(clusterDisplayParams, clusterDisplayScreenPoint);
-        }
+        public static Vector2 ClusterScreenPositionToDeviceScreenPosition(this Camera camera, Vector2 clusterScreenPosition) =>
+            NCCToClusterScreenPosition(camera, DeviceScreenPositionToNCC(camera, clusterScreenPosition));
     }
 }

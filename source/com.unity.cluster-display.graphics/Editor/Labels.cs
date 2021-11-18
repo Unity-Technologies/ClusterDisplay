@@ -19,6 +19,8 @@ namespace Unity.ClusterDisplay.Graphics
             LayoutMode,
             DebugViewportSubsection,
             ScaleBiasOffset,
+            QueueEmitterFrame,
+            QueueEmitterFrameCount,
         }
         
         static string GetName(Field field)
@@ -36,6 +38,8 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.LayoutMode:              return "Layout Mode";
                 case Field.DebugViewportSubsection: return "Debug Viewport Subsection";
                 case Field.ScaleBiasOffset:         return "Scale Bias Offset";
+                case Field.QueueEmitterFrame:       return "Queue Emitter Frame";
+                case Field.QueueEmitterFrameCount:  return "Queue Emitter Frame Count";
             }
 
             return string.Empty;
@@ -56,6 +60,8 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.LayoutMode:              return "Select various layout modes for visualization.";
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
                 case Field.ScaleBiasOffset:         return "Compositing offset allowing for overscanned pixels visualization.";
+                case Field.QueueEmitterFrame:       return "Emitter renders one frame ahead and presents the previous frame to stay in sync with the repeater.";
+                case Field.QueueEmitterFrameCount:  return "The number of rendered frame that the emitter queues before presenting the last one.";
             }
 
             return string.Empty;

@@ -42,20 +42,20 @@ namespace Unity.ClusterDisplay.Graphics
                 var dim = str.Split('x');
                 if (dim.Length != 2)
                 {
-                    Debug.LogError($"Failed to parse [{name}], expected format like 512x512, got [{str}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], expected format like 512x512, got [{str}].");
                     return false;
                 }
 
                 int w, h;
                 if (!int.TryParse(dim[0], out w))
                 {
-                    Debug.LogError($"Failed to parse [{name}], unexpected width: [{dim[0]}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], unexpected width: [{dim[0]}].");
                     return false;
                 }
 
                 if (!int.TryParse(dim[1], out h))
                 {
-                    Debug.LogError($"Failed to parse [{name}], unexpected height: [{dim[1]}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], unexpected height: [{dim[1]}].");
                     return false;
                 }
 
@@ -75,20 +75,20 @@ namespace Unity.ClusterDisplay.Graphics
                 var dim = str.Split('x');
                 if (dim.Length != 2)
                 {
-                    Debug.LogError($"Failed to parse [{name}], expected format like 12.4x54.06, got [{str}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], expected format like 12.4x54.06, got [{str}].");
                     return false;
                 }
 
                 float w, h;
                 if (!float.TryParse(dim[0], out w))
                 {
-                    Debug.LogError($"Failed to parse [{name}], unexpected width: [{dim[0]}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], unexpected width: [{dim[0]}].");
                     return false;
                 }
 
                 if (!float.TryParse(dim[1], out h))
                 {
-                    Debug.LogError($"Failed to parse [{name}], unexpected height: [{dim[1]}].");
+                    ClusterDebug.LogError($"Failed to parse [{name}], unexpected height: [{dim[1]}].");
                     return false;
                 }
 

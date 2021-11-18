@@ -10,8 +10,9 @@ public static class FishUtils
         if (!SchoolCamera.TryGetInstance(out var schoolCamera) || !School.TryGetInstance(out var school))
             return Vector3.zero;
 
-        var clusterDisplayScreenPosition = schoolCamera.Camera.ScreenPointToClusterDisplayScreenPoint(Input.mousePosition);
-        var worldRay = schoolCamera.Camera.ScreenPointToRay(new Vector3(clusterDisplayScreenPosition.x, clusterDisplayScreenPosition.y, 1f));
+        var ncc = new Vector2((Input.mousePosition.x / 1280f) * 2f - 1f, (Input.mousePosition.y / 720f) * 2f - 1f);
+        var clusterScreenPosition = schoolCamera.Camera.NCCToClusterScreenPosition(ncc);
+        var worldRay = schoolCamera.Camera.ScreenPointToRay(new Vector3(clusterScreenPosition.x, clusterScreenPosition.y, 1f));
 
         return worldRay.origin + worldRay.direction.normalized * (school.Center - schoolCamera.transform.position).magnitude;
     }
