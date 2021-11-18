@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             using (var check = new EditorGUI.ChangeCheckScope())
             {
 #if CLUSTER_DISPLAY_URP
-                RenderFeatureEditorUtils<ClusterRenderer, UrpPresenter.InjectionPointRenderFeature>.OnInspectorGUI();
+                RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
                 CheckForClusterCameraComponents();
                 
