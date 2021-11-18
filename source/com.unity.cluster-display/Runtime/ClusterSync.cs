@@ -61,9 +61,8 @@ namespace Unity.ClusterDisplay
             }
         }
 
-#if UNITY_EDITOR
         public string m_EditorCmdLine = "";
-#endif
+        
         internal ClusterNode LocalNode { get; set; }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
