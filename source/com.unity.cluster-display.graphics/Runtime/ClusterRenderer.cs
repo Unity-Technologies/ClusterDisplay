@@ -72,12 +72,12 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
 
-#if UNITY_EDITOR
 
         // we need a clip-to-world space conversion for gizmo
         Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
         ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
 
+#if UNITY_EDITOR
         void OnDrawGizmos()
         {
             if (enabled)
@@ -130,11 +130,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Enable(gameObject);
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(InjectedUpdate);
-
-            // TODO Needed?
-#if UNITY_EDITOR
-            SceneView.RepaintAll();
-#endif
         }
 
         void OnDisable()
@@ -191,10 +186,6 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_Presenter.SetSource(m_LayoutBuilder.PresentRT);
 
-// TODO is it really needed?
-#if UNITY_EDITOR
-                SceneView.RepaintAll();
-#endif
             }
         }
 
