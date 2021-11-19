@@ -1,3 +1,4 @@
+#if CLUSTER_DISPLAY_URP
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -42,3 +43,4 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 }
+#endif
