@@ -22,9 +22,9 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
-        struct CameraScope : IDisposable
+        readonly struct CameraScope : IDisposable
         {
-            public Camera m_Camera;
+            readonly Camera m_Camera;
 
             public CameraScope(Camera camera)
             {
@@ -61,14 +61,6 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
-
-        // We need to flip along the Y axis when blitting to screen on HDRP,
-        // but not when using URP.
-#if CLUSTER_DISPLAY_HDRP
-        const bool k_FlipWhenBlittingToScreen = true;
-#else
-        const bool k_FlipWhenBlittingToScreen = false;
-#endif
 
         [SerializeField]
         readonly ClusterRendererSettings m_Settings = new ClusterRendererSettings();
@@ -166,7 +158,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             foreach (var command in m_BlitCommands)
             {
-                command.Execute(commandBuffer, k_FlipWhenBlittingToScreen);
+                GraphicsUtil.Blit(commandBuffer, command);
             }
         }
         
@@ -204,7 +196,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Prepare context properties.
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, m_Settings.OverScanInPixels);
-            var asymmetricProjection = new AsymmetricProjection(originalProjectionMatrix);
             var blitParams = new BlitParams(displaySize, m_Settings.OverScanInPixels, m_DebugSettings.ScaleBiasTextOffset);
             var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
 
@@ -214,7 +205,7 @@ namespace Unity.ClusterDisplay.Graphics
                 numTiles = numTiles,
                 overscannedSize = overscannedSize,
                 viewport = viewport,
-                asymmetricProjection = asymmetricProjection,
+                originalProjection = originalProjectionMatrix,
                 blitParams = blitParams,
                 postEffectsParams = postEffectsParams,
                 debugViewportSubsection = m_DebugSettings.ViewportSubsection,
@@ -233,11 +224,11 @@ namespace Unity.ClusterDisplay.Graphics
             
             if (isStitcher)
             {
-                RenderStitcher(m_TileRenderTargets, activeCamera, renderContext, m_BlitCommands);
+                RenderStitcher(m_TileRenderTargets, activeCamera, ref renderContext, m_BlitCommands);
             }
             else
             {
-                RenderTile(m_TileRenderTargets[0], activeCamera, renderContext, m_BlitCommands);
+                RenderTile(m_TileRenderTargets[0], activeCamera, ref renderContext, m_BlitCommands);
             }
             
             // TODO Make sure there's no one-frame offset induced by rendering timing.
@@ -250,42 +241,39 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        static void RenderStitcher(RenderTexture[] targets, Camera camera, RenderContext renderContext, List<BlitCommand> commands)
+        static void RenderStitcher(RenderTexture[] targets, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
             using var cameraScope = new CameraScope(camera);
             for (var tileIndex = 0; tileIndex != renderContext.numTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = renderContext.viewport.GetSubsectionWithOverscan(tileIndex);
 
-                var asymmetricProjectionMatrix = renderContext.asymmetricProjection.GetFrustumSlice(overscannedViewportSubsection);
+                var asymmetricProjectionMatrix = renderContext.originalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
                 var clusterParams = renderContext.postEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
                 cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
 
                 var viewportSubsection = renderContext.viewport.GetSubsectionWithoutOverscan(tileIndex);
-                renderContext.blitParams.GetScaleBias(viewportSubsection, out var scaleBiasTex, out var scaleBiasRT);
 
-                commands.Add(new BlitCommand(targets[tileIndex], scaleBiasTex, scaleBiasRT));
+                commands.Add(new BlitCommand(targets[tileIndex], renderContext.blitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
             }
         }
 
-        static void RenderTile(RenderTexture target, Camera camera, RenderContext renderContext, List<BlitCommand> commands)
+        static void RenderTile(RenderTexture target, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
             using var cameraScope = new CameraScope(camera);
             var overscannedViewportSubsection = renderContext.useDebugViewportSubsection ? 
                 renderContext.debugViewportSubsection : 
                 renderContext.viewport.GetSubsectionWithOverscan(renderContext.currentTileIndex);
             
-            var asymmetricProjectionMatrix = renderContext.asymmetricProjection.GetFrustumSlice(overscannedViewportSubsection);
+            var asymmetricProjectionMatrix = renderContext.originalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
             var clusterParams = renderContext.postEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
             
             cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
 
-            renderContext.blitParams.GetScaleBias(new Rect(0, 0, 1, 1), out var scaleBiasTex, out var scaleBiasRT);
-
-            commands.Add(new BlitCommand(target, scaleBiasTex, scaleBiasRT));
+            commands.Add(new BlitCommand(target, renderContext.blitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
         }
 
         internal static void SetShaderKeyword(bool enabled)

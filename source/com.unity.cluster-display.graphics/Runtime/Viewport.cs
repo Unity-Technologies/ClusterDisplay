@@ -2,12 +2,12 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    struct Viewport
+    readonly struct Viewport
     {
-        Vector2Int m_GridSize;
-        Vector2 m_PhysicalScreenSize;
-        Vector2 m_Bezel;
-        int m_OverscanInPixels;
+        readonly Vector2Int m_GridSize;
+        readonly Vector2 m_PhysicalScreenSize;
+        readonly Vector2 m_Bezel;
+        readonly int m_OverscanInPixels;
 
         public Viewport(Vector2Int gridSize, Vector2 physicalScreenSize, Vector2 bezel, int overscanInPixels)
         {
@@ -15,22 +15,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_PhysicalScreenSize = physicalScreenSize;
             m_Bezel = bezel;
             m_OverscanInPixels = overscanInPixels;
-        }
-        
-        public Viewport(Vector2Int gridSize, int overscanInPixels)
-        {
-            m_GridSize = gridSize;
-            m_PhysicalScreenSize = Vector2.zero;
-            m_Bezel = Vector2.zero;
-            m_OverscanInPixels = overscanInPixels;
-        }
-        
-        public Viewport(Vector2Int gridSize)
-        {
-            m_GridSize = gridSize;
-            m_PhysicalScreenSize = Vector2.zero;
-            m_Bezel = Vector2.zero;
-            m_OverscanInPixels = 0;
         }
 
         public Rect GetSubsectionWithoutOverscan(int tileIndex)

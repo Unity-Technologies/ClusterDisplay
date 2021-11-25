@@ -1,6 +1,5 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
@@ -8,6 +7,14 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
+        // We need to flip along the Y axis when blitting to screen on HDRP,
+        // but not when using URP.
+#if CLUSTER_DISPLAY_HDRP
+        const bool k_FlipWhenBlittingToScreen = true;
+#else
+        const bool k_FlipWhenBlittingToScreen = false;
+#endif
+
         static class ShaderIDs
         {
             public static readonly int _BlitTexture = Shader.PropertyToID("_BlitTexture");
@@ -60,12 +67,16 @@ namespace Unity.ClusterDisplay.Graphics
             Blit(cmd, source, texBias, k_IdentityScaleBiasRT, flipY);
         }
 
-        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
+        internal static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand)
+        {
+            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
+        }
+
+        internal static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
             var propertyBlock = GetPropertyBlock();
 
-            // TODO Use static ints...
             propertyBlock.SetTexture(ShaderIDs._BlitTexture, source);
             propertyBlock.SetVector(ShaderIDs._BlitScaleBias, texBias);
             propertyBlock.SetVector(ShaderIDs._BlitScaleBiasRt, rtBias);
@@ -124,7 +135,7 @@ namespace Unity.ClusterDisplay.Graphics
             rts = null;
         }
 
-        public static void DeallocateIfNeeded(ref RenderTexture rt)
+        static void DeallocateIfNeeded(ref RenderTexture rt)
         {
             if (rt != null)
             {
@@ -150,5 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
                 Shader.DisableKeyword(k_ShaderKeyword);
             }
         }
+
+        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
 }

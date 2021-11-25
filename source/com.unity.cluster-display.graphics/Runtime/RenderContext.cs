@@ -3,13 +3,13 @@
 namespace Unity.ClusterDisplay.Graphics
 {
     // TODO Capitalize props.
-    struct RenderContext
+    ref struct RenderContext
     {
         public int currentTileIndex;
         public int numTiles;
         public Vector2Int overscannedSize;
         public Viewport viewport;
-        public AsymmetricProjection asymmetricProjection;
+        public Matrix4x4 originalProjection;
         public BlitParams blitParams;
         public PostEffectsParams postEffectsParams;
         // Debug data.
