@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Bezel: return "Bezel";
                 case Field.BezelColor: return "Bezel Color";
                 case Field.Overscan: return "Overscan in Pixels";
-                case Field.Debug: return "Debug";
+                case Field.Debug: return "Debug Mode";
                 case Field.TileIndexOverride: return "Tile Index Override";
                 case Field.Keyword: return "Keyword";
                 case Field.LayoutMode: return "Layout Mode";

@@ -64,12 +64,12 @@ namespace Unity.ClusterDisplay.Graphics.Example
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 
-        public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
+        public static void DrawDebugSettings(ClusterRendererDebugSettings settings, TiledProjectionDebugSettings tileDebugSettings)
         {
-            settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
+            tileDebugSettings.tileIndexOverride = GUIIntField("Tile Index Override", tileDebugSettings.tileIndexOverride);
             settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), settings.LayoutMode);
+            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), tileDebugSettings.layoutMode);
             var layoutModes = Enum.GetNames(typeof(LayoutMode));
             GUILayout.Label("Layout Modes");
             for (var i = 0; i < layoutModes.Length; i++)
@@ -83,16 +83,16 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
                 if (GUILayout.Button(layoutModes[i]))
                 {
-                    settings.LayoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
+                    tileDebugSettings.layoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
                 }
             }
 
-            settings.UseDebugViewportSubsection = GUILayout.Toggle(settings.UseDebugViewportSubsection, "Debug Viewport Section");
+            tileDebugSettings.useDebugViewportSubsection = GUILayout.Toggle(tileDebugSettings.useDebugViewportSubsection, "Debug Viewport Section");
 
-            if (settings.UseDebugViewportSubsection)
+            if (tileDebugSettings.useDebugViewportSubsection)
             {
                 GUILayout.Label("Viewport Section");
-                var rect = settings.ViewportSubsection;
+                var rect = tileDebugSettings.viewportSubsection;
                 var xMin = rect.xMin;
                 var xMax = rect.xMax;
                 var yMin = rect.yMin;
@@ -102,14 +102,14 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 xMax = GUISlider("xMax", xMax, 0, 1);
                 yMin = GUISlider("yMin", yMin, 0, 1);
                 yMax = GUISlider("yMax", yMax, 0, 1);
-                settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                tileDebugSettings.viewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
 
             GUILayout.Label("Scale Bias Offset");
-            var offset = settings.ScaleBiasTextOffset;
+            var offset = tileDebugSettings.scaleBiasTextOffset;
             offset.x = GUISlider("x", offset.x, -1, 1);
             offset.y = GUISlider("y", offset.y, -1, 1);
-            settings.ScaleBiasTextOffset = offset;
+            tileDebugSettings.scaleBiasTextOffset = offset;
         }
 
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display

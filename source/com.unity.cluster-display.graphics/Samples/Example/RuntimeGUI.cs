@@ -20,6 +20,11 @@ namespace Unity.ClusterDisplay.Graphics.Example
         [SerializeField]
         [HideInInspector]
         ClusterRenderer m_ClusterRenderer;
+        
+        [Tooltip("Projection component whose settings are to be displayed/edited.")]
+        [SerializeField]
+        [HideInInspector]
+        TiledProjectionPolicy m_ProjectionPolicy;
 #pragma warning restore 649
 
         [Tooltip("Show/Hide GUI.")]
@@ -40,6 +45,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         void OnValidate()
         {
             m_ClusterRenderer = GetComponent<ClusterRenderer>();
+            m_ProjectionPolicy = GetComponent<TiledProjectionPolicy>();
         }
 
         void Update()
@@ -108,7 +114,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 m_ClusterRenderer.IsDebug = GUILayout.Toggle(prevDebug, "debug");
                 if (m_ClusterRenderer.IsDebug)
                 {
-                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.DebugSettings);
+                    GUIUtilities.DrawDebugSettings(m_ClusterRenderer.DebugSettings, m_ProjectionPolicy.DebugSettings);
                 }
             }
 
