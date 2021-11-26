@@ -2,7 +2,6 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    // TODO Capitalize props.
     ref struct RenderContext
     {
         public int currentTileIndex;
