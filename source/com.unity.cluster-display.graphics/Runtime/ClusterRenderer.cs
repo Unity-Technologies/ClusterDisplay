@@ -57,7 +57,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         struct ClusterDisplayUpdate { }
 
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
         [SerializeField]
@@ -275,23 +274,6 @@ namespace Unity.ClusterDisplay.Graphics
             cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
 
             commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
-        }
-
-        internal static void SetShaderKeyword(bool enabled)
-        {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
-            {
-                return;
-            }
-
-            if (enabled)
-            {
-                Shader.EnableKeyword(k_ShaderKeyword);
-            }
-            else
-            {
-                Shader.DisableKeyword(k_ShaderKeyword);
-            }
         }
     }
 }
