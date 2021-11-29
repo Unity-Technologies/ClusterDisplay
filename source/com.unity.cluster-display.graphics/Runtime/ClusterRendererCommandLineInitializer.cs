@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
             {
-                clusterRenderer.Context.Debug = true;
+                clusterRenderer.IsDebug = true;
             }
 
             ParseSettings(clusterRenderer.Settings);

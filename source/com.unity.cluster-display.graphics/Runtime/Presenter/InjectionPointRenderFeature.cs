@@ -2,9 +2,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     class InjectionPointRenderPass : ScriptableRenderPass
     {
-        public static event Action<ScriptableRenderContext, RenderingData> ExecuteRender = delegate { };
+        public static event Action<ScriptableRenderContext, RenderingData> ExecuteRender = delegate {};
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
@@ -25,6 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// A render feature whose purpose is to provide an event invoked at a given rendering stage.
     /// Meant to abstract away the render feature mechanism and allow for simple graphics code injection.
     /// </summary>
+    [DisallowMultipleRendererFeature("InjectionPoint")]
     public class InjectionPointRenderFeature : ScriptableRendererFeature
     {
         InjectionPointRenderPass m_Pass;
