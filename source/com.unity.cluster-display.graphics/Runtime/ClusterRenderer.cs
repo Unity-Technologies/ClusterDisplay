@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Assertions;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -21,22 +22,54 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
+        readonly struct CameraScope : IDisposable
+        {
+            readonly Camera m_Camera;
+
+            public CameraScope(Camera camera)
+            {
+                m_Camera = camera;
+            }
+
+            public void Render(Matrix4x4 projection, Matrix4x4 clusterParams, RenderTexture target)
+            {
+                m_Camera.targetTexture = target;
+                m_Camera.projectionMatrix = projection;
+                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+            
+                // TODO Make sure this simple way to pass uniforms is conform to HDRP's expectations.
+                // We could have to pass this data through the pipeline.
+                Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterParams);
+
+                m_Camera.Render();
+            }
+            
+            public void Dispose()
+            {
+                m_Camera.ResetAspect();
+                m_Camera.ResetProjectionMatrix();
+                m_Camera.ResetCullingMatrix();
+            }
+        }
+
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
         struct ClusterDisplayUpdate { }
 
-        const string k_LayoutPresentCmdBufferName = "Layout Present";
+        static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
-        // TODO Temporary
         [SerializeField]
-        bool m_EnableGUI;
+        readonly ClusterRendererSettings m_Settings = new ClusterRendererSettings();
 
-        [HideInInspector]
         [SerializeField]
-        ClusterRenderContext m_Context = new ClusterRenderContext();
+        readonly ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
 
-        ILayoutBuilder m_LayoutBuilder;
+        readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
+
+        RenderTexture[] m_TileRenderTargets;
+        GraphicsFormat m_GraphicsFormat;
+        bool m_IsDebug;
 
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
@@ -45,57 +78,26 @@ namespace Unity.ClusterDisplay.Graphics
 #else // TODO Add support for Legacy render pipeline.
         IPresenter m_Presenter = new NullPresenter();
 #endif
+
         public bool IsDebug
         {
-            get => m_Context.Debug;
-            set => m_Context.Debug = value;
+            get => m_IsDebug;
+            set => m_IsDebug = value;
         }
+        
+        public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
 
-        // TODO sketchy, limits client changes for the time being
-        internal ClusterRenderContext Context => m_Context;
-
-        /// <summary>
-        /// User controlled settings, typically project specific.
-        /// </summary>
-        public ClusterRendererSettings Settings => m_Context.Settings;
-
-        /// <summary>
-        /// Debug mode specific settings, meant to be tweaked from the custom inspector or a debug GUI.
-        /// </summary>
-        public ClusterRendererDebugSettings debugSettings => m_Context.DebugSettings;
-
-        Matrix4x4 m_OriginalProjectionMatrix = Matrix4x4.identity;
-
-        // TODO Is this needed? Users typically manage the projection.
-        /// <summary>
-        /// Camera projection before its slicing to an asymmetric projection.
-        /// </summary>
-        public Matrix4x4 originalProjectionMatrix => m_OriginalProjectionMatrix;
+        public ClusterRendererSettings Settings => m_Settings;
 
 
-        // we need a clip-to-world space conversion for gizmo
-        Matrix4x4 m_ViewProjectionInverse = Matrix4x4.identity;
-        ClusterFrustumGizmo m_Gizmo = new ClusterFrustumGizmo();
+        readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
 
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
             if (enabled)
             {
-                m_Gizmo.Draw(m_ViewProjectionInverse, m_Context.GridSize, m_Context.TileIndex);
-            }
-        }
-
-        void OnGUI()
-        {
-            if (!m_EnableGUI)
-            {
-                return;
-            }
-
-            if (m_LayoutBuilder != null)
-            {
-                GUI.DrawTexture(new Rect(0, 0, 256, 256), m_LayoutBuilder.PresentRT);
+                m_Gizmo.Draw();
             }
         }
 #endif
@@ -125,97 +127,153 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             // Sync, will change from inspector as well.
-            GraphicsUtil.SetShaderKeyword(m_Context.DebugSettings.EnableKeyword);
-            SetLayoutMode(m_Context.DebugSettings.LayoutMode);
+            // TODO We must set the keyword systematically unless in debug mode.
+            
+            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+            GraphicsUtil.SetShaderKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
+            m_Presenter.Present += OnPresent;
 
-            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(InjectedUpdate);
+            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+
+            // TODO Needed?
+#if UNITY_EDITOR
+            SceneView.RepaintAll();
+#endif
         }
 
         void OnDisable()
         {
-            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(InjectedUpdate);
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            // TODO We assume ONE ClusterRenderer. Enforce it.
+            // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
             GraphicsUtil.SetShaderKeyword(false);
-            SetLayoutMode(LayoutMode.None);
+            m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
+            
+            GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
         }
-
-        void InjectedUpdate()
+        
+        void OnPresent(CommandBuffer commandBuffer)
         {
-            if (ClusterCameraManager.Instance.ActiveCamera != null)
+            foreach (var command in m_BlitCommands)
             {
-                TryRenderLayout();
-
-                // TODO Make sur there's no one-frame offset induced by rendering timing.
-                TryPresentLayout();
+                GraphicsUtil.Blit(commandBuffer, command);
             }
         }
-
-        // TODO temporary functions, while we figure the right time to invoke it.
-        void TryRenderLayout()
+        
+        void OnClusterDisplayUpdate()
         {
-            if (!(m_Context.GridSize.x > 0 && m_Context.GridSize.y > 0))
-            {
-                return;
-            }
-
             var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
             if (activeCamera == null)
             {
                 return;
             }
-#if UNITY_EDITOR
-            m_ViewProjectionInverse = (activeCamera.projectionMatrix * activeCamera.worldToCameraMatrix).inverse;
-#endif
-
-            // TODO consider a null-object pattern for layout. It is *not* expected to be null while the cluster-renderer is enabled.
-            m_LayoutBuilder?.Render(activeCamera, Screen.width, Screen.height);
-        }
-
-        void TryPresentLayout()
-        {
-            // TODO use null-object.
-            if (m_LayoutBuilder != null)
-            {
-                var cmd = CommandBufferPool.Get(k_LayoutPresentCmdBufferName);
-                m_LayoutBuilder.Present(cmd, Screen.width, Screen.height);
-                UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
-
-                m_Presenter.SetSource(m_LayoutBuilder.PresentRT);
-
-            }
-        }
-
-        internal void SetLayoutMode(LayoutMode newLayoutMode)
-        {
-            if (m_LayoutBuilder != null && m_LayoutBuilder.LayoutMode == newLayoutMode)
+            // Move early return at the Update's top.
+            if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
             {
                 return;
             }
 
-            if (m_LayoutBuilder != null)
-            {
-                m_LayoutBuilder.Dispose();
-                m_LayoutBuilder = null;
-            }
+            // TODO Could remove conditional? Have ClearColor as a setting?
+            m_Presenter.ClearColor = m_IsDebug ? m_DebugSettings.BezelColor : Color.black;
+            
+            var displaySize = new Vector2Int(Screen.width, Screen.height);
+            var overscannedSize = displaySize + m_Settings.OverScanInPixels * 2 * Vector2Int.one;
+            var currentTileIndex = m_IsDebug || !ClusterSync.Active ? m_DebugSettings.TileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
+            var numTiles = m_Settings.GridSize.x * m_Settings.GridSize.y;
+            var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
+            
+            // Aspect must be updated *before* we pull the projection matrix.
+            activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
+            var originalProjectionMatrix = activeCamera.projectionMatrix;
+            
+#if UNITY_EDITOR
+            m_Gizmo.TileIndex = currentTileIndex;
+            m_Gizmo.GridSize = m_Settings.GridSize;
+            m_Gizmo.ViewProjectionInverse = (originalProjectionMatrix * activeCamera.worldToCameraMatrix).inverse;
+#endif
 
-            switch (newLayoutMode)
+            // Prepare context properties.
+            var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, m_Settings.OverScanInPixels);
+            var blitParams = new BlitParams(displaySize, m_Settings.OverScanInPixels, m_DebugSettings.ScaleBiasTextOffset);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
+
+            var renderContext = new RenderContext
             {
-                case LayoutMode.None:
-                    m_LayoutBuilder = null;
-                    break;
-                case LayoutMode.StandardTile:
-                    m_LayoutBuilder = new TileLayoutBuilder(m_Context);
-                    break;
-                case LayoutMode.StandardStitcher:
-                    m_LayoutBuilder = new StitcherLayoutBuilder(m_Context);
-                    break;
-                default:
-                    throw new Exception($"Unimplemented {nameof(LayoutMode)}: \"{newLayoutMode}\".");
+                CurrentTileIndex = currentTileIndex,
+                NumTiles = numTiles,
+                OverscannedSize = overscannedSize,
+                Viewport = viewport,
+                OriginalProjection = originalProjectionMatrix,
+                BlitParams = blitParams,
+                PostEffectsParams = postEffectsParams,
+                DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
+                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
+            };
+
+            // Allocate tiles targets.
+            var isStitcher = m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
+            var numTargets = isStitcher ? renderContext.NumTiles : 1;
+            
+            GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,  
+                renderContext.OverscannedSize.x, 
+                renderContext.OverscannedSize.y, m_GraphicsFormat, "Source");
+
+            m_BlitCommands.Clear();
+            
+            if (isStitcher)
+            {
+                RenderStitcher(m_TileRenderTargets, activeCamera, ref renderContext, m_BlitCommands);
             }
+            else
+            {
+                RenderTile(m_TileRenderTargets[0], activeCamera, ref renderContext, m_BlitCommands);
+            }
+            
+            // TODO Make sure there's no one-frame offset induced by rendering timing.
+            // TODO Make sure blitCommands are executed within the frame.
+            // Screen camera must render *after* all tiles have been rendered.
+
+            // TODO is it really needed?
+#if UNITY_EDITOR
+            SceneView.RepaintAll();
+#endif
+        }
+
+        static void RenderStitcher(RenderTexture[] targets, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
+        {
+            using var cameraScope = new CameraScope(camera);
+            for (var tileIndex = 0; tileIndex != renderContext.NumTiles; ++tileIndex)
+            {
+                var overscannedViewportSubsection = renderContext.Viewport.GetSubsectionWithOverscan(tileIndex);
+
+                var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
+
+                var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+
+                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+
+                var viewportSubsection = renderContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
+
+                commands.Add(new BlitCommand(targets[tileIndex], renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+            }
+        }
+
+        static void RenderTile(RenderTexture target, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
+        {
+            using var cameraScope = new CameraScope(camera);
+            var overscannedViewportSubsection = renderContext.UseDebugViewportSubsection ? 
+                renderContext.DebugViewportSubsection : 
+                renderContext.Viewport.GetSubsectionWithOverscan(renderContext.CurrentTileIndex);
+            
+            var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
+
+            var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+            
+            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
+
+            commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
         }
     }
 }

@@ -10,8 +10,15 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
+        public event Action<CommandBuffer> Present = delegate { };
+
         Camera m_Camera;
-        RenderTexture m_RenderTexture;
+        Color m_ClearColor;
+        
+        public Color ClearColor
+        {
+            set => m_ClearColor = value;
+        }
         
         public void Disable()
         {
@@ -31,8 +38,6 @@ namespace Unity.ClusterDisplay.Graphics
             
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
-
-        public void SetSource(RenderTexture texture) => m_RenderTexture = texture;
         
         void ExecuteRender(ScriptableRenderContext context, RenderingData renderingData)
         {
@@ -42,8 +47,14 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            var target = renderingData.cameraData.renderer.cameraColorTarget;
+
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
-            cmd.Blit(m_RenderTexture, renderingData.cameraData.renderer.cameraColorTarget);
+            cmd.SetRenderTarget(target);
+            cmd.ClearRenderTarget(true, true, m_ClearColor);
+            
+            Present.Invoke(cmd);
+            
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }

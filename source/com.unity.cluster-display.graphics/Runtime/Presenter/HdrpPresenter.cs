@@ -1,4 +1,5 @@
 ﻿#if CLUSTER_DISPLAY_HDRP
+using System;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
@@ -11,15 +12,21 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_CommandBufferName = "Present To Screen";
         readonly RenderTargetIdentifier k_CameraTargetId = new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget);
         
+        public event Action<CommandBuffer> Present = delegate {};
+
         HDAdditionalCameraData m_AdditionalCameraData;
-        RenderTexture m_RenderTexture;
+        Color m_ClearColor;
+
+        public Color ClearColor
+        {
+            set => m_ClearColor = value;
+        }
         
         public void Disable()
         {
             // We don't destroy procedural components, we may reuse them
             // or they'll be destroyed with the ClusterRenderer.
             m_AdditionalCameraData.customRender -= OnCustomRender;
-            m_RenderTexture = null;
         }
 
         public void Enable(GameObject gameObject)
@@ -44,17 +51,15 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.customRender += OnCustomRender;
         }
 
-        public void SetSource(RenderTexture texture) => m_RenderTexture = texture;
-
         void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera)
         {
-            if (m_RenderTexture == null)
-            {
-                return;
-            }
-            
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
-            cmd.Blit(m_RenderTexture, k_CameraTargetId);
+            
+            cmd.SetRenderTarget(k_CameraTargetId);
+            cmd.ClearRenderTarget(true, true, m_ClearColor);
+
+            Present.Invoke(cmd);
+            
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
