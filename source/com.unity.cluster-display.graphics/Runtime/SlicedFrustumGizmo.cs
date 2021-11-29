@@ -14,17 +14,17 @@ namespace Unity.ClusterDisplay.Graphics
             0, 4, 1, 5, 2, 6, 3, 7, // sides
         };
 
-        public int tileIndex
+        public int TileIndex
         {
             set { m_TileIndex = value; }
         }
 
-        public Vector2Int gridSize
+        public Vector2Int GridSize
         {
             set { m_GridSize = value; }
         }
 
-        public Matrix4x4 viewProjectionInverse
+        public Matrix4x4 ViewProjectionInverse
         {
             set { m_ViewProjectionInverse = value; }
         }

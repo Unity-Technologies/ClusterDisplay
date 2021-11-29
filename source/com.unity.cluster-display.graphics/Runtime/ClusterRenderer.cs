@@ -57,9 +57,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         struct ClusterDisplayUpdate { }
 
-        const string k_LayoutPresentCmdBufferName = "Layout Present";
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
         [SerializeField]
@@ -71,6 +69,7 @@ namespace Unity.ClusterDisplay.Graphics
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
 
         RenderTexture[] m_TileRenderTargets;
+        GraphicsFormat m_GraphicsFormat;
         bool m_IsDebug;
 
 #if CLUSTER_DISPLAY_HDRP
@@ -130,6 +129,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             // Sync, will change from inspector as well.
             // TODO We must set the keyword systematically unless in debug mode.
+            
+            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
             GraphicsUtil.SetShaderKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
@@ -189,9 +190,9 @@ namespace Unity.ClusterDisplay.Graphics
             var originalProjectionMatrix = activeCamera.projectionMatrix;
             
 #if UNITY_EDITOR
-            m_Gizmo.tileIndex = currentTileIndex;
-            m_Gizmo.gridSize = m_Settings.GridSize;
-            m_Gizmo.viewProjectionInverse = (originalProjectionMatrix * activeCamera.worldToCameraMatrix).inverse;
+            m_Gizmo.TileIndex = currentTileIndex;
+            m_Gizmo.GridSize = m_Settings.GridSize;
+            m_Gizmo.ViewProjectionInverse = (originalProjectionMatrix * activeCamera.worldToCameraMatrix).inverse;
 #endif
 
             // Prepare context properties.
@@ -201,24 +202,24 @@ namespace Unity.ClusterDisplay.Graphics
 
             var renderContext = new RenderContext
             {
-                currentTileIndex = currentTileIndex,
-                numTiles = numTiles,
-                overscannedSize = overscannedSize,
-                viewport = viewport,
-                originalProjection = originalProjectionMatrix,
-                blitParams = blitParams,
-                postEffectsParams = postEffectsParams,
-                debugViewportSubsection = m_DebugSettings.ViewportSubsection,
-                useDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
+                CurrentTileIndex = currentTileIndex,
+                NumTiles = numTiles,
+                OverscannedSize = overscannedSize,
+                Viewport = viewport,
+                OriginalProjection = originalProjectionMatrix,
+                BlitParams = blitParams,
+                PostEffectsParams = postEffectsParams,
+                DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
+                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
             };
 
             // Allocate tiles targets.
             var isStitcher = m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
-            var numTargets = isStitcher ? renderContext.numTiles : 1;
+            var numTargets = isStitcher ? renderContext.NumTiles : 1;
             
-            GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets, "Source", 
-                renderContext.overscannedSize.x, 
-                renderContext.overscannedSize.y, k_DefaultFormat);
+            GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,  
+                renderContext.OverscannedSize.x, 
+                renderContext.OverscannedSize.y, m_GraphicsFormat, "Source");
 
             m_BlitCommands.Clear();
             
@@ -233,7 +234,7 @@ namespace Unity.ClusterDisplay.Graphics
             
             // TODO Make sure there's no one-frame offset induced by rendering timing.
             // TODO Make sure blitCommands are executed within the frame.
-            // Screeen camera must render *after* all tiles have been rendered.
+            // Screen camera must render *after* all tiles have been rendered.
 
             // TODO is it really needed?
 #if UNITY_EDITOR
@@ -244,36 +245,36 @@ namespace Unity.ClusterDisplay.Graphics
         static void RenderStitcher(RenderTexture[] targets, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
             using var cameraScope = new CameraScope(camera);
-            for (var tileIndex = 0; tileIndex != renderContext.numTiles; ++tileIndex)
+            for (var tileIndex = 0; tileIndex != renderContext.NumTiles; ++tileIndex)
             {
-                var overscannedViewportSubsection = renderContext.viewport.GetSubsectionWithOverscan(tileIndex);
+                var overscannedViewportSubsection = renderContext.Viewport.GetSubsectionWithOverscan(tileIndex);
 
-                var asymmetricProjectionMatrix = renderContext.originalProjection.GetFrustumSlice(overscannedViewportSubsection);
+                var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-                var clusterParams = renderContext.postEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+                var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
                 cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
 
-                var viewportSubsection = renderContext.viewport.GetSubsectionWithoutOverscan(tileIndex);
+                var viewportSubsection = renderContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], renderContext.blitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+                commands.Add(new BlitCommand(targets[tileIndex], renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
             }
         }
 
         static void RenderTile(RenderTexture target, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
             using var cameraScope = new CameraScope(camera);
-            var overscannedViewportSubsection = renderContext.useDebugViewportSubsection ? 
-                renderContext.debugViewportSubsection : 
-                renderContext.viewport.GetSubsectionWithOverscan(renderContext.currentTileIndex);
+            var overscannedViewportSubsection = renderContext.UseDebugViewportSubsection ? 
+                renderContext.DebugViewportSubsection : 
+                renderContext.Viewport.GetSubsectionWithOverscan(renderContext.CurrentTileIndex);
             
-            var asymmetricProjectionMatrix = renderContext.originalProjection.GetFrustumSlice(overscannedViewportSubsection);
+            var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-            var clusterParams = renderContext.postEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+            var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
             
             cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
 
-            commands.Add(new BlitCommand(target, renderContext.blitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
+            commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
         }
 
         internal static void SetShaderKeyword(bool enabled)

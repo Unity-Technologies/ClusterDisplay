@@ -25,7 +25,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         const string k_BlitShaderName = "ClusterDisplay/Blit";
-        static readonly Vector4 k_IdentityScaleBiasRT = new Vector4(1, 1, 0, 0);
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
@@ -44,8 +43,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (s_BlitMaterial == null)
             {
                 var shader = Shader.Find(k_BlitShaderName);
-
-                // TODO we had a utility adding shader to the included list, bring it on.
                 if (shader == null)
                 {
                     throw new InvalidOperationException($"Could not find shader \"{k_BlitShaderName}\", " +
@@ -61,18 +58,12 @@ namespace Unity.ClusterDisplay.Graphics
             return s_BlitMaterial;
         }
 
-        // TODO Remove?
-        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, bool flipY)
-        {
-            Blit(cmd, source, texBias, k_IdentityScaleBiasRT, flipY);
-        }
-
-        internal static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand)
+        public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand)
         {
             Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
         }
 
-        internal static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
+        static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
             var propertyBlock = GetPropertyBlock();
@@ -84,24 +75,32 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), shaderPass, MeshTopology.Quads, 4, 1, propertyBlock);
         }
 
-        public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, string name, int width, int height, GraphicsFormat format)
+        public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, GraphicsFormat format, string name)
         {
+            var nameNeedsUpdate = false;
+            
             if (rts == null || count != rts.Length)
             {
+                nameNeedsUpdate = true;
                 DeallocateIfNeeded(ref rts);
                 rts = new RenderTexture[count];
             }
-
-            // TODO name rarely used, inefficient
-            // TODO we populate these arrays all at once,
-            // we can assume all tex are similar, just check the 1st
+            
             for (var i = 0; i != count; ++i)
             {
-                AllocateIfNeeded(ref rts[i], $"{name}-{i}", width, height, format);
+                nameNeedsUpdate |= AllocateIfNeeded(ref rts[i], width, height, format);
+            }
+            
+            if (nameNeedsUpdate)
+            {
+                for (var i = 0; i != count; ++i)
+                {
+                    rts[i].name = $"{name}-{width}X{height}-{i}";
+                }
             }
         }
 
-        public static void AllocateIfNeeded(ref RenderTexture rt, string name, int width, int height, GraphicsFormat format)
+        static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
         {
             if (rt == null ||
                 rt.width != width ||
@@ -113,11 +112,11 @@ namespace Unity.ClusterDisplay.Graphics
                     rt.Release();
                 }
 
-                rt = new RenderTexture(width, height, 1, format, 0)
-                {
-                    name = $"{name}-{width}X{height}"
-                };
+                rt = new RenderTexture(width, height, 1, format, 0);
+                return true;
             }
+
+            return false;
         }
 
         public static void DeallocateIfNeeded(ref RenderTexture[] rts)

@@ -10,9 +10,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public BlitParams(Vector2 displaySize, float overscanInPixels, Vector2 srcOffset)
         {
-            this.m_DisplaySize = displaySize;
-            this.m_OverscanInPixels = overscanInPixels;
-            this.m_SrcOffset = srcOffset;
+            m_DisplaySize = displaySize;
+            m_OverscanInPixels = overscanInPixels;
+            m_SrcOffset = srcOffset;
         }
 
         public Vector4 ScaleBias
