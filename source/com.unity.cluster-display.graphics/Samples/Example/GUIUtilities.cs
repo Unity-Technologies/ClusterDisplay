@@ -64,10 +64,10 @@ namespace Unity.ClusterDisplay.Graphics.Example
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 
-        public static void DrawDebugSettings(ClusterRendererDebugSettings settings, TiledProjectionDebugSettings tileDebugSettings)
+        public static void DrawDebugSettings(TiledProjectionDebugSettings tileDebugSettings)
         {
             tileDebugSettings.tileIndexOverride = GUIIntField("Tile Index Override", tileDebugSettings.tileIndexOverride);
-            settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
+            tileDebugSettings.enableKeyword = GUILayout.Toggle(tileDebugSettings.enableKeyword, "Enable Keyword");
 
             var currentLayoutMode = Enum.GetName(typeof(LayoutMode), tileDebugSettings.layoutMode);
             var layoutModes = Enum.GetNames(typeof(LayoutMode));

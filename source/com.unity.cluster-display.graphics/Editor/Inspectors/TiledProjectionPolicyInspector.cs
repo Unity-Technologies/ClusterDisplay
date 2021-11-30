@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_IsDebugProp;
         SerializedProperty m_TileIndexProp;
         SerializedProperty m_LayoutProp;
+        SerializedProperty m_KeywordProp;
         SerializedProperty m_DebugViewportProp;
         SerializedProperty m_BezelColorProp;
         SerializedProperty m_ViewportSectionProp;
@@ -22,16 +23,17 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         public void OnEnable()
         {
-            m_GridProp = serializedObject.FindProperty("m_TileSettings.gridSize");
-            m_ScreenSizeProp = serializedObject.FindProperty("m_TileSettings.physicalScreenSize");
-            m_BezelProp = serializedObject.FindProperty("m_TileSettings.bezel");
+            m_GridProp = serializedObject.FindProperty("m_Settings.gridSize");
+            m_ScreenSizeProp = serializedObject.FindProperty("m_Settings.physicalScreenSize");
+            m_BezelProp = serializedObject.FindProperty("m_Settings.bezel");
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
-            m_TileIndexProp = serializedObject.FindProperty("m_TileDebugSettings.tileIndexOverride");
-            m_LayoutProp = serializedObject.FindProperty("m_TileDebugSettings.layoutMode");
-            m_BezelColorProp = serializedObject.FindProperty("m_TileDebugSettings.bezelColor");
-            m_DebugViewportProp = serializedObject.FindProperty("m_TileDebugSettings.useDebugViewportSubsection");
-            m_ViewportSectionProp = serializedObject.FindProperty("m_TileDebugSettings.viewportSubsection");
-            m_ScaleBiasProp = serializedObject.FindProperty("m_TileDebugSettings.scaleBiasTextOffset");
+            m_TileIndexProp = serializedObject.FindProperty("m_DebugSettings.tileIndexOverride");
+            m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.layoutMode");
+            m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.enableKeyword");
+            m_BezelColorProp = serializedObject.FindProperty("m_DebugSettings.bezelColor");
+            m_DebugViewportProp = serializedObject.FindProperty("m_DebugSettings.useDebugViewportSubsection");
+            m_ViewportSectionProp = serializedObject.FindProperty("m_DebugSettings.viewportSubsection");
+            m_ScaleBiasProp = serializedObject.FindProperty("m_DebugSettings.scaleBiasTextOffset");
         }
 
         public override void OnInspectorGUI()
@@ -57,6 +59,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         void EditDebugSettings()
         {
+            EditorGUILayout.PropertyField(m_KeywordProp, Labels.GetGUIContent(Labels.Field.Keyword));
             EditorGUILayout.PropertyField(m_LayoutProp);
             if ((LayoutMode) m_LayoutProp.intValue == LayoutMode.StandardStitcher)
             {

@@ -23,6 +23,15 @@ readonly struct CameraScope : IDisposable
 
         m_Camera.Render();
     }
+    
+    public void Render(Matrix4x4 projection, RenderTexture target)
+    {
+        m_Camera.targetTexture = target;
+        m_Camera.projectionMatrix = projection;
+        m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+            
+        m_Camera.Render();
+    }
             
     public void Dispose()
     {

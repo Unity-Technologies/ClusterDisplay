@@ -70,15 +70,23 @@ namespace Unity.ClusterDisplay.Graphics
         /// Allows you to offset the presented image so you can see the overscan effect.
         /// </summary>
         public Vector2 scaleBiasTextOffset;
+        
+        /// <summary>
+        /// Enable/Disable shader features, such as Global Screen Space,
+        /// meant to compare original and ported-to-cluster-display shaders,
+        /// in order to observe tiled projection artefacts.
+        /// </summary>
+        public bool enableKeyword;
     }
     
+    [ExecuteAlways]
     public class TiledProjectionPolicy : MonoBehaviour, IProjectionPolicy
     {
         [SerializeField]
-        TiledProjectionSettings m_TileSettings;
+        TiledProjectionSettings m_Settings;
 
         [SerializeField]
-        TiledProjectionDebugSettings m_TileDebugSettings;
+        TiledProjectionDebugSettings m_DebugSettings;
 
         [SerializeField]
         bool m_IsDebug;
@@ -89,26 +97,31 @@ namespace Unity.ClusterDisplay.Graphics
         
         GraphicsFormat m_GraphicsFormat;
 
-        public TiledProjectionDebugSettings DebugSettings => m_TileDebugSettings;
+        public TiledProjectionDebugSettings DebugSettings => m_DebugSettings;
 
         void OnDisable()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
+            
+            // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
+            GraphicsUtil.SetShaderKeyword(false);
         }
 
         public void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             // Move early return at the Update's top.
-            if (!(m_TileSettings.gridSize.x > 0 && m_TileSettings.gridSize.y > 0))
+            if (!(m_Settings.gridSize.x > 0 && m_Settings.gridSize.y > 0))
             {
                 return;
             }
             
+            GraphicsUtil.SetShaderKeyword(!m_IsDebug || m_DebugSettings.enableKeyword);
+            
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
-            var currentTileIndex = m_IsDebug || !ClusterSync.Active ? m_TileDebugSettings.tileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
-            var numTiles = m_TileSettings.gridSize.x * m_TileSettings.gridSize.y;
-            var displayMatrixSize = new Vector2Int(m_TileSettings.gridSize.x * displaySize.x, m_TileSettings.gridSize.y * displaySize.y);
+            var currentTileIndex = m_IsDebug || !ClusterSync.Active ? m_DebugSettings.tileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
+            var numTiles = m_Settings.gridSize.x * m_Settings.gridSize.y;
+            var displayMatrixSize = new Vector2Int(m_Settings.gridSize.x * displaySize.x, m_Settings.gridSize.y * displaySize.y);
             
             // Aspect must be updated *before* we pull the projection matrix.
             activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
@@ -116,15 +129,15 @@ namespace Unity.ClusterDisplay.Graphics
                         
 #if UNITY_EDITOR
             m_Gizmo.tileIndex = currentTileIndex;
-            m_Gizmo.gridSize = m_TileSettings.gridSize;
+            m_Gizmo.gridSize = m_Settings.gridSize;
             m_Gizmo.viewProjectionInverse = (originalProjectionMatrix * activeCamera.worldToCameraMatrix).inverse;
 #endif
 
             // Prepare context properties.
-            var viewport = new Viewport(m_TileSettings.gridSize, m_TileSettings.physicalScreenSize, m_TileSettings.bezel, clusterSettings.OverScanInPixels);
+            var viewport = new Viewport(m_Settings.gridSize, m_Settings.physicalScreenSize, m_Settings.bezel, clusterSettings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, clusterSettings.OverScanInPixels, 
-                m_IsDebug ? m_TileDebugSettings.scaleBiasTextOffset : Vector2.zero);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_TileSettings.gridSize);
+                m_IsDebug ? m_DebugSettings.scaleBiasTextOffset : Vector2.zero);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.gridSize);
 
             var renderContext = new RenderContext
             {
@@ -135,12 +148,12 @@ namespace Unity.ClusterDisplay.Graphics
                 originalProjection = originalProjectionMatrix,
                 blitParams = blitParams,
                 postEffectsParams = postEffectsParams,
-                debugViewportSubsection = m_TileDebugSettings.viewportSubsection,
-                useDebugViewportSubsection = m_IsDebug && m_TileDebugSettings.useDebugViewportSubsection
+                debugViewportSubsection = m_DebugSettings.viewportSubsection,
+                useDebugViewportSubsection = m_IsDebug && m_DebugSettings.useDebugViewportSubsection
             };
 
             // Allocate tiles targets.
-            var isStitcher = m_IsDebug && m_TileDebugSettings.layoutMode == LayoutMode.StandardStitcher;
+            var isStitcher = m_IsDebug && m_DebugSettings.layoutMode == LayoutMode.StandardStitcher;
             var numTargets = isStitcher ? renderContext.numTiles : 1;
             
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
@@ -171,9 +184,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Present(CommandBuffer commandBuffer)
         {
-            if (m_IsDebug && m_TileDebugSettings.layoutMode == LayoutMode.StandardStitcher)
+            if (m_IsDebug && m_DebugSettings.layoutMode == LayoutMode.StandardStitcher)
             {
-                commandBuffer.ClearRenderTarget(true, true, m_TileDebugSettings.bezelColor);
+                commandBuffer.ClearRenderTarget(true, true, m_DebugSettings.bezelColor);
             }
             foreach (var command in m_BlitCommands)
             {

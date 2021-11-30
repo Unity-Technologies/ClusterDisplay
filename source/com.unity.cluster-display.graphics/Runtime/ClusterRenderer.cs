@@ -30,9 +30,6 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ClusterRendererSettings m_Settings = new ClusterRendererSettings();
 
-        [SerializeField]
-        ClusterRendererDebugSettings m_DebugSettings = new ClusterRendererDebugSettings();
-
         bool m_IsDebug;
 
         IProjectionPolicy m_ProjectionPolicy;
@@ -51,8 +48,6 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_IsDebug = value;
         }
         
-        public ClusterRendererDebugSettings DebugSettings => m_DebugSettings;
-
         public ClusterRendererSettings Settings => m_Settings;
 
         // TODO we'll need a method to configure additional camera data for HDRP
@@ -84,9 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            // Sync, will change from inspector as well.
-            // TODO We must set the keyword systematically unless in debug mode.
-            GraphicsUtil.SetShaderKeyword(m_DebugSettings.EnableKeyword);
+            m_ProjectionPolicy = GetComponent<IProjectionPolicy>();
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -102,8 +95,6 @@ namespace Unity.ClusterDisplay.Graphics
         {
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
-            GraphicsUtil.SetShaderKeyword(false);
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
@@ -119,6 +110,10 @@ namespace Unity.ClusterDisplay.Graphics
         void OnClusterDisplayUpdate()
         {
             var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
+            if (m_ProjectionPolicy == null)
+            {
+                m_ProjectionPolicy = GetComponent<IProjectionPolicy>();
+            }
             if (activeCamera == null || m_ProjectionPolicy == null)
             {
                 return;

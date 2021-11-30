@@ -27,13 +27,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 var settings = clusterRenderer.Settings;
                 settings.OverScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.OverScanInPixels, 0, 256);
 
-                clusterRenderer.IsDebug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), clusterRenderer.IsDebug);
-
-                if (clusterRenderer.IsDebug)
-                {
-                    EditDebugSettings(clusterRenderer);
-                }
-
                 if (check.changed)
                 {
                     serializedObject.ApplyModifiedProperties();
@@ -41,19 +34,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     // TODO needed?
                     EditorUtility.SetDirty(clusterRenderer);
                 }
-            }
-        }
-
-        // TODO renderer exposes both debug-settings and context, redundant arguments.
-        static void EditDebugSettings(ClusterRenderer clusterRenderer)
-        {
-            var debugSettings = clusterRenderer.DebugSettings;
-            
-            var prevEnableKeyword = debugSettings.EnableKeyword;
-            debugSettings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
-            if (debugSettings.EnableKeyword != prevEnableKeyword)
-            {
-                GraphicsUtil.SetShaderKeyword(debugSettings.EnableKeyword);
             }
         }
 
