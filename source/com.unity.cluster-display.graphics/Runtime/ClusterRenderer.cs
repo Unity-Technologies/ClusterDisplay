@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+
 #if UNITY_EDITOR
 using UnityEditor;
 
@@ -22,35 +23,8 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
-        readonly struct CameraScope : IDisposable
-        {
-            readonly Camera m_Camera;
-
-            public CameraScope(Camera camera)
-            {
-                m_Camera = camera;
-            }
-
-            public void Render(Matrix4x4 projection, Matrix4x4 clusterParams, RenderTexture target)
-            {
-                m_Camera.targetTexture = target;
-                m_Camera.projectionMatrix = projection;
-                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
-            
-                // TODO Make sure this simple way to pass uniforms is conform to HDRP's expectations.
-                // We could have to pass this data through the pipeline.
-                Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterParams);
-
-                m_Camera.Render();
-            }
-            
-            public void Dispose()
-            {
-                m_Camera.ResetAspect();
-                m_Camera.ResetProjectionMatrix();
-                m_Camera.ResetCullingMatrix();
-            }
-        }
+        const string k_ShaderKeyword = "USING_SCREEN_COORD_OVERRIDE";
+        internal static void EnableScreenCoordOverrideKeyword(bool enabled) => GraphicsUtil.SetShaderKeyword(k_ShaderKeyword, enabled);
 
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
@@ -102,35 +76,14 @@ namespace Unity.ClusterDisplay.Graphics
         }
 #endif
 
-        // TODO we'll need a method to configure additional camera data for HDRP
-        void ____()
-        {
-            /*if (TryGetPreviousCameraContext(out _))
-            {
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
-                additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
-            }
-
-            if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
-            {
-                m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
-                m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
-
-                additionalCameraData.customRenderingSettings = true;
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
-                additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
-            }*/
-        }
-
         void OnEnable()
         {
             // Sync, will change from inspector as well.
             // TODO We must set the keyword systematically unless in debug mode.
             
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-            GraphicsUtil.SetShaderKeyword(m_DebugSettings.EnableKeyword);
+            // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
+            EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -147,7 +100,7 @@ namespace Unity.ClusterDisplay.Graphics
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
-            GraphicsUtil.SetShaderKeyword(false);
+            EnableScreenCoordOverrideKeyword(false);
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
             
@@ -197,7 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
             // Prepare context properties.
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, m_Settings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, m_Settings.OverScanInPixels, m_DebugSettings.ScaleBiasTextOffset);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize);
 
             var renderContext = new RenderContext
             {
@@ -243,16 +196,18 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void RenderStitcher(RenderTexture[] targets, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera);
+            
             for (var tileIndex = 0; tileIndex != renderContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = renderContext.Viewport.GetSubsectionWithOverscan(tileIndex);
 
                 var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-                var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+                var screenSizeOverride = renderContext.PostEffectsParams.GetScreenSizeOverride();
+                var screenCoordTransform = PostEffectsParams.GetScreenCoordTransform(overscannedViewportSubsection);
 
-                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordTransform, targets[tileIndex]);
 
                 var viewportSubsection = renderContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
@@ -262,16 +217,18 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void RenderTile(RenderTexture target, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera);
+            
             var overscannedViewportSubsection = renderContext.UseDebugViewportSubsection ? 
                 renderContext.DebugViewportSubsection : 
                 renderContext.Viewport.GetSubsectionWithOverscan(renderContext.CurrentTileIndex);
             
             var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
-
-            var clusterParams = renderContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
             
-            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
+            var screenSizeOverride = renderContext.PostEffectsParams.GetScreenSizeOverride();
+            var screenCoordTransform = PostEffectsParams.GetScreenCoordTransform(overscannedViewportSubsection);
+            
+            cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordTransform, target);
 
             commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
         }

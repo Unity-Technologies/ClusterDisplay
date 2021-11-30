@@ -23,7 +23,6 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
 
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
         const string k_BlitShaderName = "ClusterDisplay/Blit";
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
@@ -144,23 +143,23 @@ namespace Unity.ClusterDisplay.Graphics
             rt = null;
         }
 
-        public static void SetShaderKeyword(bool enabled)
+        public static void SetShaderKeyword(string keyword, bool enabled)
         {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
+            if (Shader.IsKeywordEnabled(keyword) == enabled)
             {
                 return;
             }
 
             if (enabled)
             {
-                Shader.EnableKeyword(k_ShaderKeyword);
+                Shader.EnableKeyword(keyword);
             }
             else
             {
-                Shader.DisableKeyword(k_ShaderKeyword);
+                Shader.DisableKeyword(keyword);
             }
         }
 
-        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+        public static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
 }
