@@ -23,6 +23,10 @@ namespace Unity.ClusterDisplay.Graphics
         void Awake()
         {
             m_Camera = GetComponent<Camera>();
+            // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
+            // var mask = m_Camera.cullingMask;
+            // mask ^= 1 << ClusterRenderer.GetVirtualObjectLayer();
+            // m_Camera.cullingMask = mask;
         }
 
         void Update()

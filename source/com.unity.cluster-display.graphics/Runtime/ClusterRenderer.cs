@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
+using UnityEditorInternal;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
-
+using UnityEngine.Assertions;
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -42,12 +42,14 @@ namespace Unity.ClusterDisplay.Graphics
         IPresenter m_Presenter = new NullPresenter();
 #endif
 
+        const string k_ClusterRenderLayerName = "ClusterRenderer";
+
         public bool IsDebug
         {
             get => m_IsDebug;
             set => m_IsDebug = value;
         }
-        
+
         public ClusterRendererSettings Settings => m_Settings;
 
         // TODO we'll need a method to configure additional camera data for HDRP
@@ -98,7 +100,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
-        
+
         void OnPresent(CommandBuffer commandBuffer)
         {
             if (m_ProjectionPolicy != null)
@@ -110,16 +112,43 @@ namespace Unity.ClusterDisplay.Graphics
         void OnClusterDisplayUpdate()
         {
             var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
-            if (m_ProjectionPolicy == null)
-            {
-                m_ProjectionPolicy = GetComponent<IProjectionPolicy>();
-            }
             if (activeCamera == null || m_ProjectionPolicy == null)
             {
                 return;
             }
-            
+
             m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
+#if UNITY_EDITOR
+        public static int GetVirtualObjectLayer()
+        {
+            return GetOrAddLayer(k_ClusterRenderLayerName);
+        }
+        
+        static int GetOrAddLayer(string name)
+        {
+            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var layersProp = tagManager.FindProperty("layers");
+            for (int i = 6; i < 32; ++i)
+            {
+                var layer = layersProp.GetArrayElementAtIndex(i);
+                if (layer.stringValue == "")
+                {
+                    layer.stringValue = name;
+                    tagManager.ApplyModifiedProperties();
+
+                    return i;
+                }
+
+                if (layer.stringValue == name)
+                {
+                    return i;
+                }
+            }
+
+            Debug.LogError("All layer slots are full");
+            return -1;
+        }
+#endif
     }
 }

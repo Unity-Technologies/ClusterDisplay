@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         // TODO: Get the appropriate format based on current settings
         const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
-        
+
 #if CLUSTER_DISPLAY_HDRP
         const string k_ShaderName = "HDRP/Unlit";
 #elif CLUSTER_DISPLAY_URP
@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         [SerializeField]
         Vector2Int m_ScreenResolution = new Vector2Int(1920, 1080);
-        
+
         MeshRenderer m_Renderer;
         MeshFilter m_MeshFilter;
         Material m_ScreenPreviewMaterial;
@@ -36,9 +36,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         public RenderTexture RenderTarget => m_RenderTarget;
         public Vector2Int Resolution => m_ScreenResolution;
-        
+
         void OnEnable()
         {
+            gameObject.layer = ClusterRenderer.GetVirtualObjectLayer();
             Initialize();
         }
 
@@ -65,9 +66,16 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var overscannedSize = m_ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
-            GraphicsUtil.AllocateIfNeeded(ref m_RenderTarget, name, overscannedSize.x, overscannedSize.y, k_DefaultFormat);
-            m_ScreenPreviewMaterial.mainTexture = m_RenderTarget;
-            
+            if (GraphicsUtil.AllocateIfNeeded(
+                ref m_RenderTarget,
+                name,
+                overscannedSize.x,
+                overscannedSize.y,
+                k_DefaultFormat))
+            {
+                m_ScreenPreviewMaterial.mainTexture = m_RenderTarget;
+            }
+
             var mesh = m_MeshFilter.sharedMesh;
             var cornersView = new Vector3[m_CornerIndices.Length];
             var cornersWorld = new Vector3[m_CornerIndices.Length];
@@ -129,10 +137,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             return cornerIndices;
         }
-        
+
         static Matrix4x4 GetProjectionMatrix(
-            Matrix4x4 originalProjection, 
-            IList<Vector3> planeCorners, 
+            Matrix4x4 originalProjection,
+            IList<Vector3> planeCorners,
             Vector2Int resolution,
             int overScanInPixels)
         {
@@ -153,7 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
             };
 
             var frustumSize = new Vector2(
-                frustumPlanes.right - frustumPlanes.left, 
+                frustumPlanes.right - frustumPlanes.left,
                 frustumPlanes.top - frustumPlanes.bottom);
             var overscanDelta = frustumSize / resolution * overScanInPixels;
             frustumPlanes.left -= overscanDelta.x;

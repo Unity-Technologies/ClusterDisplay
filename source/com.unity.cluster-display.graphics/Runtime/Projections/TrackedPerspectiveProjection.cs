@@ -2,6 +2,7 @@ using System;
 using Unity.ClusterDisplay;
 using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 using UnityEngine.Serialization;
 
@@ -33,15 +34,17 @@ public class TrackedPerspectiveProjection : MonoBehaviour, IProjectionPolicy
         }
 
         var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
+        if (nodeIndex >= m_ProjectionSurfaces.Length) return;
         
-        m_ProjectionSurfaces[nodeIndex].Render(clusterSettings, activeCamera);
+        var targetSurface = m_ProjectionSurfaces[nodeIndex];
+        targetSurface.Render(clusterSettings, activeCamera);
 
         m_BlitCommand = new BlitCommand(
-            m_ProjectionSurfaces[nodeIndex].RenderTarget, 
+            targetSurface.RenderTarget,
             new BlitParams(
-                m_ProjectionSurfaces[nodeIndex].Resolution, 
-                clusterSettings.OverScanInPixels, Vector2.zero)
-                .ScaleBias, 
+                    m_ProjectionSurfaces[nodeIndex].Resolution,
+                    clusterSettings.OverScanInPixels, Vector2.zero)
+                .ScaleBias,
             GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1)));
     }
 
