@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             debugSettings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
             if (debugSettings.EnableKeyword != prevEnableKeyword)
             {
-                GraphicsUtil.SetShaderKeyword(debugSettings.EnableKeyword);
+                ClusterRenderer.EnableScreenCoordOverrideKeyword(debugSettings.EnableKeyword);
             }
 
             debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), debugSettings.LayoutMode);
