@@ -2,9 +2,7 @@ using System;
 using Unity.ClusterDisplay;
 using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Rendering;
-using UnityEngine.Serialization;
 
 [ExecuteAlways]
 public class TrackedPerspectiveProjection : MonoBehaviour, IProjectionPolicy
@@ -35,7 +33,7 @@ public class TrackedPerspectiveProjection : MonoBehaviour, IProjectionPolicy
 
         var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
         if (nodeIndex >= m_ProjectionSurfaces.Length) return;
-        
+
         var targetSurface = m_ProjectionSurfaces[nodeIndex];
         targetSurface.Render(clusterSettings, activeCamera);
 

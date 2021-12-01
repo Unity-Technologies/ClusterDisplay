@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics
         IPresenter m_Presenter = new NullPresenter();
 #endif
 
-        const string k_ClusterRenderLayerName = "ClusterRenderer";
+        internal const int VirtualObjectLayer = 12;
 
         public bool IsDebug
         {
@@ -119,36 +119,5 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
-#if UNITY_EDITOR
-        public static int GetVirtualObjectLayer()
-        {
-            return GetOrAddLayer(k_ClusterRenderLayerName);
-        }
-        
-        static int GetOrAddLayer(string name)
-        {
-            var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
-            var layersProp = tagManager.FindProperty("layers");
-            for (int i = 6; i < 32; ++i)
-            {
-                var layer = layersProp.GetArrayElementAtIndex(i);
-                if (layer.stringValue == "")
-                {
-                    layer.stringValue = name;
-                    tagManager.ApplyModifiedProperties();
-
-                    return i;
-                }
-
-                if (layer.stringValue == name)
-                {
-                    return i;
-                }
-            }
-
-            Debug.LogError("All layer slots are full");
-            return -1;
-        }
-#endif
     }
 }

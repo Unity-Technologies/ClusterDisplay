@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            gameObject.layer = ClusterRenderer.GetVirtualObjectLayer();
+            gameObject.layer = ClusterRenderer.VirtualObjectLayer;
             Initialize();
         }
 
