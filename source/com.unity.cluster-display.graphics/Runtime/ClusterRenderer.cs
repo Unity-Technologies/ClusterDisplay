@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Linq;
-using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine.Assertions;
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -32,7 +29,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         bool m_IsDebug;
 
-        IProjectionPolicy m_ProjectionPolicy;
+        [SerializeField]
+        ProjectionPolicy m_ProjectionPolicy;
 
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
@@ -51,6 +49,22 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public ClusterRendererSettings Settings => m_Settings;
+
+        public void SetProjectionPolicy<T>() where T : ProjectionPolicy
+        {
+            if (m_ProjectionPolicy != null && m_ProjectionPolicy.gameObject == gameObject)
+            {
+                DestroyImmediate(m_ProjectionPolicy);
+            }
+
+            m_ProjectionPolicy = gameObject.AddComponent<T>();
+            m_ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
+        }
+
+        void OnDestroy()
+        {
+            DestroyImmediate(m_ProjectionPolicy);
+        }
 
         // TODO we'll need a method to configure additional camera data for HDRP
         void ____()
@@ -74,14 +88,9 @@ namespace Unity.ClusterDisplay.Graphics
             }*/
         }
 
-        void OnValidate()
-        {
-            m_ProjectionPolicy = GetComponent<IProjectionPolicy>();
-        }
-
         void OnEnable()
         {
-            m_ProjectionPolicy = GetComponent<IProjectionPolicy>();
+            m_ProjectionPolicy = GetComponent<ProjectionPolicy>();
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 

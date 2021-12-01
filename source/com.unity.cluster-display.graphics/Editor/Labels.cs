@@ -18,7 +18,8 @@ namespace Unity.ClusterDisplay.Graphics
             Keyword,
             LayoutMode,
             DebugViewportSubsection,
-            ScaleBiasOffset
+            ScaleBiasOffset,
+            ProjectionPolicy
         }
 
         static string GetName(Field field)
@@ -36,6 +37,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.LayoutMode: return "Layout Mode";
                 case Field.DebugViewportSubsection: return "Debug Viewport Subsection";
                 case Field.ScaleBiasOffset: return "Scale Bias Offset";
+                case Field.ProjectionPolicy: return "Projection Policy";
             }
 
             return string.Empty;
@@ -56,6 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.LayoutMode: return "Select various layout modes for visualization.";
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
                 case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";
+                case Field.ProjectionPolicy: return "The method with which the content is projected for display.";
             }
 
             return string.Empty;

@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [ExecuteAlways]
-    public class TiledProjection : MonoBehaviour, IProjectionPolicy
+    public class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new()
@@ -125,7 +125,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.SetShaderKeyword(false);
         }
 
-        public void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
+        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             // Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
@@ -202,7 +202,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public void Present(CommandBuffer commandBuffer)
+        public override void Present(CommandBuffer commandBuffer)
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
