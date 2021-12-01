@@ -25,14 +25,14 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, true);
             }
 
-            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordTransform, RenderTexture target)
+            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
             {
                 m_Camera.targetTexture = target;
                 m_Camera.projectionMatrix = projection;
                 m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
 
                 m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordTransform = screenCoordTransform;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
                 // TODO Set Global Shader Uniforms?
 
@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera = camera;
         }
 
-        public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordTransform, RenderTexture target)
+        public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
         {
             m_Camera.targetTexture = target;
             m_Camera.projectionMatrix = projection;
