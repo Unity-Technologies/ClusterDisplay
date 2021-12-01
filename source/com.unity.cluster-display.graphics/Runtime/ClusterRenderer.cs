@@ -205,13 +205,13 @@ namespace Unity.ClusterDisplay.Graphics
                 var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
                 var screenSizeOverride = renderContext.PostEffectsParams.GetScreenSizeOverride();
-                var screenCoordTransform = PostEffectsParams.GetScreenCoordTransform(overscannedViewportSubsection);
+                var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
-                cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordTransform, targets[tileIndex]);
+                cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, targets[tileIndex]);
 
                 var viewportSubsection = renderContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+                commands.Add(new BlitCommand(targets[tileIndex], renderContext.BlitParams.ScaleBias, GraphicsUtil.RectAsScaleBias(viewportSubsection)));
             }
         }
 
@@ -226,11 +226,11 @@ namespace Unity.ClusterDisplay.Graphics
             var asymmetricProjectionMatrix = renderContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
             
             var screenSizeOverride = renderContext.PostEffectsParams.GetScreenSizeOverride();
-            var screenCoordTransform = PostEffectsParams.GetScreenCoordTransform(overscannedViewportSubsection);
+            var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
             
-            cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordTransform, target);
+            cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, target);
 
-            commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
+            commands.Add(new BlitCommand(target, renderContext.BlitParams.ScaleBias, GraphicsUtil.RectAsScaleBias(new Rect(0, 0, 1, 1))));
         }
     }
 }

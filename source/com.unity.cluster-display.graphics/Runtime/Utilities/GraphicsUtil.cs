@@ -160,6 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+        // Convention, consistent with blit scale-bias for example.
+        public static Vector4 RectAsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
 }

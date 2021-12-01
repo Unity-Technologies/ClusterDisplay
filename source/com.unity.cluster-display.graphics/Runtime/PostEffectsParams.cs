@@ -16,9 +16,9 @@ namespace Unity.ClusterDisplay.Graphics
             return new Vector4(m_DisplayMatrixSize.x, m_DisplayMatrixSize.y, 1.0f / m_DisplayMatrixSize.x, 1.0f / m_DisplayMatrixSize.y);
         }
         
-        public static Vector4 GetScreenCoordTransform(Rect overscannedViewportSubsection)
+        public static Vector4 GetScreenCoordScaleBias(Rect overscannedViewportSubsection)
         {
-            return new Vector4(overscannedViewportSubsection.x, overscannedViewportSubsection.y, overscannedViewportSubsection.width, overscannedViewportSubsection.height);
+            return GraphicsUtil.RectAsScaleBias(overscannedViewportSubsection);
         }
     }
 }

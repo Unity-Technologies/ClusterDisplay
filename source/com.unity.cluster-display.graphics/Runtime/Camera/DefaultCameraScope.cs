@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera = camera;
         }
 
-        public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordTransform, RenderTexture target)
+        public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
         {
             m_Camera.targetTexture = target;
             m_Camera.projectionMatrix = projection;
