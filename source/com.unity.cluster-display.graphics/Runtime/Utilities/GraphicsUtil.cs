@@ -100,7 +100,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
+        public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
         {
             if (rt == null ||
                 rt.width != width ||

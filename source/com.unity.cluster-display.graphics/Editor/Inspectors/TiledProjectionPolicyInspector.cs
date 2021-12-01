@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
-    [CustomEditor(typeof(TiledProjectionPolicy))]
+    [CustomEditor(typeof(TiledProjection))]
     class TiledProjectionPolicyInspector : UnityEditor.Editor
     {
         SerializedProperty m_GridProp;
@@ -23,17 +23,17 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         public void OnEnable()
         {
-            m_GridProp = serializedObject.FindProperty("m_Settings.gridSize");
-            m_ScreenSizeProp = serializedObject.FindProperty("m_Settings.physicalScreenSize");
-            m_BezelProp = serializedObject.FindProperty("m_Settings.bezel");
+            m_GridProp = serializedObject.FindProperty("m_Settings.GridSize");
+            m_ScreenSizeProp = serializedObject.FindProperty("m_Settings.PhysicalScreenSize");
+            m_BezelProp = serializedObject.FindProperty("m_Settings.Bezel");
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
-            m_TileIndexProp = serializedObject.FindProperty("m_DebugSettings.tileIndexOverride");
-            m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.layoutMode");
-            m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.enableKeyword");
-            m_BezelColorProp = serializedObject.FindProperty("m_DebugSettings.bezelColor");
-            m_DebugViewportProp = serializedObject.FindProperty("m_DebugSettings.useDebugViewportSubsection");
-            m_ViewportSectionProp = serializedObject.FindProperty("m_DebugSettings.viewportSubsection");
-            m_ScaleBiasProp = serializedObject.FindProperty("m_DebugSettings.scaleBiasTextOffset");
+            m_TileIndexProp = serializedObject.FindProperty("m_DebugSettings.TileIndexOverride");
+            m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.LayoutMode");
+            m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.EnableKeyword");
+            m_BezelColorProp = serializedObject.FindProperty("m_DebugSettings.BezelColor");
+            m_DebugViewportProp = serializedObject.FindProperty("m_DebugSettings.UseDebugViewportSubsection");
+            m_ViewportSectionProp = serializedObject.FindProperty("m_DebugSettings.ViewportSubsection");
+            m_ScaleBiasProp = serializedObject.FindProperty("m_DebugSettings.ScaleBiasTextOffset");
         }
 
         public override void OnInspectorGUI()

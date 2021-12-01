@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         [Tooltip("Projection component whose settings are to be displayed/edited.")]
         [SerializeField]
         [HideInInspector]
-        TiledProjectionPolicy m_ProjectionPolicy;
+        TiledProjection m_ProjectionPolicy;
 #pragma warning restore 649
 
         [Tooltip("Show/Hide GUI.")]
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         void OnValidate()
         {
             m_ClusterRenderer = GetComponent<ClusterRenderer>();
-            m_ProjectionPolicy = GetComponent<TiledProjectionPolicy>();
+            m_ProjectionPolicy = GetComponent<TiledProjection>();
         }
 
         void Update()

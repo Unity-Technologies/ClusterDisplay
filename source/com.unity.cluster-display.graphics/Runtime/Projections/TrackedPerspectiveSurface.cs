@@ -68,7 +68,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (GraphicsUtil.AllocateIfNeeded(
                 ref m_RenderTarget,
-                name,
                 overscannedSize.x,
                 overscannedSize.y,
                 k_DefaultFormat))
