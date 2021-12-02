@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using UnityEditor;
 #endif
 
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC.Runtime")]
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 
 namespace Unity.ClusterDisplay
 {

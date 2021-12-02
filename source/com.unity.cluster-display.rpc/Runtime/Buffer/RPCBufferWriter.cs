@@ -287,12 +287,15 @@ namespace Unity.ClusterDisplay.RPC
         [RPCCallMarker]
         public static void AppendRPCCall (
             UnityEngine.Component instance, 
-            ushort rpcId, 
+            string rpcHash, 
             ushort rpcExecutionStage, 
             buint parametersPayloadSize)
         {
              // This becomes true when we make a successful connection to the cluster display network.
             if (!ClusterDisplayState.IsActive) 
+                return;
+            
+            if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
                 return;
 
             // Get the pipe ID, which is the ID of the instance, and this ID should match the equivalant instance on a repeater node.
@@ -337,11 +340,14 @@ namespace Unity.ClusterDisplay.RPC
 
         [StaticRPCCallMarker]
         public static void AppendStaticRPCCall (
-            ushort rpcId, 
+            string rpcHash, 
             ushort rpcExecutionStage, 
             buint parametersPayloadSize)
         {
             if (!ClusterDisplayState.IsActive)
+                return;
+            
+            if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
                 return;
 
             // This is the total size of the RPC call which is the header + the byte count of the method arguments.

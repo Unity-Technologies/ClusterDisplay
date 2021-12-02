@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
 
         public class ObjectRegistryMarker : Attribute {}
         public class PipeIdMarker : Attribute {}
-        public class RPCIdMarker : Attribute {}
+        public class RPCHashMarker : Attribute {}
         public class ParametersPayloadSizeMarker : Attribute {}
         public class RPCBufferPositionMarker : Attribute {}
 

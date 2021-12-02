@@ -74,53 +74,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool TryGetTryCallParameters (
-                out ParameterDefinition pipeIdParamDef,
-                out ParameterDefinition rpcIdParamDef,
-                out ParameterDefinition parametersPayloadSizeParamDef,
-                out ParameterDefinition rpcBufferPositionParamDef)
-            {
-                pipeIdParamDef = null;
-                rpcIdParamDef = null;
-                parametersPayloadSizeParamDef = null;
-                rpcBufferPositionParamDef = null;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.PipeIdMarker>(ilProcessor.Body.Method, out pipeIdParamDef))
-                    return false;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(ilProcessor.Body.Method, out rpcIdParamDef))
-                    return false;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(ilProcessor.Body.Method, out parametersPayloadSizeParamDef))
-                    return false;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(ilProcessor.Body.Method, out rpcBufferPositionParamDef))
-                    return false;
-
-                return true;
-            }
-
-            private bool TryGetTryStaticCallParameters (
-                out ParameterDefinition rpcIdParamDef,
-                out ParameterDefinition parametersPayloadSizeParamDef,
-                out ParameterDefinition rpcBufferPositionParamDef)
-            {
-                rpcIdParamDef = null;
-                parametersPayloadSizeParamDef = null;
-                rpcBufferPositionParamDef = null;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCIdMarker>(ilProcessor.Body.Method, out rpcIdParamDef))
-                    return false;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(ilProcessor.Body.Method, out parametersPayloadSizeParamDef))
-                    return false;
-
-                if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCBufferPositionMarker>(ilProcessor.Body.Method, out rpcBufferPositionParamDef))
-                    return false;
-
-                return true;
-            }
-
             private bool TryGetQueueMethodReference (
                 RPCExecutionStage rpcExecutionStage,
                 out MethodReference methodRef)
@@ -215,7 +168,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 ilProcessor.InsertAfter(lastSwitchJmpInstruction, newInstruction);
             }
 
-            public bool TryAppendInstanceRPCExecution (MethodDefinition targetMethodDef, ushort rpcId)
+            public bool TryAppendInstanceRPCExecution (MethodDefinition targetMethodDef, string rpcHash)
             {
                 Instruction firstInstructionOfSwitchCaseImpl = null;
                 var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
@@ -232,7 +185,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     afterInstruction: lastSwitchJmpInstruction,
-                    valueToPushForBeq: rpcId,
+                    valueToPushForBeq: rpcHash,
                     jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
                     return false;
@@ -245,7 +198,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return false;
             }
 
-            public bool TryAppendStaticRPCExecution (MethodDefinition targetMethodDef, ushort rpcId)
+            public bool TryAppendStaticRPCExecution (MethodDefinition targetMethodDef, string rpcHash)
             {
                 Instruction firstInstructionOfSwitchCaseImpl = null;
                 var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
@@ -262,7 +215,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (!TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     afterInstruction: lastSwitchJmpInstruction,
-                    valueToPushForBeq: rpcId,
+                    valueToPushForBeq: rpcHash,
                     jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchJmpInstruction))
                     return false;

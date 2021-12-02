@@ -164,7 +164,7 @@ namespace Unity.ClusterDisplay.Helpers
         }
 
         #if UNITY_EDITOR
-        [SerializeField] private bool selectRaycastedUI = false;
+        private const bool selectRaycastedUI = false;
         #endif
         private bool TryPerformRaycast (PointerEventData pointerEventData, out RaycastResult raycast)
         {

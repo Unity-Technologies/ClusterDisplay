@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
-
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -279,7 +279,6 @@ namespace Unity.ClusterDisplay.RPC
                         }
 
                         sceneObjectsRegistry.Add(path, sceneRegistry);
-                        sceneRegistry.DeserializeSceneSingletonInstance();
                     }
 
                     if (sceneRegistry.Registered(component))

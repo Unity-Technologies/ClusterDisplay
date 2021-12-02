@@ -1,10 +1,9 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.Example",
+    "rootNamespace": "",
     "references": [
         "Unity.ClusterDisplay",
-        "Unity.ClusterDisplay.Runtime",
         "Unity.ClusterDisplay.Graphics",
-        "Unity.ClusterDisplay.Common",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

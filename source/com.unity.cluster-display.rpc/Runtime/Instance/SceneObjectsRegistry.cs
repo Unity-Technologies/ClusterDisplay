@@ -143,16 +143,14 @@ namespace Unity.ClusterDisplay.RPC
             m_SerializedInstances = serializedInstances.ToArray();
             Dirty();
         }
-
+        
+        public void OnAfterDeserialize() {}
         public void OnBeforeSerialize() 
         {
             IsSerializing = true;
             SerializeRPCSceneInstances();
             IsSerializing = false;
-            SerializeSceneSingletonInstance();
         }
-
-        public void OnAfterDeserialize() => DeserializeSceneSingletonInstance();
 
         private void GatherSceneInstances ()
         {

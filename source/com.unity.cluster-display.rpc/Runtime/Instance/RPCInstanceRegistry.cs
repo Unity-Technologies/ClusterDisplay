@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
         [OnTryCallDelegateMarker] protected delegate bool ExecuteRPCDelegate(
-            ushort rpcId, 
+            string rpcId, 
             ushort pipeId, 
             buint parametersPayloadSize, 
             ref buint rpcBufferParameterPosition);
@@ -85,7 +85,7 @@ namespace Unity.ClusterDisplay
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
         [OnTryStaticCallDelegateMarker] protected delegate bool ExecuteStaticRPCDelegate(
-            ushort rpcId, 
+            string rpcId, 
             buint parametersPayloadSize, 
             ref buint rpcBufferParameterPosition);
 
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
         [ExecuteQueuedRPCDelegateMarker] protected delegate void ExecuteQueuedRPCDelegate(
-            ushort rpcId, 
+            string rpcId, 
             ushort pipeId, 
             buint parametersPayloadSize, 
             buint rpcBufferParameterPosition);
@@ -232,12 +232,15 @@ namespace Unity.ClusterDisplay
                 DelegateNotRegisteredError();
                 return false;
             }
+            
+            if (!RPCRegistry.RPCIdToRPCHash(rpcId, out var rpcHash))
+                return false;
 
             // Call the IL injected method that implements the byte conversion of the RPC's arguments then subsequently invoke the RPC.
             try
             {
                 return m_OnTryCallInstanceDelegate[assemblyIndex](
-                    rpcId, 
+                    rpcHash, 
                     pipeId, 
                     parametersPayloadSize, 
                     ref rpcsBufferPosition);
@@ -262,11 +265,14 @@ namespace Unity.ClusterDisplay
                 DelegateNotRegisteredError();
                 return false;
             }
+            
+            if (!RPCRegistry.RPCIdToRPCHash(rpcId, out var rpcHash))
+                return false;
 
             try
             {
                 return m_OnTryStaticCallInstanceDelegate[assemblyIndex](
-                    rpcId, 
+                    rpcHash, 
                     parametersPayloadSize, 
                     ref rpcsBufferPosition);
             }
@@ -305,13 +311,16 @@ namespace Unity.ClusterDisplay
                 var queuedRPCCall = beforeFixedUpdateRPCQueue.Dequeue();
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
+
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
                 
                 LogCall(queuedRPCCall);
-
+                
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);
@@ -342,13 +351,16 @@ namespace Unity.ClusterDisplay
                 var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
+                
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
 
                 LogCall(queuedRPCCall);
 
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);
@@ -379,13 +391,16 @@ namespace Unity.ClusterDisplay
                 var queuedRPCCall = beforeUpdateRPCQueue.Dequeue();
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
+                
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
 
                 LogCall(queuedRPCCall);
 
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);
@@ -417,12 +432,15 @@ namespace Unity.ClusterDisplay
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
                 
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
+                
                 LogCall(queuedRPCCall);
 
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);
@@ -454,12 +472,15 @@ namespace Unity.ClusterDisplay
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
                 
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
+                
                 LogCall(queuedRPCCall);
 
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);
@@ -491,12 +512,15 @@ namespace Unity.ClusterDisplay
                 if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
                     continue;
                 
+                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                    continue;
+                
                 LogCall(queuedRPCCall);
 
                 try
                 {
                     m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        queuedRPCCall.rpcRequest.rpcId, 
+                        rpcHash, 
                         queuedRPCCall.rpcRequest.pipeId, 
                         queuedRPCCall.rpcRequest.parametersPayloadSize, 
                         queuedRPCCall.rpcsBufferParametersStartPosition);

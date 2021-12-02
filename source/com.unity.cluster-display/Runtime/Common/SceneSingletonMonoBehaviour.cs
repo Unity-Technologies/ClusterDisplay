@@ -11,16 +11,6 @@ namespace Unity.ClusterDisplay
         where SceneInstanceType : SceneSingletonMonoBehaviour<SceneInstanceType>
     {
         private static readonly Dictionary<string, SceneInstanceType> sceneInstances = new Dictionary<string, SceneInstanceType>();
-        [SerializeField] private string m_SerializedScenePath;
-        internal string serializedScenePath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(m_SerializedScenePath))
-                    m_SerializedScenePath = gameObject.scene.path;
-                return m_SerializedScenePath;
-            }
-        }
 
         protected virtual void Enabled () {}
         private void OnEnable() => Enabled();
@@ -30,8 +20,8 @@ namespace Unity.ClusterDisplay
         protected virtual void Destroying () {}
         private void OnDestroy()
         {
-            if (sceneInstances.TryGetValue(serializedScenePath, out var instance))
-                sceneInstances.Remove(serializedScenePath);
+            if (sceneInstances.TryGetValue(gameObject.scene.path, out var instance))
+                sceneInstances.Remove(gameObject.scene.path);
             Destroying();
         }
 
@@ -46,6 +36,7 @@ namespace Unity.ClusterDisplay
 
             GameObject go = new GameObject("SceneObjectRegistry");
             SceneManager.SetActiveScene(scene);
+            go.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
 
             instance = go.AddComponent<SceneInstanceType>();
             Register(instance);
@@ -91,7 +82,7 @@ namespace Unity.ClusterDisplay
 
         private static void Register (SceneSingletonMonoBehaviour<SceneInstanceType> baseInstance, bool throwError = true)
         {
-            var path = baseInstance.m_SerializedScenePath;
+            var path = baseInstance.gameObject.scene.path;
 
             if (string.IsNullOrEmpty(path))
             {
@@ -116,8 +107,5 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Registered instance of: \"{typeof(SceneInstanceType).FullName}\" in scene: \"{path}\".");
             sceneInstances.Add(path, baseInstance as SceneInstanceType);
         }
-
-        protected void DeserializeSceneSingletonInstance () => Register(this, throwError: false);
-        protected void SerializeSceneSingletonInstance () => sceneInstances.Clear();
     }
 }

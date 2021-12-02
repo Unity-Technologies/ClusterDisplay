@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.RPC
     public struct RPCMethodInfo
     {
         public readonly MethodInfo methodInfo;
+        public readonly string rpcHash;
         public readonly ushort rpcId;
 
         public bool overrideRPCExecutionStage;
@@ -18,12 +19,14 @@ namespace Unity.ClusterDisplay.RPC
         public bool IsStatic => methodInfo != null ? methodInfo.IsStatic : false;
 
         public RPCMethodInfo (
+            string rpcHash,
             ushort rpcId, 
             bool overrideRPCExecutionStage,
             RPCExecutionStage rpcExecutionStage, 
             MethodInfo methodInfo, 
             bool usingWrapper)
         {
+            this.rpcHash = rpcHash;
             this.rpcId = rpcId;
             this.overrideRPCExecutionStage = overrideRPCExecutionStage;
             this.rpcExecutionStage = rpcExecutionStage;

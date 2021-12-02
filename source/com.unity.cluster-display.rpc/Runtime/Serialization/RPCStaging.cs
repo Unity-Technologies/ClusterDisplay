@@ -14,8 +14,8 @@ namespace Unity.ClusterDisplay.RPC
             if (!TryGetInstance(out var rpcRegistry))
                 return;
 
-            var methodUniqueID = MethodToUniqueId(methodInfo);
-            if (rpcRegistry.stagedMethods.TryGetValue(methodUniqueID, out var serializedMethod))
+            var rpcHash = MethodInfoToRPCHash(methodInfo);
+            if (rpcRegistry.stagedMethods.TryGetValue(rpcHash, out var serializedMethod))
                 return;
 
             if (!ReflectionUtils.DetermineIfMethodIsRPCCompatible(methodInfo))
@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.RPC
             }
 
             serializedMethod = SerializedMethod.Create(methodInfo);
-            rpcRegistry.stagedMethods.Add(methodUniqueID, serializedMethod);
+            rpcRegistry.stagedMethods.Add(rpcHash, serializedMethod);
         }
     }
 }

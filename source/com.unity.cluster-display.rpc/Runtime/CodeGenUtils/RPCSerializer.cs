@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC
 {
@@ -247,7 +246,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryReadRegisteredAssembliesFile (string path, out string[] registeredAssemblyFullNames)
+        public static bool TryReadRegisteredAssembliesFile (string path, out string[] registeredAssemblyFullNames, bool logMissingFile = true)
         {
             registeredAssemblyFullNames = new string[0]; // Always return a non-null string array, as the file could be missing, and we also want to return an empty array to describe that.
             if (string.IsNullOrEmpty(path))
@@ -258,7 +257,8 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!System.IO.File.Exists(path))
             {
-                CodeGenDebug.LogWarning($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
+                if (logMissingFile)
+                    CodeGenDebug.LogWarning($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
                 return false;
             }
 
@@ -360,7 +360,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static void ReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs, out SerializedMethod[] stagedMethods)
+        public static void ReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs, out SerializedMethod[] stagedMethods, bool logMissingFile = true)
         {
             serializedInstanceRPCs = new SerializedRPC[0];
             stagedMethods = new SerializedMethod[0];
@@ -372,7 +372,8 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!System.IO.File.Exists(path))
             {
-                CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
+                if (logMissingFile)
+                    CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
                 return;
             }
 
@@ -394,7 +395,7 @@ namespace Unity.ClusterDisplay.RPC
 
         public static bool TryDeserializeRPCStubsJson (string jsonStr, out SerializedRPC[] rpcs, out SerializedMethod[] stagedMethods)
         {
-            CodeGenDebug.Log($"Deserializing RPC stubs:\n{jsonStr}");
+            // CodeGenDebug.Log($"Deserializing RPC stubs:\n{jsonStr}");
             
             try
             {

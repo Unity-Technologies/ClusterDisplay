@@ -175,9 +175,6 @@ namespace Unity.ClusterDisplay.RPC
             // some stability as often we will parse RPC ID of 0 if the read head is out of line.
             rpcRequest.rpcId--;
             
-            if (rpcRequest.rpcId == 16)
-                ClusterDebug.Log("TEST");
-
             #if !CLUSTER_DISPLAY_DISABLE_VALIDATION
             // Validate whether the received RPC has even been registered with the repeater node. If the RPC buffer is incorrectly read and we lose track of
             // where the read head is in the RPC buffer, this may result in some bizzare RPC ids since it's reading aross random bytes.

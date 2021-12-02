@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: ClusterSync
   m_EditorClassIdentifier: 
   m_ClusterSyncEditorConfig:
-    m_EditorInstanceIsEmitter: 0
-    m_EditorInstanceEmitterCmdLine: -emitterNode 0 1 224.0.1.0:25691,25692 -communicationTimeout
-      60000
-    m_EditorInstanceRepeaterCmdLine: -node 1 224.0.1.0:25692,25691 -communicationTimeout
-      60000
+    m_EditorInstanceIsEmitter: 1
+    m_EditorInstanceEmitterCmdLine: -adapterName Ethernet -emitterNode 0 1 225.0.1.0:25690,25691
+      -communicationTimeout 60000
+    m_EditorInstanceRepeaterCmdLine: -adapterName Ethernet -node 1 225.0.1.0:25691,25690
+      -communicationTimeout 60000
     m_IgnoreEditorCmdLine: 0
     m_UseTargetFramerate: 0
     m_TargetFrameRate: 60

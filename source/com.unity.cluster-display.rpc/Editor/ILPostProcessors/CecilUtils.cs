@@ -1,18 +1,88 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using UnityEngine;
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public static class CecilUtils
     {
+        public static string ComputeMethodHash(MethodReference methodRef)
+        {
+            using (var sha1 = SHA1Managed.Create())
+            {
+                string methodSignature = CecilUtils.MethodRefToSignature(methodRef);
+                
+                var methodSignatureBytes = System.Text.Encoding.ASCII.GetBytes(methodSignature);
+                var hashBytes = sha1.ComputeHash(methodSignatureBytes);
+                
+                string hashStr = BitConverter.ToString(hashBytes);
+                return hashStr.Replace("-", "");
+            }
+        }
+
+        public static string GenericTypeToSignature (GenericParameter typeDef)
+        {
+            string genericTypeSignature = TypeDefToSignature(typeDef.GenericParameters[0]);
+            for (int i = 1; i < typeDef.GenericParameters.Count; i++)
+                genericTypeSignature = $"{genericTypeSignature},{TypeDefToSignature(typeDef.GenericParameters[i])}";
+            return $"{ParseGenericType(typeDef)}<{genericTypeSignature}>";
+        }
+        
+        public static string GenericTypeToSignature (TypeReference typeDef)
+        {
+            string genericTypeSignature = TypeDefToSignature(typeDef.GenericParameters[0]);
+            for (int i = 1; i < typeDef.GenericParameters.Count; i++)
+                genericTypeSignature = $"{genericTypeSignature},{TypeDefToSignature(typeDef.GenericParameters[i])}";
+            return $"{ParseGenericType(typeDef)}<{genericTypeSignature}>";
+        }
+        
+        public static string ParseGenericType(GenericParameter typeDef) =>
+            typeDef.FullName.Substring(0, typeDef.FullName.Length - 2);
+
+        public static string ParseGenericType(TypeReference typeDef) =>
+            typeDef.FullName.Substring(0, typeDef.FullName.Length - 2);
+        
+        public static string TypeDefToSignature(GenericParameter typeDef) =>
+            $"{(typeDef.HasGenericParameters ? GenericTypeToSignature(typeDef) : typeDef.FullName)}";
+        
+        public static string TypeDefToSignature(TypeReference typeDef) =>
+            $"{(typeDef.HasGenericParameters ? GenericTypeToSignature(typeDef) : typeDef.FullName)}";
+
+        public static string MethodParametersToSignature(MethodDefinition methodDef)
+        {
+            if (methodDef.Parameters.Count == 0)
+                return "";
+            
+            string parameterSignatures = TypeDefToSignature(methodDef.Parameters[0].ParameterType);
+            for (int i = 1; i < methodDef.Parameters.Count; i++)
+                parameterSignatures = $",{TypeDefToSignature(methodDef.Parameters[i].ParameterType)}";
+            
+            return parameterSignatures;
+        }
+
+        public static string GenericMethodToSignature(MethodReference methodRef)
+        {
+            string genericTypeSignature = TypeDefToSignature(methodRef.GenericParameters[0]);
+            for (int i = 1; i < methodRef.GenericParameters.Count; i++)
+                genericTypeSignature = $"{genericTypeSignature},{TypeDefToSignature(methodRef.GenericParameters[i])}";
+            return $"{methodRef.Name}<{genericTypeSignature}>";
+        }
+
+        public static string MethodNameSignature(MethodReference methodRef) =>
+            $"{TypeDefToSignature(methodRef.DeclaringType)}.{(methodRef.HasGenericParameters ? GenericMethodToSignature(methodRef) : methodRef.Name)}";
+
+        public static string MethodParametersSignature(MethodReference methodRef) =>
+            $"{(methodRef.Parameters.Count > 0 ? $" {MethodParametersToSignature(methodRef.Resolve())}" : "")}";
+
+        public static string MethodRefToSignature(MethodReference methodRef) =>
+            $"{TypeDefToSignature(methodRef.ReturnType)} {MethodNameSignature(methodRef)}{MethodParametersSignature(methodRef)}";
+        
         public static bool MethodDefinitionMatchesMethod(MethodDefinition methodDef, ConstructorInfo methodInfo)
         {
             if (methodDef.Name != methodInfo.Name)
@@ -71,16 +141,26 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, MethodInfo methodInfo, out MethodDefinition methodDef)
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, methodInfo));
+
             if (methodDef == null)
+            {
                 CodeGenDebug.LogError($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                return false;
+            }
+
             return true;
         }
 
         public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, ConstructorInfo constructorInfo, out MethodDefinition methodDef)
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, constructorInfo));
+
             if (methodDef == null)
+            {
                 CodeGenDebug.LogError($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                return false;
+            }
+
             return true;
         }
 
@@ -124,7 +204,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (moduleToImportInto.Name != type.Module.Name)
             {
                 importedTypeRef = moduleToImportInto.ImportReference(type);
-                return true;
+                return importedTypeRef != null;
             }
 
             if (type.IsNested)
@@ -136,7 +216,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 }
 
                 importedTypeRef = nestedTypeDef;
-                return true;
+                return (importedTypeRef = nestedTypeDef) != null;
             }
 
             else
@@ -174,11 +254,25 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             importedMethodRef = matchingMethodDef;
-            return true;
+            return (importedMethodRef = matchingMethodDef) != null;
         }
 
         public static bool TryImport (ModuleDefinition moduleToImportInto, MethodInfo methodToImport, out MethodReference importedMethodRef)
         {
+            if (methodToImport == null)
+            {
+                CodeGenDebug.LogError("NULL module.");
+                importedMethodRef = null;
+                return false;
+            }
+            
+            if (moduleToImportInto == null)
+            {
+                CodeGenDebug.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", the module were attempting to import into is null.");
+                importedMethodRef = null;
+                return false;
+            }
+            
             if (moduleToImportInto.Name != methodToImport.Module.Name)
             {
                 importedMethodRef = moduleToImportInto.ImportReference(methodToImport);
@@ -400,7 +494,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (!TryFindNestedTypeWithAttribute<DelegateMarker>(compiledAssemblyDef.MainModule, typeof(RPCInterfaceRegistry), out var delegateTypeRef))
                 return false;
 
-            constructorILProcessor.Emit(OpCodes.Newobj, Import(compiledAssemblyDef.MainModule, delegateTypeRef.Resolve().Methods.FirstOrDefault(method => method.IsConstructor)));
+            var delegateTypeDef = delegateTypeRef.Resolve();
+            if (delegateTypeDef == null)
+                return false;
+
+            var constructorMethodDef = delegateTypeDef.Methods.FirstOrDefault(method => method != null && method.IsConstructor);
+            var constructorMethodRef = Import(compiledAssemblyDef.MainModule, constructorMethodDef);
+            if (constructorMethodRef == null)
+                return false;
+
+            constructorILProcessor.Emit(OpCodes.Newobj, constructorMethodRef);
             return true;
         }
 
@@ -490,7 +593,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public static bool TryDetermineSizeOfField(FieldDefinition fieldDef, ref buint size)
         {
-            var fieldType = fieldDef.FieldType.Resolve();
             if (fieldDef.HasMarshalInfo)
             {
                 switch (fieldDef.MarshalInfo.NativeType)
@@ -517,29 +619,33 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         return true;
                     
                     default:
-                        CodeGenDebug.LogError($"Unsupported unmanaged type: \"{fieldDef.MarshalInfo.NativeType}\" declared for primitive type: \"{fieldType.Name}\".");
+                        CodeGenDebug.LogError($"Unsupported unmanaged type: \"{fieldDef.MarshalInfo.NativeType}\" declared for primitive type: \"{fieldDef.FieldType.Name}\".");
                         return false;
                 }
             }
-            return TryDetermineSizeOfValueType(fieldType, ref size);
+            
+            return TryDetermineSizeOfValueType(fieldDef.FieldType, ref size);
         }
 
-        public static bool TryDetermineSizeOfValueType (TypeDefinition typeDefinition, ref buint size)
+        public static bool TryDetermineSizeOfValueType (TypeReference typeRef, ref buint size)
         {
-            if (typeDefinition.IsPrimitive)
-                return TryDetermineSizeOfPrimitive(typeDefinition, ref size);
+            var typeDef = typeRef.Resolve();
+            if (typeDef == null)
+                throw new Exception($"Unable to determine size of type: \"{typeRef.Name}\", the resolved type definition is NULL!");
+            
+            if (typeDef.IsPrimitive)
+                return TryDetermineSizeOfPrimitive(typeDef, ref size);
 
-            else if (typeDefinition.IsEnum)
+            else if (typeDef.IsEnum)
             {
-                var fieldDef = typeDefinition.Fields.FirstOrDefault(field => field.Name == "value__");
+                var fieldDef = typeDef.Fields.FirstOrDefault(field => field.Name == "value__");
                 return TryDetermineSizeOfPrimitive(fieldDef.FieldType.Resolve(), ref size);
             }
 
-            else if (typeDefinition.IsValueType)
-                return TryDetermineSizeOfStruct(typeDefinition, ref size);
+            else if (typeRef.IsValueType)
+                return TryDetermineSizeOfStruct(typeDef, ref size);
 
-            CodeGenDebug.LogError($"Unable to determine size of supposed value type: \"{typeDefinition.FullName}\".");
-            return false;
+            throw new Exception($"Unable to determine size of supposed value type: \"{typeRef.FullName}\".");
         }
 
         public static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
@@ -847,7 +953,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             var constructorMethodDef = customAttribute.Constructor.Resolve();
 
-            for (int i = 0; i < customAttribute.Constructor.Parameters.Count; i++)
+            for (int i = 0; i < constructorMethodDef.Parameters.Count; i++)
             {
                 var parameterDef = constructorMethodDef.Parameters[i].Resolve();
                 if (!parameterDef.CustomAttributes.Any(parameterCustomAttribute => parameterCustomAttribute.AttributeType.FullName == customAttributeArgumentAttributeType.FullName))
@@ -929,23 +1035,21 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         public static void AddCustomAttributeToParameter<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
         {
-            if (!TryImport(compiledAssemblyDef.MainModule, typeof(Attribute), out var onTryCallMarkerAttributeTypeRef))
+            var constructorMethodInfo = typeof(Attribute).GetConstructors()[0];
+            if (!TryImport(compiledAssemblyDef.MainModule, constructorMethodInfo, out var constructorMethodRef))
                 return;
-
-            var onTryCallMarkerAttributeTypeDef = onTryCallMarkerAttributeTypeRef.Resolve();
-            var constructor = onTryCallMarkerAttributeTypeDef.Methods.FirstOrDefault(methodDef => methodDef.IsConstructor);
-            parameterDef.CustomAttributes.Add(new CustomAttribute(Import(compiledAssemblyDef.MainModule, constructor)));
+            parameterDef.CustomAttributes.Add(new CustomAttribute(constructorMethodRef));
         }
 
-        public static void AddCustomAttributeToMethod<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
+        public static CustomAttribute AddCustomAttributeToMethod<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
         {
-            if (!TryImport(moduleDef, typeof(Attribute), out var attributeTypeRef))
-                return;
+            var constructorMethodInfo = typeof(Attribute).GetConstructors()[0];
+            if (!TryImport(moduleDef, constructorMethodInfo, out var constructorMethodRef))
+                return null;
 
-            var attributeTypeDef = attributeTypeRef.Resolve();
-            var constructor = attributeTypeDef.Methods.FirstOrDefault(method => method.IsConstructor);
-            var customAttribute = new CustomAttribute(Import(moduleDef, constructor));
+            var customAttribute = new CustomAttribute(constructorMethodRef);
             methoDef.CustomAttributes.Add(customAttribute);
+            return customAttribute;
         }
     }
 }

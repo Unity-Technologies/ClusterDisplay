@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay
                     if (GUILayout.Button("Add", GUILayout.Width(45)))
                         onSelectMethod(cachedMethods[i]);
 
-                    EditorGUILayout.LabelField(ReflectionUtils.GetMethodSignatureString(cachedMethods[i]));
+                    EditorGUILayout.LabelField(ReflectionUtils.GetMethodSignature(cachedMethods[i]));
                     EditorGUILayout.EndHorizontal();
                 }
 

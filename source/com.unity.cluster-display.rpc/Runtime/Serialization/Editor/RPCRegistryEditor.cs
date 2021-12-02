@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay.RPC
                                 rpcMethodToRemove = rpcMethodInfo;
                         }
 
-                        EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignatureString(rpcMethodInfo.methodInfo)}\"");
+                        EditorGUILayout.LabelField($"RPC UUID: {rpcMethodInfo.rpcId}, Signature: \"{ReflectionUtils.GetMethodSignature(rpcMethodInfo.methodInfo)}\"");
                         EditorGUILayout.EndHorizontal();
 
                         EditorGUILayout.BeginHorizontal();

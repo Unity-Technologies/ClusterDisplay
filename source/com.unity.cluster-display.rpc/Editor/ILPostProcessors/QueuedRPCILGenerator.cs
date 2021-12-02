@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using System.Collections.Generic;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
@@ -24,14 +25,18 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
+            private Dictionary<string, Instruction> firstExecutionInstruction = new Dictionary<string, Instruction>();
             public bool TryInjectILToExecuteQueuedRPC(
                 MethodReference targetMethod,
                 RPCExecutionStage rpcExecutionStage,
-                int rpcId)
+                string rpcHash)
             {
                 if (lastSwitchCaseInstruction == null)
                     lastSwitchCaseInstruction = ilProcessor.Body.Instructions[0];
                 var lastInstruction = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 1];
+                
+                if (rpcHash == "319249A669B53F2684CF79162F60AC96CBE2EFFA")
+                    CodeGenDebug.Log("TEST");
 
                 Instruction firstInstructionOfCaseImpl;
                 var targetMethodDef = targetMethod.Resolve();
@@ -55,11 +60,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     isImmediateRPCExeuction: false,
                     firstInstructionOfInjection: out firstInstructionOfCaseImpl))
                     return false;
-
+                
                 if (!TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     afterInstruction: lastSwitchCaseInstruction,
-                    valueToPushForBeq: rpcId,
+                    valueToPushForBeq: rpcHash,
                     jmpToInstruction: firstInstructionOfCaseImpl,
                     lastInstructionOfSwitchJmp: out lastSwitchCaseInstruction))
                     return false;
