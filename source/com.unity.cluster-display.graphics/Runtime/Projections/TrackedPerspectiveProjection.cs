@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [ExecuteAlways]
+[PopupItem("Tracked Perspective")]
 public class TrackedPerspectiveProjection : ProjectionPolicy
 {
     [SerializeField]

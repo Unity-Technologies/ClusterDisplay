@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(TiledProjection))]
-    class TiledProjectionPolicyInspector : UnityEditor.Editor
+    class TiledProjectionInspector : UnityEditor.Editor
     {
         SerializedProperty m_GridProp;
         SerializedProperty m_ScreenSizeProp;

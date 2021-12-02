@@ -79,17 +79,14 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [ExecuteAlways]
+    [PopupItem("Tiled")]
     public class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
-        TiledProjectionSettings m_Settings = new()
-        {
-            GridSize = new Vector2Int(2, 2),
-            PhysicalScreenSize = new Vector2(1600, 900)
-        };
+        TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
 
         [SerializeField]
-        TiledProjectionDebugSettings m_DebugSettings;
+        TiledProjectionDebugSettings m_DebugSettings = new() {ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f)};
 
         [SerializeField]
         bool m_IsDebug;

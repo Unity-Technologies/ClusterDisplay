@@ -25,10 +25,20 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 .ToArray();
 
             s_PolicyOptions = s_ProjectionPolicies
-                .Select(type => new GUIContent(type.ToString()))
+                .Select(GetPopupItemName)
+                .Select(str => new GUIContent(str))
                 .ToArray();
+
             m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
+        }
+
+        static string GetPopupItemName(Type type)
+        {
+            return type.GetCustomAttributes(typeof(PopupItemAttribute), true).FirstOrDefault()
+                is PopupItemAttribute item
+                ? item.ItemName
+                : type.ToString();
         }
 
         public override void OnInspectorGUI()
