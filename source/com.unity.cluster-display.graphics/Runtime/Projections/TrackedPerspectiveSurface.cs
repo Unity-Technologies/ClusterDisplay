@@ -27,6 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
         MeshFilter m_MeshFilter;
         Material m_ScreenPreviewMaterial;
         RenderTexture m_RenderTarget;
+        RenderTexture m_PreviewTexture;
 
         GraphicsFormat m_GraphicsFormat;
 
@@ -66,14 +67,11 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var overscannedSize = m_ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
-            if (GraphicsUtil.AllocateIfNeeded(
+            GraphicsUtil.AllocateIfNeeded(
                 ref m_RenderTarget,
                 overscannedSize.x,
                 overscannedSize.y,
-                m_GraphicsFormat))
-            {
-                m_ScreenPreviewMaterial.mainTexture = m_RenderTarget;
-            }
+                m_GraphicsFormat);
 
             var mesh = m_MeshFilter.sharedMesh;
             var cornersView = new Vector3[m_CornerIndices.Length];
@@ -103,6 +101,22 @@ namespace Unity.ClusterDisplay.Graphics
             using var cameraScope = new CameraScope(activeCamera);
             cameraScope.Render(projectionMatrix, m_RenderTarget);
             cameraTransform.rotation = savedRotation;
+
+#if UNITY_EDITOR
+            if (GraphicsUtil.AllocateIfNeeded(
+                ref m_PreviewTexture,
+                m_ScreenResolution.x,
+                m_ScreenResolution.y,
+                m_GraphicsFormat))
+            {
+                m_ScreenPreviewMaterial.mainTexture = m_PreviewTexture;
+            }
+
+            UnityEngine.Graphics.Blit(
+                source: m_RenderTarget, dest: m_PreviewTexture,
+                scale: (Vector2)m_ScreenResolution / overscannedSize,
+                offset: Vector2.one * clusterSettings.OverScanInPixels / overscannedSize);
+#endif
         }
 
         static int[] GetMeshCorners(Mesh mesh)
@@ -199,6 +213,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 go.transform.Rotate(Vector3.left, -90);
             }
+
             go.transform.SetParent(parent, worldPositionStays: true);
             return surface;
         }
