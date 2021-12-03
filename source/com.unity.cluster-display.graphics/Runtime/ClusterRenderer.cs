@@ -63,7 +63,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDestroy()
         {
-            DestroyImmediate(m_ProjectionPolicy);
+            if (m_ProjectionPolicy != null)
+            {
+                DestroyImmediate(m_ProjectionPolicy);
+            }
         }
 
         // TODO we'll need a method to configure additional camera data for HDRP

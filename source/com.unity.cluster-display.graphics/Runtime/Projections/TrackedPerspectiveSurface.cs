@@ -1,8 +1,8 @@
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
-using UnityEngine.Serialization;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -11,9 +11,6 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways]
     public class TrackedPerspectiveSurface : MonoBehaviour
     {
-        // TODO: Get the appropriate format based on current settings
-        const GraphicsFormat k_DefaultFormat = GraphicsFormat.R8G8B8A8_SRGB;
-
 #if CLUSTER_DISPLAY_HDRP
         const string k_ShaderName = "HDRP/Unlit";
 #elif CLUSTER_DISPLAY_URP
@@ -31,6 +28,8 @@ namespace Unity.ClusterDisplay.Graphics
         Material m_ScreenPreviewMaterial;
         RenderTexture m_RenderTarget;
 
+        GraphicsFormat m_GraphicsFormat;
+
         int[] m_CornerIndices;
         int m_ScreenIndex;
 
@@ -40,6 +39,7 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             gameObject.layer = ClusterRenderer.VirtualObjectLayer;
+            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
             Initialize();
         }
 
@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.Graphics
                 ref m_RenderTarget,
                 overscannedSize.x,
                 overscannedSize.y,
-                k_DefaultFormat))
+                m_GraphicsFormat))
             {
                 m_ScreenPreviewMaterial.mainTexture = m_RenderTarget;
             }
@@ -175,6 +175,32 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var normal = Vector3.Cross(plane[1] - plane[0], plane[2] - plane[0]).normalized;
             return pt - Vector3.Dot(pt - plane[0], normal) * normal;
+        }
+
+        public static TrackedPerspectiveSurface CreateDefaultPlanar(Transform parent)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            go.name = GameObjectUtility.GetUniqueNameForSibling(parent, "Cluster Screen");
+            var surface = go.AddComponent<TrackedPerspectiveSurface>();
+            var aspect = (float)surface.Resolution.x / surface.Resolution.y;
+            var scale = go.transform.localScale;
+            scale.z /= aspect;
+            scale /= 2;
+            go.transform.localScale = scale;
+            if (ClusterCameraManager.Instance.ActiveCamera is { } activeCamera)
+            {
+                var camTransform = activeCamera.transform;
+                var position = camTransform.position;
+                go.transform.position = position + camTransform.forward * 3f;
+                go.transform.rotation = camTransform.rotation;
+                go.transform.Rotate(90, 180, 0);
+            }
+            else
+            {
+                go.transform.Rotate(Vector3.left, -90);
+            }
+            go.transform.SetParent(parent, worldPositionStays: true);
+            return surface;
         }
     }
 }

@@ -114,6 +114,11 @@ namespace Unity.ClusterDisplay.Graphics
             public bool UseDebugViewportSubsection;
         }
 
+        void OnEnable()
+        {
+            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+        }
+
         void OnDisable()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
@@ -171,7 +176,6 @@ namespace Unity.ClusterDisplay.Graphics
             var isStitcher = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
             var numTargets = isStitcher ? renderContext.NumTiles : 1;
 
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,
                 renderContext.OverscannedSize.x,
                 renderContext.OverscannedSize.y,

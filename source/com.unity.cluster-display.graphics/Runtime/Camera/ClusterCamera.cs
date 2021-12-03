@@ -20,15 +20,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         Camera m_Camera;
 
-        void Awake()
-        {
-            m_Camera = GetComponent<Camera>();
-            // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
-            var mask = m_Camera.cullingMask;
-            mask ^= 1 << ClusterRenderer.VirtualObjectLayer;
-            m_Camera.cullingMask = mask;
-        }
-
         void Update()
         {
             m_Camera.enabled = false;
@@ -36,6 +27,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            m_Camera = GetComponent<Camera>();
+            // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
+            var mask = m_Camera.cullingMask;
+            mask &= ~(1 << ClusterRenderer.VirtualObjectLayer);
+            m_Camera.cullingMask = mask;
             ClusterCameraManager.Instance.Register(m_Camera);
         }
 

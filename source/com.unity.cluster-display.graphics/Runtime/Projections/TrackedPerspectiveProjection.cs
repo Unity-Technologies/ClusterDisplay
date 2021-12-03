@@ -24,7 +24,8 @@ public class TrackedPerspectiveProjection : ProjectionPolicy
     {
         var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
         if (nodeIndex >= m_ProjectionSurfaces.Length) return;
-        var targetSurface = m_ProjectionSurfaces[nodeIndex];
+        if (m_ProjectionSurfaces[nodeIndex] is not {isActiveAndEnabled: true} targetSurface) return;
+
         if (m_IsDebug)
         {
             foreach (var surface in m_ProjectionSurfaces)
