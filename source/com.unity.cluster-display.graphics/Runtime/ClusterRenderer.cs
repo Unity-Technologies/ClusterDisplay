@@ -42,6 +42,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         internal const int VirtualObjectLayer = 12;
 
+        internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
+
         public bool IsDebug
         {
             get => m_IsDebug;

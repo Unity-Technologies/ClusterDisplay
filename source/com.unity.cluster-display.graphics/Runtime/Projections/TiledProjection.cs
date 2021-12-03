@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
 
     [ExecuteAlways]
     [PopupItem("Tiled")]
-    public class TiledProjection : ProjectionPolicy
+    public sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
@@ -97,7 +97,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         GraphicsFormat m_GraphicsFormat;
 
-        public TiledProjectionDebugSettings DebugSettings => m_DebugSettings;
+        public TiledProjectionSettings Settings
+        {
+            get => m_Settings;
+            internal set => m_Settings = value;
+        }
+
+        public ref readonly TiledProjectionDebugSettings DebugSettings => ref m_DebugSettings;
 
         ref struct TileProjectionContext
         {

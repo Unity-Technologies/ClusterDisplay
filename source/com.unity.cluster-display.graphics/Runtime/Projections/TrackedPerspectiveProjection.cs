@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 
 [ExecuteAlways]
 [PopupItem("Tracked Perspective")]
-public class TrackedPerspectiveProjection : ProjectionPolicy
+public sealed class TrackedPerspectiveProjection : ProjectionPolicy
 {
     [SerializeField]
     bool m_IsDebug;

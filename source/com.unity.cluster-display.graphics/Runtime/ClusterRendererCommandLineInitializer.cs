@@ -25,9 +25,17 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ParseSettings(clusterRenderer.Settings);
+
+            switch (clusterRenderer.ProjectionPolicy)
+            {
+                case TiledProjection tiledProjection:
+                    tiledProjection.Settings = ParseSettings(tiledProjection.Settings);
+                    break;
+                // Add settings parsing for other projection types here
+            }
         }
 
-        static void ParseSettings(ClusterRendererSettings settings)
+        static TiledProjectionSettings ParseSettings(TiledProjectionSettings settings)
         {
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out Vector2Int gridSize))
             {
@@ -44,6 +52,11 @@ namespace Unity.ClusterDisplay.Graphics
                 settings.PhysicalScreenSize = physicalScreenSize;
             }
 
+            return settings;
+        }
+
+        static void ParseSettings(ClusterRendererSettings settings)
+        {
             if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out int overscanInPixels))
             {
                 settings.OverScanInPixels = overscanInPixels;

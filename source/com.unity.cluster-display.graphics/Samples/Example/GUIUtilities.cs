@@ -55,12 +55,11 @@ namespace Unity.ClusterDisplay.Graphics.Example
             return value;
         }
 
-        public static void DrawSettings(ClusterRendererSettings settings)
+        public static void DrawSettings(TiledProjectionSettings settings)
         {
             settings.GridSize = GUIVector2IntField("Grid", settings.GridSize);
             settings.PhysicalScreenSize = GUIVector2Field("Physical Screen Size", settings.PhysicalScreenSize);
             settings.Bezel = GUIVector2Field("Bezel", settings.Bezel);
-            settings.OverScanInPixels = GUIIntSlider("Overscan In Pixels", settings.OverScanInPixels, 0, 256);
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 

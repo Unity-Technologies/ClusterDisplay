@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         [SerializeField]
         [HideInInspector]
         ClusterRenderer m_ClusterRenderer;
-        
+
         [Tooltip("Projection component whose settings are to be displayed/edited.")]
         [SerializeField]
         [HideInInspector]
@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
             if (m_ClusterRenderer != null)
             {
-                GUIUtilities.DrawSettings(m_ClusterRenderer.Settings);
+                GUIUtilities.DrawSettings(m_ProjectionPolicy.Settings);
                 GUIUtilities.KeyboardControls(m_ClusterRenderer.Settings);
 
                 var prevDebug = m_ClusterRenderer.IsDebug;
