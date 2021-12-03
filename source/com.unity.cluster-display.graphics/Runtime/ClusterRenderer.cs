@@ -8,11 +8,10 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.Graphics
 {
     /// <summary>
-    /// This component is responsible for managing projection, layout (tile, stitcher),
-    /// and Cluster Display specific shader features such as Global Screen Space.
+    /// Manages Cluster Display rendering.
     /// </summary>
     /// <remarks>
-    /// We typically expect at most one instance active at a given time.
+    /// Instantiate this component to render using cluster-specific projections.
     /// </remarks>
     [ExecuteAlways]
     [DisallowMultipleComponent]
@@ -44,17 +43,32 @@ namespace Unity.ClusterDisplay.Graphics
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
+        /// <summary>
+        /// Enable debug mode.
+        /// </summary>
         public bool IsDebug
         {
             get => m_IsDebug;
             set => m_IsDebug = value;
         }
 
+        /// <summary>
+        /// Gets the current cluster rendering settings.
+        /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
 
+        /// <summary>
+        /// Set the current projection policy.
+        /// </summary>
+        /// <typeparam name="T">The projection policy type to set.</typeparam>
+        /// <remarks>
+        /// The projection policy determines how the content is to be rendered. Only one policy
+        /// can be active at a time, so calling this method multiple times will override any
+        /// previously-active policies (and potentially erase all of the previous settings).
+        /// </remarks>
         public void SetProjectionPolicy<T>() where T : ProjectionPolicy
         {
-            if (m_ProjectionPolicy != null && m_ProjectionPolicy.gameObject == gameObject)
+            if (m_ProjectionPolicy != null && m_ProjectionPolicy == GetComponent<ProjectionPolicy>())
             {
                 DestroyImmediate(m_ProjectionPolicy);
             }
@@ -69,28 +83,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 DestroyImmediate(m_ProjectionPolicy);
             }
-        }
-
-        // TODO we'll need a method to configure additional camera data for HDRP
-        void ____()
-        {
-            /*if (TryGetPreviousCameraContext(out _))
-            {
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = m_PreviousAsymmetricProjectionSetting;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, m_PreviousAsymmetricProjectionSetting);
-                additionalCameraData.customRenderingSettings = m_PreviousCustomFrameSettingsToggled;
-            }
-
-            if (TryGetContextCamera(out var contextCamera) && contextCamera.TryGetComponent(out additionalCameraData))
-            {
-                m_PreviousAsymmetricProjectionSetting = additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection];
-                m_PreviousCustomFrameSettingsToggled = additionalCameraData.customRenderingSettings;
-
-                additionalCameraData.customRenderingSettings = true;
-                additionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymetricProjection] = true;
-                additionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymetricProjection, true);
-                additionalCameraData.antialiasing = HDAdditionalCameraData.AntialiasingMode.FastApproximateAntialiasing;
-            }*/
         }
 
         void OnEnable()

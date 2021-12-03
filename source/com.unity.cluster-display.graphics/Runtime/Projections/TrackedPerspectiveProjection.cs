@@ -4,7 +4,7 @@ using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-[ExecuteAlways]
+[ExecuteAlways, DisallowMultipleComponent]
 [PopupItem("Tracked Perspective")]
 public sealed class TrackedPerspectiveProjection : ProjectionPolicy
 {

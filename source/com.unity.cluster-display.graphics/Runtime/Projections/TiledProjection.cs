@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword;
     }
 
-    [ExecuteAlways]
+    [ExecuteAlways, DisallowMultipleComponent]
     [PopupItem("Tiled")]
     public sealed class TiledProjection : ProjectionPolicy
     {
