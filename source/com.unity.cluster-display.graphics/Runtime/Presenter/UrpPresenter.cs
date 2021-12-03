@@ -47,10 +47,8 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            var target = renderingData.cameraData.renderer.cameraColorTarget;
-
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
-            cmd.SetRenderTarget(target);
+            cmd.SetRenderTarget(renderingData.cameraData.renderer.cameraColorTargetHandle);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
             
             Present.Invoke(cmd);

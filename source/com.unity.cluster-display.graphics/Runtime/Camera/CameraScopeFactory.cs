@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
+
 #if CLUSTER_DISPLAY_HDRP
 using UnityEngine.Rendering.HighDefinition;
+#elif CLUSTER_DISPLAY_URP
+using UnityEngine.Rendering.Universal;
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -34,8 +37,6 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
                 m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
-                // TODO Set Global Shader Uniforms?
-
                 m_Camera.Render();
             }
 
@@ -50,14 +51,16 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Camera.ResetCullingMatrix();
             }
         }
-#else
-    readonly struct DefaultCameraScope : ICameraScope
+#elif CLUSTER_DISPLAY_URP
+    readonly struct UrpCameraScope : ICameraScope
     {
         readonly Camera m_Camera;
+        readonly UniversalAdditionalCameraData m_AdditionalCameraData;
 
-        public DefaultCameraScope(Camera camera)
+        public UrpCameraScope(Camera camera)
         {
             m_Camera = camera;
+            m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(camera.gameObject);
         }
 
         public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
@@ -66,7 +69,8 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera.projectionMatrix = projection;
             m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
             
-            // TODO Set Global Shader Uniforms?
+            m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
+            m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
             m_Camera.Render();
         }
@@ -78,14 +82,27 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera.ResetCullingMatrix();
         }
     }
+#else
+        readonly struct NullCameraScope : ICameraScope
+        {
+            public void Dispose()
+            {
+            }
+
+            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            {
+            }
+        }
 #endif
 
         public static ICameraScope Create(Camera camera)
         {
 #if CLUSTER_DISPLAY_HDRP
             return new HdrpCameraScope(camera);
-#else // TODO Add support for urp and legacy render pipeline.
-            return new DefaultCameraScope(camera, additionalCameraData);
+#elif CLUSTER_DISPLAY_URP
+            return new UrpCameraScope(camera);
+#else // TODO Add support for legacy render pipeline.
+            return new NullCameraScope();
 #endif
         }
     }
