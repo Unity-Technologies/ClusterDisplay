@@ -38,12 +38,12 @@ namespace Unity.ClusterDisplay.Graphics
         /// in order to observe cluster-display specific artefacts.
         /// </summary>
         [SerializeField]
-        bool m_EnableKeyword;
+        bool m_ScreenCoordOverride;
 
-        public bool EnableKeyword
+        public bool ScreenCoordOverride
         {
-            get => m_EnableKeyword;
-            set => m_EnableKeyword = value;
+            get => m_ScreenCoordOverride;
+            set => m_ScreenCoordOverride = value;
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_TileIndexOverride = 0;
             LayoutMode = LayoutMode.StandardTile;
-            m_EnableKeyword = true;
+            m_ScreenCoordOverride = true;
             m_ViewportSubsection = new Rect(0, 0, 1, 1);
             m_UseDebugViewportSubsection = false;
             m_ScaleBiasTexOffset = Vector2.zero;

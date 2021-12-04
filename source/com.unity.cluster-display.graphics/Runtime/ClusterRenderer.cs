@@ -23,16 +23,17 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
-        const string k_ShaderKeyword = "USING_SCREEN_COORD_OVERRIDE";
+        // Will only be used for Legacy if we end up supporting it.
+        // Otherwise see ScreenCoordOverrideUtils in SRP Core.
+        const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
+        
         internal static void EnableScreenCoordOverrideKeyword(bool enabled) => GraphicsUtil.SetShaderKeyword(k_ShaderKeyword, enabled);
 
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
         struct ClusterDisplayUpdate { }
-
-        static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
-
+        
         [SerializeField]
         readonly ClusterRendererSettings m_Settings = new ClusterRendererSettings();
 
@@ -83,7 +84,7 @@ namespace Unity.ClusterDisplay.Graphics
             
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
             // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
-            EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
+            // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -100,7 +101,7 @@ namespace Unity.ClusterDisplay.Graphics
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
-            EnableScreenCoordOverrideKeyword(false);
+            // EnableScreenCoordOverrideKeyword(false);
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
             
@@ -152,6 +153,14 @@ namespace Unity.ClusterDisplay.Graphics
             var blitParams = new BlitParams(displaySize, m_Settings.OverScanInPixels, m_DebugSettings.ScaleBiasTextOffset);
             var postEffectsParams = new PostEffectsParams(displayMatrixSize);
 
+            // Can't turn off asymmetric projection yet.
+            var renderFeature = RenderFeature.AsymmetricProjection;
+
+            if (m_DebugSettings.ScreenCoordOverride)
+            {
+                renderFeature |= RenderFeature.ScreenCoordOverride;
+            }
+
             var renderContext = new RenderContext
             {
                 CurrentTileIndex = currentTileIndex,
@@ -162,7 +171,8 @@ namespace Unity.ClusterDisplay.Graphics
                 BlitParams = blitParams,
                 PostEffectsParams = postEffectsParams,
                 DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
-                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
+                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection,
+                RenderFeature = renderFeature
             };
 
             // Allocate tiles targets.
@@ -196,7 +206,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void RenderStitcher(RenderTexture[] targets, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
-            using var cameraScope = CameraScopeFactory.Create(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera, renderContext.RenderFeature);
             
             for (var tileIndex = 0; tileIndex != renderContext.NumTiles; ++tileIndex)
             {
@@ -217,7 +227,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void RenderTile(RenderTexture target, Camera camera, ref RenderContext renderContext, List<BlitCommand> commands)
         {
-            using var cameraScope = CameraScopeFactory.Create(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera, renderContext.RenderFeature);
             
             var overscannedViewportSubsection = renderContext.UseDebugViewportSubsection ? 
                 renderContext.DebugViewportSubsection : 

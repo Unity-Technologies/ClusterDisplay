@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
             Overscan,
             Debug,
             TileIndexOverride,
-            Keyword,
+            ScreenCoordOverride,
             LayoutMode,
             DebugViewportSubsection,
             ScaleBiasOffset
@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Overscan: return "Overscan in Pixels";
                 case Field.Debug: return "Debug";
                 case Field.TileIndexOverride: return "Tile Index Override";
-                case Field.Keyword: return "Keyword";
+                case Field.ScreenCoordOverride: return "Screen Coord Override";
                 case Field.LayoutMode: return "Layout Mode";
                 case Field.DebugViewportSubsection: return "Debug Viewport Subsection";
                 case Field.ScaleBiasOffset: return "Scale Bias Offset";
@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.Overscan: return "Amount of overscan in pixels.";
                 case Field.Debug: return "Activate/Deactivate debug mode.";
                 case Field.TileIndexOverride: return "Tile index to be used in debug mode, overrides network tile index.";
-                case Field.Keyword: return "Activate/Deactivate cluster display shading features.";
+                case Field.ScreenCoordOverride: return "Activate/Deactivate cluster display shading features.";
                 case Field.LayoutMode: return "Select various layout modes for visualization.";
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
                 case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";

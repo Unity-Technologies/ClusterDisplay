@@ -14,5 +14,6 @@ namespace Unity.ClusterDisplay.Graphics
         // Debug data.
         public Rect DebugViewportSubsection;
         public bool UseDebugViewportSubsection;
+        public RenderFeature RenderFeature;
     }
 }

@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
         public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
         {
             settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
-            settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
+            settings.ScreenCoordOverride = GUILayout.Toggle(settings.ScreenCoordOverride, "Enable Keyword");
 
             var currentLayoutMode = Enum.GetName(typeof(LayoutMode), settings.LayoutMode);
             var layoutModes = Enum.GetNames(typeof(LayoutMode));

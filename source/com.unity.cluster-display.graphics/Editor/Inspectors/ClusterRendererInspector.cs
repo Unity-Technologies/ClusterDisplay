@@ -55,12 +55,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             
             debugSettings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), debugSettings.TileIndexOverride);
 
-            var prevEnableKeyword = debugSettings.EnableKeyword;
-            debugSettings.EnableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), prevEnableKeyword);
-            if (debugSettings.EnableKeyword != prevEnableKeyword)
+            var prevEnableKeyword = debugSettings.ScreenCoordOverride;
+            debugSettings.ScreenCoordOverride = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.ScreenCoordOverride), prevEnableKeyword);
+            /*if (debugSettings.EnableKeyword != prevEnableKeyword)
             {
                 ClusterRenderer.EnableScreenCoordOverrideKeyword(debugSettings.EnableKeyword);
-            }
+            }*/
 
             debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), debugSettings.LayoutMode);
 
