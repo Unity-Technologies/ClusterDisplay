@@ -23,8 +23,16 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
     {
         var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
-        if (nodeIndex >= m_ProjectionSurfaces.Length) return;
-        if (m_ProjectionSurfaces[nodeIndex] is not {isActiveAndEnabled: true} targetSurface) return;
+
+        if (nodeIndex >= m_ProjectionSurfaces.Length)
+        {
+            return;
+        }
+
+        if (m_ProjectionSurfaces[nodeIndex] is not {isActiveAndEnabled: true} targetSurface)
+        {
+            return;
+        }
 
         if (m_IsDebug)
         {
@@ -44,7 +52,7 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
                     m_ProjectionSurfaces[nodeIndex].Resolution,
                     clusterSettings.OverScanInPixels, Vector2.zero)
                 .ScaleBias,
-            GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1)));
+            GraphicsUtil.k_IdentityScaleBias);
     }
 
     public override void Present(CommandBuffer commandBuffer)

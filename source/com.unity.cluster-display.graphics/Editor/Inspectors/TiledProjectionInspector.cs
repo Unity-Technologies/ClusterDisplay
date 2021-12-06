@@ -38,20 +38,22 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             serializedObject.Update();
 
-            using var check = new EditorGUI.ChangeCheckScope();
-            EditorGUILayout.PropertyField(m_GridProp, Labels.GetGUIContent(Labels.Field.GridSize));
-            EditorGUILayout.PropertyField(m_ScreenSizeProp, Labels.GetGUIContent(Labels.Field.PhysicalScreenSize));
-            EditorGUILayout.PropertyField(m_BezelProp, Labels.GetGUIContent(Labels.Field.Bezel));
-            EditorGUILayout.PropertyField(m_TileIndexProp);
-            EditorGUILayout.PropertyField(m_IsDebugProp, Labels.GetGUIContent(Labels.Field.Debug));
-            if (m_IsDebugProp.boolValue)
+            using (var check = new EditorGUI.ChangeCheckScope())
             {
-                EditDebugSettings();
-            }
+                EditorGUILayout.PropertyField(m_GridProp, Labels.GetGUIContent(Labels.Field.GridSize));
+                EditorGUILayout.PropertyField(m_ScreenSizeProp, Labels.GetGUIContent(Labels.Field.PhysicalScreenSize));
+                EditorGUILayout.PropertyField(m_BezelProp, Labels.GetGUIContent(Labels.Field.Bezel));
+                EditorGUILayout.PropertyField(m_TileIndexProp);
+                EditorGUILayout.PropertyField(m_IsDebugProp, Labels.GetGUIContent(Labels.Field.Debug));
+                if (m_IsDebugProp.boolValue)
+                {
+                    EditDebugSettings();
+                }
 
-            if (check.changed)
-            {
-                serializedObject.ApplyModifiedProperties();
+                if (check.changed)
+                {
+                    serializedObject.ApplyModifiedProperties();
+                }
             }
         }
 

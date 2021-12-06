@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
 
-        void OnEnable()
+        internal static void InitializePoliciesDropDown()
         {
             s_ProjectionPolicies = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(assembly => assembly.GetTypes())
@@ -28,7 +28,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 .Select(GetPopupItemName)
                 .Select(str => new GUIContent(str))
                 .ToArray();
+        }
 
+        void OnEnable()
+        {
             m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
         }

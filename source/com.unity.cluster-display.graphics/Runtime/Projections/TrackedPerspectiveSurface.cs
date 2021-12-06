@@ -1,8 +1,11 @@
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -191,6 +194,7 @@ namespace Unity.ClusterDisplay.Graphics
             return pt - Vector3.Dot(pt - plane[0], normal) * normal;
         }
 
+#if UNITY_EDITOR
         public static TrackedPerspectiveSurface CreateDefaultPlanar(Transform parent)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -217,5 +221,6 @@ namespace Unity.ClusterDisplay.Graphics
             go.transform.SetParent(parent, worldPositionStays: true);
             return surface;
         }
+#endif
     }
 }
