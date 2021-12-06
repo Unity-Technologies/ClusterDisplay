@@ -99,15 +99,16 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             serializedObject.Update();
 
-            using var check = new EditorGUI.ChangeCheckScope();
-
-            EditorGUILayout.PropertyField(m_DebugProp, Labels.GetGUIContent(Labels.Field.Debug));
-            m_SurfacesList.DoLayoutList();
-            EditorGUILayout.PropertyField(m_NodeIndexProp, Labels.GetGUIContent(Labels.Field.NodeIndexOverride));
-
-            if (check.changed)
+            using (var check = new EditorGUI.ChangeCheckScope())
             {
-                serializedObject.ApplyModifiedProperties();
+                EditorGUILayout.PropertyField(m_DebugProp, Labels.GetGUIContent(Labels.Field.Debug));
+                m_SurfacesList.DoLayoutList();
+                EditorGUILayout.PropertyField(m_NodeIndexProp, Labels.GetGUIContent(Labels.Field.NodeIndexOverride));
+
+                if (check.changed)
+                {
+                    serializedObject.ApplyModifiedProperties();
+                }
             }
         }
     }
