@@ -14,6 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
         const bool k_FlipWhenBlittingToScreen = false;
 #endif
+        public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
         static class ShaderIDs
         {
@@ -78,19 +79,19 @@ namespace Unity.ClusterDisplay.Graphics
         public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, GraphicsFormat format, string name)
         {
             var nameNeedsUpdate = false;
-            
+
             if (rts == null || count != rts.Length)
             {
                 nameNeedsUpdate = true;
                 DeallocateIfNeeded(ref rts);
                 rts = new RenderTexture[count];
             }
-            
+
             for (var i = 0; i != count; ++i)
             {
                 nameNeedsUpdate |= AllocateIfNeeded(ref rts[i], width, height, format);
             }
-            
+
             if (nameNeedsUpdate)
             {
                 for (var i = 0; i != count; ++i)
@@ -100,7 +101,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
+        public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
         {
             if (rt == null ||
                 rt.width != width ||

@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
     class Initializer
     {
         const string k_BlitShaderName = "ClusterDisplay/Blit";
-        
+
         static Initializer()
         {
             if (Util.AddAlwaysIncludedShaderIfNeeded(k_BlitShaderName))

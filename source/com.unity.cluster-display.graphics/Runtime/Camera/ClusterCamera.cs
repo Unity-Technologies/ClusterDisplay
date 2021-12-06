@@ -20,11 +20,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         Camera m_Camera;
 
-        void Awake()
-        {
-            m_Camera = GetComponent<Camera>();
-        }
-
         void Update()
         {
             m_Camera.enabled = false;
@@ -32,6 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            m_Camera = GetComponent<Camera>();
             ClusterCameraManager.Instance.Register(m_Camera);
         }
 

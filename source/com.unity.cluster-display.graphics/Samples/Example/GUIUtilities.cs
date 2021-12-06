@@ -55,21 +55,20 @@ namespace Unity.ClusterDisplay.Graphics.Example
             return value;
         }
 
-        public static void DrawSettings(ClusterRendererSettings settings)
+        public static void DrawSettings(TiledProjectionSettings settings)
         {
             settings.GridSize = GUIVector2IntField("Grid", settings.GridSize);
             settings.PhysicalScreenSize = GUIVector2Field("Physical Screen Size", settings.PhysicalScreenSize);
             settings.Bezel = GUIVector2Field("Bezel", settings.Bezel);
-            settings.OverScanInPixels = GUIIntSlider("Overscan In Pixels", settings.OverScanInPixels, 0, 256);
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 
-        public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
+        public static void DrawDebugSettings(TiledProjectionDebugSettings tileDebugSettings)
         {
-            settings.TileIndexOverride = GUIIntField("Tile Index Override", settings.TileIndexOverride);
-            settings.EnableKeyword = GUILayout.Toggle(settings.EnableKeyword, "Enable Keyword");
+            tileDebugSettings.TileIndexOverride = GUIIntField("Tile Index Override", tileDebugSettings.TileIndexOverride);
+            tileDebugSettings.EnableKeyword = GUILayout.Toggle(tileDebugSettings.EnableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), settings.LayoutMode);
+            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), tileDebugSettings.LayoutMode);
             var layoutModes = Enum.GetNames(typeof(LayoutMode));
             GUILayout.Label("Layout Modes");
             for (var i = 0; i < layoutModes.Length; i++)
@@ -83,16 +82,16 @@ namespace Unity.ClusterDisplay.Graphics.Example
 
                 if (GUILayout.Button(layoutModes[i]))
                 {
-                    settings.LayoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
+                    tileDebugSettings.LayoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
                 }
             }
 
-            settings.UseDebugViewportSubsection = GUILayout.Toggle(settings.UseDebugViewportSubsection, "Debug Viewport Section");
+            tileDebugSettings.UseDebugViewportSubsection = GUILayout.Toggle(tileDebugSettings.UseDebugViewportSubsection, "Debug Viewport Section");
 
-            if (settings.UseDebugViewportSubsection)
+            if (tileDebugSettings.UseDebugViewportSubsection)
             {
                 GUILayout.Label("Viewport Section");
-                var rect = settings.ViewportSubsection;
+                var rect = tileDebugSettings.ViewportSubsection;
                 var xMin = rect.xMin;
                 var xMax = rect.xMax;
                 var yMin = rect.yMin;
@@ -102,14 +101,14 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 xMax = GUISlider("xMax", xMax, 0, 1);
                 yMin = GUISlider("yMin", yMin, 0, 1);
                 yMax = GUISlider("yMax", yMax, 0, 1);
-                settings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                tileDebugSettings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
 
             GUILayout.Label("Scale Bias Offset");
-            var offset = settings.ScaleBiasTextOffset;
+            var offset = tileDebugSettings.ScaleBiasTextOffset;
             offset.x = GUISlider("x", offset.x, -1, 1);
             offset.y = GUISlider("y", offset.y, -1, 1);
-            settings.ScaleBiasTextOffset = offset;
+            tileDebugSettings.ScaleBiasTextOffset = offset;
         }
 
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
