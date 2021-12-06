@@ -6,6 +6,7 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(ClusterRenderer))]
+    [InitializeOnLoad]
     class ClusterRendererInspector : UnityEditor.Editor
     {
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
@@ -17,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
 
-        internal static void InitializePoliciesDropDown()
+        static ClusterRendererInspector()
         {
             s_ProjectionPolicies = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(assembly => assembly.GetTypes())

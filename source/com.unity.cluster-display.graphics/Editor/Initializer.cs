@@ -15,8 +15,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 Debug.Log($"Added {k_BlitShaderName} to the list of Always Included shader.");
             }
-
-            ClusterRendererInspector.InitializePoliciesDropDown();
         }
     }
 }
