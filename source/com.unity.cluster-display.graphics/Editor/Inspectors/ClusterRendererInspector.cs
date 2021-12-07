@@ -110,7 +110,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (target as ClusterRenderer is not { } renderer) return;
 
-            var setterMethod = typeof(ClusterRenderer).GetMethod(nameof(ClusterRenderer.SetProjectionPolicy));
+            Undo.RegisterCompleteObjectUndo(target, "Set Projection Policy");
+            var setterMethod = typeof(ClusterRenderer).GetMethod(nameof(ClusterRenderer.SetNewProjectionPolicy));
             var genericSetter = setterMethod?.MakeGenericMethod(type);
             genericSetter?.Invoke(renderer, null);
         }

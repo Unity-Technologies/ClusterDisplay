@@ -78,7 +78,6 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword;
     }
 
-    [ExecuteAlways, DisallowMultipleComponent]
     [PopupItem("Tiled")]
     public sealed class TiledProjection : ProjectionPolicy
     {
@@ -150,7 +149,7 @@ namespace Unity.ClusterDisplay.Graphics
             var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
 
             // Aspect must be updated *before* we pull the projection matrix.
-            activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
+            activeCamera.aspect = displayMatrixSize.x / (float) displayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
 
 #if UNITY_EDITOR
@@ -225,10 +224,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
-            if (enabled)
-            {
-                m_Gizmo.Draw();
-            }
+            m_Gizmo.Draw();
         }
 #endif
 

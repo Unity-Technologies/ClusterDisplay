@@ -66,15 +66,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// can be active at a time, so calling this method multiple times will override any
         /// previously-active policies (and potentially erase all of the previous settings).
         /// </remarks>
-        public void SetProjectionPolicy<T>() where T : ProjectionPolicy
+        public void SetNewProjectionPolicy<T>() where T : ProjectionPolicy
         {
-            if (m_ProjectionPolicy != null && m_ProjectionPolicy == GetComponent<ProjectionPolicy>())
-            {
-                DestroyImmediate(m_ProjectionPolicy);
-            }
+            // if (m_ProjectionPolicy != null && m_ProjectionPolicy == GetComponent<ProjectionPolicy>())
+            // {
+            //     DestroyImmediate(m_ProjectionPolicy);
+            // }
 
-            m_ProjectionPolicy = gameObject.AddComponent<T>();
-            m_ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
+            // m_ProjectionPolicy = gameObject.AddComponent<T>();
+            m_ProjectionPolicy = ScriptableObject.CreateInstance<T>();
+            
+            // m_ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
         }
 
         void OnDestroy()
@@ -87,7 +89,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            m_ProjectionPolicy = GetComponent<ProjectionPolicy>();
+            // m_ProjectionPolicy = GetComponent<ProjectionPolicy>();
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 

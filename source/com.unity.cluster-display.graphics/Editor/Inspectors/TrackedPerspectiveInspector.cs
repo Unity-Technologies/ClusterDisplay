@@ -33,64 +33,69 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 drawHeaderCallback = rect => EditorGUI.LabelField(rect, Labels.GetGUIContent(Labels.Field.ProjectionSurfaces)),
                 drawElementCallback = OnDrawSurfaceElement,
-                onAddDropdownCallback = DisplayAddSurfaceDropdown
+                onAddDropdownCallback = DisplayAddSurfaceDropdown,
+                onSelectCallback = OnSelectSurfaceElement,
+                onRemoveCallback = OnRemoveSurfaceElement
             };
         }
 
+        void OnSelectSurfaceElement(ReorderableList list)
+        {
+            Debug.Log($"Selected {list.index}");
+        }
+
+        void OnRemoveSurfaceElement(ReorderableList list)
+        {
+            var obj = m_SurfacesProp.GetArrayElementAtIndex(list.index).managedReferenceValue as TrackedPerspectiveSurface;
+            m_SurfacesProp.DeleteArrayElementAtIndex(list.index);
+            serializedObject.ApplyModifiedProperties();
+            System.Diagnostics.Debug.Assert(obj != null, nameof(obj) + " != null");
+            obj.Dispose();
+        }
+        
         void OnDrawSurfaceElement(Rect rect, int index, bool active, bool focused)
         {
             var element = m_SurfacesProp.GetArrayElementAtIndex(index);
             EditorGUI.PropertyField(rect, element, GUIContent.none);
+            // EditorGUI.LabelField(rect, element.objectReferenceValue.name);
+            // Selection.activeObject = element.objectReferenceValue;
         }
 
         void DisplayAddSurfaceDropdown(Rect buttonRect, ReorderableList list)
         {
             serializedObject.Update();
-            var existing = SceneUtils.FindAllObjectsInScene<TrackedPerspectiveSurface>();
             var menu = new GenericMenu();
-            foreach (var surface in existing)
-            {
-                if (!IsSurfaceInList(surface))
-                {
-                    menu.AddItem(new GUIContent(surface.name), false, () =>
-                    {
-                        AddSurfaceToList(surface);
-                    });
-                }
-            }
+            // var existing = SceneUtils.FindAllObjectsInScene<TrackedPerspectiveSurface>();
+            // foreach (var surface in existing)
+            // {
+            //     if (!IsSurfaceInList(surface))
+            //     {
+            //         menu.AddItem(new GUIContent(surface.name), false, () =>
+            //         {
+            //             AddSurfaceToList(surface);
+            //         });
+            //     }
+            // }
 
             menu.AddItem(Labels.GetGUIContent(Labels.Field.DefaultProjectionSurface), false, AddDefaultSurface);
             menu.ShowAsContext();
         }
 
-        bool IsSurfaceInList(TrackedPerspectiveSurface surface)
-        {
-            for (int i = 0; i < m_SurfacesProp.arraySize; i++)
-            {
-                if (surface == m_SurfacesProp.GetArrayElementAtIndex(i).objectReferenceValue == surface)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        void AddSurfaceToList(Object surface)
+        void AddSurfaceToList(TrackedPerspectiveSurface surface)
         {
             var index = m_SurfacesProp.arraySize;
             m_SurfacesProp.InsertArrayElementAtIndex(index);
-            m_SurfacesProp.GetArrayElementAtIndex(index).objectReferenceValue = surface;
+            m_SurfacesProp.GetArrayElementAtIndex(index).managedReferenceValue = surface;
             serializedObject.ApplyModifiedProperties();
-            EditorGUIUtility.PingObject(surface);
+            // EditorGUIUtility.PingObject(surface);
         }
 
         void AddDefaultSurface()
         {
             if (target is TrackedPerspectiveProjection parent)
             {
-                var surface = TrackedPerspectiveSurface.CreateDefaultPlanar(parent.transform);
-                Undo.RegisterCreatedObjectUndo(surface.gameObject, k_UndoCreateSurface);
+                var surface = TrackedPerspectiveSurface.CreateDefaultPlanar();
+                // Undo.RegisterCreatedObjectUndo(surface.gameObject, k_UndoCreateSurface);
                 AddSurfaceToList(surface);
             }
         }
@@ -112,4 +117,13 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
         }
     }
+
+    // [CustomPropertyDrawer(typeof(TrackedPerspectiveSurface))]
+    // class TrackedPerspectiveSurfaceDrawer : PropertyDrawer
+    // {
+    //     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    //     {
+    //         EditorGUI.PropertyField(position, property.FindPropertyRelative("m_Name"), GUIContent.none);
+    //     }
+    // }
 }

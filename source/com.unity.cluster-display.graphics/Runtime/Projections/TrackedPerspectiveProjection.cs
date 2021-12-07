@@ -4,21 +4,22 @@ using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-[ExecuteAlways, DisallowMultipleComponent]
 [PopupItem("Tracked Perspective")]
 public sealed class TrackedPerspectiveProjection : ProjectionPolicy
 {
     [SerializeField]
     bool m_IsDebug;
 
-    [SerializeField]
-    public TrackedPerspectiveSurface[] m_ProjectionSurfaces = Array.Empty<TrackedPerspectiveSurface>();
+    [SerializeReference]
+    TrackedPerspectiveSurface[] m_ProjectionSurfaces = Array.Empty<TrackedPerspectiveSurface>();
 
     [SerializeField]
     int m_NodeIndexOverride;
 
     Camera m_Camera;
     BlitCommand m_BlitCommand;
+
+    Matrix4x4 m_RootTransform = Matrix4x4.identity;
 
     public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
     {
@@ -29,7 +30,7 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
             return;
         }
 
-        if (m_ProjectionSurfaces[nodeIndex] is not {isActiveAndEnabled: true} targetSurface)
+        if (m_ProjectionSurfaces[nodeIndex] is not { } targetSurface)
         {
             return;
         }
@@ -38,12 +39,12 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
         {
             foreach (var surface in m_ProjectionSurfaces)
             {
-                surface.Render(clusterSettings, activeCamera);
+                surface.Render(clusterSettings, activeCamera, m_RootTransform);
             }
         }
         else
         {
-            targetSurface.Render(clusterSettings, activeCamera);
+            targetSurface.Render(clusterSettings, activeCamera, m_RootTransform);
         }
 
         m_BlitCommand = new BlitCommand(
@@ -63,5 +64,13 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
         }
 
         GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
+    }
+
+    void OnDisable()
+    {
+        foreach (var surface in m_ProjectionSurfaces)
+        {
+            surface.Dispose();
+        }
     }
 }
