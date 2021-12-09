@@ -17,7 +17,7 @@ public sealed class ExampleScreenCoordOverridePostProcess : CustomPostProcessVol
     // Do not forget to add this post process in the Custom Post Process Orders list (Project Settings > Graphics > HDRP Settings).
     public override CustomPostProcessInjectionPoint injectionPoint => CustomPostProcessInjectionPoint.AfterPostProcess;
 
-    const string kShaderName = "Hidden/Shader/ExampleScreenCoordOverride";
+    const string kShaderName = "Hidden/ExampleScreenCoordOverridePostProcess";
 
     public override void Setup()
     {

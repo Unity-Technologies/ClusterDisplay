@@ -18,6 +18,14 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
+        // TODO The notion of camera state overlaps with camera scopes who could also implement save-restore mechanism.
+        struct CameraState
+        {
+            public RenderTexture Target;
+            public bool Enabled;
+        }
+
+        CameraState m_CameraState;
         Camera m_Camera;
 
         void Awake()
@@ -27,17 +35,55 @@ namespace Unity.ClusterDisplay.Graphics
 
         void Update()
         {
-            m_Camera.enabled = false;
+            if (m_Camera.enabled && ClusterRenderer.IsActive())
+            {
+                // TODO Not technically breaking but unexpected from a usage perspective.
+                Debug.LogError($"Camera {m_Camera.name} enabled while Cluster Renderer is active, this is not supported.");
+            }
         }
-
+        
         void OnEnable()
         {
+            ClusterRenderer.Enabled += OnRendererEnabled;
+            ClusterRenderer.Disabled += OnRendererDisabled;
             ClusterCameraManager.Instance.Register(m_Camera);
+            
+            // In case the renderer is already active;
+            if (ClusterRenderer.IsActive())
+            {
+                OnRendererEnabled();
+            }
         }
 
         void OnDisable()
         {
             ClusterCameraManager.Instance.Unregister(m_Camera);
+            ClusterRenderer.Enabled -= OnRendererEnabled;
+            ClusterRenderer.Disabled -= OnRendererDisabled;
+        }
+
+        void OnRendererEnabled()
+        {
+            m_CameraState = new CameraState
+            {
+                Enabled = m_Camera.enabled,
+                Target = m_Camera.targetTexture
+            };
+            
+            m_Camera.enabled = false;
+        }
+
+        void OnRendererDisabled()
+        {
+            // TODO What if the user alters the Camera state between Enabled and here?
+            m_Camera.enabled = m_CameraState.Enabled;
+            m_Camera.targetTexture = m_CameraState.Target;
+            
+            // TODO Similar code in camera scopes, DRY?
+            m_Camera.ResetWorldToCameraMatrix();
+            m_Camera.ResetProjectionMatrix();
+            m_Camera.ResetCullingMatrix();
+            m_Camera.ResetAspect();
         }
     }
 

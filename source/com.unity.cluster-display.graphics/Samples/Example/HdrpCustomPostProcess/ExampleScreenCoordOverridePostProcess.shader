@@ -1,4 +1,4 @@
-Shader "Hidden/Shader/ExampleScreenCoordOverride"
+Shader "Hidden/ExampleScreenCoordOverridePostProcess"
 {
     Properties
     {
