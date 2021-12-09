@@ -103,6 +103,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             return $"{base.GetDebugString()} : {LocalNode.m_RemoteNodes.Count}";
         }
+
     }
 
 }

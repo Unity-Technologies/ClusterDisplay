@@ -11,7 +11,8 @@ public static class FishUtils
             return Vector3.zero;
 
         var ncc = new Vector2((Input.mousePosition.x / 1280f) * 2f - 1f, (Input.mousePosition.y / 720f) * 2f - 1f);
-        var clusterScreenPosition = schoolCamera.Camera.NCCToClusterScreenPosition(ncc);
+        var clusterScreenPosition = Vector2.one * 0.5f;
+        // var clusterScreenPosition = schoolCamera.Camera.NCCToClusterScreenPosition(ncc);
         var worldRay = schoolCamera.Camera.ScreenPointToRay(new Vector3(clusterScreenPosition.x, clusterScreenPosition.y, 1f));
 
         return worldRay.origin + worldRay.direction.normalized * (school.Center - schoolCamera.transform.position).magnitude;

@@ -10,7 +10,7 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay
 {
-    public class EmitterStateWriter
+    internal class EmitterStateWriter
     {
         private NativeArray<byte> m_PreviousStateSubBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;

@@ -3,10 +3,10 @@
     "rootNamespace": "",
     "references": [
         "Unity.ClusterDisplay",
-        "Unity.ClusterDisplay.Graphics",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.Editor",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.HighDefinition.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime"
+        "Unity.ClusterDisplay.Graphics"
     ],
     "includePlatforms": [
         "Editor"
@@ -17,6 +17,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "8.3.1",
+            "define": "CLUSTER_DISPLAY_HDRP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "8.3.1",
+            "define": "CLUSTER_DISPLAY_URP"
+        }
+    ],
     "noEngineReferences": false
 }

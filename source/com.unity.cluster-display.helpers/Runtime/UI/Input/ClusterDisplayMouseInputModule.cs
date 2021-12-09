@@ -20,7 +20,9 @@ namespace Unity.ClusterDisplay.Helpers
 
         public override Vector2 GetPointerScreenSpacePosition()
         {
-            if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
+            return Vector2.zero;
+            /*
+            if (ClusterCameraManager.Instance.ActiveCamera == null)
                 return Vector2.zero;
 
             switch (m_InputMode)
@@ -29,15 +31,15 @@ namespace Unity.ClusterDisplay.Helpers
                     return Input.mousePosition;
 
                 case InputMode.ClusterSpace:
-                    return contextCamera.DeviceScreenPositionToClusterScreenPosition(Input.mousePosition);
+                    return ClusterCameraManager.Instance.ActiveCamera.DeviceScreenPositionToClusterScreenPosition(Input.mousePosition);
 
                 case InputMode.ControllerSpace:
                 {
                     if (m_ControllerSpaceDimension == Vector2.zero)
-                        return contextCamera.NCCToClusterScreenPosition(Vector2.one * 0.5f);
+                        return ClusterCameraManager.Instance.ActiveCamera.NCCToClusterScreenPosition(Vector2.one * 0.5f);
 
                     var ncc = new Vector2((Input.mousePosition.x / m_ControllerSpaceDimension.x) * 2f - 1f, (Input.mousePosition.y / m_ControllerSpaceDimension.y) * 2f - 1f);
-                    var clusterScreenPosition = contextCamera.NCCToClusterScreenPosition(ncc);
+                    var clusterScreenPosition = ClusterCameraManager.Instance.ActiveCamera.NCCToClusterScreenPosition(ncc);
                     return clusterScreenPosition;
                 }
 
@@ -45,6 +47,7 @@ namespace Unity.ClusterDisplay.Helpers
                     Debug.LogError($"Unhandled input mode: \"{m_InputMode}\".");
                     return Vector2.zero;
             }
+            */
         }
 
         public override PointerEventData.FramePressState GetPressState()

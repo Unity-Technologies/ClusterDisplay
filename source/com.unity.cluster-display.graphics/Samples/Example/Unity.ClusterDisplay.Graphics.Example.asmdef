@@ -4,6 +4,7 @@
     "references": [
         "Unity.ClusterDisplay",
         "Unity.ClusterDisplay.Graphics",
+        "Unity.ClusterDisplay.Runtime",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

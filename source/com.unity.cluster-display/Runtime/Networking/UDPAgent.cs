@@ -246,7 +246,9 @@ namespace Unity.ClusterDisplay
         public UInt64 NewNodeNotification(byte newNodeId)
         {
             if (newNodeId + 1 > MaxSupportedNodeCount)
+            {
                 OnError( $"Node id must be in the range of [0,{MaxSupportedNodeCount - 1}]");
+            }
             else
                  AllNodesMask |= (UInt64)1 << newNodeId;
 

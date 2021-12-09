@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -239,14 +240,18 @@ namespace Unity.ClusterDisplay
             #endif
             
             Assert.IsTrue(indexOfPlayerUpdateTime != -1, "Can't find insertion point in player loop for ClusterRendering system");
+
             initList.Insert(indexOfPlayerUpdateTime + 1, new PlayerLoopSystem()
             {
                 type = this.GetType(),
                 updateDelegate = SystemUpdate
             });
 
+
             newLoop.subSystemList[0].subSystemList = initList.ToArray();
+
             PlayerLoop.SetPlayerLoop(newLoop);
+
         }
 
         private void RemoveSynchPointFromPlayerLoop()
@@ -255,13 +260,13 @@ namespace Unity.ClusterDisplay
             Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
 
             var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            
             var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
             if (entryToDel == -1)
                 return; // If the subsystem does not doesn't contain our loop, then we don't need to remove it.
             initList.RemoveAt(entryToDel);
 
             newLoop.subSystemList[0].subSystemList = initList.ToArray();
+
             PlayerLoop.SetPlayerLoop(newLoop);
         }
 
@@ -391,9 +396,9 @@ namespace Unity.ClusterDisplay
                     
                     var newFrame = true;
                     m_DelayMonitor.RefPoint();
-                    
                     do
                     {
+
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!

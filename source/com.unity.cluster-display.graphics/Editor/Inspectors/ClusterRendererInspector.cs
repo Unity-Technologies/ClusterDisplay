@@ -1,71 +1,158 @@
 ﻿using System;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 
-namespace Unity.ClusterDisplay.Graphics.Inspectors
+namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(ClusterRenderer))]
+    [InitializeOnLoad]
     class ClusterRendererInspector : UnityEditor.Editor
     {
+        const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
+        const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
+        const string k_ConfirmPolicyChange = "You are changing the projection policy. Your current projection settings will by lost. Continue?";
+        static Type[] s_ProjectionPolicies;
+        static GUIContent[] s_PolicyOptions;
+
+        SerializedProperty m_PolicyProp;
+        SerializedProperty m_OverscanProp;
+
+        static ClusterRendererInspector()
+        {
+            s_ProjectionPolicies = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(assembly =>
+                {
+                    try
+                    {
+                        return assembly.GetTypes();
+                    }
+                    catch (ReflectionTypeLoadException e)
+                    {
+                        return e.Types;
+                    }
+                })
+                .Where(t => t != null && t.IsSubclassOf(typeof(ProjectionPolicy)))
+                .ToArray();
+
+            s_PolicyOptions = s_ProjectionPolicies
+                .Select(GetPopupItemName)
+                .Select(str => new GUIContent(str))
+                .ToArray();
+        }
+
+        void OnEnable()
+        {
+            m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
+            m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
+        }
+
+        static string GetPopupItemName(Type type)
+        {
+            return type.GetCustomAttributes(typeof(PopupItemAttribute), true).FirstOrDefault()
+                is PopupItemAttribute item
+                ? item.ItemName
+                : type.ToString();
+        }
+
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
+
+            if (target as ClusterRenderer is not { } clusterRenderer) return;
+
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                var adapter = target as ClusterRenderer;
-             
-                var settings = adapter.settings;
-                settings.resources = (ClusterDisplayGraphicsResources)EditorGUILayout.ObjectField(settings.resources, typeof(ClusterDisplayGraphicsResources), false);
-                settings.gridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.gridSize);
-                settings.physicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.physicalScreenSize);
-                settings.bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.bezel);
-                settings.overScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.overScanInPixels, 0, 256);
-                settings.queueEmitterFrames = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.QueueEmitterFrame), settings.queueEmitterFrames);
-                settings.queueEmitterFrameCount = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.QueueEmitterFrameCount), settings.queueEmitterFrameCount);
+#if CLUSTER_DISPLAY_URP
+                RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
+#endif
+                CheckForClusterCameraComponents();
+                SelectPolicyDropdown();
 
-                adapter.context.debug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), adapter.context.debug);
-                
-                if (adapter.context.debug)
-                    EditDebugSettings(adapter.debugSettings);
-                
+                EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
+
                 if (check.changed)
-                    EditorUtility.SetDirty(adapter);
+                {
+                    serializedObject.ApplyModifiedProperties();
+
+                    // TODO needed?
+                    EditorUtility.SetDirty(clusterRenderer);
+                }
+            }
+
+            if (m_PolicyProp.objectReferenceValue != null)
+            {
+                var policyEditor = CreateEditor(m_PolicyProp.objectReferenceValue);
+                policyEditor.OnInspectorGUI();
             }
         }
-     
-        static void EditDebugSettings(ClusterRendererDebugSettings settings)
+
+        void SelectPolicyDropdown()
         {
-            //settings.TileIndexOverride = EditorGUILayout.IntField("Tile Index Override", settings.TileIndexOverride);
-            settings.tileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), settings.tileIndexOverride);
-            settings.enableKeyword = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Keyword), settings.enableKeyword);
-            settings.currentLayoutMode = (ClusterRenderer.LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), settings.currentLayoutMode);
-            settings.useDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), settings.useDebugViewportSubsection);
-
-            if (ClusterRenderer.LayoutModeIsStitcher(settings.currentLayoutMode))
-                settings.bezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), settings.bezelColor);
-
-            // Let user manipulate viewport directly instead of inferring it from tile index.
-            if (settings.useDebugViewportSubsection)
+            var policyRef = m_PolicyProp.objectReferenceValue;
+            var selectedIndex = -1;
+            if (policyRef != null)
             {
-                EditorGUILayout.LabelField("Viewport Section");
-
-                var rect = settings.viewportSubsection;
-                float xMin = rect.xMin;
-                float xMax = rect.xMax;
-                float yMin = rect.yMin;
-                float yMax = rect.yMax;
-
-                xMin = EditorGUILayout.Slider("xMin", xMin, 0, 1);
-                xMax = EditorGUILayout.Slider("xMax", xMax, 0, 1);
-                yMin = EditorGUILayout.Slider("yMin", yMin, 0, 1);
-                yMax = EditorGUILayout.Slider("yMax", yMax, 0, 1);
-                settings.viewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                var selectedPolicy = policyRef.GetType();
+                selectedIndex = Array.IndexOf(s_ProjectionPolicies, policyRef.GetType());
             }
 
-            EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));
-            var offset = settings.scaleBiasTextOffset;
-            offset.x = EditorGUILayout.Slider("x", offset.x, -1, 1);
-            offset.y = EditorGUILayout.Slider("y", offset.y, -1, 1);
-            settings.scaleBiasTextOffset = offset;
+            var newIndex = EditorGUILayout.Popup(
+                Labels.GetGUIContent(Labels.Field.ProjectionPolicy),
+                selectedIndex,
+                s_PolicyOptions);
+
+            if (newIndex != selectedIndex)
+            {
+                if (selectedIndex >= 0)
+                {
+                    if (!EditorUtility.DisplayDialog("Cluster Rendering", k_ConfirmPolicyChange, "Change projection policy", "Cancel"))
+                    {
+                        return;
+                    }
+                }
+
+                SetProjectionPolicy(s_ProjectionPolicies[newIndex]);
+            }
+        }
+
+        void SetProjectionPolicy(Type type)
+        {
+            if (target as ClusterRenderer is not { } renderer) return;
+
+            var setterMethod = typeof(ClusterRenderer).GetMethod(nameof(ClusterRenderer.SetProjectionPolicy));
+            var genericSetter = setterMethod?.MakeGenericMethod(type);
+            genericSetter?.Invoke(renderer, null);
+        }
+
+        static void CheckForClusterCameraComponents()
+        {
+            if (!SceneUtils.FindAllObjectsInScene<ClusterCamera>().Any())
+            {
+                EditorGUILayout.HelpBox(k_NoCamerasMessage, MessageType.Warning);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button(k_AddCameraScriptText))
+                    {
+                        AddMissingClusterCameraComponents();
+                    }
+
+                    GUILayout.FlexibleSpace();
+                }
+            }
+        }
+
+        static void AddMissingClusterCameraComponents()
+        {
+            foreach (var camera in SceneUtils.FindAllObjectsInScene<Camera>())
+            {
+                if (camera.GetComponent<ClusterRenderer>() == null && camera.GetComponent<ClusterCamera>() == null)
+                {
+                    camera.gameObject.AddComponent<ClusterCamera>();
+                }
+            }
         }
     }
 }

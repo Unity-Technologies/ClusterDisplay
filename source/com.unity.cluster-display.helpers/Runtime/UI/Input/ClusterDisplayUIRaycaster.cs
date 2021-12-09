@@ -28,13 +28,13 @@ namespace Unity.ClusterDisplay.Helpers
         {
             get
             {
-                if (!ClusterCameraController.TryGetContextCamera(out var contextCamera))
+                if (ClusterCameraManager.Instance.ActiveCamera == null)
                 {
                     ClusterDebug.LogError("There is no cluster display camera to fire UI raycasts from!");
                     return null;
                 }
 
-                return contextCamera;
+                return ClusterCameraManager.Instance.ActiveCamera;
             }
         }
 

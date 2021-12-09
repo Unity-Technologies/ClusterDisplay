@@ -17,6 +17,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "8.3.1",
+            "define": "CLUSTER_DISPLAY_HDRP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "8.3.1",
+            "define": "CLUSTER_DISPLAY_URP"
+        }
+    ],
     "noEngineReferences": false
 }

@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public class RepeaterStateReader
+    internal class RepeaterStateReader
     {
         private NativeArray<byte> m_MsgFromEmitter;
         private byte[] m_OutBuffer = new byte[0];

@@ -24,6 +24,7 @@ namespace Unity.ClusterDisplay
         public static ClusterDisplayBehaviourDelegate onApplicationQuit;
         public static ClusterDisplayBehaviourDelegate update;
         public static ClusterDisplayBehaviourDelegate lateUpdate;
+        public static ClusterDisplayBehaviourDelegate onDrawGizmos;
 
         public static ClusterDisplayBehaviourDelegate onBeforePresent;
         private Coroutine endOfFrameCoroutine;
@@ -92,6 +93,7 @@ namespace Unity.ClusterDisplay
 
         private void Update() => update?.Invoke();
         private void LateUpdate() => lateUpdate?.Invoke();
+        private void OnDrawGizmos() => onDrawGizmos?.Invoke();
 
         private IEnumerator BeforePresentCoroutine ()
         {

@@ -53,7 +53,6 @@ namespace Unity.ClusterDisplay
 
                 return true;
             }
-            
             catch (Exception e)
             {
                 ClusterDebug.LogError( $"Failed to start UDP Agent:\n{e.Message}");

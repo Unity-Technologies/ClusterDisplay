@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             int.TryParse(str, out value);
             return value;
         }
-        
+
         static float GUIFloatField(string label, float value)
         {
             var str = value.ToString("0.00");
@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.Graphics.Example
             value.y = GUIIntField("y", value.y);
             return value;
         }
-        
+
         static Vector2 GUIVector2Field(string label, Vector2 value)
         {
             GUILayout.Label(label);
@@ -55,64 +55,66 @@ namespace Unity.ClusterDisplay.Graphics.Example
             return value;
         }
 
-        public static void DrawSettings(ClusterRendererSettings settings)
+        public static void DrawSettings(TiledProjectionSettings settings)
         {
-            settings.gridSize = GUIVector2IntField("Grid", settings.gridSize);
-            settings.physicalScreenSize = GUIVector2Field("Physical Screen Size", settings.physicalScreenSize);
-            settings.bezel = GUIVector2Field("Bezel", settings.bezel);
-            settings.overScanInPixels = GUIIntSlider("Overscan In Pixels", settings.overScanInPixels, 0, 256);
+            settings.GridSize = GUIVector2IntField("Grid", settings.GridSize);
+            settings.PhysicalScreenSize = GUIVector2Field("Physical Screen Size", settings.PhysicalScreenSize);
+            settings.Bezel = GUIVector2Field("Bezel", settings.Bezel);
             GUILayout.Label("Press <b>[O]</b> then use <b>left/right</b> arrows to decrease/increase");
         }
 
-        public static void DrawDebugSettings(ClusterRendererDebugSettings settings)
+        public static void DrawDebugSettings(TiledProjectionDebugSettings tileDebugSettings)
         {
-            settings.tileIndexOverride = GUIIntField("Tile Index Override", settings.tileIndexOverride);
-            settings.enableKeyword = GUILayout.Toggle(settings.enableKeyword, "Enable Keyword");
+            tileDebugSettings.TileIndexOverride = GUIIntField("Tile Index Override", tileDebugSettings.TileIndexOverride);
+            tileDebugSettings.EnableKeyword = GUILayout.Toggle(tileDebugSettings.EnableKeyword, "Enable Keyword");
 
-            var currentLayoutMode = Enum.GetName(typeof(ClusterRenderer.LayoutMode), settings.currentLayoutMode);
-            string[] layoutModes = Enum.GetNames(typeof(ClusterRenderer.LayoutMode));
+            var currentLayoutMode = Enum.GetName(typeof(LayoutMode), tileDebugSettings.LayoutMode);
+            var layoutModes = Enum.GetNames(typeof(LayoutMode));
             GUILayout.Label("Layout Modes");
-            for (int i = 0; i < layoutModes.Length; i++)
+            for (var i = 0; i < layoutModes.Length; i++)
             {
                 if (layoutModes[i] == currentLayoutMode)
                 {
-                    if (GUILayout.Button($"{currentLayoutMode} (Active)")) {}
+                    if (GUILayout.Button($"{currentLayoutMode} (Active)")) { }
+
                     continue;
                 }
 
                 if (GUILayout.Button(layoutModes[i]))
-                    settings.currentLayoutMode = (ClusterRenderer.LayoutMode)Enum.Parse(typeof(ClusterRenderer.LayoutMode), layoutModes[i]);
+                {
+                    tileDebugSettings.LayoutMode = (LayoutMode)Enum.Parse(typeof(LayoutMode), layoutModes[i]);
+                }
             }
 
-            settings.useDebugViewportSubsection = GUILayout.Toggle(settings.useDebugViewportSubsection, "Debug Viewport Section");
+            tileDebugSettings.UseDebugViewportSubsection = GUILayout.Toggle(tileDebugSettings.UseDebugViewportSubsection, "Debug Viewport Section");
 
-            if (settings.useDebugViewportSubsection)
+            if (tileDebugSettings.UseDebugViewportSubsection)
             {
                 GUILayout.Label("Viewport Section");
-                var rect = settings.viewportSubsection;
-                float xMin = rect.xMin;
-                float xMax = rect.xMax;
-                float yMin = rect.yMin;
-                float yMax = rect.yMax;
+                var rect = tileDebugSettings.ViewportSubsection;
+                var xMin = rect.xMin;
+                var xMax = rect.xMax;
+                var yMin = rect.yMin;
+                var yMax = rect.yMax;
 
                 xMin = GUISlider("xMin", xMin, 0, 1);
                 xMax = GUISlider("xMax", xMax, 0, 1);
                 yMin = GUISlider("yMin", yMin, 0, 1);
                 yMax = GUISlider("yMax", yMax, 0, 1);
-                settings.viewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+                tileDebugSettings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
             }
 
             GUILayout.Label("Scale Bias Offset");
-            var offset = settings.scaleBiasTextOffset;
+            var offset = tileDebugSettings.ScaleBiasTextOffset;
             offset.x = GUISlider("x", offset.x, -1, 1);
             offset.y = GUISlider("y", offset.y, -1, 1);
-            settings.scaleBiasTextOffset = offset;
+            tileDebugSettings.ScaleBiasTextOffset = offset;
         }
 
         // introduce keyboard controls to make up for lack of IMGUI support with Cluster Display
         public static void KeyboardControls(ClusterRendererSettings settings)
         {
-            #if ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM
             if (Keyboard.current.oKey.isPressed)
             {
                 var overscan = settings.overScanInPixels;
@@ -123,17 +125,22 @@ namespace Unity.ClusterDisplay.Graphics.Example
                 settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
 
-            #elif ENABLE_LEGACY_INPUT_MANAGER
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKey(KeyCode.O))
             {
-                var overscan = settings.overScanInPixels;
+                var overscan = settings.OverScanInPixels;
                 if (Input.GetKey(KeyCode.RightArrow))
+                {
                     ++overscan;
+                }
                 else if (Input.GetKey(KeyCode.LeftArrow))
+                {
                     --overscan;
-                settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
+                }
+
+                settings.OverScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
-            #endif
+#endif
         }
     }
 }

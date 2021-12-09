@@ -2,50 +2,65 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    // TODO naming way too vague
-    [CreateAssetMenu(fileName = "ClusterRendererCommandLineInitializer", menuName = "Cluster Display/ClusterRendererCommandLineInitializer", order = 1)]
-    class ClusterRendererCommandLineInitializer : 
-        SingletonScriptableObject<ClusterRendererCommandLineInitializer>,
-        IClusterDisplayConfigurable
+    // TODO Is that component too shallow? Should we promote this to the CLusterRenderer?
+    [RequireComponent(typeof(ClusterRenderer))]
+    class ClusterRendererCommandLineInitializer : MonoBehaviour
     {
         static class CommandLineArgs
         {
-            internal static readonly string k_Debug = "--debug"; // very common name, collision risk
-            internal static readonly string k_GridSize = "--gridsize";
-            internal static readonly string k_Overscan = "--overscan";
-            internal static readonly string k_Bezel = "--bezel";
-            internal static readonly string k_PhysicalScreenSize = "--physicalscreensize";
+            public const string k_Debug = "--debug"; // very common name, collision risk
+            public const string k_GridSize = "--gridsize";
+            public const string k_Overscan = "--overscan";
+            public const string k_Bezel = "--bezel";
+            public const string k_PhysicalScreenSize = "--physicalscreensize";
         }
 
-        ClusterRenderer m_ClusterRenderer;
-        
         public void OnEnable()
         {
-            if (!ClusterRenderer.TryGetInstance(out m_ClusterRenderer))
-                return;
-                
+            var clusterRenderer = GetComponent<ClusterRenderer>();
+
             if (ApplicationUtil.CommandLineArgExists(CommandLineArgs.k_Debug))
-                m_ClusterRenderer.context.debug = true;
+            {
+                clusterRenderer.IsDebug = true;
+            }
 
-            Vector2Int gridSize;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out gridSize))
-                m_ClusterRenderer.settings.gridSize = gridSize;
-           
-            Vector2 bezel;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out bezel))
-                m_ClusterRenderer.settings.bezel = bezel;
-            
-            Vector2 physicalScreenSize;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out physicalScreenSize))
-                m_ClusterRenderer.settings.physicalScreenSize = physicalScreenSize;
+            ParseSettings(clusterRenderer.Settings);
 
-            int overscanInPixels;
-            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out overscanInPixels))
-                m_ClusterRenderer.settings.overScanInPixels = overscanInPixels;
+            switch (clusterRenderer.ProjectionPolicy)
+            {
+                case TiledProjection tiledProjection:
+                    tiledProjection.Settings = ParseSettings(tiledProjection.Settings);
+                    break;
+                // Add settings parsing for other projection types here
+            }
         }
 
-        protected override void OnAwake()
+        static TiledProjectionSettings ParseSettings(TiledProjectionSettings settings)
         {
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_GridSize, out Vector2Int gridSize))
+            {
+                settings.GridSize = gridSize;
+            }
+
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Bezel, out Vector2 bezel))
+            {
+                settings.Bezel = bezel;
+            }
+
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_PhysicalScreenSize, out Vector2 physicalScreenSize))
+            {
+                settings.PhysicalScreenSize = physicalScreenSize;
+            }
+
+            return settings;
+        }
+
+        static void ParseSettings(ClusterRendererSettings settings)
+        {
+            if (ApplicationUtil.ParseCommandLineArgs(CommandLineArgs.k_Overscan, out int overscanInPixels))
+            {
+                settings.OverScanInPixels = overscanInPixels;
+            }
         }
     }
 }

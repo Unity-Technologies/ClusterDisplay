@@ -23,6 +23,7 @@ namespace Unity.ClusterDisplay.Helpers
                     m_PlayableDirector = GetComponent<PlayableDirector>();
                     if (m_PlayableDirector == null)
                         return null;
+                    
                     delegatesRegistered = false;
                 }
 
@@ -112,6 +113,7 @@ namespace Unity.ClusterDisplay.Helpers
         [ClusterRPC(RPCExecutionStage.BeforeFixedUpdate)]
         public void Stopped ()
         {
+            
             if (ClusterDisplayState.IsEmitter)
                 return;
 

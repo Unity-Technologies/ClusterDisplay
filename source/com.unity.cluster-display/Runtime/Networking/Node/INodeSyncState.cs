@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay
 {
-    public interface IRepeaterNodeSyncState : INodeSyncState
+    internal interface IRepeaterNodeSyncState : INodeSyncState
     {
         UInt64 EmitterNodeIdMask { get; }
         void OnUnhandledNetworkMessage(MessageHeader msgHeader);
@@ -10,12 +10,12 @@ namespace Unity.ClusterDisplay
         void OnReceivedEmitterFrameData();
     }
 
-    public interface INodeSyncState
+    internal interface INodeSyncState
     {
         UDPAgent NetworkAgent { get; }
     }
 
-    public interface IEmitterNodeSyncState : INodeSyncState
+    internal interface IEmitterNodeSyncState : INodeSyncState
     {
     }
 }
