@@ -23,7 +23,6 @@ namespace Unity.ClusterDisplay.Helpers
                     m_PlayableDirector = GetComponent<PlayableDirector>();
                     if (m_PlayableDirector == null)
                         return null;
-
                     delegatesRegistered = false;
                 }
 

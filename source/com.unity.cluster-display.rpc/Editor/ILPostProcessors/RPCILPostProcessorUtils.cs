@@ -48,7 +48,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             CecilUtils.InsertPushIntAfter(il, ref afterInstruction, rpcExecutionStage);
-            // InsertPushIntAfter(il, ref afterInstruction, ((RPCExecutionStage)rpcExecutionStage) != RPCExecutionStage.Automatic ? 1 : 0);
             CecilUtils.InsertPushBufferUIntAfter(il, ref afterInstruction, sizeOfAllParameters);
             CecilUtils.InsertCallAfter(il, ref afterInstruction, call);
             lastInstruction = afterInstruction;
@@ -59,12 +58,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private bool TryFindMethodWithMatchingFormalySerializedAs (
             ModuleDefinition moduleDef, 
             TypeDefinition typeDefinition, 
-            SerializedRPC serializedRPC,
+            RPCStub rpcStub,
             string serializedMethodName, 
             out MethodReference outMethodRef)
         {
-            serializedRPC.method.methodName = serializedMethodName;
-            return CecilUtils.TryGetMethodReference(moduleDef, typeDefinition, ref serializedRPC, out outMethodRef);
+            rpcStub.methodStub.methodName = serializedMethodName;
+            return CecilUtils.TryGetMethodReference(moduleDef, typeDefinition, ref rpcStub, out outMethodRef);
         }
 
         public static MethodReference CreateMethodReferenceForGenericInstanceType (

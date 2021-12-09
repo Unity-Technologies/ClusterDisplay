@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     public partial class RPCILPostProcessor
     {
-        private SerializedRPC[] cachedSerializedRPCS = null;
+        private RPCStub[] cachedSerializedRPCS = null;
 
         private readonly static Dictionary<string, RPCILGenerator> cachedOnTryCallProcessors = new Dictionary<string, RPCILGenerator>();
         private readonly static Dictionary<string, RPCILGenerator> cachedOnTryStaticCallProcessors = new Dictionary<string, RPCILGenerator>();

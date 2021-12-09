@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
 namespace Unity.ClusterDisplay.RPC
@@ -101,28 +102,28 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
-        public static bool TryDeserializeMethodInfo (SerializedMethod method, out MethodInfo outMethodInfo)
+        public static bool TryDeserializeMethodInfo (RPMethodStub methodStub, out MethodInfo outMethodInfo)
         {
             outMethodInfo = null;
 
-            if (!TryDeserializeType(method.declaringAssemblyName, method.declaringTypeNamespace, method.declaryingTypeName, out var declaringType))
+            if (!TryDeserializeType(methodStub.declaringAssemblyName, methodStub.declaringTypeNamespace, methodStub.declaringTypeName, out var declaringType))
             {
-                CodeGenDebug.LogError($"Unable to find serialized method's declaring type: \"{method.declaryingTypeName}\" in assembly: \"{method.declaringAssemblyName}\".");
+                CodeGenDebug.LogError($"Unable to find serialized method's declaring type: \"{methodStub.declaringTypeName}\" in assembly: \"{methodStub.declaringAssemblyName}\".");
                 return false;
             }
 
-            if (!TryDeserializeType(method.declaringReturnTypeAssemblyName, method.returnTypeNamespace, method.returnTypeName, out var returnType))
+            if (!TryDeserializeType(methodStub.declaringReturnTypeAssemblyName, methodStub.returnTypeNamespace, methodStub.returnTypeName, out var returnType))
             {
-                CodeGenDebug.LogError($"Unable to find serialized method's return type: \"{method.returnTypeName}\" in assembly: \"{method.declaringReturnTypeAssemblyName}\".");
+                CodeGenDebug.LogError($"Unable to find serialized method's return type: \"{methodStub.returnTypeName}\" in assembly: \"{methodStub.declaringReturnTypeAssemblyName}\".");
                 return false;
             }
 
             var parameterList = new List<(System.Type parameterType, string parameterName)>();
-            if (method.ParameterCount > 0)
+            if (methodStub.ParameterCount > 0)
             {
-                for (int i = 0; i < method.ParameterCount; i++)
+                for (int i = 0; i < methodStub.ParameterCount; i++)
                 {
-                    var parameterString = method[i];
+                    var parameterString = methodStub[i];
                     if (!TryDeserializeType(parameterString.declaringParameterTypeAssemblyName, parameterString.parameterTypeNamespace, parameterString.parameterTypeName, out var parameterType))
                     {
                         CodeGenDebug.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
@@ -136,7 +137,7 @@ namespace Unity.ClusterDisplay.RPC
             MethodInfo matchingMethod = null;
             ReflectionUtils.ParallelForeachMethod(declaringType, (methodInfo) =>
             {
-                if (methodInfo.Name != method.methodName)
+                if (methodInfo.Name != methodStub.methodName)
                     return true;
 
                 var parameters = methodInfo.GetParameters();
@@ -176,7 +177,7 @@ namespace Unity.ClusterDisplay.RPC
 
             if (matchingMethod == null)
             {
-                CodeGenDebug.LogError($"Unable to deserialize method: \"{method.methodName}\", declared in type: \"{method.declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                CodeGenDebug.LogError($"Unable to deserialize method: \"{methodStub.methodName}\", declared in type: \"{methodStub.declaringTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                 return false;
             }
 
@@ -190,23 +191,10 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryDeserializeMethodInfo (SerializedRPC serializedRPC, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
+        public static bool TryDeserializeMethodInfo (RPCStub rpcStub, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
         {
-            rpcExecutionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
-            return TryDeserializeMethodInfo(serializedRPC.method, out outMethodInfo);
-        }
-
-        public static void PrepareRegisteredAssembliesForSerialization (List<Assembly> assemblies, out string serializedAssemblies)
-        {
-            if (assemblies.Count == 0)
-            {
-                serializedAssemblies = "";
-                return;
-            }
-
-            serializedAssemblies = assemblies[0].GetName().Name;
-            for (int i = 1; i < assemblies.Count; i++)
-                serializedAssemblies = $"{serializedAssemblies}{Environment.NewLine}{assemblies[i].GetName().Name}";
+            rpcExecutionStage = (RPCExecutionStage)rpcStub.rpcExecutionStage;
+            return TryDeserializeMethodInfo(rpcStub.methodStub, out outMethodInfo);
         }
 
         private static void MakeFileWriteable(string path)
@@ -222,155 +210,70 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        public static bool TryWriteRegisteredAssemblies (string path, string serializedAssemblies)
+        private static void Serialize<T> (T[] rpcs, out byte[] bytes) where T : struct
         {
-            if (string.IsNullOrEmpty(path))
+            if (rpcs == null || rpcs.Length == 0)
             {
-                CodeGenDebug.LogError("Unable to write RPC stubs, the path is invalid.");
-                return false;
-            }
-
-            try
-            {
-                MakeFileWriteable(path);
-                System.IO.File.WriteAllText(path, serializedAssemblies);
-
-            } catch (System.Exception exception)
-            {
-                CodeGenDebug.LogError($"Unable to write registered assemblies to path: \"{path}\", the following exception occurred.");
-                CodeGenDebug.LogException(exception);
-                return false;
-            }
-
-            // LogWriter.Log($"RPC Stubs was written to path: \"{path}\".");
-            return true;
-        }
-
-        public static bool TryReadRegisteredAssembliesFile (string path, out string[] registeredAssemblyFullNames, bool logMissingFile = true)
-        {
-            registeredAssemblyFullNames = new string[0]; // Always return a non-null string array, as the file could be missing, and we also want to return an empty array to describe that.
-            if (string.IsNullOrEmpty(path))
-            {
-                CodeGenDebug.LogWarning("Unable to read registered assemblies, the path is invalid.");
-                return false;
-            }
-
-            if (!System.IO.File.Exists(path))
-            {
-                if (logMissingFile)
-                    CodeGenDebug.LogWarning($"Unable to read registered assemblies from path: \"{path}\", the file does not exist.");
-                return false;
-            }
-
-            try
-            {
-                var assemblyFullNames = System.IO.File.ReadAllLines(path);
-                registeredAssemblyFullNames = assemblyFullNames.Where(assemblyFullName => !string.IsNullOrEmpty(assemblyFullName)).ToArray();
-
-            } catch (System.Exception exception)
-            {
-                CodeGenDebug.LogError($"Unable to read registered assemblies from path: \"{path}\", the following exception occurred.");
-                CodeGenDebug.LogException(exception);
-                return false;
-            }
-
-            return true;
-        }
-
-        public static bool TryDeserializeRegisteredAssemblies (string serializedRegisteredAssemblies, out List<Assembly> registeredAssemblies)
-        {
-            if (string.IsNullOrEmpty(serializedRegisteredAssemblies))
-            {
-                CodeGenDebug.LogError("String containing serialized registered assemblies is null or empty.");
-                registeredAssemblies = null;
-                return false;
+                bytes = null;
+                return;
             }
             
-            CodeGenDebug.Log($"Deserializing registered assemblies:\n{serializedRegisteredAssemblies}");
-
-            var registeredAssemblyFullNames = serializedRegisteredAssemblies.Split(new string[] {Environment.NewLine }, StringSplitOptions.None);
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            registeredAssemblies = new List<Assembly>();
-
-            for (int rai = 0; rai < registeredAssemblyFullNames.Length; rai++)
+            var count = rpcs.Length;
+            var size = Marshal.SizeOf<T>();
+            using (MemoryStream memoryStream = new MemoryStream())
             {
-                for (int ai = 0; ai < assemblies.Length; ai++)
-                {
-                    if (assemblies[ai].FullName != registeredAssemblyFullNames[rai])
-                        continue;
+                memoryStream.Write(BitConverter.GetBytes(count));
 
-                    registeredAssemblies.Add(assemblies[ai]);
-                    break;
+                for (int i = 0; i < rpcs.Length; i++)
+                {
+                    byte[] buffer = new byte[size];
+
+                    var ptr = Marshal.AllocHGlobal(size);
+                    Marshal.StructureToPtr(rpcs[i], ptr, true);
+                    Marshal.Copy(ptr, buffer, 0, size);
+
+                    memoryStream.Write(buffer);
                 }
-            }
 
-            // LogWriter.Log($"Deserialized: {registeredAssemblies.Count} registered assemblies.");
-            return registeredAssemblies.Count > 0;
+                bytes = memoryStream.GetBuffer();
+            }
         }
 
-        public static bool TryReadRegisteredAssemblies (string path, out List<Assembly> registeredAssemblies)
+        public static bool SerializeRPCs (
+            RPCStub[] rpcs, 
+            RPMethodStub[] stagedRPCs, 
+            out byte[] rpcBytes,
+            out byte[] stagedRPCBytes)
         {
-            if (!TryReadRegisteredAssembliesFile(path, out var registeredAssemblyFullNames))
-            {
-                registeredAssemblies = null;
-                return false;
-            }
+            rpcBytes = null;
+            stagedRPCBytes = null;
             
-            ClusterDebug.Log($"Deserializing registered assemblies:\n{registeredAssemblyFullNames.Aggregate((concatenation, registeredAssemblyFullName) => $"{concatenation},\n{registeredAssemblyFullName}")}");
-
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            registeredAssemblies = new List<Assembly>();
-            
-            for (int rai = 0; rai < registeredAssemblyFullNames.Length; rai++)
-            {
-                for (int ai = 0; ai < assemblies.Length; ai++)
-                {
-                    if (assemblies[ai].FullName != registeredAssemblyFullNames[rai])
-                        continue;
-
-                    registeredAssemblies.Add(assemblies[ai]);
-                    break;
-                }
-            }
-
-            return registeredAssemblies.Count > 0;
-        }
-
-        public static bool TryPrepareRPCStubsForSerialization (SerializedRPC[] rpcsToSerialize, SerializedMethod[] stagedMethods, out string jsonString)
-        {
             try
             {
-                var serializedInstanceRPCs = new RPCStubs
-                {
-                    rpcs = rpcsToSerialize,
-                    stagedMethods = stagedMethods
-                };
-
-                jsonString = JsonConvert.SerializeObject(serializedInstanceRPCs, Formatting.Indented);
+                Serialize(rpcs, out rpcBytes);
+                Serialize(stagedRPCs, out stagedRPCBytes);
             }
 
             catch (System.Exception exception)
             {
                 CodeGenDebug.LogError($"Unable to serialize RPC stubs, the following exception occurred.");
                 CodeGenDebug.LogException(exception);
-                jsonString = null;
                 return false;
             }
 
             return true;
         }
 
-        public static void ReadRPCStubs (string path, out SerializedRPC[] serializedInstanceRPCs, out SerializedMethod[] stagedMethods, bool logMissingFile = true)
+        private static void Read<T> (string path, out T[] data, bool logMissingFile) where T : struct
         {
-            serializedInstanceRPCs = new SerializedRPC[0];
-            stagedMethods = new SerializedMethod[0];
+            data = new T[0];
             if (string.IsNullOrEmpty(path))
             {
                 CodeGenDebug.LogError("Unable to read RPC stubs, the path is invalid.");
                 return;
             }
 
-            if (!System.IO.File.Exists(path))
+            if (!File.Exists(path))
             {
                 if (logMissingFile)
                     CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
@@ -379,71 +282,100 @@ namespace Unity.ClusterDisplay.RPC
 
             try
             {
-                var text = System.IO.File.ReadAllText(path);
-                if (!TryDeserializeRPCStubsJson(text, out serializedInstanceRPCs, out stagedMethods))
+                var bytes = File.ReadAllBytes(path);
+                if (bytes.Length == 0)
                     return;
-
+                
+                BytesToRPCs<T>(bytes, out data);
             }
 
             catch (System.Exception exception)
             {
                 CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
                 CodeGenDebug.LogException(exception);
-                return;
             }
         }
 
-        public static bool TryDeserializeRPCStubsJson (string jsonStr, out SerializedRPC[] rpcs, out SerializedMethod[] stagedMethods)
+        public static void ReadAllRPCs (
+            string rpcsPath,
+            string stagedRPCsPath, 
+            out RPCStub[] rpcs, 
+            out RPMethodStub[] stagedRPCs, 
+            bool logMissingFile = true)
         {
-            // CodeGenDebug.Log($"Deserializing RPC stubs:\n{jsonStr}");
+            Read(rpcsPath, out rpcs, logMissingFile);
+            Read(stagedRPCsPath, out stagedRPCs, logMissingFile);
+        }
+
+        public unsafe static void BytesToRPCs<T> (
+            byte[] bytes, 
+            out T[] rpcs) where T : struct
+        {
+            if (bytes == null || bytes.Length == 0)
+            {
+                CodeGenDebug.LogError("Unable to parse RPCs from bytes, the byte array is NULL!");
+                rpcs = new T[0];
+                return;
+            }
             
             try
             {
-                var stubs = JsonConvert.DeserializeObject<RPCStubs>(jsonStr);
-                rpcs = stubs.rpcs;
-                // rpcs = stubs.rpcs.OrderBy(serializedRPC =>
-                // {
-                //     if (string.IsNullOrEmpty(serializedRPC.method.declaringTypeNamespace))
-                //         return $"{serializedRPC.method.declaringAssemblyName}.{serializedRPC.method.declaryingTypeName}.{serializedRPC.method.methodName}";
-                //     return $"{serializedRPC.method.declaringAssemblyName}.{serializedRPC.method.declaringTypeNamespace}.{serializedRPC.method.declaryingTypeName}.{serializedRPC.method.methodName}";
-                // }).ToArray();
+                int count = BitConverter.ToInt32(bytes, 0);
+                var size = Marshal.SizeOf<T>();
+                
+                rpcs = new T[count];
 
-                stagedMethods = stubs.stagedMethods;
+                fixed (byte * ptr = bytes)
+                {
+                    int byteOffset = 4;
+                    for (int i = 0; i < count; i++)
+                    {
+                        var intPtr = new IntPtr(ptr + byteOffset);
+                        rpcs[i] = Marshal.PtrToStructure<T>(intPtr);
+                        byteOffset += size;
+                    }
+                }
             }
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to parse RPC stubs JSON, the following exception occurred.");
+                CodeGenDebug.LogError($"Unable to parse RPC stubs from bytes, the following exception occurred.");
                 CodeGenDebug.LogException(exception);
-                rpcs = null;
-                stagedMethods = null;
-                return false;
+                rpcs = new T[0];
             }
-
-            // LogWriter.Log($"Deserialized: {serializedInstanceRPCs.Length} RPCs.");
-            return true;
         }
 
-        public static bool TryWriteRPCStubs (string path, string serializedRPCs)
+        private static bool Write(string path, byte[] bytes)
         {
+            if (bytes == null || bytes.Length == 0)
+                return true;
+            
             if (string.IsNullOrEmpty(path))
             {
-                CodeGenDebug.LogError("Unable to write RPC stubs, the path is invalid.");
+                CodeGenDebug.LogError("Unable to write serialized RPCs, the path is invalid.");
                 return false;
             }
 
             try
             {
                 MakeFileWriteable(path);
-                File.WriteAllText(path, serializedRPCs);
+                File.WriteAllBytes(path, bytes);
             } catch (Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to write RPC stubs JSON to path: \"{path}\", the following exception occurred.");
+                CodeGenDebug.LogError($"Unable to write serialized RPCs to path: \"{path}\", the following exception occurred.");
                 CodeGenDebug.LogException(exception);
                 return false;
             }
 
             return true;
         }
+
+        public static bool WriteSerializedRPCs (
+            string rpcsPath,
+            string stagedRPCsPath, 
+            byte[] rpcBytes,
+            byte[] stagedRPCBytes) =>
+                Write(rpcsPath, rpcBytes) &&
+                Write(stagedRPCsPath, stagedRPCBytes);
     }
 }

@@ -784,33 +784,33 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public static bool TryFindMatchingMethodInTypeDef (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
-            ref SerializedRPC serializedRPC, 
+            ref RPCStub rpcStub, 
             out MethodDefinition outMethodDef)
         {
             MethodDefinition methodDef = null;
             outMethodDef = null;
 
-            var rpc = serializedRPC;
+            var rpc = rpcStub;
 
             ForeachMethodDef(typeDef, (method) =>
             {
-                if (method.Name != rpc.method.methodName || method.ReturnType.Name != rpc.method.returnTypeName)
+                if (method.Name != rpc.methodStub.methodName || method.ReturnType.Name != rpc.methodStub.returnTypeName)
                     return true;
 
-                if (rpc.method.ParameterCount > 0)
+                if (rpc.methodStub.ParameterCount > 0)
                 {
-                    if (method.Parameters.Count == 0 || method.Parameters.Count != rpc.method.ParameterCount)
+                    if (method.Parameters.Count == 0 || method.Parameters.Count != rpc.methodStub.ParameterCount)
                         return true;
 
                     bool allParametersMatch = true;
                     for (int pi = 0; pi < method.Parameters.Count; pi++)
                     {
-                        if (!(allParametersMatch &= method.Parameters[pi].Name == rpc.method[pi].parameterName))
+                        if (!(allParametersMatch &= method.Parameters[pi].Name == rpc.methodStub[pi].parameterName))
                             return true;
 
                         allParametersMatch &=
-                            method.Parameters[pi].ParameterType.Name == rpc.method.parameterTypeName[pi] &&
-                            method.Parameters[pi].Name == rpc.method.parameterNames[pi];
+                            method.Parameters[pi].ParameterType.Name == rpc.methodStub.parameterTypeName[pi] &&
+                            method.Parameters[pi].Name == rpc.methodStub.parameterNames[pi];
                     }
 
                     if (allParametersMatch)
@@ -834,12 +834,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public static bool TryGetMethodReference (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
-            ref SerializedRPC serializedRPC, 
+            ref RPCStub rpcStub, 
             out MethodReference methodRef)
         {
-            if (!TryFindMatchingMethodInTypeDef(moduleDef, typeDef, ref serializedRPC, out var methodDef))
+            if (!TryFindMatchingMethodInTypeDef(moduleDef, typeDef, ref rpcStub, out var methodDef))
             {
-                CodeGenDebug.LogError($"Unable to find method reference for serialized RPC: \"{serializedRPC.method.methodName}\" declared in: \"{typeDef.FullName}\".");
+                CodeGenDebug.LogError($"Unable to find method reference for serialized RPC: \"{rpcStub.methodStub.methodName}\" declared in: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }

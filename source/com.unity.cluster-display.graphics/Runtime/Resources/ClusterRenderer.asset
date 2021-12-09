@@ -29,7 +29,7 @@ MonoBehaviour:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 0.5
+        width: 1
         height: 1
       m_UseDebugViewportSubsection: 0
       m_ScaleBiasTexOffset: {x: 0, y: 0}

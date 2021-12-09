@@ -7,6 +7,26 @@ using UnityEngine;
 
 public class RPCArgumentTestSet : MonoBehaviour
 {
+    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 20)]
+    public struct StructA
+    {
+        [FieldOffset(0)]
+        public float floatValue;
+        [FieldOffset(4)]
+        public int intValue;
+        [FieldOffset(8)]
+        public StructB structB;
+    }
+
+    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 12)]
+    public struct StructB
+    {
+        [FieldOffset(0)]
+        public bool booleanValue;
+        [FieldOffset(4)]
+        public long longValue;
+    }
+
     private void Update()
     {
         if (ClusterDisplayState.IsRepeater)
@@ -15,7 +35,7 @@ public class RPCArgumentTestSet : MonoBehaviour
             return;
         }
         
-        FloatTest(1.5f);
+        FloatTest(1.4f);
         StringTest("Hello, World!");
         MultiStringTest("Hello", "World");
         
@@ -204,26 +224,6 @@ public class RPCArgumentTestSet : MonoBehaviour
                 msg = $"{msg}\n\t{vectorArray[i]},";
             Debug.Log(msg);
         }
-    }
-
-    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 20)]
-    public struct StructA
-    {
-        [FieldOffset(0)]
-        public float floatValue;
-        [FieldOffset(4)]
-        public int intValue;
-        [FieldOffset(8)]
-        public StructB structB;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 12)]
-    public struct StructB
-    {
-        [FieldOffset(0)]
-        public bool booleanValue;
-        [FieldOffset(4)]
-        public long longValue;
     }
 
     [ClusterRPC]

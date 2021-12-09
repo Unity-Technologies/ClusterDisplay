@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 });
             }
 
-            return queuedMethodDefs.OrderBy(methodDef => methodDef.FullName);
+            return queuedMethodDefs.ToArray();
         }
 
         private bool TryGetRPCILGenerators (
@@ -197,6 +197,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             RPCExecutionStage rpcExecutionStage,
             ref string explicitRPCHash)
         {
+            CodeGenDebug.Log($"Attempting to post process method: \"{targetMethodRef.Name}\" declared in: \"{targetMethodRef.DeclaringType.Name}\" with execution stage: {rpcExecutionStage}");
             var rpcHash = CecilUtils.ComputeMethodHash(targetMethodRef);
             if (!string.IsNullOrEmpty(explicitRPCHash))
                 rpcHash = explicitRPCHash;
@@ -239,22 +240,27 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             throw new Exception($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
         }
 
+        private void ApplyRPCExecutionStage(CustomAttribute customAttribute, RPCExecutionStage rpcExecutionStage) =>
+            customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(customAttribute.ConstructorArguments[0].Type, rpcExecutionStage);
+        
+        private void ApplyRPCHash(CustomAttribute customAttribute, string rpcHash) =>
+            customAttribute.ConstructorArguments[1] = new CustomAttributeArgument(customAttribute.ConstructorArguments[1].Type, rpcHash);
+
         private bool PostProcessDeserializedRPCs (
             AssemblyDefinition compiledAssemblyDef, 
-            SerializedRPC[] serializedRPCs)
+            RPCStub[] serializedRPCs)
         {
-            var orderedSerializedRPCs = serializedRPCs.OrderBy(serializedRPC => serializedRPC.method.methodName);
             bool modified = false;
-            foreach (var serializedRPC in orderedSerializedRPCs)
+            foreach (var serializedRPC in serializedRPCs)
             {
                 var rpc = serializedRPC;
 
                 // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
-                if (rpc.method.declaringAssemblyName == compiledAssemblyDef.Name.Name)
+                if (rpc.methodStub.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    if (!CecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.method.declaringTypeNamespace, rpc.method.declaryingTypeName, out var declaringTypeDef))
+                    if (!CecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.methodStub.declaringTypeNamespace, rpc.methodStub.declaringTypeName, out var declaringTypeDef))
                     {
-                        CodeGenDebug.LogError($"Unable to find serialized method: \"{rpc.method.methodName}\", the declaring type: \"{rpc.method.declaryingTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
+                        CodeGenDebug.LogError($"Unable to find serialized method: \"{rpc.methodStub.methodName}\", the declaring type: \"{rpc.methodStub.declaringTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
                         continue;
                     }
                     
@@ -265,7 +271,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             compiledAssemblyDef.MainModule,
                             declaringTypeDef,
                             rpc,
-                            rpc.method.methodName,
+                            rpc.methodStub.methodName,
                             out targetMethodRef) &&
                         !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, declaringTypeDef, ref rpc, out targetMethodRef);
 
@@ -277,8 +283,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     
                     if (!TryGetOrCreateClusterRPCAttribute(targetMethodRef, out var customAttribute) || !TryGetRPCHashFromClusterRPCAttribute(customAttribute, out var rpcHash))
                         continue;
-                    
+
                     var executionStage = (RPCExecutionStage)serializedRPC.rpcExecutionStage;
+                    
                     var methodModified = ProcessMethodDef(
                         compiledAssemblyDef,
                         targetMethodRef,
@@ -287,7 +294,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                     if (methodModified)
                     {
-                        RPCHashFromClusterRPCAttribute(customAttribute, rpcHash);
+                        if (serializedRPC.overrideRPCExecutionStage)
+                            ApplyRPCExecutionStage(customAttribute, executionStage);
+                        ApplyRPCHash(customAttribute, rpcHash);
                         AddProcessedMethod(targetMethodRef);
                     }
                     
@@ -301,7 +310,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         private bool PostProcessSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
             if (cachedSerializedRPCS == null)
-                RPCSerializer.ReadRPCStubs(RPCRegistry.k_RPCStubsPath, out cachedSerializedRPCS, out var serializedStagedMethods, logMissingFile: false);
+                RPCSerializer.ReadAllRPCs(
+                    RPCRegistry.k_RPCStubsFileName, 
+                    RPCRegistry.k_RPCStagedPath, 
+                    out cachedSerializedRPCS, 
+                    out var serializedStagedMethods, 
+                    logMissingFile: false);
 
             if (cachedSerializedRPCS == null || cachedSerializedRPCS.Length == 0)
                 return false;
@@ -332,15 +346,15 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
         
-        private void RPCHashFromClusterRPCAttribute(CustomAttribute customAttribute, string rpcHash)
-        {
-            var customAttributeArgument = customAttribute.ConstructorArguments[1];
-            customAttribute.ConstructorArguments[1] = new CustomAttributeArgument(customAttributeArgument.Type, rpcHash);
-        }
-        
         private bool PostProcessMethodsWithRPCAttributes (AssemblyDefinition compiledAssemblyDef)
         {
             var methodRefs = GetMethodsWithRPCAttribute(compiledAssemblyDef, out var rpcMethodAttributeFullName);
+            
+            var msg = $"Methods with {nameof(ClusterRPC)} attribute:";
+            foreach (var methodRef in methodRefs)
+                msg = $"{msg}\n\t{methodRef.DeclaringType.Name}.{methodRef.Name}";
+            CodeGenDebug.Log(msg);
+            
             bool modified = false;
             foreach (var methodRef in methodRefs)
             {
@@ -371,7 +385,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 if (methodModified)
                 {
-                    RPCHashFromClusterRPCAttribute(customAttribute, rpcHash);
+                    ApplyRPCHash(customAttribute, rpcHash);
                     AddProcessedMethod(methodDef);
                 }
 
@@ -384,7 +398,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         public bool Execute(AssemblyDefinition compiledAssemblyDef)
         {
             bool modified = 
-                PostProcessSerializedRPCs(compiledAssemblyDef) ||
+                PostProcessSerializedRPCs(compiledAssemblyDef) |
                 PostProcessMethodsWithRPCAttributes(compiledAssemblyDef);
 
             if (modified)

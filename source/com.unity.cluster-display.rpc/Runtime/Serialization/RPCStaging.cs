@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.RPC
 {
     public partial class RPCRegistry
     {
-        private Dictionary<string, SerializedMethod> stagedMethods = new Dictionary<string, SerializedMethod>();
+        private Dictionary<string, RPMethodStub> stagedMethods = new Dictionary<string, RPMethodStub>();
 
         public static void StageRPCToRegister (MethodInfo methodInfo)
         {
@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.RPC
                 return;
             }
 
-            serializedMethod = SerializedMethod.Create(methodInfo);
+            serializedMethod = RPMethodStub.Create(methodInfo);
             rpcRegistry.stagedMethods.Add(rpcHash, serializedMethod);
         }
     }

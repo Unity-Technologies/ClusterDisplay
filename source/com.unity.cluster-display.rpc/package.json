@@ -12,7 +12,6 @@
   "dependencies": {
     "com.unity.cluster-display" : "0.0.4-preview",
     "com.unity.code-analysis" : "0.1.2-preview",
-    "com.unity.nuget.mono-cecil": "1.10.1",
-    "com.unity.nuget.newtonsoft-json" : "2.0.1-preview.1"
+    "com.unity.nuget.mono-cecil": "1.10.1"
   }
 }

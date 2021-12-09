@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
 using Assembly = System.Reflection.Assembly;
 using DeserializedRPCList = System.Collections.Generic.List<(string rpcHash, bool overrideRPCExecutionStage, Unity.ClusterDisplay.RPC.RPCExecutionStage rpcExecutionStage, System.Reflection.MethodInfo methodInfo)>; 
 
@@ -73,15 +75,10 @@ namespace Unity.ClusterDisplay.RPC
 
         [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
 
-        public const string k_RPCStubsPath = "./RPCStubs.json";
-
-        /// <summary>
-        /// This is where our assembly names are serialized to so they can be read
-        /// by the ILPostProcessor when recompiling.
-        /// </summary>
-        public const string k_RegisteredAssembliesJsonPath = "./RegisteredAssemblies.txt";
-
-        [SerializeField][HideInInspector] private string m_JSONString;
+        public const string k_RPCStubsFileName = "RPCStubs.bin";
+        public readonly string k_RPCStubsResourcesPath = $"Assets/Resources/{k_RPCStubsFileName}";
+        public const string k_RPCStagedPath = "./Temp/ClusterDisplay/RPCStaged.bin";
+        [SerializeField][HideInInspector] private byte[] m_RPCStubBytes;
 
         public delegate void OnTriggerRecompileDelegate();
 
@@ -482,34 +479,85 @@ namespace Unity.ClusterDisplay.RPC
 
         private void SerializeRPCStubs ()
         {
-            List<SerializedRPC> list = new List<SerializedRPC>();
+            List<RPCStub> list = new List<RPCStub>();
             for (int rpcId = 0; rpcId <= m_LargestRPCId; rpcId++)
             {
                 if (m_RPCs[rpcId] == null)
                     continue;
 
                 var rpc = m_RPCs[rpcId].Value;
-                list.Add(SerializedRPC.Create(ref rpc));
+                list.Add(RPCStub.Create(ref rpc));
             }
 
-            var orderedRPCs = list.OrderBy(rpc => rpc.method.methodName);
-            var orderedStagedMethods = stagedMethods.Values.OrderBy(value => value.methodName);
-
-            if (!RPCSerializer.TryPrepareRPCStubsForSerialization(orderedRPCs.ToArray(), orderedStagedMethods.ToArray(), out m_JSONString))
+            if (!RPCSerializer.SerializeRPCs(
+                list.ToArray(), 
+                stagedMethods.Values.ToArray(), 
+                out m_RPCStubBytes, 
+                out var stagedRPCBytes))
                 return;
 
             #if UNITY_EDITOR
-            RPCSerializer.TryWriteRPCStubs(k_RPCStubsPath, m_JSONString);
+            RPCSerializer.WriteSerializedRPCs(k_RPCStubsResourcesPath, k_RPCStagedPath, m_RPCStubBytes, stagedRPCBytes);
             #endif
 
             m_IsDirty = true;
         }
 
-        private void DeserializeData (out SerializedRPC[] serializedRPCs, out SerializedMethod[] serializedStagedMethods)
+        private void DeserializeData (out RPCStub[] serializedRPCs, out RPMethodStub[] serializedStagedMethods)
         {
+            serializedRPCs = new RPCStub[0];
+            serializedStagedMethods = new RPMethodStub[0];
+
+            byte[] serializedRPCBytes = null;
+            byte[] serializedStagedMethodBytes = null;
+
             if (Application.isEditor)
-                RPCSerializer.ReadRPCStubs(k_RPCStubsPath, out serializedRPCs, out serializedStagedMethods);
-            else RPCSerializer.TryDeserializeRPCStubsJson(m_JSONString, out serializedRPCs, out serializedStagedMethods);
+            {
+                try
+                {
+                    if (File.Exists(k_RPCStubsResourcesPath))
+                        serializedRPCBytes = File.ReadAllBytes(k_RPCStubsResourcesPath);
+                    
+                    if (File.Exists(k_RPCStagedPath))
+                        serializedStagedMethodBytes = File.ReadAllBytes(k_RPCStagedPath);
+                }
+                
+                catch (Exception e)
+                {
+                    CodeGenDebug.LogException(e);
+                }
+            }
+
+            else
+            {
+                var textAsset = Resources.Load<TextAsset>(k_RPCStubsFileName);
+                if (textAsset != null)
+                    serializedRPCBytes = textAsset.bytes;
+                
+                textAsset = Resources.Load<TextAsset>(k_RPCStagedPath);
+                if (textAsset != null)
+                    serializedStagedMethodBytes = textAsset.bytes;
+            }
+            
+            if (serializedRPCBytes != null && serializedRPCBytes.Length > 0)
+                RPCSerializer.BytesToRPCs(serializedRPCBytes, out serializedRPCs);
+            if (serializedStagedMethodBytes != null && serializedStagedMethodBytes.Length > 0)
+                RPCSerializer.BytesToRPCs(serializedStagedMethodBytes, out serializedStagedMethods);
+            
+            /*
+            if (Application.isEditor)
+                RPCSerializer.ReadAllRPCs(
+                    k_RPCStubsPath, 
+                    k_RPCStagedPath, 
+                    out serializedRPCs, 
+                    out serializedStagedMethods,
+                    logMissingFile: false);
+            else
+            {
+                RPCSerializer.BytesToRPCs(m_RPCStubBytes, out serializedRPCs);
+                serializedStagedMethods = null;
+            }
+            */
 
             ClusterDebug.Log($"Deserialized RPC count: {(serializedRPCs != null ? serializedRPCs.Length : 0)})");
         }
@@ -577,14 +625,14 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         private void DeserializeStagedMethods (
-            SerializedMethod[] serializedStagedMethods)
+            RPMethodStub[] serializedStagedMethods)
         {
             var list = new List<RPCMethodInfo>();
             for (int i = 0; i < serializedStagedMethods.Length; i++)
             {
                 if (!RPCSerializer.TryDeserializeMethodInfo(serializedStagedMethods[i], out var stagedMethod))
                 {
-                    ClusterDebug.LogError($"Unable to deserialize method: \"{serializedStagedMethods[i].methodName}\", declared in type: \"{serializedStagedMethods[i].declaryingTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                    ClusterDebug.LogError($"Unable to deserialize method: \"{serializedStagedMethods[i].methodName}\", declared in type: \"{serializedStagedMethods[i].declaringTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                     continue;
                 }
 
@@ -620,17 +668,17 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         private void SearchForSerializedRPCWithFormerName (
-            SerializedRPC[] serializedRPCs, 
+            RPCStub[] serializedRPCs, 
             MethodInfo methodInfo, 
             ClusterRPC rpcMethodAttribute, 
-            out SerializedRPC ? nullableSerializedRPC)
+            out RPCStub ? nullableSerializedRPC)
         {
             // Search for the serialized RPC with the former name.
             if (serializedRPCs != null)
             {
                 for (int i = 0; i < serializedRPCs.Length; i++)
                 {
-                    if (serializedRPCs[i].method.methodName != methodInfo.Name && serializedRPCs[i].method.methodName != rpcMethodAttribute.formarlySerializedAs)
+                    if (serializedRPCs[i].methodStub.methodName != methodInfo.Name && serializedRPCs[i].methodStub.methodName != rpcMethodAttribute.formarlySerializedAs)
                         continue;
 
                     nullableSerializedRPC = serializedRPCs[i];
@@ -641,7 +689,7 @@ namespace Unity.ClusterDisplay.RPC
             nullableSerializedRPC = null;
         }
 
-        private RPCExecutionStage DetermineExecutionStage (ClusterRPC rpcMethodAttribute, SerializedRPC ? nullableSerializedRPC, out bool overrideRPCExecutionStage)
+        private RPCExecutionStage DetermineExecutionStage (ClusterRPC rpcMethodAttribute, RPCStub ? nullableSerializedRPC, out bool overrideRPCExecutionStage)
         {
             overrideRPCExecutionStage = nullableSerializedRPC != null && nullableSerializedRPC.Value.overrideRPCExecutionStage;
             return overrideRPCExecutionStage ? (RPCExecutionStage)nullableSerializedRPC.Value.rpcExecutionStage : rpcMethodAttribute.rpcExecutionStage;
@@ -656,7 +704,7 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         private void TryPollMethodWithRPCAttribute (
-            SerializedRPC[] serializedRPCs, 
+            RPCStub[] serializedRPCs, 
             List<string> renamedRPCs, 
             DeserializedRPCList list, 
             MethodInfo methodInfo)
@@ -672,6 +720,9 @@ namespace Unity.ClusterDisplay.RPC
             SearchForSerializedRPCWithFormerName(serializedRPCs, methodInfo, rpcMethodAttribute, out var nullableSerializedRPC);
             var rpcHash = rpcMethodAttribute.rpcHash;
             if (!ValidateRPCHash(methodInfo, rpcHash))
+                return;
+            
+            if (m_MethodUniqueIdToRPCId.ContainsKey(rpcHash))
                 return;
 
             var rpcExecutionStage = DetermineExecutionStage(rpcMethodAttribute, nullableSerializedRPC, out var overrideRPCExecutionStage);
@@ -703,7 +754,7 @@ namespace Unity.ClusterDisplay.RPC
         }
         
         private void PollMethodsWithRPCAttribute (
-            SerializedRPC[] serializedRPCs, 
+            RPCStub[] serializedRPCs, 
             List<string> renamedRPCs)
         {
             CacheMethodsWithRPCAttribute();
@@ -716,31 +767,31 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         private void TryPollSerializedRPC (
-            ref SerializedRPC serializedRPC,
+            ref RPCStub rpcStub,
             DeserializedRPCList list)
         {
-            if (!RPCSerializer.TryDeserializeMethodInfo(serializedRPC, out var rpcExecutionStage, out var methodInfo))
+            if (!RPCSerializer.TryDeserializeMethodInfo(rpcStub, out var rpcExecutionStage, out var methodInfo))
                 return;
 
             var rpcMethodAttribute = methodInfo.GetCustomAttribute<ClusterRPC>();
             var rpcHash = rpcMethodAttribute.rpcHash;
             if (!ValidateRPCHash(methodInfo, rpcHash))
                 return;
-
-            rpcExecutionStage = DetermineExecutionStage(rpcMethodAttribute, serializedRPC, out serializedRPC.overrideRPCExecutionStage);
-            list.Add((rpcHash, serializedRPC.overrideRPCExecutionStage, rpcExecutionStage, methodInfo));
+            
+            rpcExecutionStage = DetermineExecutionStage(rpcMethodAttribute, rpcStub, out rpcStub.overrideRPCExecutionStage);
+            list.Add((rpcHash, rpcStub.overrideRPCExecutionStage, rpcExecutionStage, methodInfo));
         }
 
         private void DeserializeRegisteredRPCMethods (
-            SerializedRPC[] serializedRPCs,
+            RPCStub[] serializedRPCs,
             List<string> renamedRPCs)
         {
             DeserializedRPCList list = new DeserializedRPCList();
 
             for (int i = 0; i < serializedRPCs.Length; i++)
             {
-                if (renamedRPCs.Contains(serializedRPCs[i].method.methodName))
-                    return;
+                if (renamedRPCs.Contains(serializedRPCs[i].methodStub.methodName))
+                    continue;
 
                 TryPollSerializedRPC(ref serializedRPCs[i], list);
             }
