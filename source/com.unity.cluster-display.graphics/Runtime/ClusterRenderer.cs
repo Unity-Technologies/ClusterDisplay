@@ -23,10 +23,15 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
+        // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
+        static int S_ActiveInstancesCount;
+        internal static bool IsActive() => S_ActiveInstancesCount > 0;
+        internal static Action Enabled = delegate { };
+        internal static Action Disabled = delegate { };
+        
         // Will only be used for Legacy if we end up supporting it.
         // Otherwise see ScreenCoordOverrideUtils in SRP Core.
         const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
-        
         internal static void EnableScreenCoordOverrideKeyword(bool enabled) => GraphicsUtil.SetShaderKeyword(k_ShaderKeyword, enabled);
 
         /// <summary>
@@ -42,6 +47,21 @@ namespace Unity.ClusterDisplay.Graphics
 
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
 
+        readonly List<ICapturePresent> m_PresentCaptures = new List<ICapturePresent>();
+
+        internal void AddCapturePresent(ICapturePresent capturePresent)
+        {
+            if (!m_PresentCaptures.Contains(capturePresent))
+            {
+                m_PresentCaptures.Add(capturePresent);
+            }
+        }
+
+        internal void RemoveCapturePresent(ICapturePresent capturePresent)
+        {
+            m_PresentCaptures.Remove(capturePresent);
+        }
+        
         RenderTexture[] m_TileRenderTargets;
         GraphicsFormat m_GraphicsFormat;
         bool m_IsDebug;
@@ -79,6 +99,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            ++S_ActiveInstancesCount;
+
+            // TODO More elegant / user friendly way to handle this.
+            if (S_ActiveInstancesCount > 1)
+            {
+                throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
+            }
+            
             // Sync, will change from inspector as well.
             // TODO We must set the keyword systematically unless in debug mode.
             
@@ -94,10 +122,13 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
+            Enabled.Invoke();
         }
 
         void OnDisable()
         {
+            Disabled.Invoke();
+            
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
@@ -106,13 +137,32 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Disable();
             
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
+
+            --S_ActiveInstancesCount;
         }
-        
+
+        void OnDestroy()
+        {
+            m_PresentCaptures.Clear();
+        }
+
         void OnPresent(CommandBuffer commandBuffer)
         {
             foreach (var command in m_BlitCommands)
             {
                 GraphicsUtil.Blit(commandBuffer, command);
+            }
+
+            foreach (var capturePresent in m_PresentCaptures)
+            {
+                capturePresent.OnBeginCapture();
+                
+                foreach (var command in m_BlitCommands)
+                {
+                    GraphicsUtil.Blit(capturePresent.GetCommandBuffer(), command);
+                }
+                
+                capturePresent.OnEndCapture();
             }
         }
         

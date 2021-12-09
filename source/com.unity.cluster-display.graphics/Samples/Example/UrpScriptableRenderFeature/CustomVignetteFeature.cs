@@ -40,24 +40,21 @@ public class CustomVignetteFeature : ScriptableRendererFeature
         m_Material.SetTexture(ShaderProperties._VignetteTex, m_VignetteTex);
         m_Material.SetColor(ShaderProperties._VignetteColor, m_VignetteColor);
 
-        m_ScriptablePass = new CustomVignettePass();
+        m_ScriptablePass = new CustomVignettePass(m_Material);
         m_ScriptablePass.renderPassEvent = m_RenderPassEvent;
     }
-    
-    public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
-    {
-        m_ScriptablePass.Setup(m_Material);
-    }
-
+  
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        renderer.EnqueuePass(m_ScriptablePass);
+        if (renderingData.cameraData.camera.cameraType == CameraType.Game)
+        {
+            renderer.EnqueuePass(m_ScriptablePass);
+        }
     }
     
     protected override void Dispose(bool disposing)
     {
         CoreUtils.Destroy(m_Material);
-        m_Material = null;
     }
 }
 #endif

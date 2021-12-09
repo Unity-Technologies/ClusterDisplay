@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             set => m_ClearColor = value;
         }
-        
+
         public void Disable()
         {
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Enable(GameObject gameObject)
         {
             m_Camera = gameObject.GetOrAddComponent<Camera>();
-            m_Camera.hideFlags = HideFlags.NotEditable;
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             // We use the camera to blit to screen.
             // Configure it to minimize wasteful rendering.
             m_Camera.targetTexture = null;

@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
         }
-
+        
         static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
+        public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
         {
             if (rt == null ||
                 rt.width != width ||
@@ -133,7 +133,7 @@ namespace Unity.ClusterDisplay.Graphics
             rts = null;
         }
 
-        static void DeallocateIfNeeded(ref RenderTexture rt)
+        public static void DeallocateIfNeeded(ref RenderTexture rt)
         {
             if (rt != null)
             {
