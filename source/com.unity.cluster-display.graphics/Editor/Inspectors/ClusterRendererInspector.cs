@@ -18,6 +18,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
 
+        NestedInspector m_PolicyEditor;
+
         static ClusterRendererInspector()
         {
             s_ProjectionPolicies = AppDomain.CurrentDomain.GetAssemblies()
@@ -72,8 +74,15 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             if (m_PolicyProp.objectReferenceValue != null)
             {
-                var policyEditor = CreateEditor(m_PolicyProp.objectReferenceValue);
-                policyEditor.OnInspectorGUI();
+                if (m_PolicyEditor == null)
+                {
+                    m_PolicyEditor = CreateEditor(m_PolicyProp.objectReferenceValue) as NestedInspector;
+                }
+
+                if (m_PolicyEditor != null)
+                {
+                    m_PolicyEditor.OnInspectorGUI();
+                }
             }
         }
 
@@ -110,10 +119,19 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (target as ClusterRenderer is not { } renderer) return;
 
+            m_PolicyEditor = null;
             Undo.RegisterCompleteObjectUndo(target, "Set Projection Policy");
             var setterMethod = typeof(ClusterRenderer).GetMethod(nameof(ClusterRenderer.SetNewProjectionPolicy));
             var genericSetter = setterMethod?.MakeGenericMethod(type);
             genericSetter?.Invoke(renderer, null);
+        }
+
+        void OnSceneGUI()
+        {
+            if (m_PolicyEditor != null)
+            {
+                m_PolicyEditor.OnSceneGUI();
+            }
         }
 
         static void CheckForClusterCameraComponents()

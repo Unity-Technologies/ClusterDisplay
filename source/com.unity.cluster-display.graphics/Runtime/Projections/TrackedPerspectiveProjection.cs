@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.ClusterDisplay;
 using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
@@ -19,9 +20,9 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     Camera m_Camera;
     BlitCommand m_BlitCommand;
 
-    Matrix4x4 m_RootTransform = Matrix4x4.identity;
+    internal IReadOnlyList<TrackedPerspectiveSurface> Surfaces => m_ProjectionSurfaces;
 
-    public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
+    public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera, Matrix4x4 anchor)
     {
         var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
 
@@ -35,16 +36,21 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
             return;
         }
 
+        foreach (var surface in m_ProjectionSurfaces)
+        {
+            surface.RootTransform = anchor;
+        }
+        
         if (m_IsDebug)
         {
             foreach (var surface in m_ProjectionSurfaces)
             {
-                surface.Render(clusterSettings, activeCamera, m_RootTransform);
+                surface.Render(clusterSettings, activeCamera);
             }
         }
         else
         {
-            targetSurface.Render(clusterSettings, activeCamera, m_RootTransform);
+            targetSurface.Render(clusterSettings, activeCamera);
         }
 
         m_BlitCommand = new BlitCommand(
@@ -64,13 +70,5 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
         }
 
         GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
-    }
-
-    void OnDisable()
-    {
-        foreach (var surface in m_ProjectionSurfaces)
-        {
-            surface.Dispose();
-        }
     }
 }

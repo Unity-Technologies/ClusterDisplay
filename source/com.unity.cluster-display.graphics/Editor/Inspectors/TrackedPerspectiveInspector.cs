@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(TrackedPerspectiveProjection))]
-    class TrackedPerspectiveInspector : UnityEditor.Editor
+    class TrackedPerspectiveInspector : NestedInspector
     {
         SerializedProperty m_DebugProp;
         SerializedProperty m_SurfacesProp;
@@ -16,6 +16,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         ReorderableList m_SurfacesList;
 
         const string k_UndoCreateSurface = "Create projection surface";
+
+        TrackedPerspectiveSurface m_SelectedSurface;
 
         void OnEnable()
         {
@@ -41,7 +43,37 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         void OnSelectSurfaceElement(ReorderableList list)
         {
-            Debug.Log($"Selected {list.index}");
+            m_SelectedSurface = m_SurfacesProp.GetArrayElementAtIndex(list.index).managedReferenceValue as TrackedPerspectiveSurface;
+        }
+
+        public override void OnSceneGUI()
+        {
+            if (target as TrackedPerspectiveProjection is not { } projection)
+            {
+                return;
+            }
+
+            if (m_SelectedSurface is not { } surface)
+            {
+                return;
+            }
+
+            Undo.RecordObject(target, "Modify Projection Surface");
+            DrawSurfaceOutline(surface);
+            DrawSurfaceHandles(surface);
+            EditorUtility.SetDirty(target);
+        }
+
+        static void DrawSurfaceOutline(TrackedPerspectiveSurface surface)
+        {
+            var corners = surface.GetVertices();
+            Handles.DrawLines(corners, new []{0, 1, 0, 2, 1, 3, 2, 3});
+        }
+
+        static void DrawSurfaceHandles(TrackedPerspectiveSurface surface)
+        {
+            surface.Rotation = Handles.RotationHandle(surface.Rotation, surface.Position);
+            surface.Position = Handles.PositionHandle(surface.Position, surface.Rotation);
         }
 
         void OnRemoveSurfaceElement(ReorderableList list)
@@ -50,7 +82,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_SurfacesProp.DeleteArrayElementAtIndex(list.index);
             serializedObject.ApplyModifiedProperties();
             System.Diagnostics.Debug.Assert(obj != null, nameof(obj) + " != null");
-            obj.Dispose();
+
+            if (obj == m_SelectedSurface)
+            {
+                m_SelectedSurface = null;
+            }
         }
         
         void OnDrawSurfaceElement(Rect rect, int index, bool active, bool focused)
@@ -108,6 +144,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 EditorGUILayout.PropertyField(m_DebugProp, Labels.GetGUIContent(Labels.Field.Debug));
                 m_SurfacesList.DoLayoutList();
+                // EditorGUILayout.PropertyField(m_SurfacesProp);
                 EditorGUILayout.PropertyField(m_NodeIndexProp, Labels.GetGUIContent(Labels.Field.NodeIndexOverride));
 
                 if (check.changed)
@@ -116,14 +153,19 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 }
             }
         }
+
+        void OnDisable()
+        {
+            PerspectiveSurfacePreview.DisableAll();
+        }
     }
 
-    // [CustomPropertyDrawer(typeof(TrackedPerspectiveSurface))]
-    // class TrackedPerspectiveSurfaceDrawer : PropertyDrawer
-    // {
-    //     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-    //     {
-    //         EditorGUI.PropertyField(position, property.FindPropertyRelative("m_Name"), GUIContent.none);
-    //     }
-    // }
+    [CustomPropertyDrawer(typeof(TrackedPerspectiveSurface))]
+    class TrackedPerspectiveSurfaceDrawer : PropertyDrawer
+    {
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        {
+            EditorGUI.PropertyField(position, property.FindPropertyRelative("m_Name"), GUIContent.none);
+        }
+    }
 }

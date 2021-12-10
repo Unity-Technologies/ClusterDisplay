@@ -132,7 +132,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.SetShaderKeyword(false);
         }
 
-        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
+        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera, Matrix4x4 anchor)
         {
             // Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
@@ -222,7 +222,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
 #if UNITY_EDITOR
-        void OnDrawGizmos()
+        public override void DrawGizmos()
         {
             m_Gizmo.Draw();
         }

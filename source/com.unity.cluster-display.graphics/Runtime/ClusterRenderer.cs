@@ -86,6 +86,16 @@ namespace Unity.ClusterDisplay.Graphics
                 DestroyImmediate(m_ProjectionPolicy);
             }
         }
+        
+#if UNITY_EDITOR
+        void OnDrawGizmos()
+        {
+            if (m_ProjectionPolicy != null)
+            {
+                m_ProjectionPolicy.DrawGizmos();
+            }
+        }
+#endif
 
         void OnEnable()
         {
@@ -125,7 +135,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
+            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera, transform.localToWorldMatrix);
         }
     }
 }
