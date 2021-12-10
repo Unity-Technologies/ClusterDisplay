@@ -355,11 +355,16 @@ namespace Unity.ClusterDisplay.RPC
                 CodeGenDebug.LogError("Unable to write serialized RPCs, the path is invalid.");
                 return false;
             }
-
+            
             try
             {
+                var folder = Path.GetDirectoryName(path);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
+                
                 MakeFileWriteable(path);
                 File.WriteAllBytes(path, bytes);
+                
             } catch (Exception exception)
             {
                 CodeGenDebug.LogError($"Unable to write serialized RPCs to path: \"{path}\", the following exception occurred.");

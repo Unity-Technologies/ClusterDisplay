@@ -1,7 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Win32;
 using UnityEngine;
+using Object = UnityEngine.Object;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -28,25 +34,37 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             m_Camera = GetComponent<Camera>();
-            ClusterCameraManager.Instance.Register(m_Camera);
+            ClusterCameraManager.Register(m_Camera);
         }
 
         void OnDisable()
         {
-            ClusterCameraManager.Instance.Unregister(m_Camera);
+            ClusterCameraManager.Unregister(m_Camera);
         }
     }
 
-    public class ClusterCameraManager
+    #if UNITY_EDITOR
+    [InitializeOnLoad]
+    #endif
+    public static class ClusterCameraManager
     {
-        readonly List<Camera> m_ActiveCameras = new();
-
-        public static ClusterCameraManager Instance { get; } = new();
+        static readonly List<Camera> m_ActiveCameras = new();
 
         // Programmer's note: ElementAtOrDefault() is one of the few non-allocating LINQ methods
-        public Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);
+        public static Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);
 
-        public void Register(Camera camera)
+        static ClusterCameraManager()
+        {
+            var cameras = Object.FindObjectsOfType<Camera>();
+            foreach (var camera in cameras)
+            {
+                if (camera.GetComponent<ClusterCamera>() == null)
+                    continue;
+                Register(camera);
+            }
+        }
+
+        public static void Register(Camera camera)
         {
             if (!m_ActiveCameras.Contains(camera))
             {
@@ -54,7 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void Unregister(Camera camera)
+        public static void Unregister(Camera camera)
         {
             m_ActiveCameras.Remove(camera);
         }

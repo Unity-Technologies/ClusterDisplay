@@ -205,7 +205,7 @@ namespace Unity.ClusterDisplay.Graphics
             scale.z /= aspect;
             scale /= 2;
             go.transform.localScale = scale;
-            if (ClusterCameraManager.Instance.ActiveCamera is { } activeCamera)
+            if (ClusterCameraManager.ActiveCamera is { } activeCamera)
             {
                 var camTransform = activeCamera.transform;
                 var position = camTransform.position;

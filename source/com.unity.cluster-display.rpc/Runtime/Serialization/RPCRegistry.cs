@@ -76,7 +76,7 @@ namespace Unity.ClusterDisplay.RPC
         [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
 
         public const string k_RPCStubsFileName = "RPCStubs.bin";
-        public readonly string k_RPCStubsResourcesPath = $"Assets/Resources/{k_RPCStubsFileName}";
+        public readonly string k_RPCStubsResourcesPath = $"Assets/Resources/ClusterDisplay/{k_RPCStubsFileName}";
         public const string k_RPCStagedPath = "./Temp/ClusterDisplay/RPCStaged.bin";
         [SerializeField][HideInInspector] private byte[] m_RPCStubBytes;
 

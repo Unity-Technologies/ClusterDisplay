@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
+using System.IO;
 using UnityEditor;
 #endif
 
@@ -57,6 +59,15 @@ namespace Unity.ClusterDisplay.Graphics
         /// Gets the current cluster rendering settings.
         /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
+        
+        private T CreateProjectionPolicyAsset<T>(string folder) where T : ProjectionPolicy, new()
+        {
+            var newProjectionPolicy = ScriptableObject.CreateInstance<T>();
+            #if UNITY_EDITOR
+            AssetDatabase.CreateAsset(newProjectionPolicy, $"{folder}/{typeof(T).Name}.asset");
+            #endif
+            return newProjectionPolicy;
+        }
 
         /// <summary>
         /// Set the current projection policy.
@@ -69,7 +80,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// </remarks>
         public void SetProjectionPolicy<T>() where T : ProjectionPolicy, new()
         {
-            m_ProjectionPolicy = new T();
+            var resourcePath = $"./ClusterDisplay/{typeof(T).Name}";
+            var projectionPolicy = Resources.Load<T>(resourcePath);
+            if (projectionPolicy == null)
+            {
+                projectionPolicy = ScriptableObject.CreateInstance<T>();
+                #if UNITY_EDITOR
+                AssetDatabase.CreateAsset(projectionPolicy, $"Assets/Resources/ClusterDisplay/{typeof(T).Name}.asset");
+                #endif
+            }
+
+            m_ProjectionPolicy = projectionPolicy;
         }
 
         void OnDestroy()
@@ -111,7 +132,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnClusterDisplayUpdate()
         {
-            var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
+            var activeCamera = ClusterCameraManager.ActiveCamera;
             if (activeCamera == null || m_ProjectionPolicy == null)
             {
                 return;
