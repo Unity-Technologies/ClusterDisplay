@@ -78,15 +78,20 @@ namespace Unity.ClusterDisplay.Graphics
         /// can be active at a time, so calling this method multiple times will override any
         /// previously-active policies (and potentially erase all of the previous settings).
         /// </remarks>
-        public void SetProjectionPolicy<T>() where T : ProjectionPolicy, new()
+        public void SetProjectionPolicy<T>() where T : ProjectionPolicy
         {
-            var resourcePath = $"./ClusterDisplay/{typeof(T).Name}";
+            if (m_ProjectionPolicy != null && m_ProjectionPolicy.GetType() == typeof(T))
+                return;
+            
+            var resourcePath = $"{typeof(T).Name}";
             var projectionPolicy = Resources.Load<T>(resourcePath);
             if (projectionPolicy == null)
             {
                 projectionPolicy = ScriptableObject.CreateInstance<T>();
                 #if UNITY_EDITOR
-                AssetDatabase.CreateAsset(projectionPolicy, $"Assets/Resources/ClusterDisplay/{typeof(T).Name}.asset");
+                var assetPathOfClusterRenderer = AssetDatabase.GetAssetPath(this);
+                var folder = Path.GetDirectoryName(assetPathOfClusterRenderer);
+                AssetDatabase.CreateAsset(projectionPolicy, $"{folder}/{typeof(T).Name}.asset");
                 #endif
             }
 

@@ -206,7 +206,6 @@ namespace Unity.ClusterDisplay.Graphics
                 "Source");
 
             m_BlitCommands.Clear();
-
             if (isStitcher)
             {
                 RenderStitcher(m_TileRenderTargets, activeCamera, ref renderContext, m_BlitCommands);
@@ -232,7 +231,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 commandBuffer.ClearRenderTarget(true, true, m_DebugSettings.BezelColor);
             }
-
+            
             foreach (var command in m_BlitCommands)
             {
                 GraphicsUtil.Blit(commandBuffer, command);
@@ -258,11 +257,11 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
-
+                // Adding blit commands first, since calling Camera.Render will invoke Present() before we have any blit commands.
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
-
                 commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+                
+                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
             }
         }
 
@@ -275,9 +274,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
-
+            // Adding blit commands first, since calling Camera.Render will invoke Present() before we have any blit commands.
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
+            
+            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
         }
     }
 }

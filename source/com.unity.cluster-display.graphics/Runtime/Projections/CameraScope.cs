@@ -27,7 +27,8 @@ readonly struct CameraScope : IDisposable
     {
         // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
         var mask = m_Camera.cullingMask;
-        mask &= ~(1 << ClusterRenderer.VirtualObjectLayer);
+        // mask &= ~(1 << ClusterRenderer.VirtualObjectLayer);
+        mask &= ~(1 << 1);
         m_Camera.cullingMask = mask;
 
         m_Camera.targetTexture = target;
