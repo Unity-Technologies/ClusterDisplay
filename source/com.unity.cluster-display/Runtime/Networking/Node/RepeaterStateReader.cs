@@ -7,11 +7,11 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Profiling;
 using UnityEngine;
 
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC.Runtime")]
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 
 namespace Unity.ClusterDisplay
 {
-    public class RepeaterStateReader
+    internal class RepeaterStateReader
     {
         private NativeArray<byte> m_MsgFromEmitter;
         private byte[] m_OutBuffer = new byte[0];
@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay
                 using (m_MarkerReceivedGoFromEmitter.Auto())
                 {
                     m_NetworkingOverhead.SampleNow();
-                    var respMsg = EmitterLastFrameData.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+                    var respMsg = IBlittable<EmitterLastFrameData>.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
 
                     // The emitter is on the next frame, so were matching against the previous frame.
                     if (respMsg.FrameNumber != currentFrameID)
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 // Read the state from the server
-                var msgHdr = MessageHeader.FromByteArray(m_MsgFromEmitter);
+                var msgHdr = IBlittable<MessageHeader>.FromByteArray(m_MsgFromEmitter, 0);
 
                 // restore states
                 unsafe

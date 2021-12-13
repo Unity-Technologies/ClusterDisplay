@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -7,10 +8,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class WaitingForAllClients : EmitterState
     {
+        private readonly bool k_HeadlessEmitter;
         public override bool ReadyToProceed => false;
         public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
-        
-        public WaitingForAllClients(IClusterSyncState clusterSync) : base(clusterSync) {}
+
+        public WaitingForAllClients(IClusterSyncState clusterSync, bool headlessEmitter) : base(clusterSync) =>
+            k_HeadlessEmitter = headlessEmitter;
 
         public override void InitState()
         {
@@ -40,6 +43,21 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             return this;
         }
 
+        private void EmitRuntimeConfig ()
+        {
+            var header = new MessageHeader()
+            {
+                MessageType = EMessageType.HelloEmitter,
+                DestinationIDs = UInt64.MaxValue, // Shout it out! make sure to also use DoesNotRequireAck
+                Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
+            };
+
+            var roleInfo = new ClusterRuntimeConfig { headlessEmitter = true };
+            var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
+            roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
+            LocalNode.UdpAgent.PublishMessage(header, payload);
+        }
+
         private void ProcessMessages(CancellationToken ctk)
         {
             try
@@ -54,7 +72,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                         {
                             if (header.MessageType == EMessageType.HelloEmitter)
                             {
-                                var roleInfo = RolePublication.FromByteArray(payload, header.OffsetToPayload);
+                                var roleInfo = IBlittable<RolePublication>.FromByteArray(payload, header.OffsetToPayload);
 
                                 RegisterRemoteNode(header, roleInfo);
                                 SendResponse(header);
@@ -90,13 +108,17 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private void SendResponse(MessageHeader rxHeader)
         {
-            var response = new MessageHeader()
+            var header = new MessageHeader()
             {
                 MessageType = EMessageType.WelcomeRepeater,
                 DestinationIDs = (UInt64)1 << rxHeader.OriginID,
             };
 
-            LocalNode.UdpAgent.PublishMessage(response);
+            var roleInfo = new ClusterRuntimeConfig { headlessEmitter = k_HeadlessEmitter };
+            var payload = NetworkingHelpers.AllocateMessageWithPayload<ClusterRuntimeConfig>();
+            roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
+            
+            LocalNode.UdpAgent.PublishMessage(header, payload);
         }
 
         public override string GetDebugString()

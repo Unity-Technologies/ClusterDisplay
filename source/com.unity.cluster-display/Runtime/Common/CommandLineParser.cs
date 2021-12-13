@@ -65,6 +65,7 @@ namespace Unity.ClusterDisplay
         }
 
         internal const string k_EmitterNodeTypeArgument = "-emitterNode";
+        internal const string k_HeadlessEmitterArgument = "-batchMode";
         internal const string k_RepeaterNodeTypeArgument = "-node";
         internal const string k_DebugArgument = "-clusterNode";
         internal const string k_AdapterNameArgument = "-adapterName";
@@ -72,6 +73,7 @@ namespace Unity.ClusterDisplay
         internal const string k_CommunicationTimeoutArgument = "-communicationTimeoutArgument";
         internal const string k_TargetFPS = "-targetFps";
 
+        private static bool? m_HeadlessEmitter;
         private static bool? m_ClusterLogicSpecified;
         private static string m_NodeTypeStr;
         private static byte? m_NodeID;
@@ -92,6 +94,22 @@ namespace Unity.ClusterDisplay
                 if (m_NodeTypeStr == null)
                     m_NodeTypeStr = emitterSpecified ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
                 return m_NodeTypeStr;
+            }
+        }
+        
+        internal static bool HeadlessEmitter
+        {
+            get
+            {
+                if (m_HeadlessEmitter == null)
+                {
+                    if (!TryGetIndexOfNodeTypeArgument(k_HeadlessEmitterArgument, out var startIndex))
+                        return false;
+                    
+                    m_HeadlessEmitter = startIndex > -1;
+                }
+
+                return m_HeadlessEmitter.Value;
             }
         }
 

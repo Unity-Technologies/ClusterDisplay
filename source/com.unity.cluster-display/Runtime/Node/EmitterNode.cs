@@ -16,19 +16,27 @@ namespace Unity.ClusterDisplay
         public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
         public int TotalExpectedRemoteNodesCount { get; set; }
 
-        public EmitterNode(IClusterSyncState clusterSync, byte nodeId, int repeaterCount, string ip, int rxport,int txport, int timeOut, string adapterName)
-            : base(clusterSync, nodeId, ip, rxport, txport, timeOut, adapterName)
+        public struct Config
         {
-            TotalExpectedRemoteNodesCount = repeaterCount;
+            public bool headlessEmitter;
+            public int repeaterCount;
+            public UDPAgent.Config udpAgentConfig;
+        }
+
+        public EmitterNode(
+            IClusterSyncState clusterSync, 
+            Config config)
+            : base(clusterSync, config.udpAgentConfig)
+        {
+            m_CurrentState = new WaitingForAllClients(clusterSync, config.headlessEmitter) {
+                MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
+            TotalExpectedRemoteNodesCount = config.repeaterCount;
         }
 
         public override bool TryStart()
         {
             if (!base.TryStart())
                 return false;
-
-            m_CurrentState = new WaitingForAllClients(clusterSync) {
-                MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
 
             m_CurrentState.EnterState(null);
 

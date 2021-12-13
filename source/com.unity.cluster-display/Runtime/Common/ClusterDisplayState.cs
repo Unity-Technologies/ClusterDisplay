@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay
         internal interface IClusterDisplayStateSetter
         {
             void SetIsEmitter(bool isEmitter);
+            void SetEmitterIsHeadless(bool headlessEmitter);
             void SetIsRepeater(bool isRepeater);
             void SetIsActive(bool isActive);
             void SetCLusterLogicEnabled(bool clusterLogicEnabled);
@@ -21,6 +22,8 @@ namespace Unity.ClusterDisplay
         internal class ClusterDisplayStateStore : IClusterDisplayStateSetter
         {
             public bool m_IsEmitter = false;
+            public bool m_EmitterIsHeadless = false;
+            
             public bool m_IsRepeater = false;
 
             public bool m_IsActive = false;
@@ -32,6 +35,7 @@ namespace Unity.ClusterDisplay
             public void SetIsActive(bool isActive) => this.m_IsActive = isActive;
             public void SetCLusterLogicEnabled(bool clusterLogicEnabled) => this.m_IsClusterLogicEnabled = clusterLogicEnabled;
             public void SetIsEmitter(bool isEmitter) => this.m_IsEmitter = isEmitter;
+            public void SetEmitterIsHeadless(bool headlessEmitter) => this.m_EmitterIsHeadless = headlessEmitter;
             public void SetIsRepeater(bool isRepeater) => this.m_IsRepeater = isRepeater;
             public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
             public void SetFrame(ulong frame) => m_Frame = frame;
@@ -48,6 +52,11 @@ namespace Unity.ClusterDisplay
         [IsEmitterMarker]
         public static bool IsEmitter => stateStore.m_IsEmitter;
 
+        /// <summary>
+        /// This property returns true if this running instance is a emitter node AND is headless.
+        /// </summary>
+        public static bool EmitterIsHeadless => stateStore.m_EmitterIsHeadless;
+        
         /// <summary>
         /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.
         /// </summary>
