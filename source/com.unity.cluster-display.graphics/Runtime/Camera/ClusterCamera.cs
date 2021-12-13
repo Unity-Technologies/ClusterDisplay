@@ -43,26 +43,12 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 
-    #if UNITY_EDITOR
-    [InitializeOnLoad]
-    #endif
     public static class ClusterCameraManager
     {
-        static readonly List<Camera> m_ActiveCameras = new();
+        readonly static List<Camera> m_ActiveCameras = new();
 
         // Programmer's note: ElementAtOrDefault() is one of the few non-allocating LINQ methods
         public static Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);
-
-        static ClusterCameraManager()
-        {
-            var cameras = Object.FindObjectsOfType<Camera>();
-            foreach (var camera in cameras)
-            {
-                if (camera.GetComponent<ClusterCamera>() == null)
-                    continue;
-                Register(camera);
-            }
-        }
 
         public static void Register(Camera camera)
         {

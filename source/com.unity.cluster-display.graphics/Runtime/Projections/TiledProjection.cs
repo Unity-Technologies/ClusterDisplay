@@ -257,11 +257,10 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-                // Adding blit commands first, since calling Camera.Render will invoke Present() before we have any blit commands.
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
                 
                 cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
             }
         }
 
@@ -274,10 +273,9 @@ namespace Unity.ClusterDisplay.Graphics
 
             var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-            // Adding blit commands first, since calling Camera.Render will invoke Present() before we have any blit commands.
+            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
             
-            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
         }
     }
 }
