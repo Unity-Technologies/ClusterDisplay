@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private bool m_EmitterFound;
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
-
+        
         public RegisterWithEmitter(IClusterSyncState clusterSync, RepeaterNode node) : base(clusterSync)
         {
             m_Timer = new Stopwatch();
@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
             return this;
         }
-
+        
         public override bool ReadyToProceed => false;
 
         private void ProcessMessages(CancellationToken ctk)
@@ -78,9 +78,13 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                                     m_EmitterFound = true;
                                     LocalNode.EmitterNodeId = header.OriginID;
                                     LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
+                                    
+                                    var config = IBlittable<ClusterRuntimeConfig>.FromByteArray(payload, header.OffsetToPayload);
+                                    clusterSync.OnReceivedClusterRuntimeConfig(config);
                                     return;
                                 }
                             }
+                            
                             else
                                 ProcessUnhandledMessage(header);
                         }

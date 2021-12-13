@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 
 namespace Unity.ClusterDisplay
 {
@@ -16,23 +18,12 @@ namespace Unity.ClusterDisplay
 
         protected ClusterNode(
             IClusterSyncState clusterSync,
-            byte nodeID, 
-            string ip, 
-            int rxPort, 
-            int txPort, 
-            int timeOut, 
-            string adapterName)
+            UDPAgent.Config config)
         {
-            if(nodeID >= UDPAgent.MaxSupportedNodeCount)
+            if(config.nodeId >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
 
-            m_UDPAgent = new UDPAgent(
-                nodeID, 
-                ip, 
-                rxPort, 
-                txPort, 
-                timeOut, 
-                adapterName);
+            m_UDPAgent = new UDPAgent(config);
 
             this.clusterSync = clusterSync;
             Stopwatch.StartNew();
@@ -77,7 +68,7 @@ namespace Unity.ClusterDisplay
             return m_CurrentState.GetType() != typeof(FatalError);
         }
 
-        public void EndFrame () => m_CurrentState?.OnEndFrame();
+        public void EndFrame() => m_CurrentState?.OnEndFrame();
 
         public void Exit()
         {

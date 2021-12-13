@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay
         public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,0,1000 * 60 * 5);
 
         protected internal IClusterSyncState clusterSync;
-
+        
         public NodeState(IClusterSyncState clusterSync) =>
             this.clusterSync = clusterSync;
 

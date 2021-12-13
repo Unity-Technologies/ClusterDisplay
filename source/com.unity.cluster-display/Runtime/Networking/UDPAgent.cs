@@ -13,7 +13,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
-    public class UDPAgent
+    internal class UDPAgent
     {
         public static int MaxSupportedNodeCount {get => 64;}
 
@@ -98,6 +98,16 @@ namespace Unity.ClusterDisplay
 
         public AutoResetEvent RxWait { get; private set; }
         public bool IsTxQueueEmpty => m_TxQueue == null || m_TxQueue.Count == 0;
+        
+        public struct Config
+        {
+            public byte nodeId;
+            public string ip;
+            public int rxPort;
+            public int txPort;
+            public int timeOut;
+            public string adapterName;
+        }
 
         /// <summary>
         /// 
@@ -108,21 +118,15 @@ namespace Unity.ClusterDisplay
         /// <param name="txPort"></param>
         /// <param name="timeOut"></param>
         /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
-        public UDPAgent(
-            byte localNodeID, 
-            string ip, 
-            int rxPort, 
-            int txPort, 
-            int timeOut, 
-            string adapterName)
+        public UDPAgent(Config config)
         {
             RxWait = new AutoResetEvent(false);
-            LocalNodeID = localNodeID;
-            m_RxPort = rxPort;
-            m_TxPort = txPort;
-            m_MulticastAddress = IPAddress.Parse(ip);
-            m_MessageAckTimeout = new TimeSpan(0, 0, 0, timeOut);
-            m_AdapterName = adapterName;
+            LocalNodeID = config.nodeId;
+            m_RxPort = config.rxPort;
+            m_TxPort = config.txPort;
+            m_MulticastAddress = IPAddress.Parse(config.ip);
+            m_MessageAckTimeout = new TimeSpan(0, 0, 0, config.timeOut);
+            m_AdapterName = config.adapterName;
         }
 
         ~UDPAgent() => Dispose();
@@ -289,7 +293,7 @@ namespace Unity.ClusterDisplay
                 }
             }
 
-            msgHeader.StoreInBuffer(msgRaw);
+            msgHeader.StoreInBuffer(msgRaw, 0);
             var msg = new Message()
             {
                 ts = m_ConnectionClock.Elapsed,
@@ -353,7 +357,7 @@ namespace Unity.ClusterDisplay
         {
             var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
 
-            var header = MessageHeader.FromByteArray(receiveBytes);
+            var header = IBlittable<MessageHeader>.FromByteArray(receiveBytes, 0);
             if (header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
             {
                 ClusterDebug.Log($"(Sequence ID: {header.SequenceID}): Received message of type: {header.MessageType}");
@@ -520,7 +524,7 @@ namespace Unity.ClusterDisplay
                     }
                     
                     expiredAck.message.header.Flags |= MessageHeader.EFlag.Resending;
-                    expiredAck.message.header.StoreInBuffer(expiredAck.message.payload);
+                    expiredAck.message.header.StoreInBuffer(expiredAck.message.payload, 0);
                     expiredAck.ts = m_ConnectionClock.Elapsed;
                     
                     m_TxQueuePendingAcks[expired[i]] = expiredAck; // updates entry (struct)

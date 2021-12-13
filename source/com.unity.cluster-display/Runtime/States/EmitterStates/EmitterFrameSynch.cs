@@ -193,7 +193,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             ClusterDebug.Assert(Stage != EStage.EmitLastFrameData, $"(Frame: {CurrentFrameID}): Emitter received {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} msg while not in: {EStage.EmitLastFrameData} stage!");
 
-            var respMsg = ClusterDisplay.RepeaterEnteredNextFrame.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+            var respMsg = ClusterDisplay.IBlittable<RepeaterEnteredNextFrame>.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
             ClusterDebug.Log($"(Sequence ID: {msgHdr.SequenceID}, Frame: {respMsg.FrameNumber}): Received: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} message.");
 
             // Repeater nodes will send FrameDone messages one frame behind, since the emitter will always be rendering 1 frame ahead.

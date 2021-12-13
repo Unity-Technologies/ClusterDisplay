@@ -6,7 +6,7 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.Editor
 {
     [CustomEditor(typeof(ClusterSync))]
-    public class ClusterSyncEditor : UnityEditor.Editor
+    internal class ClusterSyncEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {

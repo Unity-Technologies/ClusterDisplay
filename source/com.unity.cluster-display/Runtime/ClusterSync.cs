@@ -9,6 +9,9 @@ using System.Runtime.CompilerServices;
 using UnityEditor;
 #endif
 
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor")]
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics.Example")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 
 namespace Unity.ClusterDisplay
@@ -60,7 +63,7 @@ namespace Unity.ClusterDisplay
     #if UNITY_EDITOR
     [InitializeOnLoad]
     #endif
-    public class ClusterSync : 
+    internal class ClusterSync : 
         SingletonScriptableObject<ClusterSync>, 
         IClusterSyncState,
         IClusterDisplayConfigurable
@@ -113,7 +116,13 @@ namespace Unity.ClusterDisplay
 
         internal ClusterNode m_LocalNode;
         ClusterNode IClusterSyncState.LocalNode => m_LocalNode;
+
         internal ClusterNode LocalNode => m_LocalNode;
+        
+        public void OnReceivedClusterRuntimeConfig(ClusterRuntimeConfig clusterRuntimeConfig)
+        {
+            stateSetter.SetEmitterIsHeadless(clusterRuntimeConfig.headlessEmitter);
+        }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
@@ -270,18 +279,17 @@ namespace Unity.ClusterDisplay
             PlayerLoop.SetPlayerLoop(newLoop);
         }
 
-        private bool TryInitializeEmitter()
+        private bool TryInitializeEmitter(UDPAgent.Config config)
         {
             // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
-            m_LocalNode =  new EmitterNode(
-                this, 
-                CommandLineParser.nodeID, 
-                CommandLineParser.repeaterCount, 
-                CommandLineParser.multicastAddress, 
-                CommandLineParser.rxPort, 
-                CommandLineParser.txPort, 
-                30, 
-                CommandLineParser.adapterName);
+            m_LocalNode = new EmitterNode(
+                this,
+                new EmitterNode.Config
+                {
+                    headlessEmitter = CommandLineParser.HeadlessEmitter,
+                    repeaterCount = CommandLineParser.repeaterCount,
+                    udpAgentConfig = config
+                });
             
             stateSetter.SetIsEmitter(true);
             stateSetter.SetIsRepeater(false);
@@ -289,17 +297,10 @@ namespace Unity.ClusterDisplay
             return m_LocalNode.TryStart();
         }
 
-        private bool TryInitializeRepeater()
+        private bool TryInitializeRepeater(UDPAgent.Config config)
         {
             // Emitter command line format: -node nodeId ip:rxport,txport
-            m_LocalNode = new RepeaterNode(
-                this, 
-                CommandLineParser.nodeID, 
-                CommandLineParser.multicastAddress, 
-                CommandLineParser.rxPort, 
-                CommandLineParser.txPort, 
-                30, 
-                CommandLineParser.adapterName);
+            m_LocalNode = new RepeaterNode(this, config);
             
             stateSetter.SetIsEmitter(false);
             stateSetter.SetIsRepeater(true);
@@ -319,14 +320,24 @@ namespace Unity.ClusterDisplay
                 if (CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout))
                     ClusterParams.CommunicationTimeout = communicationTimeout;
 
+                var udpAgentConfig = new UDPAgent.Config
+                {
+                    nodeId = CommandLineParser.nodeID,
+                    ip = CommandLineParser.multicastAddress,
+                    rxPort = CommandLineParser.rxPort,
+                    txPort = CommandLineParser.txPort,
+                    timeOut = 30,
+                    adapterName = CommandLineParser.adapterName
+                };
+                
                 if (CommandLineParser.emitterSpecified)
                 {
-                    if (!TryInitializeEmitter())
+                    if (!TryInitializeEmitter(udpAgentConfig))
                         return false;
                     return true;
                 }
 
-                if (TryInitializeRepeater())
+                if (TryInitializeRepeater(udpAgentConfig))
                     return true;
 
                 throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.");
