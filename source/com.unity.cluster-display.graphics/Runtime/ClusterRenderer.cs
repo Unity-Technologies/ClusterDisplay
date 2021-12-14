@@ -34,6 +34,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
+        public delegate void PreRenderCameraDataOverride(ref Vector3 position, ref Quaternion rotation, ref Matrix4x4 projectionMatrix);
+        public PreRenderCameraDataOverride preRenderCameraDataOverride;
+
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
 #elif CLUSTER_DISPLAY_URP
@@ -147,7 +150,10 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             ClusterDebug.Log($"Starting render.");
-            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
+            m_ProjectionPolicy.UpdateCluster(
+                preRenderCameraDataOverride, 
+                m_Settings, 
+                activeCamera);
         }
     }
 }

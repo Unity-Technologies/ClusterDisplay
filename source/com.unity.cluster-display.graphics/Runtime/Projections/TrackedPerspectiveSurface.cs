@@ -66,7 +66,10 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void Render(ClusterRendererSettings clusterSettings, Camera activeCamera)
+        public void Render(
+            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRendererSettings clusterSettings, 
+            Camera activeCamera)
         {
             var overscannedSize = m_ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
@@ -101,7 +104,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var projectionMatrix = GetProjectionMatrix(activeCamera.projectionMatrix, cornersView, m_ScreenResolution, clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(activeCamera);
+            using var cameraScope = new CameraScope(preRenderCameraDataOverride, activeCamera);
             cameraScope.Render(projectionMatrix, m_RenderTarget);
             cameraTransform.rotation = savedRotation;
 

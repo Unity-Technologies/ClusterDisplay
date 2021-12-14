@@ -21,7 +21,10 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     Camera m_Camera;
     BlitCommand m_BlitCommand;
 
-    public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
+    public override void UpdateCluster(
+        ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+        ClusterRendererSettings clusterSettings, 
+        Camera activeCamera)
     {
         var nodeIndex = m_IsDebug || !ClusterDisplayState.IsActive ? m_NodeIndexOverride : ClusterDisplayState.NodeID;
 
@@ -39,12 +42,12 @@ public sealed class TrackedPerspectiveProjection : ProjectionPolicy
         {
             foreach (var surface in m_ProjectionSurfaces)
             {
-                surface.Render(clusterSettings, activeCamera);
+                surface.Render(preRenderCameraDataOverride, clusterSettings, activeCamera);
             }
         }
         else
         {
-            targetSurface.Render(clusterSettings, activeCamera);
+            targetSurface.Render(preRenderCameraDataOverride, clusterSettings, activeCamera);
         }
 
         m_BlitCommand = new BlitCommand(

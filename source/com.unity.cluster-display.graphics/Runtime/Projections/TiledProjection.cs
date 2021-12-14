@@ -187,7 +187,10 @@ namespace Unity.ClusterDisplay.Graphics
         }
 		
 
-        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
+        public override void UpdateCluster(
+            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRendererSettings clusterSettings, 
+            Camera activeCamera)
         {
             // Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
@@ -219,11 +222,21 @@ namespace Unity.ClusterDisplay.Graphics
             m_BlitCommands.Clear();
             if (isStitcher)
             {
-                RenderStitcher(m_TileRenderTargets, activeCamera, ref renderContext, m_BlitCommands);
+                RenderStitcher(
+                    preRenderCameraDataOverride,
+                    m_TileRenderTargets, 
+                    activeCamera, 
+                    ref renderContext, 
+                    m_BlitCommands);
             }
             else
             {
-                RenderTile(m_TileRenderTargets[0], activeCamera, ref renderContext, m_BlitCommands);
+                RenderTile(
+                    preRenderCameraDataOverride,
+                    m_TileRenderTargets[0], 
+                    activeCamera, 
+                    ref renderContext, 
+                    m_BlitCommands);
             }
 
             // TODO Make sure there's no one-frame offset induced by rendering timing.
@@ -257,9 +270,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        static void RenderStitcher(IReadOnlyList<RenderTexture> targets, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
+        static void RenderStitcher(
+            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            IReadOnlyList<RenderTexture> targets, 
+            Camera camera, 
+            ref TileProjectionContext tileProjectionContext, 
+            List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = new CameraScope(preRenderCameraDataOverride, camera);
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
@@ -270,21 +288,32 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
                 
-                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                cameraScope.Render(
+                    asymmetricProjectionMatrix, 
+                    clusterParams, 
+                    targets[tileIndex]);
                 commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
             }
         }
 
-        static void RenderTile(RenderTexture target, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
+        static void RenderTile(
+            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            RenderTexture target, 
+            Camera camera, 
+            ref TileProjectionContext tileProjectionContext, 
+            List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = new CameraScope(preRenderCameraDataOverride, camera);
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
             var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
+            cameraScope.Render(
+                asymmetricProjectionMatrix, 
+                clusterParams, 
+                target);
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
             
         }
