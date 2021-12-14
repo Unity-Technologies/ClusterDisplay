@@ -23,6 +23,7 @@ namespace Unity.ClusterDisplay
         }
 
         public void Render(
+            int nodeId,
             Matrix4x4 projection, 
             Matrix4x4 clusterParams, 
             RenderTexture target)
@@ -31,29 +32,37 @@ namespace Unity.ClusterDisplay
             // We could have to pass this data through the pipeline.
             Shader.SetGlobalMatrix(k_ClusterDisplayParams, clusterParams);
 
-            Render(projection, target);
+            Render(nodeId, projection, target);
         }
 
-        public void Render(Matrix4x4 projectionMatrix, RenderTexture target)
+        public void Render(int nodeId, Matrix4x4 projectionMatrix, RenderTexture target)
         {
             // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
             var mask = m_Camera.cullingMask;
             mask &= ~(1 << ClusterRenderer.VirtualObjectLayer);
+            
             m_Camera.cullingMask = mask;
+            m_Camera.targetTexture = target;
             
             var position = m_Camera.transform.position;
-            var rotation = m_Camera.transform.rotation;
-
-            m_preRenderCameraDataOverride?.Invoke(ref position, ref rotation, ref projectionMatrix);
+            var oldPosition = position;
             
-            m_Camera.targetTexture = target;
+            var rotation = m_Camera.transform.rotation;
+            var oldRotation = rotation;
+            
+            m_preRenderCameraDataOverride?.Invoke(nodeId, ref position, ref rotation, ref projectionMatrix);
+            
             m_Camera.transform.position = position;
             m_Camera.transform.rotation = rotation;
+            
             m_Camera.projectionMatrix = projectionMatrix;
             m_Camera.cullingMatrix = projectionMatrix * m_Camera.worldToCameraMatrix;
-
+            
             ClusterDebug.Log($"Calling render on camera: \"{m_Camera.gameObject.name}\".");
             m_Camera.Render();
+            
+            m_Camera.transform.position = oldPosition;
+            m_Camera.transform.rotation = oldRotation;
         }
 
         public void Dispose()

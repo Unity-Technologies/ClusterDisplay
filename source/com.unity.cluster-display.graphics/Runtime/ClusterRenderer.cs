@@ -34,7 +34,12 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
-        public delegate void PreRenderCameraDataOverride(ref Vector3 position, ref Quaternion rotation, ref Matrix4x4 projectionMatrix);
+        public delegate void PreRenderCameraDataOverride(
+            int nodeId, 
+            ref Vector3 position, 
+            ref Quaternion rotation, 
+            ref Matrix4x4 projectionMatrix);
+        
         public PreRenderCameraDataOverride preRenderCameraDataOverride;
 
 #if CLUSTER_DISPLAY_HDRP
@@ -130,25 +135,43 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Disable();
         }
 
+        private bool ShouldRender
+        {
+            get
+            {
+                if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+                {
+                    return false;
+                }
+                
+                var activeCamera = ClusterCameraManager.ActiveCamera;
+                if (activeCamera == null || m_ProjectionPolicy == null)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
         void OnPresent(CommandBuffer commandBuffer)
         {
-            if (m_ProjectionPolicy != null)
+            if (!ShouldRender)
             {
-                m_ProjectionPolicy.Present(commandBuffer);
+                return;
             }
+            
+            m_ProjectionPolicy.Present(commandBuffer);
         }
 
         void OnClusterDisplayUpdate()
         {
-            if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
-                return;
-            
-            var activeCamera = ClusterCameraManager.ActiveCamera;
-            if (activeCamera == null || m_ProjectionPolicy == null)
+            if (!ShouldRender)
             {
                 return;
             }
-
+            
+            var activeCamera = ClusterCameraManager.ActiveCamera;
             ClusterDebug.Log($"Starting render.");
             m_ProjectionPolicy.UpdateCluster(
                 preRenderCameraDataOverride, 

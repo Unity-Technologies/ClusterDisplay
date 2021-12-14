@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// This property returns true if this running instance is a emitter node AND is headless.
         /// </summary>
-        public static bool EmitterIsHeadless => stateStore.m_EmitterIsHeadless;
+        public static bool EmitterIsHeadless => !Application.isEditor && stateStore.m_EmitterIsHeadless;
         
         /// <summary>
         /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.

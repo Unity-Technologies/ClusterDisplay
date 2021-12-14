@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
             var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;
             var cameraColorTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
 
-            if (ClusterDisplayState.IsEmitter)
+            if (ClusterDisplayState.IsEmitter && Application.isPlaying)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
                 

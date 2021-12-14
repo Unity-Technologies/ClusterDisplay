@@ -289,6 +289,7 @@ namespace Unity.ClusterDisplay.Graphics
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
                 
                 cameraScope.Render(
+                    tileIndex,
                     asymmetricProjectionMatrix, 
                     clusterParams, 
                     targets[tileIndex]);
@@ -311,6 +312,7 @@ namespace Unity.ClusterDisplay.Graphics
             var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
             cameraScope.Render(
+                ClusterDisplayState.NodeID,
                 asymmetricProjectionMatrix, 
                 clusterParams, 
                 target);

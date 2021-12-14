@@ -105,7 +105,7 @@ namespace Unity.ClusterDisplay.Graphics
             var projectionMatrix = GetProjectionMatrix(activeCamera.projectionMatrix, cornersView, m_ScreenResolution, clusterSettings.OverScanInPixels);
 
             using var cameraScope = new CameraScope(preRenderCameraDataOverride, activeCamera);
-            cameraScope.Render(projectionMatrix, m_RenderTarget);
+            cameraScope.Render(ClusterDisplayState.NodeID, projectionMatrix, m_RenderTarget);
             cameraTransform.rotation = savedRotation;
 
 #if UNITY_EDITOR

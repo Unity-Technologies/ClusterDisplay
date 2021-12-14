@@ -1,3 +1,4 @@
+using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -12,7 +13,8 @@ namespace Unity.ClusterDisplay
                 if (!TryGetInstance(out var instance, logError: false))
                 {
                     instance = new GameObject("PresenterCamera").AddComponent<PresenterCamera>();
-                    instance.gameObject.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
+                    // instance.gameObject.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
+                    instance.gameObject.hideFlags = HideFlags.HideAndDontSave;
                     
                     // We use the camera to blit to screen.
                     // Configure it to minimize wasteful rendering.
