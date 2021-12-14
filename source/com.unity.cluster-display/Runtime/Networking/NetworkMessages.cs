@@ -212,7 +212,7 @@ namespace Unity.ClusterDisplay
     [StructLayout(LayoutKind.Sequential)]
     internal struct ClusterRuntimeConfig : IBlittable<ClusterRuntimeConfig>
     {
-        public bool headlessEmitter;
+        public byte headlessEmitter;
         
         public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
             NetworkingHelpers.StructToBytes(dest, offset, ref this);

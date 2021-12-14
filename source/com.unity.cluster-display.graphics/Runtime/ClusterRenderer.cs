@@ -137,12 +137,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnClusterDisplayUpdate()
         {
+            if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+                return;
+            
             var activeCamera = ClusterCameraManager.ActiveCamera;
             if (activeCamera == null || m_ProjectionPolicy == null)
             {
                 return;
             }
 
+            ClusterDebug.Log($"Starting render.");
             m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
     }

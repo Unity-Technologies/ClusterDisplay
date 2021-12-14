@@ -121,7 +121,7 @@ namespace Unity.ClusterDisplay
         
         public void OnReceivedClusterRuntimeConfig(ClusterRuntimeConfig clusterRuntimeConfig)
         {
-            stateSetter.SetEmitterIsHeadless(clusterRuntimeConfig.headlessEmitter);
+            stateSetter.SetEmitterIsHeadless(clusterRuntimeConfig.headlessEmitter == 1);
         }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
@@ -292,6 +292,7 @@ namespace Unity.ClusterDisplay
                 });
             
             stateSetter.SetIsEmitter(true);
+            stateSetter.SetEmitterIsHeadless(CommandLineParser.HeadlessEmitter);
             stateSetter.SetIsRepeater(false);
 
             return m_LocalNode.TryStart();

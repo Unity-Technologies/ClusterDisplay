@@ -1,6 +1,7 @@
 ﻿#if CLUSTER_DISPLAY_URP
 using System;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -36,11 +37,15 @@ namespace Unity.ClusterDisplay.Graphics
         public RenderTexture m_LastFrame = null;
         void ExecuteRender(ScriptableRenderContext context, RenderingData renderingData)
         {
+            if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+                return;
+            
             if (m_Camera == null)
             {
                 m_Camera = PresenterCamera.Camera;
                 if (m_Camera == null)
                 {
+                    ClusterDebug.LogError("Unable to setup camera present.");
                     return;
                 }
             }
@@ -57,6 +62,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (ClusterDisplayState.IsEmitter)
             {
+                ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
+                
                 if (m_LastFrame == null ||
                     m_LastFrame.width != cameraColorTargetDescriptor.width ||
                     m_LastFrame.height != cameraColorTargetDescriptor.height ||
@@ -73,8 +80,16 @@ namespace Unity.ClusterDisplay.Graphics
                         cameraColorTargetDescriptor.width,
                         cameraColorTargetDescriptor.height, 
                         cameraColorTargetDescriptor.depthBufferBits,
-                        cameraColorTargetDescriptor.graphicsFormat);
+                        cameraColorTargetDescriptor.graphicsFormat,
+                        0);
+                    m_LastFrame.antiAliasing = 1;
+                    m_LastFrame.filterMode = FilterMode.Point;
+                    
+                    ClusterDebug.Log($"Created new buffer for storing previous frame.");
                 }
+                
+                cmd.SetRenderTarget(cameraColorTarget);
+                cmd.ClearRenderTarget(true, true, m_ClearColor);
                 
                 cmd.Blit(m_LastFrame, cameraColorTarget);
                 cmd.SetRenderTarget(m_LastFrame);
@@ -82,6 +97,7 @@ namespace Unity.ClusterDisplay.Graphics
             
             else
             {
+                ClusterDebug.Log($"Repeater presenting current frame: {ClusterDisplayState.Frame}");
                 cmd.SetRenderTarget(cameraColorTarget);
             }
             

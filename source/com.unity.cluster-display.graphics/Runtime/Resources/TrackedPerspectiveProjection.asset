@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: TrackedPerspectiveProjection
   m_EditorClassIdentifier: 
   m_IsDebug: 0
-  m_ProjectionSurfaces: []
+  m_ProjectionSurfaces:
+  - {fileID: 0}
   m_NodeIndexOverride: 0

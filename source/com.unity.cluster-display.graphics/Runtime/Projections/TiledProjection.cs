@@ -142,14 +142,23 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.SetShaderKeyword(false);
         }
 
+        private int GetTileIndex()
+        {
+            if (m_IsDebug || !ClusterDisplayState.IsActive)
+                return m_DebugSettings.TileIndexOverride;
+            if (ClusterDisplayState.IsRepeater && ClusterDisplayState.EmitterIsHeadless)
+                return ClusterDisplayState.NodeID - 1;
+            return ClusterDisplayState.NodeID;
+        }
+
         public TileProjectionContext BuildRenderContext(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
                 return default(TileProjectionContext);
 
+            int currentTileIndex = GetTileIndex();
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
-            var currentTileIndex = m_IsDebug || !ClusterDisplayState.IsActive ? m_DebugSettings.TileIndexOverride : ClusterDisplayState.NodeID;
             var numTiles = m_Settings.GridSize.x * m_Settings.GridSize.y;
             var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
 

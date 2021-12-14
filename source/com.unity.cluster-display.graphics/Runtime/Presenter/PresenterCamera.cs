@@ -1,7 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -24,6 +20,8 @@ namespace Unity.ClusterDisplay
                     instance.camera.cullingMask = 0;
                     instance.camera.clearFlags = CameraClearFlags.Nothing;
                     instance.camera.depthTextureMode = DepthTextureMode.None;
+                    
+                    ClusterDebug.Log($"Setup {nameof(PresenterCamera)}.");
                 }
                 
                 return instance.camera;
