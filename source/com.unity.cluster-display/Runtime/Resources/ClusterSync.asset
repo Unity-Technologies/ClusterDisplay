@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_ClusterSyncEditorConfig:
     m_EditorInstanceIsEmitter: 1
-    m_EditorInstanceEmitterCmdLine: -batchMode -adapterName Ethernet -emitterNode
-      0 1 225.0.1.0:25690,25691 -communicationTimeout 60000
+    m_EditorInstanceEmitterCmdLine: -adapterName Ethernet -emitterNode 0 1 225.0.1.0:25690,25691
+      -communicationTimeout 60000
     m_EditorInstanceRepeaterCmdLine: -adapterName Ethernet -node 1 225.0.1.0:25691,25690
       -communicationTimeout 60000
     m_IgnoreEditorCmdLine: 0

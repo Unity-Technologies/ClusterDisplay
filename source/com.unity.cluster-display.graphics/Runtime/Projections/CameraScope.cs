@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay
 
             Render(nodeId, projection, target);
         }
-
+        
         public void Render(int nodeId, Matrix4x4 projectionMatrix, RenderTexture target)
         {
             // Do not render objects that are part of the cluster rendering infrastructure, e.g. projection surfaces
@@ -43,7 +43,8 @@ namespace Unity.ClusterDisplay
             
             m_Camera.cullingMask = mask;
             m_Camera.targetTexture = target;
-            
+
+            var oldProjectionMatrix = m_Camera.projectionMatrix;
             var position = m_Camera.transform.position;
             var oldPosition = position;
             
@@ -63,6 +64,9 @@ namespace Unity.ClusterDisplay
             
             m_Camera.transform.position = oldPosition;
             m_Camera.transform.rotation = oldRotation;
+
+            m_Camera.projectionMatrix = oldProjectionMatrix;
+            m_Camera.cullingMatrix = oldProjectionMatrix * m_Camera.worldToCameraMatrix;
         }
 
         public void Dispose()

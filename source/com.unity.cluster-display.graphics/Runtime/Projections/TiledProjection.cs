@@ -146,7 +146,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_IsDebug || !ClusterDisplayState.IsActive)
                 return m_DebugSettings.TileIndexOverride;
-            if (ClusterDisplayState.IsRepeater && ClusterDisplayState.EmitterIsHeadless)
+            if (CommandLineParser.RepeaterReplacesHeadlessEmitter && ClusterDisplayState.IsRepeater && ClusterDisplayState.EmitterIsHeadless)
                 return ClusterDisplayState.NodeID - 1;
             return ClusterDisplayState.NodeID;
         }

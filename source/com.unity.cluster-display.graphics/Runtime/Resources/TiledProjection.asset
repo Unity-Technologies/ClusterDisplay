@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: TiledProjection
   m_EditorClassIdentifier: 
   m_Settings:
-    GridSize: {x: 2, y: 1}
+    GridSize: {x: 2, y: 4}
     Bezel: {x: 0, y: 0}
-    PhysicalScreenSize: {x: 2160, y: 1920}
+    PhysicalScreenSize: {x: 0, y: 0}
   m_DebugSettings:
-    TileIndexOverride: 0
+    TileIndexOverride: 1
     UseDebugViewportSubsection: 0
     ViewportSubsection:
       serializedVersion: 2
@@ -25,7 +25,7 @@ MonoBehaviour:
       y: 0
       width: 0.5
       height: 0.5
-    LayoutMode: 0
+    LayoutMode: 1
     BezelColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 0
