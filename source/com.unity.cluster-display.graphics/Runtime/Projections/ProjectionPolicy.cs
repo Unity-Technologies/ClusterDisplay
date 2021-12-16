@@ -17,19 +17,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// <param name="clusterSettings">The current cluster display settings.</param>
         /// <param name="activeCamera">The current "main" camera.
         /// </param>
-        /// <param name="anchor">The localToWorld matrix of the calling object.</param>
         /// <remarks>
         /// The <paramref name="activeCamera"/> will be disabled by default so it will not be rendered
         /// normally. At this point, you can perform special logic, such as manipulating projection
         /// matrices, rendering to a <see cref="RenderTexture"/>, etc. Do not draw anything to the screen;
         /// that should happen in your <see cref="Present"/> method.
-        /// The <param name="anchor"></param> parameter allows you to pass an "origin" to the projection policy,
-        /// if it needs one.
         /// </remarks>
-        public abstract void UpdateCluster(
-            ClusterRendererSettings clusterSettings, 
-            Camera activeCamera, 
-            Matrix4x4 anchor);
+        public abstract void UpdateCluster(ClusterRendererSettings clusterSettings,
+            Camera activeCamera);
 
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.
@@ -42,9 +37,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// </remarks>
         public abstract void Present(CommandBuffer commandBuffer);
 
-        public virtual void DrawGizmos()
+        public virtual void DrawGizmos(ClusterRendererSettings clusterSettings)
         {
             
         }
+        
+        /// <summary>
+        /// Gets or sets an anchor position
+        /// </summary>
+        public virtual Matrix4x4 Origin { get; set; }
     }
 }

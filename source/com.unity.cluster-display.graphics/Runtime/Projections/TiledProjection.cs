@@ -132,7 +132,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.SetShaderKeyword(false);
         }
 
-        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera, Matrix4x4 anchor)
+        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             // Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
@@ -221,12 +221,12 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-#if UNITY_EDITOR
-        public override void DrawGizmos()
+        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
         {
+#if UNITY_EDITOR
             m_Gizmo.Draw();
-        }
 #endif
+        }
 
         static void RenderStitcher(IReadOnlyList<RenderTexture> targets, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {
