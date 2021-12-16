@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 namespace Unity.ClusterDisplay.Graphics
 {
     [Serializable]
-    public struct ProjectionSurface
+    public struct ProjectionSurface : IEquatable<ProjectionSurface>
     {
         [SerializeField]
         public string Name;
@@ -43,6 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
         Vector3[] m_Vertices;
 
         [SerializeField]
+        // ReSharper disable once NotAccessedField.Local
         bool m_Expanded;
 
         public static ProjectionSurface CreateDefaultPlanar(string name)
@@ -78,6 +79,37 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             return cornersWorld;
+        }
+
+        public bool Equals(ProjectionSurface other)
+        {
+            return Name == other.Name &&
+                ScreenResolution.Equals(other.ScreenResolution) &&
+                PhysicalSize.Equals(other.PhysicalSize) &&
+                LocalPosition.Equals(other.LocalPosition) &&
+                LocalRotation.Equals(other.LocalRotation) &&
+                Equals(m_Vertices,
+                    other.m_Vertices);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ProjectionSurface other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Name, ScreenResolution, PhysicalSize, LocalPosition, LocalRotation, m_Vertices);
+        }
+
+        public static bool operator ==(ProjectionSurface left, ProjectionSurface right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(ProjectionSurface left, ProjectionSurface right)
+        {
+            return !left.Equals(right);
         }
     }
 }

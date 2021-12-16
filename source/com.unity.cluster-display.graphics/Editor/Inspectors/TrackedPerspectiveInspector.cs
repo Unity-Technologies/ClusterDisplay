@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             serializedObject.Update();
-            
+
             if (m_SelectedSurfaceIndex >= m_SurfacesProp.arraySize)
             {
                 m_SelectedSurfaceIndex = -1;
@@ -65,9 +65,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             Undo.RecordObject(target, "Modify Projection Surface");
             if (m_SelectedSurfaceIndex >= 0)
             {
-                projection.SetSurface(
-                    m_SelectedSurfaceIndex,
-                    DoSurfaceHandles(projection.Surfaces[m_SelectedSurfaceIndex], projection.Origin));
+                var newSurface = DoSurfaceHandles(projection.Surfaces[m_SelectedSurfaceIndex], projection.Origin);
+                if (newSurface != projection.Surfaces[m_SelectedSurfaceIndex])
+                {
+                    projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
+                    EditorApplication.QueuePlayerLoopUpdate();
+                }
             }
         }
 
@@ -104,9 +107,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 m_SelectedSurfaceIndex = index;
             }
-            
+
             var element = m_SurfacesProp.GetArrayElementAtIndex(index);
-            
+
             EditorGUI.PropertyField(rect, element);
         }
 
@@ -126,7 +129,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 Undo.RegisterCompleteObjectUndo(target, k_UndoCreateSurface);
                 projection.AddSurface();
             }
-            
+
             if (m_SelectedSurfaceIndex >= 0)
             {
                 serializedObject.Update();

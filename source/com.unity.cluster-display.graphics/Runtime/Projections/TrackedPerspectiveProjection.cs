@@ -5,7 +5,6 @@ using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
-
 namespace Unity.ClusterDisplay.Graphics
 {
     [PopupItem("Tracked Perspective")]
@@ -43,6 +42,11 @@ namespace Unity.ClusterDisplay.Graphics
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
         }
 
+        void OnDisable()
+        {
+            ClearPreviews();
+        }
+
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var nodeIndex = m_IsDebug || !ClusterSync.Active ? m_NodeIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
@@ -71,8 +75,6 @@ namespace Unity.ClusterDisplay.Graphics
                         clusterSettings.OverScanInPixels, Vector2.zero)
                     .ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias);
-
-            UpdatePreview(clusterSettings);
         }
 
         public override void Present(CommandBuffer commandBuffer)
@@ -85,20 +87,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
         }
 
-        // public override Matrix4x4 Origin
-        // {
-        //     get => m_Origin;
-        //     set
-        //     {
-        //         m_Origin = value;
-        //         foreach (var surface in m_ProjectionSurfaces)
-        //         {
-        //             surface.RootTransform = value;
-        //         }
-        //     }
-        // }
-
-        public void UpdatePreview(ClusterRendererSettings clusterSettings)
+        void ClearPreviews()
         {
             foreach (var preview in m_ActivePreviews)
             {
@@ -106,10 +95,13 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             m_ActivePreviews.Clear();
+        }
 
-            if (m_IsDebug)
+        void DrawPreview(ClusterRendererSettings clusterSettings)
+        {
+            for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
             {
-                for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
+                if (m_RenderTargets.TryGetValue(index, out var rt))
                 {
                     var surface = m_ProjectionSurfaces[index];
                     var preview = m_PreviewPool.Get();
@@ -118,12 +110,23 @@ namespace Unity.ClusterDisplay.Graphics
                     preview.Draw(Origin.MultiplyPoint(surface.LocalPosition),
                         Origin.rotation * surface.LocalRotation,
                         surface.Scale,
-                        m_RenderTargets[index],
+                        rt,
                         surface.ScreenResolution,
                         clusterSettings.OverScanInPixels,
                         m_GraphicsFormat);
                 }
             }
+        }
+
+        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
+        {
+#if UNITY_EDITOR
+            ClearPreviews();
+            if (m_IsDebug)
+            {
+                DrawPreview(clusterSettings);
+            }
+#endif
         }
 
         public void AddSurface()
@@ -198,7 +201,7 @@ namespace Unity.ClusterDisplay.Graphics
             var normal = Vector3.Cross(plane[1] - plane[0], plane[2] - plane[0]).normalized;
             return pt - Vector3.Dot(pt - plane[0], normal) * normal;
         }
-        
+
         static Matrix4x4 GetProjectionMatrix(
             Matrix4x4 originalProjection,
             IList<Vector3> planeCorners,
