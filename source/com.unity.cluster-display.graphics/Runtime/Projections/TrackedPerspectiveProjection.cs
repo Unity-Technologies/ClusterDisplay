@@ -9,8 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     [PopupItem("Tracked Perspective")]
     [CreateAssetMenu(fileName = "TrackedPerspectiveProjection",
-        menuName = "Cluster Display/Tracked Perspective Projection",
-        order = 2)]
+        menuName = "Cluster Display/Tracked Perspective Projection")]
     public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     {
         // TODO: Create a custom icon for this.
@@ -130,7 +129,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
+        public override void OnDrawGizmos()
         {
 #if UNITY_EDITOR
             foreach (var surface in Surfaces)

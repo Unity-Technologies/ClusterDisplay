@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     
                     // We need to update the cluster rendering, but Update and LateUpdate
                     // do not happen after OnSceneGUI changes, so we need to explicitly request
-                    // an updated.
+                    // that the Editor execute an update loop.
                     EditorApplication.QueuePlayerLoopUpdate();
                 }
             }

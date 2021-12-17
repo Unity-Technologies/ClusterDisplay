@@ -74,7 +74,7 @@ namespace Unity.ClusterDisplay.Graphics
             Gizmos.DrawIcon(transform.position, k_IconName);
             if (m_ProjectionPolicy != null && Selection.Contains(gameObject))
             {
-                m_ProjectionPolicy.DrawGizmos(m_Settings);
+                m_ProjectionPolicy.OnDrawGizmos();
             }
         }
 #endif

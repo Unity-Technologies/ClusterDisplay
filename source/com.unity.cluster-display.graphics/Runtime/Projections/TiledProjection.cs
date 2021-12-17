@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [PopupItem("Tiled")]
-    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection", order = 2)]
+    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
     public sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
@@ -222,7 +222,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
+        public override void OnDrawGizmos()
         {
 #if UNITY_EDITOR
             m_Gizmo.Draw();

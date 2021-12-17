@@ -23,8 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// matrices, rendering to a <see cref="RenderTexture"/>, etc. Do not draw anything to the screen;
         /// that should happen in your <see cref="Present"/> method.
         /// </remarks>
-        public abstract void UpdateCluster(ClusterRendererSettings clusterSettings,
-            Camera activeCamera);
+        public abstract void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera);
 
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.
@@ -37,13 +36,13 @@ namespace Unity.ClusterDisplay.Graphics
         /// </remarks>
         public abstract void Present(CommandBuffer commandBuffer);
 
-        public virtual void DrawGizmos(ClusterRendererSettings clusterSettings)
-        {
-            
-        }
-        
         /// <summary>
-        /// Gets or sets an anchor position
+        /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
+        /// </summary>
+        public virtual void OnDrawGizmos() { }
+
+        /// <summary>
+        /// Gets or sets the origin of the cluster display.
         /// </summary>
         public virtual Matrix4x4 Origin { get; set; }
     }
