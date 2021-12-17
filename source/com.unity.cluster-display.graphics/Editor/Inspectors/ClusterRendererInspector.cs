@@ -2,36 +2,24 @@
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
+using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(ClusterRenderer))]
-    [InitializeOnLoad]
     class ClusterRendererInspector : UnityEditor.Editor
     {
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
-        const string k_ConfirmPolicyChange = "You are changing the projection policy. Your current projection settings will by lost. Continue?";
-        static Type[] s_ProjectionPolicies;
-        static GUIContent[] s_PolicyOptions;
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
 
         NestedInspector m_PolicyEditor;
 
-        static ClusterRendererInspector()
-        {
-            s_ProjectionPolicies = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(assembly => assembly.GetTypes())
-                .Where(t => t.IsSubclassOf(typeof(ProjectionPolicy)))
-                .ToArray();
-
-            s_PolicyOptions = s_ProjectionPolicies
-                .Select(GetPopupItemName)
-                .Select(str => new GUIContent(str))
-                .ToArray();
-        }
+        // We need to detect when the projection policy has changed. Caching the previous
+        // value seems to be the only reliable way to detect changes. Can we do better?
+        Object m_CachedPolicyObject;
 
         void OnEnable()
         {
@@ -39,51 +27,45 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
         }
 
-        static string GetPopupItemName(Type type)
-        {
-            return type.GetCustomAttributes(typeof(PopupItemAttribute), true).FirstOrDefault()
-                is PopupItemAttribute item
-                ? item.ItemName
-                : type.ToString();
-        }
-
         public override void OnInspectorGUI()
         {
-            serializedObject.Update();
+#if CLUSTER_DISPLAY_URP
+            RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
+#endif
+            CheckForClusterCameraComponents();
 
-            if (target as ClusterRenderer is not { } clusterRenderer) return;
+            serializedObject.Update();
+            var currentPolicy = m_PolicyProp.objectReferenceValue;
 
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-#if CLUSTER_DISPLAY_URP
-                RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
-#endif
-                CheckForClusterCameraComponents();
-                
                 EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
-                EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
-
-                if (check.changed)
+                // Make sure we are drawing the correct editor for the select policy.
+                // This detects if the policy has changed. Not all changes come from the Inspector.
+                // e.g. The scene undo stack could change it.
+                if (check.changed || m_CachedPolicyObject != currentPolicy)
                 {
-                    serializedObject.ApplyModifiedProperties();
-
-                    // TODO needed?
-                    EditorUtility.SetDirty(clusterRenderer);
+                    if (m_PolicyEditor != null)
+                    {
+                        DestroyImmediate(m_PolicyEditor);
+                    }
+                    
+                    if (currentPolicy != null || m_PolicyEditor == null)
+                    {
+                        m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                    }
                 }
             }
 
-            if (m_PolicyProp.objectReferenceValue != null)
+            EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
+            
+            if (currentPolicy != null && m_PolicyEditor != null)
             {
-                if (m_PolicyEditor == null)
-                {
-                    m_PolicyEditor = CreateEditor(m_PolicyProp.objectReferenceValue) as NestedInspector;
-                }
-
-                if (m_PolicyEditor != null)
-                {
-                    m_PolicyEditor.OnInspectorGUI();
-                }
+                m_PolicyEditor.OnInspectorGUI();
+                m_CachedPolicyObject = currentPolicy;
             }
+            
+            serializedObject.ApplyModifiedProperties();
         }
 
         void OnSceneGUI()
@@ -91,6 +73,14 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             if (m_PolicyEditor != null)
             {
                 m_PolicyEditor.OnSceneGUI();
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (m_PolicyEditor != null)
+            {
+                DestroyImmediate(m_PolicyEditor);
             }
         }
 

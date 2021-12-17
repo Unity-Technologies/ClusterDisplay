@@ -50,6 +50,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 return;
             }
 
+            serializedObject.Update();
             foreach (var surface in projection.Surfaces)
             {
                 Handles.DrawLines(surface.GetVertices(projection.Origin), surface.DrawOrder);
@@ -148,6 +149,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 if (check.changed)
                 {
                     serializedObject.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(target);
                 }
             }
         }

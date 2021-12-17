@@ -59,14 +59,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// Gets the current cluster rendering settings.
         /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
-
-        void OnDestroy()
-        {
-            if (m_ProjectionPolicy != null)
-            {
-                DestroyImmediate(m_ProjectionPolicy);
-            }
-        }
         
 #if UNITY_EDITOR
         void OnDrawGizmos()

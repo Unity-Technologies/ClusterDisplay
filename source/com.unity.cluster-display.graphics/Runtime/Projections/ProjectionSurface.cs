@@ -1,3 +1,5 @@
+#pragma warning disable 0414
+// Warning disabled for m_Expanded field
 using System;
 using UnityEngine;
 
