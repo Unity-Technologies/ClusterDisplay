@@ -9,10 +9,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         public static float GetHeight(SerializedProperty property)
         {
-            var foldout = property.FindPropertyRelative("m_Expanded");
             var lineHeight = EditorGUIUtility.singleLineHeight + 2;
             var height = lineHeight;
-            if (foldout.boolValue)
+            if (property.isExpanded)
             {
                 height += lineHeight * 4;
             }
@@ -23,7 +22,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
         {
             var nameProp = property.FindPropertyRelative("Name");
-            var foldout = property.FindPropertyRelative("m_Expanded");
             var resolution = property.FindPropertyRelative("ScreenResolution");
             var sizeProp = property.FindPropertyRelative("PhysicalSize");
             var positionProp = property.FindPropertyRelative("LocalPosition");
@@ -32,11 +30,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             var position = new Rect(rect.x, rect.y + 2, rect.width, EditorGUIUtility.singleLineHeight);
             var lineHeight = EditorGUIUtility.singleLineHeight + 2;
             EditorGUI.indentLevel++;
-            foldout.boolValue = EditorGUI.Foldout(new Rect(position.x, position.y, 10, lineHeight),
-                foldout.boolValue,
-                foldout.boolValue ? string.Empty : nameProp.stringValue);
+            property.isExpanded = EditorGUI.Foldout(new Rect(position.x, position.y, 10, lineHeight),
+                property.isExpanded,
+                property.isExpanded ? string.Empty : nameProp.stringValue);
 
-            if (foldout.boolValue)
+            if (property.isExpanded)
             {
                 EditorGUI.PropertyField(position, nameProp);
                 position.y += lineHeight;

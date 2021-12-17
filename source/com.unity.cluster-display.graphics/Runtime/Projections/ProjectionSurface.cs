@@ -1,5 +1,3 @@
-#pragma warning disable 0414
-// Warning disabled for m_Expanded field
 using System;
 using UnityEngine;
 
@@ -60,12 +58,6 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         int[] m_PlaneWinding;
 
-        /// <summary>
-        /// Whether this item is expanded in the Editor.
-        /// </summary>
-        [SerializeField]
-        bool m_Expanded;
-
         public static ProjectionSurface CreateDefaultPlanar(string name)
         {
             return new ProjectionSurface
@@ -83,8 +75,7 @@ namespace Unity.ClusterDisplay.Graphics
                     new(-0.5f, 0.5f, 0)
                 },
                 m_PlaneWinding = new[] {0, 1, 3, 2},
-                m_DrawOrder = new[] {0, 1, 0, 2, 1, 3, 2, 3},
-                m_Expanded = true
+                m_DrawOrder = new[] {0, 1, 0, 2, 1, 3, 2, 3}
             };
         }
 
