@@ -50,34 +50,30 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 return;
             }
 
-            serializedObject.Update();
+            foreach (var surface in projection.Surfaces)
+            {
+                Handles.DrawLines(surface.GetVertices(projection.Origin), surface.DrawOrder);
+            }
 
             if (m_SelectedSurfaceIndex >= m_SurfacesProp.arraySize)
             {
                 m_SelectedSurfaceIndex = -1;
             }
-
-            foreach (var surface in projection.Surfaces)
-            {
-                DrawSurfaceOutline(surface, projection.Origin);
-            }
-
-            Undo.RecordObject(target, "Modify Projection Surface");
+            
             if (m_SelectedSurfaceIndex >= 0)
             {
                 var newSurface = DoSurfaceHandles(projection.Surfaces[m_SelectedSurfaceIndex], projection.Origin);
                 if (newSurface != projection.Surfaces[m_SelectedSurfaceIndex])
                 {
+                    Undo.RecordObject(target, "Modify Projection Surface");
                     projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
+                    
+                    // We need to update the cluster rendering, but Update and LateUpdate
+                    // do not happen after OnSceneGUI changes, so we need to explicitly request
+                    // an updated.
                     EditorApplication.QueuePlayerLoopUpdate();
                 }
             }
-        }
-
-        static void DrawSurfaceOutline(ProjectionSurface surface, Matrix4x4 rootTransform)
-        {
-            var corners = surface.GetVertices(rootTransform);
-            Handles.DrawLines(corners, new[] {0, 1, 0, 2, 1, 3, 2, 3});
         }
 
         static ProjectionSurface DoSurfaceHandles(ProjectionSurface surface, Matrix4x4 rootTransform)

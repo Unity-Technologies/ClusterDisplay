@@ -75,6 +75,12 @@ namespace Unity.ClusterDisplay.Graphics
                         clusterSettings.OverScanInPixels, Vector2.zero)
                     .ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias);
+            
+            ClearPreviews();
+            if (m_IsDebug)
+            {
+                DrawPreview(clusterSettings);
+            }
         }
 
         public override void Present(CommandBuffer commandBuffer)
@@ -118,17 +124,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
-        {
-#if UNITY_EDITOR
-            ClearPreviews();
-            if (m_IsDebug)
-            {
-                DrawPreview(clusterSettings);
-            }
-#endif
-        }
-
         public void AddSurface()
         {
             m_ProjectionSurfaces.Add(ProjectionSurface.CreateDefaultPlanar($"Screen {m_ProjectionSurfaces.Count}"));
@@ -169,25 +164,26 @@ namespace Unity.ClusterDisplay.Graphics
             var surface = m_ProjectionSurfaces[index];
             var overscannedSize = surface.ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
-            var cornersWorld = surface.GetVertices(Origin);
-            var cornersView = new Vector3[cornersWorld.Length];
+            var surfacePlane = surface.GetFrustumPlane(Origin);
 
             var cameraTransform = activeCamera.transform;
             var savedRotation = cameraTransform.rotation;
             var position = cameraTransform.position;
-            var lookAtPoint = ProjectPointToPlane(position, cornersWorld);
 
-            Debug.DrawLine(position, lookAtPoint);
-            var upDir = cornersWorld[2] - cornersWorld[0];
-            activeCamera.transform.LookAt(lookAtPoint, upDir);
+            var lookAtPoint = ProjectPointToPlane(position, surfacePlane);
 
-            for (var i = 0; i < cornersView.Length; i++)
+            if (m_IsDebug)
             {
-                cornersView[i] = cameraTransform.InverseTransformPoint(cornersWorld[i]);
+                Debug.DrawLine(position, lookAtPoint);
             }
 
+            var upDir = surfacePlane.TopLeft - surfacePlane.BottomLeft;
+            activeCamera.transform.LookAt(lookAtPoint, upDir);
+
+            var planeInViewCoords = surfacePlane.ApplyTransform(cameraTransform.worldToLocalMatrix);
+
             var projectionMatrix = GetProjectionMatrix(activeCamera.projectionMatrix,
-                cornersView,
+                planeInViewCoords,
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
@@ -196,23 +192,25 @@ namespace Unity.ClusterDisplay.Graphics
             cameraTransform.rotation = savedRotation;
         }
 
-        static Vector3 ProjectPointToPlane(Vector3 pt, Vector3[] plane)
+        static Vector3 ProjectPointToPlane(Vector3 pt, in ProjectionSurface.FrustumPlane plane)
         {
-            var normal = Vector3.Cross(plane[1] - plane[0], plane[2] - plane[0]).normalized;
-            return pt - Vector3.Dot(pt - plane[0], normal) * normal;
+            var normal = Vector3.Cross(plane.BottomRight - plane.BottomLeft,
+                    plane.TopLeft - plane.BottomLeft)
+                .normalized;
+            return pt - Vector3.Dot(pt - plane.BottomLeft, normal) * normal;
         }
 
         static Matrix4x4 GetProjectionMatrix(
             Matrix4x4 originalProjection,
-            IList<Vector3> planeCorners,
+            in ProjectionSurface.FrustumPlane plane,
             Vector2Int resolution,
             int overScanInPixels)
         {
-            var planeLeft = planeCorners[0].x;
-            var planeRight = planeCorners[1].x;
-            var planeDepth = planeCorners[0].z;
-            var planeTop = planeCorners[2].y;
-            var planeBottom = planeCorners[0].y;
+            var planeLeft = plane.BottomLeft.x;
+            var planeRight = plane.BottomRight.x;
+            var planeDepth = plane.BottomLeft.z;
+            var planeTop = plane.TopLeft.y;
+            var planeBottom = plane.BottomLeft.y;
             var originalFrustum = originalProjection.decomposeProjection;
             var frustumPlanes = new FrustumPlanes
             {

@@ -1,11 +1,17 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public class ProjectionPreview : MonoBehaviour
+    /// <summary>
+    /// Script that draws an unlit textured plane hidden in the hierarchy
+    /// and not rendered by the game camera. 
+    /// </summary>
+    /// <remarks>
+    /// Use this script to preview projection surfaces (screens).
+    /// </remarks>
+    class ProjectionPreview : MonoBehaviour
     {
 #if CLUSTER_DISPLAY_HDRP
         const string k_ShaderName = "HDRP/Unlit";
@@ -17,7 +23,6 @@ namespace Unity.ClusterDisplay.Graphics
         static readonly Vector3 k_BaseScale = Vector3.one / 10f;
 
         Material m_Material;
-        MeshRenderer m_Renderer;
         RenderTexture m_Texture;
         
         public static ProjectionPreview Create()
@@ -27,9 +32,10 @@ namespace Unity.ClusterDisplay.Graphics
             var preview = obj.AddComponent<ProjectionPreview>();
 
             obj.hideFlags = HideFlags.HideAndDontSave;
-            preview.m_Material = new(Shader.Find(k_ShaderName));
-            preview.m_Renderer = obj.GetComponent<MeshRenderer>();
-            preview.m_Renderer.sharedMaterial = preview.m_Material;
+            preview.m_Material = new Material(Shader.Find(k_ShaderName));
+            var renderer = obj.GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.sharedMaterial = preview.m_Material;
             return preview;
         }
 
@@ -42,12 +48,14 @@ namespace Unity.ClusterDisplay.Graphics
             int overScan,
             GraphicsFormat format)
         {
-            var previewTransform = m_Renderer.transform;
+            var previewTransform = transform;
             previewTransform.position = position;
             previewTransform.rotation = rotation * k_BasePlaneRotation;
+            
             var previewScale = k_BasePlaneRotation * scale;
             previewScale.y = 1;
             previewScale.Scale(k_BaseScale);
+            
             previewTransform.localScale = previewScale;
 
             if (GraphicsUtil.AllocateIfNeeded(
