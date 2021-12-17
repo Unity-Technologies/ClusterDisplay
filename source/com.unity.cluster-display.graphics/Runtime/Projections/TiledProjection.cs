@@ -79,6 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [PopupItem("Tiled")]
+    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection", order = 2)]
     public sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]

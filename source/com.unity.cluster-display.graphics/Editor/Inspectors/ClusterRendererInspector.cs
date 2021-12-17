@@ -59,8 +59,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
                 CheckForClusterCameraComponents();
-                SelectPolicyDropdown();
-
+                
+                EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
                 EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
 
                 if (check.changed)
@@ -84,46 +84,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     m_PolicyEditor.OnInspectorGUI();
                 }
             }
-        }
-
-        void SelectPolicyDropdown()
-        {
-            var policyRef = m_PolicyProp.objectReferenceValue;
-            var selectedIndex = -1;
-            if (policyRef != null)
-            {
-                var selectedPolicy = policyRef.GetType();
-                selectedIndex = Array.IndexOf(s_ProjectionPolicies, policyRef.GetType());
-            }
-
-            var newIndex = EditorGUILayout.Popup(
-                Labels.GetGUIContent(Labels.Field.ProjectionPolicy),
-                selectedIndex,
-                s_PolicyOptions);
-
-            if (newIndex != selectedIndex)
-            {
-                if (selectedIndex >= 0)
-                {
-                    if (!EditorUtility.DisplayDialog("Cluster Rendering", k_ConfirmPolicyChange, "Change projection policy", "Cancel"))
-                    {
-                        return;
-                    }
-                }
-
-                SetProjectionPolicy(s_ProjectionPolicies[newIndex]);
-            }
-        }
-
-        void SetProjectionPolicy(Type type)
-        {
-            if (target as ClusterRenderer is not { } renderer) return;
-
-            m_PolicyEditor = null;
-            Undo.RegisterCompleteObjectUndo(target, "Set Projection Policy");
-            var setterMethod = typeof(ClusterRenderer).GetMethod(nameof(ClusterRenderer.SetNewProjectionPolicy));
-            var genericSetter = setterMethod?.MakeGenericMethod(type);
-            genericSetter?.Invoke(renderer, null);
         }
 
         void OnSceneGUI()

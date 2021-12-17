@@ -8,6 +8,9 @@ using UnityEngine.Rendering;
 namespace Unity.ClusterDisplay.Graphics
 {
     [PopupItem("Tracked Perspective")]
+    [CreateAssetMenu(fileName = "TrackedPerspectiveProjection",
+        menuName = "Cluster Display/Tracked Perspective Projection",
+        order = 2)]
     public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     {
         // TODO: Create a custom icon for this.
