@@ -10,6 +10,9 @@ namespace Unity.ClusterDisplay.Graphics
     [PopupItem("Tracked Perspective")]
     public sealed class TrackedPerspectiveProjection : ProjectionPolicy
     {
+        // TODO: Create a custom icon for this.
+        const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";
+        
         [SerializeField]
         bool m_IsDebug;
 
@@ -124,6 +127,16 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
+        public override void DrawGizmos(ClusterRendererSettings clusterSettings)
+        {
+#if UNITY_EDITOR
+            foreach (var surface in Surfaces)
+            {
+                Gizmos.DrawIcon(Origin.MultiplyPoint(surface.LocalPosition), k_SurfaceIconName);
+            }
+#endif
+        }
+        
         public void AddSurface()
         {
             m_ProjectionSurfaces.Add(ProjectionSurface.CreateDefaultPlanar($"Screen {m_ProjectionSurfaces.Count}"));
@@ -132,7 +145,12 @@ namespace Unity.ClusterDisplay.Graphics
         public void RemoveSurface(int index)
         {
             m_ProjectionSurfaces.RemoveAt(index);
-            m_RenderTargets.Remove(index);
+
+            if (m_RenderTargets.TryGetValue(index, out var rt))
+            {
+                rt.Release();
+                m_RenderTargets.Remove(index);
+            }
         }
 
         public void SetSurface(int index, ProjectionSurface surface)

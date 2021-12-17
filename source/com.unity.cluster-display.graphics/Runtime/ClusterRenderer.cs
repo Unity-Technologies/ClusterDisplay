@@ -40,6 +40,9 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
+        
+        // TODO: Create a custom icon.
+        const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
@@ -90,7 +93,8 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
-            if (m_ProjectionPolicy != null)
+            Gizmos.DrawIcon(transform.position, k_IconName);
+            if (m_ProjectionPolicy != null && Selection.Contains(gameObject))
             {
                 m_ProjectionPolicy.DrawGizmos(m_Settings);
             }

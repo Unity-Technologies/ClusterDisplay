@@ -62,8 +62,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             
             if (m_SelectedSurfaceIndex >= 0)
             {
-                var newSurface = DoSurfaceHandles(projection.Surfaces[m_SelectedSurfaceIndex], projection.Origin);
-                if (newSurface != projection.Surfaces[m_SelectedSurfaceIndex])
+                var currentSurface = projection.Surfaces[m_SelectedSurfaceIndex];
+                var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
+                if (newSurface != currentSurface)
                 {
                     Undo.RecordObject(target, "Modify Projection Surface");
                     projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
