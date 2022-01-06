@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         NestedInspector m_PolicyEditor;
 
         // We need to detect when the projection policy has changed. Caching the previous
-        // value seems to be the only reliable way to detect changes. Can we do better?
+        // value seems to be the most reliable way to detect changes.
         Object m_CachedPolicyObject;
 
         void OnEnable()
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             using (var check = new EditorGUI.ChangeCheckScope())
             {
                 EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
-                // Make sure we are drawing the correct editor for the select policy.
+                // Make sure we are drawing the correct editor for the selected policy.
                 // This detects if the policy has changed. Not all changes come from the Inspector.
                 // e.g. The scene undo stack could change it.
                 if (check.changed || m_CachedPolicyObject != currentPolicy)

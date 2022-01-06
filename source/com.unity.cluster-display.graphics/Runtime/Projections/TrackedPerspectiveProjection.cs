@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     [PopupItem("Tracked Perspective")]
     [CreateAssetMenu(fileName = "TrackedPerspectiveProjection",
         menuName = "Cluster Display/Tracked Perspective Projection")]
-    public sealed class TrackedPerspectiveProjection : ProjectionPolicy
+    sealed class TrackedPerspectiveProjection : ProjectionPolicy
     {
         // TODO: Create a custom icon for this.
         const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";

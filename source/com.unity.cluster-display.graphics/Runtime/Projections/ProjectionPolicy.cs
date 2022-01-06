@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// Implement this abstract class to perform custom rendering and presentation operations.
     /// </remarks>
-    public abstract class ProjectionPolicy : ScriptableObject
+    abstract class ProjectionPolicy : ScriptableObject
     {
         /// <summary>
         /// Called just before the frame is rendered.

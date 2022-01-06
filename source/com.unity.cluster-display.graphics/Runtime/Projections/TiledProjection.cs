@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
 
     [PopupItem("Tiled")]
     [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
-    public sealed class TiledProjection : ProjectionPolicy
+    sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};

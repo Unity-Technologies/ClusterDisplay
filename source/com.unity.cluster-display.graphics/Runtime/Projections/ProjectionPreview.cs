@@ -18,13 +18,13 @@ namespace Unity.ClusterDisplay.Graphics
 #elif CLUSTER_DISPLAY_URP
         const string k_ShaderName = "Universal Render Pipeline/Unlit";
 #endif
-        
+
         static readonly Quaternion k_BasePlaneRotation = Quaternion.Euler(90, 0, 0);
         static readonly Vector3 k_BaseScale = Vector3.one / 10f;
 
         Material m_Material;
         RenderTexture m_Texture;
-        
+
         public static ProjectionPreview Create()
         {
             var obj = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -40,10 +40,10 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public void Draw(
-            Vector3 position, 
-            Quaternion rotation, 
-            Vector3 scale, 
-            RenderTexture source, 
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RenderTexture source,
             Vector2Int resolution,
             int overScan,
             GraphicsFormat format)
@@ -51,11 +51,11 @@ namespace Unity.ClusterDisplay.Graphics
             var previewTransform = transform;
             previewTransform.position = position;
             previewTransform.rotation = rotation * k_BasePlaneRotation;
-            
+
             var previewScale = k_BasePlaneRotation * scale;
             previewScale.y = 1;
             previewScale.Scale(k_BaseScale);
-            
+
             previewTransform.localScale = previewScale;
 
             if (GraphicsUtil.AllocateIfNeeded(
@@ -72,7 +72,8 @@ namespace Unity.ClusterDisplay.Graphics
             UnityEngine.Graphics.Blit(
                 source: source, dest: m_Texture,
                 scale: (Vector2) resolution / overscannedSize,
-                offset: Vector2.one * overScan / overscannedSize);
+                offset: Vector2.one * overScan / overscannedSize
+            );
         }
     }
 }

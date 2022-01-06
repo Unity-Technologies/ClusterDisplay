@@ -13,10 +13,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     /// A typical use case would be for embedding a custom inspector
     /// inside another custom inspector.
     /// </remarks>
-    public abstract class NestedInspector : UnityEditor.Editor
+    abstract class NestedInspector : UnityEditor.Editor
     {
-        public virtual void OnSceneGUI()
-        {
-        }
+        public virtual void OnSceneGUI() { }
     }
 }

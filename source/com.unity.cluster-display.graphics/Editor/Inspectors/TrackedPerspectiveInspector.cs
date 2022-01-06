@@ -18,6 +18,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         const string k_UndoDeleteSurface = "Delete projection surface";
 
         int m_SelectedSurfaceIndex = -1;
+        GenericMenu m_NewSurfaceMenu;
 
         void OnEnable()
         {
@@ -73,7 +74,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     // We need to update the cluster rendering, but Update and LateUpdate
                     // do not happen after OnSceneGUI changes, so we need to explicitly request
                     // that the Editor execute an update loop.
-                    EditorApplication.QueuePlayerLoopUpdate();
+                    if (!Application.isPlaying)
+                    {
+                        EditorApplication.QueuePlayerLoopUpdate();
+                    }
                 }
             }
         }
@@ -114,10 +118,17 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         void DisplayAddSurfaceDropdown(Rect buttonRect, ReorderableList list)
         {
             serializedObject.Update();
-            var menu = new GenericMenu();
 
-            menu.AddItem(Labels.GetGUIContent(Labels.Field.DefaultProjectionSurface), false, AddDefaultSurface);
-            menu.ShowAsContext();
+            if (m_NewSurfaceMenu == null)
+            {
+                m_NewSurfaceMenu = new GenericMenu();
+                m_NewSurfaceMenu.AddItem(
+                    Labels.GetGUIContent(Labels.Field.DefaultProjectionSurface),
+                    false,
+                    AddDefaultSurface);
+            }
+
+            m_NewSurfaceMenu.ShowAsContext();
         }
 
         void AddDefaultSurface()
