@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             serializedObject.Update();
             foreach (var surface in projection.Surfaces)
             {
-                Handles.DrawLines(surface.GetVertices(projection.Origin), surface.DrawOrder);
+                Handles.DrawLines(surface.GetVertices(projection.Origin), surface.Indices);
             }
 
             if (m_SelectedSurfaceIndex >= m_SurfacesProp.arraySize)

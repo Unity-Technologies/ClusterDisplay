@@ -141,7 +141,7 @@ namespace Unity.ClusterDisplay.Graphics
         
         public void AddSurface()
         {
-            m_ProjectionSurfaces.Add(ProjectionSurface.CreateDefaultPlanar($"Screen {m_ProjectionSurfaces.Count}"));
+            m_ProjectionSurfaces.Add(ProjectionSurface.Create($"Screen {m_ProjectionSurfaces.Count}"));
         }
 
         public void RemoveSurface(int index)

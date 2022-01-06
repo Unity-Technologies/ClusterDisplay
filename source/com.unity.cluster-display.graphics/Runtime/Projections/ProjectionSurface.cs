@@ -35,19 +35,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         [SerializeField]
         public Quaternion LocalRotation;
-
+        
         /// <summary>
-        /// Base (untransformed) vertices of the surface (i.e. unit size).
+        /// Base (untransformed) vertices of a surface (i.e. unit size).
         /// </summary>
-        [SerializeField]
-        Vector3[] m_Vertices;
-
-        /// <summary>
-        /// Indices used to draw the surface as a polygon.
-        /// </summary>
-        [SerializeField]
-        int[] m_DrawOrder;
-
+        static readonly Vector3[] k_UnitPlaneVerts = {
+            new(0.5f, -0.5f, 0),
+            new(-0.5f, -0.5f, 0),
+            new(0.5f, 0.5f, 0),
+            new(-0.5f, 0.5f, 0)
+        };
+        
         /// <summary>
         /// Indices of 4 vertices that form a right-angled plane, in anti-clockwise
         /// order starting at the bottom-left.
@@ -55,10 +53,19 @@ namespace Unity.ClusterDisplay.Graphics
         /// <remarks>
         /// Given in the following order: [bottom-left, bottom-right, top-right, top-left].
         /// </remarks>
-        [SerializeField]
-        int[] m_PlaneWinding;
+        static readonly int[] k_UnitPlaneWinding = {0, 1, 3, 2};
+        
+        /// <summary>
+        /// Indices used to draw the surface as a polygon.
+        /// </summary>
+        static readonly int[] k_UnitPlaneDrawIndices = {0, 1, 0, 2, 1, 3, 2, 3};
 
-        public static ProjectionSurface CreateDefaultPlanar(string name)
+        /// <summary>
+        /// Creates a planar projection surface defaults for size, orientation, and position.
+        /// </summary>
+        /// <param name="name">Name of the surface.</param>
+        /// <returns></returns>
+        public static ProjectionSurface Create(string name)
         {
             return new ProjectionSurface
             {
@@ -66,23 +73,14 @@ namespace Unity.ClusterDisplay.Graphics
                 ScreenResolution = new Vector2Int(1920, 1080),
                 PhysicalSize = new Vector2(4.8f, 2.7f),
                 LocalPosition = Vector3.forward * 3f,
-                LocalRotation = Quaternion.Euler(0, 180, 0),
-                m_Vertices = new Vector3[]
-                {
-                    new(0.5f, -0.5f, 0),
-                    new(-0.5f, -0.5f, 0),
-                    new(0.5f, 0.5f, 0),
-                    new(-0.5f, 0.5f, 0)
-                },
-                m_PlaneWinding = new[] {0, 1, 3, 2},
-                m_DrawOrder = new[] {0, 1, 0, 2, 1, 3, 2, 3}
+                LocalRotation = Quaternion.Euler(0, 180, 0)
             };
         }
 
         /// <summary>
         /// A data structure for holding 4 points.
         /// </summary>
-        public readonly struct FrustumPlane
+        internal readonly struct FrustumPlane
         {
             public readonly Vector3 BottomLeft;
             public readonly Vector3 BottomRight;
@@ -114,7 +112,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Indices used to draw the surface as a polygon.
         /// </summary>
-        internal int[] DrawOrder => m_DrawOrder;
+        internal int[] Indices => k_UnitPlaneDrawIndices;
 
         /// <summary>
         /// Get vertices in a world coordinate system.
@@ -123,17 +121,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// <returns></returns>
         internal Vector3[] GetVertices(Matrix4x4 rootTransform)
         {
-            if (m_Vertices == null)
-            {
-                return Array.Empty<Vector3>();
-            }
+            Debug.Assert(k_UnitPlaneVerts != null);
             
             var surfaceTransform = rootTransform * Matrix4x4.TRS(LocalPosition, LocalRotation, Scale);
 
-            var vertsWorld = new Vector3[m_Vertices.Length];
-            for (var i = 0; i < m_Vertices.Length; i++)
+            var vertsWorld = new Vector3[k_UnitPlaneVerts.Length];
+            for (var i = 0; i < k_UnitPlaneVerts.Length; i++)
             {
-                vertsWorld[i] = surfaceTransform.MultiplyPoint(m_Vertices[i]);
+                vertsWorld[i] = surfaceTransform.MultiplyPoint(k_UnitPlaneVerts[i]);
             }
 
             return vertsWorld;
@@ -146,19 +141,15 @@ namespace Unity.ClusterDisplay.Graphics
         /// <returns></returns>
         internal FrustumPlane GetFrustumPlane(Matrix4x4 rootTransform)
         {
-            if (m_Vertices == null || m_Vertices.Length < 4)
-            {
-                // This is not a sufficient check, but it's an efficient one.
-                return new FrustumPlane();
-            }
+            Debug.Assert(k_UnitPlaneVerts is {Length: >= 4});
             
             var surfaceTransform = rootTransform * Matrix4x4.TRS(LocalPosition, LocalRotation, Scale);
 
             return new FrustumPlane(
-                bottomLeft: m_Vertices[m_PlaneWinding[0]],
-                bottomRight: m_Vertices[m_PlaneWinding[1]],
-                topLeft: m_Vertices[m_PlaneWinding[3]],
-                topRight: m_Vertices[m_PlaneWinding[2]]
+                bottomLeft: k_UnitPlaneVerts[k_UnitPlaneWinding[0]],
+                bottomRight: k_UnitPlaneVerts[k_UnitPlaneWinding[1]],
+                topLeft: k_UnitPlaneVerts[k_UnitPlaneWinding[3]],
+                topRight: k_UnitPlaneVerts[k_UnitPlaneWinding[2]]
             ).ApplyTransform(surfaceTransform);
         }
 
