@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Indices used to draw the surface as a polygon.
         /// </summary>
-        static readonly int[] k_UnitPlaneDrawIndices = {0, 1, 0, 2, 1, 3, 2, 3};
+        static readonly int[] k_UnitPlaneDrawIndices = {0, 1, 3, 2, 0};
 
         /// <summary>
         /// Creates a planar projection surface defaults for size, orientation, and position.
@@ -132,6 +132,18 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             return vertsWorld;
+        }
+
+        internal Vector3[] GetPolyLine(Matrix4x4 rootTransForm)
+        {
+            var verts = GetVertices(rootTransForm);
+            var polyline = new Vector3[Indices.Length];
+            for (var i = 0; i < Indices.Length; i++)
+            {
+                polyline[i] = verts[Indices[i]];
+            }
+
+            return polyline;
         }
 
         /// <summary>

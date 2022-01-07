@@ -14,6 +14,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         ReorderableList m_SurfacesList;
 
+        static readonly Color k_SelectedColor = new Color(235, 116, 52, 255) / 255f;
+        static readonly Color k_UnselectedColor = Color.green;
+        const int k_LineWidth = 4;
         const string k_UndoCreateSurface = "Create projection surface";
         const string k_UndoDeleteSurface = "Delete projection surface";
 
@@ -52,32 +55,39 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             serializedObject.Update();
-            foreach (var surface in projection.Surfaces)
-            {
-                Handles.DrawLines(surface.GetVertices(projection.Origin), surface.Indices);
-            }
 
             if (m_SelectedSurfaceIndex >= m_SurfacesProp.arraySize)
             {
                 m_SelectedSurfaceIndex = -1;
             }
-            
-            if (m_SelectedSurfaceIndex >= 0)
+
+            for (int i = 0; i < m_SurfacesProp.arraySize; i++)
             {
-                var currentSurface = projection.Surfaces[m_SelectedSurfaceIndex];
-                var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
-                if (newSurface != currentSurface)
+                var currentSurface = projection.Surfaces[i];
+                if (i == m_SelectedSurfaceIndex)
                 {
-                    Undo.RecordObject(target, "Modify Projection Surface");
-                    projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
-                    
-                    // We need to update the cluster rendering, but Update and LateUpdate
-                    // do not happen after OnSceneGUI changes, so we need to explicitly request
-                    // that the Editor execute an update loop.
-                    if (!Application.isPlaying)
+                    var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
+                    if (newSurface != currentSurface)
                     {
-                        EditorApplication.QueuePlayerLoopUpdate();
+                        Undo.RecordObject(target, "Modify Projection Surface");
+                        projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
+
+                        // We need to update the cluster rendering, but Update and LateUpdate
+                        // do not happen after OnSceneGUI changes, so we need to explicitly request
+                        // that the Editor execute an update loop.
+                        if (!Application.isPlaying)
+                        {
+                            EditorApplication.QueuePlayerLoopUpdate();
+                        }
                     }
+
+                    Handles.color = k_SelectedColor;
+                    Handles.DrawAAPolyLine(k_LineWidth, newSurface.GetPolyLine(projection.Origin));
+                }
+                else
+                {
+                    Handles.color = k_UnselectedColor;
+                    Handles.DrawAAPolyLine(k_LineWidth, currentSurface.GetPolyLine(projection.Origin));
                 }
             }
         }
