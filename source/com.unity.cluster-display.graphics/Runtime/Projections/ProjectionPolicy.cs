@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// Implement this abstract class to perform custom rendering and presentation operations.
     /// </remarks>
-    public abstract class ProjectionPolicy : MonoBehaviour
+    abstract class ProjectionPolicy : ScriptableObject
     {
         /// <summary>
         /// Called just before the frame is rendered.
@@ -35,5 +35,15 @@ namespace Unity.ClusterDisplay.Graphics
         /// output to the current display output device.
         /// </remarks>
         public abstract void Present(CommandBuffer commandBuffer);
+
+        /// <summary>
+        /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
+        /// </summary>
+        public virtual void OnDrawGizmos() { }
+
+        /// <summary>
+        /// Gets or sets the origin of the cluster display.
+        /// </summary>
+        public virtual Matrix4x4 Origin { get; set; }
     }
 }

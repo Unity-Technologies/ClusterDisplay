@@ -78,9 +78,9 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword;
     }
 
-    [ExecuteAlways, DisallowMultipleComponent]
     [PopupItem("Tiled")]
-    public sealed class TiledProjection : ProjectionPolicy
+    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
+    sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
             var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
 
             // Aspect must be updated *before* we pull the projection matrix.
-            activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
+            activeCamera.aspect = displayMatrixSize.x / (float) displayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
 
 #if UNITY_EDITOR
@@ -222,15 +222,12 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-#if UNITY_EDITOR
-        void OnDrawGizmos()
+        public override void OnDrawGizmos()
         {
-            if (enabled)
-            {
-                m_Gizmo.Draw();
-            }
-        }
+#if UNITY_EDITOR
+            m_Gizmo.Draw();
 #endif
+        }
 
         static void RenderStitcher(IReadOnlyList<RenderTexture> targets, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {

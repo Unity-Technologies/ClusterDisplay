@@ -2,12 +2,11 @@ using System;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(TrackedPerspectiveProjection))]
-    class TrackedPerspectiveInspector : UnityEditor.Editor
+    class TrackedPerspectiveInspector : NestedInspector
     {
         SerializedProperty m_DebugProp;
         SerializedProperty m_SurfacesProp;
@@ -15,7 +14,14 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         ReorderableList m_SurfacesList;
 
+        static readonly Color k_SelectedColor = new Color(235, 116, 52, 255) / 255f;
+        static readonly Color k_UnselectedColor = Color.green;
+        const int k_LineWidth = 4;
         const string k_UndoCreateSurface = "Create projection surface";
+        const string k_UndoDeleteSurface = "Delete projection surface";
+
+        int m_SelectedSurfaceIndex = -1;
+        GenericMenu m_NewSurfaceMenu;
 
         void OnEnable()
         {
@@ -31,67 +37,122 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 displayAddButton: true,
                 displayRemoveButton: true)
             {
-                drawHeaderCallback = rect => EditorGUI.LabelField(rect, Labels.GetGUIContent(Labels.Field.ProjectionSurfaces)),
-                drawElementCallback = OnDrawSurfaceElement,
-                onAddDropdownCallback = DisplayAddSurfaceDropdown
+                drawHeaderCallback = rect =>
+                    EditorGUI.LabelField(rect, Labels.GetGUIContent(Labels.Field.ProjectionSurfaces)),
+                drawElementCallback = DrawSurfaceElement,
+                onAddDropdownCallback = DisplayAddSurfaceDropdown,
+                onRemoveCallback = OnRemoveSurfaceElement,
+                elementHeightCallback = index =>
+                    ProjectionSurfacePropertyDrawer.GetHeight(m_SurfacesProp.GetArrayElementAtIndex(index))
             };
         }
 
-        void OnDrawSurfaceElement(Rect rect, int index, bool active, bool focused)
+        public override void OnSceneGUI()
         {
+            if (target as TrackedPerspectiveProjection is not { } projection)
+            {
+                return;
+            }
+
+            serializedObject.Update();
+
+            if (m_SelectedSurfaceIndex >= m_SurfacesProp.arraySize)
+            {
+                m_SelectedSurfaceIndex = -1;
+            }
+
+            for (int i = 0; i < m_SurfacesProp.arraySize; i++)
+            {
+                var currentSurface = projection.Surfaces[i];
+                if (i == m_SelectedSurfaceIndex)
+                {
+                    var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
+                    if (newSurface != currentSurface)
+                    {
+                        Undo.RecordObject(target, "Modify Projection Surface");
+                        projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
+
+                        // We need to update the cluster rendering, but Update and LateUpdate
+                        // do not happen after OnSceneGUI changes, so we need to explicitly request
+                        // that the Editor execute an update loop.
+                        if (!Application.isPlaying)
+                        {
+                            EditorApplication.QueuePlayerLoopUpdate();
+                        }
+                    }
+
+                    Handles.color = k_SelectedColor;
+                    Handles.DrawAAPolyLine(k_LineWidth, newSurface.GetPolyLine(projection.Origin));
+                }
+                else
+                {
+                    Handles.color = k_UnselectedColor;
+                    Handles.DrawAAPolyLine(k_LineWidth, currentSurface.GetPolyLine(projection.Origin));
+                }
+            }
+        }
+
+        static ProjectionSurface DoSurfaceHandles(ProjectionSurface surface, Matrix4x4 rootTransform)
+        {
+            var rotation = rootTransform.rotation * surface.LocalRotation;
+            rotation.Normalize();
+            var position = rootTransform.MultiplyPoint(surface.LocalPosition);
+            rotation = Handles.RotationHandle(rotation, position);
+            surface.LocalRotation = (rotation * rootTransform.inverse.rotation).normalized;
+            surface.LocalPosition = rootTransform.inverse.MultiplyPoint(Handles.PositionHandle(position, rotation));
+            return surface;
+        }
+
+        void OnRemoveSurfaceElement(ReorderableList list)
+        {
+            if (m_SelectedSurfaceIndex >= 0 &&
+                target as TrackedPerspectiveProjection is { } projection)
+            {
+                Undo.RegisterCompleteObjectUndo(target, k_UndoDeleteSurface);
+                projection.RemoveSurface(m_SelectedSurfaceIndex);
+            }
+        }
+
+        void DrawSurfaceElement(Rect rect, int index, bool active, bool focused)
+        {
+            if (active && focused)
+            {
+                m_SelectedSurfaceIndex = index;
+            }
+
             var element = m_SurfacesProp.GetArrayElementAtIndex(index);
-            EditorGUI.PropertyField(rect, element, GUIContent.none);
+
+            EditorGUI.PropertyField(rect, element);
         }
 
         void DisplayAddSurfaceDropdown(Rect buttonRect, ReorderableList list)
         {
             serializedObject.Update();
-            var existing = SceneUtils.FindAllObjectsInScene<TrackedPerspectiveSurface>();
-            var menu = new GenericMenu();
-            foreach (var surface in existing)
+
+            if (m_NewSurfaceMenu == null)
             {
-                if (!IsSurfaceInList(surface))
-                {
-                    menu.AddItem(new GUIContent(surface.name), false, () =>
-                    {
-                        AddSurfaceToList(surface);
-                    });
-                }
+                m_NewSurfaceMenu = new GenericMenu();
+                m_NewSurfaceMenu.AddItem(
+                    Labels.GetGUIContent(Labels.Field.DefaultProjectionSurface),
+                    false,
+                    AddDefaultSurface);
             }
 
-            menu.AddItem(Labels.GetGUIContent(Labels.Field.DefaultProjectionSurface), false, AddDefaultSurface);
-            menu.ShowAsContext();
-        }
-
-        bool IsSurfaceInList(TrackedPerspectiveSurface surface)
-        {
-            for (int i = 0; i < m_SurfacesProp.arraySize; i++)
-            {
-                if (surface == m_SurfacesProp.GetArrayElementAtIndex(i).objectReferenceValue == surface)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        void AddSurfaceToList(Object surface)
-        {
-            var index = m_SurfacesProp.arraySize;
-            m_SurfacesProp.InsertArrayElementAtIndex(index);
-            m_SurfacesProp.GetArrayElementAtIndex(index).objectReferenceValue = surface;
-            serializedObject.ApplyModifiedProperties();
-            EditorGUIUtility.PingObject(surface);
+            m_NewSurfaceMenu.ShowAsContext();
         }
 
         void AddDefaultSurface()
         {
-            if (target is TrackedPerspectiveProjection parent)
+            if (target as TrackedPerspectiveProjection is { } projection)
             {
-                var surface = TrackedPerspectiveSurface.CreateDefaultPlanar(parent.transform);
-                Undo.RegisterCreatedObjectUndo(surface.gameObject, k_UndoCreateSurface);
-                AddSurfaceToList(surface);
+                Undo.RegisterCompleteObjectUndo(target, k_UndoCreateSurface);
+                projection.AddSurface();
+            }
+
+            if (m_SelectedSurfaceIndex >= 0)
+            {
+                serializedObject.Update();
+                m_SurfacesList.Select(m_SurfacesList.count - 1);
             }
         }
 
@@ -103,11 +164,13 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 EditorGUILayout.PropertyField(m_DebugProp, Labels.GetGUIContent(Labels.Field.Debug));
                 m_SurfacesList.DoLayoutList();
+
                 EditorGUILayout.PropertyField(m_NodeIndexProp, Labels.GetGUIContent(Labels.Field.NodeIndexOverride));
 
                 if (check.changed)
                 {
                     serializedObject.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(target);
                 }
             }
         }
