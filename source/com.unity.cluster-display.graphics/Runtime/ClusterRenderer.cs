@@ -40,6 +40,9 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
+        
+        // TODO: Create a custom icon.
+        const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
@@ -56,38 +59,20 @@ namespace Unity.ClusterDisplay.Graphics
         /// Gets the current cluster rendering settings.
         /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
-
-        /// <summary>
-        /// Set the current projection policy.
-        /// </summary>
-        /// <typeparam name="T">The projection policy type to set.</typeparam>
-        /// <remarks>
-        /// The projection policy determines how the content is to be rendered. Only one policy
-        /// can be active at a time, so calling this method multiple times will override any
-        /// previously-active policies (and potentially erase all of the previous settings).
-        /// </remarks>
-        public void SetProjectionPolicy<T>() where T : ProjectionPolicy
+        
+#if UNITY_EDITOR
+        void OnDrawGizmos()
         {
-            if (m_ProjectionPolicy != null && m_ProjectionPolicy == GetComponent<ProjectionPolicy>())
+            Gizmos.DrawIcon(transform.position, k_IconName);
+            if (m_ProjectionPolicy != null && Selection.Contains(gameObject))
             {
-                DestroyImmediate(m_ProjectionPolicy);
-            }
-
-            m_ProjectionPolicy = gameObject.AddComponent<T>();
-            m_ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
-        }
-
-        void OnDestroy()
-        {
-            if (m_ProjectionPolicy != null)
-            {
-                DestroyImmediate(m_ProjectionPolicy);
+                m_ProjectionPolicy.OnDrawGizmos();
             }
         }
+#endif
 
         void OnEnable()
         {
-            m_ProjectionPolicy = GetComponent<ProjectionPolicy>();
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -97,6 +82,14 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
+        }
+
+        void Update()
+        {
+            if (m_ProjectionPolicy != null)
+            {
+                m_ProjectionPolicy.Origin = transform.localToWorldMatrix;
+            }
         }
 
         void OnDisable()
