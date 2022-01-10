@@ -28,13 +28,10 @@ namespace Unity.ClusterDisplay.Graphics
         CameraState m_CameraState;
         Camera m_Camera;
 
-        void Awake()
-        {
-            m_Camera = GetComponent<Camera>();
-        }
-
         void Update()
         {
+            m_Camera = GetComponent<Camera>();
+            
             if (m_Camera.enabled && ClusterRenderer.IsActive())
             {
                 // TODO Not technically breaking but unexpected from a usage perspective.

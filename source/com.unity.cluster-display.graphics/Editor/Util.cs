@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             var graphicsSettingsObj = AssetDatabase.LoadAssetAtPath<GraphicsSettings>("ProjectSettings/GraphicsSettings.asset");
             var serializedObject = new SerializedObject(graphicsSettingsObj);
             var arrayProp = serializedObject.FindProperty("m_AlwaysIncludedShaders");
-            
+
             // Check if shader is already included.
             for (int i = 0; i < arrayProp.arraySize; ++i)
             {
