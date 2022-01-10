@@ -95,8 +95,6 @@ namespace Unity.ClusterDisplay.Graphics
         RenderTexture[] m_TileRenderTargets;
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
 
-        GraphicsFormat m_GraphicsFormat;
-
         public TiledProjectionSettings Settings
         {
             get => m_Settings;
@@ -120,15 +118,11 @@ namespace Unity.ClusterDisplay.Graphics
             public bool UseDebugViewportSubsection;
         }
 
-        void OnEnable()
-        {
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-        }
-
         void OnDisable()
         {
+            m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
-
+            
             // Used only on Legacy when supported.
             // For SRP we use additional camera data.
             GraphicsUtil.SetShaderKeyword(false);
@@ -188,7 +182,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,
                 renderContext.OverscannedSize.x,
                 renderContext.OverscannedSize.y,
-                m_GraphicsFormat,
                 "Source");
 
             m_BlitCommands.Clear();

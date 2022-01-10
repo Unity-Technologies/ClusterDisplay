@@ -40,13 +40,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
 
-        GraphicsFormat m_GraphicsFormat;
-
-        void OnEnable()
-        {
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-        }
-
         void OnDisable()
         {
             ClearPreviews();
@@ -123,8 +116,7 @@ namespace Unity.ClusterDisplay.Graphics
                         surface.Scale,
                         rt,
                         surface.ScreenResolution,
-                        clusterSettings.OverScanInPixels,
-                        m_GraphicsFormat);
+                        clusterSettings.OverScanInPixels);
                 }
             }
         }
@@ -168,8 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (GraphicsUtil.AllocateIfNeeded(
                 ref rt,
                 overscannedSize.x,
-                overscannedSize.y,
-                m_GraphicsFormat))
+                overscannedSize.y))
             {
                 m_RenderTargets[index] = rt;
             }

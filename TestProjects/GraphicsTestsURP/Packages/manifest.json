@@ -2,7 +2,7 @@
   "dependencies": {
     "com.unity.cluster-display": "file:../../../source/com.unity.cluster-display",
     "com.unity.cluster-display.graphics": "file:../../../source/com.unity.cluster-display.graphics",
-    "com.unity.collab-proxy": "1.15.4",
+    "com.unity.collab-proxy": "1.15.7",
     "com.unity.ide.rider": "3.0.7",
     "com.unity.ide.visualstudio": "2.0.12",
     "com.unity.ide.vscode": "1.2.4",
@@ -10,7 +10,9 @@
     "com.unity.render-pipelines.core": "file:../../../../Graphics/com.unity.render-pipelines.core",
     "com.unity.render-pipelines.universal": "file:../../../../Graphics/com.unity.render-pipelines.universal",
     "com.unity.shadergraph": "file:../../../../Graphics/com.unity.shadergraph",
-    "com.unity.test-framework": "1.1.30",
+    "com.unity.test-framework": "1.1.18",
+    "com.unity.test-framework.build": "0.0.1-preview.14",
+    "com.unity.test-framework.utp-reporter": "1.0.2-preview",
     "com.unity.testframework.graphics": "7.8.14-preview",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.7.0-pre.1",
@@ -48,5 +50,10 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  }
+  },
+  "testables": [
+    "com.unity.render-pipelines.core",
+    "com.unity.render-pipelines.universal",
+    "com.unity.testframework.graphics"
+  ]
 }

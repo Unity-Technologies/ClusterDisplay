@@ -21,8 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
     public class ClusterRenderer : MonoBehaviour
     {
         // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
-        static int S_ActiveInstancesCount;
-        internal static bool IsActive() => S_ActiveInstancesCount > 0;
+        static int s_ActiveInstancesCount;
+        internal static bool IsActive() => s_ActiveInstancesCount > 0;
         internal static Action Enabled = delegate { };
         internal static Action Disabled = delegate { };
         
@@ -53,22 +53,6 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
-        
-        // TODO capture does not belong here anymore.
-        readonly List<ICapturePresent> m_PresentCaptures = new List<ICapturePresent>();
-
-        internal void AddCapturePresent(ICapturePresent capturePresent)
-        {
-            if (!m_PresentCaptures.Contains(capturePresent))
-            {
-                m_PresentCaptures.Add(capturePresent);
-            }
-        }
-
-        internal void RemoveCapturePresent(ICapturePresent capturePresent)
-        {
-            m_PresentCaptures.Remove(capturePresent);
-        }
 
         /// <summary>
         /// Enable debug mode.
@@ -83,6 +67,11 @@ namespace Unity.ClusterDisplay.Graphics
         /// Gets the current cluster rendering settings.
         /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
+
+        /// <summary>
+        /// Gets the camera internally used to present on screen.
+        /// </summary>
+        public Camera PresentCamera => m_Presenter.Camera;
         
 #if UNITY_EDITOR
         void OnDrawGizmos()
@@ -97,10 +86,10 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            ++S_ActiveInstancesCount;
+            ++s_ActiveInstancesCount;
 
             // TODO More elegant / user friendly way to handle this.
-            if (S_ActiveInstancesCount > 1)
+            if (s_ActiveInstancesCount > 1)
             {
                 throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
             }
@@ -133,7 +122,7 @@ namespace Unity.ClusterDisplay.Graphics
             
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            --S_ActiveInstancesCount;
+            --s_ActiveInstancesCount;
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
