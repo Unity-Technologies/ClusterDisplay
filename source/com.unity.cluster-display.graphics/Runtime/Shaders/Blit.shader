@@ -1,4 +1,4 @@
-Shader "ClusterDisplay/Blit"
+Shader "Hidden/ClusterDisplay/Blit"
 {
     SubShader
     {

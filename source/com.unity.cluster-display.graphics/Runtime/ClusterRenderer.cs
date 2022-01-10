@@ -148,21 +148,21 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnPresent(CommandBuffer commandBuffer)
         {
-            foreach (var command in m_BlitCommands)
-            {
-                GraphicsUtil.Blit(commandBuffer, command);
-            }
+            ExecuteBlitCommands(commandBuffer);
 
             foreach (var capturePresent in m_PresentCaptures)
             {
                 capturePresent.OnBeginCapture();
-                
-                foreach (var command in m_BlitCommands)
-                {
-                    GraphicsUtil.Blit(capturePresent.GetCommandBuffer(), command);
-                }
-                
+                ExecuteBlitCommands(capturePresent.GetCommandBuffer());
                 capturePresent.OnEndCapture();
+            }
+        }
+
+        void ExecuteBlitCommands(CommandBuffer commandBuffer)
+        {
+            foreach (var command in m_BlitCommands)
+            {
+                GraphicsUtil.Blit(commandBuffer, command);
             }
         }
         
