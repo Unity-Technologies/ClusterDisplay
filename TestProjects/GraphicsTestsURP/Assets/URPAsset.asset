@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf2edee5c58d82540a51f03df9d42094, type: 3}
   m_Name: URPAsset
   m_EditorClassIdentifier: 
-  k_AssetVersion: 9
-  k_AssetPreviousVersion: 9
+  k_AssetVersion: 10
+  k_AssetPreviousVersion: 10
   m_RendererType: 1
   m_RendererData: {fileID: 0}
   m_RendererDataList:
@@ -26,6 +26,7 @@ MonoBehaviour:
   m_SupportsHDR: 1
   m_MSAA: 1
   m_RenderScale: 1
+  m_UpscalingFilter: 0
   m_MainLightRenderingMode: 1
   m_MainLightShadowsSupported: 1
   m_MainLightShadowmapResolution: 2048
@@ -66,6 +67,6 @@ MonoBehaviour:
   m_LocalShadowsAtlasResolution: 256
   m_MaxPixelLights: 0
   m_ShadowAtlasResolution: 256
-  m_ShaderVariantLogLevel: 0
   m_VolumeFrameworkUpdateMode: 0
+  m_ShaderVariantLogLevel: 0
   m_ShadowCascades: 0
