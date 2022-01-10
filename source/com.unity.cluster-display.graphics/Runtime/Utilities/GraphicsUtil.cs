@@ -7,6 +7,10 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class GraphicsUtil
     {
+        // Will only be used for Legacy if we end up supporting it.
+        // Otherwise see ScreenCoordOverrideUtils in SRP Core.
+        const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
+
         // We need to flip along the Y axis when blitting to screen on HDRP,
         // but not when using URP.
 #if CLUSTER_DISPLAY_HDRP
@@ -14,6 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
 #else
         const bool k_FlipWhenBlittingToScreen = false;
 #endif
+        public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
         static class ShaderIDs
         {
@@ -77,19 +82,19 @@ namespace Unity.ClusterDisplay.Graphics
         public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, GraphicsFormat format, string name)
         {
             var nameNeedsUpdate = false;
-            
+
             if (rts == null || count != rts.Length)
             {
                 nameNeedsUpdate = true;
                 DeallocateIfNeeded(ref rts);
                 rts = new RenderTexture[count];
             }
-            
+
             for (var i = 0; i != count; ++i)
             {
                 nameNeedsUpdate |= AllocateIfNeeded(ref rts[i], width, height, format);
             }
-            
+
             if (nameNeedsUpdate)
             {
                 for (var i = 0; i != count; ++i)
@@ -143,6 +148,11 @@ namespace Unity.ClusterDisplay.Graphics
             rt = null;
         }
 
+        public static void SetShaderKeyword(bool enabled)
+        {
+            SetShaderKeyword(k_ShaderKeyword, enabled);
+        }
+        
         public static void SetShaderKeyword(string keyword, bool enabled)
         {
             if (Shader.IsKeywordEnabled(keyword) == enabled)
@@ -161,6 +171,6 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // Convention, consistent with blit scale-bias for example.
-        public static Vector4 RectAsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
 }

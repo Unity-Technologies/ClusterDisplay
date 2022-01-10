@@ -2,6 +2,7 @@
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
+using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
@@ -11,94 +12,76 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
 
+        SerializedProperty m_PolicyProp;
+        SerializedProperty m_OverscanProp;
+
+        NestedInspector m_PolicyEditor;
+
+        // We need to detect when the projection policy has changed. Caching the previous
+        // value seems to be the most reliable way to detect changes.
+        Object m_CachedPolicyObject;
+
+        void OnEnable()
+        {
+            m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
+            m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
+        }
+
         public override void OnInspectorGUI()
         {
+#if CLUSTER_DISPLAY_URP
+            RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
+#endif
+            CheckForClusterCameraComponents();
+
             serializedObject.Update();
+            var currentPolicy = m_PolicyProp.objectReferenceValue;
 
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-#if CLUSTER_DISPLAY_URP
-                RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
-#endif
-                CheckForClusterCameraComponents();
-                
-                var clusterRenderer = target as ClusterRenderer;
-
-                var settings = clusterRenderer.Settings;
-                settings.GridSize = EditorGUILayout.Vector2IntField(Labels.GetGUIContent(Labels.Field.GridSize), settings.GridSize);
-                settings.PhysicalScreenSize = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.PhysicalScreenSize), settings.PhysicalScreenSize);
-                settings.Bezel = EditorGUILayout.Vector2Field(Labels.GetGUIContent(Labels.Field.Bezel), settings.Bezel);
-                settings.OverScanInPixels = EditorGUILayout.IntSlider(Labels.GetGUIContent(Labels.Field.Overscan), settings.OverScanInPixels, 0, 256);
-
-                clusterRenderer.IsDebug = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.Debug), clusterRenderer.IsDebug);
-
-                if (clusterRenderer.IsDebug)
+                EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
+                // Make sure we are drawing the correct editor for the selected policy.
+                // This detects if the policy has changed. Not all changes come from the Inspector.
+                // e.g. The scene undo stack could change it.
+                if (check.changed || m_CachedPolicyObject != currentPolicy)
                 {
-                    EditDebugSettings(clusterRenderer);
-                }
-
-                if (check.changed)
-                {
-                    serializedObject.ApplyModifiedProperties();
+                    if (m_PolicyEditor != null)
+                    {
+                        DestroyImmediate(m_PolicyEditor);
+                    }
                     
-                    // TODO needed?
-                    EditorUtility.SetDirty(clusterRenderer);
+                    if (currentPolicy != null || m_PolicyEditor == null)
+                    {
+                        m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                    }
                 }
+            }
+
+            EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
+            
+            if (currentPolicy != null && m_PolicyEditor != null)
+            {
+                m_PolicyEditor.OnInspectorGUI();
+                m_CachedPolicyObject = currentPolicy;
+            }
+            
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        void OnSceneGUI()
+        {
+            if (m_PolicyEditor != null)
+            {
+                m_PolicyEditor.OnSceneGUI();
             }
         }
 
-        // TODO renderer exposes both debug-settings and context, redundant arguments.
-        static void EditDebugSettings(ClusterRenderer clusterRenderer)
+        void OnDestroy()
         {
-            var debugSettings = clusterRenderer.DebugSettings;
-            var settings = clusterRenderer.Settings;
-            
-            debugSettings.TileIndexOverride = EditorGUILayout.IntField(Labels.GetGUIContent(Labels.Field.TileIndexOverride), debugSettings.TileIndexOverride);
-
-            var prevEnableKeyword = debugSettings.ScreenCoordOverride;
-            debugSettings.ScreenCoordOverride = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.ScreenCoordOverride), prevEnableKeyword);
-            /*if (debugSettings.EnableKeyword != prevEnableKeyword)
+            if (m_PolicyEditor != null)
             {
-                ClusterRenderer.EnableScreenCoordOverrideKeyword(debugSettings.EnableKeyword);
-            }*/
-
-            debugSettings.LayoutMode = (LayoutMode)EditorGUILayout.EnumPopup(Labels.GetGUIContent(Labels.Field.LayoutMode), debugSettings.LayoutMode);
-
-            debugSettings.UseDebugViewportSubsection = EditorGUILayout.Toggle(Labels.GetGUIContent(Labels.Field.DebugViewportSubsection), debugSettings.UseDebugViewportSubsection);
-
-            if (debugSettings.LayoutMode == LayoutMode.StandardStitcher)
-            {
-                debugSettings.BezelColor = EditorGUILayout.ColorField(Labels.GetGUIContent(Labels.Field.BezelColor), debugSettings.BezelColor);
+                DestroyImmediate(m_PolicyEditor);
             }
-
-            // Let user manipulate viewport directly instead of inferring it from tile index.
-            if (debugSettings.UseDebugViewportSubsection)
-            {
-                EditorGUILayout.LabelField("Viewport Section");
-
-                var rect = debugSettings.ViewportSubsection;
-                var xMin = rect.xMin;
-                var xMax = rect.xMax;
-                var yMin = rect.yMin;
-                var yMax = rect.yMax;
-
-                xMin = EditorGUILayout.Slider("xMin", xMin, 0, 1);
-                xMax = EditorGUILayout.Slider("xMax", xMax, 0, 1);
-                yMin = EditorGUILayout.Slider("yMin", yMin, 0, 1);
-                yMax = EditorGUILayout.Slider("yMax", yMax, 0, 1);
-                debugSettings.ViewportSubsection = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
-            }
-            else
-            {
-                // Reset viewport subsection.
-                debugSettings.ViewportSubsection = Viewport.TileIndexToSubSection(settings.GridSize, debugSettings.TileIndexOverride);
-            }
-
-            EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));
-            var offset = debugSettings.ScaleBiasTextOffset;
-            offset.x = EditorGUILayout.Slider("x", offset.x, -1, 1);
-            offset.y = EditorGUILayout.Slider("y", offset.y, -1, 1);
-            debugSettings.ScaleBiasTextOffset = offset;
         }
 
         static void CheckForClusterCameraComponents()
@@ -113,6 +96,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     {
                         AddMissingClusterCameraComponents();
                     }
+
                     GUILayout.FlexibleSpace();
                 }
             }
@@ -125,7 +109,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 if (camera.GetComponent<ClusterRenderer>() == null && camera.GetComponent<ClusterCamera>() == null)
                 {
                     camera.gameObject.AddComponent<ClusterCamera>();
-                    Debug.Log($"Added {typeof(ClusterCamera)} component to {camera.name}");
                 }
             }
         }
