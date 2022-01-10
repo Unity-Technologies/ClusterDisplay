@@ -6,6 +6,10 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+using NUnit.Framework;
+using Unity.ClusterDisplay.Graphics;
+using UnityEngine.TestTools.Graphics;
+using Assert = UnityEngine.Assertions.Assert;
 
 namespace Unity.ClusterDisplay.Graphics.Tests.Universal
 {
@@ -18,9 +22,10 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
         [SerializeField]
         ClusterRenderer m_ClusterRenderer;
 
-        RTHandle m_VanillaCaptureHandle;
         RenderTexture m_VanillaCapture;
         RenderTexture m_StitcherCapture;
+        Texture2D m_VanillaCaptureTex2D;
+        Texture2D m_StitcherCapturetex2D;
 
         void OnGUI()
         {
@@ -35,12 +40,20 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             }
         }
 
+        void OnEnable()
+        {
+            Blitter_.InitializeIfNeeded();
+        }
+
         void OnDisable()
         {
+            Blitter_.Dispose();
+            
+            CoreUtils.Destroy(m_VanillaCaptureTex2D);
+            CoreUtils.Destroy(m_StitcherCapturetex2D);
             GraphicsUtil.DeallocateIfNeeded(ref m_VanillaCapture);
             GraphicsUtil.DeallocateIfNeeded(ref m_StitcherCapture);
             StopAllCoroutines();
-            Blitter_.Dispose();
         }
 
         [ContextMenu("Run Test")]
@@ -52,18 +65,18 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
         // [UnityTest]
         IEnumerator CompareVanillaAndStitchedCluster()
         {
-            Blitter_.InitializeifNeeded();
-
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
             // We assume there's no resize during the execution.
-            // TODO Maybe force GameView display and size.
+            // TODO Maybe force Game View display and size.
 
-            var format = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, m_Camera.pixelWidth, m_Camera.pixelHeight, format);
-            GraphicsUtil.AllocateIfNeeded(ref m_StitcherCapture, m_Camera.pixelWidth, m_Camera.pixelHeight, format);
+            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
+            GraphicsUtil.AllocateIfNeeded(ref m_StitcherCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
 
+            m_VanillaCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
+            m_StitcherCapturetex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
+            
             m_ClusterRenderer.gameObject.SetActive(true);
             m_ClusterRenderer.enabled = false;
 
@@ -71,7 +84,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             m_Camera.gameObject.SetActive(true);
             m_Camera.enabled = true;
 
-            // Perform a capture of vanilla output
             using (new CameraCapture(m_Camera, m_VanillaCapture))
             {
                 // Let a capture of the vanilla output happen.
@@ -80,9 +92,11 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
 
             m_ClusterRenderer.enabled = true;
 
-            using (new StitcherCapture(m_ClusterRenderer, m_StitcherCapture))
+            Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
+
+            using (new CameraCapture(m_ClusterRenderer.PresentCamera, m_StitcherCapture))
             {
-                // Let a capture of the stitcher output happen.
+                // Let a capture of the stitched output happen.
                 // TODO Figure out why 2 frames are needed.
                 yield return new WaitForEndOfFrame();
             }
@@ -90,12 +104,31 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             // Compare the two.
 
             yield return null;
+
+            CopyTotexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
+            CopyTotexture2D(m_StitcherCapture, m_StitcherCapturetex2D);
+
+            var settings = new ImageComparisonSettings();
+            
+            ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_StitcherCapturetex2D, settings);
         }
 
         IEnumerator Wait()
         {
             yield return null;
             yield return null;
+        }
+
+        static void CopyTotexture2D(RenderTexture source, Texture2D dest)
+        {
+            Assert.IsTrue(source.width == dest.width);
+            Assert.IsTrue(source.height == dest.height);
+            
+            var restore = RenderTexture.active;
+            RenderTexture.active = source;
+            dest.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            dest.Apply();
+            RenderTexture.active = restore;
         }
     }
 }

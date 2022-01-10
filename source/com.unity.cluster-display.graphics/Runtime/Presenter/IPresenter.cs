@@ -8,6 +8,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         event Action<CommandBuffer> Present;
         public Color ClearColor { set; }
+        // We expose the output camera since it may be used for capture.
+        public Camera Camera { get; }
         void Enable(GameObject gameObject);
         void Disable();
     }

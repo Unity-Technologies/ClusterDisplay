@@ -20,6 +20,8 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_ClearColor = value;
         }
 
+        public Camera Camera => m_Camera;
+        
         public void Disable()
         {
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
@@ -47,8 +49,12 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            var target = renderingData.cameraData.renderer.cameraColorTargetHandle;
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
-            cmd.SetRenderTarget(renderingData.cameraData.renderer.cameraColorTargetHandle);
+
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke);
+            
+            cmd.SetRenderTarget(target);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
             
             Present.Invoke(cmd);

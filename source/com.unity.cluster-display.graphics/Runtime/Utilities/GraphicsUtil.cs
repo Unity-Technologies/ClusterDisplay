@@ -5,11 +5,16 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    static class GraphicsUtil
+    internal static class GraphicsUtil
     {
         // Will only be used for Legacy if we end up supporting it.
         // Otherwise see ScreenCoordOverrideUtils in SRP Core.
         const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
+        
+        // Used to support the camera bridge capture API. 
+        static readonly int k_RecorderTempRT = Shader.PropertyToID("TempRecorder");
+
+        static GraphicsFormat s_GraphicsFormat = GraphicsFormat.None;
 
         // We need to flip along the Y axis when blitting to screen on HDRP,
         // but not when using URP.
@@ -32,6 +37,16 @@ namespace Unity.ClusterDisplay.Graphics
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
+        static GraphicsFormat GetGraphicsFormat()
+        {
+            if (s_GraphicsFormat == GraphicsFormat.None)
+            {
+                s_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+            }
+
+            return s_GraphicsFormat;
+        }
+        
         static MaterialPropertyBlock GetPropertyBlock()
         {
             if (s_PropertyBlock == null)
@@ -79,6 +94,11 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), shaderPass, MeshTopology.Quads, 4, 1, propertyBlock);
         }
 
+        public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, string name)
+        {
+            AllocateIfNeeded(ref rts, count, width, height, GetGraphicsFormat(), name);
+        }
+
         public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, GraphicsFormat format, string name)
         {
             var nameNeedsUpdate = false;
@@ -102,6 +122,11 @@ namespace Unity.ClusterDisplay.Graphics
                     rts[i].name = $"{name}-{width}X{height}-{i}";
                 }
             }
+        }
+
+        public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height)
+        {
+            return AllocateIfNeeded(ref rt, width, height, GetGraphicsFormat());
         }
 
         public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
@@ -172,5 +197,23 @@ namespace Unity.ClusterDisplay.Graphics
 
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+
+        internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<CommandBuffer> render)
+        {
+            var captureActions = CameraCaptureBridge.GetCaptureActions(camera);
+            if (captureActions != null)
+            {
+                cmd.GetTemporaryRT(k_RecorderTempRT, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Point, GetGraphicsFormat());
+                cmd.SetRenderTarget(k_RecorderTempRT);
+                cmd.ClearRenderTarget(true, true, clearColor);
+
+                render.Invoke(cmd);
+
+                for (captureActions.Reset(); captureActions.MoveNext();)
+                {
+                    captureActions.Current(k_RecorderTempRT, cmd);
+                }
+            }
+        }
     }
 }

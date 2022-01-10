@@ -18,6 +18,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Color ClearColor { get; set; }
 
+        public Camera Camera => null;
+
         public void Enable(GameObject gameObject)
         {
             throw new InvalidOperationException(

@@ -3,8 +3,8 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics.Tests.Universal
 {
-    // Borrowed from SRP core Blitter, we want a slightly different API, don't care about older platforms.
-    // TODO Promote to package?
+// Borrowed from SRP core Blitter, we want a slightly different API, don't care about older platforms.
+// TODO Promote to package?
     static class Blitter_
     {
         static class BlitShaderIDs
@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             public static readonly int _BlitScaleBiasRt = Shader.PropertyToID("_BlitScaleBiasRt");
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
-            
+
         const string k_ShaderName = "Hidden/Universal/CoreBlit";
 
         static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
         static MaterialPropertyBlock s_PropertyBlock;
         static bool s_Initialized;
 
-        public static void InitializeifNeeded()
+        public static void InitializeIfNeeded()
         {
             if (!s_Initialized)
             {
@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             CoreUtils.Destroy(s_Material);
             s_Initialized = false;
         }
-        
+
         public static void BlitQuad(CommandBuffer cmd, RenderTargetIdentifier source)
         {
             BlitQuad(cmd, source, k_IdentityScaleBias, k_IdentityScaleBias, 0, true);
