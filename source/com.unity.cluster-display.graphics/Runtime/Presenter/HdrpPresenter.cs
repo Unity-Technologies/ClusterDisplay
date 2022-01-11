@@ -38,8 +38,9 @@ namespace Unity.ClusterDisplay.Graphics
             // We consider that making components Not Editable is enough to communicate our intent to users.
             m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
             
-            // HDAdditionalCameraData requires a Camera so no need to add it manually.
-            var camera = gameObject.GetComponent<Camera>();
+            // HDAdditionalCameraData requires a Camera, so add one if it doesn't already exist.
+            // This camera is not serialized, so it will probably need to be created when running a build.
+            var camera = gameObject.GetOrAddComponent<Camera>();
             Assert.IsNotNull(camera);
             // We use the camera to blit to screen.
             camera.targetTexture = null;
