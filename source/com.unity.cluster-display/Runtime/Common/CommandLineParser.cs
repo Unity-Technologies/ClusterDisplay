@@ -24,20 +24,24 @@ namespace Unity.ClusterDisplay
         private static void ResetCache()
         {
             m_Arguments = null;
-            
-            m_NodeTypeStr = null;
+
+            m_HeadlessEmitter = null;
+            m_RepeaterReplacesHeadlessEmitter = null;
             m_ClusterLogicSpecified = null;
-            m_RepeaterSpecified = null;
-            m_EmitterSpecified = null;
-            
+            m_NodeTypeStr = null;
             m_NodeID = null;
+            m_MulticastAddress = null;
             m_RXPort = null;
             m_TXPort = null;
-            m_MulticastAddress = null;
-            m_RepeaterCount = null;
-            
-            m_DebugFlag = null;
             m_AdapterName = null;
+            m_RepeaterCount = null;
+            m_DebugFlag = null;
+            m_EmitterSpecified = null;
+            m_RepeaterSpecified = null;
+            m_TargetFPS = null;
+            m_GridSize = null;
+            m_Bezel = null;
+            m_PhysicalScreenSize = null;
         }
 
         private static void PrintArguments(List<string> arguments)
@@ -104,7 +108,6 @@ namespace Unity.ClusterDisplay
         private static bool? m_EmitterSpecified;
         private static bool? m_RepeaterSpecified;
         private static int? m_TargetFPS;
-        
         private static Vector2Int? m_GridSize;
         private static Vector2Int? m_Bezel;
         private static int? m_Overscan;
