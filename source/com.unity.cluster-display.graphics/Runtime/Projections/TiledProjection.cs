@@ -78,10 +78,9 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword;
     }
 
-    [CreateAssetMenu(fileName = "ClusterRenderer", menuName = "Cluster Display/Projection Policies/Tiled Projection", order = 1)]
-    [ExecuteAlways, DisallowMultipleComponent]
     [PopupItem("Tiled")]
-    public sealed class TiledProjection : ProjectionPolicy
+    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
+    sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
@@ -106,7 +105,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public ref readonly TiledProjectionDebugSettings DebugSettings => ref m_DebugSettings;
 
-        public ref struct TileProjectionContext
+        ref struct TileProjectionContext
         {
             public int CurrentTileIndex;
             public int NumTiles;
@@ -154,8 +153,18 @@ namespace Unity.ClusterDisplay.Graphics
         public TileProjectionContext BuildRenderContext(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return default(TileProjectionContext);
+			{
+				return default(TileProjectionContext);
+			}
 
+			// Move early return at the Update's top.
+            if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
+            {
+                return;
+            }
+
+            GraphicsUtil.SetShaderKeyword(!m_IsDebug || m_DebugSettings.EnableKeyword);
+			
             int currentTileIndex = GetTileIndex();
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
@@ -165,6 +174,12 @@ namespace Unity.ClusterDisplay.Graphics
             // Aspect must be updated *before* we pull the projection matrix.
             activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
+
+#if UNITY_EDITOR
+            m_Gizmo.TileIndex = currentTileIndex;
+            m_Gizmo.GridSize = m_Settings.GridSize;
+            m_Gizmo.ViewProjectionInverse = (originalProjectionMatrix * activeCamera.worldToCameraMatrix).inverse;
+#endif
 
             // Prepare context properties.
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, clusterSettings.OverScanInPixels);
@@ -220,6 +235,7 @@ namespace Unity.ClusterDisplay.Graphics
                 "Source");
 
             m_BlitCommands.Clear();
+
             if (isStitcher)
             {
                 RenderStitcher(
@@ -285,6 +301,8 @@ namespace Unity.ClusterDisplay.Graphics
                 var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
                 var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+
+                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
                 

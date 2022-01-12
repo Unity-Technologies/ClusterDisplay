@@ -141,10 +141,10 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 rt.Release();
             }
+
+            rt = null;
         }
 
-        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
-        
         public static void SetShaderKeyword(bool enabled)
         {
             if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
@@ -161,5 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
                 Shader.DisableKeyword(k_ShaderKeyword);
             }
         }
+
+        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
 }

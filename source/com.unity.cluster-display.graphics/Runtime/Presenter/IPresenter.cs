@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Color ClearColor { set; }
 
-        void Enable();
+        void Enable(GameObject gameObject);
         void Disable();
     }
 }

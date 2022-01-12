@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public readonly struct PostEffectsParams
+    readonly struct PostEffectsParams
     {
         readonly Vector2 m_DisplayMatrixSize;
         readonly Vector2Int m_GridSize;

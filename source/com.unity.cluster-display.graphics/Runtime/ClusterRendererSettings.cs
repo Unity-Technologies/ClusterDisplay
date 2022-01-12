@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         [Range(0, 256)]
         int m_OverscanInPixels;
-        
+
         /// <summary>
         /// Amount of overscan per tile expressed in pixels.
         /// </summary>

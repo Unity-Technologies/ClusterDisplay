@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public readonly struct BlitParams
+    readonly struct BlitParams
     {
         readonly Vector2 m_DisplaySize;
         readonly Vector2 m_SrcOffset;

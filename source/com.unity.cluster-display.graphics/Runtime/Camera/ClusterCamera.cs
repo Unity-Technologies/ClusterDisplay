@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Win32;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -46,6 +45,8 @@ namespace Unity.ClusterDisplay.Graphics
     public static class ClusterCameraManager
     {
         readonly static List<Camera> m_ActiveCameras = new();
+
+        public static ClusterCameraManager Instance { get; } = new();
 
         // Programmer's note: ElementAtOrDefault() is one of the few non-allocating LINQ methods
         public static Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);

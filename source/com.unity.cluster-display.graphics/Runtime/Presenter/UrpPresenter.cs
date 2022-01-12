@@ -30,7 +30,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Enable()
         {
+            m_Camera = gameObject.GetOrAddComponent<Camera>();
+            m_Camera.hideFlags = HideFlags.NotEditable;
+            // We use the camera to blit to screen.
+            // Configure it to minimize wasteful rendering.
+            m_Camera.targetTexture = null;
+            m_Camera.cullingMask = 0;
+            m_Camera.clearFlags = CameraClearFlags.Nothing;
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender; // Insurances to avoid duplicate delegate registration.
+            
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
 
@@ -55,6 +63,8 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 return;
             }
+
+            var target = renderingData.cameraData.renderer.cameraColorTarget;
 
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;

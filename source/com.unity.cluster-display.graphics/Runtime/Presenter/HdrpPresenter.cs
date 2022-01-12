@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
             Assert.IsNotNull(camera);
             // We use the camera to blit to screen.
             camera.targetTexture = null;
-            camera.hideFlags = HideFlags.NotEditable;
+            camera.hideFlags = HideFlags.HideAndDontSave;
             
             // Assigning a customRender will bypass regular camera rendering,
             // so we don't need to worry about the camera render involving wasteful operations.

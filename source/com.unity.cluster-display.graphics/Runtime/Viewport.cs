@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public readonly struct Viewport
+    readonly struct Viewport
     {
         readonly Vector2Int m_GridSize;
         readonly Vector2 m_PhysicalScreenSize;
