@@ -1,0 +1,18 @@
+{
+    "name": "Unity.ClusterDisplay.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:07b081236bf19154392571ccef7c2d64"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
