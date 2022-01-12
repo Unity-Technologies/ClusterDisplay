@@ -61,9 +61,10 @@ namespace Unity.ClusterDisplay
             {
                 if (m_Arguments == null)
                 {
-                    #if  UNITY_EDITOR
                     m_Arguments = new List<string>(20) {};
                     m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
+                    
+                    #if  UNITY_EDITOR
                     if (EditorApplication.isPlayingOrWillChangePlaymode && 
                         ClusterSync.TryGetInstance(out var clusterSync) && 
                         !clusterSync.EditorConfig.m_IgnoreEditorCmdLine)
