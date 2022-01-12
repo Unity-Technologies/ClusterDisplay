@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         None = 0,
         AsymmetricProjection = 1 << 0,
         ScreenCoordOverride = 1 << 1,
+        AsymmetricProjectionAndScreenCoordOverride = AsymmetricProjection | ScreenCoordOverride,
         All = ~0
     }
 
@@ -84,10 +85,12 @@ namespace Unity.ClusterDisplay.Graphics
         readonly Camera m_Camera;
         readonly UniversalAdditionalCameraData m_AdditionalCameraData;
         readonly bool m_UseScreenCoordOverride;
+        readonly int m_CullingMask;
 
         public UrpCameraScope(Camera camera, RenderFeature renderFeature)
         {
             m_Camera = camera;
+            m_CullingMask = m_Camera.cullingMask;
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(camera.gameObject);
             m_UseScreenCoordOverride = renderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
         }
@@ -98,13 +101,20 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera.projectionMatrix = projection;
             m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
 
+            m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
+
             m_AdditionalCameraData.useScreenCoordOverride = m_UseScreenCoordOverride;
             m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
             m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
             m_Camera.Render();
         }
-            
+
+        public void Render(Matrix4x4 projection, RenderTexture target)
+        {
+            Render(projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
+        }
+
         public void Dispose()
         {
             // TODO Should we save & restore instead of setting false?
@@ -113,6 +123,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera.ResetAspect();
             m_Camera.ResetProjectionMatrix();
             m_Camera.ResetCullingMatrix();
+            m_Camera.cullingMask = m_CullingMask;
         }
     }
 #else
@@ -123,6 +134,10 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            {
+            }
+
+            public void Render(Matrix4x4 projection, RenderTexture target)
             {
             }
         }

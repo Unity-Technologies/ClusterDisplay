@@ -2,12 +2,20 @@ using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Graphics;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 public class ClusterCameraTest
 {
     List<Camera> m_Cameras = new();
+
+    [OneTimeSetUp]
+    public void LoadEmptyScene()
+    {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+    }
     
     [SetUp]
     public void SetUp()

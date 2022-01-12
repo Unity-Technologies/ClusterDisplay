@@ -31,8 +31,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         void Update()
         {
-            m_Camera = GetComponent<Camera>();
-
             if (m_Camera.enabled && ClusterRenderer.IsActive())
             {
                 // TODO Not technically breaking but unexpected from a usage perspective.
@@ -42,6 +40,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            m_Camera = GetComponent<Camera>();
+            
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
             ClusterCameraManager.Instance.Register(m_Camera);

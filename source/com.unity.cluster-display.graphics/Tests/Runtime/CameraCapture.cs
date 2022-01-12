@@ -2,9 +2,9 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Unity.ClusterDisplay.Graphics.Tests.Universal
+namespace Unity.ClusterDisplay.Graphics.Tests
 {
-    class CameraCapture : IDisposable
+    public class CameraCapture : IDisposable
     {
         Camera m_Camera;
         RenderTexture m_Target;
@@ -23,11 +23,9 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
             CameraCaptureBridge.enabled = false;
         }
 
-        void CaptureAction(RenderTargetIdentifier source, CommandBuffer cb)
+        void CaptureAction(RenderTargetIdentifier source, CommandBuffer cmd)
         {
-            cb.SetRenderTarget(m_Target);
-            cb.ClearRenderTarget(false, true, Color.blue);
-            Blitter_.BlitQuad(cb, source);
+            cmd.Blit(source, m_Target);
         }
     }
 }

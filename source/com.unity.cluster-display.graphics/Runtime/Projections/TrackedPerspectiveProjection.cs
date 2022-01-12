@@ -198,8 +198,10 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(activeCamera);
+            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
+            
             cameraScope.Render(projectionMatrix, GetRenderTexture(index, overscannedSize));
+            
             cameraTransform.rotation = savedRotation;
         }
 

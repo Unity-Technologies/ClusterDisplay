@@ -28,5 +28,5 @@ MonoBehaviour:
     LayoutMode: 1
     BezelColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
-    EnableKeyword: 0
+    EnableKeyword: 1
   m_IsDebug: 1
