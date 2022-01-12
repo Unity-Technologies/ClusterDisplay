@@ -297,7 +297,7 @@ namespace Unity.ClusterDisplay
             {
                 if (m_AdapterName == null)
                 {
-                    if (!TryGetIndexOfNodeTypeArgument(k_RepeaterNodeTypeArgument, out var startIndex))
+                    if (!TryGetIndexOfNodeTypeArgument(k_AdapterNameArgument, out var startIndex))
                         return null;
                     ParseAdapterName(out m_AdapterName);
                 }

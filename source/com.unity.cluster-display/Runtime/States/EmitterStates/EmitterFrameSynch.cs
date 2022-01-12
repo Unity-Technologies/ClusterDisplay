@@ -125,10 +125,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 if ((m_Time.Elapsed - m_TsOfStage) >= m_FrameDoneTimeout)
                 {
                     ClusterDebug.LogError($"(Frame: {CurrentFrameID}): The following repeaters are late reporting back: {m_WaitingOnNodes}");
-                    // KickLateClients();
-                    // BecomeReadyToSignalStartNewFrame();
+                    KickLateClients();
                 }
-                
             }
         }
 
