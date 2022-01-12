@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Helpers")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
@@ -56,7 +57,18 @@ namespace Unity.ClusterDisplay
             {
                 if (m_Arguments == null)
                 {
-                    m_Arguments = System.Environment.GetCommandLineArgs().ToList();
+                    #if  UNITY_EDITOR
+                    m_Arguments = new List<string>(20) {};
+                    m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
+                    if (EditorApplication.isPlayingOrWillChangePlaymode && 
+                        ClusterSync.TryGetInstance(out var clusterSync) && 
+                        !clusterSync.EditorConfig.m_IgnoreEditorCmdLine)
+                    {
+                        m_Arguments.AddRange(ClusterDisplayState.IsEmitter
+                            ? clusterSync.EditorConfig.m_EditorInstanceEmitterCmdLine.Split(' ')
+                            : clusterSync.EditorConfig.m_EditorInstanceRepeaterCmdLine.Split(' '));
+                    }
+                    #endif
                     PrintArguments(m_Arguments);
                 }
                 
@@ -69,6 +81,10 @@ namespace Unity.ClusterDisplay
         internal const string k_RepeaterReplacesHeadlessEmitterArgument = "-replaceHeadlessEmitter";
         internal const string k_RepeaterNodeTypeArgument = "-node";
         internal const string k_DebugArgument = "-clusterNode";
+        internal const string k_GridSize = "-gridSize";
+        internal const string k_Bezel = "-bezel";
+        internal const string k_Overscan = "-overscan";
+        internal const string k_PhysicalScreenSize = "-physicalScreenSize";
         internal const string k_AdapterNameArgument = "-adapterName";
         internal const string k_HandShakeTimeoutArgument = "-handshakeTimeoutArgument";
         internal const string k_CommunicationTimeoutArgument = "-communicationTimeoutArgument";
@@ -88,7 +104,12 @@ namespace Unity.ClusterDisplay
         private static bool? m_EmitterSpecified;
         private static bool? m_RepeaterSpecified;
         private static int? m_TargetFPS;
-
+        
+        private static Vector2Int? m_GridSize;
+        private static Vector2Int? m_Bezel;
+        private static int? m_Overscan;
+        private static Vector2Int? m_PhysicalScreenSize;
+        
         private static string nodeTypeStr
         {
             get
@@ -319,6 +340,67 @@ namespace Unity.ClusterDisplay
                 return m_TargetFPS.Value;
             }
         }
+        
+        internal static Vector2Int ? gridSize
+        {
+            get
+            {
+                if (m_GridSize == null)
+                {
+                    if (!TryParseVector2Int(k_GridSize, out var value))
+                        return null;
+                    m_GridSize = value;
+                }
+
+                return m_GridSize.Value;
+            }
+        }
+        
+        
+        internal static Vector2Int ? bezel
+        {
+            get
+            {
+                if (m_Bezel == null)
+                {
+                    if (!TryParseVector2Int(k_Bezel, out var value))
+                        return null;
+                    m_Bezel = value;
+                }
+
+                return m_Bezel.Value;
+            }
+        }
+        
+        internal static int ? overscan
+        {
+            get
+            {
+                if (m_Overscan == null)
+                {
+                    if (!TryParseIntArgument(k_Overscan, out var value))
+                        return null;
+                    m_Overscan = value;
+                }
+
+                return m_Overscan.Value;
+            }
+        }
+        
+        internal static Vector2Int ? physicalScreenSize
+        {
+            get
+            {
+                if (m_PhysicalScreenSize == null)
+                {
+                    if (!TryParseVector2Int(k_PhysicalScreenSize, out var value))
+                        return null;
+                    m_PhysicalScreenSize = value;
+                }
+
+                return m_PhysicalScreenSize.Value;
+            }
+        }
 
         private static bool ValidateStartIndex(int startIndex) =>
             startIndex > -1 && startIndex < Arguments.Count;
@@ -408,6 +490,27 @@ namespace Unity.ClusterDisplay
             if (targetFPS < -1)
                 targetFPS = -1;
 
+            return true;
+        }
+        
+        internal static bool TryParseVector2Int(string argumentName, out Vector2Int value)
+        {
+            value = Vector2Int.zero;
+            if (!TryParseStringArgument(argumentName, out var str, optional: true))
+                return false;
+
+            var split = str.ToLower().Split('x');
+            if (split == null || split.Length != 2)
+                return false;
+
+            if (!int.TryParse(split[0], out var x) || !int.TryParse(split[1], out var y))
+            {
+                ClusterDebug.LogError($"Unable to parse Vector2Int argument with name: \"{argumentName}\", it's value: \"{str}\" cannot be parsed as an Vector2Int in format!");
+                return false;
+            }
+
+            value.x = x;
+            value.y = y;
             return true;
         }
 

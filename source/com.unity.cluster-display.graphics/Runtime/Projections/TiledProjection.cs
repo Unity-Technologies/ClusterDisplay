@@ -131,6 +131,20 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnEnable()
         {
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+            if (CommandLineParser.gridSize != null)
+            {
+                m_Settings.GridSize = CommandLineParser.gridSize.Value;
+            }
+
+            if (CommandLineParser.bezel != null)
+            {
+                m_Settings.Bezel = CommandLineParser.bezel.Value;
+            }
+
+            if (CommandLineParser.physicalScreenSize != null)
+            {
+                m_Settings.PhysicalScreenSize = CommandLineParser.physicalScreenSize.Value;
+            }
         }
 
         public override void OnDisable()

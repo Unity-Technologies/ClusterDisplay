@@ -117,6 +117,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_Presenter.Enable();
             m_Presenter.Present += OnPresent;
+            m_ProjectionPolicy.OnEnable();
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
@@ -132,6 +133,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
+            
+            m_ProjectionPolicy.OnDisable();
         }
 
         private bool ShouldRender
