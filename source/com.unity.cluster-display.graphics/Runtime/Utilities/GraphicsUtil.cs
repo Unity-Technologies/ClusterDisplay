@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.Graphics
             Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
         }
         
-        static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
+        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
             var propertyBlock = GetPropertyBlock();
@@ -196,7 +196,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         // Convention, consistent with blit scale-bias for example.
-        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+        internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
 
         internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<CommandBuffer> render)
         {

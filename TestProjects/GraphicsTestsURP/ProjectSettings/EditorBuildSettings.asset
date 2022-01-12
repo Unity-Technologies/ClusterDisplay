@@ -5,7 +5,10 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: d1c3109bdb54ad54c8a2b2838528e640
+  - enabled: 1
+    path: Assets/Scenes/TileProjection.unity
+    guid: c572160b3a89ec34b9cf546fc8268f69
+  - enabled: 1
+    path: Assets/Scenes/TileProjectionPostProcess.unity
+    guid: c4498aa53d10a3744b6c334ab24afb0f
   m_configObjects: {}

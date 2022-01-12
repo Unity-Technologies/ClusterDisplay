@@ -160,7 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, clusterSettings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, clusterSettings.OverScanInPixels,
                 m_IsDebug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
+            var postEffectsParams = new PostEffectsParams(displayMatrixSize);
 
             var renderContext = new TileProjectionContext
             {
@@ -227,35 +227,39 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void RenderStitcher(IReadOnlyList<RenderTexture> targets, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
 
                 var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-                var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
-
-                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
+                
+                var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
+                
+                cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, targets[tileIndex]);
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection)));
             }
         }
 
         static void RenderTile(RenderTexture target, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(camera);
+            using var cameraScope = CameraScopeFactory.Create(camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-            var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+            var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
+                
+            var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
-            cameraScope.Render(asymmetricProjectionMatrix, clusterParams, target);
+            cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, target);
 
-            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
+            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(new Rect(0, 0, 1, 1))));
         }
     }
 }
