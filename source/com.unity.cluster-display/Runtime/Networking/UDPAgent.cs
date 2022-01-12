@@ -82,16 +82,16 @@ namespace Unity.ClusterDisplay
                 {
                     var stats = new NetworkingStats()
                     {
-                        rxQueueSize = m_RxQueue.Count,
-                        txQueueSize = m_TxQueue.Count,
-                        pendingAckQueueSize = m_TxQueuePendingAcks.Count,
-                        failedMsgs = m_DeadMessages.Count,
+                        rxQueueSize = m_RxQueue != null ? m_RxQueue.Count : 0,
+                        txQueueSize = m_TxQueue != null ? m_TxQueue.Count : 0,
+                        pendingAckQueueSize = m_TxQueuePendingAcks != null ? m_TxQueuePendingAcks.Count : 0,
+                        failedMsgs = m_DeadMessages != null ? m_DeadMessages.Count : 0,
                         totalResends = m_TotalResendCount,
                         msgsSent = m_TotalSentCount,
                     };
+                    
                     return stats;
                 }
-
             }
         }
 

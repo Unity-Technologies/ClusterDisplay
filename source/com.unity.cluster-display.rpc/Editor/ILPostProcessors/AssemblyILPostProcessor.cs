@@ -223,6 +223,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 RPCILPostProcessor postProcessor = new RPCILPostProcessor();
                 
                 // Returns false if the assembly was not modfiied.
+                CodeGenDebug.Log($"Starting post process on assembly.");
                 if (!postProcessor.Execute(compiledAssemblyDef))
                     goto ignoreAssembly;
                 ;
@@ -236,6 +237,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     WriteSymbols = true,
                 };
 
+                CodeGenDebug.Log($"Attempting to write modified assembly to disk.");
                 compiledAssemblyDef.Write(pe, writerParameters);
             }
 
@@ -245,7 +247,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 goto failure;
             }
 
-            CodeGenDebug.Log($"Finished");
+            CodeGenDebug.Log($"Finished assembly.");
             return new ILPostProcessResult(new InMemoryAssembly(pe.ToArray(), pdb.ToArray()));
 
             ignoreAssembly:

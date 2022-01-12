@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay
         protected Task m_Task;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
-        public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,0,1000 * 60 * 5);
+        public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,30,0);
 
         protected internal IClusterSyncState clusterSync;
         

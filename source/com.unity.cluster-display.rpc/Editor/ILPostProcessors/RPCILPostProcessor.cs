@@ -309,6 +309,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         private bool PostProcessSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
+            CodeGenDebug.Log($"Polling serialized RPCs for assembly.");
             if (cachedSerializedRPCS == null)
                 RPCSerializer.ReadAllRPCs(
                     RPCRegistry.k_RPCStubsFileName, 
@@ -320,6 +321,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (cachedSerializedRPCS == null || cachedSerializedRPCS.Length == 0)
                 return false;
 
+            CodeGenDebug.Log($"Found {cachedSerializedRPCS.Length} serialized RPCs.");
             return PostProcessDeserializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray());
         }
 
