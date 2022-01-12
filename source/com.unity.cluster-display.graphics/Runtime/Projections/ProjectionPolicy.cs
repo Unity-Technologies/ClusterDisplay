@@ -47,6 +47,6 @@ namespace Unity.ClusterDisplay.Graphics
         public abstract void OnEnable();
         public abstract void OnDisable();
 
-        public Transform transform { get; }
+        public virtual Matrix4x4 Origin { get; set; }
     }
 }

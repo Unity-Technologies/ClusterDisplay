@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Color ClearColor { get; set; }
 
-        public void Enable(GameObject gameObject)
+        public void Enable()
         {
             throw new InvalidOperationException(
                 $"Using {nameof(NullPresenter)}, the current render pipeline is not supported.");

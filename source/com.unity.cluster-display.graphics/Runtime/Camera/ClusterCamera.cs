@@ -46,9 +46,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         readonly static List<Camera> m_ActiveCameras = new();
 
-        public static ClusterCameraManager Instance { get; } = new();
-
-        // Programmer's note: ElementAtOrDefault() is one of the few non-allocating LINQ methods
         public static Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);
 
         public static void Register(Camera camera)

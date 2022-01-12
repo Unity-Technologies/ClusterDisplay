@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
             return ClusterDisplayState.NodeID;
         }
 
-        public TileProjectionContext BuildRenderContext(ClusterRendererSettings clusterSettings, Camera activeCamera)
+        private TileProjectionContext BuildRenderContext(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
 			{
@@ -160,7 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
 			// Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
             {
-                return;
+				return default(TileProjectionContext);
             }
 
             GraphicsUtil.SetShaderKeyword(!m_IsDebug || m_DebugSettings.EnableKeyword);
@@ -302,7 +302,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
 
-                cameraScope.Render(asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                cameraScope.Render(tileIndex, asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
                 

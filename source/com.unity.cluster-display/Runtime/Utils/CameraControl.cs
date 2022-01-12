@@ -23,12 +23,12 @@ namespace ClusterDisplay.Utils
 
         void LateUpdate()
         {
-            if (!ClusterSync.Active)
+            if (!ClusterDisplayState.IsActive)
             {
                 return;
             }
 
-            var localTile = ClusterSync.Active ? ClusterSync.Instance.DynamicLocalNodeId : 0;
+            var localTile = ClusterDisplayState.IsActive ? ClusterDisplayState.NodeID : 0;
             if (localTile > numTilesX * numTilesY - 1)
                 return;
    

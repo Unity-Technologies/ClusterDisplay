@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Enable()
         {
-            m_Camera = gameObject.GetOrAddComponent<Camera>();
+            m_Camera = PresenterCamera.Camera;
             m_Camera.hideFlags = HideFlags.NotEditable;
             // We use the camera to blit to screen.
             // Configure it to minimize wasteful rendering.

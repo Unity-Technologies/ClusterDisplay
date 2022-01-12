@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using System.IO;
@@ -69,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public ClusterRendererSettings Settings => m_Settings;
         
-        private T CreateProjectionPolicyAsset<T>(string folder) where T : ProjectionPolicy, new()
+        internal T CreateProjectionPolicyAsset<T>(string folder) where T : ProjectionPolicy, new()
         {
             var newProjectionPolicy = ScriptableObject.CreateInstance<T>();
             #if UNITY_EDITOR
@@ -87,7 +85,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// can be active at a time, so calling this method multiple times will override any
         /// previously-active policies (and potentially erase all of the previous settings).
         /// </remarks>
-        public void SetProjectionPolicy<T>() where T : ProjectionPolicy
+        internal void SetProjectionPolicy<T>() where T : ProjectionPolicy
         {
             if (m_ProjectionPolicy != null && m_ProjectionPolicy.GetType() == typeof(T))
                 return;

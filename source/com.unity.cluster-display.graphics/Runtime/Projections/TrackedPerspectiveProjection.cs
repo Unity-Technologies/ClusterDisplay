@@ -42,12 +42,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         GraphicsFormat m_GraphicsFormat;
 
-        override void OnEnable()
+        public override void OnEnable()
         {
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
         }
 
-        override void OnDisable()
+        public override void OnDisable()
         {
             ClearPreviews();
         }
@@ -65,16 +65,16 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             if (m_IsDebug)
-	        {
-	            foreach (var surface in m_ProjectionSurfaces)
-	            {
-	                surface.Render(preRenderCameraDataOverride, clusterSettings, activeCamera);
-	            }
-	        }
-	        else
-	        {
-	            targetSurface.Render(preRenderCameraDataOverride, clusterSettings, activeCamera);
-	        }
+            {
+                for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
+                {
+                    RenderSurface(index, preRenderCameraDataOverride, clusterSettings, activeCamera);
+                }
+            }
+            else
+            {
+                RenderSurface(nodeIndex, preRenderCameraDataOverride, clusterSettings, activeCamera);
+            }
 
             m_BlitCommand = new BlitCommand(
                 m_RenderTargets[nodeIndex],
@@ -181,6 +181,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         void RenderSurface(int index,
+        	ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
             ClusterRendererSettings clusterSettings,
             Camera activeCamera)
         {
@@ -210,8 +211,8 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(activeCamera);
-            cameraScope.Render(projectionMatrix, GetRenderTexture(index, overscannedSize));
+            using var cameraScope = new CameraScope(preRenderCameraDataOverride, activeCamera);
+            cameraScope.Render(index, projectionMatrix, GetRenderTexture(index, overscannedSize));
             cameraTransform.rotation = savedRotation;
         }
 
