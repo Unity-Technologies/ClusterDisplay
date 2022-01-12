@@ -45,6 +45,9 @@ namespace Unity.ClusterDisplay.Graphics
         public override void OnEnable()
         {
             m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+            
+            ClusterDisplayManager.onDrawGizmos -= OnDrawGizmos;
+            ClusterDisplayManager.onDrawGizmos += OnDrawGizmos;
         }
 
         public override void OnDisable()
@@ -132,14 +135,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void OnDrawGizmos()
+        public void OnDrawGizmos()
         {
-#if UNITY_EDITOR
+            #if UNITY_EDITOR
             foreach (var surface in Surfaces)
             {
                 Gizmos.DrawIcon(Origin.MultiplyPoint(surface.LocalPosition), k_SurfaceIconName);
             }
-#endif
+            #endif
         }
         
         public void AddSurface()

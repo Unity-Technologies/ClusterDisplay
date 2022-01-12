@@ -39,11 +39,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// </remarks>
         public abstract void Present(CommandBuffer commandBuffer);
 		
-		/// <summary>
-        /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
-        /// </summary>
-        public virtual void OnDrawGizmos() { }
-
         public abstract void OnEnable();
         public abstract void OnDisable();
 
