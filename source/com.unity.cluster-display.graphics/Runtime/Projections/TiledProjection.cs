@@ -235,7 +235,7 @@ namespace Unity.ClusterDisplay.Graphics
                 "Source");
 
             m_BlitCommands.Clear();
-
+            
             if (isStitcher)
             {
                 RenderStitcher(
@@ -271,7 +271,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 commandBuffer.ClearRenderTarget(true, true, m_DebugSettings.BezelColor);
             }
-            
+
             foreach (var command in m_BlitCommands)
             {
                 GraphicsUtil.Blit(commandBuffer, command);

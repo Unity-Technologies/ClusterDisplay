@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         public event Action<CommandBuffer> Present = delegate { };
         
         Camera m_Camera;
-        Color m_ClearColor;
+        Color m_ClearColor = Color.black;
         private RenderTexture m_CopyBuffer;
         
         public Color ClearColor
@@ -30,15 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Enable()
         {
-            m_Camera = PresenterCamera.Camera;
-            m_Camera.hideFlags = HideFlags.NotEditable;
-            // We use the camera to blit to screen.
-            // Configure it to minimize wasteful rendering.
-            m_Camera.targetTexture = null;
-            m_Camera.cullingMask = 0;
-            m_Camera.clearFlags = CameraClearFlags.Nothing;
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender; // Insurances to avoid duplicate delegate registration.
-            
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
 

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: TiledProjection
   m_EditorClassIdentifier: 
   m_Settings:
-    GridSize: {x: 2, y: 4}
+    GridSize: {x: 2, y: 1}
     Bezel: {x: 0, y: 0}
     PhysicalScreenSize: {x: 0, y: 0}
   m_DebugSettings:

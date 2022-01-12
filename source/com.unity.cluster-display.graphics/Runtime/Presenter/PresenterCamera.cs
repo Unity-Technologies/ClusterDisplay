@@ -42,7 +42,8 @@ namespace Unity.ClusterDisplay
                     if (m_Camera == null)
                         m_Camera = gameObject.AddComponent<Camera>();
                 }
-                
+
+                m_Camera.gameObject.hideFlags = HideFlags.DontSave;
                 return m_Camera;
             }
         }
