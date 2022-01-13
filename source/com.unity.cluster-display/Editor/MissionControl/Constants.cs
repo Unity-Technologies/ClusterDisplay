@@ -8,16 +8,21 @@
         /// <summary>
         /// The default UDP port used for server discovery.
         /// </summary>
-        public const ushort DefaultPort = 9876;
-
+        public const ushort DiscoveryPort = 9876;
+        
         /// <summary>
         /// The number of characters that may be used in the name strings.
         /// </summary>
-        public const int StringMaxLength = 32;
+        public const int MaxHostNameLength = 256;
+        
+        /// <summary>
+        /// The number of characters that may be used in a path string.
+        /// </summary>
+        public const int PathMaxLength = 260;
         
         /// <summary>
         /// The size of the message buffers in bytes. This limits the size of the messages used by the discovery protocol.
         /// </summary>
-        public const int BufferSize = 1024;
+        public const int BufferSize = 9216;
     }
 }

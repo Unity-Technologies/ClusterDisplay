@@ -16,7 +16,9 @@ namespace Unity.ClusterDisplay.MissionControl
             };
             
             Console.WriteLine("Hello World!");
-            var discovery = new DiscoveryListener(Constants.DefaultPort);
+            // var launcher = new Launcher();
+            
+            var discovery = new ClusterListener(Constants.DiscoveryPort);
             discovery.Listen(cancellationTokenSource.Token).GetAwaiter().GetResult();
         }
     }

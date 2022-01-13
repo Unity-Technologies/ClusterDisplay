@@ -1,15 +1,28 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
+    enum NodeStatus : byte
+    {
+        Ready,
+        SyncFiles,
+        Running,
+        Error
+    }
+    
     /// <summary>
     /// A struct that contains information about a server instance.
     /// </summary>
+    [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
-    public readonly struct NodeInfo
+    readonly struct NodeInfo
     {
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.StringMaxLength + 1)]
-        readonly string Name;
+        public readonly NodeStatus Status;
+        public NodeInfo(NodeStatus status)
+        {
+            Status = status;
+        }
     }
 }

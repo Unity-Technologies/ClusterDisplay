@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
-        public static unsafe int WriteStruct<T>(this byte[] buffer, ref T data, int offset = 0) where T : struct
+        public static unsafe int WriteStruct<T>(this byte[] buffer, in T data, int offset = 0) where T : struct
         {
             var size = Marshal.SizeOf<T>();
 
