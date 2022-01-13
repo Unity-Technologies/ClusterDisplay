@@ -1566,7 +1566,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: a3d2090d85f665c42b91bb0ecf7f8068, type: 2}
+  sharedProfile: {fileID: 11400000, guid: c754082269c212f4bb72a18d6e78aef5, type: 2}
 --- !u!4 &1641568144
 Transform:
   m_ObjectHideFlags: 0
@@ -1978,6 +1978,14 @@ PrefabInstance:
     serializedVersion: 2
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 400713408593692140, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 400713408593692140, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
+      propertyPath: m_TargetTexture
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 400713408593692141, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
       propertyPath: m_RootOrder
       value: 0
