@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay
         [SerializeField] private List<SceneAsset> additions = new List<SceneAsset>();
         [SerializeField] private List<PostSceneCompositionTask> postSceneCompositionTasks = new List<PostSceneCompositionTask>();
 
-        public string StagedScenePath => $"Assets/Cluster Display/Scenes/Staged/{compositionName}.unity";
+        public string StagedScenePath => $"Assets/Cluster Display/Scenes/Staged/{compositionName}-Staged.unity";
 
         public SceneAsset Stage ()
         {

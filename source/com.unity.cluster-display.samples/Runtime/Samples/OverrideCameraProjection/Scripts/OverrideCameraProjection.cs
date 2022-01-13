@@ -18,9 +18,9 @@ namespace Unity.ClusterDisplay
         
         private void PreRenderCameraDataOverride(int nodeId, ref Vector3 position, ref Quaternion rotation, ref Matrix4x4 matrix)
         {
-            position.y += nodeId * 0.2f;
-            rotation = Quaternion.AngleAxis(45 - (nodeId - 0.5f) * 5f, Vector3.up);
-            matrix = Matrix4x4.Perspective(45f, 16 / 9f, 0.1f, 100f);
+            rotation = Quaternion.AngleAxis(0f + 45f * nodeId, Vector3.up);
+            position = position + rotation * new Vector3(0f, 0f, -4f);
+            matrix = Matrix4x4.Perspective(45f, Screen.height / (float)Screen.width, 0.1f, 100f);
         }
 
         private void OnEnable()

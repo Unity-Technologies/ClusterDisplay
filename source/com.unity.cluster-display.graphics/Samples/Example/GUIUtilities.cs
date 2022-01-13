@@ -117,12 +117,12 @@ namespace Unity.ClusterDisplay.Graphics.Example
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current.oKey.isPressed)
             {
-                var overscan = settings.overScanInPixels;
+                var overscan = settings.OverScanInPixels;
                 if (Keyboard.current.rightArrowKey.isPressed)
                     ++overscan;
                 else if (Keyboard.current.leftArrowKey.isPressed)
                     --overscan;
-                settings.overScanInPixels = Mathf.Clamp(overscan, 0, 256);
+                settings.OverScanInPixels = Mathf.Clamp(overscan, 0, 256);
             }
 
 #elif ENABLE_LEGACY_INPUT_MANAGER

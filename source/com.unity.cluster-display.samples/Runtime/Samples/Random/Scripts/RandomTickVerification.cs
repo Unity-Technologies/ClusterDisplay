@@ -15,6 +15,9 @@ public class RandomTickVerification : MonoBehaviour
     {
         // No need to set the initial seed as that information is communicated automatically between the emitter and repeater.
         // Random.InitState(12345);
+
+        // Wait for connection to stabilize.
+        yield return null;
         
         var wait = new WaitForSeconds(1);
         
@@ -29,11 +32,9 @@ public class RandomTickVerification : MonoBehaviour
         {
             // Generate a new random number on both the emitter and repeater since this coroutine executes on both.
             float randomNumber = Random.Range(-100f, 100f);
-
+            Debug.Log($"Generated new random number: \"{randomNumber}\", Count: {localRandomNumberList.Count}");
             // Add this new random number to a local list.
             localRandomNumberList.Add(randomNumber);
-            
-            Debug.Log($"Generated new random number: \"{randomNumber}\", Count: {localRandomNumberList.Count}");
             
             if (ClusterDisplayState.IsEmitter) // If we are the emitter, send the list of random numbers to the repeaters.
                 Verify(localRandomNumberList.ToArray());
@@ -46,7 +47,7 @@ public class RandomTickVerification : MonoBehaviour
         StartCoroutine(TickRandomNumber());
 
     
-    [ClusterRPC]
+    [ClusterRPC(RPCExecutionStage.AfterLateUpdate)]
     public void Verify(float[] emitterRandomNumbers)
     {
         // Only the repeater should perform the verification, so early out.

@@ -10,9 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 12daba082b06f1040a1bdf963b0bab50, type: 3}
-  m_Name: ReloadScene
+  m_Name: SceneManagement
   m_EditorClassIdentifier: 
-  compositionName: ReloadScene
+  compositionName: SceneManagement
   baseScene: {fileID: 102900000, guid: 8cc3825030aac494b91a80be27054bd3, type: 3}
-  additions: []
+  additions:
+  - {fileID: 102900000, guid: a87a6b9d896ea004da5d1e02aebd1fd9, type: 3}
   postSceneCompositionTasks: []

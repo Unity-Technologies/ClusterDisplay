@@ -7,7 +7,7 @@ using UnityEngine;
 
 public class RPCArgumentTestSet : MonoBehaviour
 {
-    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 20)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 20)]
     public struct StructA
     {
         [FieldOffset(0)]
@@ -18,7 +18,7 @@ public class RPCArgumentTestSet : MonoBehaviour
         public StructB structB;
     }
 
-    [StructLayout(LayoutKind.Explicit, Pack = 0, Size = 12)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 12)]
     public struct StructB
     {
         [FieldOffset(0)]

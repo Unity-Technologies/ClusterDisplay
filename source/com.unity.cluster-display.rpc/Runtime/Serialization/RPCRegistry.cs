@@ -151,23 +151,27 @@ namespace Unity.ClusterDisplay.RPC
             ClusterDisplayManager.awake -= Initialize;
         }
 
-        public static bool MethodRegistered(ushort rpcId) => m_RPCs[rpcId] != null;
+        public static bool MethodRegistered(ushort rpcId)
+        {
+            if (rpcId < 0 || rpcId >= m_RPCs.Length)
+            {
+                ClusterDebug.LogError($"RPC ID: {rpcId} is out of range: (0 - {m_RPCs.Length})");
+                return false;
+            }
+            
+            return m_RPCs[rpcId] != null;
+        }
+        
         public static bool MethodRegistered(MethodInfo methodInfo) => m_MethodUniqueIdToRPCId.ContainsKey(MethodInfoToRPCHash(methodInfo));
 
         public static bool TryGetRPC(ushort rpcId, out RPCMethodInfo rpcMethodInfo)
         {
-            if (rpcId < 0 || rpcId >= m_RPCs.Length)
+            if (!MethodRegistered(rpcId))
             {
                 rpcMethodInfo = default(RPCMethodInfo);
                 return false;
             }
-
-            if (m_RPCs[rpcId] == null)
-            {
-                rpcMethodInfo = default(RPCMethodInfo);
-                return false;
-            }
-
+                
             rpcMethodInfo = m_RPCs[rpcId].Value;
             return true;
         }

@@ -18,7 +18,9 @@ namespace Unity.ClusterDisplay
         private buint m_CurrentStateBufferEndPos = 0;
         private bool m_CurrentStateResult = false;
 
+        private UnityEngine.Random.State previousFrameRndState;
         private byte[] m_MsgBuffer = new byte[0];
+        
         public bool ValidRawStateData => m_PreviousStateSubBuffer != default;
 
         public IEmitterNodeSyncState nodeState;
@@ -35,6 +37,7 @@ namespace Unity.ClusterDisplay
         public EmitterStateWriter (IEmitterNodeSyncState nodeState)
         {
             this.nodeState = nodeState;
+            previousFrameRndState = UnityEngine.Random.state;
             m_CurrentStateBuffer = new NativeArray<byte>(NodeStateConstants.k_MaxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         }
 
@@ -174,7 +177,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            var rndState = UnityEngine.Random.state;
+            var rndState = previousFrameRndState;
 
             StoreStateID(buffer, ref endPos, (byte)StateID.Random);
 
@@ -187,7 +190,8 @@ namespace Unity.ClusterDisplay
             buint sizeOfRandomState = (buint)Marshal.SizeOf<UnityEngine.Random.State>();
             endPos += sizeOfRandomState;
             *((buint*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
-
+            
+            previousFrameRndState = UnityEngine.Random.state;
             return true;
         }
 
