@@ -44,7 +44,6 @@ public class TileProjectionPostProcessTest : ClusterRendererTest
             yield return "FilmGrain";
             yield return "LensDistortion";
             yield return "MotionBlur";
-            yield return "PaniniProjection";
             yield return "Vignette";
         }
     }

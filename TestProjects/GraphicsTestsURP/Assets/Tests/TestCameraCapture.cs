@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics.Tests.Universal
 {
+    /// <summary>
+    /// A utility to make sure the camera capture bridge works properly.
+    /// (We have encountered bugs previously)
+    /// </summary>
     [ExecuteAlways]
     [RequireComponent(typeof(Camera))]
     public class TestCameraCapture : MonoBehaviour
@@ -21,8 +25,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests.Universal
         void OnEnable()
         {
             GraphicsUtil.AllocateIfNeeded(ref m_Target, 256, 256);
-            var camera_ = GetComponent<Camera>();
-            m_Capture = new CameraCapture(camera_, m_Target);
+            var @camera = GetComponent<Camera>();
+            m_Capture = new CameraCapture(@camera, m_Target);
         }
 
         void OnDisable()
