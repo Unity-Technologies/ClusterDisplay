@@ -28,13 +28,13 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.
         /// </summary>
-        /// <param name="commandBuffer">A <see cref="CommandBuffer"/> belonging to the current
-        /// rendering pipeline.</param>
+        /// <param name="commandBuffer">A <see cref="CommandBuffer"/> belonging to the current rendering pipeline.</param>
+        /// <param name="flipY">Whether to flip the render along the Y axis.</param>
         /// <remarks>
         /// At this point, you can enqueue any commands that are required to draw the final
         /// output to the current display output device.
         /// </remarks>
-        public abstract void Present(CommandBuffer commandBuffer);
+        public abstract void Present(CommandBuffer commandBuffer, bool flipY);
 
         /// <summary>
         /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.

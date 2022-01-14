@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
 
     [PopupItem("Tiled")]
     [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
-    sealed class TiledProjection : ProjectionPolicy
+    internal sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
@@ -205,7 +205,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public override void Present(CommandBuffer commandBuffer)
+        public override void Present(CommandBuffer commandBuffer, bool flipY)
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
@@ -214,7 +214,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             foreach (var command in m_BlitCommands)
             {
-                GraphicsUtil.Blit(commandBuffer, command);
+                GraphicsUtil.Blit(commandBuffer, command, flipY);
             }
         }
 
@@ -228,6 +228,7 @@ namespace Unity.ClusterDisplay.Graphics
         static void RenderStitcher(IReadOnlyList<RenderTexture> targets, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {
             using var cameraScope = CameraScopeFactory.Create(camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+            
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
@@ -249,6 +250,7 @@ namespace Unity.ClusterDisplay.Graphics
         static void RenderTile(RenderTexture target, Camera camera, ref TileProjectionContext tileProjectionContext, List<BlitCommand> commands)
         {
             using var cameraScope = CameraScopeFactory.Create(camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+            
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
@@ -259,7 +261,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cameraScope.Render(asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, target);
 
-            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(new Rect(0, 0, 1, 1))));
+            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
         }
     }
 }

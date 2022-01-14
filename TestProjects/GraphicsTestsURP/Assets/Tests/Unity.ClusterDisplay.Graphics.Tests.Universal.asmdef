@@ -2,12 +2,13 @@
     "name": "Unity.ClusterDisplay.Graphics.Tests.Universal",
     "rootNamespace": "",
     "references": [
-        "GUID:c081bc530f560634bb5c21d4b323a7f1",
-        "GUID:d430e338f0b6b2c49ba9a2d10ebe07ea",
-        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
-        "GUID:27619889b8ba8c24980f49ee34dbb44a",
-        "GUID:0acc523941302664db1f4e527237feb3",
-        "GUID:5559e32f300f7dc4ba97a09013392ca6"
+        "UnityEngine.TestTools.Graphics",
+        "Unity.ClusterDisplay.Graphics",
+        "Unity.RenderPipelines.Core.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.ClusterDisplay.Graphics.Tests",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

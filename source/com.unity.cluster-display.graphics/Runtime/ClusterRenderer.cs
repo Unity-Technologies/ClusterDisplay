@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
         internal static bool IsActive() => s_ActiveInstancesCount > 0;
         internal static Action Enabled = delegate { };
         internal static Action Disabled = delegate { };
-        
+
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
-        
+
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
@@ -66,13 +66,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Gets the current cluster rendering settings.
         /// </summary>
-        public ClusterRendererSettings Settings => m_Settings;
+        public ClusterRendererSettings Settings
+        {
+            get => m_Settings;
+            set => m_Settings = value;
+        }
 
         /// <summary>
         /// Gets the camera internally used to present on screen.
         /// </summary>
         public Camera PresentCamera => m_Presenter.Camera;
-        
+
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
@@ -93,7 +97,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
             }
-            
+
             // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
             // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
@@ -119,7 +123,7 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDisable()
         {
             Disabled.Invoke();
-            
+
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             --s_ActiveInstancesCount;
@@ -127,11 +131,11 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Disable();
         }
 
-        void OnPresent(CommandBuffer commandBuffer)
+        void OnPresent(CommandBuffer commandBuffer, bool flipY)
         {
             if (m_ProjectionPolicy != null)
             {
-                m_ProjectionPolicy.Present(commandBuffer);
+                m_ProjectionPolicy.Present(commandBuffer, flipY);
             }
         }
 

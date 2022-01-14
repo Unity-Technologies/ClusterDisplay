@@ -27,14 +27,16 @@ namespace Unity.ClusterDisplay.Graphics
             readonly Camera m_Camera;
             readonly HDAdditionalCameraData m_AdditionalCameraData;
             readonly bool m_HadCustomRenderSettings;
+            readonly int m_CullingMask;
 
             public HdrpCameraScope(Camera camera, RenderFeature renderFeature)
             {
                 m_Camera = camera;
+                m_CullingMask = m_Camera.cullingMask;
                 m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(camera.gameObject);
                 m_HadCustomRenderSettings = m_AdditionalCameraData.customRenderingSettings;
-            
-                // TODO Should we cache frame settings to restore them on Dispose?
+
+                return;
                 if (renderFeature != RenderFeature.None)
                 {
                     m_AdditionalCameraData.customRenderingSettings = true;
@@ -54,16 +56,24 @@ namespace Unity.ClusterDisplay.Graphics
                 
             }
 
+            // TODO REMOVE DEBUG EDITS
             public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
             {
                 m_Camera.targetTexture = target;
-                m_Camera.projectionMatrix = projection;
-                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+               // m_Camera.projectionMatrix = projection;
+               // m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
 
-                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                //m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
+
+                //m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
+                //m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
                 m_Camera.Render();
+            }
+            
+            public void Render(Matrix4x4 projection, RenderTexture target)
+            {
+                Render(projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
             }
 
             public void Dispose()
@@ -77,6 +87,8 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Camera.ResetAspect();
                 m_Camera.ResetProjectionMatrix();
                 m_Camera.ResetCullingMatrix();
+                m_Camera.cullingMask = m_CullingMask;
+                //m_Camera.targetTexture = null;
             }
         }
 #elif CLUSTER_DISPLAY_URP
@@ -117,13 +129,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Dispose()
         {
-            // TODO Should we save & restore instead of setting false?
             m_AdditionalCameraData.useScreenCoordOverride = false;
 
             m_Camera.ResetAspect();
             m_Camera.ResetProjectionMatrix();
             m_Camera.ResetCullingMatrix();
             m_Camera.cullingMask = m_CullingMask;
+            m_Camera.targetTexture = null;
         }
     }
 #else

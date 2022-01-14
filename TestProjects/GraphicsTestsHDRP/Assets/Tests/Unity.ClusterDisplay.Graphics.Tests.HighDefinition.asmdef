@@ -1,0 +1,26 @@
+{
+	"name": "Unity.ClusterDisplay.Graphics.Tests.HighDefinition",
+	"rootNamespace": "",
+	"references": [
+		"UnityEngine.TestTools.Graphics",
+		"Unity.ClusterDisplay.Graphics",
+		"Unity.RenderPipelines.Core.Runtime",
+		"UnityEngine.TestRunner",
+		"UnityEditor.TestRunner",
+		"Unity.ClusterDisplay.Graphics.Tests",
+		"Unity.RenderPipelines.HighDefinition.Runtime"
+	],
+	"includePlatforms": [],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": true,
+	"precompiledReferences": [
+		"nunit.framework.dll"
+	],
+	"autoReferenced": false,
+	"defineConstraints": [
+		"UNITY_INCLUDE_TESTS"
+	],
+	"versionDefines": [],
+	"noEngineReferences": false
+}

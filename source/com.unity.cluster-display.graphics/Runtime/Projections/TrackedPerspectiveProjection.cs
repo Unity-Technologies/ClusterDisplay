@@ -81,14 +81,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void Present(CommandBuffer commandBuffer)
+        public override void Present(CommandBuffer commandBuffer, bool flipY)
         {
             if (m_ProjectionSurfaces.Count == 0 || m_BlitCommand.texture == null)
             {
                 return;
             }
 
-            GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
+            GraphicsUtil.Blit(commandBuffer, m_BlitCommand, flipY);
         }
 
         void ClearPreviews()
