@@ -197,7 +197,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             // TODO Make sure there's no one-frame offset induced by rendering timing.
             // TODO Make sure blitCommands are executed within the frame.
-            // Screeen camera must render *after* all tiles have been rendered.
+            // Screen camera must render *after* all tiles have been rendered.
 
             // TODO is it really needed?
 #if UNITY_EDITOR

@@ -37,6 +37,7 @@ public class TiledProjectionPostProcessTest : ClusterRendererTest
         {
             yield return "Bloom";
             yield return "ChromaticAberration";
+            yield return "CustomPostProcess";
             yield return "FilmGrain";
             yield return "LensDistortion";
             yield return "Vignette";
@@ -51,6 +52,7 @@ public class TiledProjectionPostProcessTest : ClusterRendererTest
         {
             yield return "Bloom";
             yield return "ChromaticAberration";
+            yield return "CustomPostProcess";
             yield return "LensDistortion";
             yield return "Vignette";
         }
