@@ -51,8 +51,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_VanillaCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
             m_ClusterCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
 
-            m_ClusterRenderer.gameObject.SetActive(true);
-            m_ClusterRenderer.enabled = false;
+            m_ClusterRenderer.gameObject.SetActive(false);
 
             // TODO Could add tests of the ClusterRenderer control of the Camera state. Separately.
             m_Camera.gameObject.SetActive(true);
@@ -64,16 +63,17 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 yield return new WaitForEndOfFrame();
             }
 
-            m_ClusterRenderer.enabled = true;
+            m_ClusterRenderer.gameObject.SetActive(true);
 
             Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
 
             using (new CameraCapture(m_ClusterRenderer.PresentCamera, m_ClusterCapture))
             {
                 // Let a capture of the stitched output happen.
-                // TODO Figure out why 2 frames are needed.
                 yield return new WaitForEndOfFrame();
             }
+            
+            m_ClusterRenderer.gameObject.SetActive(false);
         }
 
         protected IEnumerator RenderAndCompare(

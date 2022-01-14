@@ -26,7 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
 
-        const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
+        public const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 

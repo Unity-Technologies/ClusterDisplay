@@ -3,8 +3,17 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    // TODO not a great name, more generic.
     static class ApplicationUtil
     {
+        public static void ResetCamera(Camera camera)
+        {
+            camera.ResetWorldToCameraMatrix();
+            camera.ResetProjectionMatrix();
+            camera.ResetCullingMatrix();
+            camera.ResetAspect();
+        }
+        
         // TODO Maybe not the right place for this.
         public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
         {

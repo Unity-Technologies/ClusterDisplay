@@ -1,8 +1,9 @@
 ﻿using System;
 using UnityEngine;
-
 #if CLUSTER_DISPLAY_HDRP
+using UnityEngine.Assertions;
 using UnityEngine.Rendering.HighDefinition;
+
 #elif CLUSTER_DISPLAY_URP
 using UnityEngine.Rendering.Universal;
 #endif
@@ -26,17 +27,21 @@ namespace Unity.ClusterDisplay.Graphics
         {
             readonly Camera m_Camera;
             readonly HDAdditionalCameraData m_AdditionalCameraData;
+            readonly RenderTexture m_Target;
             readonly bool m_HadCustomRenderSettings;
             readonly int m_CullingMask;
 
             public HdrpCameraScope(Camera camera, RenderFeature renderFeature)
             {
                 m_Camera = camera;
+                m_Target = m_Camera.targetTexture;
                 m_CullingMask = m_Camera.cullingMask;
                 m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(camera.gameObject);
                 m_HadCustomRenderSettings = m_AdditionalCameraData.customRenderingSettings;
 
-                return;
+                // Required, see ClusterCamera for assignment/restore/comment.
+                Assert.IsTrue(m_AdditionalCameraData.hasPersistentHistory);
+
                 if (renderFeature != RenderFeature.None)
                 {
                     m_AdditionalCameraData.customRenderingSettings = true;
@@ -53,24 +58,22 @@ namespace Unity.ClusterDisplay.Graphics
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
                     }
                 }
-                
             }
 
-            // TODO REMOVE DEBUG EDITS
             public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
             {
                 m_Camera.targetTexture = target;
-               // m_Camera.projectionMatrix = projection;
-               // m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+                m_Camera.projectionMatrix = projection;
+                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
 
-                //m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
+                m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
 
-                //m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                //m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
 
                 m_Camera.Render();
             }
-            
+
             public void Render(Matrix4x4 projection, RenderTexture target)
             {
                 Render(projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
@@ -84,11 +87,9 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
 
-                m_Camera.ResetAspect();
-                m_Camera.ResetProjectionMatrix();
-                m_Camera.ResetCullingMatrix();
+                ApplicationUtil.ResetCamera(m_Camera);
                 m_Camera.cullingMask = m_CullingMask;
-                //m_Camera.targetTexture = null;
+                m_Camera.targetTexture = m_Target;
             }
         }
 #elif CLUSTER_DISPLAY_URP
@@ -96,12 +97,14 @@ namespace Unity.ClusterDisplay.Graphics
     {
         readonly Camera m_Camera;
         readonly UniversalAdditionalCameraData m_AdditionalCameraData;
+        readonly RenderTexture m_Target;
         readonly bool m_UseScreenCoordOverride;
         readonly int m_CullingMask;
 
         public UrpCameraScope(Camera camera, RenderFeature renderFeature)
         {
             m_Camera = camera;
+            m_Target = m_Camera.targetTexture;
             m_CullingMask = m_Camera.cullingMask;
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(camera.gameObject);
             m_UseScreenCoordOverride = renderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
@@ -131,14 +134,12 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_AdditionalCameraData.useScreenCoordOverride = false;
 
-            m_Camera.ResetAspect();
-            m_Camera.ResetProjectionMatrix();
-            m_Camera.ResetCullingMatrix();
+            ApplicationUtil.ResetCamera(m_Camera);
             m_Camera.cullingMask = m_CullingMask;
-            m_Camera.targetTexture = null;
+            m_Camera.targetTexture = m_Target;
         }
     }
-#else
+#endif
         readonly struct NullCameraScope : ICameraScope
         {
             public void Dispose()
@@ -153,7 +154,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
             }
         }
-#endif
 
         public static ICameraScope Create(Camera camera, RenderFeature renderFeature)
         {

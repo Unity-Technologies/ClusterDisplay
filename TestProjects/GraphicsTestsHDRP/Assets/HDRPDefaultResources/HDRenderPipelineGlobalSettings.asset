@@ -60,11 +60,13 @@ MonoBehaviour:
     msaaMode: 1
     materialQuality: 0
   m_RenderPipelineResources: {fileID: 11400000, guid: 3ce144cff5783da45aa5d4fdc2da14b7, type: 2}
-  m_RenderPipelineRayTracingResources: {fileID: 11400000, guid: ba6e7f30e5cffc249a8bf7ee5756c196, type: 2}
+  m_RenderPipelineRayTracingResources: {fileID: 0}
   beforeTransparentCustomPostProcesses: []
   beforePostProcessCustomPostProcesses: []
   afterPostProcessBlursCustomPostProcesses: []
-  afterPostProcessCustomPostProcesses: []
+  afterPostProcessCustomPostProcesses:
+  - CustomPostProcess, Unity.ClusterDisplay.Graphics.Tests.HighDefinition, Version=0.0.0.0,
+    Culture=neutral, PublicKeyToken=null
   beforeTAACustomPostProcesses: []
   lightLayerName0: Light Layer default
   lightLayerName1: Light Layer 1
@@ -83,7 +85,7 @@ MonoBehaviour:
   decalLayerName6: Decal Layer 6
   decalLayerName7: Decal Layer 7
   lensAttenuationMode: 0
-  colorGradingSpace: 0
+  colorGradingSpace: 1
   diffusionProfileSettingsList:
   - {fileID: 11400000, guid: 1f3326ae884350749b9df8662e845c10, type: 2}
   - {fileID: 11400000, guid: 3d987fc82114cce478744ddd7d21f17c, type: 2}

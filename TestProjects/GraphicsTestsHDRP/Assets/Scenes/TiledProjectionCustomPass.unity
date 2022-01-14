@@ -317,7 +317,7 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 95891419}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &135989124
+--- !u!1 &330863795
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -325,39 +325,59 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 135989126}
-  - component: {fileID: 135989125}
+  - component: {fileID: 330863797}
+  - component: {fileID: 330863796}
   m_Layer: 0
-  m_Name: Global Volume
+  m_Name: Custom Pass
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &135989125
+--- !u!114 &330863796
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 135989124}
+  m_GameObject: {fileID: 330863795}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Script: {fileID: 11500000, guid: 26d6499a6bd256e47b859377446493a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_IsGlobal: 1
+  fadeRadius: 0
   priority: 0
-  blendDistance: 0
-  weight: 1
-  sharedProfile: {fileID: 11400000, guid: 8236a8eda95ea18419c90d64e1fe529d, type: 2}
---- !u!4 &135989126
+  customPasses:
+  - rid: 5976198955269882007
+  injectionPoint: 1
+  m_TargetCamera: {fileID: 0}
+  useTargetCamera: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 5976198955269882007
+      type: {class: FullScreenCustomPass, ns: UnityEngine.Rendering.HighDefinition, asm: Unity.RenderPipelines.HighDefinition.Runtime}
+      data:
+        m_Name: Custom Pass
+        enabled: 1
+        targetColorBuffer: 0
+        targetDepthBuffer: 0
+        clearFlags: 0
+        passFoldout: 0
+        m_Version: 0
+        fullscreenPassMaterial: {fileID: 2100000, guid: bb1ea8c02da104441bf59e1eda65056c, type: 2}
+        materialPassIndex: 0
+        materialPassName: Custom Pass 0
+        fetchColorBuffer: 0
+--- !u!4 &330863797
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 135989124}
+  m_GameObject: {fileID: 330863795}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
@@ -2065,31 +2085,7 @@ PrefabInstance:
       value: Main Camera
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: m_Depth
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: m_AllowMSAA
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: field of view
-      value: 60
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: m_FocalLength
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: m_TargetTexture
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: m_projectionMatrixMode
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
@@ -2134,34 +2130,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: xrRendering
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenSizeOverride.w
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenSizeOverride.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenSizeOverride.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenSizeOverride.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenCoordScaleBias.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: screenCoordScaleBias.y
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

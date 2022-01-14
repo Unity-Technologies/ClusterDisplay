@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
+#if CLUSTER_DISPLAY_HDRP
+using UnityEngine.Rendering.HighDefinition;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -19,16 +22,22 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
-        // TODO The notion of camera state overlaps with camera scopes who could also implement save-restore mechanism.
         struct CameraState
         {
             public RenderTexture Target;
             public bool Enabled;
+#if CLUSTER_DISPLAY_HDRP
+            public bool HasPersistentHistory;
+#endif
         }
 
         CameraState m_CameraState;
         Camera m_Camera;
-
+#if CLUSTER_DISPLAY_HDRP
+        HDAdditionalCameraData m_AdditionalCameraData;
+#endif
+        bool m_ShouldRestore;
+        
         void Update()
         {
             if (m_Camera.enabled && ClusterRenderer.IsActive())
@@ -41,6 +50,9 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             m_Camera = GetComponent<Camera>();
+#if CLUSTER_DISPLAY_HDRP
+            m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
+#endif
             
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
@@ -58,32 +70,54 @@ namespace Unity.ClusterDisplay.Graphics
             ClusterCameraManager.Instance.Unregister(m_Camera);
             ClusterRenderer.Enabled -= OnRendererEnabled;
             ClusterRenderer.Disabled -= OnRendererDisabled;
+            
+            // In case the renderer is still active;
+            if (ClusterRenderer.IsActive())
+            {
+                OnRendererDisabled();
+            }
         }
 
         void OnRendererEnabled()
         {
             Assert.IsNotNull(m_Camera);
-            
+            Assert.IsFalse(m_ShouldRestore);
+
+            // Save camera state.
             m_CameraState = new CameraState
             {
                 Enabled = m_Camera.enabled,
-                Target = m_Camera.targetTexture
+                Target = m_Camera.targetTexture,
+#if CLUSTER_DISPLAY_HDRP
+                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
+#endif
             };
 
+            m_ShouldRestore = true;
+            
             m_Camera.enabled = false;
+#if CLUSTER_DISPLAY_HDRP
+            // Since we will render this camera procedurally rendered,
+            // we need to retain history buffers even if the camera is disabled.
+            m_AdditionalCameraData.hasPersistentHistory = true;
+#endif
         }
 
         void OnRendererDisabled()
         {
+            Assert.IsTrue(m_ShouldRestore);
+            
             // TODO What if the user alters the camera state between Enable() and here?
+            // Restore camera state.
             m_Camera.enabled = m_CameraState.Enabled;
             m_Camera.targetTexture = m_CameraState.Target;
+#if CLUSTER_DISPLAY_HDRP
+            m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
+#endif
+            
+            m_ShouldRestore = false;
 
-            // TODO Similar code in camera scopes, DRY?
-            m_Camera.ResetWorldToCameraMatrix();
-            m_Camera.ResetProjectionMatrix();
-            m_Camera.ResetCullingMatrix();
-            m_Camera.ResetAspect();
+            ApplicationUtil.ResetCamera(m_Camera);
         }
     }
 
