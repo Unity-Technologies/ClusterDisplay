@@ -17,7 +17,7 @@ MonoBehaviour:
     Bezel: {x: 0, y: 0}
     PhysicalScreenSize: {x: 1600, y: 900}
   m_DebugSettings:
-    TileIndexOverride: 1
+    TileIndexOverride: 2
     UseDebugViewportSubsection: 0
     ViewportSubsection:
       serializedVersion: 2

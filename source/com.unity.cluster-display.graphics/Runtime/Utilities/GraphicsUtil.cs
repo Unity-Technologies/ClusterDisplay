@@ -16,13 +16,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         static GraphicsFormat s_GraphicsFormat = GraphicsFormat.None;
 
-        // We need to flip along the Y axis when blitting to screen on HDRP,
-        // but not when using URP.
-#if CLUSTER_DISPLAY_HDRP
-        const bool k_FlipWhenBlittingToScreen = true;
-#else
-        const bool k_FlipWhenBlittingToScreen = false;
-#endif
         public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
         static class ShaderIDs
@@ -41,7 +34,11 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (s_GraphicsFormat == GraphicsFormat.None)
             {
+#if CLUSTER_DISPLAY_HDRP
+                s_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.HDR);
+#else
                 s_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+#endif
             }
 
             return s_GraphicsFormat;
@@ -77,9 +74,9 @@ namespace Unity.ClusterDisplay.Graphics
             return s_BlitMaterial;
         }
 
-        public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand)
+        public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)
         {
-            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
+            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY);
         }
         
         public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
@@ -198,7 +195,7 @@ namespace Unity.ClusterDisplay.Graphics
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
 
-        internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<CommandBuffer> render)
+        internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<CommandBuffer, bool> render, bool flipY)
         {
             var captureActions = CameraCaptureBridge.GetCaptureActions(camera);
             if (captureActions != null)
@@ -207,7 +204,7 @@ namespace Unity.ClusterDisplay.Graphics
                 cmd.SetRenderTarget(k_RecorderTempRT);
                 cmd.ClearRenderTarget(true, true, clearColor);
 
-                render.Invoke(cmd);
+                render.Invoke(cmd, flipY);
 
                 for (captureActions.Reset(); captureActions.MoveNext();)
                 {

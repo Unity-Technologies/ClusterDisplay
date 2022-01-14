@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
-        public event Action<CommandBuffer> Present = delegate { };
+        public event Action<CommandBuffer, bool> Present = delegate { };
 
         Camera m_Camera;
         Color m_ClearColor;
@@ -52,12 +52,12 @@ namespace Unity.ClusterDisplay.Graphics
             var target = renderingData.cameraData.renderer.cameraColorTargetHandle;
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
-            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke);
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
             
             cmd.SetRenderTarget(target);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
             
-            Present.Invoke(cmd);
+            Present.Invoke(cmd, false);
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

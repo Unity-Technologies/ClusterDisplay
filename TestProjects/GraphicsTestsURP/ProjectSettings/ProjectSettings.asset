@@ -638,7 +638,8 @@ PlayerSettings:
   webGLMemoryLinearGrowthStep: 16
   webGLMemoryGeometricGrowthStep: 0.2
   webGLMemoryGeometricGrowthCap: 96
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Standalone: LWRP_DEBUG_STATIC_POSTFX
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

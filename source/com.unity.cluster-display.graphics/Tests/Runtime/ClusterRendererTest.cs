@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -73,6 +74,48 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 // TODO Figure out why 2 frames are needed.
                 yield return new WaitForEndOfFrame();
             }
+        }
+
+        protected IEnumerator RenderAndCompare(
+            Action preRender = null, 
+            Action postRender = null,
+            Action exceptionHandler = null)
+        {
+            InitializeTest();
+
+            if (preRender != null)
+            {
+                preRender.Invoke();
+            }
+            
+            yield return Render();
+
+            if (postRender != null)
+            {
+                postRender.Invoke();
+            }
+
+            CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
+            CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
+
+            if (exceptionHandler == null)
+            {
+                ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+            }
+            else
+            {
+                try
+                {
+                    ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                }
+                catch (Exception _)
+                {
+                    exceptionHandler.Invoke();
+                    throw;
+                }
+            }
+
+            DisposeTest();
         }
         
         static Camera FindUniqueMainCamera()
