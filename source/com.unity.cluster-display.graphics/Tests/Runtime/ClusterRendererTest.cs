@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using NUnit.Framework;
+using Unity.ClusterDisplay.Graphics.EditorTests;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools.Graphics;
@@ -9,6 +11,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 {
     public class ClusterRendererTest : MonoBehaviour
     {
+        static string k_GameViewSizeName = "Graphic Test";
         const string k_MainCameraTag = "MainCamera";
 
         protected Camera m_Camera;
@@ -27,6 +30,10 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_ClusterRenderer, $"Could not find {nameof(ClusterRenderer)}");
             m_GraphicsTestSettings = FindObjectOfType<GraphicsTestSettings>();
             Assert.IsNotNull(m_GraphicsTestSettings, "Missing test settings for graphic tests.");
+            
+            SetGameViewSize(
+                m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth, 
+                m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight);
         }
 
         protected virtual void DisposeTest()
@@ -142,6 +149,21 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             dest.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
             dest.Apply();
             RenderTexture.active = restore;
+        }
+        
+        static void SetGameViewSize(int width, int height)
+        {
+            if (GameViewUtils.SizeExists(GameViewSizeGroupType.Standalone, k_GameViewSizeName))
+            {
+                GameViewUtils.RemoveCustomSize(GameViewSizeGroupType.Standalone, GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
+            }
+
+            GameViewUtils.AddCustomSize(
+                GameViewUtils.GameViewSizeType.FixedResolution, 
+                GameViewSizeGroupType.Standalone, 
+                width, height, k_GameViewSizeName);
+
+            GameViewUtils.SetSize(GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
         }
     }
 }
