@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_LayoutProp;
         SerializedProperty m_KeywordProp;
         SerializedProperty m_DebugViewportProp;
-        SerializedProperty m_BezelColorProp;
+        SerializedProperty m_PresentClearColorProp;
         SerializedProperty m_ViewportSectionProp;
         SerializedProperty m_ScaleBiasProp;
 
@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_TileIndexProp = serializedObject.FindProperty("m_DebugSettings.TileIndexOverride");
             m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.LayoutMode");
             m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.EnableKeyword");
-            m_BezelColorProp = serializedObject.FindProperty("m_DebugSettings.BezelColor");
+            m_PresentClearColorProp = serializedObject.FindProperty("m_DebugSettings.PresentClearColor");
             m_DebugViewportProp = serializedObject.FindProperty("m_DebugSettings.UseDebugViewportSubsection");
             m_ViewportSectionProp = serializedObject.FindProperty("m_DebugSettings.ViewportSubsection");
             m_ScaleBiasProp = serializedObject.FindProperty("m_DebugSettings.ScaleBiasTextOffset");
@@ -63,7 +63,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             EditorGUILayout.PropertyField(m_LayoutProp);
             if ((LayoutMode) m_LayoutProp.intValue == LayoutMode.StandardStitcher)
             {
-                EditorGUILayout.PropertyField(m_BezelColorProp);
+                EditorGUILayout.PropertyField(m_PresentClearColorProp);
             }
 
             EditorGUILayout.LabelField(Labels.GetGUIContent(Labels.Field.ScaleBiasOffset));

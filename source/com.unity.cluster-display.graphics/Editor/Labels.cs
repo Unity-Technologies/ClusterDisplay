@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
             GridSize,
             PhysicalScreenSize,
             Bezel,
-            BezelColor,
+            PresentClearColor,
             Overscan,
             Debug,
             TileIndexOverride,
@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.GridSize: return "Grid Size";
                 case Field.PhysicalScreenSize: return "Physical Screen Size";
                 case Field.Bezel: return "Bezel";
-                case Field.BezelColor: return "Bezel Color";
+                case Field.PresentClearColor: return "Present Clear Color";
                 case Field.Overscan: return "Overscan";
                 case Field.Debug: return "Debug Mode";
                 case Field.TileIndexOverride: return "Tile Index Override";
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.GridSize: return "Number of displays per row and column.";
                 case Field.PhysicalScreenSize: return "Physical size of a display (not to be confused with screen size in pixels).";
                 case Field.Bezel: return "Physical size of display bezels.";
-                case Field.BezelColor: return "Color of bezels in stitcher layout mode.";
+                case Field.PresentClearColor: return "Color of bezels in stitcher layout mode.";
                 case Field.Overscan: return "Amount of overscan in pixels.";
                 case Field.Debug: return "Activate/Deactivate debug mode.";
                 case Field.TileIndexOverride: return "Tile index to be used when there is no cluster network.";

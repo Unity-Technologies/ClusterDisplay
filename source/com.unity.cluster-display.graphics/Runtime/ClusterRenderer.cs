@@ -131,11 +131,11 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Disable();
         }
 
-        void OnPresent(CommandBuffer commandBuffer, bool flipY)
+        void OnPresent(PresentArgs args)
         {
             if (m_ProjectionPolicy != null)
             {
-                m_ProjectionPolicy.Present(commandBuffer, flipY);
+                m_ProjectionPolicy.Present(args);
             }
         }
 
