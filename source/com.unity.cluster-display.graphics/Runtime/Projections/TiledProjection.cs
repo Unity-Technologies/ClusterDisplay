@@ -61,9 +61,9 @@ namespace Unity.ClusterDisplay.Graphics
         public LayoutMode LayoutMode;
 
         /// <summary>
-        /// Color of the simulated bezels in <see cref="ClusterDisplay.Graphics.LayoutMode.StandardStitcher"/>.
+        /// Clear color used to present to screen.
         /// </summary>
-        public Color BezelColor;
+        public Color PresentClearColor;
 
         /// <summary>
         /// Allows you to offset the presented image so you can see the overscan effect.
@@ -92,9 +92,10 @@ namespace Unity.ClusterDisplay.Graphics
         bool m_IsDebug;
 
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
-        RenderTexture[] m_TileRenderTargets;
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
-
+        RenderTexture[] m_TileRenderTargets;
+        Vector2Int m_DisplayMatrixSize = Vector2Int.one;
+        
         public TiledProjectionSettings Settings
         {
             get => m_Settings;
@@ -144,10 +145,10 @@ namespace Unity.ClusterDisplay.Graphics
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
             var currentTileIndex = m_IsDebug || !ClusterSync.Active ? m_DebugSettings.TileIndexOverride : ClusterSync.Instance.DynamicLocalNodeId;
             var numTiles = m_Settings.GridSize.x * m_Settings.GridSize.y;
-            var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
+            m_DisplayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
 
             // Aspect must be updated *before* we pull the projection matrix.
-            activeCamera.aspect = displayMatrixSize.x / (float) displayMatrixSize.y;
+            activeCamera.aspect = m_DisplayMatrixSize.x / (float) m_DisplayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
 
 #if UNITY_EDITOR
@@ -160,7 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, clusterSettings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, clusterSettings.OverScanInPixels,
                 m_IsDebug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize);
+            var postEffectsParams = new PostEffectsParams(m_DisplayMatrixSize);
 
             var renderContext = new TileProjectionContext
             {
@@ -205,16 +206,37 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public override void Present(CommandBuffer commandBuffer, bool flipY)
+        public override void Present(PresentArgs args)
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
-                commandBuffer.ClearRenderTarget(true, true, m_DebugSettings.BezelColor);
+                args.CommandBuffer.ClearRenderTarget(true, true, m_DebugSettings.PresentClearColor);
+
+                var presentRatio = args.CameraPixelRect.width / args.CameraPixelRect.height;
+                var stitchedRatio = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;
+
+                if (!Mathf.Approximately(presentRatio, stitchedRatio))
+                {
+                    var pixelRect = args.CameraPixelRect;
+                
+                    if (stitchedRatio > presentRatio)
+                    {
+                        pixelRect.height = pixelRect.width / stitchedRatio;
+                        pixelRect.y += (args.CameraPixelRect.height - pixelRect.height) / 2;
+                    }
+                    else
+                    {
+                        pixelRect.width = pixelRect.height * stitchedRatio;
+                        pixelRect.x += (args.CameraPixelRect.width - pixelRect.width) / 2;
+                    }
+                    
+                    args.CommandBuffer.SetViewport(pixelRect);
+                }
             }
 
             foreach (var command in m_BlitCommands)
             {
-                GraphicsUtil.Blit(commandBuffer, command, flipY);
+                GraphicsUtil.Blit(args.CommandBuffer, command, args.FlipY);
             }
         }
 

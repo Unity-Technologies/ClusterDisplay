@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
-        public event Action<CommandBuffer, bool> Present = delegate { };
+        public event Action<PresentArgs> Present = delegate { };
 
         Camera m_Camera;
         Color m_ClearColor;
@@ -57,7 +57,12 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetRenderTarget(target);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
             
-            Present.Invoke(cmd, false);
+            Present.Invoke(new PresentArgs
+            {
+                CommandBuffer = cmd,
+                FlipY = false,
+                CameraPixelRect = m_Camera.pixelRect
+            });
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

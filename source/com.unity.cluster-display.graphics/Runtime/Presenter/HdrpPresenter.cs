@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_CommandBufferName = "Present To Screen";
         readonly RenderTargetIdentifier k_CameraTargetId = new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget);
         
-        public event Action<CommandBuffer, bool> Present = delegate {};
+        public event Action<PresentArgs> Present = delegate {};
 
         Camera m_Camera;
         HDAdditionalCameraData m_AdditionalCameraData;
@@ -64,7 +64,12 @@ namespace Unity.ClusterDisplay.Graphics
             cmd.SetRenderTarget(k_CameraTargetId);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
 
-            Present.Invoke(cmd, true);
+            Present.Invoke(new PresentArgs
+            {
+                CommandBuffer = cmd,
+                FlipY = true,
+                CameraPixelRect = m_Camera.pixelRect
+            });
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

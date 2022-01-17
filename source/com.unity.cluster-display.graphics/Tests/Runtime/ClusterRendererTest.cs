@@ -115,7 +115,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 {
                     ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
                 }
-                catch (Exception _)
+                catch (Exception)
                 {
                     exceptionHandler.Invoke();
                     throw;
