@@ -8,12 +8,16 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
+    // Performs sanity checks on Volume Profiles within the Assets directory.
+    // Assumes the ones actually used are within this directory.
     class VolumeProfileChecker : AssetModificationProcessor
     {
+        const string k_AssetsDirectory = "Assets";
+        
         [InitializeOnLoadMethod]
         static void Initialize()
         {
-            var volumeProfiles = Resources.FindObjectsOfTypeAll<VolumeProfile>();
+            var volumeProfiles = LoadAllAssetsOfType<VolumeProfile>(new[] { k_AssetsDirectory });
             foreach (var volumeProfile in volumeProfiles)
             {
                 CheckVolumeProfile(volumeProfile);
@@ -24,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             foreach (var path in paths)
             {
-                if (Path.GetExtension(path) == ".asset")
+                if (path.Contains(k_AssetsDirectory) && Path.GetExtension(path) == ".asset")
                 {
                     var volumeProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
                     if (volumeProfile != null)
@@ -43,14 +47,24 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 if (!IsExposureFixed(exposureComponent.mode.value))
                 {
-                    Debug.LogWarning($"Exposure component in volume profile \"{volumeProfile.name}\" " + 
-                        "uses automatic mode. We recommend using fixed exposure with Cluster Display.");
+                    var path = AssetDatabase.GetAssetPath(volumeProfile);
+                    Debug.LogWarning($"Exposure component in volume profile \"{volumeProfile.name}\" " +
+                        $"at {path} uses automatic mode. We recommend using fixed exposure with Cluster Display.");
+                    ;
                 }
             }
         }
 
         // See IsExposureFixed in HDRenderPipeline.PostProcess.
         static bool IsExposureFixed(ExposureMode mode) => mode == ExposureMode.Fixed || mode == ExposureMode.UsePhysicalCamera;
+
+        static T[] LoadAllAssetsOfType<T>(string[] searchInFolders) where T : Object
+        {
+            return AssetDatabase.FindAssets($"t:{typeof(T).Name}", searchInFolders)
+                .Select(guid => AssetDatabase.GUIDToAssetPath(guid))
+                .Select(path => AssetDatabase.LoadAssetAtPath<T>(path))
+                .ToArray();
+        }
     }
 }
 #endif
