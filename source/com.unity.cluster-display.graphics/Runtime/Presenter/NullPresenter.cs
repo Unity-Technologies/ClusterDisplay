@@ -10,13 +10,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static IPresenter Instance => s_Instance;
 
-        public event Action<CommandBuffer> Present = delegate { };
+        public event Action<PresentArgs> Present = delegate { };
 
         NullPresenter() { }
 
         public void Disable() { }
 
         public Color ClearColor { get; set; }
+
+        public Camera Camera => null;
 
         public void Enable()
         {

@@ -61,9 +61,9 @@ namespace Unity.ClusterDisplay.Graphics
         public LayoutMode LayoutMode;
 
         /// <summary>
-        /// Color of the simulated bezels in <see cref="ClusterDisplay.Graphics.LayoutMode.StandardStitcher"/>.
+        /// Clear color used to present to screen.
         /// </summary>
-        public Color BezelColor;
+        public Color PresentClearColor;
 
         /// <summary>
         /// Allows you to offset the presented image so you can see the overscan effect.
@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
 
     [PopupItem("Tiled")]
     [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
-    sealed class TiledProjection : ProjectionPolicy
+    internal sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
         TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
@@ -92,11 +92,10 @@ namespace Unity.ClusterDisplay.Graphics
         bool m_IsDebug;
 
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
-        RenderTexture[] m_TileRenderTargets;
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
-
-        GraphicsFormat m_GraphicsFormat;
-
+        RenderTexture[] m_TileRenderTargets;
+        Vector2Int m_DisplayMatrixSize = Vector2Int.one;
+        
         public TiledProjectionSettings Settings
         {
             get => m_Settings;
@@ -130,7 +129,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEnable()
         {
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
             if (CommandLineParser.gridSize != null)
             {
                 m_Settings.GridSize = CommandLineParser.gridSize.Value;
@@ -149,9 +147,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnDisable()
         {
+            m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
-
-            // TODO Do we assume *one* ClusterRenderer? If not, how do we manage the shader keyword?
+            
+            // Used only on Legacy when supported.
+            // For SRP we use additional camera data.
             GraphicsUtil.SetShaderKeyword(false);
         }
 
@@ -177,16 +177,18 @@ namespace Unity.ClusterDisplay.Graphics
 				return default(TileProjectionContext);
             }
 
+            // Used only on Legacy when supported.
+            // For SRP we use additional camera data.
             GraphicsUtil.SetShaderKeyword(!m_IsDebug || m_DebugSettings.EnableKeyword);
 			
             int currentTileIndex = GetTileIndex();
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
             var numTiles = m_Settings.GridSize.x * m_Settings.GridSize.y;
-            var displayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
+            m_DisplayMatrixSize = new Vector2Int(m_Settings.GridSize.x * displaySize.x, m_Settings.GridSize.y * displaySize.y);
 
             // Aspect must be updated *before* we pull the projection matrix.
-            activeCamera.aspect = displayMatrixSize.x / (float)displayMatrixSize.y;
+            activeCamera.aspect = m_DisplayMatrixSize.x / (float) m_DisplayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
 
 #if UNITY_EDITOR
@@ -199,7 +201,7 @@ namespace Unity.ClusterDisplay.Graphics
             var viewport = new Viewport(m_Settings.GridSize, m_Settings.PhysicalScreenSize, m_Settings.Bezel, clusterSettings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, clusterSettings.OverScanInPixels,
                 m_IsDebug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero);
-            var postEffectsParams = new PostEffectsParams(displayMatrixSize, m_Settings.GridSize);
+            var postEffectsParams = new PostEffectsParams(m_DisplayMatrixSize);
 
             return new TileProjectionContext
             {
@@ -245,7 +247,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,
                 renderContext.OverscannedSize.x,
                 renderContext.OverscannedSize.y,
-                m_GraphicsFormat,
                 "Source");
 
             m_BlitCommands.Clear();
@@ -271,7 +272,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             // TODO Make sure there's no one-frame offset induced by rendering timing.
             // TODO Make sure blitCommands are executed within the frame.
-            // Screeen camera must render *after* all tiles have been rendered.
+            // Screen camera must render *after* all tiles have been rendered.
 
             // TODO is it really needed?
 #if UNITY_EDITOR
@@ -279,16 +280,37 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public override void Present(CommandBuffer commandBuffer)
+        public override void Present(PresentArgs args)
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
-                commandBuffer.ClearRenderTarget(true, true, m_DebugSettings.BezelColor);
+                args.CommandBuffer.ClearRenderTarget(true, true, m_DebugSettings.PresentClearColor);
+
+                var presentRatio = args.CameraPixelRect.width / args.CameraPixelRect.height;
+                var stitchedRatio = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;
+
+                if (!Mathf.Approximately(presentRatio, stitchedRatio))
+                {
+                    var pixelRect = args.CameraPixelRect;
+                
+                    if (stitchedRatio > presentRatio)
+                    {
+                        pixelRect.height = pixelRect.width / stitchedRatio;
+                        pixelRect.y += (args.CameraPixelRect.height - pixelRect.height) / 2;
+                    }
+                    else
+                    {
+                        pixelRect.width = pixelRect.height * stitchedRatio;
+                        pixelRect.x += (args.CameraPixelRect.width - pixelRect.width) / 2;
+                    }
+                    
+                    args.CommandBuffer.SetViewport(pixelRect);
+                }
             }
 
             foreach (var command in m_BlitCommands)
             {
-                GraphicsUtil.Blit(commandBuffer, command);
+                GraphicsUtil.Blit(args.CommandBuffer, command, args.FlipY);
             }
         }
 
@@ -307,25 +329,28 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(preRenderCameraDataOverride, camera);
+            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+            
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
 
                 var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-                var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
-
-                cameraScope.Render(tileIndex, asymmetricProjectionMatrix, clusterParams, targets[tileIndex]);
+                var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
+                
+                var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
+                
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
                 
                 cameraScope.Render(
                     tileIndex,
                     asymmetricProjectionMatrix, 
-                    clusterParams, 
+                    screenSizeOverride,
+                    screenCoordScaleBias,
                     targets[tileIndex]);
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(viewportSubsection)));
+                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection)));
             }
         }
 
@@ -336,19 +361,23 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            using var cameraScope = new CameraScope(preRenderCameraDataOverride, camera);
+            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+            
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
-            var clusterParams = tileProjectionContext.PostEffectsParams.GetAsMatrix4x4(overscannedViewportSubsection);
+            var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
+                
+            var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
             cameraScope.Render(
                 ClusterDisplayState.NodeID,
                 asymmetricProjectionMatrix, 
-                clusterParams, 
+                screenSizeOverride,
+                screenCoordScaleBias,
                 target);
-            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.ToVector4(new Rect(0, 0, 1, 1))));
+            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
             
         }
     }

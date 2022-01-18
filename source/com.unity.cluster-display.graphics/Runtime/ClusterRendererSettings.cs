@@ -8,6 +8,8 @@ namespace Unity.ClusterDisplay.Graphics
     [System.Serializable]
     public sealed class ClusterRendererSettings
     {
+        // TODO Could be a property on ClusterRenderer unless new settings are added.
+        
         [SerializeField]
         [Range(0, 256)]
         int m_OverscanInPixels;

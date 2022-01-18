@@ -12,9 +12,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
-        public event Action<CommandBuffer> Present = delegate { };
+        public event Action<PresentArgs> Present = delegate { };
         
-        Camera m_Camera;
         Color m_ClearColor = Color.black;
         private RenderTexture m_CopyBuffer;
         
@@ -22,6 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             set => m_ClearColor = value;
         }
+
+        public Camera Camera => PresenterCamera.Camera;
         
         public void Disable()
         {
@@ -30,6 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Enable()
         {
+            Camera.hideFlags = HideFlags.NotEditable;
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender; // Insurances to avoid duplicate delegate registration.
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
@@ -40,24 +42,13 @@ namespace Unity.ClusterDisplay.Graphics
             if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
                 return;
             
-            if (m_Camera == null)
-            {
-                m_Camera = PresenterCamera.Camera;
-                if (m_Camera == null)
-                {
-                    ClusterDebug.LogError("Unable to setup camera present.");
-                    return;
-                }
-            }
-            
             // The render pass gets invoked for all cameras so we need to filter.
-            if (renderingData.cameraData.camera != m_Camera)
+            if (renderingData.cameraData.camera != Camera)
             {
                 return;
             }
 
-            var target = renderingData.cameraData.renderer.cameraColorTarget;
-
+            var target = renderingData.cameraData.renderer.cameraColorTargetHandle;
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;
             var cameraColorTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
@@ -69,7 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
                 if (m_LastFrame == null ||
                     m_LastFrame.width != cameraColorTargetDescriptor.width ||
                     m_LastFrame.height != cameraColorTargetDescriptor.height ||
-                    m_LastFrame.depth != cameraColorTargetDescriptor.depthBufferBits ||
+					m_LastFrame.depth != cameraColorTargetDescriptor.depthBufferBits ||
                     m_LastFrame.graphicsFormat != cameraColorTargetDescriptor.graphicsFormat)
                 {
                     if (m_LastFrame != null)
@@ -89,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
                     
                     ClusterDebug.Log($"Created new buffer for storing previous frame.");
                 }
-                
+				GraphicsUtil.ExecuteCaptureIfNeeded(Camera, cmd, m_ClearColor, Present.Invoke, false);
                 cmd.SetRenderTarget(cameraColorTarget);
                 cmd.ClearRenderTarget(true, true, m_ClearColor);
                 
@@ -104,7 +95,12 @@ namespace Unity.ClusterDisplay.Graphics
             }
             
             cmd.ClearRenderTarget(true, true, m_ClearColor);
-            Present.Invoke(cmd);
+            Present.Invoke(new PresentArgs
+            {
+                CommandBuffer = cmd,
+                FlipY = false,
+                CameraPixelRect = Camera.pixelRect
+            });
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

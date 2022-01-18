@@ -1,5 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
+
 #if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
@@ -17,8 +19,38 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
+    #if UNITY_EDITOR
+    [InitializeOnLoad]
+    #endif
     public class ClusterRenderer : SingletonScriptableObject<ClusterRenderer>
     {
+        static ClusterRenderer() => Initialize();
+        [RuntimeInitializeOnLoadMethod]
+        private static void Initialize()
+        {
+            ClusterDisplayManager.onEnable -= OnEnabled;
+            ClusterDisplayManager.onDisable -= OnDisabled;
+            
+            ClusterDisplayManager.onEnable += OnEnabled;
+            ClusterDisplayManager.onDisable += OnDisabled;
+        }
+
+        private static void OnEnabled()
+        {
+            if (ClusterRenderer.TryGetInstance(out var clusterRenderer))
+                clusterRenderer.OnEnable();
+        }
+        
+        private static void OnDisabled()
+        {
+            if (ClusterRenderer.TryGetInstance(out var clusterRenderer))
+                clusterRenderer.OnDisable();
+        }
+        
+        // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
+        static int s_ActiveInstancesCount;
+        internal static bool IsActive() => s_ActiveInstancesCount > 0;
+
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
@@ -49,6 +81,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
+        
 		const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
@@ -65,8 +98,17 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Gets the current cluster rendering settings.
         /// </summary>
-        public ClusterRendererSettings Settings => m_Settings;
-        
+        public ClusterRendererSettings Settings
+        {
+            get => m_Settings;
+            set => m_Settings = value;
+        }
+		
+		/// <summary>
+        /// Gets the camera internally used to present on screen.
+        /// </summary>
+		public Camera PresentCamera => m_Presenter.Camera;
+
         internal T CreateProjectionPolicyAsset<T>(string folder) where T : ProjectionPolicy, new()
         {
             var newProjectionPolicy = ScriptableObject.CreateInstance<T>();
@@ -115,6 +157,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
+            // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable();
             m_Presenter.Present += OnPresent;
             m_ProjectionPolicy.OnEnable();
@@ -131,6 +175,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
+            --s_ActiveInstancesCount;
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
             
@@ -156,14 +201,17 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        void OnPresent(CommandBuffer commandBuffer)
+         void OnPresent(PresentArgs args)
         {
             if (!ShouldRender)
             {
                 return;
             }
             
-            m_ProjectionPolicy.Present(commandBuffer);
+            if (m_ProjectionPolicy != null)
+            {
+                m_ProjectionPolicy.Present(args);
+            }
         }
 
         void OnClusterDisplayUpdate()

@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -19,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             var shader = Shader.Find(shaderName);
             if (shader == null)
             {
-                return false;
+                throw new InvalidOperationException($"Could not find shader \"{shaderName}\"");
             }
 
             var graphicsSettingsObj = AssetDatabase.LoadAssetAtPath<GraphicsSettings>("ProjectSettings/GraphicsSettings.asset");

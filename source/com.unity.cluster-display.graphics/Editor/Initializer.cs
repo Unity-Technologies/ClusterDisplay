@@ -1,19 +1,24 @@
-﻿using Unity.ClusterDisplay.Graphics.Editor;
+﻿using System;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.XR;
 
-namespace Unity.ClusterDisplay.Graphics
+namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [InitializeOnLoad]
     class Initializer
     {
-        const string k_BlitShaderName = "ClusterDisplay/Blit";
-
         static Initializer()
         {
-            if (Util.AddAlwaysIncludedShaderIfNeeded(k_BlitShaderName))
+            if (Util.AddAlwaysIncludedShaderIfNeeded(GraphicsUtil.k_BlitShaderName))
             {
-                Debug.Log($"Added {k_BlitShaderName} to the list of Always Included shader.");
+                Debug.Log($"Added {GraphicsUtil.k_BlitShaderName} to the list of Always Included shader.");
+            }
+            
+            // Sanity check.
+            if (XRSettings.enabled)
+            {
+                Debug.LogWarning("XR is currently enabled which is not expected when using Cluster Display.");
             }
         }
     }

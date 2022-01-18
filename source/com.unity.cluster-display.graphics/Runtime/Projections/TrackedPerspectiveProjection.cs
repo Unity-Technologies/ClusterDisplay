@@ -40,12 +40,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
 
-        GraphicsFormat m_GraphicsFormat;
-
         public override void OnEnable()
         {
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-            
             ClusterDisplayManager.onDrawGizmos -= OnDrawGizmos;
             ClusterDisplayManager.onDrawGizmos += OnDrawGizmos;
         }
@@ -94,14 +90,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void Present(CommandBuffer commandBuffer)
+        public override void Present(PresentArgs args)
         {
             if (m_ProjectionSurfaces.Count == 0 || m_BlitCommand.texture == null)
             {
                 return;
             }
 
-            GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
+            GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
         }
 
         void ClearPreviews()
@@ -129,8 +125,7 @@ namespace Unity.ClusterDisplay.Graphics
                         surface.Scale,
                         rt,
                         surface.ScreenResolution,
-                        clusterSettings.OverScanInPixels,
-                        m_GraphicsFormat);
+                        clusterSettings.OverScanInPixels);
                 }
             }
         }
@@ -174,8 +169,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (GraphicsUtil.AllocateIfNeeded(
                 ref rt,
                 overscannedSize.x,
-                overscannedSize.y,
-                m_GraphicsFormat))
+                overscannedSize.y))
             {
                 m_RenderTargets[index] = rt;
             }
@@ -214,8 +208,10 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(preRenderCameraDataOverride, activeCamera);
-            cameraScope.Render(index, projectionMatrix, GetRenderTexture(index, overscannedSize));
+            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, activeCamera, RenderFeature.AsymmetricProjection);
+            
+            cameraScope.Render(-1, projectionMatrix, GetRenderTexture(index, overscannedSize));
+            
             cameraTransform.rotation = savedRotation;
         }
 

@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Settings:
     GridSize: {x: 2, y: 2}
-    Bezel: {x: 5, y: 5}
-    PhysicalScreenSize: {x: 1920, y: 1080}
+    Bezel: {x: 0, y: 0}
+    PhysicalScreenSize: {x: 0, y: 0}
   m_DebugSettings:
     TileIndexOverride: 1
     UseDebugViewportSubsection: 0
@@ -26,7 +26,7 @@ MonoBehaviour:
       width: 0.5
       height: 0.5
     LayoutMode: 1
-    BezelColor: {r: 1, g: 0, b: 0, a: 0}
+    PresentClearColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 1
   m_IsDebug: 1

@@ -8,12 +8,11 @@ namespace Unity.ClusterDisplay
     readonly struct CameraScope : IDisposable
     {
         private readonly ClusterRenderer.PreRenderCameraDataOverride m_preRenderCameraDataOverride;
-        
         readonly Camera m_Camera;
         readonly int m_cullingMask;
         static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
-        public CameraScope(
+    	public CameraScope(
             ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
             Camera camera)
         {
