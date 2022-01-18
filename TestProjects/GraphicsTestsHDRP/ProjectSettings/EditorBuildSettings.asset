@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TiledProjectionPostProcess.unity
     guid: bde8dfa8f79c2904a852e8c68d75a141
+  - enabled: 1
+    path: Assets/Scenes/TiledProjectionCustomPass.unity
+    guid: 85a2cb092431d594eb3af97a746f0248
   m_configObjects: {}
