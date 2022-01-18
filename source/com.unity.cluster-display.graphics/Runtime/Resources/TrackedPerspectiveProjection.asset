@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_IsDebug: 0
   m_ProjectionSurfaces:
-  - {fileID: 0}
+  - Name: 
+    ScreenResolution: {x: 0, y: 0}
+    PhysicalSize: {x: 0, y: 0}
+    LocalPosition: {x: 0, y: 0, z: 0}
+    LocalRotation: {x: 0, y: 0, z: 0, w: 0}
   m_NodeIndexOverride: 0

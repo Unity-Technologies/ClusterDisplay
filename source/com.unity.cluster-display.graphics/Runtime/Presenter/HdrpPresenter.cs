@@ -26,21 +26,24 @@ namespace Unity.ClusterDisplay.Graphics
         {
             // We don't destroy procedural components, we may reuse them
             // or they'll be destroyed with the ClusterRenderer.
-            m_AdditionalCameraData.customRender -= OnCustomRender;
+            if (m_AdditionalCameraData != null)
+                m_AdditionalCameraData.customRender -= OnCustomRender;
         }
 
-        public void Enable(GameObject gameObject)
+        public void Enable()
         {
             // Note: we use procedural components.
             // In edge cases, a user could have added a Camera to the GameObject, and we will modify this Camera.
             // The alternative would be to use a hidden procedural GameObject.
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
-            m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
+            
+            var camera = PresenterCamera.Camera;
+            Assert.IsNotNull(camera);
             
             // HDAdditionalCameraData requires a Camera so no need to add it manually.
-            var camera = gameObject.GetComponent<Camera>();
-            Assert.IsNotNull(camera);
+            m_AdditionalCameraData = camera.gameObject.GetOrAddComponent<HDAdditionalCameraData>();
+            
             // We use the camera to blit to screen.
             camera.targetTexture = null;
             camera.hideFlags = HideFlags.NotEditable;
@@ -48,6 +51,8 @@ namespace Unity.ClusterDisplay.Graphics
             // Assigning a customRender will bypass regular camera rendering,
             // so we don't need to worry about the camera render involving wasteful operations.
             m_AdditionalCameraData.hideFlags = HideFlags.NotEditable;
+            
+            m_AdditionalCameraData.customRender -= OnCustomRender;
             m_AdditionalCameraData.customRender += OnCustomRender;
         }
 
