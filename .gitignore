@@ -6,4 +6,5 @@ TestProjects/*/obj
 TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
+TestProjects/*/UserSettings
 TestProjects/*/.idea
