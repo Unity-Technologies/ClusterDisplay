@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public override void UpdateCluster(
-        	ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
         	ClusterRendererSettings clusterSettings, 
         	Camera activeCamera)
         {
@@ -67,12 +67,12 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
                 {
-                    RenderSurface(index, preRenderCameraDataOverride, clusterSettings, activeCamera);
+                    RenderSurface(index, onRenderClusterCamera, clusterSettings, activeCamera);
                 }
             }
             else
             {
-                RenderSurface(nodeIndex, preRenderCameraDataOverride, clusterSettings, activeCamera);
+                RenderSurface(nodeIndex, onRenderClusterCamera, clusterSettings, activeCamera);
             }
 
             m_BlitCommand = new BlitCommand(
@@ -178,7 +178,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         void RenderSurface(int index,
-        	ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings,
             Camera activeCamera)
         {
@@ -208,9 +208,7 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, activeCamera, RenderFeature.AsymmetricProjection);
-            
-            cameraScope.Render(-1, projectionMatrix, GetRenderTexture(index, overscannedSize));
+            onRenderClusterCamera.Invoke(activeCamera, -1, projectionMatrix, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0), GetRenderTexture(index, overscannedSize), RenderFeature.All);
             
             cameraTransform.rotation = savedRotation;
         }

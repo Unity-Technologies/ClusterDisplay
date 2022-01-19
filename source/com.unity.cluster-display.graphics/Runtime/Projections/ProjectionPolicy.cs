@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -24,8 +23,8 @@ namespace Unity.ClusterDisplay.Graphics
         /// that should happen in your <see cref="Present"/> method.
         /// </remarks>
         public abstract void UpdateCluster(
-            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
-            ClusterRendererSettings clusterSettings, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRendererSettings clusterSettings,
             Camera activeCamera);
 
         /// <summary>

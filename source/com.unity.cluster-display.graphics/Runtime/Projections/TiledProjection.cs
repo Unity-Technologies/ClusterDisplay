@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.Graphics
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
         RenderTexture[] m_TileRenderTargets;
         Vector2Int m_DisplayMatrixSize = Vector2Int.one;
-        
+
         public TiledProjectionSettings Settings
         {
             get => m_Settings;
@@ -216,10 +216,10 @@ namespace Unity.ClusterDisplay.Graphics
                 UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
             };
         }
-		
+
 
         public override void UpdateCluster(
-            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings, 
             Camera activeCamera)
         {
@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (isStitcher)
             {
                 RenderStitcher(
-                    preRenderCameraDataOverride,
+                    onRenderClusterCamera,
                     m_TileRenderTargets, 
                     activeCamera, 
                     ref renderContext, 
@@ -263,7 +263,7 @@ namespace Unity.ClusterDisplay.Graphics
             else
             {
                 RenderTile(
-                    preRenderCameraDataOverride,
+                    onRenderClusterCamera,
                     m_TileRenderTargets[0], 
                     activeCamera, 
                     ref renderContext, 
@@ -323,14 +323,13 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         static void RenderStitcher(
-            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
             IReadOnlyList<RenderTexture> targets, 
             Camera camera, 
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
-            
+            camera.enabled = false;
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
@@ -343,26 +342,27 @@ namespace Unity.ClusterDisplay.Graphics
                 
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
-                
-                cameraScope.Render(
-                    tileIndex,
+                onRenderClusterCamera?.Invoke(
+                    camera, 
+                    tileIndex, 
                     asymmetricProjectionMatrix, 
-                    screenSizeOverride,
-                    screenCoordScaleBias,
-                    targets[tileIndex]);
+                    screenSizeOverride, 
+                    screenCoordScaleBias, 
+                    targets[tileIndex],
+                    RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+                
                 commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection)));
             }
         }
 
         static void RenderTile(
-            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
             RenderTexture target, 
             Camera camera, 
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            using var cameraScope = CameraScopeFactory.Create(preRenderCameraDataOverride, camera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
-            
+            // camera.enabled = false;
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
@@ -370,13 +370,15 @@ namespace Unity.ClusterDisplay.Graphics
             var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
                 
             var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
-
-            cameraScope.Render(
-                ClusterDisplayState.NodeID,
+            onRenderClusterCamera?.Invoke(
+                camera, 
+                ClusterDisplayState.NodeID, 
                 asymmetricProjectionMatrix, 
-                screenSizeOverride,
-                screenCoordScaleBias,
-                target);
+                screenSizeOverride, 
+                screenCoordScaleBias, 
+                target,
+                RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
             
         }

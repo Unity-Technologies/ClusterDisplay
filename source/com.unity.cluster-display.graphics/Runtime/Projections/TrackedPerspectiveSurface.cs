@@ -66,8 +66,8 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void Render(
-            ClusterRenderer.PreRenderCameraDataOverride preRenderCameraDataOverride, 
+        internal void Render(
+            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera, 
             ClusterRendererSettings clusterSettings, 
             Camera activeCamera)
         {
@@ -104,8 +104,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var projectionMatrix = GetProjectionMatrix(activeCamera.projectionMatrix, cornersView, m_ScreenResolution, clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(preRenderCameraDataOverride, activeCamera);
-            cameraScope.Render(ClusterDisplayState.NodeID, projectionMatrix, m_RenderTarget);
+            onRenderClusterCamera.Invoke(activeCamera, -1, projectionMatrix, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0), m_RenderTarget, RenderFeature.All);
             cameraTransform.rotation = savedRotation;
 
 #if UNITY_EDITOR
@@ -208,7 +207,7 @@ namespace Unity.ClusterDisplay.Graphics
             scale.z /= aspect;
             scale /= 2;
             go.transform.localScale = scale;
-            if (ClusterCameraManager.ActiveCamera is { } activeCamera)
+            if (ClusterDisplayManager.ActiveCamera is { } activeCamera)
             {
                 var camTransform = activeCamera.transform;
                 var position = camTransform.position;

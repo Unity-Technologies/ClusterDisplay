@@ -5,6 +5,11 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.LowLevel;
 using System.Runtime.CompilerServices;
+
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -376,8 +381,13 @@ namespace Unity.ClusterDisplay
 
         private void SystemUpdate()
         {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
+                Quit();
+#elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
                 Quit();
+#endif
 
             try
             {

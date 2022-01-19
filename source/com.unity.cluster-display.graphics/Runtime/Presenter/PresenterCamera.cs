@@ -34,7 +34,10 @@ namespace Unity.ClusterDisplay
                     
                     ClusterDebug.Log($"Setup {nameof(PresenterCamera)}.");
                 }
-                
+
+                instance.gameObject.hideFlags = HideFlags.DontSave;
+                instance.cam.depth = 100;
+
                 return instance.cam;
             }
         }

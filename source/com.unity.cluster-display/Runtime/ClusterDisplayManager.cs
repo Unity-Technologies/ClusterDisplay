@@ -9,6 +9,31 @@ namespace Unity.ClusterDisplay
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
+        [SerializeField][HideInInspector] private Camera m_ActiveCamera;
+        public static Camera ActiveCamera
+        {
+            get
+            {
+                if (!TryGetInstance(out var instance, logError: false))
+                    return null;
+                return instance.m_ActiveCamera;
+            }
+        }
+
+        static internal void SetActiveCamera(Camera camera)
+        {
+            if (!TryGetInstance(out var instance, logError: false))
+                return;
+
+            if (instance.m_ActiveCamera == camera)
+                return;
+
+            onChangeActiveCamera?.Invoke(instance.m_ActiveCamera, camera);
+            instance.m_ActiveCamera = camera;
+        }
+
+        public delegate void OnChangeActiveCamera (Camera previousCamera, Camera newCamera);
+
         public delegate void ClusterDisplayBehaviourDelegate();
 
         public delegate void ClusterDisplayOnFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
@@ -29,6 +54,7 @@ namespace Unity.ClusterDisplay
         public static ClusterDisplayBehaviourDelegate onBeforePresent;
         private Coroutine endOfFrameCoroutine;
 
+        public static OnChangeActiveCamera onChangeActiveCamera;
         public static ClusterDisplayOnFrameRenderDelegate onBeginFrameRender;
         public static ClusterDisplayOnCameraRenderDelegate onBeginCameraRender;
         public static ClusterDisplayOnCameraRenderDelegate onEndCameraRender;
@@ -37,6 +63,8 @@ namespace Unity.ClusterDisplay
         private void RegisterRenderPipelineDelegates ()
         {
             UnregisterRenderPipelineDelegates();
+
+            ClusterDebug.Log("Registering render pipeline delegates.");
 
             RenderPipelineManager.beginFrameRendering += OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering += OnBeginCameraRender;
@@ -56,7 +84,6 @@ namespace Unity.ClusterDisplay
         {
             ClusterDebug.Log("Cluster Display started bootstrap.");
 
-            RegisterRenderPipelineDelegates();
             endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
 
             preInitialize?.Invoke();
@@ -67,7 +94,13 @@ namespace Unity.ClusterDisplay
             awake?.Invoke();   
         }
 
-        private void OnEnable() => onEnable?.Invoke();
+        private void OnEnable()
+        {
+            SetInstance(this);
+            RegisterRenderPipelineDelegates();
+            onEnable?.Invoke();
+        }
+
         private void Start() => start?.Invoke();
         private void OnDisable() => onDisable?.Invoke();
 

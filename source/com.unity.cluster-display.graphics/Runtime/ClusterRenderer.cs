@@ -24,6 +24,17 @@ namespace Unity.ClusterDisplay.Graphics
     #endif
     public class ClusterRenderer : SingletonScriptableObject<ClusterRenderer>
     {
+        internal delegate void OnRenderClusterCamera(
+            Camera camera, 
+            int nodeId, 
+            Matrix4x4 projection, 
+            Vector4 screenSizeOverride, 
+            Vector4 screenCoordScaleBias, 
+            RenderTexture target,
+            RenderFeature renderFeature);
+
+        internal static OnRenderClusterCamera onRenderClusterCamera;
+
         static ClusterRenderer() => Initialize();
         [RuntimeInitializeOnLoadMethod]
         private static void Initialize()
@@ -63,14 +74,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
-
-        public delegate void PreRenderCameraDataOverride(
-            int nodeId, 
-            ref Vector3 position, 
-            ref Quaternion rotation, 
-            ref Matrix4x4 projectionMatrix);
-        
-        public PreRenderCameraDataOverride preRenderCameraDataOverride;
 
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
@@ -165,10 +168,27 @@ namespace Unity.ClusterDisplay.Graphics
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
+            ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
+            ClusterDisplayManager.onBeginCameraRender += OnBeginCameraRender;
+
             // TODO Needed?
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
+        }
+
+        // Capture a rendering camera and set it as the active cluster camera if it meets the parameters.
+        private void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
+        {
+            if (!camera.enabled || // Ignore the camera if it's disbaled.
+                PresenterCamera.Camera == camera || // Ignore the present camera.
+                camera == ClusterDisplayManager.ActiveCamera || // If the active cluster camera is the current rendering camera, then we don't have to do anything.
+                camera.targetTexture != null) // Ignore cameras with render textures, as the user is probably using that camera for something.
+            {
+                return;
+            }
+
+            ClusterDisplayManager.SetActiveCamera(camera);
         }
 
         void OnDisable()
@@ -191,7 +211,7 @@ namespace Unity.ClusterDisplay.Graphics
                     return false;
                 }
                 
-                var activeCamera = ClusterCameraManager.ActiveCamera;
+                var activeCamera = ClusterDisplayManager.ActiveCamera;
                 if (activeCamera == null || m_ProjectionPolicy == null)
                 {
                     return false;
@@ -214,17 +234,17 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        void OnClusterDisplayUpdate()
+        internal void OnClusterDisplayUpdate()
         {
             if (!ShouldRender)
             {
                 return;
             }
             
-            var activeCamera = ClusterCameraManager.ActiveCamera;
+            var activeCamera = ClusterDisplayManager.ActiveCamera;
             ClusterDebug.Log($"Starting render.");
             m_ProjectionPolicy.UpdateCluster(
-                preRenderCameraDataOverride, 
+                onRenderClusterCamera, 
                 m_Settings, 
                 activeCamera);
         }
