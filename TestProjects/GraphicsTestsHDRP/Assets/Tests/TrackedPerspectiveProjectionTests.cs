@@ -6,12 +6,12 @@ using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class TiledProjectionCustomPassTests : ClusterRendererTest
+public class TrackedPerspectiveProjectionTests : ClusterRendererTest
 {
     [OneTimeSetUp]
     public void LoadScene()
     {
-        SceneManager.LoadScene("TiledProjectionCustomPass");
+        SceneManager.LoadScene("TrackedPerspectiveProjection");
     }
 
     [UnityTest]
@@ -20,6 +20,7 @@ public class TiledProjectionCustomPassTests : ClusterRendererTest
         yield return RenderAndCompare(() =>
         {
             Assert.IsTrue(m_ClusterRenderer.Settings.OverScanInPixels == 0, "Expected zero overscan.");
+            AlignSurfaceWithCameraFrustum(64);
         });
     }
 
@@ -29,6 +30,7 @@ public class TiledProjectionCustomPassTests : ClusterRendererTest
         yield return RenderAndCompare(() =>
         {
             m_ClusterRenderer.Settings.OverScanInPixels = 64;
+            AlignSurfaceWithCameraFrustum(64);
         });
     }
 }

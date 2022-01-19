@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TiledProjectionCustomPass.unity
     guid: 85a2cb092431d594eb3af97a746f0248
+  - enabled: 1
+    path: Assets/Scenes/TrackedPerspectiveProjection.unity
+    guid: e729210c5b8c4da4fa7afe30748e7790
   m_configObjects: {}

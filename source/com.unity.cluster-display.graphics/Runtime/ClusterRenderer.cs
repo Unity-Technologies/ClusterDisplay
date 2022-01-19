@@ -34,8 +34,6 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ClusterRendererSettings m_Settings = new ClusterRendererSettings();
 
-        bool m_IsDebug;
-
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
@@ -55,12 +53,18 @@ namespace Unity.ClusterDisplay.Graphics
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
         /// <summary>
-        /// Enable debug mode.
+        /// Specifies whether the current projection policy is in debug mode.
         /// </summary>
-        public bool IsDebug
+        internal bool IsDebug
         {
-            get => m_IsDebug;
-            set => m_IsDebug = value;
+            set
+            {
+                if (m_ProjectionPolicy != null)
+                {
+                    m_ProjectionPolicy.IsDebug = value;
+                }
+            }
+            get => m_ProjectionPolicy == null ? false : m_ProjectionPolicy.IsDebug;
         }
 
         /// <summary>

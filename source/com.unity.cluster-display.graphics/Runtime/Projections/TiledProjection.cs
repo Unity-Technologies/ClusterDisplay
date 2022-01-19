@@ -88,9 +88,6 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         TiledProjectionDebugSettings m_DebugSettings = new() {ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f)};
 
-        [SerializeField]
-        bool m_IsDebug;
-
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
         RenderTexture[] m_TileRenderTargets;

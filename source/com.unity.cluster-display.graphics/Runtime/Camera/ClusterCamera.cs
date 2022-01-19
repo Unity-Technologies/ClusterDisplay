@@ -24,7 +24,6 @@ namespace Unity.ClusterDisplay.Graphics
     {
         struct CameraState
         {
-            public RenderTexture Target;
             public bool Enabled;
 #if CLUSTER_DISPLAY_HDRP
             public bool HasPersistentHistory;
@@ -87,7 +86,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_CameraState = new CameraState
             {
                 Enabled = m_Camera.enabled,
-                Target = m_Camera.targetTexture,
 #if CLUSTER_DISPLAY_HDRP
                 HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
 #endif
@@ -110,14 +108,11 @@ namespace Unity.ClusterDisplay.Graphics
             // TODO What if the user alters the camera state between Enable() and here?
             // Restore camera state.
             m_Camera.enabled = m_CameraState.Enabled;
-            m_Camera.targetTexture = m_CameraState.Target;
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
 #endif
             
             m_ShouldRestore = false;
-
-            ApplicationUtil.ResetCamera(m_Camera);
         }
     }
 
