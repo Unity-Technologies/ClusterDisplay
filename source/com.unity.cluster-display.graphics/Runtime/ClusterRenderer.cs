@@ -167,19 +167,22 @@ namespace Unity.ClusterDisplay.Graphics
             m_Presenter.Enable();
             m_ProjectionPolicy.OnEnable();
 
-            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
             RegisterDelegates();
 
             // TODO Needed?
 #if UNITY_EDITOR
+            if (!Application.isPlaying) // We only really need this for testing in the editor when the game is stopped.
+            {
+                PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+            }
             SceneView.RepaintAll();
 #endif
         }
 
+        // Just being safe.
         private void DeregisterDelegates ()
         {
             m_Presenter.Present -= OnPresent;
-
             ClusterDisplayManager.onBeginFrameRender -= OnBeginFrameRender;
             ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
             ClusterDisplayManager.onEndCameraRender -= OnEndCameraRender;
@@ -208,8 +211,9 @@ namespace Unity.ClusterDisplay.Graphics
                     continue;
                 }
 
-                if (camera.enabled || // Ignore the camera if it's disbaled.
-                    camera != ClusterDisplayManager.ActiveCamera || // If the active cluster camera is the current rendering camera, then we don't have to do anything.
+                if (camera.enabled && // Ignore the camera if it's disabled.
+                    camera.gameObject.activeInHierarchy &&
+                    camera != ClusterDisplayManager.ActiveCamera && // If the active cluster camera is the current rendering camera, then we don't have to do anything.
                     camera.targetTexture == null) // Ignore cameras with render textures, as the user is probably using that camera for something.
                 {
                     ClusterDisplayManager.SetActiveCamera(camera);
@@ -218,31 +222,21 @@ namespace Unity.ClusterDisplay.Graphics
                 if (camera != ClusterDisplayManager.ActiveCamera)
                     continue;
 
+                if (Application.isPlaying)
+                {
+                    OnClusterDisplayUpdate();
+                }
+
                 onBeginFrameRender?.Invoke(camera);
+                break;
             }
         }
 
         // Capture a rendering camera and set it as the active cluster camera if it meets the parameters.
-        private void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
-        {
-            if (camera != ClusterDisplayManager.ActiveCamera)
-            {
-                return;
-            }
-
-            onBeginCameraRender?.Invoke(camera);
-        }
+        private void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) => onBeginCameraRender?.Invoke(camera);
 
         // Capture a rendering camera and set it as the active cluster camera if it meets the parameters.
-        private void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
-        {
-            if (camera != ClusterDisplayManager.ActiveCamera)
-            {
-                return;
-            }
-
-            onEndCameraRender?.Invoke(camera);
-        }
+        private void OnEndCameraRender(ScriptableRenderContext context, Camera camera) => onEndCameraRender?.Invoke(camera);
 
         private void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
         {
@@ -255,7 +249,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
-            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+            }
+#endif
             DeregisterDelegates();
 
             --s_ActiveInstancesCount;
@@ -264,32 +263,8 @@ namespace Unity.ClusterDisplay.Graphics
             m_ProjectionPolicy.OnDisable();
         }
 
-        private bool ShouldRender
+        void OnPresent(PresentArgs args)
         {
-            get
-            {
-                if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
-                {
-                    return false;
-                }
-                
-                var activeCamera = ClusterDisplayManager.ActiveCamera;
-                if (activeCamera == null || m_ProjectionPolicy == null)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-         void OnPresent(PresentArgs args)
-        {
-            if (!ShouldRender)
-            {
-                return;
-            }
-            
             if (m_ProjectionPolicy != null)
             {
                 m_ProjectionPolicy.Present(args);
@@ -298,17 +273,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         internal void OnClusterDisplayUpdate()
         {
-            if (!ShouldRender)
-            {
-                return;
-            }
-            
-            var activeCamera = ClusterDisplayManager.ActiveCamera;
             ClusterDebug.Log($"Starting render.");
             m_ProjectionPolicy.UpdateCluster(
                 onConfigureCamera, 
                 m_Settings, 
-                activeCamera);
+                ClusterDisplayManager.ActiveCamera);
         }
     }
 }

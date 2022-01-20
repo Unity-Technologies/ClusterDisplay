@@ -364,7 +364,6 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            camera.enabled = true;
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);

@@ -156,8 +156,8 @@ namespace Unity.ClusterDisplay.Graphics
             // If the previously active camera was this camera, reapply the user settings.
             if (previousCamera == cam)
             {
-                if (!previousCamera.enabled)
-                    previousCamera.enabled = true;
+                m_QueuedCameraConfigs.Clear();
+                // previousCamera.enabled = true;
             }
 
             // If the camera were cutting to is this camera, store the user settings.
@@ -227,7 +227,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void OnBeginFrameRender(Camera camera)
         {
-            if (this.cam != camera)
+            if (this.cam != camera || !camera.gameObject.activeInHierarchy)
             {
                 return;
             }
@@ -254,8 +254,10 @@ namespace Unity.ClusterDisplay.Graphics
             RenderTexture target,
             RenderFeature renderFeature)
         {
-            if (this.cam != camera)
+            if (this.cam != camera || !camera.gameObject.activeInHierarchy)
+            {
                 return;
+            }
 
             // Queue camera data and config to be dequeued in OnBeginCameraRender()
             m_QueuedCameraConfigs.Enqueue(new QueuedCameraConfig(
@@ -278,6 +280,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void DeconfigureCamera ()
         {
+            if (m_QueuedCachedCameraConfigs.Count == 0)
+                return;
+
             ApplicationUtil.ResetCamera(cam);
 
 #if CLUSTER_DISPLAY_HDRP
@@ -294,9 +299,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.useScreenCoordOverride = false;
 
 #endif
-
-            if (m_QueuedCachedCameraConfigs.Count == 0)
-                return;
 
             var cachedCameraConfig = m_QueuedCachedCameraConfigs.Dequeue();
             cam.targetTexture = cachedCameraConfig.m_CachedRenderTexture;
