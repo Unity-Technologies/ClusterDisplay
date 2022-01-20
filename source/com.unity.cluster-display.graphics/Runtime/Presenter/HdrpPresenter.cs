@@ -12,8 +12,9 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_CommandBufferName = "Present To Screen";
         readonly RenderTargetIdentifier k_CameraTargetId = new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget);
         
-        public event Action<CommandBuffer> Present = delegate {};
+        public event Action<PresentArgs> Present = delegate {};
 
+        Camera m_Camera;
         HDAdditionalCameraData m_AdditionalCameraData;
         Color m_ClearColor;
 
@@ -21,6 +22,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             set => m_ClearColor = value;
         }
+
+        public Camera Camera => m_Camera;
         
         public void Disable()
         {
@@ -37,18 +40,18 @@ namespace Unity.ClusterDisplay.Graphics
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
             m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
+            m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
             
-            // HDAdditionalCameraData requires a Camera, so add one if it doesn't already exist.
-            // This camera is not serialized, so it will probably need to be created when running a build.
-            var camera = gameObject.GetOrAddComponent<Camera>();
-            Assert.IsNotNull(camera);
+            // HDAdditionalCameraData requires a Camera so no need to add it manually.
+            m_Camera = gameObject.GetComponent<Camera>();
+            Assert.IsNotNull(m_Camera);
             // We use the camera to blit to screen.
-            camera.targetTexture = null;
-            camera.hideFlags = HideFlags.HideAndDontSave;
+            m_Camera.targetTexture = null;
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             
             // Assigning a customRender will bypass regular camera rendering,
             // so we don't need to worry about the camera render involving wasteful operations.
-            m_AdditionalCameraData.hideFlags = HideFlags.NotEditable;
+            m_AdditionalCameraData.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             m_AdditionalCameraData.customRender += OnCustomRender;
         }
 
@@ -56,10 +59,17 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
+
             cmd.SetRenderTarget(k_CameraTargetId);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
 
-            Present.Invoke(cmd);
+            Present.Invoke(new PresentArgs
+            {
+                CommandBuffer = cmd,
+                FlipY = true,
+                CameraPixelRect = m_Camera.pixelRect
+            });
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

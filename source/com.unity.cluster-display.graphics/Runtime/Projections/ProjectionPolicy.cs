@@ -11,6 +11,9 @@ namespace Unity.ClusterDisplay.Graphics
     /// </remarks>
     abstract class ProjectionPolicy : ScriptableObject
     {
+        [SerializeField]
+        protected bool m_IsDebug;
+        
         /// <summary>
         /// Called just before the frame is rendered.
         /// </summary>
@@ -28,13 +31,12 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.
         /// </summary>
-        /// <param name="commandBuffer">A <see cref="CommandBuffer"/> belonging to the current
-        /// rendering pipeline.</param>
+        /// <param name="args">A <see cref="PresentArgs"/> struct holding present arguments.</param>
         /// <remarks>
         /// At this point, you can enqueue any commands that are required to draw the final
         /// output to the current display output device.
         /// </remarks>
-        public abstract void Present(CommandBuffer commandBuffer);
+        public abstract void Present(PresentArgs args);
 
         /// <summary>
         /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
@@ -45,5 +47,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// Gets or sets the origin of the cluster display.
         /// </summary>
         public virtual Matrix4x4 Origin { get; set; }
+
+        /// <summary>
+        /// Specifies whether debug mode is enabled.
+        /// </summary>
+        public bool IsDebug
+        {
+            set => m_IsDebug = value;
+            get => m_IsDebug;
+        }
     }
 }

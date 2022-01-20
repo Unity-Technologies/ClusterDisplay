@@ -1,3 +1,6 @@
+TODO
+* mention we don't support lens flare or panini projection (yet)
+
 # About Unity.ClusterDisplay.Graphics
 See the core [Cluster Display package](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display/Documenation~/index.md) for general information, installation, and usage of Cluster Display.
 

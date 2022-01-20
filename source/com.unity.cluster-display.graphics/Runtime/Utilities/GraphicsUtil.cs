@@ -5,15 +5,17 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    static class GraphicsUtil
+    internal static class GraphicsUtil
     {
-        // We need to flip along the Y axis when blitting to screen on HDRP,
-        // but not when using URP.
-#if CLUSTER_DISPLAY_HDRP
-        const bool k_FlipWhenBlittingToScreen = true;
-#else
-        const bool k_FlipWhenBlittingToScreen = false;
-#endif
+        // Will only be used for Legacy if we end up supporting it.
+        // Otherwise see ScreenCoordOverrideUtils in SRP Core.
+        const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
+        
+        // Used to support the camera bridge capture API. 
+        static readonly int k_RecorderTempRT = Shader.PropertyToID("TempRecorder");
+
+        static GraphicsFormat s_GraphicsFormat = GraphicsFormat.None;
+
         public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
         static class ShaderIDs
@@ -24,11 +26,24 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
 
-        const string k_ShaderKeyword = "USING_CLUSTER_DISPLAY";
-        const string k_BlitShaderName = "ClusterDisplay/Blit";
+        public const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
+        static GraphicsFormat GetGraphicsFormat()
+        {
+            if (s_GraphicsFormat == GraphicsFormat.None)
+            {
+#if CLUSTER_DISPLAY_HDRP
+                s_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.HDR);
+#else
+                s_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
+#endif
+            }
+
+            return s_GraphicsFormat;
+        }
+        
         static MaterialPropertyBlock GetPropertyBlock()
         {
             if (s_PropertyBlock == null)
@@ -59,12 +74,12 @@ namespace Unity.ClusterDisplay.Graphics
             return s_BlitMaterial;
         }
 
-        public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand)
+        public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)
         {
-            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, k_FlipWhenBlittingToScreen);
+            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY);
         }
-
-        static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
+        
+        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
             var propertyBlock = GetPropertyBlock();
@@ -74,6 +89,11 @@ namespace Unity.ClusterDisplay.Graphics
             propertyBlock.SetVector(ShaderIDs._BlitScaleBiasRt, rtBias);
             propertyBlock.SetFloat(ShaderIDs._BlitMipLevel, 0);
             cmd.DrawProcedural(Matrix4x4.identity, GetBlitMaterial(), shaderPass, MeshTopology.Quads, 4, 1, propertyBlock);
+        }
+
+        public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, string name)
+        {
+            AllocateIfNeeded(ref rts, count, width, height, GetGraphicsFormat(), name);
         }
 
         public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, GraphicsFormat format, string name)
@@ -99,6 +119,11 @@ namespace Unity.ClusterDisplay.Graphics
                     rts[i].name = $"{name}-{width}X{height}-{i}";
                 }
             }
+        }
+
+        public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height)
+        {
+            return AllocateIfNeeded(ref rt, width, height, GetGraphicsFormat());
         }
 
         public static bool AllocateIfNeeded(ref RenderTexture rt, int width, int height, GraphicsFormat format)
@@ -135,7 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
             rts = null;
         }
 
-        static void DeallocateIfNeeded(ref RenderTexture rt)
+        public static void DeallocateIfNeeded(ref RenderTexture rt)
         {
             if (rt != null)
             {
@@ -147,21 +172,50 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void SetShaderKeyword(bool enabled)
         {
-            if (Shader.IsKeywordEnabled(k_ShaderKeyword) == enabled)
+            SetShaderKeyword(k_ShaderKeyword, enabled);
+        }
+        
+        public static void SetShaderKeyword(string keyword, bool enabled)
+        {
+            if (Shader.IsKeywordEnabled(keyword) == enabled)
             {
                 return;
             }
 
             if (enabled)
             {
-                Shader.EnableKeyword(k_ShaderKeyword);
+                Shader.EnableKeyword(keyword);
             }
             else
             {
-                Shader.DisableKeyword(k_ShaderKeyword);
+                Shader.DisableKeyword(keyword);
             }
         }
 
-        internal static Vector4 ToVector4(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+        // Convention, consistent with blit scale-bias for example.
+        internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+
+        internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<PresentArgs> render, bool flipY)
+        {
+            var captureActions = CameraCaptureBridge.GetCaptureActions(camera);
+            if (captureActions != null)
+            {
+                cmd.GetTemporaryRT(k_RecorderTempRT, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Point, GetGraphicsFormat());
+                cmd.SetRenderTarget(k_RecorderTempRT);
+                cmd.ClearRenderTarget(true, true, clearColor);
+
+                render.Invoke(new PresentArgs
+                {
+                    CommandBuffer = cmd,
+                    FlipY = flipY,
+                    CameraPixelRect = camera.pixelRect
+                });
+
+                for (captureActions.Reset(); captureActions.MoveNext();)
+                {
+                    captureActions.Current(k_RecorderTempRT, cmd);
+                }
+            }
+        }
     }
 }

@@ -16,9 +16,6 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";
         
         [SerializeField]
-        bool m_IsDebug;
-
-        [SerializeField]
         List<ProjectionSurface> m_ProjectionSurfaces = new();
 
         [SerializeField]
@@ -40,13 +37,23 @@ namespace Unity.ClusterDisplay.Graphics
 
         public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
 
-        GraphicsFormat m_GraphicsFormat;
-
-        void OnEnable()
+        public bool SetSurface(ProjectionSurface surface, int index = -1)
         {
-            m_GraphicsFormat = SystemInfo.GetGraphicsFormat(DefaultFormat.LDR);
-        }
+            if (index == -1)
+            {
+                m_ProjectionSurfaces.Add(surface);
+                return true;
+            }
 
+            if (index > -1 && index < m_ProjectionSurfaces.Count)
+            {
+                m_ProjectionSurfaces[index] = surface;
+                return true;
+            }
+
+            return false;
+        }
+        
         void OnDisable()
         {
             ClearPreviews();
@@ -88,14 +95,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void Present(CommandBuffer commandBuffer)
+        public override void Present(PresentArgs args)
         {
             if (m_ProjectionSurfaces.Count == 0 || m_BlitCommand.texture == null)
             {
                 return;
             }
 
-            GraphicsUtil.Blit(commandBuffer, m_BlitCommand);
+            GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
         }
 
         void ClearPreviews()
@@ -123,8 +130,7 @@ namespace Unity.ClusterDisplay.Graphics
                         surface.Scale,
                         rt,
                         surface.ScreenResolution,
-                        clusterSettings.OverScanInPixels,
-                        m_GraphicsFormat);
+                        clusterSettings.OverScanInPixels);
                 }
             }
         }
@@ -168,8 +174,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (GraphicsUtil.AllocateIfNeeded(
                 ref rt,
                 overscannedSize.x,
-                overscannedSize.y,
-                m_GraphicsFormat))
+                overscannedSize.y))
             {
                 m_RenderTargets[index] = rt;
             }
@@ -207,8 +212,10 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = new CameraScope(activeCamera);
+            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
+            
             cameraScope.Render(projectionMatrix, GetRenderTexture(index, overscannedSize));
+            
             cameraTransform.rotation = savedRotation;
         }
 

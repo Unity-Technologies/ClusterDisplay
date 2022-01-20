@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
+        const string k_NoPolicyMessage = "No projection policy assigned. You can create a new Projection Policy using the \"Create/Cluster Display\" menu.";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
@@ -50,9 +51,16 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                         DestroyImmediate(m_PolicyEditor);
                     }
                     
-                    if (currentPolicy != null || m_PolicyEditor == null)
+                    if (currentPolicy != null)
                     {
-                        m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                        if (m_PolicyEditor == null)
+                        {
+                            m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                        }
+                    }
+                    else
+                    {
+                        EditorGUILayout.HelpBox(k_NoPolicyMessage, MessageType.Warning);
                     }
                 }
             }

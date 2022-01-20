@@ -45,8 +45,7 @@ namespace Unity.ClusterDisplay.Graphics
             Vector3 scale,
             RenderTexture source,
             Vector2Int resolution,
-            int overScan,
-            GraphicsFormat format)
+            int overScan)
         {
             var previewTransform = transform;
             previewTransform.position = position;
@@ -61,8 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (GraphicsUtil.AllocateIfNeeded(
                 ref m_Texture,
                 resolution.x,
-                resolution.y,
-                format))
+                resolution.y))
             {
                 m_Material.mainTexture = m_Texture;
             }

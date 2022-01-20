@@ -6,4 +6,11 @@ TestProjects/*/obj
 TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
+TestProjects/*/UserSettings
 TestProjects/*/.idea
+
+# Our graphics tests generate reference images on the fly.
+TestProjects/GraphicsTestsURP/Assets/ActualImages
+TestProjects/GraphicsTestsURP/Assets/ActualImages.meta
+TestProjects/GraphicsTestsHDRP/Assets/ActualImages
+TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta

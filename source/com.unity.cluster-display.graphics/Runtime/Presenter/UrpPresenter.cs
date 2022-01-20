@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
-        public event Action<CommandBuffer> Present = delegate { };
+        public event Action<PresentArgs> Present = delegate { };
 
         Camera m_Camera;
         Color m_ClearColor;
@@ -19,6 +19,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             set => m_ClearColor = value;
         }
+
+        public Camera Camera => m_Camera;
         
         public void Disable()
         {
@@ -28,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
         public void Enable(GameObject gameObject)
         {
             m_Camera = gameObject.GetOrAddComponent<Camera>();
-            m_Camera.hideFlags = HideFlags.NotEditable;
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             // We use the camera to blit to screen.
             // Configure it to minimize wasteful rendering.
             m_Camera.targetTexture = null;
@@ -47,13 +49,20 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            var target = renderingData.cameraData.renderer.cameraColorTarget;
-
+            var target = renderingData.cameraData.renderer.cameraColorTargetHandle;
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
+
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
+            
             cmd.SetRenderTarget(target);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
             
-            Present.Invoke(cmd);
+            Present.Invoke(new PresentArgs
+            {
+                CommandBuffer = cmd,
+                FlipY = false,
+                CameraPixelRect = m_Camera.pixelRect
+            });
             
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

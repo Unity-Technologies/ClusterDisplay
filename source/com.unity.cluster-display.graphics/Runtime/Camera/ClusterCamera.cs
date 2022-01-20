@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Assertions;
+#if CLUSTER_DISPLAY_HDRP
+using UnityEngine.Rendering.HighDefinition;
+#endif
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -18,22 +22,97 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
-        Camera m_Camera;
+        struct CameraState
+        {
+            public bool Enabled;
+#if CLUSTER_DISPLAY_HDRP
+            public bool HasPersistentHistory;
+#endif
+        }
 
+        CameraState m_CameraState;
+        Camera m_Camera;
+#if CLUSTER_DISPLAY_HDRP
+        HDAdditionalCameraData m_AdditionalCameraData;
+#endif
+        bool m_ShouldRestore;
+        
         void Update()
         {
-            m_Camera.enabled = false;
+            if (m_Camera.enabled && ClusterRenderer.IsActive())
+            {
+                // TODO Not technically breaking but unexpected from a usage perspective.
+                Debug.LogError($"Camera {m_Camera.name} enabled while Cluster Renderer is active, this is not supported.");
+            }
         }
 
         void OnEnable()
         {
             m_Camera = GetComponent<Camera>();
+#if CLUSTER_DISPLAY_HDRP
+            m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
+#endif
+            
+            ClusterRenderer.Enabled += OnRendererEnabled;
+            ClusterRenderer.Disabled += OnRendererDisabled;
             ClusterCameraManager.Instance.Register(m_Camera);
+
+            // In case the renderer is already active;
+            if (ClusterRenderer.IsActive())
+            {
+                OnRendererEnabled();
+            }
         }
 
         void OnDisable()
         {
             ClusterCameraManager.Instance.Unregister(m_Camera);
+            ClusterRenderer.Enabled -= OnRendererEnabled;
+            ClusterRenderer.Disabled -= OnRendererDisabled;
+            
+            // In case the renderer is still active;
+            if (ClusterRenderer.IsActive())
+            {
+                OnRendererDisabled();
+            }
+        }
+
+        void OnRendererEnabled()
+        {
+            Assert.IsNotNull(m_Camera);
+            Assert.IsFalse(m_ShouldRestore);
+
+            // Save camera state.
+            m_CameraState = new CameraState
+            {
+                Enabled = m_Camera.enabled,
+#if CLUSTER_DISPLAY_HDRP
+                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
+#endif
+            };
+
+            m_ShouldRestore = true;
+            
+            m_Camera.enabled = false;
+#if CLUSTER_DISPLAY_HDRP
+            // Since we will render this camera procedurally rendered,
+            // we need to retain history buffers even if the camera is disabled.
+            m_AdditionalCameraData.hasPersistentHistory = true;
+#endif
+        }
+
+        void OnRendererDisabled()
+        {
+            Assert.IsTrue(m_ShouldRestore);
+            
+            // TODO What if the user alters the camera state between Enable() and here?
+            // Restore camera state.
+            m_Camera.enabled = m_CameraState.Enabled;
+#if CLUSTER_DISPLAY_HDRP
+            m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
+#endif
+            
+            m_ShouldRestore = false;
         }
     }
 

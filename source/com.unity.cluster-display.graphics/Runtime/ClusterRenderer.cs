@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -18,6 +20,12 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : MonoBehaviour
     {
+        // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
+        static int s_ActiveInstancesCount;
+        internal static bool IsActive() => s_ActiveInstancesCount > 0;
+        internal static Action Enabled = delegate { };
+        internal static Action Disabled = delegate { };
+
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
@@ -25,8 +33,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         [SerializeField]
         ClusterRendererSettings m_Settings = new ClusterRendererSettings();
-
-        bool m_IsDebug;
 
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
@@ -40,26 +46,41 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
-        
+
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
         /// <summary>
-        /// Enable debug mode.
+        /// Specifies whether the current projection policy is in debug mode.
         /// </summary>
-        public bool IsDebug
+        internal bool IsDebug
         {
-            get => m_IsDebug;
-            set => m_IsDebug = value;
+            set
+            {
+                if (m_ProjectionPolicy != null)
+                {
+                    m_ProjectionPolicy.IsDebug = value;
+                }
+            }
+            get => m_ProjectionPolicy == null ? false : m_ProjectionPolicy.IsDebug;
         }
 
         /// <summary>
         /// Gets the current cluster rendering settings.
         /// </summary>
-        public ClusterRendererSettings Settings => m_Settings;
-        
+        public ClusterRendererSettings Settings
+        {
+            get => m_Settings;
+            set => m_Settings = value;
+        }
+
+        /// <summary>
+        /// Gets the camera internally used to present on screen.
+        /// </summary>
+        public Camera PresentCamera => m_Presenter.Camera;
+
 #if UNITY_EDITOR
         void OnDrawGizmos()
         {
@@ -73,6 +94,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            ++s_ActiveInstancesCount;
+
+            // TODO More elegant / user friendly way to handle this.
+            if (s_ActiveInstancesCount > 1)
+            {
+                throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
+            }
+
+            // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
+            // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
@@ -82,6 +113,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
+            Enabled.Invoke();
         }
 
         void Update()
@@ -94,17 +126,20 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
+            Disabled.Invoke();
+
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
+            --s_ActiveInstancesCount;
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
 
-        void OnPresent(CommandBuffer commandBuffer)
+        void OnPresent(PresentArgs args)
         {
             if (m_ProjectionPolicy != null)
             {
-                m_ProjectionPolicy.Present(commandBuffer);
+                m_ProjectionPolicy.Present(args);
             }
         }
 

@@ -8,7 +8,7 @@ readonly struct CameraScope : IDisposable
     readonly int m_cullingMask;
     static readonly int k_ClusterDisplayParams = Shader.PropertyToID("_ClusterDisplayParams");
 
-    public CameraScope(Camera camera)
+    CameraScope(Camera camera)
     {
         m_Camera = camera;
         m_cullingMask = camera.cullingMask;

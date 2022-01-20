@@ -56,12 +56,12 @@ namespace Unity.ClusterDisplay.Graphics
                 r.max.y + delta.y);
         }
 
-        static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels)
+        public static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels)
         {
             return ApplyOverscan(normalizedViewportSubsection, overscanInPixels, Screen.width, Screen.height);
         }
 
-        static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels, int viewportWidth, int viewportHeight)
+        public static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels, int viewportWidth, int viewportHeight)
         {
             var normalizedOverscan = new Vector2(
                 overscanInPixels * (normalizedViewportSubsection.max.x - normalizedViewportSubsection.min.x) / viewportWidth,
