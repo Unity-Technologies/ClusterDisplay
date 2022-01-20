@@ -7,13 +7,20 @@ namespace Unity.ClusterDisplay
     [ExecuteAlways]
     public class OverrideCameraProjection : MonoBehaviour
     {
-        private void Start()
+        private bool m_DelegateSet;
+
+        private void Update()
         {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
+            if (m_DelegateSet)
                 return;
 
-            clusterRenderer.preRenderCameraDataOverride -= PreRenderCameraDataOverride;
-            clusterRenderer.preRenderCameraDataOverride += PreRenderCameraDataOverride;
+            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
+                return;
+
+            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+            clusterCamera.userPreCameraRenderDataOverride += PreRenderCameraDataOverride;
+
+            m_DelegateSet = true;
         }
         
         private void PreRenderCameraDataOverride(int nodeId, ref Vector3 position, ref Quaternion rotation, ref Matrix4x4 matrix)
@@ -23,28 +30,21 @@ namespace Unity.ClusterDisplay
             matrix = Matrix4x4.Perspective(45f, Screen.height / (float)Screen.width, 0.1f, 100f);
         }
 
-        private void OnEnable()
-        {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                return;
-            
-            clusterRenderer.preRenderCameraDataOverride -= PreRenderCameraDataOverride;
-            clusterRenderer.preRenderCameraDataOverride += PreRenderCameraDataOverride;
-        }
-
         private void OnDisable()
         {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
+            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
                 return;
             
-            clusterRenderer.preRenderCameraDataOverride -= PreRenderCameraDataOverride;
+            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+            m_DelegateSet = false;
         }
         
         private void OnDestroy()
         {
-            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer, throwError: false))
+            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
                 return;
-            clusterRenderer.preRenderCameraDataOverride -= PreRenderCameraDataOverride;
+            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+            m_DelegateSet = false;
         }
     }
 }

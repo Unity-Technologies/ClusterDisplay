@@ -330,7 +330,9 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
+            ClusterDebug.Log($"Preparing camera: \"{camera.gameObject.name}\" for sitcher.");
             camera.enabled = false;
+
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
                 var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
@@ -364,6 +366,8 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
+            ClusterDebug.Log($"Preparing camera: \"{camera.gameObject.name}\" for tile.");
+
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
@@ -381,7 +385,6 @@ namespace Unity.ClusterDisplay.Graphics
                 RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
 
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
-            
         }
     }
 }

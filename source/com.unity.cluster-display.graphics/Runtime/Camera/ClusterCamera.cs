@@ -16,6 +16,19 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    public static class ClusterCameraExtensions
+    {
+        public static bool TryGetClusterCamera (this Camera camera, out ClusterCamera clusterCamera)
+        {
+            if (camera == null)
+            {
+                clusterCamera = null;
+                return false;
+            }
+
+            return (clusterCamera = camera.gameObject.GetComponent<ClusterCamera>()) != null;
+        }
+    }
     /// <summary>
     /// Attach this script to a Camera object if you wish for it to be rendered by
     /// the cluster.
@@ -65,6 +78,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         private readonly struct QueuedCachedCameraConfig
         {
+            #if CLUSTER_DISPLAY_HDRP
+            public readonly bool m_UseCustomFrameSettings;
+            public readonly bool m_HasPersistentHistory;
+            #endif
+
+            public readonly bool m_UsePhysicalCamera;
             public readonly int m_CachedCullingMask;
             public readonly Matrix4x4 m_CachedProjectionMatrix;
             public readonly Vector3 m_CachedPosition;
@@ -72,12 +91,24 @@ namespace Unity.ClusterDisplay.Graphics
             public readonly RenderTexture m_CachedRenderTexture;
 
             public QueuedCachedCameraConfig(
+
+                #if CLUSTER_DISPLAY_HDRP
+                bool useCustomFrameSettings,
+                bool hasPersistentHistory,
+                #endif
+
+                bool usePhysicalCamera,
                 int cachedCullingMask,
                 Matrix4x4 cachedProjectionMatrix,
                 Vector3 cachedPosition,
                 Quaternion cachedRotation,
                 RenderTexture cachedRenderTexture)
             {
+                #if CLUSTER_DISPLAY_HDRP
+                m_UseCustomFrameSettings = useCustomFrameSettings;
+                m_HasPersistentHistory = hasPersistentHistory;
+                #endif
+                m_UsePhysicalCamera = usePhysicalCamera;
                 m_CachedCullingMask = cachedCullingMask;
                 m_CachedProjectionMatrix = cachedProjectionMatrix;
                 m_CachedPosition = cachedPosition;
@@ -101,37 +132,44 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-#if CLUSTER_DISPLAY_HDRP
+        #if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
-#elif CLUSTER_DISPLAY_URP
+        #elif CLUSTER_DISPLAY_URP
         UniversalAdditionalCameraData m_AdditionalCameraData;
-#endif
+        #endif
+
+        private void Awake ()
+        {
+            cam.enabled = true;
+        }
 
         void OnEnable()
         {
-#if CLUSTER_DISPLAY_HDRP
+
+            #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
-#elif CLUSTER_DISPLAY_URP
+            #elif CLUSTER_DISPLAY_URP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(gameObject);
-#endif
+            #endif
+
             RegisterDelegates();
-#if UNITY_EDITOR
-            EditorApplication.playModeStateChanged -= PlayModeStateChanged;
-            EditorApplication.playModeStateChanged += PlayModeStateChanged;
-#endif
         }
 
-#if UNITY_EDITOR
+        /*
+        #if UNITY_EDITOR
         private void PlayModeStateChanged(PlayModeStateChange state)
         {
             if (!cam.enabled)
                 cam.enabled = true;
         }
-#endif
+        #endif
+        */
 
         private void RegisterDelegates()
         {
             DeregisterDelegates();
+
+            ClusterDebug.Log($"Registering {nameof(ClusterCamera)} delegates.");
 
             ClusterRenderer.onBeginFrameRender += OnBeginFrameRender;
             ClusterRenderer.onEndCameraRender += OnEndCameraRender;
@@ -142,6 +180,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         private void DeregisterDelegates()
         {
+            ClusterDebug.Log($"Deregistering {nameof(ClusterCamera)} delegates.");
+
             ClusterRenderer.onBeginFrameRender -= OnBeginFrameRender;
             ClusterRenderer.onEndCameraRender -= OnEndCameraRender;
 
@@ -172,12 +212,20 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             var cameraConfig = m_QueuedCameraConfigs.Dequeue();
+            ClusterDebug.Log($"Configuring cluster camera: \"{cam.gameObject.name}\" on node: {cameraConfig.m_NodeId}.");
 
             var projectionMatrix = m_Camera.projectionMatrix;
             var position = m_Camera.transform.position;
             var rotation = m_Camera.transform.rotation;
 
             m_QueuedCachedCameraConfigs.Enqueue(new QueuedCachedCameraConfig(
+
+                #if CLUSTER_DISPLAY_HDRP
+                m_AdditionalCameraData.customRenderingSettings,
+                m_AdditionalCameraData.hasPersistentHistory,
+                #endif
+
+                cam.usePhysicalProperties,
                 cam.cullingMask,
                 cam.projectionMatrix,
                 position,
@@ -187,7 +235,7 @@ namespace Unity.ClusterDisplay.Graphics
             projectionMatrix = cameraConfig.m_ProjectionMatrix;
             userPreCameraRenderDataOverride?.Invoke(cameraConfig.m_NodeId, ref position, ref rotation, ref projectionMatrix);
 
-#if CLUSTER_DISPLAY_HDRP
+            #if CLUSTER_DISPLAY_HDRP
 
             if (cameraConfig.m_RenderFeature != RenderFeature.None)
             {
@@ -207,11 +255,12 @@ namespace Unity.ClusterDisplay.Graphics
             }
             m_AdditionalCameraData.hasPersistentHistory = true;
 
-#elif CLUSTER_DISPLAY_URP
+            #elif CLUSTER_DISPLAY_URP
 
             m_AdditionalCameraData.useScreenCoordOverride = cameraConfig.m_RenderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
 
-#endif
+            #endif
+
             m_Camera.transform.position = position;
             m_Camera.transform.rotation = rotation;
 
@@ -259,6 +308,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            ClusterDebug.Log($"Queuing configuration for camera: \"{cam.gameObject.name}\" on node: {nodeId}.");
             // Queue camera data and config to be dequeued in OnBeginCameraRender()
             m_QueuedCameraConfigs.Enqueue(new QueuedCameraConfig(
                 nodeId,
@@ -274,6 +324,7 @@ namespace Unity.ClusterDisplay.Graphics
             // where we will explicitly call Render() from then on.
             if (!camera.enabled)
             {
+                ClusterDebug.Log($"Active camera: \"{cam.gameObject.name}\" is disabled, so we will manually call render.");
                 camera.Render();
             }
         }
@@ -283,24 +334,26 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_QueuedCachedCameraConfigs.Count == 0)
                 return;
 
+            ClusterDebug.Log($"Deconfiguring camera: \"{cam.gameObject.name}\".");
+
+            var cachedCameraConfig = m_QueuedCachedCameraConfigs.Dequeue();
             ApplicationUtil.ResetCamera(cam);
 
-#if CLUSTER_DISPLAY_HDRP
+            #if CLUSTER_DISPLAY_HDRP
 
             m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = false;
             m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = false;
             m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
             m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
-            // m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
-            m_AdditionalCameraData.hasPersistentHistory = false;
+            m_AdditionalCameraData.customRenderingSettings = cachedCameraConfig.m_UseCustomFrameSettings;
+            m_AdditionalCameraData.hasPersistentHistory = cachedCameraConfig.m_HasPersistentHistory;
 
-#elif CLUSTER_DISPLAY_URP
+            #elif CLUSTER_DISPLAY_URP
 
             m_AdditionalCameraData.useScreenCoordOverride = false;
 
-#endif
+            #endif
 
-            var cachedCameraConfig = m_QueuedCachedCameraConfigs.Dequeue();
             cam.targetTexture = cachedCameraConfig.m_CachedRenderTexture;
 
             cam.transform.position = cachedCameraConfig.m_CachedPosition;
@@ -309,6 +362,8 @@ namespace Unity.ClusterDisplay.Graphics
             cam.projectionMatrix = cachedCameraConfig.m_CachedProjectionMatrix;
             cam.cullingMatrix = cam.projectionMatrix * m_Camera.worldToCameraMatrix;
             cam.cullingMask = cachedCameraConfig.m_CachedCullingMask;
+
+            cam.usePhysicalProperties = cachedCameraConfig.m_UsePhysicalCamera;
         }
     }
 }

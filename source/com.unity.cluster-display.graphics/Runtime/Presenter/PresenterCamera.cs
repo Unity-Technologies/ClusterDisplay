@@ -31,12 +31,10 @@ namespace Unity.ClusterDisplay
                     instance.cam.cullingMask = 0;
                     instance.cam.clearFlags = CameraClearFlags.Nothing;
                     instance.cam.depthTextureMode = DepthTextureMode.None;
+                    instance.cam.depth = 100;
                     
-                    ClusterDebug.Log($"Setup {nameof(PresenterCamera)}.");
+                    ClusterDebug.Log($"Created {nameof(PresenterCamera)}.");
                 }
-
-                instance.gameObject.hideFlags = HideFlags.DontSave;
-                instance.cam.depth = 100;
 
                 return instance.cam;
             }

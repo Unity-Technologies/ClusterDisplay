@@ -82,13 +82,13 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
-#if CLUSTER_DISPLAY_HDRP
+        #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
-#elif CLUSTER_DISPLAY_URP
+        #elif CLUSTER_DISPLAY_URP
         IPresenter m_Presenter = new UrpPresenter();
-#else // TODO Add support for Legacy render pipeline.
+        #else // TODO Add support for Legacy render pipeline.
         IPresenter m_Presenter = new NullPresenter();
-#endif
+        #endif
 
         internal const int VirtualObjectLayer = 12;
         
@@ -169,19 +169,22 @@ namespace Unity.ClusterDisplay.Graphics
 
             RegisterDelegates();
 
-            // TODO Needed?
-#if UNITY_EDITOR
-            if (!Application.isPlaying) // We only really need this for testing in the editor when the game is stopped.
+            #if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode) // We only really need this for testing in the editor when the game is stopped.
             {
-                PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+                PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(PrepareFrame);
             }
+
+            // TODO Needed?
             SceneView.RepaintAll();
-#endif
+            #endif
         }
 
         // Just being safe.
         private void DeregisterDelegates ()
         {
+            ClusterDebug.Log($"Unregistering {nameof(ClusterRenderer)} delegates.");
+
             m_Presenter.Present -= OnPresent;
             ClusterDisplayManager.onBeginFrameRender -= OnBeginFrameRender;
             ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
@@ -193,8 +196,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             DeregisterDelegates();
 
-            m_Presenter.Present += OnPresent;
+            ClusterDebug.Log($"Registering {nameof(ClusterRenderer)} delegates.");
 
+            m_Presenter.Present += OnPresent;
             ClusterDisplayManager.onBeginFrameRender += OnBeginFrameRender;
             ClusterDisplayManager.onBeginCameraRender += OnBeginCameraRender;
             ClusterDisplayManager.onEndCameraRender += OnEndCameraRender;
@@ -224,7 +228,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 if (Application.isPlaying)
                 {
-                    OnClusterDisplayUpdate();
+                    PrepareFrame();
                 }
 
                 onBeginFrameRender?.Invoke(camera);
@@ -249,12 +253,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnDisable()
         {
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
+            #if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
+                PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(PrepareFrame);
             }
-#endif
+            #endif
+
             DeregisterDelegates();
 
             --s_ActiveInstancesCount;
@@ -267,13 +272,19 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_ProjectionPolicy != null)
             {
+                ClusterDebug.Log($"Presenting via: {m_ProjectionPolicy.GetType().Name}.");
                 m_ProjectionPolicy.Present(args);
             }
         }
 
-        internal void OnClusterDisplayUpdate()
+        internal void PrepareFrame()
         {
-            ClusterDebug.Log($"Starting render.");
+            if (ClusterDisplayManager.ActiveCamera == null)
+            {
+                return; // This is really only for when stopped in the editor.
+            }
+
+            ClusterDebug.Log($"Preparing frame via: {m_ProjectionPolicy.GetType().Name}");
             m_ProjectionPolicy.UpdateCluster(
                 onConfigureCamera, 
                 m_Settings, 

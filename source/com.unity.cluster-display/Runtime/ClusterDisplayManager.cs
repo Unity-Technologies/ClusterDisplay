@@ -28,6 +28,7 @@ namespace Unity.ClusterDisplay
             if (instance.m_ActiveCamera == camera)
                 return;
 
+            ClusterDebug.Log($"Switching active camera from: \"{(camera != null ? camera.gameObject.name : "NULL")}\" to camera: \"{camera.gameObject.name}\".");
             onChangeActiveCamera?.Invoke(instance.m_ActiveCamera, camera);
             instance.m_ActiveCamera = camera;
         }

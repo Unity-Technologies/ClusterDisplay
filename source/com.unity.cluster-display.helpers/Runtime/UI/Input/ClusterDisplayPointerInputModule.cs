@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay.Helpers
         #endif
         private bool TryPerformRaycast (PointerEventData pointerEventData, out RaycastResult raycast)
         {
-            if (ClusterCameraManager.ActiveCamera == null)
+            if (ClusterDisplayManager.ActiveCamera == null)
             {
                 raycast = default(RaycastResult);
                 return false;

@@ -91,7 +91,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_LastFrame.wrapMode = TextureWrapMode.Repeat;
                     m_LastFrame.filterMode = FilterMode.Point;
 
-                    ClusterDebug.Log($"Created new buffer for storing previous frame.");
+                    ClusterDebug.Log($"Created new buffer for storing previous frame:\n\tWidth: {hdCamera.actualWidth}\n\tHeight: {hdCamera.actualHeight}\n\tDepth: {handle.rt.depth}\n\tGraphics Format: {handle.rt.graphicsFormat}");
                 }
 
                 cmd.SetRenderTarget(k_CameraTargetId);
@@ -102,9 +102,11 @@ namespace Unity.ClusterDisplay.Graphics
             }
             else
             {
+                ClusterDebug.Log($"Repeater presenting current frame: {ClusterDisplayState.Frame}");
                 cmd.SetRenderTarget(k_CameraTargetId);
-                cmd.ClearRenderTarget(true, true, m_ClearColor);
             }
+
+            cmd.ClearRenderTarget(true, true, m_ClearColor);
 
             Present.Invoke(new PresentArgs
             {

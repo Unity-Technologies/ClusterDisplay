@@ -28,10 +28,12 @@ namespace Unity.ClusterDisplay.Graphics
             if (update == null)
                 throw new ArgumentNullException(nameof(update));
 
+            ClusterDebug.Log($"Attempting to register: {update.Method.Name} in: {nameof(UnityEngine.PlayerLoop.PostLateUpdate)}.");
             var loop = PlayerLoop.GetCurrentPlayerLoop();
 
             if (!loop.TryFindSubSystem<TSystem>(out var system))
             {
+                ClusterDebug.Log($"No subsystem of type: {typeof(TSystem).Name}.");
                 return false;
             }
 
@@ -70,6 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (update == null)
                 throw new ArgumentNullException(nameof(update));
 
+            ClusterDebug.Log($"Unregistering: {update.Method.Name} in: {typeof(TSubSystem).Name}.");
             var loop = PlayerLoop.GetCurrentPlayerLoop();
 
             if (loop.TryFindSubSystem<TSubSystem>(out var subSystem))

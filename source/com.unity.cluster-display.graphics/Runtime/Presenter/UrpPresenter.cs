@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             GraphicsUtil.ExecuteCaptureIfNeeded(PresenterCamera.Camera, cmd, m_ClearColor, Present.Invoke, false);
 
-            if (ClusterDisplayState.IsEmitter && Application.isPlaying)
+            if (ClusterDisplayState.IsEmitter)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
                 
@@ -75,6 +75,9 @@ namespace Unity.ClusterDisplay.Graphics
                         cameraColorTargetDescriptor.depthBufferBits,
                         cameraColorTargetDescriptor.graphicsFormat,
                         0);
+
+                    m_LastFrame.name = $"EmitterLastFrame-({m_LastFrame.width}x{m_LastFrame.height})";
+
                     m_LastFrame.antiAliasing = 1;
                     m_LastFrame.filterMode = FilterMode.Point;
                     
