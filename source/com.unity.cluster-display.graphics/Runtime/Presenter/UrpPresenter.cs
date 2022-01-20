@@ -22,8 +22,6 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_ClearColor = value;
         }
 
-        public Camera Camera => PresenterCamera.Camera;
-        
         public void Disable()
         {
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
@@ -31,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void Enable()
         {
-            Camera.hideFlags = HideFlags.NotEditable;
+            PresenterCamera.Camera.hideFlags = HideFlags.NotEditable;
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender; // Insurances to avoid duplicate delegate registration.
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
@@ -43,7 +41,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             
             // The render pass gets invoked for all cameras so we need to filter.
-            if (renderingData.cameraData.camera != Camera)
+            if (renderingData.cameraData.camera != PresenterCamera.Camera)
             {
                 return;
             }
@@ -52,6 +50,8 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;
             var cameraColorTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
+
+            GraphicsUtil.ExecuteCaptureIfNeeded(PresenterCamera.Camera, cmd, m_ClearColor, Present.Invoke, false);
 
             if (ClusterDisplayState.IsEmitter && Application.isPlaying)
             {
@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Graphics
                     
                     ClusterDebug.Log($"Created new buffer for storing previous frame.");
                 }
-				GraphicsUtil.ExecuteCaptureIfNeeded(Camera, cmd, m_ClearColor, Present.Invoke, false);
+
                 cmd.SetRenderTarget(cameraColorTarget);
                 cmd.ClearRenderTarget(true, true, m_ClearColor);
                 
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 CommandBuffer = cmd,
                 FlipY = false,
-                CameraPixelRect = Camera.pixelRect
+                CameraPixelRect = PresenterCamera.Camera.pixelRect
             });
             
             context.ExecuteCommandBuffer(cmd);

@@ -219,7 +219,7 @@ namespace Unity.ClusterDisplay.Graphics
 
 
         public override void UpdateCluster(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings, 
             Camera activeCamera)
         {
@@ -263,6 +263,7 @@ namespace Unity.ClusterDisplay.Graphics
             else
             {
                 RenderTile(
+                    renderContext.CurrentTileIndex,
                     onRenderClusterCamera,
                     m_TileRenderTargets[0], 
                     activeCamera, 
@@ -323,7 +324,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         static void RenderStitcher(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             IReadOnlyList<RenderTexture> targets, 
             Camera camera, 
             ref TileProjectionContext tileProjectionContext, 
@@ -339,9 +340,9 @@ namespace Unity.ClusterDisplay.Graphics
                 var screenSizeOverride = tileProjectionContext.PostEffectsParams.GetScreenSizeOverride();
                 
                 var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
-                
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
+
                 onRenderClusterCamera?.Invoke(
                     camera, 
                     tileIndex, 
@@ -356,13 +357,14 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         static void RenderTile(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            int tileIndex,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             RenderTexture target, 
             Camera camera, 
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
-            // camera.enabled = false;
+            camera.enabled = true;
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);

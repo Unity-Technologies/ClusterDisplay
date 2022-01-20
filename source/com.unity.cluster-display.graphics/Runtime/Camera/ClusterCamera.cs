@@ -30,11 +30,11 @@ namespace Unity.ClusterDisplay.Graphics
     public class ClusterCamera : MonoBehaviour
     {
         public delegate void UserPreCameraRenderDataOverride(
-            int nodeId, 
-            ref Vector3 position, 
-            ref Quaternion rotation, 
+            int nodeId,
+            ref Vector3 position,
+            ref Quaternion rotation,
             ref Matrix4x4 projectionMatrix);
-        
+
         public UserPreCameraRenderDataOverride userPreCameraRenderDataOverride;
 
         internal readonly struct QueuedCameraConfig
@@ -46,11 +46,11 @@ namespace Unity.ClusterDisplay.Graphics
             public readonly RenderTexture m_Target;
             public readonly RenderFeature m_RenderFeature;
 
-            public QueuedCameraConfig (
-                int nodeId, 
-                Matrix4x4 projectionMatrix, 
-                Vector4 screenSizeOverride, 
-                Vector4 screenCoordScaleBias, 
+            public QueuedCameraConfig(
+                int nodeId,
+                Matrix4x4 projectionMatrix,
+                Vector4 screenSizeOverride,
+                Vector4 screenCoordScaleBias,
                 RenderTexture target,
                 RenderFeature renderFeature)
             {
@@ -129,26 +129,29 @@ namespace Unity.ClusterDisplay.Graphics
         }
 #endif
 
-        private void RegisterDelegates ()
+        private void RegisterDelegates()
         {
             DeregisterDelegates();
-            ClusterDisplayManager.onBeginCameraRender += OnBeginCameraRender;
-            ClusterDisplayManager.onEndCameraRender += OnEndCameraRender;
+
+            ClusterRenderer.onBeginFrameRender += OnBeginFrameRender;
+            ClusterRenderer.onEndCameraRender += OnEndCameraRender;
+
             ClusterDisplayManager.onChangeActiveCamera += OnChangeActiveCamera;
-            ClusterRenderer.onRenderClusterCamera += OnRenderClusterCamera;
+            ClusterRenderer.onConfigureCamera += OnRenderClusterCamera;
         }
 
-        private void DeregisterDelegates ()
+        private void DeregisterDelegates()
         {
-            ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
-            ClusterDisplayManager.onEndCameraRender -= OnEndCameraRender;
+            ClusterRenderer.onBeginFrameRender -= OnBeginFrameRender;
+            ClusterRenderer.onEndCameraRender -= OnEndCameraRender;
+
             ClusterDisplayManager.onChangeActiveCamera -= OnChangeActiveCamera;
-            ClusterRenderer.onRenderClusterCamera -= OnRenderClusterCamera;
+            ClusterRenderer.onConfigureCamera -= OnRenderClusterCamera;
         }
 
         private void OnDestroy() => DeregisterDelegates();
 
-        private void OnChangeActiveCamera (Camera previousCamera, Camera nextCamera)
+        private void OnChangeActiveCamera(Camera previousCamera, Camera nextCamera)
         {
             // If the previously active camera was this camera, reapply the user settings.
             if (previousCamera == cam)
@@ -163,12 +166,10 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        private void OnBeginCameraRender(ScriptableRenderContext context, Camera camera)
+        private void ConfigureCamera()
         {
-            if (this.cam != camera || m_QueuedCameraConfigs.Count == 0)
-            {
+            if (m_QueuedCameraConfigs.Count == 0)
                 return;
-            }
 
             var cameraConfig = m_QueuedCameraConfigs.Dequeue();
 
@@ -177,11 +178,11 @@ namespace Unity.ClusterDisplay.Graphics
             var rotation = m_Camera.transform.rotation;
 
             m_QueuedCachedCameraConfigs.Enqueue(new QueuedCachedCameraConfig(
-                camera.cullingMask,
-                camera.projectionMatrix,
+                cam.cullingMask,
+                cam.projectionMatrix,
                 position,
                 rotation,
-                camera.targetTexture));
+                cam.targetTexture));
 
             projectionMatrix = cameraConfig.m_ProjectionMatrix;
             userPreCameraRenderDataOverride?.Invoke(cameraConfig.m_NodeId, ref position, ref rotation, ref projectionMatrix);
@@ -204,6 +205,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
                 }
             }
+            m_AdditionalCameraData.hasPersistentHistory = true;
 
 #elif CLUSTER_DISPLAY_URP
 
@@ -212,15 +214,35 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
             m_Camera.transform.position = position;
             m_Camera.transform.rotation = rotation;
-            
+
             m_Camera.targetTexture = cameraConfig.m_Target;
             m_Camera.projectionMatrix = projectionMatrix;
             m_Camera.cullingMatrix = projectionMatrix * m_Camera.worldToCameraMatrix;
-            m_Camera.cullingMask = camera.cullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
+            m_Camera.cullingMask = cam.cullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
 
             m_AdditionalCameraData.screenSizeOverride = cameraConfig.m_ScreenSizeOverride;
             m_AdditionalCameraData.screenCoordScaleBias = cameraConfig.m_ScreenCoordScaleBias;
 
+        }
+
+        private void OnBeginFrameRender(Camera camera)
+        {
+            if (this.cam != camera)
+            {
+                return;
+            }
+
+            ConfigureCamera();
+        }
+
+        private void OnEndCameraRender(Camera camera)
+        {
+            if (this.cam != camera)
+            {
+                return;
+            }
+
+            DeconfigureCamera();
         }
 
         private void OnRenderClusterCamera(
@@ -245,19 +267,18 @@ namespace Unity.ClusterDisplay.Graphics
                 renderFeature));
 
             // If the camera is not enabled, then we need to explicitly call Render(), this is because
-            // if your switching between camera A to camera B when B is enabled OnBeginCameraRender()
+            // if your switching between camera A to camera B when B is enabled, OnBeginCameraRender()
             // will get executed automatically. We then disable the camera in OnBeginCameraRender
             // where we will explicitly call Render() from then on.
             if (!camera.enabled)
+            {
                 camera.Render();
+            }
         }
 
-        private void OnEndCameraRender(ScriptableRenderContext context, Camera camera)
+        private void DeconfigureCamera ()
         {
-            if (this.cam != camera)
-                return;
-
-            ApplicationUtil.ResetCamera(camera);
+            ApplicationUtil.ResetCamera(cam);
 
 #if CLUSTER_DISPLAY_HDRP
 
@@ -265,11 +286,12 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = false;
             m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
             m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
+            // m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
+            m_AdditionalCameraData.hasPersistentHistory = false;
 
-#elif CLUSTER_DISPLAY_HDRP
+#elif CLUSTER_DISPLAY_URP
 
             m_AdditionalCameraData.useScreenCoordOverride = false;
-            m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
 
 #endif
 
@@ -277,14 +299,14 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
 
             var cachedCameraConfig = m_QueuedCachedCameraConfigs.Dequeue();
-            camera.targetTexture = cachedCameraConfig.m_CachedRenderTexture;
+            cam.targetTexture = cachedCameraConfig.m_CachedRenderTexture;
 
-            camera.transform.position = cachedCameraConfig.m_CachedPosition;
-            camera.transform.rotation = cachedCameraConfig.m_CachedRotation;
+            cam.transform.position = cachedCameraConfig.m_CachedPosition;
+            cam.transform.rotation = cachedCameraConfig.m_CachedRotation;
 
-            camera.projectionMatrix = cachedCameraConfig.m_CachedProjectionMatrix;
-            camera.cullingMatrix = camera.projectionMatrix * m_Camera.worldToCameraMatrix;
-            camera.cullingMask = cachedCameraConfig.m_CachedCullingMask;
+            cam.projectionMatrix = cachedCameraConfig.m_CachedProjectionMatrix;
+            cam.cullingMatrix = cam.projectionMatrix * m_Camera.worldToCameraMatrix;
+            cam.cullingMask = cachedCameraConfig.m_CachedCullingMask;
         }
     }
 }

@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public override void UpdateCluster(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
         	ClusterRendererSettings clusterSettings, 
         	Camera activeCamera)
         {
@@ -178,7 +178,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         void RenderSurface(int index,
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings,
             Camera activeCamera)
         {

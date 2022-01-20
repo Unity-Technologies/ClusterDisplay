@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// that should happen in your <see cref="Present"/> method.
         /// </remarks>
         public abstract void UpdateCluster(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera,
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings,
             Camera activeCamera);
 

@@ -22,8 +22,6 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_ClearColor = value;
         }
 
-        public Camera Camera => PresenterCamera.Camera;
-        
         public void Disable()
         {
             // We don't destroy procedural components, we may reuse them
@@ -59,20 +57,60 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.customRender += OnCustomRender;
         }
 
+        RenderTexture m_LastFrame;
         void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera)
         {
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             
-            GraphicsUtil.ExecuteCaptureIfNeeded(Camera, cmd, m_ClearColor, Present.Invoke, false);
+            GraphicsUtil.ExecuteCaptureIfNeeded(PresenterCamera.Camera, cmd, m_ClearColor, Present.Invoke, false);
+            var handle = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
 
-            cmd.SetRenderTarget(k_CameraTargetId);
-            cmd.ClearRenderTarget(true, true, m_ClearColor);
+            if (ClusterDisplayState.IsEmitter && Application.isPlaying)
+            {
+                ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
+
+                if (m_LastFrame == null ||
+                    m_LastFrame.width != hdCamera.actualWidth ||
+                    m_LastFrame.height != hdCamera.actualHeight ||
+                    m_LastFrame.depth != handle.rt.depth ||
+                    m_LastFrame.graphicsFormat != handle.rt.graphicsFormat)
+                {
+                    if (m_LastFrame != null)
+                    {
+                        m_LastFrame.DiscardContents();
+                        m_LastFrame = null;
+                    }
+
+                    m_LastFrame = new RenderTexture(
+                        hdCamera.actualWidth,
+                        hdCamera.actualHeight,
+                        handle.rt.depth,
+                        handle.rt.graphicsFormat,
+                        0);
+                    m_LastFrame.antiAliasing = 1;
+                    m_LastFrame.wrapMode = TextureWrapMode.Repeat;
+                    m_LastFrame.filterMode = FilterMode.Point;
+
+                    ClusterDebug.Log($"Created new buffer for storing previous frame.");
+                }
+
+                cmd.SetRenderTarget(k_CameraTargetId);
+                cmd.ClearRenderTarget(true, true, m_ClearColor);
+
+                cmd.Blit(m_LastFrame, k_CameraTargetId, new Vector2(1, -1), Vector2.zero);
+                cmd.SetRenderTarget(m_LastFrame);
+            }
+            else
+            {
+                cmd.SetRenderTarget(k_CameraTargetId);
+                cmd.ClearRenderTarget(true, true, m_ClearColor);
+            }
 
             Present.Invoke(new PresentArgs
             {
                 CommandBuffer = cmd,
                 FlipY = true,
-                CameraPixelRect = Camera.pixelRect
+                CameraPixelRect = PresenterCamera.Camera.pixelRect
             });
             
             context.ExecuteCommandBuffer(cmd);

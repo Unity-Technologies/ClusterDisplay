@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         internal void Render(
-            ClusterRenderer.OnRenderClusterCamera onRenderClusterCamera, 
+            ClusterRenderer.OnConfigureCamera onRenderClusterCamera, 
             ClusterRendererSettings clusterSettings, 
             Camera activeCamera)
         {
