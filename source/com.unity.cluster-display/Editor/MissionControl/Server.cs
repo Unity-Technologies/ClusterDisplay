@@ -82,12 +82,18 @@ namespace Unity.ClusterDisplay.MissionControl
 
         static readonly string k_MachineName = Environment.MachineName;
         const int k_MaxResponseTime = 15;
+        IPEndPoint m_LocalEndPoint;
 
         CancellationTokenSource m_CancellationTokenSource;
 
         public async Task Run()
         {
-            m_CancellationTokenSource.Dispose();
+            var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
+            var localAddress = NetworkUtils.GetLocalIPAddress();
+            m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
+            Debug.Log($"The local endpoint is {m_LocalEndPoint}");
+
+            m_CancellationTokenSource?.Dispose();
             m_CancellationTokenSource = new CancellationTokenSource();
             var discoveryTask = DoDiscovery(m_CancellationTokenSource.Token);
             var pruneTask = PruneNodes(m_CancellationTokenSource.Token);
@@ -98,8 +104,12 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public void Dispose()
         {
-            m_CancellationTokenSource.Cancel();
-            m_CancellationTokenSource.Dispose();
+            if (m_CancellationTokenSource != null)
+            {
+                m_CancellationTokenSource.Cancel();
+                m_CancellationTokenSource.Dispose();
+            }
+
             m_UdpClient.Dispose();
         }
 
@@ -120,10 +130,8 @@ namespace Unity.ClusterDisplay.MissionControl
 
         async Task DoDiscovery(CancellationToken token)
         {
-            var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = NetworkUtils.GetLocalIPAddress();
             var dgram = new byte[Constants.BufferSize];
-            var size = dgram.WriteMessage(k_MachineName, new IPEndPoint(localAddress, localPort), new ServerInfo());
+            var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new ServerInfo());
 
             while (true)
             {
@@ -152,25 +160,62 @@ namespace Unity.ClusterDisplay.MissionControl
                     }
                     else if (node != newItem)
                     {
-                        Debug.Log($"Node changed {newItem.Address}");
                         OnNodeUpdated(newItem);
                     }
+
                     m_ActiveNodes[newItem.Id] = newItem;
                 }
             }
         }
 
-        public async Task Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData)
+        async Task WaitForStatus(int nodeId, NodeStatus targetStatus)
         {
-            var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = NetworkUtils.GetLocalIPAddress();
-            var localEndPoint = new IPEndPoint(localAddress, localPort);
-            var dgram = new byte[Constants.BufferSize];
+            var tcs = new TaskCompletionSource<bool>();
+            var handler = new Action<ExtendedNodeInfo>(nodeInfo =>
+            {
+                if (nodeId == nodeInfo.Id && targetStatus == nodeInfo.Info.Status)
+                {
+                    tcs.SetResult(true);
+                }
+            });
 
+            NodeUpdated += handler;
+            await tcs.Task;
+            NodeUpdated -= handler;
+        }
+
+        async Task SyncProjectNodes(IReadOnlyList<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        {
+            var dgram = new byte[Constants.BufferSize];
+            List<Task> allSyncTasks = new List<Task>();
             foreach (var (node, launchInfo) in launchData)
             {
                 var size = dgram.WriteMessage(k_MachineName,
-                    localEndPoint,
+                    m_LocalEndPoint,
+                    new ProjectSyncInfo(launchInfo.ProjectDir));
+                var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
+                await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+                await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
+                allSyncTasks.Add(WaitForStatus(node.Id, NodeStatus.Ready));
+                Debug.Log($"Sync started for {node.Id}");
+            }
+
+            await Task.WhenAll(allSyncTasks);
+            Debug.Log("All nodes synced");
+        }
+
+        public async Task Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        {
+            var dgram = new byte[Constants.BufferSize];
+
+            var data = launchData.ToList();
+
+            await SyncProjectNodes(data, token);
+
+            foreach (var (node, launchInfo) in data)
+            {
+                var size = dgram.WriteMessage(k_MachineName,
+                    m_LocalEndPoint,
                     new LaunchInfo(launchInfo.ProjectDir,
                         launchInfo.NodeID,
                         launchInfo.NumRepeaters));
@@ -181,14 +226,11 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public async void StopAll()
         {
-            var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = NetworkUtils.GetLocalIPAddress();
-            var localEndPoint = new IPEndPoint(localAddress, localPort);
             var dgram = new byte[Constants.BufferSize];
 
             foreach (var node in Nodes.ToList())
             {
-                var size = dgram.WriteMessage(k_MachineName, localEndPoint, new KillInfo());
+                var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new KillInfo());
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
                 await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
             }
@@ -206,6 +248,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         void OnNodeUpdated(ExtendedNodeInfo obj)
         {
+            // Debug.Log($"Node changed {obj.Address}[{obj.Info.Status}]");
             NodeUpdated?.Invoke(obj);
         }
     }

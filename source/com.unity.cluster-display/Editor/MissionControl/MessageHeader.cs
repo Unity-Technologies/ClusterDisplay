@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.MissionControl
     {
         Discovery,
         NodeStatus,
+        SyncProject,
         Launch,
         Kill
     }

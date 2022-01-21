@@ -8,18 +8,16 @@ namespace Unity.ClusterDisplay.MissionControl
     {
         static void Main(string[] args)
         {
-            var cancellationTokenSource = new CancellationTokenSource();
+            var clusterListener = new ClusterListener();
             Console.CancelKeyPress += (_, _) =>
             {
-                cancellationTokenSource.Cancel();
+                clusterListener.Dispose();
                 Environment.ExitCode = 0;
             };
             
-            Console.WriteLine("Hello World!");
-            // var launcher = new Launcher();
+            // Console.WriteLine("Running Unity Cluster Display daemon");
             
-            var discovery = new ClusterListener(Constants.DiscoveryPort);
-            discovery.Listen(cancellationTokenSource.Token).GetAwaiter().GetResult();
+            clusterListener.Run().GetAwaiter().GetResult();
         }
     }
 }

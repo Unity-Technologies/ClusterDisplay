@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -13,8 +14,12 @@ namespace Unity.ClusterDisplay.MissionControl
             {MessageType.Discovery, typeof(ServerInfo)},
             {MessageType.NodeStatus, typeof(NodeInfo)},
             {MessageType.Launch, typeof(LaunchInfo)},
+            {MessageType.SyncProject, typeof(ProjectSyncInfo)},
             {MessageType.Kill, typeof(KillInfo)}
         };
+
+        static readonly Dictionary<Type, MessageType> k_DataTypeToMessage = k_MessageToDataType
+            .ToDictionary(p => p.Value, p => p.Key);
 
         public static IPAddress GetLocalIPAddress()
         {
@@ -35,29 +40,12 @@ namespace Unity.ClusterDisplay.MissionControl
             IPEndPoint endPoint,
             in T messageData) where T : struct
         {
-            MessageType type;
-            if (typeof(T) == typeof(ServerInfo))
+            if (!k_DataTypeToMessage.TryGetValue(typeof(T), out var messageType))
             {
-                type = MessageType.Discovery;
-            }
-            else if (typeof(T) == typeof(NodeInfo))
-            {
-                type = MessageType.NodeStatus;
-            }
-            else if (typeof(T) == typeof(LaunchInfo))
-            {
-                type = MessageType.Launch;
-            }
-            else if (typeof(T) == typeof(KillInfo))
-            {
-                type = MessageType.Kill;
-            }
-            else
-            {
-                throw new ArgumentException("No message type associated with data");
+                return 0;
             }
 
-            var header = new MessageHeader(type, hostName, endPoint);
+            var header = new MessageHeader(messageType, hostName, endPoint);
             var offset = buffer.WriteStruct(header);
             offset += buffer.WriteStruct(messageData, offset);
             return offset;

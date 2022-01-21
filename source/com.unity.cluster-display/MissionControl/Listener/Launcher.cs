@@ -15,22 +15,30 @@ namespace Unity.ClusterDisplay.MissionControl
         static readonly string k_LocalPath = Environment.SpecialFolder.LocalApplicationData + "\\ClusterDisplayBuilds";
         const string k_CopyParams = "/MIR /FFT /Z /XA:H";
 
-        static async Task<string> CopyProjectDir(LaunchInfo launchInfo, CancellationToken token)
+        public static string GetLocalProjectDir(string sharedProjectDir)
         {
-            var projectName = new DirectoryInfo(launchInfo.ProjectDir).Name;
-            var localProjectionDir = Path.Combine(k_LocalPath, projectName);
+            var projectName = new DirectoryInfo(sharedProjectDir).Name;
+            return Path.Combine(k_LocalPath, projectName);
+        }
+        
+        public static async Task SyncProjectDir(string sharedProjectDir, CancellationToken token)
+        {
+            var localProjectionDir = GetLocalProjectDir(sharedProjectDir);
 
-            Console.WriteLine($"Syncing project from {launchInfo.ProjectDir} to {localProjectionDir}");
+            Console.WriteLine($"Syncing project from {sharedProjectDir} to {localProjectionDir}");
 
             var copyProcess = new Process
             {
                 StartInfo =
                 {
                     FileName = "robocopy.exe",
-                    Arguments = $"{launchInfo.ProjectDir} {localProjectionDir} {k_CopyParams}"
+                    Arguments = $"{sharedProjectDir} {localProjectionDir} {k_CopyParams}"
                 }
             };
             Console.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
+            //
+            // await Task.Delay(30000, token);
+            // return;
             
             copyProcess.Start();
             try
@@ -49,9 +57,6 @@ namespace Unity.ClusterDisplay.MissionControl
                     copyProcess.Kill();
                 }
             }
-
-            var dirInfo = new DirectoryInfo(localProjectionDir);
-            return dirInfo.GetFiles("*.exe").FirstOrDefault()?.FullName;
         }
 
         static string GetCommandLineArgString(in LaunchInfo launchInfo)
@@ -73,21 +78,19 @@ namespace Unity.ClusterDisplay.MissionControl
             return string.Join(" ", args);
         }
 
-        public static async IAsyncEnumerable<NodeStatus> Launch(
+        public static async Task Launch(
             LaunchInfo launchInfo,
-            [EnumeratorCancellation] CancellationToken token)
+            CancellationToken token)
         {
-            yield return NodeStatus.SyncFiles;
             token.ThrowIfCancellationRequested();
-            var exePath = await CopyProjectDir(launchInfo, token);
-
+            var localProjectionDir = GetLocalProjectDir(launchInfo.ProjectDir);
+            var dirInfo = new DirectoryInfo(localProjectionDir);
+            var exePath = dirInfo.GetFiles("*.exe").FirstOrDefault()?.FullName;
             if (exePath == null)
             {
-                yield return NodeStatus.Error;
-                yield break;
+                Console.WriteLine($"No executable found in project directory.");
+                return;
             }
-
-            yield return NodeStatus.Ready;
 
             var argString = GetCommandLineArgString(launchInfo);
             var runProjectProcess = new Process
@@ -101,17 +104,14 @@ namespace Unity.ClusterDisplay.MissionControl
 
             Console.WriteLine($"Running...\n{exePath} {argString}");
             runProjectProcess.Start();
-            yield return NodeStatus.Running;
 
-            token.ThrowIfCancellationRequested();
             try
             {
                 await runProjectProcess.WaitForExitAsync(token);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                Console.WriteLine(e.Message);
             }
             finally
             {

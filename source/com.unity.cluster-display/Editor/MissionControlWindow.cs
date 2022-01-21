@@ -42,6 +42,8 @@ namespace Unity.ClusterDisplay.Editor
         [SerializeField]
         MultiColumnHeaderState m_MultiColumnHeaderState;
 
+        CancellationTokenSource m_CancellationTokenSource;
+
         [MenuItem("Cluster Display/Mission Control")]
         public static void ShowWindow()
         {
@@ -76,7 +78,6 @@ namespace Unity.ClusterDisplay.Editor
 
             var header = new MultiColumnHeader(m_MultiColumnHeaderState);
 
-            m_Server?.Dispose();
             m_Server = new Server();
 
             m_NodeListView = new NodeListView(m_TreeViewState, header);
@@ -145,11 +146,13 @@ namespace Unity.ClusterDisplay.Editor
                 var numRepeaters = activeNodes.Count - 1;
                 var launchData = activeNodes
                     .Select(x => (x.NodeInfo, new LaunchInfo(selectedProject, x.ClusterId, numRepeaters)));
-                _ = m_Server.Launch(launchData);
+                m_CancellationTokenSource = new CancellationTokenSource();
+                _ = m_Server.Launch(launchData, m_CancellationTokenSource.Token);
             }
 
             if (GUILayout.Button("Stop All"))
             {
+                m_CancellationTokenSource?.Cancel();
                 m_Server.StopAll();
             }
         }
