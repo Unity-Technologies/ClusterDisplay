@@ -6,10 +6,10 @@ Shader "ClusterDisplay/Samples/HDRP/CustomPass/Vignette"
     #pragma target 4.5
     #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
     
-    // Note the multi-compile statement necessary to toggle Cluster related shader features.
+    // Note the multi-compile statement necessary to toggle Cluster Display related shader features.
     #pragma multi_compile_fragment _ SCREEN_COORD_OVERRIDE
 
-    // These file provides Cluster related shader features.
+    // These files provide Cluster Display related shader features.
     #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ScreenCoordOverride.hlsl"
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ScreenCoordOverride.hlsl"
     

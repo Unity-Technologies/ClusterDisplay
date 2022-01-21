@@ -15,10 +15,10 @@ Shader "Hidden/ClusterDisplay/Samples/URP/Vignette"
             #pragma vertex FullscreenVert
             #pragma fragment Fragment
             
-            // Note the multi-compile statement necessary to toggle Cluster related shader features.
+            // Note the multi-compile statement necessary to toggle Cluster Display related shader features.
             #pragma multi_compile_fragment _ SCREEN_COORD_OVERRIDE
 
-            // This file provides Cluster related shader features.
+            // This file provides Cluster Display related shader features.
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ScreenCoordOverride.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/Utils/Fullscreen.hlsl"
 
