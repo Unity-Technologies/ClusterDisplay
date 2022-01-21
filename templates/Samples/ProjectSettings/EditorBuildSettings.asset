@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Cluster Display/Scenes/Staged/SimpleSpectrum-Staged.unity
+    guid: a5325d09bd0f50a4b941259a5431256c
   m_configObjects: {}
