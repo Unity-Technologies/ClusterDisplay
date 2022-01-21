@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: FullScreen_ExampleScreenCoordOverrideCustomPass
-  m_Shader: {fileID: 4800000, guid: 941e3bb56a44c694ba0ce5a128e8d7fc, type: 3}
+  m_Name: HdrpVignetteCustomPass
+  m_Shader: {fileID: 4800000, guid: 7f42d370a56bdcb48bfe324437f29af1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ShaderKeywords: 
