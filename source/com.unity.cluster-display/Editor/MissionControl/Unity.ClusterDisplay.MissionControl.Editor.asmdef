@@ -1,14 +1,10 @@
 {
-    "name": "Unity.ClusterDisplay.Editor",
+    "name": "Unity.ClusterDisplay.MissionControl.Editor",
     "rootNamespace": "",
-    "references": [
-        "GUID:3ecb0e29a1813cb4ebb405a3664ec7da"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

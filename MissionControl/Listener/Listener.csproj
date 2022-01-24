@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <AssemblyName>ClusterListener</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\BufferExtensions.cs">
+        <Link>MissionControl\BufferExtensions.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\CommandListener.cs">
+        <Link>MissionControl\CommandListener.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\Constants.cs">
+        <Link>MissionControl\Constants.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\LaunchInfo.cs">
+        <Link>MissionControl\LaunchInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageHeader.cs">
+        <Link>MissionControl\MessageHeader.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NetworkUtils.cs">
+        <Link>MissionControl\NetworkUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NodeInfo.cs">
+        <Link>MissionControl\NodeInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ProjectSyncInfo.cs">
+        <Link>MissionControl\ProjectSyncInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\Server.cs">
+        <Link>MissionControl\Server.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ServerInfo.cs">
+        <Link>MissionControl\ServerInfo.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -14,8 +12,6 @@ namespace Unity.ClusterDisplay.MissionControl
                 clusterListener.Dispose();
                 Environment.ExitCode = 0;
             };
-            
-            // Console.WriteLine("Running Unity Cluster Display daemon");
             
             clusterListener.Run().GetAwaiter().GetResult();
         }

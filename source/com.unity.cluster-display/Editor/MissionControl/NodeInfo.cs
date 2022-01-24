@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
-    enum NodeStatus : byte
+    public enum NodeStatus : byte
     {
         Ready,
         SyncFiles,
@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.MissionControl
     /// </summary>
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
-    readonly struct NodeInfo
+    public readonly struct NodeInfo
     {
         public readonly NodeStatus Status;
         public NodeInfo(NodeStatus status)

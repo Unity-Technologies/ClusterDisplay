@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.MissionControl
 {
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
-    readonly struct LaunchInfo
+    public readonly struct LaunchInfo
     {
         static readonly byte[] k_DefaultAddress = {224, 0, 1, 0};
         public readonly int NodeID;

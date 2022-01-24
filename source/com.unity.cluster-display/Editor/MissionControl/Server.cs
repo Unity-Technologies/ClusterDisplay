@@ -1,19 +1,15 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
     [Serializable]
-    struct ExtendedNodeInfo : IEquatable<ExtendedNodeInfo>
+    public struct ExtendedNodeInfo : IEquatable<ExtendedNodeInfo>
     {
         public readonly string Name;
 
@@ -65,7 +61,7 @@ namespace Unity.ClusterDisplay.MissionControl
         }
     }
 
-    sealed class Server : IDisposable
+    public sealed class Server : IDisposable
     {
         UdpClient m_UdpClient = new(port: 0);
         Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
@@ -91,7 +87,6 @@ namespace Unity.ClusterDisplay.MissionControl
             var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
             var localAddress = NetworkUtils.GetLocalIPAddress();
             m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
-            Debug.Log($"The local endpoint is {m_LocalEndPoint}");
 
             m_CancellationTokenSource?.Dispose();
             m_CancellationTokenSource = new CancellationTokenSource();
@@ -142,7 +137,6 @@ namespace Unity.ClusterDisplay.MissionControl
 
         async Task ListenForNodeResponses(CancellationToken token)
         {
-            Debug.Log("Listening for responses");
             while (true)
             {
                 var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
@@ -154,7 +148,6 @@ namespace Unity.ClusterDisplay.MissionControl
                     };
                     if (!m_ActiveNodes.TryGetValue(newItem.Id, out var node))
                     {
-                        Debug.Log($"Node added {newItem.Address}");
                         m_ActiveNodes.Add(newItem.Id, newItem);
                         OnNodeAdded(newItem);
                     }
@@ -197,11 +190,9 @@ namespace Unity.ClusterDisplay.MissionControl
                 await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
                 await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
                 allSyncTasks.Add(WaitForStatus(node.Id, NodeStatus.Ready));
-                Debug.Log($"Sync started for {node.Id}");
             }
 
             await Task.WhenAll(allSyncTasks);
-            Debug.Log("All nodes synced");
         }
 
         public async Task Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
