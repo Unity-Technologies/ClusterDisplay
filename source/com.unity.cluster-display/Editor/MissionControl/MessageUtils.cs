@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
-    public static class NetworkUtils
+    public static class MessageUtils
     {
         static readonly Dictionary<MessageType, Type> k_MessageToDataType = new()
         {

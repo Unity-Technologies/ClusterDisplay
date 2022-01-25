@@ -23,17 +23,14 @@
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageHeader.cs">
         <Link>MissionControl\MessageHeader.cs</Link>
       </Compile>
-      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NetworkUtils.cs">
-        <Link>MissionControl\NetworkUtils.cs</Link>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageUtils.cs">
+        <Link>MissionControl\MessageUtils.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NodeInfo.cs">
         <Link>MissionControl\NodeInfo.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ProjectSyncInfo.cs">
         <Link>MissionControl\ProjectSyncInfo.cs</Link>
-      </Compile>
-      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\Server.cs">
-        <Link>MissionControl\Server.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ServerInfo.cs">
         <Link>MissionControl\ServerInfo.cs</Link>
