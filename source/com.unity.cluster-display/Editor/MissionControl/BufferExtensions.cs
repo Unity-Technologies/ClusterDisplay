@@ -69,5 +69,10 @@ namespace Unity.ClusterDisplay.MissionControl
                 return null;
             }, cancellationToken);
         }
+        
+        public static async Task<bool> AddAsync<T>(this BlockingCollection<T> collection, T item, int timeoutMilliseconds, CancellationToken cancellationToken) where T : struct
+        {
+            return await Task.Run(() => collection.TryAdd(item, timeoutMilliseconds, cancellationToken), cancellationToken);
+        }
     }
 }

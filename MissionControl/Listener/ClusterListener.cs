@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
@@ -16,7 +15,6 @@ namespace Unity.ClusterDisplay.MissionControl
         const int k_MessageQueueSize = 16;
 
         UdpClient m_UdpClient;
-        BlockingCollection<NodeInfo> m_OutgoingMessages = new(k_MessageQueueSize);
 
         NodeStatus m_LatestStatus;
 
@@ -26,19 +24,27 @@ namespace Unity.ClusterDisplay.MissionControl
         Task m_ListenTask;
         Task m_SubProcessTask;
         Task m_HeartbeatTask;
+        Task m_PumpMessagesTask;
 
         IPEndPoint m_ServerEndPoint;
         IPEndPoint m_LocalEndPoint;
-        DateTime m_LastServerResponse = DateTime.Now;
+        DateTime m_LastHeardFromServer = DateTime.Now;
+
+        Channel<NodeInfo> m_MessageChannel = Channel.CreateBounded<NodeInfo>(new BoundedChannelOptions(k_MessageQueueSize)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = true
+        });
 
         public ClusterListener(int port = Constants.DiscoveryPort)
         {
             m_UdpClient = new UdpClient(port);
-            
-            const int sioUdpConnreset = -1744830452;
+
+            // Allow send to fail without closing the socket.
+            const int sioUdpConnReset = -1744830452;
             byte[] inValue = {0};
             byte[] outValue = {0};
-            m_UdpClient.Client.IOControl(sioUdpConnreset, inValue, outValue);
+            m_UdpClient.Client.IOControl(sioUdpConnReset, inValue, outValue);
         }
 
         public async Task Run()
@@ -49,57 +55,51 @@ namespace Unity.ClusterDisplay.MissionControl
 
             m_HeartbeatTask = DoHeartbeat(15000, cancellationToken);
             m_ListenTask = Listen(cancellationToken);
+            m_PumpMessagesTask = PumpMessages(cancellationToken);
 
-            await Task.WhenAll(m_HeartbeatTask, m_ListenTask);
+            await Task.WhenAll(m_HeartbeatTask, m_ListenTask, m_PumpMessagesTask);
         }
 
         async Task Listen(CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
-                try
+                var receiveResult = await m_UdpClient.ReceiveAsync().WithCancellation(token);
+                if (receiveResult.Buffer.MatchMessage<ServerInfo>() is var (header, _))
                 {
-                    var receiveResult = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                    if (receiveResult.Buffer.MatchMessage<ServerInfo>() is var (header, _))
-                    {
-                        // Console.WriteLine($"Discovery request from {header.HostName}");
-                        Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
+                    // Console.WriteLine($"Discovery request from {header.HostName}");
+                    Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
 
-                        m_LocalEndPoint ??= new IPEndPoint(
-                            NetworkUtils.QueryRoutingInterface(header.EndPoint),
-                            ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port);
+                    m_LocalEndPoint ??= new IPEndPoint(
+                        MessageUtils.QueryRoutingInterface(header.EndPoint),
+                        ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port);
 
-                        m_ServerEndPoint = header.EndPoint;
-                        m_LastServerResponse = DateTime.Now;
-                        ReportNodeStatus(m_LatestStatus, token);
-                    }
-                    else if (receiveResult.Buffer.MatchMessage<LaunchInfo>() is var (_, launchInfo))
-                    {
-                        Console.WriteLine("Launch requested");
-                        await KillRunningProcess();
-                        m_SubProcessCancellation = new CancellationTokenSource();
-                        m_SubProcessTask = MonitorLaunch(launchInfo, m_SubProcessCancellation.Token);
-                    }
-                    else if (receiveResult.Buffer.MatchMessage<ProjectSyncInfo>() is var (_, syncInfo))
-                    {
-                        Console.WriteLine("Project sync requested");
-                        await KillRunningProcess();
-                        m_SubProcessCancellation = new CancellationTokenSource();
-                        m_SubProcessTask = MonitorSync(syncInfo, m_SubProcessCancellation.Token);
-                    }
-                    else if (receiveResult.Buffer.MatchMessage<KillInfo>() is var (_, _))
-                    {
-                        await KillRunningProcess();
-                        ReportNodeStatus(NodeStatus.Ready, token);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Unsupported message type received");
-                    }
+                    m_ServerEndPoint = header.EndPoint;
+                    m_LastHeardFromServer = DateTime.Now;
+                    ReportNodeStatus(m_LatestStatus);
                 }
-                catch (Exception e)
+                else if (receiveResult.Buffer.MatchMessage<LaunchInfo>() is var (_, launchInfo))
                 {
-                    Console.WriteLine(e);
+                    Console.WriteLine("Launch requested");
+                    await KillRunningProcess();
+                    m_SubProcessCancellation = new CancellationTokenSource();
+                    m_SubProcessTask = MonitorLaunch(launchInfo, m_SubProcessCancellation.Token);
+                }
+                else if (receiveResult.Buffer.MatchMessage<ProjectSyncInfo>() is var (_, syncInfo))
+                {
+                    Console.WriteLine("Project sync requested");
+                    await KillRunningProcess();
+                    m_SubProcessCancellation = new CancellationTokenSource();
+                    m_SubProcessTask = MonitorSync(syncInfo, m_SubProcessCancellation.Token);
+                }
+                else if (receiveResult.Buffer.MatchMessage<KillInfo>() is var (_, _))
+                {
+                    await KillRunningProcess();
+                    ReportNodeStatus(NodeStatus.Ready);
+                }
+                else
+                {
+                    Console.WriteLine("Unsupported message type received");
                 }
             }
         }
@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.MissionControl
         async Task KillRunningProcess()
         {
             m_SubProcessCancellation?.Cancel();
-            if (m_SubProcessTask != null)
+            if (m_SubProcessTask is {Status: TaskStatus.Running})
             {
                 try
                 {
@@ -115,63 +115,96 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Console.WriteLine(e.Message);
                 }
+
                 Console.WriteLine("Subprocess killed");
+                m_SubProcessTask = null;
             }
+        }
+
+        async Task<bool> RunAndLogErrors(Task task)
+        {
+            try
+            {
+                await task;
+                return true;
+            }
+            catch (AggregateException ae)
+            {
+                foreach (var exception in ae.InnerExceptions)
+                {
+                    ReportNodeStatus(NodeStatus.Error, exception.Message);
+                }
+            }
+            catch (Exception e)
+            {
+                ReportNodeStatus(NodeStatus.Error, e.Message);
+            }
+
+            return false;
         }
 
         async Task MonitorSync(ProjectSyncInfo syncInfo, CancellationToken token)
         {
-            ReportNodeStatus(NodeStatus.SyncFiles, token);
-            await Launcher.SyncProjectDir(syncInfo.SharedProjectDir, token);
-            Console.WriteLine("Sync complete");
-            ReportNodeStatus(NodeStatus.Ready, token);
+            ReportNodeStatus(NodeStatus.SyncFiles);
+            if (await RunAndLogErrors(Launcher.SyncProjectDir(syncInfo.SharedProjectDir, token)))
+            {
+                Console.Write("Sync successful");
+                ReportNodeStatus(NodeStatus.Ready);
+            }
         }
 
         async Task MonitorLaunch(LaunchInfo launchInfo, CancellationToken token)
         {
-            ReportNodeStatus(NodeStatus.Running, token);
-            await Launcher.Launch(launchInfo, token);
-            ReportNodeStatus(NodeStatus.Ready, token);
+            ReportNodeStatus(NodeStatus.Running);
+            await RunAndLogErrors(Launcher.Launch(launchInfo, token));
+            ReportNodeStatus(NodeStatus.Ready);
         }
 
-        void ReportNodeStatus(NodeStatus status, CancellationToken token)
+        void ReportNodeStatus(NodeStatus status, string message = null)
         {
             m_LatestStatus = status;
-            m_OutgoingMessages.TryAdd(new NodeInfo(status), Timeout.Infinite, token);
+            var canWrite = m_MessageChannel.Writer.TryWrite(new NodeInfo(status, message));
+            Debug.Assert(canWrite);
         }
 
-        async Task PumpMessages(int timeoutMilliseconds, CancellationToken token)
+        async Task PumpMessages(CancellationToken token)
         {
-            while (await m_OutgoingMessages.TakeAsync(timeoutMilliseconds, token) is {} nodeInfo
-                && m_ServerEndPoint != null)
+            var reader = m_MessageChannel.Reader;
+            while (await reader.WaitToReadAsync(token))
             {
-                var size = m_SendBuffer.WriteMessage(k_MachineName, m_LocalEndPoint, nodeInfo);
-                Console.WriteLine($"Sending status {nodeInfo.Status} to {m_ServerEndPoint}");
-                var bytesSent = await m_UdpClient.SendAsync(m_SendBuffer, size, m_ServerEndPoint).WithCancellation(token);
-                if (bytesSent < size)
+                while (m_ServerEndPoint != null && reader.TryRead(out var nodeInfo))
                 {
-                    Console.WriteLine($"Sent {bytesSent}; expected {size}");
+                    var size = m_SendBuffer.WriteMessage(k_MachineName, m_LocalEndPoint, nodeInfo);
+
+                    // Console.WriteLine($"Sending status {nodeInfo.Status} to {m_ServerEndPoint}");
+                    var bytesSent = await m_UdpClient.SendAsync(m_SendBuffer, size, m_ServerEndPoint).WithCancellation(token);
+                    if (bytesSent < size)
+                    {
+                        Console.WriteLine($"Sent {bytesSent}; expected {size}");
+                    }
                 }
             }
         }
 
         async Task DoHeartbeat(int intervalMilliseconds, CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
-                await PumpMessages(intervalMilliseconds, token);
-                if (m_ServerEndPoint != null && (DateTime.Now - m_LastServerResponse).TotalMilliseconds > intervalMilliseconds * 2)
+                if (m_ServerEndPoint != null && (DateTime.Now - m_LastHeardFromServer).TotalMilliseconds > intervalMilliseconds * 2)
                 {
                     Console.WriteLine("Server lost");
                     m_ServerEndPoint = null;
                 }
+
+                await Task.Delay(intervalMilliseconds, token);
             }
         }
 
         public async void Dispose()
         {
+            m_MessageChannel.Writer.Complete();
             m_TaskCancellation.Cancel();
             try
             {

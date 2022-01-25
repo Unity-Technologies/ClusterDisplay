@@ -12,6 +12,14 @@ namespace Unity.ClusterDisplay.MissionControl
 {
     static class Launcher
     {
+        internal readonly struct ExecutableInfo
+        {
+            public readonly string Name;
+            public readonly string Path;
+            public readonly string Company;
+            
+        }
+        
         static readonly string k_LocalPath = Environment.SpecialFolder.LocalApplicationData + "\\ClusterDisplayBuilds";
         const string k_CopyParams = "/MIR /FFT /Z /XA:H";
 
@@ -36,19 +44,15 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             };
             Console.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
-            //
-            // await Task.Delay(30000, token);
-            // return;
             
             copyProcess.Start();
             try
             {
                 await copyProcess.WaitForExitAsync(token);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
+                if ((copyProcess.ExitCode & 0x08) != 0)
+                {
+                    throw new Exception("Robocopy encountered errors");
+                }
             }
             finally
             {

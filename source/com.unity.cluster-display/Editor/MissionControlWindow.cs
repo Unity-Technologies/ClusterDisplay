@@ -29,9 +29,10 @@ namespace Unity.ClusterDisplay.Editor
 
         [SerializeField]
         Vector2 m_ListScrollPos;
-        
+
         List<string> m_ProjectDirs = new();
         Task m_ServerTask;
+        Task<bool> m_LaunchTask;
 
         /// <summary>
         /// Serialized fields get written out to the window layout file.
@@ -58,11 +59,8 @@ namespace Unity.ClusterDisplay.Editor
             {
                 return;
             }
-            
-            if (m_ServerTask.IsFaulted)
-            {
-                
-            }
+
+            if (m_ServerTask.IsFaulted) { }
         }
 
         void OnDisable()
@@ -87,7 +85,7 @@ namespace Unity.ClusterDisplay.Editor
             m_Server.NodeUpdated += m_NodeListView.UpdateItem;
             m_Server.NodeAdded += m_NodeListView.AddItem;
             m_Server.NodeRemoved += m_NodeListView.RemoveItem;
-            
+
             CreateProjectList();
         }
 
@@ -115,7 +113,7 @@ namespace Unity.ClusterDisplay.Editor
             EditorGUIUtility.wideMode = true;
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height);
             m_NodeListView?.OnGUI(rect);
-            
+
             var rootPath = EditorGUILayout.TextField(new GUIContent("Project Root"), m_RootPath);
 
             if (GUI.changed)
@@ -127,7 +125,7 @@ namespace Unity.ClusterDisplay.Editor
                     RefreshFolders();
                 }
             }
-            
+
             using (var scrollView = new EditorGUILayout.ScrollViewScope(m_ListScrollPos))
             {
                 m_ListScrollPos = scrollView.scrollPosition;
@@ -147,7 +145,21 @@ namespace Unity.ClusterDisplay.Editor
                 var launchData = activeNodes
                     .Select(x => (x.NodeInfo, new LaunchInfo(selectedProject, x.ClusterId, numRepeaters)));
                 m_CancellationTokenSource = new CancellationTokenSource();
-                _ = m_Server.Launch(launchData, m_CancellationTokenSource.Token);
+                m_LaunchTask = m_Server.Launch(launchData, m_CancellationTokenSource.Token);
+            }
+
+            if (m_LaunchTask is {Status: TaskStatus.Faulted})
+            {
+                Debug.Log("Launch failed (see following messages).");
+                if (m_LaunchTask.Exception != null)
+                {
+                    foreach (var exception in m_LaunchTask.Exception.InnerExceptions)
+                    {
+                        Debug.Log(exception.Message);
+                    }
+                }
+
+                m_LaunchTask = null;
             }
 
             if (GUILayout.Button("Stop All"))

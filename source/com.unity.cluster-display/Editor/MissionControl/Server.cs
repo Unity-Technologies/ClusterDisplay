@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -63,7 +64,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
     public sealed class Server : IDisposable
     {
-        UdpClient m_UdpClient = new(port: 0);
+        UdpClient m_UdpClient;
         Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
 
         static readonly IPEndPoint k_DiscoveryEndPoint = new(IPAddress.Broadcast, Constants.DiscoveryPort);
@@ -82,16 +83,21 @@ namespace Unity.ClusterDisplay.MissionControl
 
         CancellationTokenSource m_CancellationTokenSource;
 
+        public Server(int port = 0)
+        {
+            m_UdpClient = new UdpClient(port);
+        }
+        
         public async Task Run()
         {
             var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = NetworkUtils.GetLocalIPAddress();
+            var localAddress = MessageUtils.GetLocalIPAddress();
             m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
 
             m_CancellationTokenSource?.Dispose();
             m_CancellationTokenSource = new CancellationTokenSource();
             var discoveryTask = DoDiscovery(m_CancellationTokenSource.Token);
-            var pruneTask = PruneNodes(m_CancellationTokenSource.Token);
+            var pruneTask = PruneInactiveNodes(m_CancellationTokenSource.Token);
             var listenTask = ListenForNodeResponses(m_CancellationTokenSource.Token);
 
             await Task.WhenAny(discoveryTask, pruneTask, listenTask);
@@ -108,9 +114,9 @@ namespace Unity.ClusterDisplay.MissionControl
             m_UdpClient.Dispose();
         }
 
-        async Task PruneNodes(CancellationToken token)
+        async Task PruneInactiveNodes(CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
                 await Task.Delay(5000, token);
                 var now = DateTime.Now;
@@ -128,7 +134,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var dgram = new byte[Constants.BufferSize];
             var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new ServerInfo());
 
-            while (true)
+            while (!token.IsCancellationRequested)
             {
                 await m_UdpClient.SendAsync(dgram, size, k_DiscoveryEndPoint).WithCancellation(token);
                 await Task.Delay(5000, token);
@@ -137,7 +143,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         async Task ListenForNodeResponses(CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
                 var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
                 if (result.Buffer.MatchMessage<NodeInfo>() is var (header, nodeInfo))
@@ -154,6 +160,7 @@ namespace Unity.ClusterDisplay.MissionControl
                     else if (node != newItem)
                     {
                         OnNodeUpdated(newItem);
+                        LogError(ref newItem);
                     }
 
                     m_ActiveNodes[newItem.Id] = newItem;
@@ -161,26 +168,49 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
-        async Task WaitForStatus(int nodeId, NodeStatus targetStatus)
+        static void LogError(ref ExtendedNodeInfo nodeInfo)
         {
-            var tcs = new TaskCompletionSource<bool>();
-            var handler = new Action<ExtendedNodeInfo>(nodeInfo =>
+            if (nodeInfo.Info.Status == NodeStatus.Error)
             {
-                if (nodeId == nodeInfo.Id && targetStatus == nodeInfo.Info.Status)
-                {
-                    tcs.SetResult(true);
-                }
-            });
+                Debug.Log($"[{nodeInfo.Name}]: {nodeInfo.Info.LogMessage}");
+            }
+        }
+        
+        async Task<NodeStatus> WaitForStatusChange(int nodeId, CancellationToken token)
+        {
+            var tcs = new TaskCompletionSource<NodeStatus>();
 
-            NodeUpdated += handler;
-            await tcs.Task;
-            NodeUpdated -= handler;
+            void UpdatedHandler(ExtendedNodeInfo nodeInfo)
+            {
+                if (nodeId == nodeInfo.Id)
+                {
+                    tcs.SetResult(nodeInfo.Info.Status);
+                }
+            }
+
+            void RemovedHandler(ExtendedNodeInfo nodeInfo)
+            {
+                if (nodeId == nodeInfo.Id)
+                {
+                    tcs.SetResult(NodeStatus.Error);
+                }
+            }
+
+            NodeUpdated += UpdatedHandler;
+            NodeRemoved += RemovedHandler;
+            
+            var result = await tcs.Task.WithCancellation(token);
+            
+            NodeUpdated -= UpdatedHandler;
+            NodeRemoved -= RemovedHandler;
+            
+            return result;
         }
 
-        async Task SyncProjectNodes(IReadOnlyList<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        async Task<bool> SyncProjectFiles(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            List<Task> allSyncTasks = new List<Task>();
+            var allSyncTasks = new List<Task<NodeStatus>>();
             foreach (var (node, launchInfo) in launchData)
             {
                 var size = dgram.WriteMessage(k_MachineName,
@@ -188,20 +218,29 @@ namespace Unity.ClusterDisplay.MissionControl
                     new ProjectSyncInfo(launchInfo.ProjectDir));
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
                 await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
-                await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
-                allSyncTasks.Add(WaitForStatus(node.Id, NodeStatus.Ready));
+                if (await WaitForStatusChange(node.Id, token) != NodeStatus.SyncFiles)
+                {
+                    return false;
+                }
+                
+                // await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
+                allSyncTasks.Add(WaitForStatusChange(node.Id, token));
             }
-
-            await Task.WhenAll(allSyncTasks);
+            
+            var results = await Task.WhenAll(allSyncTasks);
+            return results.All(s => s == NodeStatus.Ready);
         }
 
-        public async Task Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        public async Task<bool> Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
 
             var data = launchData.ToList();
 
-            await SyncProjectNodes(data, token);
+            if (!await SyncProjectFiles(data, token))
+            {
+                throw new Exception("Sync failed");
+            }
 
             foreach (var (node, launchInfo) in data)
             {
@@ -213,6 +252,8 @@ namespace Unity.ClusterDisplay.MissionControl
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
                 await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
             }
+
+            return true;
         }
 
         public async void StopAll()
@@ -239,7 +280,6 @@ namespace Unity.ClusterDisplay.MissionControl
 
         void OnNodeUpdated(ExtendedNodeInfo obj)
         {
-            // Debug.Log($"Node changed {obj.Address}[{obj.Info.Status}]");
             NodeUpdated?.Invoke(obj);
         }
     }

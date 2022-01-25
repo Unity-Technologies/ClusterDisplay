@@ -21,6 +21,11 @@
         public const int PathMaxLength = 260;
         
         /// <summary>
+        /// The number of characters that may be used in a log string.
+        /// </summary>
+        public const int LogMaxLength = 140;
+        
+        /// <summary>
         /// The size of the message buffers in bytes. This limits the size of the messages used by the discovery protocol.
         /// </summary>
         public const int BufferSize = 9216;
