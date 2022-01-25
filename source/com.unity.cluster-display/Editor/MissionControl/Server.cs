@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             m_UdpClient = new UdpClient(port);
         }
-        
+
         public async Task Run()
         {
             var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 Debug.Log($"[{nodeInfo.Name}]: {nodeInfo.Info.LogMessage}");
             }
         }
-        
+
         async Task<NodeStatus> WaitForStatusChange(int nodeId, CancellationToken token)
         {
             var tcs = new TaskCompletionSource<NodeStatus>();
@@ -184,7 +184,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 if (nodeId == nodeInfo.Id)
                 {
-                    tcs.SetResult(nodeInfo.Info.Status);
+                    tcs.TrySetResult(nodeInfo.Info.Status);
                 }
             }
 
@@ -192,43 +192,53 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 if (nodeId == nodeInfo.Id)
                 {
-                    tcs.SetResult(NodeStatus.Error);
+                    tcs.TrySetResult(NodeStatus.Error);
                 }
             }
 
             NodeUpdated += UpdatedHandler;
             NodeRemoved += RemovedHandler;
-            
+
             var result = await tcs.Task.WithCancellation(token);
-            
+
             NodeUpdated -= UpdatedHandler;
             NodeRemoved -= RemovedHandler;
-            
+
             return result;
         }
 
-        async Task<bool> SyncProjectFiles(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        async Task<bool> MirrorPlayerFiles(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
             var allSyncTasks = new List<Task<NodeStatus>>();
-            foreach (var (node, launchInfo) in launchData)
+
+            try
             {
-                var size = dgram.WriteMessage(k_MachineName,
-                    m_LocalEndPoint,
-                    new ProjectSyncInfo(launchInfo.ProjectDir));
-                var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
-                await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
-                if (await WaitForStatusChange(node.Id, token) != NodeStatus.SyncFiles)
+                foreach (var (node, launchInfo) in launchData)
                 {
-                    return false;
+                    var size = dgram.WriteMessage(k_MachineName,
+                        m_LocalEndPoint,
+                        new ProjectSyncInfo(launchInfo.PlayerDir));
+                    var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
+                    await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+                    if (await WaitForStatusChange(node.Id, token) != NodeStatus.SyncFiles)
+                    {
+                        return false;
+                    }
+
+                    // await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
+                    allSyncTasks.Add(WaitForStatusChange(node.Id, token));
                 }
-                
-                // await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
-                allSyncTasks.Add(WaitForStatusChange(node.Id, token));
+
+                var results = await Task.WhenAll(allSyncTasks);
+                return results.All(s => s == NodeStatus.Ready);
             }
-            
-            var results = await Task.WhenAll(allSyncTasks);
-            return results.All(s => s == NodeStatus.Ready);
+            catch (TaskCanceledException)
+            {
+                // Don't need to do anything if the task was cancelled.
+            }
+
+            return false;
         }
 
         public async Task<bool> Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
@@ -237,7 +247,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
             var data = launchData.ToList();
 
-            if (!await SyncProjectFiles(data, token))
+            if (!await MirrorPlayerFiles(data, token))
             {
                 throw new Exception("Sync failed");
             }
@@ -246,7 +256,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 var size = dgram.WriteMessage(k_MachineName,
                     m_LocalEndPoint,
-                    new LaunchInfo(launchInfo.ProjectDir,
+                    new LaunchInfo(launchInfo.PlayerDir,
                         launchInfo.NodeID,
                         launchInfo.NumRepeaters));
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
@@ -260,7 +270,7 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             var dgram = new byte[Constants.BufferSize];
 
-            foreach (var node in Nodes.ToList())
+            foreach (var node in Nodes)
             {
                 var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new KillInfo());
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);

@@ -28,11 +28,11 @@ namespace Unity.ClusterDisplay.MissionControl
         public readonly int RxPort;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
-        public readonly string ProjectDir;
+        public readonly string PlayerDir;
 
-        public LaunchInfo(string projectDir, int id, int numRepeaters, int handshakeTimeout = 10000, int commTimeout = 5000)
+        public LaunchInfo(string playerDir, int id, int numRepeaters, int handshakeTimeout = 10000, int commTimeout = 5000)
         {
-            ProjectDir = projectDir;
+            PlayerDir = playerDir;
             NodeID = id;
             NumRepeaters = numRepeaters;
             HandshakeTimeoutMilliseconds = handshakeTimeout;

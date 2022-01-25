@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using Unity.ClusterDisplay.MissionControl;
+using Unity.EditorCoroutines.Editor;
 using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
 
@@ -30,9 +31,8 @@ namespace Unity.ClusterDisplay.Editor
         [SerializeField]
         Vector2 m_ListScrollPos;
 
-        List<string> m_ProjectDirs = new();
+        List<PlayerInfo> m_PlayerList = new();
         Task m_ServerTask;
-        Task<bool> m_LaunchTask;
 
         /// <summary>
         /// Serialized fields get written out to the window layout file.
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Editor
         [SerializeField]
         MultiColumnHeaderState m_MultiColumnHeaderState;
 
-        CancellationTokenSource m_CancellationTokenSource;
+        CancellationTokenSource m_LaunchCancellationTokenSource;
 
         [MenuItem("Cluster Display/Mission Control")]
         public static void ShowWindow()
@@ -60,7 +60,10 @@ namespace Unity.ClusterDisplay.Editor
                 return;
             }
 
-            if (m_ServerTask.IsFaulted) { }
+            if (m_ServerTask.IsFaulted)
+            {
+                
+            }
         }
 
         void OnDisable()
@@ -81,31 +84,37 @@ namespace Unity.ClusterDisplay.Editor
             m_NodeListView = new NodeListView(m_TreeViewState, header);
             m_NodeListView.Reload();
 
-            m_ServerTask = m_Server.Run();
+            this.StartCoroutine(m_Server.Run().ToCoroutine(e => Debug.Log(e.Message)));
             m_Server.NodeUpdated += m_NodeListView.UpdateItem;
             m_Server.NodeAdded += m_NodeListView.AddItem;
             m_Server.NodeRemoved += m_NodeListView.RemoveItem;
 
-            CreateProjectList();
+            CreatePLayerList();
+            RefreshPlayers();
         }
 
-        void CreateProjectList()
+        void CreatePLayerList()
         {
-            m_ProjectListView = new ReorderableList(m_ProjectDirs, typeof(string))
+            m_ProjectListView = new ReorderableList(m_PlayerList, typeof(string))
             {
                 draggable = false,
                 displayAdd = false,
                 displayRemove = false,
-                drawHeaderCallback = rect => EditorGUI.LabelField(rect, "Available projects")
+                drawHeaderCallback = rect => EditorGUI.LabelField(rect, "Available Players"),
+                drawElementCallback = (rect, index, _, _) => EditorGUI.LabelField(rect, m_PlayerList[index].ToString())
             };
         }
 
-        async Task RefreshFolders()
+        async void RefreshPlayers()
         {
-            var dirInfo = new DirectoryInfo(m_RootPath);
-            m_ProjectDirs.Clear();
-            var results = await Task.Run(() => dirInfo.GetDirectories().Select(folder => folder.Name).ToList());
-            m_ProjectDirs.AddRange(results);
+            if (string.IsNullOrEmpty(m_RootPath))
+            {
+                return;
+            }
+            
+            m_PlayerList.Clear();
+            var apps = await Task.Run(() => FolderUtils.ListPlayers(m_RootPath));
+            m_PlayerList.AddRange(apps);
         }
 
         void OnGUI()
@@ -114,15 +123,15 @@ namespace Unity.ClusterDisplay.Editor
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height);
             m_NodeListView?.OnGUI(rect);
 
-            var rootPath = EditorGUILayout.TextField(new GUIContent("Project Root"), m_RootPath);
+            var rootPath = EditorGUILayout.TextField(new GUIContent("Shared Folder"), m_RootPath);
 
             if (GUI.changed)
             {
                 m_RootPath = rootPath;
-                m_ProjectDirs.Clear();
+                m_PlayerList.Clear();
                 if (!string.IsNullOrWhiteSpace(rootPath))
                 {
-                    RefreshFolders();
+                    RefreshPlayers();
                 }
             }
 
@@ -135,36 +144,23 @@ namespace Unity.ClusterDisplay.Editor
             m_HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", m_HandshakeTimeout);
             m_CommTimeout = EditorGUILayout.IntField("Communication Timeout", m_CommTimeout);
 
-            if (GUILayout.Button("Run selected project") && m_ProjectListView.index >= 0 && m_ProjectDirs.Count > m_ProjectListView.index)
+            if (GUILayout.Button("Run Selected Player") && m_ProjectListView.index >= 0 && m_PlayerList.Count > m_ProjectListView.index)
             {
-                Debug.Log("Launch");
-                var selectedProject = Path.Combine(m_RootPath, m_ProjectDirs[m_ProjectListView.index]);
+                var selectedPlayerDir = Path.Combine(m_RootPath, m_PlayerList[m_ProjectListView.index].DirectoryName);
                 var activeNodes = m_NodeListView?.Nodes.Where(x => x.IsActive).ToList()
                     ?? new List<NodeListView.NodeViewItem>();
                 var numRepeaters = activeNodes.Count - 1;
                 var launchData = activeNodes
-                    .Select(x => (x.NodeInfo, new LaunchInfo(selectedProject, x.ClusterId, numRepeaters)));
-                m_CancellationTokenSource = new CancellationTokenSource();
-                m_LaunchTask = m_Server.Launch(launchData, m_CancellationTokenSource.Token);
-            }
-
-            if (m_LaunchTask is {Status: TaskStatus.Faulted})
-            {
-                Debug.Log("Launch failed (see following messages).");
-                if (m_LaunchTask.Exception != null)
-                {
-                    foreach (var exception in m_LaunchTask.Exception.InnerExceptions)
-                    {
-                        Debug.Log(exception.Message);
-                    }
-                }
-
-                m_LaunchTask = null;
+                    .Select(x => (x.NodeInfo, new LaunchInfo(selectedPlayerDir, x.ClusterId, numRepeaters)));
+                m_LaunchCancellationTokenSource = new CancellationTokenSource();
+                
+                this.StartCoroutine(m_Server.Launch(launchData, m_LaunchCancellationTokenSource.Token)
+                        .ToCoroutine(e => Debug.Log(e.Message)));
             }
 
             if (GUILayout.Button("Stop All"))
             {
-                m_CancellationTokenSource?.Cancel();
+                m_LaunchCancellationTokenSource?.Cancel();
                 m_Server.StopAll();
             }
         }

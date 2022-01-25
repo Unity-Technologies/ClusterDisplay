@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.MissionControl
             CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            var localProjectionDir = GetLocalProjectDir(launchInfo.ProjectDir);
+            var localProjectionDir = GetLocalProjectDir(launchInfo.PlayerDir);
             var dirInfo = new DirectoryInfo(localProjectionDir);
             var exePath = dirInfo.GetFiles("*.exe").FirstOrDefault()?.FullName;
             if (exePath == null)

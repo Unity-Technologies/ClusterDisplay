@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -43,7 +44,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
             await task;
         }
-        
+
         public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<bool>();
@@ -58,21 +59,25 @@ namespace Unity.ClusterDisplay.MissionControl
             return task.Result;
         }
 
-        public static async Task<T?> TakeAsync<T>(this BlockingCollection<T> collection, int timeoutMilliseconds, CancellationToken cancellationToken) where T : struct
+        public static IEnumerator ToCoroutine(this Task task, Action<Exception> exceptionHandler = null)
         {
-            return await Task.Run<T?>(() =>
+            var done = false;
+            while (!done)
             {
-                if (collection.TryTake(out var item, timeoutMilliseconds, cancellationToken))
+                yield return null;
+                try
                 {
-                    return item;
+                    done = task.Wait(0);
                 }
-                return null;
-            }, cancellationToken);
-        }
-        
-        public static async Task<bool> AddAsync<T>(this BlockingCollection<T> collection, T item, int timeoutMilliseconds, CancellationToken cancellationToken) where T : struct
-        {
-            return await Task.Run(() => collection.TryAdd(item, timeoutMilliseconds, cancellationToken), cancellationToken);
+                catch (AggregateException ae)
+                {
+                    foreach (var e in ae.InnerExceptions)
+                    {
+                        exceptionHandler?.Invoke(e);
+                    }
+                    done = true;
+                }
+            }
         }
     }
 }
