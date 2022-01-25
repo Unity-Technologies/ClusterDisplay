@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: ClusterRenderer
   m_EditorClassIdentifier: 
   m_Settings:
-    m_OverscanInPixels: 0
+    m_OverscanInPixels: 256
   m_ProjectionPolicy: {fileID: 11400000, guid: fe5911b451d262048960e5d7b0ecfd5f, type: 2}

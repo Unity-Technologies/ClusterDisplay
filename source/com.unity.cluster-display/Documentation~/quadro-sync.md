@@ -1,80 +1,147 @@
 # Quadro Sync
 NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
 
-- Only supported on DirectX 11 or DirectX 12.
-- Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
-- Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+Example **WITHOUT** Quadro Sync:
+
+![](images/without-genlock.gif)
+
+Notice that the camera cuts **are NOT synchronized** across the cluster.
+
+Example **WITH** Quadro Sync:
+
+![](images/with-genlock.gif)
+
+Notice that the camera cuts **are perfectly synchronized** across the cluster.
+
+## Requirements
+* Only supported on DirectX 11 or DirectX 12.
+* Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
+* Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+* Windows 10
+* Unity 2022.x+
+
+## Recommendations
+* Choose a motherboard that supports [IPMI](https://en.wikipedia.org/wiki/Intelligent_Platform_Management_Interface) so you can remotely shutdown, restart and boot your nodes without needing physical access to the machines.
+* Place your emitter and repeater workstations on a dedicated network so that other network traffic does not interfer with the cluster.
 
 ## Setup
+1. Verify that you've added the **ClusterDisplay** prefab to the scene located in **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab**:
 
-You can setup Quadro Sync to synchronize through the network, or through a Quadro Sync card.
+    ![](images/cluster-display-prefab.png)
 
-Add the **GfxPluginQuadroSyncCallbacks** component to your scene to enable Swap Barriers.
+2. Verify that the **GFXPluginQuadroSyncCallbacks** component is added and enabled:
 
-**OS**
+    ![](images/quadro-sync-component.png)
 
--   Windows 10 Enterprise version 1903
+3. Verify that your Unity project has vsync set to **Every VBlank**
 
-**Network**
+    ![](images/vsync.png)
 
-Every server is connected to two NICs (Network Interface Controller):
+4. Verify that your Unity project has **Fullscreen Mode** set to **Exclusive Fullscreen**
 
--   Build management (VM, copying and executing scripts)
+    ![](images/fullscreen-exclusive.png)
 
--   Dedicated Cluster Display sync network
+5. **On each node** in the cluster, verify that the display settings **Scale and Layout* option is set to 100%:
 
-**Graphics Card**
+    ![](images/scale-and-layout.png)
 
--   Nvidia driver: 451.77
+6. **On each node** in the cluster, setup the following Nvidia Control Panel settings:
+   * **3D Settings > Manage 3D Settings > Global Preset** set to **Workstation App–Dynamic Streaming**
 
--   Resolution set to 1080p60.
+    ![](images/nvidia-settings-0.png)
 
--   Nvidia Sync Emitter set to the same machine as Cluster Display emitter cluster node
+   * **Vertical Sync** set to **On**. Note: must set Unity project to use V Sync
 
--   **NVIDIA Control Panel** settings set to recommended settings for NVIDIA Sync:
+    ![](images/nvidia-settings-1.png)
 
-    -   **3D Settings > Manage 3D Settings > Global Preset** set to **Workstation App–Dynamic Streaming**
+    * Set your desired resolution and frame rate.
 
-    -   **Vertical Sync** set to **Use the 3D Application Settings**. Note: must set Unity project to use V Sync
+    ![](images/nvidia-settings-4.png)
 
--   For the Nvidia Sync card setup, in the **Nvidia Control Pane**l:
+7. **On the emitter (or master) node**, setup the following Nvidia Control Panel settings and make sure you set the server refresh rate to the HZ all your nodes are running at.
 
-    -   **Synchronize Display** set to **On this System** for the emitter sync server and set to **On Another System** on all clients
+    ![](images/nvidia-settings-2.png)
 
-    -   Verify the display to sync is set correctly (currently only one display is used on all clients)
+8. **On the repeater (or slave) nodes**, setup the following Nvidia Control Panel settings.
 
-    -   Set the frame rate to 60Hz
+    ![](images/nvidia-settings-3.png)
 
--   For the ethernet sync connection, Nvidia recommends the following connection diagram:
+9. If your using ethernet synchronization with your Quadro Sync cards, use Nvidia's recommendation regarding daisy chaining (**DO NOT CONNECT the ethernet cables to a switch and daisy-chaining all servers from one port is not recommended**):
 
     ![](images/connection-diagram.png)
 
--   Note that **daisy-chaining all servers from one port is not recommended**
+10. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
 
--   Do not connect the NVIDIA Quadro Sync port to a switch; connections need to be machine-to-machine
+11. Run your cluster with the **-window-mode exclusive** command argument to explicitly specify Unity to run in fullscreen exclusive mode.
+   * There is an [unexpected issue](https://forum.unity.com/threads/playersettings-are-ignored-when-building-windowed-fullscreen.257700/) where Unity will set a registry key that will override the executable in windowed/borderless if you ran the executable without explictly specifying **-window-mode exclusive**. Therefore, you will need to delete registry entries for the executable. These registry entries are located in:
+    **\HKEY_SOFTWARE_USER\SOFTWARE\\{Company Name\}\{Product Name\}**
+    <br>
+    <br>
 
-**Multiviewer**
+    Until we build a better way of resolving this issue, we suggest writing [PSExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) script that will automatically delete those registry entries for you:
+    ```
+    # On the machine that your managing the cluster
+    for($i=41; $i -le 48; $i++) { # Loop through IP address range (41-48) for 192.168.5.*
+        echo "Argument: $($args[0])"
+        # Change this IP address
+        psexec \\192.168.5.$i Powershell "C:\cluster_applications\Tools\delete-reg.ps1 $($args[0])"
+        # The script were executing here is placed on each node.
+    }
+    ``` 
+    ```
+    # On each node, this script exists somewhere and gets executed by the script on the machine managing the cluster.
+    echo "Attempting to delete registry keys in: $($args[0])"
+    reg delete "HKCU\Software\$($args[0])" /f
+    ```
 
--   **Server Settings** in the **Nvidia Control Panel** of the emitter server set to **An External House Sync Signal**
+    Then you execute it via `.\delete-registry-entries.ps1 {Company Name}`
 
->**Note:** Since both the Multiviewer and Nvidia Quadro Sync have reference input capability, we are using a tri-level sync generator from Black Magic to feed the reference signal to both the Multiviewer and Sync card. The tri-level sync is set to 59.94Hz.
+## Multiviewers
 
+ Since both the Multiviewer and Nvidia Quadro Sync have reference input capability, you can use a tri-level sync generator from Black Magic to feed the reference signal to both the Multiviewer and Sync card.
 
-![](images/synchronize-displays.png)
+For multiviewers, every server is output through DisplayPort and then converted to HDMI. The HDMI signal then goes to a Black Magic Design mini-converter and converted to SDI which goes directly in the Multiviewer.
 
->**Important:** To initialize the sync, or reinitialize after a reboot, all clients MUST be rebooted BEFORE the emitter sync server
+## Troubleshooting
+You can use [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) to verify whether Quadro Sync is working as expected. Specifically **option 8.** and **option 11.**
 
--   Since we use a Multiviewer, every server is output through DisplayPort and then converted to HDMI. The HDMI signal then goes to a Black Magic Design mini-converter and converted to SDI which goes directly in the Multiviewer.
+![](images/configureDriver-utility.png)
 
-## Operating system overlays – frame delay
+Option 8 will display a little driver debug GUI at the bottom left of any Direct X application.
 
+If it looks like this, then Quadro Sync is working correctly:
+
+![](images/option-8-working.png)
+
+However, if it's not working then it will display something like this:
+
+![](images/option-8-notworking.png)
+
+We recommend that you install this on each node within the cluster and setup a [PSExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) script to configure the driver on each node automatically:
+```
+# On the machine that your managing the cluster
+for($i=41; $i -le 48; $i++) { # Loop through IP address range (41-48) for 192.168.5.*
+    echo "Argument: $($args[0])"
+    # Change this IP address
+	psexec \\192.168.5.$i -h powershell "C:\cluster_applications\Tools\set-nvidia-config.ps1 $($args[0])"
+    # The script were executing here is placed on each node.
+}
+```
+```
+# On each node, this script exists somewhere and gets executed by the script on the machine managing the cluster.
+echo $args[0] | C:\cluster_applications\Tools\NvidiaTests\configureDriver.exe
+```
+
+## Other Recommendations 
+
+### Operating system overlays – frame delay
 Whenever you have operating system managed overlays (e.g. Windows Taskbar, TeamViewer windows, Windows File Explorer) on top of your Fullscreen Unity application, this may introduce a one-frame delay causing cluster synchronization artefacts.
 
 ## Framerate drops – screen tearing
 
 Framerate drops cause temporary loss of synchronization, which leads to temporary screen tearing until the framerate is back to the targeted one. For this reason, you should design your project experiences so that the framerate never drops.
 
-## Tested Hardware
+## Internal Test Hardware
 
 We have tested the solution with the hardware and configuration detailed below.
 
