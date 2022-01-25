@@ -1,5 +1,48 @@
 # Cluster Display
 
+The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering. This feature enables you, for example, to deploy your Unity project to large, multi-display configurations.
+
+## Multiple displays
+
+In practice, you could use a single machine to render to multiple displays and/or high resolution displays (4K+), but the machine's computational power might present a limit to this approach. With Unity Cluster Display, you can scale up to an arbitrary number of machines, therefore an arbitrary number of displays: Unity Cluster Display currently supports up to 64 nodes. However, if you need to increase this number, it is technically possible.
+
+Note that Unity Cluster Display does not prevent the use of multiple displays per machine. The total number of pixels a machine can render to depends both on its hardware capabilities and the user project's complexity.
+
+## Clustering and synchronization
+
+A Cluster Display setup typically consists of **one emitter node** and **several repeater nodes**:
+
+-   A single repeater node consists of a workstation and a display output.
+
+    -   Each workstation runs a copy of your Unity application with Cluster Display enabled.
+
+    -   All the nodes run the same interactive content in lockstep, but each one only renders a subsection of the total display surface.
+
+-   The emitter is responsible for synchronizing the state for all repeater nodes.
+
+    -   The repeater nodes connect to the emitter node via a **wired** Local Area Network.
+
+    -   The emitter node does not technically need to be connected to a display, unless you configure it to also take the role of a repeater node.
+
+## Disclaimer
+
+### Licensing
+
+Making cluster-enabled builds with Unity requires a special license. [Contact a Unity sales representative](https://create.unity3d.com/unity-sales) for more information.
+
+### Experimental packages
+
+The packages required to set up Unity Cluster Display are currently available as experimental packages, so they are not ready for production use. The features and documentation in these packages will change before they are verified for release.
+
+## Requirements
+
+* Requires Unity 2022.x+
+* Windows 10
+* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Timesout After Period](troubleshooting.md)).
+* If your using Quadro Sync the following hardware is required:
+  * Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
+  * Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+
 ## Terminology
 | Word | Definition |
 |--------------|-----------------|
@@ -22,3 +65,8 @@ After you've setup your project, the following guides will help you setup synchr
 [Network Events](network-events.md)
 
 [Setting up Quadro Sync](quadro-sync.md)
+
+## Send Us Your Logs!
+Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging and send those logs to us if something is broken. You can find where those logs are located by reading this [page](https://docs.unity3d.com/Manual/LogFiles.html).
+
+![Verbose Logging](images/verbose-logging.png)

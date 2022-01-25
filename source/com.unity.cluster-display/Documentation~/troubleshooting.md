@@ -1,8 +1,4 @@
 # Troubleshooting
-
-## QuadroSync is not Working
-Quadro Sync can be difficult to setup correctly. See [this](quadro-sync.md) page for trouble shooting steps.
-
 ## Screen is Black in URP
 You may need to perform the following:
 1. **If you are using URP**, verify that the following is toggled on your **"Universal Render Pipeline Asset"**:
@@ -22,3 +18,16 @@ You may need to perform the following:
 ## Compile Time Errors in GeneratedInspectors.cs 
 This can be a common issue while changing Unity versions, updating packages or removing packages, and you can read about the solution here:
 * [How to Generate Them](network-events#how-to-generate-them)
+
+## QuadroSync is not Working
+Quadro Sync can be difficult to setup correctly. See [this](quadro-sync.md) page for trouble shooting steps.
+
+## I Need to Debug Something
+Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging:
+
+![Verbose Logging](images/verbose-logging.png)
+
+## Cluster Timesout After Period 
+Routers & switches periodically propagate membership query to all members of a multicast group. This is done to determine whether a multicast group should expire or not. Some enterprise routers and switches will NOT do this by default and automatically expire multicast group after a period of time essentially preventing nodes inside the cluster from communicating with each other.
+
+In order to resolve this, you will need to configure your [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings in your router/switch so it will not expire those multicast groups. These settings are different for every switch manufacturer, so you will need to search your hardware's manual and settings interface for these settings.
