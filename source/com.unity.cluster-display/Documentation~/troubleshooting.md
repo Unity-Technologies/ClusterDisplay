@@ -1,17 +1,24 @@
 # Troubleshooting
 
+## QuadroSync is not Working
+Quadro Sync can be difficult to setup correctly. See [this](quadro-sync.md) page for trouble shooting steps.
+
+## Screen is Black in URP
+You may need to perform the following:
+1. **If you are using URP**, verify that the following is toggled on your **"Universal Render Pipeline Asset"**:
+
+    ![URP Texture Settings](images/urp-texture-setting.png)
+
+2. **If you are using URP**, add the following rendering feature to your **"Forward Renderer"**
+
+    ![URP Render Feature](images/urp-render-feature.png)
+
+3. Find the camera you want to use in the scene and add a **ClusterCamera** component to it:
+
+    ![Cluster Display Prefab](images/cluster-camera.png)
+
+4. If your camera was disabled, enable it and it will start rendering after it disables itself.
+
 ## Compile Time Errors in GeneratedInspectors.cs 
 This can be a common issue while changing Unity versions, updating packages or removing packages, and you can read about the solution here:
 * [How to Generate Them](network-events#how-to-generate-them)
-
-## Help! Everything is Gray
-In the context of cluster display, this means that your manifest.json is NOT referencing the custom branch of the **com.unity.render-pipeline.core** package. Walk through [Project Setup](project-setup.md) again, verify your package configuration and this problem should resolve yourself.
-
-Here is an example **snippet** of **manifest.json**
-```
-  "dependencies": {
-    "com.unity.cluster-display": "file:../../Packages/ClusterDisplay/source/com.unity.cluster-display",
-    "com.unity.cluster-display.graphics": "file:../../Packages/ClusterDisplay/source/com.unity.cluster-display.graphics",
-    "com.unity.render-pipelines.core": "file:../../Packages/Graphics/com.unity.render-pipelines.core",
-    "com.unity.render-pipelines.universal": "file:../../Packages/Graphics/com.unity.render-pipelines.universal",
-```

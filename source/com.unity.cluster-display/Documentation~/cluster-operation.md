@@ -1,4 +1,4 @@
-# Cluster operation
+# Cluster Deployment
 
 ## Deploying your application across the cluster
 
@@ -69,6 +69,8 @@ You can optionally add arguments to the command line to control the timeout valu
 |--------------|-----------------|
 | **handshakeTimeout \<value\>** | Timeout (in *milliseconds*) for the handshake phase.<br />The default value is 30000 (30 seconds). |
 | **communicationTimeout \<value\>** | Timeout (in *milliseconds*) for the regular lockstep rendering phase.<br />The default value is 5000 (5 seconds).|
+| **batchMode** | If you pass this argument into the emitter, the node will run headless. |
+| **replaceHeadlessRepeater** | This argument is meant to be passed to the repeaters in tandem with passing **-batchMode** to the emitter. If you pass this argument to a repeater, the repeater nodes will shift their tile index down to replace the emitter where repeater 1 will render tile 0 and repeater 2 will render tile 1. |
 
 >**Note:** Set the communication timeout to a lower value on the server node (e.g. 4000) compared to the client nodes (e.g. 5000) to prevent an avalanche quit phenomenon where the server node needs to kick out unresponsive nodes before the client node timeout occurs.
 

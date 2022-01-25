@@ -1,6 +1,4 @@
-# Hardware Setup
-
-Before you start setting up your hardware, you should be aware of the [hardware requirements](index.md#hardware) and review the section about [hardware tested by Unity](reference.md#tested-hardware).
+# Network Configuration
 
 Set up your Cluster Display Hardware elements according to the following
 graphical representation (example for a 2x2 screen matrix):
@@ -11,11 +9,11 @@ To summarize:
 
 -   A node in the cluster consists of a workstation and a display output.
 
--   There is one Emitter Node and multiple client nodes (here, 1 emitter and 3 clients).
+-   There is one Emitter Node and multiple repeater nodes (here, 1 emitter and 3 repeaters).
 
--   You can set up the Emitter as a rendering node to optimize the use of your hardware resources.
+-   You can set up the emitter as a rendering node to optimize the use of your hardware resources.
 
--   The client nodes connect to the Emitter Node via a wired Local Area Network.
+-   The repeater nodes connect to the Emitter Node via a wired Local Area Network.
 
 Additional recommendations:
 

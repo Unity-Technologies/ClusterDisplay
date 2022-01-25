@@ -1,64 +1,11 @@
-# Reference
-
-## Available components
-
-This section describes all components available in the Unity Editor for Cluster Display setup.
-
-### Cluster Sync
-
-The **Cluster Sync** component ensures the internal state synchronization and lockstep rendering.
-
-![](images/component-cluster-sync.png)
-
-Note that **Cluster Sync** requires specific command line arguments to function. For more details on those command line arguments, see [Launching the cluster](cluster-operation.md#starting-the-cluster).
-
-For debugging purposes, you can run the Unity Editor as a cluster node. To do so, populate the **Editor Cmd Line** field on the **ClusterSync** component with the command line arguments that you would normally use to run a standalone build. Otherwise, you can leave this field blank. Note that if other cluster nodes fail to respond, the editor might hang.
-
-The **ClusterSync** component als provides the following functionality:
-
--   You can press **Q** on a keyboard connected to the emitter when you need to manually quit the whole cluster.
--   The nodes can automatically quit the cluster if the [cluster communication times out](#communication-phases-and-timeouts).
-
-**GfxPluginQuadroSyncCallbacks**
-
+# Quadro Sync
 NVIDIA's NvAPI provides the capability to synchronize the buffer swaps of a group of DirectX swap chains when using Quadro Sync II boards. This extension also provides the capability to synchronize the buffer swaps of different swaps groups, which may reside on distributed systems on a network using a swap barrier. It’s essential to coordinate the back buffer swap between nodes, so it can stay perfectly synchronized (Frame Lock + Genlock) for a large number of displays.
 
+## Setup
+
+You can setup Quadro Sync to synchronize through the network, or through a Quadro Sync card.
+
 Add the **GfxPluginQuadroSyncCallbacks** component to your scene to enable Swap Barriers.
-
-## Tested Hardware
-
-We have tested the solution with the hardware and configuration detailed below.
-
-### Components
-
--   4 x [Supermicro SuperServer 1019GP-TT](https://www.supermicro.com/en/products/system/1U/1019/SYS-1019GP-TT.cfm)
-    with:
-
-    -   NVIDIA Quadro P6000 GPU
-
-    -   NVIDIA Quadro Sync II Kit for Pascal Quadro
-
-    -   1x Intel Xeon Gold 5122 3.6GHz Quad-Core Server CPU
-
-    -   4x 16GB DDR4 2666Mhz ECC (64GB total)
-
-    -   1x Samsung 970 Pro 512GB m.2 SSD
-
--   1x [Blackmagic Design MultiView 16](https://www.blackmagicdesign.com/ca/products/multiview/techspecs/W-MVW-01)
-
--   16x [Blackmagic Design Mini Converter SDI to HDMI 6G](https://www.blackmagicdesign.com/ca/products/miniconverters/techspecs/W-CONM-27https://www.blackmagicdesign.com/ca/products/miniconverters/techspecs/W-CONM-27)
-
--   16x [DisplayPort to HDMI cables](https://www.accellww.com/products/displayport-1-2-to-hdmi-2-0-adapter) (6ft)
-
--   16x SDI cables (6ft)
-
--   8x Cat 5 ethernet cables (6ft)
-
--   1x HDMI cable
-
--   1x Sony 55" 4K UHD HDR OLED Android Smart TV (XBR55A9G)
-
-### Configuration
 
 **OS**
 
@@ -114,3 +61,44 @@ Every server is connected to two NICs (Network Interface Controller):
 >**Important:** To initialize the sync, or reinitialize after a reboot, all clients MUST be rebooted BEFORE the emitter sync server
 
 -   Since we use a Multiviewer, every server is output through DisplayPort and then converted to HDMI. The HDMI signal then goes to a Black Magic Design mini-converter and converted to SDI which goes directly in the Multiviewer.
+
+## Operating system overlays – frame delay
+
+Whenever you have operating system managed overlays (e.g. Windows Taskbar, TeamViewer windows, Windows File Explorer) on top of your Fullscreen Unity application, this may introduce a one-frame delay causing cluster synchronization artefacts.
+
+## Framerate drops – screen tearing
+
+Framerate drops cause temporary loss of synchronization, which leads to temporary screen tearing until the framerate is back to the targeted one. For this reason, you should design your project experiences so that the framerate never drops.
+
+## Tested Hardware
+
+We have tested the solution with the hardware and configuration detailed below.
+
+### Components
+
+-   4 x [Supermicro SuperServer 1019GP-TT](https://www.supermicro.com/en/products/system/1U/1019/SYS-1019GP-TT.cfm)
+    with:
+
+    -   NVIDIA Quadro P6000 GPU
+
+    -   NVIDIA Quadro Sync II Kit for Pascal Quadro
+
+    -   1x Intel Xeon Gold 5122 3.6GHz Quad-Core Server CPU
+
+    -   4x 16GB DDR4 2666Mhz ECC (64GB total)
+
+    -   1x Samsung 970 Pro 512GB m.2 SSD
+
+-   1x [Blackmagic Design MultiView 16](https://www.blackmagicdesign.com/ca/products/multiview/techspecs/W-MVW-01)
+
+-   16x [Blackmagic Design Mini Converter SDI to HDMI 6G](https://www.blackmagicdesign.com/ca/products/miniconverters/techspecs/W-CONM-27https://www.blackmagicdesign.com/ca/products/miniconverters/techspecs/W-CONM-27)
+
+-   16x [DisplayPort to HDMI cables](https://www.accellww.com/products/displayport-1-2-to-hdmi-2-0-adapter) (6ft)
+
+-   16x SDI cables (6ft)
+
+-   8x Cat 5 ethernet cables (6ft)
+
+-   1x HDMI cable
+
+-   1x Sony 55" 4K UHD HDR OLED Android Smart TV (XBR55A9G)

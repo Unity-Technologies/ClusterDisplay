@@ -1,2 +1,7 @@
 # Graphics
 Cluster display supports both URP (Universal Render Pipeline) and HDRP (High Definition Render Pipeline). Most features throughout both render pipelines are supported. However, there are a few noteable edge cases.
+
+## HDRP
+
+
+## URP
