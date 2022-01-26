@@ -39,16 +39,14 @@ namespace Unity.ClusterDisplay.Graphics
             // The alternative would be to use a hidden procedural GameObject.
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
-            m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
-            m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
-            
-            // HDAdditionalCameraData requires a Camera so no need to add it manually.
-            m_Camera = gameObject.GetComponent<Camera>();
-            Assert.IsNotNull(m_Camera);
+            m_Camera = gameObject.GetOrAddComponent<Camera>();
             // We use the camera to blit to screen.
             m_Camera.targetTexture = null;
             m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             
+            m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
+            m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
+
             // Assigning a customRender will bypass regular camera rendering,
             // so we don't need to worry about the camera render involving wasteful operations.
             m_AdditionalCameraData.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
