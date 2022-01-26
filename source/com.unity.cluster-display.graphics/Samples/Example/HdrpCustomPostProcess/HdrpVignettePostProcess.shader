@@ -1,4 +1,4 @@
-Shader "Hidden/ExampleScreenCoordOverridePostProcess"
+Shader "ClusterDisplay/Samples/HDRP/CustomPostProcess/Vignette"
 {
     Properties
     {
@@ -10,11 +10,16 @@ Shader "Hidden/ExampleScreenCoordOverridePostProcess"
 
     #pragma target 4.5
     #pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch
-    #pragma multi_compile _ SCREEN_COORD_OVERRIDE
 
+    // Note the multi-compile statement necessary to toggle Cluster Display related shader features.
+    #pragma multi_compile_fragment _ SCREEN_COORD_OVERRIDE
+
+    // These files provide Cluster Display related shader features.
+    #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ScreenCoordOverride.hlsl"
+    #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ScreenCoordOverride.hlsl"
+    
     #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
     #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
-    #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ScreenCoordOverride.hlsl"
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/PostProcessing/Shaders/FXAA.hlsl"
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/PostProcessing/Shaders/RTUpscale.hlsl"
@@ -44,38 +49,38 @@ Shader "Hidden/ExampleScreenCoordOverridePostProcess"
 
     // List of properties to control your post process effect
     float _Intensity;
+    float4 _Color;
     TEXTURE2D_X(_MainTex);
 
     float4 CustomPostProcess(Varyings input) : SV_Target
     {
         UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-        // Note that if HDUtils.DrawFullScreen is used to render the post process, use ClampAndScaleUVForBilinearPostProcessTexture(input.texcoord.xy) to get the correct UVs
+        float4 sourceColor = SAMPLE_TEXTURE2D_X(_MainTex, s_linear_clamp_sampler, input.texcoord);
 
-        float3 sourceColor = SAMPLE_TEXTURE2D_X(_MainTex, s_linear_clamp_sampler, input.texcoord).xyz;
+        // Transform UVs to Cluster Space to evaluate the vignette.
+        float2 transformedUV = SCREEN_COORD_APPLY_SCALEBIAS(input.texcoord);
 
-        float depth = LoadCameraDepth(input.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(input.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+        float2 dist = abs(transformedUV - float2(0.5, 0.5)) * 2 * _Intensity;
 
-        float2 uv = SCREEN_COORD_APPLY_SCALEBIAS(posInput.positionNDC.xy);
+        // We use the Cluster aspect ratio to ensure the vignette is rounded.
+        dist.x *= SCREEN_SIZE_OVERRIDE.x / SCREEN_SIZE_OVERRIDE.y;
 
-        float3 color = lerp(sourceColor, float3(uv, 0), _Intensity);
-
-        return float4(color, 1);
+        float t = pow(saturate(1.0 - dot(dist, dist)), 2);
+        return lerp(_Color, sourceColor, t);
     }
 
     ENDHLSL
 
     SubShader
     {
-        PackageRequirements 
-        {
-            "com.unity.render-pipelines.high-definition" : "14.0.0"
-        }
-        Tags{ "RenderPipeline" = "HDRenderPipeline" }
+
+        // See https://forum.unity.com/threads/package-requirements-in-shaderlab.1108832/
+        PackageRequirements { "com.unity.render-pipelines.high-definition" : "14.0.0" }
+        
         Pass
         {
-            Name "ExampleScreenCoordOverridePostProcess"
+            Name "Vignette"
 
             ZWrite Off
             ZTest Always
