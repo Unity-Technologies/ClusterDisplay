@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.Editor
                     .Select(x => (x.NodeInfo, new LaunchInfo(selectedPlayerDir, x.ClusterId, numRepeaters)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
                 
-                this.StartCoroutine(m_Server.Launch(launchData, m_LaunchCancellationTokenSource.Token)
+                this.StartCoroutine(m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token)
                         .ToCoroutine(e => Debug.Log(e.Message)));
             }
 

@@ -23,17 +23,23 @@
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageHeader.cs">
         <Link>MissionControl\MessageHeader.cs</Link>
       </Compile>
-      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageUtils.cs">
-        <Link>MissionControl\MessageUtils.cs</Link>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\MessageBufferExtensions.cs">
+        <Link>MissionControl\MessageBufferExtensions.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NetworkUtils.cs">
+        <Link>MissionControl\NetworkUtils.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\NodeInfo.cs">
         <Link>MissionControl\NodeInfo.cs</Link>
       </Compile>
-      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ProjectSyncInfo.cs">
-        <Link>MissionControl\ProjectSyncInfo.cs</Link>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\DirectorySyncInfo.cs">
+        <Link>MissionControl\DirectorySyncInfo.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ServerInfo.cs">
         <Link>MissionControl\ServerInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\TaskExtensions.cs">
+        <Link>MissionControl\TaskExtensions.cs</Link>
       </Compile>
     </ItemGroup>
 

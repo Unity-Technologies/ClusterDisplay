@@ -5,14 +5,14 @@ namespace Unity.ClusterDisplay.MissionControl
 {
     [Serializable]
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
-    public struct ProjectSyncInfo
+    public struct DirectorySyncInfo
     {
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
-        public readonly string SharedProjectDir;
+        public readonly string RemoteDirectory;
 
-        public ProjectSyncInfo(string sharedProjectDir)
+        public DirectorySyncInfo(string remoteDirectory)
         {
-            SharedProjectDir = sharedProjectDir;
+            RemoteDirectory = remoteDirectory;
         }
     }
 }

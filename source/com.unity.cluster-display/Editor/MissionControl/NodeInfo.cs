@@ -9,7 +9,6 @@ namespace Unity.ClusterDisplay.MissionControl
         Ready,
         SyncFiles,
         Running,
-        Canceled,
         Error
     }
     

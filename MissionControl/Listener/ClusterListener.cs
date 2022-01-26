@@ -60,75 +60,71 @@ namespace Unity.ClusterDisplay.MissionControl
             await Task.WhenAll(m_HeartbeatTask, m_ListenTask, m_PumpMessagesTask);
         }
 
+        void HandleServerBroadcast(in MessageHeader header, in ServerInfo _)
+        {
+            // Console.WriteLine($"Discovery request from {header.HostName}");
+            Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
+
+            m_LocalEndPoint ??= new IPEndPoint(
+                NetworkUtils.QueryRoutingInterface(header.EndPoint),
+                ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port);
+
+            m_ServerEndPoint = header.EndPoint;
+            m_LastHeardFromServer = DateTime.Now;
+            ReportNodeStatus(m_LatestStatus);
+        }
+
         async Task Listen(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 var receiveResult = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                if (receiveResult.Buffer.MatchMessage<ServerInfo>() is var (header, _))
-                {
-                    // Console.WriteLine($"Discovery request from {header.HostName}");
-                    Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
-
-                    m_LocalEndPoint ??= new IPEndPoint(
-                        MessageUtils.QueryRoutingInterface(header.EndPoint),
-                        ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port);
-
-                    m_ServerEndPoint = header.EndPoint;
-                    m_LastHeardFromServer = DateTime.Now;
-                    ReportNodeStatus(m_LatestStatus);
-                }
-                else if (receiveResult.Buffer.MatchMessage<LaunchInfo>() is var (_, launchInfo))
-                {
-                    Console.WriteLine("Launch requested");
-                    await KillRunningProcess();
-                    m_SubProcessCancellation = new CancellationTokenSource();
-                    m_SubProcessTask = MonitorLaunch(launchInfo, m_SubProcessCancellation.Token);
-                }
-                else if (receiveResult.Buffer.MatchMessage<ProjectSyncInfo>() is var (_, syncInfo))
-                {
-                    Console.WriteLine("Project sync requested");
-                    await KillRunningProcess();
-                    m_SubProcessCancellation = new CancellationTokenSource();
-                    m_SubProcessTask = MonitorSync(syncInfo, m_SubProcessCancellation.Token);
-                }
-                else if (receiveResult.Buffer.MatchMessage<KillInfo>() is var (_, _))
-                {
-                    await KillRunningProcess();
-                    ReportNodeStatus(NodeStatus.Ready);
-                }
-                else
+                if (!receiveResult.Buffer.MatchMessage<ServerInfo, LaunchInfo, DirectorySyncInfo, KillInfo>(
+                    HandleServerBroadcast,
+                    (in MessageHeader _, in LaunchInfo launchInfo) =>
+                    {
+                        m_SubProcessTask = RunPlayer(launchInfo);
+                    },
+                    (in MessageHeader _, in DirectorySyncInfo syncInfo) =>
+                    {
+                        m_SubProcessTask = SyncPlayerFiles(syncInfo);
+                    },
+                    (in MessageHeader _, in KillInfo _) =>
+                    {
+                        KillRunningProcess();
+                        ReportNodeStatus(NodeStatus.Ready);
+                    }))
                 {
                     Console.WriteLine("Unsupported message type received");
-                }
+                };
             }
         }
 
-        async Task KillRunningProcess()
+        void KillRunningProcess()
         {
             m_SubProcessCancellation?.Cancel();
             if (m_SubProcessTask is {Status: TaskStatus.Running})
             {
                 try
                 {
-                    await m_SubProcessTask;
+                    m_SubProcessTask.Wait(5000);
+                    Console.WriteLine("Subprocess killed");
                 }
-                catch (Exception e)
+                catch (AggregateException e)
                 {
                     Console.WriteLine(e.Message);
                 }
-
-                Console.WriteLine("Subprocess killed");
-                m_SubProcessTask = null;
             }
+
+            m_SubProcessTask = null;
         }
 
-        async Task<bool> RunAndLogErrors(Task task)
+        async Task<bool> RunAndReportErrors(Task task)
         {
             try
             {
                 await task;
-                return true;
+                return task.IsCompletedSuccessfully;
             }
             catch (AggregateException ae)
             {
@@ -145,20 +141,29 @@ namespace Unity.ClusterDisplay.MissionControl
             return false;
         }
 
-        async Task MonitorSync(ProjectSyncInfo syncInfo, CancellationToken token)
+        async Task SyncPlayerFiles(DirectorySyncInfo syncInfo)
         {
+            Console.WriteLine("Project sync requested");
+            KillRunningProcess();
+            m_SubProcessCancellation = new CancellationTokenSource();
+            
             ReportNodeStatus(NodeStatus.SyncFiles);
-            if (await RunAndLogErrors(Launcher.SyncProjectDir(syncInfo.SharedProjectDir, token)))
+            if (await RunAndReportErrors(Launcher.SyncProjectDir(syncInfo.RemoteDirectory, m_SubProcessCancellation.Token)))
             {
                 Console.Write("Sync successful");
                 ReportNodeStatus(NodeStatus.Ready);
             }
         }
 
-        async Task MonitorLaunch(LaunchInfo launchInfo, CancellationToken token)
+        async Task RunPlayer(LaunchInfo launchInfo)
         {
+            Console.WriteLine("Launch requested");
+            
+            KillRunningProcess();
+            m_SubProcessCancellation = new CancellationTokenSource();
+            
             ReportNodeStatus(NodeStatus.Running);
-            await RunAndLogErrors(Launcher.Launch(launchInfo, token));
+            await RunAndReportErrors(Launcher.Launch(launchInfo, m_SubProcessCancellation.Token));
             ReportNodeStatus(NodeStatus.Ready);
         }
 
@@ -208,7 +213,8 @@ namespace Unity.ClusterDisplay.MissionControl
             m_TaskCancellation.Cancel();
             try
             {
-                await Task.WhenAll(KillRunningProcess(), m_HeartbeatTask, m_ListenTask);
+                KillRunningProcess();
+                await Task.WhenAll(m_HeartbeatTask, m_ListenTask);
             }
             catch (TaskCanceledException)
             {

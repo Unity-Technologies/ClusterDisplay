@@ -5,7 +5,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+#if UNITY_EDITOR
 using UnityEngine;
+#endif
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -64,22 +66,19 @@ namespace Unity.ClusterDisplay.MissionControl
 
     public sealed class Server : IDisposable
     {
-        UdpClient m_UdpClient;
-        Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
-
-        static readonly IPEndPoint k_DiscoveryEndPoint = new(IPAddress.Broadcast, Constants.DiscoveryPort);
-
-        IEnumerable<ExtendedNodeInfo> Nodes => m_ActiveNodes.Values;
-
         public event Action<ExtendedNodeInfo> NodeAdded;
-
         public event Action<ExtendedNodeInfo> NodeRemoved;
-
         public event Action<ExtendedNodeInfo> NodeUpdated;
 
-        static readonly string k_MachineName = Environment.MachineName;
         const int k_MaxResponseTime = 15;
+        static readonly IPEndPoint k_DiscoveryEndPoint = new(IPAddress.Broadcast, Constants.DiscoveryPort);
+        static readonly string k_MachineName = Environment.MachineName;
+
+        UdpClient m_UdpClient;
         IPEndPoint m_LocalEndPoint;
+        Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
+
+        IEnumerable<ExtendedNodeInfo> Nodes => m_ActiveNodes.Values;
 
         CancellationTokenSource m_CancellationTokenSource;
 
@@ -91,7 +90,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public async Task Run()
         {
             var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = MessageUtils.GetLocalIPAddress();
+            var localAddress = NetworkUtils.GetLocalIPAddress();
             m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
 
             m_CancellationTokenSource?.Dispose();
@@ -146,33 +145,39 @@ namespace Unity.ClusterDisplay.MissionControl
             while (!token.IsCancellationRequested)
             {
                 var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                if (result.Buffer.MatchMessage<NodeInfo>() is var (header, nodeInfo))
-                {
-                    var newItem = new ExtendedNodeInfo(nodeInfo, header)
-                    {
-                        LastResponse = DateTime.Now
-                    };
-                    if (!m_ActiveNodes.TryGetValue(newItem.Id, out var node))
-                    {
-                        m_ActiveNodes.Add(newItem.Id, newItem);
-                        OnNodeAdded(newItem);
-                    }
-                    else if (node != newItem)
-                    {
-                        OnNodeUpdated(newItem);
-                        LogError(ref newItem);
-                    }
-
-                    m_ActiveNodes[newItem.Id] = newItem;
-                }
+                result.Buffer.MatchMessage<NodeInfo>(HandleNodeMessage);
             }
         }
 
-        static void LogError(ref ExtendedNodeInfo nodeInfo)
+        void HandleNodeMessage(in MessageHeader header, in NodeInfo nodeInfo)
+        {
+            var newItem = new ExtendedNodeInfo(nodeInfo, header)
+            {
+                LastResponse = DateTime.Now
+            };
+            if (!m_ActiveNodes.TryGetValue(newItem.Id, out var node))
+            {
+                m_ActiveNodes.Add(newItem.Id, newItem);
+                OnNodeAdded(newItem);
+            }
+            else if (node != newItem)
+            {
+                OnNodeUpdated(newItem);
+                LogNodeError(ref newItem);
+            }
+
+            m_ActiveNodes[newItem.Id] = newItem;
+        }
+
+        static void LogNodeError(ref ExtendedNodeInfo nodeInfo)
         {
             if (nodeInfo.Info.Status == NodeStatus.Error)
             {
+#if UNITY_EDITOR
                 Debug.Log($"[{nodeInfo.Name}]: {nodeInfo.Info.LogMessage}");
+#else
+                Console.WriteLine($"[{nodeInfo.Name}]: {nodeInfo.Info.LogMessage}");
+#endif
             }
         }
 
@@ -207,60 +212,68 @@ namespace Unity.ClusterDisplay.MissionControl
             return result;
         }
 
-        async Task<bool> MirrorPlayerFiles(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        async Task<NodeStatus> SyncPlayerFiles(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            var allSyncTasks = new List<Task<NodeStatus>>();
+            var size = dgram.WriteMessage(k_MachineName,
+                m_LocalEndPoint,
+                new DirectorySyncInfo(launchInfo.PlayerDir));
+            var remoteEndPoint = new IPEndPoint(nodeInfo.Address, nodeInfo.Port);
+            
+            // Instruct node to perform sync
+            await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+            
+            // Wait for sync operation to start before continuing
+            if (await WaitForStatusChange(nodeInfo.Id, token) != NodeStatus.SyncFiles)
+            {
+                return NodeStatus.Error;
+            }
 
+            // await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
+            return await WaitForStatusChange(nodeInfo.Id, token);
+        }
+
+        async Task<bool> SyncPlayerFiles(IEnumerable<(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo)> launchData, CancellationToken token)
+        {
             try
             {
-                foreach (var (node, launchInfo) in launchData)
-                {
-                    var size = dgram.WriteMessage(k_MachineName,
-                        m_LocalEndPoint,
-                        new ProjectSyncInfo(launchInfo.PlayerDir));
-                    var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
-                    await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
-                    if (await WaitForStatusChange(node.Id, token) != NodeStatus.SyncFiles)
-                    {
-                        return false;
-                    }
-
-                    // await WaitForStatus(node.Id, NodeStatus.SyncFiles).WithCancellation(token);
-                    allSyncTasks.Add(WaitForStatusChange(node.Id, token));
-                }
-
+                var allSyncTasks = launchData.Select(t => SyncPlayerFiles(t.nodeInfo, t.launchInfo, token));
                 var results = await Task.WhenAll(allSyncTasks);
                 return results.All(s => s == NodeStatus.Ready);
             }
             catch (TaskCanceledException)
             {
-                // Don't need to do anything if the task was cancelled.
+                // Don't need to do anything if the task was prematurely cancelled.
             }
 
             return false;
         }
 
-        public async Task<bool> Launch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        public async Task LaunchPlayer(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
+            var size = dgram.WriteMessage(k_MachineName,
+                m_LocalEndPoint,
+                new LaunchInfo(launchInfo.PlayerDir,
+                    launchInfo.NodeID,
+                    launchInfo.NumRepeaters));
+            var remoteEndPoint = new IPEndPoint(nodeInfo.Address, nodeInfo.Port);
+            await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+        }
+        
+        public async Task<bool> SyncAndLaunch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
+        {
 
             var data = launchData.ToList();
 
-            if (!await MirrorPlayerFiles(data, token))
+            // Wait for all nodes to finish syncing files
+            if (!await SyncPlayerFiles(data, token))
             {
                 throw new Exception("Sync failed");
             }
-
             foreach (var (node, launchInfo) in data)
             {
-                var size = dgram.WriteMessage(k_MachineName,
-                    m_LocalEndPoint,
-                    new LaunchInfo(launchInfo.PlayerDir,
-                        launchInfo.NodeID,
-                        launchInfo.NumRepeaters));
-                var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
-                await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+                await LaunchPlayer(node, launchInfo, token);
             }
 
             return true;
