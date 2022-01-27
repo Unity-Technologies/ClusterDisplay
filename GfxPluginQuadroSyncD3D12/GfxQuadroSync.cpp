@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <sstream>
+#include <fstream>
 
 #include "d3d12.h"
 #include "dxgi.h"
@@ -19,10 +21,32 @@ namespace GfxQuadroSync
 	static IDXGISwapChain* s_SwapChain = NULL;
 	static bool s_Initialized = false;
 
+#ifdef DEBUG_LOG_QUADRO_SYNC
+	void WriteFileDebug(const char* const message, const bool append)
+	{
+		std::ofstream myfile;
+
+		if (append)
+		{
+			myfile.open("C:/QS/NVIDIA_QuadroSync_DebugFile_PluginCallbacks.txt", std::ios_base::app | std::ios_base::out);
+		}
+		else
+		{
+			myfile.open("C:/QS/NVIDIA_QuadroSync_DebugFile_PluginCallbacks.txt");
+		}
+
+		myfile << message;
+		myfile.close();
+	}
+#endif
+
 	// Override the function defining the load of the plugin
 	extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
 		UnityPluginLoad(IUnityInterfaces * unityInterfaces)
 	{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+		WriteFileDebug("Success: UnityPluginLoad triggered.\n", true);
+#endif
 		if (unityInterfaces)
 		{
 			s_UnityInterfaces = unityInterfaces;
@@ -30,10 +54,28 @@ namespace GfxQuadroSync
 			s_UnityGraphics = s_UnityInterfaces->Get<IUnityGraphics>();
 			if (s_UnityGraphics)
 			{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+				WriteFileDebug("Success: s_UnityGraphics is valid.\n", true);
+#endif
 				s_UnityGraphicsD3D12 = unityInterfaces->Get<IUnityGraphicsD3D12v7>();
+
+#ifdef DEBUG_LOG_QUADRO_SYNC
+				if (s_UnityGraphicsD3D12 != nullptr)
+				{
+					WriteFileDebug("Success: s_UnityGraphicsD3D12 is valid.\n", true);
+				}
+				else
+				{
+					WriteFileDebug("Error: s_UnityGraphicsD3D12 is not valid.\n", true);
+				}
+#endif
 				s_UnityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
 			}
 		}
+
+		// Run OnGraphicsDeviceEvent(initialize) manually on plugin load
+		// to not miss the event in case the graphics device is already initialized
+		OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
 	}
 
 	// Freely defined function to pass a callback to plugin-specific scripts
@@ -49,7 +91,12 @@ namespace GfxQuadroSync
 		UnityRenderingExtQuery(UnityRenderingExtQueryType query)
 	{
 		if (!IsContextValid())
+		{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+			WriteFileDebug("Error: context is not valid.\n", true);
+#endif
 			return false;
+		}
 
 		return (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
 			? s_SwapGroupClient.Render(s_D3D12Device,
@@ -65,11 +112,17 @@ namespace GfxQuadroSync
 	{
 		if (eventType == kUnityGfxDeviceEventInitialize && !s_Initialized)
 		{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+			WriteFileDebug("Info: OnGraphicsDeviceEvent: kUnityGfxDeviceEventInitialize\n", true);
+#endif
 			s_Initialized = true;
 			s_SwapGroupClient.Prepare();
 		}
 		else if (eventType == kUnityGfxDeviceEventShutdown)
 		{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+			WriteFileDebug("Info: OnGraphicsDeviceEvent: kUnityGfxDeviceEventShutdown\n", true);
+#endif
 			s_Initialized = false;
 		}
 	}
@@ -112,14 +165,24 @@ namespace GfxQuadroSync
 	// Verify if the D3D11 Device and the Swap Chain are valid
 	bool IsContextValid()
 	{
-		if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D12)
+		if (s_UnityGraphics == nullptr || s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D12)
 			return false;
 
 		if (s_D3D12Device == nullptr)
+		{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+			WriteFileDebug("Error: s_D3D12Device == nullptr\n", true);
+#endif
 			s_D3D12Device = s_UnityGraphicsD3D12->GetDevice();
+		}
 
 		if (s_SwapChain == nullptr)
+		{
+#ifdef DEBUG_LOG_QUADRO_SYNC
+			WriteFileDebug("Error: s_SwapChain == nullptr\n", true);
+#endif
 			s_SwapChain = s_UnityGraphicsD3D12->GetSwapChain();
+		}
 
 		return (s_D3D12Device != nullptr && s_SwapChain != nullptr);
 	}
@@ -130,6 +193,9 @@ namespace GfxQuadroSync
 		if (!IsContextValid())
 			return;
 
+#ifdef DEBUG_LOG_QUADRO_SYNC
+		WriteFileDebug("Info: QuadroSyncInitialize\n", true);
+#endif
 		s_SwapGroupClient.SetupWorkStation();
 		s_SwapGroupClient.Initialize(s_D3D12Device, s_SwapChain);
 	}
@@ -158,6 +224,10 @@ namespace GfxQuadroSync
 	{
 		if (!IsContextValid())
 			return;
+
+#ifdef DEBUG_LOG_QUADRO_SYNC
+		WriteFileDebug("QuadroSyncDispose\n", true);
+#endif
 
 		s_SwapGroupClient.Dispose(s_D3D12Device, s_SwapChain);
 		s_SwapGroupClient.DisposeWorkStation();

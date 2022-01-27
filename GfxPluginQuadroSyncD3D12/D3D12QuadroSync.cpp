@@ -10,7 +10,6 @@
 
 namespace GfxQuadroSync
 {
-
 #ifdef DEBUG_LOG_QUADRO_SYNC
 	void PluginCSwapGroupClient::WriteFileDebug(const char* const message,
 		const bool append)
@@ -19,11 +18,11 @@ namespace GfxQuadroSync
 
 		if (append)
 		{
-			myfile.open("C:/NVIDIA_QuadroSync_DebugFile.txt", std::ios_base::app | std::ios_base::out);
+			myfile.open("C:/QS/NVIDIA_QuadroSync_DebugFile_APICallbacks.txt", std::ios_base::app | std::ios_base::out);
 		}
 		else
 		{
-			myfile.open("C:/NVIDIA_QuadroSync_DebugFile.txt");
+			myfile.open("C:/QS/NVIDIA_QuadroSync_DebugFile_APICallbacks.txt");
 		}
 
 		myfile << message;
@@ -43,14 +42,14 @@ namespace GfxQuadroSync
 		, m_Initialized(false)
 	{
 #ifdef DEBUG_LOG_QUADRO_SYNC
-		WriteFileDebug("---- Initialize File ----\n", false);
+		WriteFileDebug("Success: Initialize PluginCSwapGroupClient ----\n", false);
 #endif
 	}
 
 	PluginCSwapGroupClient::~PluginCSwapGroupClient()
 	{
 #ifdef DEBUG_LOG_QUADRO_SYNC
-		WriteFileDebug("---- Destroy File ----\n");
+		WriteFileDebug("Success: Destroy PluginCSwapGroupClient ----\n");
 		CloseHandle(m_fileDebug);
 #endif
 	}
@@ -65,11 +64,11 @@ namespace GfxQuadroSync
 		{
 			NvAPI_ShortString errorMessage;
 			NvAPI_GetErrorMessage(status, errorMessage);
-			WriteFileDebug("* Failed: NvAPI_Initialize, ");
+			WriteFileDebug("Error: NvAPI_Initialize, ");
 			WriteFileDebug(errorMessage + '\n');
 		}
 		else
-			WriteFileDebug("* Success: NvAPI_Initialize\n");
+			WriteFileDebug("Success: NvAPI_Initialize\n");
 #endif
 	}
 
@@ -88,9 +87,9 @@ namespace GfxQuadroSync
 
 #ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
-					WriteFileDebug("* Success: NvAPI_GPU_WorkstationFeatureSetup\n");
+					WriteFileDebug("Success: NvAPI_GPU_WorkstationFeatureSetup\n");
 				else
-					WriteFileDebug("* Failed: NvAPI_GPU_WorkstationFeatureSetup\n");
+					WriteFileDebug("Error: NvAPI_GPU_WorkstationFeatureSetup\n");
 #endif
 			}
 		}
@@ -112,9 +111,9 @@ namespace GfxQuadroSync
 
 #ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
-					WriteFileDebug("* Success: NvAPI_GPU_WorkstationFeatureSetup\n");
+					WriteFileDebug("Success: NvAPI_GPU_WorkstationFeatureSetup\n");
 				else
-					WriteFileDebug("* Failed: NvAPI_GPU_WorkstationFeatureSetup\n");
+					WriteFileDebug("Error: NvAPI_GPU_WorkstationFeatureSetup\n");
 #endif
 			}
 		}
@@ -137,9 +136,9 @@ namespace GfxQuadroSync
 
 #ifdef DEBUG_LOG_QUADRO_SYNC
 		if (status == NvAPI_Status::NVAPI_OK)
-			WriteFileDebug("* Success: NvAPI_D3D1x_QueryMaxSwapGroup\n");
+			WriteFileDebug("Success: NvAPI_D3D1x_QueryMaxSwapGroup\n");
 		else
-			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup\n");
+			WriteFileDebug("Error: NvAPI_D3D1x_QueryMaxSwapGroup\n");
 #endif
 
 		if (m_GSyncSwapGroups > 0)
@@ -151,19 +150,19 @@ namespace GfxQuadroSync
 #ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
 				{
-					WriteFileDebug("* Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
+					WriteFileDebug("Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
 				}
 				else if (status == NVAPI_ERROR)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
 				}
 				else if (NVAPI_INVALID_ARGUMENT)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_INVALID_ARGUMENT\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_INVALID_ARGUMENT\n");
 				}
 				else if (NVAPI_API_NOT_INITIALIZED)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
 				}
 
 				std::ostringstream oss;
@@ -200,19 +199,19 @@ namespace GfxQuadroSync
 #ifdef DEBUG_LOG_QUADRO_SYNC
 					if (status == NvAPI_Status::NVAPI_OK)
 					{
-						WriteFileDebug("* Success: NvAPI_D3D1x_BindSwapBarrier\n");
+						WriteFileDebug("Success: NvAPI_D3D1x_BindSwapBarrier\n");
 					}
 					else if (status == NVAPI_ERROR)
 					{
-						WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_ERROR\n");
+						WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_ERROR\n");
 					}
 					else if (NVAPI_INVALID_ARGUMENT)
 					{
-						WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_INVALID_ARGUMENT\n");
+						WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_INVALID_ARGUMENT\n");
 					}
 					else if (NVAPI_API_NOT_INITIALIZED)
 					{
-						WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
+						WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
 					}
 #endif
 					if (status != NVAPI_OK)
@@ -224,7 +223,7 @@ namespace GfxQuadroSync
 			else if (m_BarrierId > 0)
 			{
 #ifdef DEBUG_LOG_QUADRO_SYNC
-				WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
+				WriteFileDebug("Error: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
 #endif
 				m_BarrierId = 0;
 				return false;
@@ -241,15 +240,15 @@ namespace GfxQuadroSync
 
 #ifdef DEBUG_LOG_QUADRO_SYNC
 			if (status == NvAPI_Status::NVAPI_OK)
-				WriteFileDebug("* Success: NvAPI_D3D1x_QuerySwapGroup\n");
+				WriteFileDebug("Success: NvAPI_D3D1x_QuerySwapGroup\n");
 			else
-				WriteFileDebug("* Failed: NvAPI_D3D1x_QuerySwapGroup\n");
+				WriteFileDebug("Error: NvAPI_D3D1x_QuerySwapGroup\n");
 #endif
 		}
 		else if (m_GroupId > 0)
 		{
 #ifdef DEBUG_LOG_QUADRO_SYNC
-			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
+			WriteFileDebug("Error: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
 #endif
 			m_GroupId = 0;
 			return false;
@@ -257,7 +256,7 @@ namespace GfxQuadroSync
 		else
 		{
 #ifdef DEBUG_LOG_QUADRO_SYNC
-			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
+			WriteFileDebug("Error: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
 #endif
 		}
 
@@ -335,13 +334,12 @@ namespace GfxQuadroSync
 			return true;
 		}
 
+#ifdef DEBUG_LOG_QUADRO_SYNC
 		NvAPI_ShortString errorMessage;
 		NvAPI_GetErrorMessage(result, errorMessage);
 		WriteFileDebug("NvAPI Error message: ");
 		WriteFileDebug(errorMessage + '\n');
-
-#ifdef DEBUG_LOG_QUADRO_SYNC
-		WriteFileDebug("* Failed: NvAPI_D3D1x_Present\n");
+		WriteFileDebug("Error: NvAPI_D3D1x_Present\n");
 #endif
 		return false;
 	}
@@ -365,9 +363,9 @@ namespace GfxQuadroSync
 	{
 #ifdef DEBUG_LOG_QUADRO_SYNC
 		if (value)
-			WriteFileDebug("EnableSwapGroup: (true), newSwapGroup ID is 1\n");
+			WriteFileDebug("Info: EnableSwapGroup: (true), newSwapGroup ID is 1\n");
 		else
-			WriteFileDebug("EnableSwapGroup: (false), newSwapGroup ID is 0\n");
+			WriteFileDebug("Info: EnableSwapGroup: (false), newSwapGroup ID is 0\n");
 #endif
 
 		const NvU32 newSwapGroup = (value) ? 1 : 0;
@@ -378,11 +376,11 @@ namespace GfxQuadroSync
 #ifdef DEBUG_LOG_QUADRO_SYNC
 			if (status == NvAPI_Status::NVAPI_OK)
 			{
-				WriteFileDebug("* Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
+				WriteFileDebug("Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
 			}
 			else if (status == NVAPI_ERROR)
 			{
-				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
+				WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
 
 				NvAPI_ShortString errorMessage;
 				NvAPI_GetErrorMessage(status, errorMessage);
@@ -406,11 +404,11 @@ namespace GfxQuadroSync
 			}
 			else if (NVAPI_INVALID_ARGUMENT)
 			{
-				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_INVALID_ARGUMENT\n");
+				WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_INVALID_ARGUMENT\n");
 			}
 			else if (NVAPI_API_NOT_INITIALIZED)
 			{
-				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
+				WriteFileDebug("Error: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
 			}
 #endif
 
@@ -428,9 +426,9 @@ namespace GfxQuadroSync
 		{
 #ifdef DEBUG_LOG_QUADRO_SYNC
 			if (value)
-				WriteFileDebug("EnableSwapBarrier: (true), newSwapBarrier ID is 1\n");
+				WriteFileDebug("Info: EnableSwapBarrier: (true), newSwapBarrier ID is 1\n");
 			else
-				WriteFileDebug("EnableSwapBarrier: (false), newSwapBarrier ID is 0\n");
+				WriteFileDebug("Info: EnableSwapBarrier: (false), newSwapBarrier ID is 0\n");
 #endif
 
 			const NvU32 newSwapBarrier = (value) ? 1 : 0;
@@ -441,19 +439,19 @@ namespace GfxQuadroSync
 #ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
 				{
-					WriteFileDebug("* Success: NvAPI_D3D1x_BindSwapBarrier, NVAPI_OK\n");
+					WriteFileDebug("Success: NvAPI_D3D1x_BindSwapBarrier, NVAPI_OK\n");
 				}
 				else if (status == NVAPI_ERROR)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_ERROR\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_ERROR\n");
 				}
 				else if (NVAPI_INVALID_ARGUMENT)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_INVALID_ARGUMENT\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_INVALID_ARGUMENT\n");
 				}
 				else if (NVAPI_API_NOT_INITIALIZED)
 				{
-					WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
+					WriteFileDebug("Error: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
 				}
 #endif
 
@@ -463,13 +461,13 @@ namespace GfxQuadroSync
 				}
 			}
 #ifdef DEBUG_LOG_QUADRO_SYNC
-			WriteFileDebug("EnableSwapBarrier: already set, nothing has been called\n");
+			WriteFileDebug("Info: EnableSwapBarrier: already set, nothing has been called\n");
 #endif
 		}
 #ifdef DEBUG_LOG_QUADRO_SYNC
 		else
 		{
-			WriteFileDebug("EnableSwapBarrier: (NULL), m_GroupId is diffent than 1\n");
+			WriteFileDebug("Info: EnableSwapBarrier: (NULL), m_GroupId is diffent than 1\n");
 		}
 #endif
 	}
