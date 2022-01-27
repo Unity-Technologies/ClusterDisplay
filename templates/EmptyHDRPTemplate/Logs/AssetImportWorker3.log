@@ -1,0 +1,229 @@
+Using pre-set license
+Built from '2022.1/staging' branch; Version is '2022.1.0b2 (980041f98dd2) revision 9961537'; Using compiler version '192829333'; Build Type 'Release'
+OS: 'Windows 10  (10.0.19043) 64bit Professional' Language: 'en' Physical Memory: 65360 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1, IsPro: 0
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\2022.1.0b2\Editor\Unity.exe
+-adb2
+-batchMode
+-noUpm
+-name
+AssetImportWorker3
+-projectPath
+C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/templates/EmptyHDRPTemplate
+-logFile
+Logs/AssetImportWorker3.log
+-srvPort
+57453
+Successfully changed project path to: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/templates/EmptyHDRPTemplate
+C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/templates/EmptyHDRPTemplate
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Refreshing native plugins compatible for Editor in 141.54 ms, found 5 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 2022.1.0b2 (980041f98dd2)
+[Subsystems] Discovering subsystems at path C:/Program Files/Unity/Hub/Editor/2022.1.0b2/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/templates/EmptyHDRPTemplate/Assets
+GfxDevice: creating device client; threaded=0; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce RTX 2070 SUPER (ID=0x1e84)
+    Vendor:   NVIDIA
+    VRAM:     8011 MB
+    Driver:   30.0.14.9676
+Initialize mono
+Mono path[0] = 'C:/Program Files/Unity/Hub/Editor/2022.1.0b2/Editor/Data/Managed'
+Mono path[1] = 'C:/Program Files/Unity/Hub/Editor/2022.1.0b2/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'C:/Program Files/Unity/Hub/Editor/2022.1.0b2/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56544
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: C:/Program Files/Unity/Hub/Editor/2022.1.0b2/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.008359 seconds.
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 115.66 ms, found 5 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  0.639 seconds
+Domain Reload Profiling:
+	ReloadAssembly (640ms)
+		BeginReloadAssembly (65ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (0ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (1ms)
+		EndReloadAssembly (501ms)
+			LoadAssemblies (63ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (118ms)
+				TypeCache.Initialize (117ms)
+					TypeCache.ScanAssembly (116ms)
+				ResolveRequiredComponents (0ms)
+			ReleaseScriptCaches (0ms)
+			RebuildScriptCaches (24ms)
+			SetupLoadedEditorAssemblies (304ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (14ms)
+				SetLoadedEditorAssemblies (6ms)
+				RefreshPlugins (116ms)
+				BeforeProcessingInitializeOnLoad (1ms)
+				ProcessInitializeOnLoadAttributes (130ms)
+				ProcessInitializeOnLoadMethodAttributes (37ms)
+				AfterProcessingInitializeOnLoad (0ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (0ms)
+Platform modules already initialized, skipping
+Registering precompiled user dll's ...
+Registered in 0.011550 seconds.
+Begin MonoManager ReloadAssembly
+Symbol file LoadedFromMemory doesn't match image C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\templates\EmptyHDRPTemplate\Library\PackageCache\com.unity.visualscripting@1.7.6\Editor\VisualScripting.Core\Dependencies\DotNetZip\Unity.VisualScripting.IonicZip.dll
+Symbol file LoadedFromMemory doesn't match image C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\templates\EmptyHDRPTemplate\Library\PackageCache\com.unity.visualscripting@1.7.6\Editor\VisualScripting.Core\Dependencies\YamlDotNet\Unity.VisualScripting.YamlDotNet.dll
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 127.83 ms, found 5 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Refresh completed but there are assets queued up for importing. Check for code that modifies assets which gets called after OnPostProcessAllAssets. Additional details in Log file
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+Unity.ClusterDisplay.Graphics.Editor.Util:AddAlwaysIncludedShaderIfNeeded (string) (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Util.cs:46)
+Unity.ClusterDisplay.Graphics.Editor.Initializer:.cctor () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Initializer.cs:13)
+System.Runtime.CompilerServices.RuntimeHelpers:RunClassConstructor (System.RuntimeTypeHandle)
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
+
+[C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Util.cs line 46]
+
+Assets queued for import after Refresh completed:
+	ProjectSettings/GraphicsSettings.asset
+Asset Pipeline Refresh (id=d2a0160f19adb094184a81b7e8c901d1): Total: 0.000 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Assertion failed on expression: 'm_Ptr'
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+Unity.ClusterDisplay.Graphics.Editor.Util:AddAlwaysIncludedShaderIfNeeded (string) (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Util.cs:46)
+Unity.ClusterDisplay.Graphics.Editor.Initializer:.cctor () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Initializer.cs:13)
+System.Runtime.CompilerServices.RuntimeHelpers:RunClassConstructor (System.RuntimeTypeHandle)
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
+
+[C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Util.cs line 46]
+
+Added Hidden/ClusterDisplay/Blit to the list of Always Included shader.
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+Unity.ClusterDisplay.Graphics.Editor.Initializer:.cctor () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Initializer.cs:15)
+System.Runtime.CompilerServices.RuntimeHelpers:RunClassConstructor (System.RuntimeTypeHandle)
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
+
+(Filename: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/Initializer.cs Line: 15)
+
+Exposure component in volume profile "DefaultSettingsVolumeProfile" at Assets/Settings/HDRPDefaultResources/DefaultSettingsVolumeProfile.asset uses automatic mode. We recommend using fixed exposure with Cluster Display.
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+Unity.ClusterDisplay.Graphics.Editor.VolumeProfileChecker:CheckVolumeProfile (UnityEngine.Rendering.VolumeProfile) (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs:51)
+Unity.ClusterDisplay.Graphics.Editor.VolumeProfileChecker:Initialize () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs:23)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadMethodAttributes ()
+
+(Filename: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs Line: 51)
+
+Exposure component in volume profile "SkyandFogSettingsProfile" at Assets/Settings/SkyandFogSettingsProfile.asset uses automatic mode. We recommend using fixed exposure with Cluster Display.
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:LogWarning (object)
+Unity.ClusterDisplay.Graphics.Editor.VolumeProfileChecker:CheckVolumeProfile (UnityEngine.Rendering.VolumeProfile) (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs:51)
+Unity.ClusterDisplay.Graphics.Editor.VolumeProfileChecker:Initialize () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs:23)
+System.Reflection.RuntimeMethodInfo:Invoke (object,System.Reflection.BindingFlags,System.Reflection.Binder,object[],System.Globalization.CultureInfo)
+System.Reflection.MethodBase:Invoke (object,object[])
+UnityEditor.EditorAssemblies:ProcessInitializeOnLoadMethodAttributes ()
+
+(Filename: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Editor/VolumeProfileChecker.cs Line: 51)
+
+Mono: successfully reloaded assembly
+- Completed reload, in  1.808 seconds
+Domain Reload Profiling:
+	ReloadAssembly (1809ms)
+		BeginReloadAssembly (107ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (5ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (21ms)
+		EndReloadAssembly (1602ms)
+			LoadAssemblies (86ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (443ms)
+				TypeCache.Initialize (428ms)
+					TypeCache.ScanAssembly (422ms)
+				ResolveRequiredComponents (14ms)
+			ReleaseScriptCaches (1ms)
+			RebuildScriptCaches (79ms)
+			SetupLoadedEditorAssemblies (939ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (10ms)
+				SetLoadedEditorAssemblies (5ms)
+				RefreshPlugins (128ms)
+				BeforeProcessingInitializeOnLoad (106ms)
+				ProcessInitializeOnLoadAttributes (525ms)
+				ProcessInitializeOnLoadMethodAttributes (156ms)
+				AfterProcessingInitializeOnLoad (8ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (5ms)
+Platform modules already initialized, skipping
+========================================================================
+Worker process is ready to serve import requests
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.07 seconds
+Refreshing native plugins compatible for Editor in 1.15 ms, found 5 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Unloading 6272 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 78 unused Assets / (3.5 MB). Loaded Objects now: 6718.
+Memory consumption went from 1.00 GB to 1.00 GB.
+Total: 6.066800 ms (FindLiveObjects: 0.519700 ms CreateObjectMapping: 0.747600 ms MarkObjects: 4.029200 ms  DeleteObjects: 0.769100 ms)
+
+AssetImportParameters requested are different than current active one (requested -> active):
+  custom:video-decoder-ogg-theora: a1e56fd34408186e4bbccfd4996cb3dc -> 
+  custom:container-muxer-webm: aa71ff27fc2769a1b78a27578f13a17b -> 
+  custom:container-demuxer-webm: 4f35f7cbe854078d1ac9338744f61a02 -> 
+  custom:video-encoder-webm-vp8: eb34c28f22e8b96e1ab97ce403110664 -> 
+  custom:audio-encoder-webm-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+  custom:framework-win-MediaFoundation: 216162199b28c13a410421893ffa2e32 -> 
+  custom:container-demuxer-ogg: 62fdf1f143b41e24485cea50d1cbac27 -> 
+  custom:video-decoder-webm-vp8: 9c59270c3fd7afecdb556c50c9e8de78 -> 
+  custom:audio-decoder-ogg-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+========================================================================
+Received Import Request.
+  Time since last request: 253564.022896 seconds.
+  path: Assets/Resources/ClusterDisplay/RPCStubs.bin
+  artifactKey: Guid(0b3d6682d2411c448ad46e30c82b6efe) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Resources/ClusterDisplay/RPCStubs.bin using Guid(0b3d6682d2411c448ad46e30c82b6efe) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '7b5d38c457ebbfa40f40824c7c3255a8') in 0.033953 seconds 

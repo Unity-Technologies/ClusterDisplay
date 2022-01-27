@@ -12,6 +12,9 @@ If you want to create a new project:
     ![](images/new-project-script.gif)
 
 3. Open the created projects from the Unity Hub:
+
     ![Scene Composition Manager](images/samples-open-hub.png)
 
-4. If you created a sample project, follow the instructions here:
+4. If you created a sample project, continue to follow the instructions [here](samples.md)
+
+5. Otherwise you can continue to [Running and Testing](running-and-testing.md).
