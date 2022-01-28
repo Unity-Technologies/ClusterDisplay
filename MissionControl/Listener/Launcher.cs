@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -87,13 +86,21 @@ namespace Unity.ClusterDisplay.MissionControl
             CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            var localProjectionDir = GetLocalProjectDir(launchInfo.PlayerDir);
-            var dirInfo = new DirectoryInfo(localProjectionDir);
-            var exePath = dirInfo.GetFiles("*.exe").FirstOrDefault()?.FullName;
-            if (exePath == null)
+            if (!FolderUtils.TryGetPlayerInfo(GetLocalProjectDir(launchInfo.PlayerDir), out var playerInfo))
             {
-                Console.WriteLine($"No executable found in project directory.");
-                return;
+                throw new ArgumentException("Not a valid Unity player");
+            }
+
+            if (launchInfo.ClearRegistry)
+            {
+                try
+                {
+                    FolderUtils.ClearRegistry(playerInfo.CompanyName, playerInfo.ProductName);
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Could not clear the registry key: {ex.Message}");
+                }
             }
 
             var argString = GetCommandLineArgString(launchInfo);
@@ -101,12 +108,12 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 StartInfo =
                 {
-                    FileName = exePath,
+                    FileName = playerInfo.ExecutablePath,
                     Arguments = argString
                 }
             };
 
-            Console.WriteLine($"Running...\n{exePath} {argString}");
+            Console.WriteLine($"Running...\n{playerInfo.ExecutablePath} {argString}");
             runProjectProcess.Start();
 
             try

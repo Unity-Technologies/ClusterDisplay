@@ -30,7 +30,9 @@ namespace Unity.ClusterDisplay.MissionControl
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
         public readonly string PlayerDir;
 
-        public LaunchInfo(string playerDir, int id, int numRepeaters, int handshakeTimeout = 10000, int commTimeout = 5000)
+        public readonly bool ClearRegistry;
+
+        public LaunchInfo(string playerDir, int id, int numRepeaters, bool clearRegistry = false, int handshakeTimeout = 10000, int commTimeout = 5000)
         {
             PlayerDir = playerDir;
             NodeID = id;
@@ -41,6 +43,7 @@ namespace Unity.ClusterDisplay.MissionControl
             MulticastAddress = k_DefaultAddress;
             TxPort = 25690;
             RxPort = 25689;
+            ClearRegistry = clearRegistry;
         }
     }
 }

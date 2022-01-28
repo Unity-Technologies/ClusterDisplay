@@ -1,8 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UnityEngine;
+#if !UNITY_EDITOR
+using Microsoft.Win32;
+#endif
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -25,7 +26,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public static bool TryGetPlayerInfo(string path, out PlayerInfo info)
         {
             info = default;
-            
+
             var dirInfo = new DirectoryInfo(path);
             if (dirInfo.GetFiles(k_PlayerDllName, SearchOption.TopDirectoryOnly).Length == 0)
             {
@@ -36,7 +37,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 return false;
             }
-            
+
             var appFileInfo = dirInfo.GetFiles("app.info", new EnumerationOptions
             {
                 RecurseSubdirectories = true
@@ -48,7 +49,7 @@ namespace Unity.ClusterDisplay.MissionControl
             }
 
             using var lines = File.ReadLines(appFileInfo.FullName).GetEnumerator();
-            
+
             if (!lines.MoveNext())
             {
                 return false;
@@ -65,5 +66,16 @@ namespace Unity.ClusterDisplay.MissionControl
 
             return true;
         }
+
+#if !UNITY_EDITOR
+        public static void ClearRegistry(string companyName, string productName)
+        {
+            var subKey = $"Software\\{companyName}";
+#pragma warning disable CA1416
+            using var key = Registry.CurrentUser.OpenSubKey(subKey, true);
+            key?.DeleteSubKeyTree(productName);
+#pragma warning restore CA1416
+        }
+#endif
     }
 }

@@ -79,6 +79,7 @@ namespace Unity.ClusterDisplay.MissionControl
             while (!token.IsCancellationRequested)
             {
                 var receiveResult = await m_UdpClient.ReceiveAsync().WithCancellation(token);
+                
                 if (!receiveResult.Buffer.MatchMessage<ServerInfo, LaunchInfo, DirectorySyncInfo, KillInfo>(
                     HandleServerBroadcast,
                     (in MessageHeader _, in LaunchInfo launchInfo) =>
@@ -148,7 +149,8 @@ namespace Unity.ClusterDisplay.MissionControl
             m_SubProcessCancellation = new CancellationTokenSource();
             
             ReportNodeStatus(NodeStatus.SyncFiles);
-            if (await RunAndReportErrors(Launcher.SyncProjectDir(syncInfo.RemoteDirectory, m_SubProcessCancellation.Token)))
+            if (await Launcher.SyncProjectDir(syncInfo.RemoteDirectory, m_SubProcessCancellation.Token)
+                .WithErrorHandling(ex => ReportNodeStatus(NodeStatus.Error, ex.Message)))
             {
                 Console.Write("Sync successful");
                 ReportNodeStatus(NodeStatus.Ready);
@@ -163,7 +165,8 @@ namespace Unity.ClusterDisplay.MissionControl
             m_SubProcessCancellation = new CancellationTokenSource();
             
             ReportNodeStatus(NodeStatus.Running);
-            await RunAndReportErrors(Launcher.Launch(launchInfo, m_SubProcessCancellation.Token));
+            await Launcher.Launch(launchInfo, m_SubProcessCancellation.Token)
+                .WithErrorHandling(ex => ReportNodeStatus(NodeStatus.Error, ex.Message));
             ReportNodeStatus(NodeStatus.Ready);
         }
 

@@ -252,11 +252,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public async Task LaunchPlayer(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            var size = dgram.WriteMessage(k_MachineName,
-                m_LocalEndPoint,
-                new LaunchInfo(launchInfo.PlayerDir,
-                    launchInfo.NodeID,
-                    launchInfo.NumRepeaters));
+            var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, launchInfo);
             var remoteEndPoint = new IPEndPoint(nodeInfo.Address, nodeInfo.Port);
             await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
         }
@@ -279,7 +275,7 @@ namespace Unity.ClusterDisplay.MissionControl
             return true;
         }
 
-        public async void StopAll()
+        public async Task StopAll()
         {
             var dgram = new byte[Constants.BufferSize];
 

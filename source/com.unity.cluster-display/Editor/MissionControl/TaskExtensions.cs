@@ -56,5 +56,27 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             }
         }
+
+        public static async Task<bool> WithErrorHandling(this Task task, Action<Exception> exceptionHandler)
+        {
+            try
+            {
+                await task;
+                return task.IsCompletedSuccessfully;
+            }
+            catch (AggregateException ae)
+            {
+                foreach (var exception in ae.InnerExceptions)
+                {
+                    exceptionHandler?.Invoke(exception);
+                }
+            }
+            catch (Exception e)
+            {
+                exceptionHandler?.Invoke(e);
+            }
+
+            return false;
+        }
     }
 }

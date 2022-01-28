@@ -17,6 +17,9 @@
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\Constants.cs">
         <Link>MissionControl\Constants.cs</Link>
       </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\FolderUtils.cs">
+        <Link>MissionControl\FolderUtils.cs</Link>
+      </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\LaunchInfo.cs">
         <Link>MissionControl\LaunchInfo.cs</Link>
       </Compile>
@@ -35,12 +38,19 @@
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\DirectorySyncInfo.cs">
         <Link>MissionControl\DirectorySyncInfo.cs</Link>
       </Compile>
+      <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\PlayerInfo.cs">
+        <Link>MissionControl\PlayerInfo.cs</Link>
+      </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\ServerInfo.cs">
         <Link>MissionControl\ServerInfo.cs</Link>
       </Compile>
       <Compile Include="..\..\source\com.unity.cluster-display\Editor\MissionControl\TaskExtensions.cs">
         <Link>MissionControl\TaskExtensions.cs</Link>
       </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Win32.Registry" Version="6.0.0-preview.5.21301.5" />
     </ItemGroup>
 
 </Project>

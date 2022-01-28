@@ -29,6 +29,9 @@ namespace Unity.ClusterDisplay.Editor
         int m_CommTimeout = 5000;
 
         [SerializeField]
+        bool m_ClearRegistry = false;
+
+        [SerializeField]
         Vector2 m_ListScrollPos;
 
         List<PlayerInfo> m_PlayerList = new();
@@ -44,6 +47,7 @@ namespace Unity.ClusterDisplay.Editor
         MultiColumnHeaderState m_MultiColumnHeaderState;
 
         CancellationTokenSource m_LaunchCancellationTokenSource;
+        CancellationTokenSource m_GeneralCancellationTokenSource;
 
         [MenuItem("Cluster Display/Mission Control")]
         public static void ShowWindow()
@@ -68,6 +72,7 @@ namespace Unity.ClusterDisplay.Editor
 
         void OnDisable()
         {
+            m_GeneralCancellationTokenSource.Cancel();
             m_Server?.Dispose();
             m_Server = null;
         }
@@ -88,6 +93,8 @@ namespace Unity.ClusterDisplay.Editor
             m_Server.NodeUpdated += m_NodeListView.UpdateItem;
             m_Server.NodeAdded += m_NodeListView.AddItem;
             m_Server.NodeRemoved += m_NodeListView.RemoveItem;
+
+            m_GeneralCancellationTokenSource = new CancellationTokenSource();
 
             CreatePLayerList();
             RefreshPlayers();
@@ -113,7 +120,8 @@ namespace Unity.ClusterDisplay.Editor
             }
             
             m_PlayerList.Clear();
-            var apps = await Task.Run(() => FolderUtils.ListPlayers(m_RootPath));
+            var apps = await Task.Run(() => FolderUtils.ListPlayers(m_RootPath),
+                m_GeneralCancellationTokenSource.Token);
             m_PlayerList.AddRange(apps);
         }
 
@@ -123,15 +131,17 @@ namespace Unity.ClusterDisplay.Editor
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height);
             m_NodeListView?.OnGUI(rect);
 
-            var rootPath = EditorGUILayout.TextField(new GUIContent("Shared Folder"), m_RootPath);
-
-            if (GUI.changed)
+            using (var check = new EditorGUI.ChangeCheckScope())
             {
-                m_RootPath = rootPath;
-                m_PlayerList.Clear();
-                if (!string.IsNullOrWhiteSpace(rootPath))
+                var rootPath = EditorGUILayout.TextField(new GUIContent("Shared Folder"), m_RootPath);
+
+                if (check.changed)
                 {
-                    RefreshPlayers();
+                    m_RootPath = rootPath;
+                    if (!string.IsNullOrWhiteSpace(rootPath))
+                    {
+                        RefreshPlayers();
+                    }
                 }
             }
 
@@ -143,6 +153,9 @@ namespace Unity.ClusterDisplay.Editor
 
             m_HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", m_HandshakeTimeout);
             m_CommTimeout = EditorGUILayout.IntField("Communication Timeout", m_CommTimeout);
+            m_ClearRegistry = EditorGUILayout.Toggle(new GUIContent("Clear Registry",
+                    "Enable if you are having trouble running in Exclusive Fullscreen"),
+                m_ClearRegistry);
 
             if (GUILayout.Button("Run Selected Player") && m_ProjectListView.index >= 0 && m_PlayerList.Count > m_ProjectListView.index)
             {
@@ -151,7 +164,12 @@ namespace Unity.ClusterDisplay.Editor
                     ?? new List<NodeListView.NodeViewItem>();
                 var numRepeaters = activeNodes.Count - 1;
                 var launchData = activeNodes
-                    .Select(x => (x.NodeInfo, new LaunchInfo(selectedPlayerDir, x.ClusterId, numRepeaters)));
+                    .Select(x => (x.NodeInfo, new LaunchInfo(selectedPlayerDir,
+                        x.ClusterId,
+                        numRepeaters,
+                        m_ClearRegistry,
+                        m_HandshakeTimeout,
+                        m_CommTimeout)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
                 
                 this.StartCoroutine(m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token)
@@ -161,7 +179,7 @@ namespace Unity.ClusterDisplay.Editor
             if (GUILayout.Button("Stop All"))
             {
                 m_LaunchCancellationTokenSource?.Cancel();
-                m_Server.StopAll();
+                this.StartCoroutine(m_Server.StopAll().ToCoroutine(e => Debug.Log(e.Message)));
             }
         }
     }
