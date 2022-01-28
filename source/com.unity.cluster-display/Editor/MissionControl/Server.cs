@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.MissionControl
         Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
         IPEndPoint m_DiscoveryEndPoint;
 
-        IEnumerable<ExtendedNodeInfo> Nodes => m_ActiveNodes.Values;
+        public IEnumerable<ExtendedNodeInfo> Nodes => m_ActiveNodes.Values;
 
         CancellationTokenSource m_CancellationTokenSource;
 

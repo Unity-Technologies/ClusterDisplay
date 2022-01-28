@@ -6,10 +6,9 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
-using UnityEngine;
-using Unity.EditorCoroutines.Editor;
 using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl.Editor
 {
@@ -20,22 +19,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         ReorderableList m_ProjectListView;
 
         [SerializeField]
-        string m_RootPath;
-
-        [SerializeField]
-        int m_HandshakeTimeout = 10000;
-
-        [SerializeField]
-        int m_CommTimeout = 5000;
-
-        [SerializeField]
-        bool m_ClearRegistry = false;
-
-        [SerializeField]
         Vector2 m_ListScrollPos;
-
-        [SerializeField]
-        string m_BroadcastProxyAddress;
 
         List<PlayerInfo> m_PlayerList = new();
         Task m_ServerTask;
@@ -76,6 +60,13 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             m_LaunchCancellationTokenSource?.Cancel();
             m_Server?.Dispose();
             m_Server = null;
+
+            SaveSettings();
+        }
+
+        void OnDestroy()
+        {
+            OnDisable();
         }
 
         void OnEnable()
@@ -86,8 +77,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             var header = new MultiColumnHeader(m_MultiColumnHeaderState);
 
             m_NodeListView = new NodeListView(m_TreeViewState, header);
-            m_NodeListView.Reload();
-
+            
             m_GeneralCancellationTokenSource = new CancellationTokenSource();
 
             CreatePLayerList();
@@ -95,26 +85,58 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 .WithErrorHandling(LogException);
 
             InitializeServer();
+
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(10000);
+                    if (m_Server != null)
+                    {
+                        m_NodeListView.RefreshNodes(m_Server.Nodes);
+                    }
+                }
+            }, m_GeneralCancellationTokenSource.Token)
+                .WithErrorHandling(LogException);
         }
 
         void InitializeServer()
         {
+            var settings = MissionControlSettings.instance;
             m_Server?.Dispose();
-            if (string.IsNullOrEmpty(m_BroadcastProxyAddress))
+            if (string.IsNullOrEmpty(settings.BroadcastProxyAddress))
             {
                 m_Server = new Server();
             }
             else
             {
                 m_Server = new Server(0,
-                    new IPEndPoint(IPAddress.Parse(m_BroadcastProxyAddress),
+                    new IPEndPoint(IPAddress.Parse(settings.BroadcastProxyAddress),
                         Constants.BroadcastProxyPort));
             }
 
-            m_Server.Run().WithErrorHandling(LogException);
             m_Server.NodeUpdated += m_NodeListView.UpdateItem;
             m_Server.NodeAdded += m_NodeListView.AddItem;
             m_Server.NodeRemoved += m_NodeListView.RemoveItem;
+            m_Server.Run().WithErrorHandling(LogException);
+        }
+
+        /// <summary>
+        /// Serializes the settings to disk.
+        /// </summary>
+        /// <remarks>
+        /// The data file is stored in the UserSettings folder of the project.
+        /// </remarks>
+        void SaveSettings()
+        {
+            var tempDictionary = MissionControlSettings.instance.NodeSettings.ToDictionary(ns => ns.Id);
+            foreach (var nodeView in m_NodeListView.Nodes)
+            {
+                tempDictionary[nodeView.id] = nodeView.MutableSettings;
+            }
+
+            MissionControlSettings.instance.NodeSettings = tempDictionary.Values.ToList();
+            MissionControlSettings.instance.Save();
         }
 
         static void LogException(Exception ex)
@@ -136,27 +158,28 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
 
         async Task RefreshPlayers(CancellationToken token)
         {
-            if (string.IsNullOrEmpty(m_RootPath))
+            if (string.IsNullOrEmpty(MissionControlSettings.instance.RootPath))
             {
                 return;
             }
 
             m_PlayerList.Clear();
             var apps = await Task.Run(
-                () => FolderUtils.ListPlayers(m_RootPath).ToList(),
+                () => FolderUtils.ListPlayers(MissionControlSettings.instance.RootPath).ToList(),
                 token);
             m_PlayerList.AddRange(apps);
         }
 
         void OnGUI()
         {
+            var settings = MissionControlSettings.instance;
             EditorGUIUtility.wideMode = true;
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                m_BroadcastProxyAddress = EditorGUILayout.DelayedTextField(new GUIContent(
+                settings.BroadcastProxyAddress = EditorGUILayout.DelayedTextField(new GUIContent(
                         "Broadcast Proxy Address",
                         "If you are unable to broadcast to the cluster, enter the address of a node and discovery messages will be rebroadcasted to the cluster"),
-                    m_BroadcastProxyAddress);
+                    settings.BroadcastProxyAddress);
 
                 if (check.changed)
                 {
@@ -170,11 +193,11 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             using (new EditorGUILayout.HorizontalScope())
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                var rootPath = EditorGUILayout.DelayedTextField(new GUIContent("Shared Folder"), m_RootPath);
+                var rootPath = EditorGUILayout.DelayedTextField(new GUIContent("Shared Folder"), settings.RootPath);
 
                 if (check.changed || GUILayout.Button("Refresh", GUILayout.Width(100)))
                 {
-                    m_RootPath = rootPath;
+                    settings.RootPath = rootPath;
                     if (!string.IsNullOrWhiteSpace(rootPath))
                     {
                         RefreshPlayers(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
@@ -188,25 +211,25 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 m_ProjectListView.DoLayoutList();
             }
 
-            m_HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", m_HandshakeTimeout);
-            m_CommTimeout = EditorGUILayout.IntField("Communication Timeout", m_CommTimeout);
-            m_ClearRegistry = EditorGUILayout.Toggle(new GUIContent("Delete registry key",
+            settings.HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", settings.HandshakeTimeout);
+            settings.Timeout = EditorGUILayout.IntField("Communication Timeout", settings.Timeout);
+            settings.DeleteRegistryKey = EditorGUILayout.Toggle(new GUIContent("Delete registry key",
                     "Enable if you are having trouble running in Exclusive Fullscreen"),
-                m_ClearRegistry);
+                settings.DeleteRegistryKey);
 
             if (GUILayout.Button("Run Selected Player") && m_ProjectListView.index >= 0 && m_PlayerList.Count > m_ProjectListView.index)
             {
-                var selectedPlayerDir = Path.Combine(m_RootPath, m_PlayerList[m_ProjectListView.index].DirectoryName);
-                var activeNodes = m_NodeListView?.Nodes.Where(x => x.IsActive).ToList()
+                var selectedPlayerDir = Path.Combine(settings.RootPath, m_PlayerList[m_ProjectListView.index].DirectoryName);
+                var activeNodes = m_NodeListView?.Nodes.Where(x => x.MutableSettings.IsActive).ToList()
                     ?? new List<NodeListView.NodeViewItem>();
                 var numRepeaters = activeNodes.Count - 1;
                 var launchData = activeNodes
                     .Select(x => (x.NodeInfo, new LaunchInfo(selectedPlayerDir,
-                        x.ClusterId,
+                        x.MutableSettings.ClusterId,
                         numRepeaters,
-                        m_ClearRegistry,
-                        m_HandshakeTimeout,
-                        m_CommTimeout)));
+                        settings.DeleteRegistryKey,
+                        settings.HandshakeTimeout,
+                        settings.Timeout)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
 
                 m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);
@@ -216,6 +239,11 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             {
                 m_LaunchCancellationTokenSource?.Cancel();
                 m_Server.StopAll().WithErrorHandling(LogException);
+            }
+
+            if (GUI.changed)
+            {
+                SaveSettings();
             }
         }
     }
