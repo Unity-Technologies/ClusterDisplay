@@ -39,11 +39,20 @@
 
     -  In **Quality > Other**, set **VSync Count** to **Every V Blank**.
 
+    ![](images/vsync.png)
+
     -  ~~In **Player > Other Settings > Configuration**, set **Scripting Backend** to **IL2CPP**.~~ **(Currently broken, use managed)**
 
     -  In **Player > Other Settings > Configuration**, enable the **Use Incremental GC** option (checkbox) to help avoiding framerate jitters caused by [garbage collection](https://blogs.unity3d.com/2018/11/26/feature-preview-incremental-garbage-collection/).
 
     -  In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **Exclusive Fullscreen** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/class-PlayerSettingsStandalone.html) for more details).
+
+    ![](images/fullscreen-exclusive.png)
+
+    - Verify that your Unity project has **Run in Background** set to **true**
+
+    ![](images/run-in-background.png)
+
 
 9. **If you are using URP**, verify that the following is toggled on your **"Universal Render Pipeline Asset"**:
 
