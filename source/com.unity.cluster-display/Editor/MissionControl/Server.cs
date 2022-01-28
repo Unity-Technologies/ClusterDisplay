@@ -71,24 +71,37 @@ namespace Unity.ClusterDisplay.MissionControl
         public event Action<ExtendedNodeInfo> NodeUpdated;
 
         const int k_MaxResponseTime = 15;
-        static readonly IPEndPoint k_DiscoveryEndPoint = new(IPAddress.Broadcast, Constants.DiscoveryPort);
         static readonly string k_MachineName = Environment.MachineName;
 
         UdpClient m_UdpClient;
         IPEndPoint m_LocalEndPoint;
         Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
+        IPEndPoint m_DiscoveryEndPoint;
 
         IEnumerable<ExtendedNodeInfo> Nodes => m_ActiveNodes.Values;
 
         CancellationTokenSource m_CancellationTokenSource;
 
-        public Server(int port = 0)
+        bool m_Disposed;
+
+        public Server(int listenPort = 0)
         {
-            m_UdpClient = new UdpClient(port);
+            m_UdpClient = new UdpClient(listenPort);
+            m_DiscoveryEndPoint = new IPEndPoint(IPAddress.Broadcast, Constants.DiscoveryPort);
+        }
+
+        public Server(int listenPort, IPEndPoint discoveryEndPoint) : this(listenPort)
+        {
+            m_DiscoveryEndPoint = discoveryEndPoint;
         }
 
         public async Task Run()
         {
+            if (m_Disposed)
+            {
+                throw new ObjectDisposedException("The Server has been disposed");
+            }
+            
             var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
             var localAddress = NetworkUtils.GetLocalIPAddress();
             m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
@@ -104,6 +117,8 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public void Dispose()
         {
+            if (m_Disposed) return;
+            
             if (m_CancellationTokenSource != null)
             {
                 m_CancellationTokenSource.Cancel();
@@ -111,6 +126,8 @@ namespace Unity.ClusterDisplay.MissionControl
             }
 
             m_UdpClient.Dispose();
+
+            m_Disposed = true;
         }
 
         async Task PruneInactiveNodes(CancellationToken token)
@@ -135,7 +152,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
             while (!token.IsCancellationRequested)
             {
-                await m_UdpClient.SendAsync(dgram, size, k_DiscoveryEndPoint).WithCancellation(token);
+                await m_UdpClient.SendAsync(dgram, size, m_DiscoveryEndPoint).WithCancellation(token);
                 await Task.Delay(5000, token);
             }
         }

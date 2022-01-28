@@ -3,12 +3,17 @@
     /// <summary>
     /// Defines constants used for server discovery.
     /// </summary>
-    static class Constants
+    public static class Constants
     {
         /// <summary>
         /// The default UDP port used for server discovery.
         /// </summary>
         public const ushort DiscoveryPort = 9876;
+        
+        /// <summary>
+        /// Port for forwarding discovery broadcasts
+        /// </summary>
+        public const ushort BroadcastProxyPort = 11000;
         
         /// <summary>
         /// The number of characters that may be used in the name strings.

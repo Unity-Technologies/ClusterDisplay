@@ -1,6 +1,8 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -46,6 +48,17 @@ namespace Unity.ClusterDisplay.MissionControl
             }
 
             return ((IPEndPoint) remoteEndPoint.Create(address)).Address;
+        }
+
+        public static async Task RunBroadcastProxy(int listenPort, int broadcastPort, CancellationToken token)
+        {
+            var client = new UdpClient(listenPort);
+            var remoteEndPoint = new IPEndPoint(IPAddress.Broadcast, broadcastPort);
+            while (!token.IsCancellationRequested)
+            {
+                var result = await client.ReceiveAsync().WithCancellation(token);
+                await client.SendAsync(result.Buffer, result.Buffer.Length, remoteEndPoint).WithCancellation(token);
+            }
         }
     }
 }

@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using Unity.ClusterDisplay.MissionControl;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
 
-namespace Unity.ClusterDisplay.Editor
+namespace Unity.ClusterDisplay.MissionControl.Editor
 {
     class MissionControlWindow : EditorWindow
     {
@@ -33,6 +33,9 @@ namespace Unity.ClusterDisplay.Editor
 
         [SerializeField]
         Vector2 m_ListScrollPos;
+
+        [SerializeField]
+        string m_BroadcastProxyAddress;
 
         List<PlayerInfo> m_PlayerList = new();
         Task m_ServerTask;
@@ -64,15 +67,13 @@ namespace Unity.ClusterDisplay.Editor
                 return;
             }
 
-            if (m_ServerTask.IsFaulted)
-            {
-                
-            }
+            if (m_ServerTask.IsFaulted) { }
         }
 
         void OnDisable()
         {
             m_GeneralCancellationTokenSource.Cancel();
+            m_LaunchCancellationTokenSource?.Cancel();
             m_Server?.Dispose();
             m_Server = null;
         }
@@ -84,20 +85,41 @@ namespace Unity.ClusterDisplay.Editor
 
             var header = new MultiColumnHeader(m_MultiColumnHeaderState);
 
-            m_Server = new Server();
-
             m_NodeListView = new NodeListView(m_TreeViewState, header);
             m_NodeListView.Reload();
-
-            this.StartCoroutine(m_Server.Run().ToCoroutine(e => Debug.Log(e.Message)));
-            m_Server.NodeUpdated += m_NodeListView.UpdateItem;
-            m_Server.NodeAdded += m_NodeListView.AddItem;
-            m_Server.NodeRemoved += m_NodeListView.RemoveItem;
 
             m_GeneralCancellationTokenSource = new CancellationTokenSource();
 
             CreatePLayerList();
-            RefreshPlayers();
+            RefreshPlayers(m_GeneralCancellationTokenSource.Token)
+                .WithErrorHandling(LogException);
+
+            InitializeServer();
+        }
+
+        void InitializeServer()
+        {
+            m_Server?.Dispose();
+            if (string.IsNullOrEmpty(m_BroadcastProxyAddress))
+            {
+                m_Server = new Server();
+            }
+            else
+            {
+                m_Server = new Server(0,
+                    new IPEndPoint(IPAddress.Parse(m_BroadcastProxyAddress),
+                        Constants.BroadcastProxyPort));
+            }
+
+            m_Server.Run().WithErrorHandling(LogException);
+            m_Server.NodeUpdated += m_NodeListView.UpdateItem;
+            m_Server.NodeAdded += m_NodeListView.AddItem;
+            m_Server.NodeRemoved += m_NodeListView.RemoveItem;
+        }
+
+        static void LogException(Exception ex)
+        {
+            Debug.Log(ex.Message);
         }
 
         void CreatePLayerList()
@@ -112,35 +134,50 @@ namespace Unity.ClusterDisplay.Editor
             };
         }
 
-        async void RefreshPlayers()
+        async Task RefreshPlayers(CancellationToken token)
         {
             if (string.IsNullOrEmpty(m_RootPath))
             {
                 return;
             }
-            
+
             m_PlayerList.Clear();
-            var apps = await Task.Run(() => FolderUtils.ListPlayers(m_RootPath),
-                m_GeneralCancellationTokenSource.Token);
+            var apps = await Task.Run(
+                () => FolderUtils.ListPlayers(m_RootPath).ToList(),
+                token);
             m_PlayerList.AddRange(apps);
         }
 
         void OnGUI()
         {
             EditorGUIUtility.wideMode = true;
+            using (var check = new EditorGUI.ChangeCheckScope())
+            {
+                m_BroadcastProxyAddress = EditorGUILayout.DelayedTextField(new GUIContent(
+                        "Broadcast Proxy Address",
+                        "If you are unable to broadcast to the cluster, enter the address of a node and discovery messages will be rebroadcasted to the cluster"),
+                    m_BroadcastProxyAddress);
+
+                if (check.changed)
+                {
+                    InitializeServer();
+                }
+            }
+
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height);
             m_NodeListView?.OnGUI(rect);
 
+            using (new EditorGUILayout.HorizontalScope())
             using (var check = new EditorGUI.ChangeCheckScope())
             {
-                var rootPath = EditorGUILayout.TextField(new GUIContent("Shared Folder"), m_RootPath);
+                var rootPath = EditorGUILayout.DelayedTextField(new GUIContent("Shared Folder"), m_RootPath);
 
-                if (check.changed)
+                if (check.changed || GUILayout.Button("Refresh", GUILayout.Width(100)))
                 {
                     m_RootPath = rootPath;
                     if (!string.IsNullOrWhiteSpace(rootPath))
                     {
-                        RefreshPlayers();
+                        RefreshPlayers(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
                     }
                 }
             }
@@ -153,7 +190,7 @@ namespace Unity.ClusterDisplay.Editor
 
             m_HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", m_HandshakeTimeout);
             m_CommTimeout = EditorGUILayout.IntField("Communication Timeout", m_CommTimeout);
-            m_ClearRegistry = EditorGUILayout.Toggle(new GUIContent("Clear Registry",
+            m_ClearRegistry = EditorGUILayout.Toggle(new GUIContent("Delete registry key",
                     "Enable if you are having trouble running in Exclusive Fullscreen"),
                 m_ClearRegistry);
 
@@ -171,15 +208,14 @@ namespace Unity.ClusterDisplay.Editor
                         m_HandshakeTimeout,
                         m_CommTimeout)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
-                
-                this.StartCoroutine(m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token)
-                        .ToCoroutine(e => Debug.Log(e.Message)));
+
+                m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);
             }
 
             if (GUILayout.Button("Stop All"))
             {
                 m_LaunchCancellationTokenSource?.Cancel();
-                this.StartCoroutine(m_Server.StopAll().ToCoroutine(e => Debug.Log(e.Message)));
+                m_Server.StopAll().WithErrorHandling(LogException);
             }
         }
     }

@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<bool>();
-            using (cancellationToken.Register(s => ((TaskCompletionSource<bool>) s).TrySetResult(true), tcs))
+            await using (cancellationToken.Register(s => ((TaskCompletionSource<bool>) s).TrySetResult(true), tcs))
             {
                 if (task != await Task.WhenAny(task, tcs.Task))
                 {
@@ -35,28 +35,16 @@ namespace Unity.ClusterDisplay.MissionControl
             return task.Result;
         }
 
-        public static IEnumerator ToCoroutine(this Task task, Action<Exception> exceptionHandler = null)
-        {
-            var done = false;
-            while (!done)
-            {
-                yield return null;
-                try
-                {
-                    done = task.Wait(0);
-                }
-                catch (AggregateException ae)
-                {
-                    foreach (var e in ae.InnerExceptions)
-                    {
-                        exceptionHandler?.Invoke(e);
-                    }
-
-                    done = true;
-                }
-            }
-        }
-
+        /// <summary>
+        /// Explicitly handle exceptions from a task.
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="exceptionHandler"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// This is useful when you have a long-running task and the synchronization context is
+        /// swallowing exceptions (e.g. Unity).
+        /// </remarks>
         public static async Task<bool> WithErrorHandling(this Task task, Action<Exception> exceptionHandler)
         {
             try

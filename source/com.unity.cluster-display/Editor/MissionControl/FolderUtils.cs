@@ -68,7 +68,7 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
 #if !UNITY_EDITOR
-        public static void ClearRegistry(string companyName, string productName)
+        public static void DeleteRegistryKey(string companyName, string productName)
         {
             var subKey = $"Software\\{companyName}";
 #pragma warning disable CA1416

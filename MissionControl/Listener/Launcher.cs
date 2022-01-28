@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 try
                 {
-                    FolderUtils.ClearRegistry(playerInfo.CompanyName, playerInfo.ProductName);
+                    FolderUtils.DeleteRegistryKey(playerInfo.CompanyName, playerInfo.ProductName);
                 }
                 catch(Exception ex)
                 {

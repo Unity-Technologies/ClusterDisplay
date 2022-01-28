@@ -25,6 +25,7 @@ namespace Unity.ClusterDisplay.MissionControl
         Task m_SubProcessTask;
         Task m_HeartbeatTask;
         Task m_PumpMessagesTask;
+        Task m_ProxyTask;
 
         IPEndPoint m_ServerEndPoint;
         IPEndPoint m_LocalEndPoint;
@@ -56,8 +57,11 @@ namespace Unity.ClusterDisplay.MissionControl
             m_HeartbeatTask = DoHeartbeat(15000, cancellationToken);
             m_ListenTask = Listen(cancellationToken);
             m_PumpMessagesTask = PumpMessages(cancellationToken);
+            m_ProxyTask = NetworkUtils.RunBroadcastProxy(Constants.BroadcastProxyPort,
+                Constants.DiscoveryPort,
+                cancellationToken);
 
-            await Task.WhenAll(m_HeartbeatTask, m_ListenTask, m_PumpMessagesTask);
+            await Task.WhenAll(m_HeartbeatTask, m_ListenTask, m_PumpMessagesTask, m_ProxyTask);
         }
 
         void HandleServerBroadcast(in MessageHeader header, in ServerInfo _)
