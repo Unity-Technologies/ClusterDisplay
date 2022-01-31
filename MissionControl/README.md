@@ -29,6 +29,10 @@ Setup
 - ability to receive UDP broadcasts
 - shared network directory or network drive accessible by all nodes 
 
+#### Building
+
+Build `MissionControl.sln` using Visual Studio, Rider, or MSBuild, etc.
+
 #### Running
 
 1. Copy the Listener's binary folder to the node's local filesystem.
@@ -53,4 +57,4 @@ Running a player build
 
 You can force stop of the current operation by clicking **Stop All**.
 
-The nodes will sync and run the latest version of the build in the shared folder.
+The nodes will sync and run the latest version of the players in the shared folder.
