@@ -1,17 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.Rendering;
-
+using UnityEngine.Assertions;
 #if CLUSTER_DISPLAY_HDRP
 using UnityEngine.Rendering.HighDefinition;
-#elif CLUSTER_DISPLAY_URP
-using UnityEngine.Rendering.Universal;
-#endif
-
-using Object = UnityEngine.Object;
-
-#if UNITY_EDITOR
-using UnityEditor;
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -35,335 +28,127 @@ namespace Unity.ClusterDisplay.Graphics
     /// </summary>
     /// <remarks>
     /// The <see cref="ClusterRenderer"/> will take control of rendering, so the
-    /// <see cref="UnityEngine.Camera"/> component will be disabled (and you cannot enable it while
+    /// <see cref="Camera"/> component will be disabled (and you cannot enable it while
     /// this script is active.
     /// </remarks>
     [RequireComponent(typeof(Camera))]
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
-        public delegate void UserPreCameraRenderDataOverride(
-            int nodeId,
-            ref Vector3 position,
-            ref Quaternion rotation,
-            ref Matrix4x4 projectionMatrix);
-
-        public UserPreCameraRenderDataOverride userPreCameraRenderDataOverride;
-
-        internal readonly struct QueuedCameraConfig
+        struct CameraState
         {
-            public readonly int m_NodeId;
-            public readonly Matrix4x4 m_ProjectionMatrix;
-            public readonly Vector4 m_ScreenSizeOverride;
-            public readonly Vector4 m_ScreenCoordScaleBias;
-            public readonly RenderTexture m_Target;
-            public readonly RenderFeature m_RenderFeature;
-
-            public QueuedCameraConfig(
-                int nodeId,
-                Matrix4x4 projectionMatrix,
-                Vector4 screenSizeOverride,
-                Vector4 screenCoordScaleBias,
-                RenderTexture target,
-                RenderFeature renderFeature)
-            {
-                m_NodeId = nodeId;
-                m_ProjectionMatrix = projectionMatrix;
-                m_ScreenSizeOverride = screenSizeOverride;
-                m_ScreenCoordScaleBias = screenCoordScaleBias;
-                m_Target = target;
-                m_RenderFeature = renderFeature;
-            }
+            public bool Enabled;
+#if CLUSTER_DISPLAY_HDRP
+            public bool HasPersistentHistory;
+#endif
         }
 
-        private readonly struct QueuedCachedCameraConfig
-        {
-            #if CLUSTER_DISPLAY_HDRP
-            public readonly bool m_UseCustomFrameSettings;
-            public readonly bool m_HasPersistentHistory;
-            #endif
-
-            public readonly bool m_UsePhysicalCamera;
-            public readonly int m_CachedCullingMask;
-            public readonly Matrix4x4 m_CachedProjectionMatrix;
-            public readonly Vector3 m_CachedPosition;
-            public readonly Quaternion m_CachedRotation;
-            public readonly RenderTexture m_CachedRenderTexture;
-
-            public QueuedCachedCameraConfig(
-
-                #if CLUSTER_DISPLAY_HDRP
-                bool useCustomFrameSettings,
-                bool hasPersistentHistory,
-                #endif
-
-                bool usePhysicalCamera,
-                int cachedCullingMask,
-                Matrix4x4 cachedProjectionMatrix,
-                Vector3 cachedPosition,
-                Quaternion cachedRotation,
-                RenderTexture cachedRenderTexture)
-            {
-                #if CLUSTER_DISPLAY_HDRP
-                m_UseCustomFrameSettings = useCustomFrameSettings;
-                m_HasPersistentHistory = hasPersistentHistory;
-                #endif
-                m_UsePhysicalCamera = usePhysicalCamera;
-                m_CachedCullingMask = cachedCullingMask;
-                m_CachedProjectionMatrix = cachedProjectionMatrix;
-                m_CachedPosition = cachedPosition;
-                m_CachedRotation = cachedRotation;
-                m_CachedRenderTexture = cachedRenderTexture;
-            }
-        }
-
-        private readonly Queue<QueuedCameraConfig> m_QueuedCameraConfigs = new Queue<QueuedCameraConfig>();
-        private readonly Queue<QueuedCachedCameraConfig> m_QueuedCachedCameraConfigs = new Queue<QueuedCachedCameraConfig>();
-
+        CameraState m_CameraState;
         Camera m_Camera;
-        Camera cam
-        {
-            get
-            {
-                if (m_Camera == null)
-                    m_Camera = GetComponent<Camera>();
-
-                return m_Camera;
-            }
-        }
-
-        #if CLUSTER_DISPLAY_HDRP
+#if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
-        #elif CLUSTER_DISPLAY_URP
-        UniversalAdditionalCameraData m_AdditionalCameraData;
-        #endif
-
-        private void Awake ()
+#endif
+        bool m_ShouldRestore;
+        
+        void Update()
         {
-            cam.enabled = true;
+            if (m_Camera.enabled && ClusterRenderer.IsActive())
+            {
+                // TODO Not technically breaking but unexpected from a usage perspective.
+                Debug.LogError($"Camera {m_Camera.name} enabled while Cluster Renderer is active, this is not supported.");
+            }
         }
 
         void OnEnable()
         {
-
-            #if CLUSTER_DISPLAY_HDRP
+            m_Camera = GetComponent<Camera>();
+#if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
-            #elif CLUSTER_DISPLAY_URP
-            m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(gameObject);
-            #endif
+#endif
+            
+            ClusterRenderer.Enabled += OnRendererEnabled;
+            ClusterRenderer.Disabled += OnRendererDisabled;
+            ClusterCameraManager.Instance.Register(m_Camera);
 
-            RegisterDelegates();
-        }
-
-        /*
-        #if UNITY_EDITOR
-        private void PlayModeStateChanged(PlayModeStateChange state)
-        {
-            if (!cam.enabled)
-                cam.enabled = true;
-        }
-        #endif
-        */
-
-        private void RegisterDelegates()
-        {
-            DeregisterDelegates();
-
-            ClusterDebug.Log($"Registering {nameof(ClusterCamera)} delegates.");
-
-            ClusterRenderer.onBeginFrameRender += OnBeginFrameRender;
-            ClusterRenderer.onEndCameraRender += OnEndCameraRender;
-
-            ClusterDisplayManager.onChangeActiveCamera += OnChangeActiveCamera;
-            ClusterRenderer.onConfigureCamera += OnRenderClusterCamera;
-        }
-
-        private void DeregisterDelegates()
-        {
-            ClusterDebug.Log($"Deregistering {nameof(ClusterCamera)} delegates.");
-
-            ClusterRenderer.onBeginFrameRender -= OnBeginFrameRender;
-            ClusterRenderer.onEndCameraRender -= OnEndCameraRender;
-
-            ClusterDisplayManager.onChangeActiveCamera -= OnChangeActiveCamera;
-            ClusterRenderer.onConfigureCamera -= OnRenderClusterCamera;
-        }
-
-        private void OnDestroy() => DeregisterDelegates();
-
-        private void OnChangeActiveCamera(Camera previousCamera, Camera nextCamera)
-        {
-            // If the previously active camera was this camera, reapply the user settings.
-            if (previousCamera == cam)
+            // In case the renderer is already active;
+            if (ClusterRenderer.IsActive())
             {
-                m_QueuedCameraConfigs.Clear();
-                // previousCamera.enabled = true;
-            }
-
-            // If the camera were cutting to is this camera, store the user settings.
-            if (nextCamera == cam)
-            {
+                OnRendererEnabled();
             }
         }
 
-        private void ConfigureCamera()
+        void OnDisable()
         {
-            if (m_QueuedCameraConfigs.Count == 0)
-                return;
-
-            var cameraConfig = m_QueuedCameraConfigs.Dequeue();
-            ClusterDebug.Log($"Configuring cluster camera: \"{cam.gameObject.name}\" on node: {cameraConfig.m_NodeId}.");
-
-            var projectionMatrix = m_Camera.projectionMatrix;
-            var position = m_Camera.transform.position;
-            var rotation = m_Camera.transform.rotation;
-
-            m_QueuedCachedCameraConfigs.Enqueue(new QueuedCachedCameraConfig(
-
-                #if CLUSTER_DISPLAY_HDRP
-                m_AdditionalCameraData.customRenderingSettings,
-                m_AdditionalCameraData.hasPersistentHistory,
-                #endif
-
-                cam.usePhysicalProperties,
-                cam.cullingMask,
-                cam.projectionMatrix,
-                position,
-                rotation,
-                cam.targetTexture));
-
-            projectionMatrix = cameraConfig.m_ProjectionMatrix;
-            userPreCameraRenderDataOverride?.Invoke(cameraConfig.m_NodeId, ref position, ref rotation, ref projectionMatrix);
-
-            #if CLUSTER_DISPLAY_HDRP
-
-            if (cameraConfig.m_RenderFeature != RenderFeature.None)
+            ClusterCameraManager.Instance.Unregister(m_Camera);
+            ClusterRenderer.Enabled -= OnRendererEnabled;
+            ClusterRenderer.Disabled -= OnRendererDisabled;
+            
+            // In case the renderer is still active;
+            if (ClusterRenderer.IsActive())
             {
-                m_AdditionalCameraData.customRenderingSettings = true;
-
-                if (cameraConfig.m_RenderFeature.HasFlag(RenderFeature.AsymmetricProjection))
-                {
-                    m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = true;
-                    m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, true);
-                }
-
-                if (cameraConfig.m_RenderFeature.HasFlag(RenderFeature.ScreenCoordOverride))
-                {
-                    m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = true;
-                    m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
-                }
+                OnRendererDisabled();
             }
+        }
+
+        void OnRendererEnabled()
+        {
+            Assert.IsNotNull(m_Camera);
+            Assert.IsFalse(m_ShouldRestore);
+
+            // Save camera state.
+            m_CameraState = new CameraState
+            {
+                Enabled = m_Camera.enabled,
+#if CLUSTER_DISPLAY_HDRP
+                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
+#endif
+            };
+
+            m_ShouldRestore = true;
+            
+            m_Camera.enabled = false;
+#if CLUSTER_DISPLAY_HDRP
+            // Since we will render this camera procedurally rendered,
+            // we need to retain history buffers even if the camera is disabled.
             m_AdditionalCameraData.hasPersistentHistory = true;
-
-            #elif CLUSTER_DISPLAY_URP
-
-            m_AdditionalCameraData.useScreenCoordOverride = cameraConfig.m_RenderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
-
-            #endif
-
-            m_Camera.transform.position = position;
-            m_Camera.transform.rotation = rotation;
-
-            m_Camera.targetTexture = cameraConfig.m_Target;
-            m_Camera.projectionMatrix = projectionMatrix;
-            m_Camera.cullingMatrix = projectionMatrix * m_Camera.worldToCameraMatrix;
-            m_Camera.cullingMask = cam.cullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
-
-            m_AdditionalCameraData.screenSizeOverride = cameraConfig.m_ScreenSizeOverride;
-            m_AdditionalCameraData.screenCoordScaleBias = cameraConfig.m_ScreenCoordScaleBias;
-
+#endif
         }
 
-        private void OnBeginFrameRender(Camera camera)
+        void OnRendererDisabled()
         {
-            if (this.cam != camera || !camera.gameObject.activeInHierarchy)
-            {
-                return;
-            }
-
-            ConfigureCamera();
+            Assert.IsTrue(m_ShouldRestore);
+            
+            // TODO What if the user alters the camera state between Enable() and here?
+            // Restore camera state.
+            m_Camera.enabled = m_CameraState.Enabled;
+#if CLUSTER_DISPLAY_HDRP
+            m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
+#endif
+            
+            m_ShouldRestore = false;
         }
+    }
 
-        private void OnEndCameraRender(Camera camera)
+    class ClusterCameraManager
+    {
+        readonly List<Camera> m_ActiveCameras = new();
+
+        public static ClusterCameraManager Instance { get; } = new();
+
+        // Programmer's note: ElementAtOrDefault() is one of the few non-allocating LINQ methods
+        public Camera ActiveCamera => m_ActiveCameras.ElementAtOrDefault(0);
+
+        public void Register(Camera camera)
         {
-            if (this.cam != camera)
+            if (!m_ActiveCameras.Contains(camera))
             {
-                return;
-            }
-
-            DeconfigureCamera();
-        }
-
-        private void OnRenderClusterCamera(
-            Camera camera, 
-            int nodeId, 
-            Matrix4x4 projection, 
-            Vector4 screenSizeOverride, 
-            Vector4 screenCoordScaleBias, 
-            RenderTexture target,
-            RenderFeature renderFeature)
-        {
-            if (this.cam != camera || !camera.gameObject.activeInHierarchy)
-            {
-                return;
-            }
-
-            ClusterDebug.Log($"Queuing configuration for camera: \"{cam.gameObject.name}\" on node: {nodeId}.");
-            // Queue camera data and config to be dequeued in OnBeginCameraRender()
-            m_QueuedCameraConfigs.Enqueue(new QueuedCameraConfig(
-                nodeId,
-                projection,
-                screenSizeOverride,
-                screenCoordScaleBias,
-                target,
-                renderFeature));
-
-            // If the camera is not enabled, then we need to explicitly call Render(), this is because
-            // if your switching between camera A to camera B when B is enabled, OnBeginCameraRender()
-            // will get executed automatically. We then disable the camera in OnBeginCameraRender
-            // where we will explicitly call Render() from then on.
-            if (!camera.enabled)
-            {
-                ClusterDebug.Log($"Active camera: \"{cam.gameObject.name}\" is disabled, so we will manually call render.");
-                camera.Render();
+                m_ActiveCameras.Add(camera);
             }
         }
 
-        private void DeconfigureCamera ()
+        public void Unregister(Camera camera)
         {
-            if (m_QueuedCachedCameraConfigs.Count == 0)
-                return;
-
-            ClusterDebug.Log($"Deconfiguring camera: \"{cam.gameObject.name}\".");
-
-            var cachedCameraConfig = m_QueuedCachedCameraConfigs.Dequeue();
-            ApplicationUtil.ResetCamera(cam);
-
-            #if CLUSTER_DISPLAY_HDRP
-
-            m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = false;
-            m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = false;
-            m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
-            m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
-            m_AdditionalCameraData.customRenderingSettings = cachedCameraConfig.m_UseCustomFrameSettings;
-            m_AdditionalCameraData.hasPersistentHistory = cachedCameraConfig.m_HasPersistentHistory;
-
-            #elif CLUSTER_DISPLAY_URP
-
-            m_AdditionalCameraData.useScreenCoordOverride = false;
-
-            #endif
-
-            cam.targetTexture = cachedCameraConfig.m_CachedRenderTexture;
-
-            cam.transform.position = cachedCameraConfig.m_CachedPosition;
-            cam.transform.rotation = cachedCameraConfig.m_CachedRotation;
-
-            cam.projectionMatrix = cachedCameraConfig.m_CachedProjectionMatrix;
-            cam.cullingMatrix = cam.projectionMatrix * m_Camera.worldToCameraMatrix;
-            cam.cullingMask = cachedCameraConfig.m_CachedCullingMask;
-
-            cam.usePhysicalProperties = cachedCameraConfig.m_UsePhysicalCamera;
+            m_ActiveCameras.Remove(camera);
         }
     }
 }

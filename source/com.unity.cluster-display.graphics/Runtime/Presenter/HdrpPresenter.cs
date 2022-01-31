@@ -14,6 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
         
         public event Action<PresentArgs> Present = delegate {};
 
+        Camera m_Camera;
         HDAdditionalCameraData m_AdditionalCameraData;
         Color m_ClearColor;
 
@@ -22,56 +23,54 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_ClearColor = value;
         }
 
+        public Camera Camera => m_Camera;
+        
         public void Disable()
         {
             // We don't destroy procedural components, we may reuse them
             // or they'll be destroyed with the ClusterRenderer.
-            if (m_AdditionalCameraData != null)
-                m_AdditionalCameraData.customRender -= OnCustomRender;
+            m_AdditionalCameraData.customRender -= OnCustomRender;
         }
 
-        public void Enable()
+        public void Enable(GameObject gameObject)
         {
-            if (PresenterCamera.Camera == null)
-                return;
-            
-            // HDAdditionalCameraData requires a Camera so no need to add it manually.
-            m_AdditionalCameraData = PresenterCamera.Camera.gameObject.GetOrAddComponent<HDAdditionalCameraData>();
-            
             // Note: we use procedural components.
             // In edge cases, a user could have added a Camera to the GameObject, and we will modify this Camera.
             // The alternative would be to use a hidden procedural GameObject.
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
-            m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
-            
+            m_Camera = gameObject.GetOrAddComponent<Camera>();
             // We use the camera to blit to screen.
-            PresenterCamera.Camera.targetTexture = null;
-            PresenterCamera.Camera.hideFlags = HideFlags.HideAndDontSave;
+            m_Camera.targetTexture = null;
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             
+            m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
+            m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
+
             // Assigning a customRender will bypass regular camera rendering,
             // so we don't need to worry about the camera render involving wasteful operations.
-            m_AdditionalCameraData.hideFlags = HideFlags.DontSave;
-            
-            m_AdditionalCameraData.customRender -= OnCustomRender;
+            m_AdditionalCameraData.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             m_AdditionalCameraData.customRender += OnCustomRender;
         }
 
         RenderTexture m_LastFrame;
         void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera)
         {
+			if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+                return;
+			
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
             
-            GraphicsUtil.ExecuteCaptureIfNeeded(PresenterCamera.Camera, cmd, m_ClearColor, Present.Invoke, false);
-            var handle = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
+			var handle = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
 
             if (ClusterDisplayState.IsEmitter && Application.isPlaying)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
 
                 if (m_LastFrame == null ||
-                    m_LastFrame.width != hdCamera.actualWidth ||
-                    m_LastFrame.height != hdCamera.actualHeight ||
+                    m_LastFrame.width != m_Camera.pixelWidth ||
+                    m_LastFrame.height != m_Camera.pixelHeight ||
                     m_LastFrame.depth != handle.rt.depth ||
                     m_LastFrame.graphicsFormat != handle.rt.graphicsFormat)
                 {
@@ -82,8 +81,8 @@ namespace Unity.ClusterDisplay.Graphics
                     }
 
                     m_LastFrame = new RenderTexture(
-                        hdCamera.actualWidth,
-                        hdCamera.actualHeight,
+                        m_Camera.pixelWidth,
+                        m_Camera.pixelHeight,
                         handle.rt.depth,
                         handle.rt.graphicsFormat,
                         0);
@@ -112,7 +111,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 CommandBuffer = cmd,
                 FlipY = true,
-                CameraPixelRect = PresenterCamera.Camera.pixelRect
+                CameraPixelRect = m_Camera.pixelRect
             });
             
             context.ExecuteCommandBuffer(cmd);

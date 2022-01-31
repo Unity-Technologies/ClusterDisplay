@@ -11,13 +11,11 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 zNear = baseFrustumPlanes.zNear,
                 zFar = baseFrustumPlanes.zFar,
-
                 left = Mathf.LerpUnclamped(baseFrustumPlanes.left, baseFrustumPlanes.right, normalizedViewportSubsection.xMin),
                 right = Mathf.LerpUnclamped(baseFrustumPlanes.left, baseFrustumPlanes.right, normalizedViewportSubsection.xMax),
                 bottom = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top, normalizedViewportSubsection.yMin),
                 top = Mathf.LerpUnclamped(baseFrustumPlanes.bottom, baseFrustumPlanes.top, normalizedViewportSubsection.yMax)
             };
-            
             return Matrix4x4.Frustum(frustumPlanes);
         }
     }

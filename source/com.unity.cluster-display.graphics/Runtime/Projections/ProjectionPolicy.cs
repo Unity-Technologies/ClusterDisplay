@@ -10,6 +10,9 @@ namespace Unity.ClusterDisplay.Graphics
     /// </remarks>
     abstract class ProjectionPolicy : ScriptableObject
     {
+        [SerializeField]
+        protected bool m_IsDebug;
+        
         /// <summary>
         /// Called just before the frame is rendered.
         /// </summary>
@@ -23,9 +26,9 @@ namespace Unity.ClusterDisplay.Graphics
         /// that should happen in your <see cref="Present"/> method.
         /// </remarks>
         public abstract void UpdateCluster(
-            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
-            ClusterRendererSettings clusterSettings,
-            Camera activeCamera);
+            ClusterRendererSettings clusterSettings, 
+            Camera activeCamera, 
+            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride);
 
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.
@@ -36,10 +39,24 @@ namespace Unity.ClusterDisplay.Graphics
         /// output to the current display output device.
         /// </remarks>
         public abstract void Present(PresentArgs args);
-		
-        public abstract void OnEnable();
-        public abstract void OnDisable();
 
+        /// <summary>
+        /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
+        /// </summary>
+        public virtual void OnDrawGizmos() { }
+
+        /// <summary>
+        /// Gets or sets the origin of the cluster display.
+        /// </summary>
         public virtual Matrix4x4 Origin { get; set; }
+
+        /// <summary>
+        /// Specifies whether debug mode is enabled.
+        /// </summary>
+        public bool IsDebug
+        {
+            set => m_IsDebug = value;
+            get => m_IsDebug;
+        }
     }
 }

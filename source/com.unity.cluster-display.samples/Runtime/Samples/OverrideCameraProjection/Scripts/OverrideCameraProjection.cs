@@ -14,11 +14,11 @@ namespace Unity.ClusterDisplay
             if (m_DelegateSet)
                 return;
 
-            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
+            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
                 return;
 
-            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
-            clusterCamera.userPreCameraRenderDataOverride += PreRenderCameraDataOverride;
+            clusterRenderer.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+            clusterRenderer.userPreCameraRenderDataOverride += PreRenderCameraDataOverride;
 
             m_DelegateSet = true;
         }
@@ -32,18 +32,19 @@ namespace Unity.ClusterDisplay
 
         private void OnDisable()
         {
-            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
+            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
                 return;
             
-            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+            clusterRenderer.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
             m_DelegateSet = false;
         }
         
         private void OnDestroy()
         {
-            if (!ClusterDisplayManager.ActiveCamera.TryGetClusterCamera(out var clusterCamera))
+            if (!ClusterRenderer.TryGetInstance(out var clusterRenderer))
                 return;
-            clusterCamera.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
+
+            clusterRenderer.userPreCameraRenderDataOverride -= PreRenderCameraDataOverride;
             m_DelegateSet = false;
         }
     }

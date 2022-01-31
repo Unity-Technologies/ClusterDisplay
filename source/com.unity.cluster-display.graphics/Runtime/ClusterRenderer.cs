@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 #if UNITY_EDITOR
-using System.IO;
 using UnityEditor;
 #endif
 
@@ -15,59 +15,24 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// Instantiate this component to render using cluster-specific projections.
     /// </remarks>
-    [CreateAssetMenu(fileName = "ClusterRenderer", menuName = "Cluster Display/ClusterRenderer", order = 1)]
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    #if UNITY_EDITOR
-    [InitializeOnLoad]
-    #endif
-    public class ClusterRenderer : SingletonScriptableObject<ClusterRenderer>
+    public class ClusterRenderer : SingletonMonoBehaviour<ClusterRenderer>
     {
-        internal delegate void OnFrameRenderEvent(Camera camera);
-        internal delegate void OnCameraRenderEvent(Camera camera);
-
-        internal delegate void OnConfigureCamera(
-            Camera camera, 
-            int nodeId, 
-            Matrix4x4 projection, 
-            Vector4 screenSizeOverride, 
-            Vector4 screenCoordScaleBias, 
-            RenderTexture target,
-            RenderFeature renderFeature);
-
-        internal static OnConfigureCamera onConfigureCamera;
-        internal static OnFrameRenderEvent onBeginFrameRender;
-        internal static OnCameraRenderEvent onBeginCameraRender;
-        internal static OnCameraRenderEvent onEndCameraRender;
-        internal static OnFrameRenderEvent onEndFrameRender;
-
-        static ClusterRenderer() => Initialize();
-        [RuntimeInitializeOnLoadMethod]
-        private static void Initialize()
-        {
-            ClusterDisplayManager.onEnable -= OnEnabled;
-            ClusterDisplayManager.onDisable -= OnDisabled;
-            
-            ClusterDisplayManager.onEnable += OnEnabled;
-            ClusterDisplayManager.onDisable += OnDisabled;
-        }
-
-        private static void OnEnabled()
-        {
-            if (ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                clusterRenderer.OnEnable();
-        }
-        
-        private static void OnDisabled()
-        {
-            if (ClusterRenderer.TryGetInstance(out var clusterRenderer))
-                clusterRenderer.OnDisable();
-        }
-        
         // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
         static int s_ActiveInstancesCount;
         internal static bool IsActive() => s_ActiveInstancesCount > 0;
+        internal static Action Enabled = delegate { };
+        internal static Action Disabled = delegate { };
+
+        public delegate void UserPreCameraRenderDataOverride(
+            int nodeId,
+            ref Vector3 position,
+            ref Quaternion rotation,
+            ref Matrix4x4 projectionMatrix);
+
+        public UserPreCameraRenderDataOverride userPreCameraRenderDataOverride;
 
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
@@ -77,32 +42,37 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ClusterRendererSettings m_Settings = new ClusterRendererSettings();
 
-        bool m_IsDebug;
-
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
-        #if CLUSTER_DISPLAY_HDRP
+#if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
-        #elif CLUSTER_DISPLAY_URP
+#elif CLUSTER_DISPLAY_URP
         IPresenter m_Presenter = new UrpPresenter();
-        #else // TODO Add support for Legacy render pipeline.
+#else // TODO Add support for Legacy render pipeline.
         IPresenter m_Presenter = new NullPresenter();
-        #endif
+#endif
 
         internal const int VirtualObjectLayer = 12;
-        
-		const string k_IconName = "BuildSettings.Metro On@2x";
+
+        // TODO: Create a custom icon.
+        const string k_IconName = "BuildSettings.Metro On@2x";
 
         internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
 
         /// <summary>
-        /// Enable debug mode.
+        /// Specifies whether the current projection policy is in debug mode.
         /// </summary>
-        public bool IsDebug
+        internal bool IsDebug
         {
-            get => m_IsDebug;
-            set => m_IsDebug = value;
+            set
+            {
+                if (m_ProjectionPolicy != null)
+                {
+                    m_ProjectionPolicy.IsDebug = value;
+                }
+            }
+            get => m_ProjectionPolicy == null ? false : m_ProjectionPolicy.IsDebug;
         }
 
         /// <summary>
@@ -113,182 +83,95 @@ namespace Unity.ClusterDisplay.Graphics
             get => m_Settings;
             set => m_Settings = value;
         }
-		
-        internal T CreateProjectionPolicyAsset<T>(string folder) where T : ProjectionPolicy, new()
-        {
-            var newProjectionPolicy = ScriptableObject.CreateInstance<T>();
-            #if UNITY_EDITOR
-            AssetDatabase.CreateAsset(newProjectionPolicy, $"{folder}/{typeof(T).Name}.asset");
-            #endif
-            return newProjectionPolicy;
-        }
 
         /// <summary>
-        /// Set the current projection policy.
+        /// Gets the camera internally used to present on screen.
         /// </summary>
-        /// <typeparam name="T">The projection policy type to set.</typeparam>
-        /// <remarks>
-        /// The projection policy determines how the content is to be rendered. Only one policy
-        /// can be active at a time, so calling this method multiple times will override any
-        /// previously-active policies (and potentially erase all of the previous settings).
-        /// </remarks>
-        internal void SetProjectionPolicy<T>() where T : ProjectionPolicy
-        {
-            if (m_ProjectionPolicy != null && m_ProjectionPolicy.GetType() == typeof(T))
-                return;
-            
-            var resourcePath = $"{typeof(T).Name}";
-            var projectionPolicy = Resources.Load<T>(resourcePath);
-            if (projectionPolicy == null)
-            {
-                projectionPolicy = ScriptableObject.CreateInstance<T>();
-                #if UNITY_EDITOR
-                var assetPathOfClusterRenderer = AssetDatabase.GetAssetPath(this);
-                var folder = Path.GetDirectoryName(assetPathOfClusterRenderer);
-                AssetDatabase.CreateAsset(projectionPolicy, $"{folder}/{typeof(T).Name}.asset");
-                #endif
-            }
+        public Camera PresentCamera => m_Presenter.Camera;
 
-            m_ProjectionPolicy = projectionPolicy;
+#if UNITY_EDITOR
+        void OnDrawGizmos()
+        {
+            Gizmos.DrawIcon(transform.position, k_IconName);
+            if (m_ProjectionPolicy != null && Selection.Contains(gameObject))
+            {
+                m_ProjectionPolicy.OnDrawGizmos();
+            }
         }
+#endif
 
-        void OnDestroy()
+        protected override void OnAwake()
         {
-            if (m_ProjectionPolicy != null)
-            {
-                m_ProjectionPolicy = null;
-            }
         }
 
         void OnEnable()
         {
+            ++s_ActiveInstancesCount;
+
+            // TODO More elegant / user friendly way to handle this.
+            if (s_ActiveInstancesCount > 1)
+            {
+                throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
+            }
+
             // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
             // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
-            m_Presenter.Enable();
-            m_ProjectionPolicy.OnEnable();
+            m_Presenter.Enable(gameObject);
+            m_Presenter.Present += OnPresent;
 
-            RegisterDelegates();
-
-            #if UNITY_EDITOR
-            if (!EditorApplication.isPlayingOrWillChangePlaymode) // We only really need this for testing in the editor when the game is stopped.
-            {
-                PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(PrepareFrame);
-            }
+            PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             // TODO Needed?
+#if UNITY_EDITOR
             SceneView.RepaintAll();
-            #endif
+#endif
+            Enabled.Invoke();
         }
 
-        // Just being safe.
-        private void DeregisterDelegates ()
+        void Update()
         {
-            ClusterDebug.Log($"Unregistering {nameof(ClusterRenderer)} delegates.");
-
-            m_Presenter.Present -= OnPresent;
-            ClusterDisplayManager.onBeginFrameRender -= OnBeginFrameRender;
-            ClusterDisplayManager.onBeginCameraRender -= OnBeginCameraRender;
-            ClusterDisplayManager.onEndCameraRender -= OnEndCameraRender;
-            ClusterDisplayManager.onEndFrameRender -= OnEndFrameRender;
-        }
-
-        private void RegisterDelegates ()
-        {
-            DeregisterDelegates();
-
-            ClusterDebug.Log($"Registering {nameof(ClusterRenderer)} delegates.");
-
-            m_Presenter.Present += OnPresent;
-            ClusterDisplayManager.onBeginFrameRender += OnBeginFrameRender;
-            ClusterDisplayManager.onBeginCameraRender += OnBeginCameraRender;
-            ClusterDisplayManager.onEndCameraRender += OnEndCameraRender;
-            ClusterDisplayManager.onEndFrameRender += OnEndFrameRender;
-        }
-
-        private void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras)
-        {
-            for (int i = 0; i < cameras.Length; i++)
+            if (m_ProjectionPolicy != null)
             {
-                var camera = cameras[i];
-                if (camera == PresenterCamera.Camera) // Ignore the present camera.
-                {
-                    continue;
-                }
-
-                if (camera.enabled && // Ignore the camera if it's disabled.
-                    camera.gameObject.activeInHierarchy &&
-                    camera != ClusterDisplayManager.ActiveCamera && // If the active cluster camera is the current rendering camera, then we don't have to do anything.
-                    camera.targetTexture == null) // Ignore cameras with render textures, as the user is probably using that camera for something.
-                {
-                    ClusterDisplayManager.SetActiveCamera(camera);
-                }
-
-                if (camera != ClusterDisplayManager.ActiveCamera)
-                    continue;
-
-                if (Application.isPlaying)
-                {
-                    PrepareFrame();
-                }
-
-                onBeginFrameRender?.Invoke(camera);
-                break;
-            }
-        }
-
-        // Capture a rendering camera and set it as the active cluster camera if it meets the parameters.
-        private void OnBeginCameraRender(ScriptableRenderContext context, Camera camera) => onBeginCameraRender?.Invoke(camera);
-
-        // Capture a rendering camera and set it as the active cluster camera if it meets the parameters.
-        private void OnEndCameraRender(ScriptableRenderContext context, Camera camera) => onEndCameraRender?.Invoke(camera);
-
-        private void OnEndFrameRender(ScriptableRenderContext context, Camera[] cameras)
-        {
-            for (int i = 0; i < cameras.Length; i++)
-            {
-                var camera = cameras[i];
-                onEndFrameRender?.Invoke(camera);
+                m_ProjectionPolicy.Origin = transform.localToWorldMatrix;
             }
         }
 
         void OnDisable()
         {
-            #if UNITY_EDITOR
-            if (!EditorApplication.isPlayingOrWillChangePlaymode)
-            {
-                PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(PrepareFrame);
-            }
-            #endif
+            Disabled.Invoke();
 
-            DeregisterDelegates();
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
             --s_ActiveInstancesCount;
-
+            m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
-            m_ProjectionPolicy.OnDisable();
         }
 
         void OnPresent(PresentArgs args)
         {
             if (m_ProjectionPolicy != null)
             {
-                ClusterDebug.Log($"Presenting via: {m_ProjectionPolicy.GetType().Name}.");
                 m_ProjectionPolicy.Present(args);
             }
         }
 
-        internal void PrepareFrame()
+        void OnClusterDisplayUpdate()
         {
-            if (ClusterDisplayManager.ActiveCamera == null)
+            var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
+            if (activeCamera == null || m_ProjectionPolicy == null)
             {
-                return; // This is really only for when stopped in the editor.
+                return;
             }
 
-            ClusterDebug.Log($"Preparing frame via: {m_ProjectionPolicy.GetType().Name}");
+            if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+            {
+                return;
+            }
+
             m_ProjectionPolicy.UpdateCluster(
-                onConfigureCamera, 
                 m_Settings, 
-                ClusterDisplayManager.ActiveCamera);
+                activeCamera, 
+                userPreCameraRenderDataOverride);
         }
     }
 }

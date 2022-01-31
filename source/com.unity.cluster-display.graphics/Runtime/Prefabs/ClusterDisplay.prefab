@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3447312720805938545}
   - component: {fileID: 2849151627657850839}
-  - component: {fileID: 4912668286416604093}
   - component: {fileID: 5686775782465581195}
+  - component: {fileID: 4660862709414694316}
   m_Layer: 0
   m_Name: ClusterDisplay
   m_TagString: Untagged
@@ -46,21 +46,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18e572db6e8010442841a0b005aafba6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &4912668286416604093
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3447312720805938546}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6937e93d1f0bac4da9a5962f6f36034, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_ConnectionSettings:
-    emitterAddress: localhost
-    port: 5839
 --- !u!114 &5686775782465581195
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73,3 +58,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62a6fb033758b08489983d8784f708d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4660862709414694316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3447312720805938546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f262ab233d06b6e47ba3517050e5d678, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Settings:
+    m_OverscanInPixels: 256
+  m_ProjectionPolicy: {fileID: 11400000, guid: fe5911b451d262048960e5d7b0ecfd5f, type: 2}

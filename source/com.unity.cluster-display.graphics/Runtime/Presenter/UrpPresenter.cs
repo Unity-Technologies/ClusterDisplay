@@ -1,10 +1,8 @@
 ﻿#if CLUSTER_DISPLAY_URP
 using System;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.UI;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -13,24 +11,33 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_CommandBufferName = "Present To Screen";
 
         public event Action<PresentArgs> Present = delegate { };
-        
-        Color m_ClearColor = Color.black;
-        private RenderTexture m_CopyBuffer;
+
+        Camera m_Camera;
+        Color m_ClearColor;
         
         public Color ClearColor
         {
             set => m_ClearColor = value;
         }
 
+        public Camera Camera => m_Camera;
+        
         public void Disable()
         {
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
         }
 
-        public void Enable()
+        public void Enable(GameObject gameObject)
         {
-            PresenterCamera.Camera.hideFlags = HideFlags.NotEditable;
-            InjectionPointRenderPass.ExecuteRender -= ExecuteRender; // Insurances to avoid duplicate delegate registration.
+            m_Camera = gameObject.GetOrAddComponent<Camera>();
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
+            // We use the camera to blit to screen.
+            // Configure it to minimize wasteful rendering.
+            m_Camera.targetTexture = null;
+            m_Camera.cullingMask = 0;
+            m_Camera.clearFlags = CameraClearFlags.Nothing;
+            m_Camera.depthTextureMode = DepthTextureMode.None;
+            
             InjectionPointRenderPass.ExecuteRender += ExecuteRender;
         }
 
@@ -41,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             
             // The render pass gets invoked for all cameras so we need to filter.
-            if (renderingData.cameraData.camera != PresenterCamera.Camera)
+            if (renderingData.cameraData.camera != m_Camera)
             {
                 return;
             }
@@ -51,8 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
             var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;
             var cameraColorTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
 
-            GraphicsUtil.ExecuteCaptureIfNeeded(PresenterCamera.Camera, cmd, m_ClearColor, Present.Invoke, false);
-
+            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
             if (ClusterDisplayState.IsEmitter)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
@@ -102,7 +108,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 CommandBuffer = cmd,
                 FlipY = false,
-                CameraPixelRect = PresenterCamera.Camera.pixelRect
+                CameraPixelRect = m_Camera.pixelRect
             });
             
             context.ExecuteCommandBuffer(cmd);

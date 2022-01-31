@@ -3,6 +3,7 @@
     "com.unity.cluster-display": "file:../../../source/com.unity.cluster-display",
     "com.unity.cluster-display.graphics": "file:../../../source/com.unity.cluster-display.graphics",
     "com.unity.ide.rider": "3.0.7",
+    "com.unity.ide.visualstudio": "2.0.14",
     "com.unity.render-pipelines.core": "file:../../../../Graphics/com.unity.render-pipelines.core",
     "com.unity.render-pipelines.universal": "file:../../../../Graphics/com.unity.render-pipelines.universal",
     "com.unity.shadergraph": "file:../../../../Graphics/com.unity.shadergraph",

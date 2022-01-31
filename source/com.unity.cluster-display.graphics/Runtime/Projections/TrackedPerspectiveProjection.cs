@@ -7,17 +7,14 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    [CreateAssetMenu(fileName = "ClusterRenderer", menuName = "Cluster Display/Projection Policies/Tracked Perspective Projection", order = 1)]
-	[ExecuteAlways, DisallowMultipleComponent]
-	[PopupItem("Tracked Perspective")]
-	sealed class TrackedPerspectiveProjection : ProjectionPolicy
-	{
+    [PopupItem("Tracked Perspective")]
+    [CreateAssetMenu(fileName = "TrackedPerspectiveProjection",
+        menuName = "Cluster Display/Tracked Perspective Projection")]
+    sealed class TrackedPerspectiveProjection : ProjectionPolicy
+    {
         // TODO: Create a custom icon for this.
         const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";
         
-        [SerializeField]
-        bool m_IsDebug;
-
         [SerializeField]
         List<ProjectionSurface> m_ProjectionSurfaces = new();
 
@@ -40,21 +37,32 @@ namespace Unity.ClusterDisplay.Graphics
 
         public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
 
-        public override void OnEnable()
+        public bool SetSurface(ProjectionSurface surface, int index = -1)
         {
-            ClusterDisplayManager.onDrawGizmos -= OnDrawGizmos;
-            ClusterDisplayManager.onDrawGizmos += OnDrawGizmos;
-        }
+            if (index == -1)
+            {
+                m_ProjectionSurfaces.Add(surface);
+                return true;
+            }
 
-        public override void OnDisable()
+            if (index > -1 && index < m_ProjectionSurfaces.Count)
+            {
+                m_ProjectionSurfaces[index] = surface;
+                return true;
+            }
+
+            return false;
+        }
+        
+        void OnDisable()
         {
             ClearPreviews();
         }
 
         public override void UpdateCluster(
-            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
-        	ClusterRendererSettings clusterSettings, 
-        	Camera activeCamera)
+            ClusterRendererSettings clusterSettings, 
+            Camera activeCamera,
+            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
         {
             var nodeIndex = m_IsDebug || !ClusterDisplayState.IsActive ? m_NodeIndexOverride : ClusterDisplayState.NodeID;
 
@@ -67,12 +75,20 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
                 {
-                    RenderSurface(index, onRenderClusterCamera, clusterSettings, activeCamera);
+                    RenderSurface(
+                        index, 
+                        clusterSettings, 
+                        activeCamera,
+                        userPreCameraRenderDataOverride);
                 }
             }
             else
             {
-                RenderSurface(nodeIndex, onRenderClusterCamera, clusterSettings, activeCamera);
+                RenderSurface(
+                    nodeIndex, 
+                    clusterSettings, 
+                    activeCamera,
+                    userPreCameraRenderDataOverride);
             }
 
             m_BlitCommand = new BlitCommand(
@@ -130,14 +146,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void OnDrawGizmos()
+        public override void OnDrawGizmos()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             foreach (var surface in Surfaces)
             {
                 Gizmos.DrawIcon(Origin.MultiplyPoint(surface.LocalPosition), k_SurfaceIconName);
             }
-            #endif
+#endif
         }
         
         public void AddSurface()
@@ -178,9 +194,9 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         void RenderSurface(int index,
-            ClusterRenderer.OnConfigureCamera onRenderClusterCamera,
             ClusterRendererSettings clusterSettings,
-            Camera activeCamera)
+            Camera activeCamera,
+            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
         {
             var surface = m_ProjectionSurfaces[index];
             var overscannedSize = surface.ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
@@ -208,7 +224,12 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            onRenderClusterCamera.Invoke(activeCamera, -1, projectionMatrix, new Vector4(1, 1, 0, 0), new Vector4(1, 1, 0, 0), GetRenderTexture(index, overscannedSize), RenderFeature.All);
+            using var cameraScope = CameraScopeFactory.Create(
+                activeCamera, 
+                RenderFeature.AsymmetricProjection,
+                userPreCameraRenderDataOverride);
+            
+            cameraScope.Render(ClusterDisplayState.NodeID, projectionMatrix, GetRenderTexture(index, overscannedSize));
             
             cameraTransform.rotation = savedRotation;
         }

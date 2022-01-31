@@ -1,8 +1,8 @@
 {
     "name": "Unity.ClusterDisplay.Graphics",
+    "rootNamespace": "",
     "references": [
-	"Unity.ClusterDisplay",
-        "Unity.ClusterDisplay.Runtime",
+        "Unity.ClusterDisplay",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"

@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:source/com.unity.cluster-display.graphics/Runtime/Attributes/PopupItemAttribute.cs.meta
 guid: 8e943e312f9c7434fa86aa13dc6c043f
-========
-guid: 959bb098bbc7f374aacd38e694fbe5fd
->>>>>>>> 19dd623bdee3e9e07c95632b7e8c5567334dfe23:source/com.unity.cluster-display.graphics/Editor/NestedInspector.cs.meta
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
