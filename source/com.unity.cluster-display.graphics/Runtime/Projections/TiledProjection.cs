@@ -116,6 +116,24 @@ namespace Unity.ClusterDisplay.Graphics
             public bool UseDebugViewportSubsection;
         }
 
+        void OnEnable()
+        {
+            if (CommandLineParser.gridSize != null)
+            {
+                m_Settings.GridSize = CommandLineParser.gridSize.Value;
+            }
+
+            if (CommandLineParser.bezel != null)
+            {
+                m_Settings.Bezel = CommandLineParser.bezel.Value;
+            }
+
+            if (CommandLineParser.physicalScreenSize != null)
+            {
+                m_Settings.PhysicalScreenSize = CommandLineParser.physicalScreenSize.Value;
+            }
+        }
+
         void OnDisable()
         {
             m_BlitCommands.Clear();

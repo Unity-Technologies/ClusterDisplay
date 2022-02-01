@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
                 cmd.SetRenderTarget(k_CameraTargetId);
                 cmd.ClearRenderTarget(true, true, m_ClearColor);
 
-                cmd.Blit(m_LastFrame, k_CameraTargetId, new Vector2(1, -1), Vector2.zero);
+                cmd.Blit(m_LastFrame, k_CameraTargetId, new Vector2(1, 1), Vector2.zero);
                 cmd.SetRenderTarget(m_LastFrame);
             }
             else
@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay.Graphics
             Present.Invoke(new PresentArgs
             {
                 CommandBuffer = cmd,
-                FlipY = true,
+                FlipY = !ClusterDisplayState.IsEmitter,
                 CameraPixelRect = m_Camera.pixelRect
             });
             
