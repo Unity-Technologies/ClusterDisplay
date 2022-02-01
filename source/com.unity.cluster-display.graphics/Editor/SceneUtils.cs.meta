@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:source/com.unity.cluster-display.graphics/Editor/SceneUtils.cs.meta
 guid: c6e626ea230bd0844b73bc719b32ab13
-========
-guid: ce2fa64078de7684a9b72aca23c225fe
->>>>>>>> 19dd623bdee3e9e07c95632b7e8c5567334dfe23:source/com.unity.cluster-display.graphics/Editor/Inspectors/TrackedPerspectiveInspector.cs.meta
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2

@@ -5,9 +5,7 @@ using NUnit.Framework;
 using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using Assert = UnityEngine.Assertions.Assert;
 
-[ExecuteAlways]
 public class TiledProjectionCustomPassTests : ClusterRendererTest
 {
     [OneTimeSetUp]
@@ -24,7 +22,7 @@ public class TiledProjectionCustomPassTests : ClusterRendererTest
             Assert.IsTrue(m_ClusterRenderer.Settings.OverScanInPixels == 0, "Expected zero overscan.");
         });
     }
-    
+
     [UnityTest]
     public IEnumerator CompareVanillaAndStitchedClusterWithOverscan()
     {

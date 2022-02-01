@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:source/com.unity.cluster-display.graphics/Editor/Inspectors/TiledProjectionInspector.cs.meta
-guid: e9cd64d558b27ef44a4a373d4b73ed82
-========
 guid: d890fe65531dd7a41aa9ef96ea3e4ec9
->>>>>>>> 19dd623bdee3e9e07c95632b7e8c5567334dfe23:source/com.unity.cluster-display.graphics/Editor/Inspectors/ProjectionSurfacePropertyDrawer.cs.meta
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2

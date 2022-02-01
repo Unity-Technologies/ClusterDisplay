@@ -6,7 +6,15 @@ TestProjects/*/obj
 TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
+TestProjects/ClusterRenderTest/obj
+TestProjects/*/Library
+TestProjects/*/Logs
+TestProjects/*/Temp
 TestProjects/*/.idea
 bee.exe
 *.orig
-*.orig.meta
+# Our graphics tests generate reference images on the fly.
+TestProjects/GraphicsTestsURP/Assets/ActualImages
+TestProjects/GraphicsTestsURP/Assets/ActualImages.meta
+TestProjects/GraphicsTestsHDRP/Assets/ActualImages
+TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta

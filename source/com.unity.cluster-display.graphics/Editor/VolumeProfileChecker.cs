@@ -50,7 +50,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     var path = AssetDatabase.GetAssetPath(volumeProfile);
                     Debug.LogWarning($"Exposure component in volume profile \"{volumeProfile.name}\" " +
                         $"at {path} uses automatic mode. We recommend using fixed exposure with Cluster Display.");
-                    ;
                 }
             }
         }

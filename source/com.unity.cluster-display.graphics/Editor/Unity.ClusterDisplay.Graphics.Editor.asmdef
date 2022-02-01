@@ -1,7 +1,8 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.Editor",
+    "rootNamespace": "",
     "references": [
-	"Unity.ClusterDisplay",
+        "Unity.ClusterDisplay.Runtime",
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Universal.Editor",
@@ -28,5 +29,6 @@
             "expression": "14.0.0",
             "define": "CLUSTER_DISPLAY_URP"
         }
-    ]
+    ],
+    "noEngineReferences": false
 }

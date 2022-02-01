@@ -5,43 +5,49 @@ using UnityEngine;
 namespace Unity.ClusterDisplay
 {
     using static GfxPluginQuadroSyncSystem;
+
     public class GfxPluginQuadroSyncCallbacks : MonoBehaviour
     {
+        static GfxPluginQuadroSyncCallbacks s_Instance;
         bool m_Initialized = false;
+        const int k_InitDelayFrames = 2;
 
-        void OnEnable() => StartCoroutine(WaitOneFrame());
-
-        private void Init()
+        void Awake()
         {
-            if (m_Initialized)
-                return;
-            
-            GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-            m_Initialized = true;
+            if (s_Instance != null && s_Instance != this)
+            {
+                Destroy(s_Instance.gameObject);
+            }
+
+            DontDestroyOnLoad(gameObject);
+            s_Instance = this;
         }
 
-        private IEnumerator WaitOneFrame()
+        void OnEnable()
         {
-            // If were the emitter, wait until frame 2.
-            while (ClusterDisplayState.IsEmitter && ClusterDisplayState.Frame < 1)
-                yield return null;
-
-            // Both emitter and repeater will wait one more frame.
-            yield return null; 
-            
-            // Emitter is enabling Quadro Sync on frame 3.
-            // Repeater is enabling Quadro sync on frame 1.
-            
-            Debug.Log($"(Frame: {ClusterDisplayState.Frame}): Initializing Quadro Sync.");
-            Init();
+            StartCoroutine(DelayedInit());
         }
 
         void OnDisable()
         {
             if (m_Initialized)
             {
-                GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
+                Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
                 m_Initialized = false;
+            }
+        }
+
+        IEnumerator DelayedInit()
+        {
+            if (!m_Initialized)
+            {
+                for (int i = 0; i < k_InitDelayFrames; i++)
+                {
+                    yield return null;
+                }
+
+                Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
+                m_Initialized = true;
             }
         }
     }

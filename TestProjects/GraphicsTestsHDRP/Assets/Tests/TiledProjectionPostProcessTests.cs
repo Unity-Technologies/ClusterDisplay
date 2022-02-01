@@ -4,59 +4,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Graphics.Tests;
-using UnityEditor;
-using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using Assert = UnityEngine.Assertions.Assert;
 using UnityObject = UnityEngine.Object;
 
-[ExecuteAlways]
-public class TiledProjectionPostProcessTest : ClusterRendererTest
+public class TiledProjectionPostProcessTest : ClusterRendererPostProcessTest
 {
-    const string k_VolumeProfilesDirectory = "Assets/Settings/PostEffects";
-
-    Volume m_Volume;
-
-    protected override void InitializeTest()
-    {
-        base.InitializeTest();
-        m_Volume = FindObjectOfType<Volume>();
-        Assert.IsNotNull(m_Volume, $"Could not find ${nameof(Volume)}");
-    }
-
     [OneTimeSetUp]
     public void LoadScene()
     {
         SceneManager.LoadScene("TiledProjectionPostProcess");
     }
 
-    static IEnumerable<string> VolumeProfileNames
-    {
-        get
-        {
-            yield return "Bloom";
-            yield return "ChromaticAberration";
-            yield return "CustomPostProcess";
-            yield return "FilmGrain";
-            yield return "LensDistortion";
-            yield return "Vignette";
-        }
-    }
+    static IEnumerable<string> VolumeProfileNames => Utils.VolumeProfileNames;
 
-    // Note that FilmGrain is not in this list. Its aspect changes with overscan which is ok.
-    // The alternative would be to assume the provided grain texture tiles seamlessly which is not guaranteed.
-    static IEnumerable<string> VolumeProfileOverscanSupportNames
-    {
-        get
-        {
-            yield return "Bloom";
-            yield return "ChromaticAberration";
-            yield return "CustomPostProcess";
-            yield return "LensDistortion";
-            yield return "Vignette";
-        }
-    }
+    static IEnumerable<string> VolumeProfileOverscanSupportNames => Utils.VolumeProfileOverscanSupportNames;
 
     [UnityTest]
     public IEnumerator CompareVanillaAndStitchedCluster([ValueSource("VolumeProfileNames")] string profileName)
@@ -71,7 +33,8 @@ public class TiledProjectionPostProcessTest : ClusterRendererTest
     }
 
     [UnityTest]
-    public IEnumerator CompareVanillaAndStitchedClusterWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")] string profileName)
+    public IEnumerator CompareVanillaAndStitchedClusterWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")]
+        string profileName)
     {
         yield return RenderAndCompare(() =>
         {
@@ -80,11 +43,18 @@ public class TiledProjectionPostProcessTest : ClusterRendererTest
         });
     }
 
-    static VolumeProfile LoadVolumeProfile(string profileName)
+    [UnityTest]
+    public IEnumerator CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties([ValueSource("VolumeProfileOverscanSupportNames")]
+        string profileName)
     {
-        var path = $"{k_VolumeProfilesDirectory}/{profileName}.asset";
-        var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
-        Assert.IsNotNull(profile, $"Could not load volume profile at path \"{path}\"");
-        return profile;
+        yield return RenderAndCompare(() =>
+        {
+            m_Camera.usePhysicalProperties = true;
+            m_Camera.focalLength = 16;
+            m_Camera.lensShift = new Vector2(0.2f, -0.12f);
+            m_Camera.gateFit = Camera.GateFitMode.Vertical;
+            m_ClusterRenderer.Settings.OverScanInPixels = 64;
+            m_Volume.profile = LoadVolumeProfile(profileName);
+        });
     }
 }
