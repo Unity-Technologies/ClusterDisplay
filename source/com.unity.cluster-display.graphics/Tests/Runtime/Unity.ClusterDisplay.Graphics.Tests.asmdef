@@ -2,7 +2,7 @@
     "name": "Unity.ClusterDisplay.Graphics.Tests",
     "rootNamespace": "",
     "references": [
-        "Unity.ClusterDisplay",
+        "Unity.ClusterDisplay.Runtime",
         "Unity.ClusterDisplay.Graphics",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

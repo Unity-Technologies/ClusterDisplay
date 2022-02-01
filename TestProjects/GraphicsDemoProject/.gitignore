@@ -57,5 +57,19 @@ sysinfo.txt
 *.apk
 *.unitypackage
 
+Assets/_Ignore
+_Ignore.meta
+.idea
+Logs
+Assets/Plugins/Editor/JetBrains
+Assets/Plugins/Editor/JetBrains.meta
+Recordings
+Packages/com.unity.*
+MemoryCaptures
+Assets/BuildReports
+SerializedBuildInfo
+SwitchIL2CPP*
+Assets/ActualImages*
+
 # Crashlytics generated file
 crashlytics-build.properties
