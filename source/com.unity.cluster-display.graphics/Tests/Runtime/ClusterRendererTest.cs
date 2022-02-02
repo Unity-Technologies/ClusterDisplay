@@ -46,13 +46,10 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsUtil.DeallocateIfNeeded(ref m_ClusterCapture);
         }
         
-        protected IEnumerator Render()
+        protected IEnumerator RenderVanillaAndOverscan()
         {
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
-
-            // We assume there's no resize during the execution.
-            // TODO Maybe force Game View display and size.
 
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
@@ -63,7 +60,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             // First we render "vanilla", that is, without Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(false);
 
-            // TODO Could add tests of the ClusterRenderer control of the Camera state. Separately.
             m_Camera.gameObject.SetActive(true);
             m_Camera.enabled = true;
 
@@ -171,7 +167,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 preRender.Invoke();
             }
             
-            yield return Render();
+            yield return RenderVanillaAndOverscan();
 
             if (postRender != null)
             {
@@ -265,7 +261,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             throw new InvalidOperationException($"{nameof(AssertImagesAreNotEqual)} failed, Images were equal.");
         }
 
-        protected static void CopyToTexture2D(RenderTexture source, Texture2D dest)
+        static void CopyToTexture2D(RenderTexture source, Texture2D dest)
         {
             Assert.IsTrue(source.width == dest.width);
             Assert.IsTrue(source.height == dest.height);
