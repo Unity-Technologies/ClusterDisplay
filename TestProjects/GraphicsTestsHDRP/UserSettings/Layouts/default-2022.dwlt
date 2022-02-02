@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PixelRect:
     serializedVersion: 2
-    x: 618
-    y: 637
-    width: 500
-    height: 567
+    x: 873
+    y: -940
+    width: 951
+    height: 800
   m_ShowMode: 0
-  m_Title: HDRP Wizard
+  m_Title: Test Runner
   m_RootView: {fileID: 4}
-  m_MinSize: {x: 500, y: 471}
+  m_MinSize: {x: 100, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   m_Maximized: 0
 --- !u!114 &2
@@ -43,7 +43,7 @@ MonoBehaviour:
     width: 2544
     height: 1351
   m_ShowMode: 4
-  m_Title: Inspector
+  m_Title: Console
   m_RootView: {fileID: 5}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -58,16 +58,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 12006, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: HDWizard
+  m_Name: TestRunnerWindow
   m_EditorClassIdentifier: 
   m_Children: []
   m_Position:
     serializedVersion: 2
     x: 0
     y: 0
-    width: 500
-    height: 567
-  m_MinSize: {x: 500, y: 471}
+    width: 951
+    height: 800
+  m_MinSize: {x: 100, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   m_ActualView: {fileID: 15}
   m_Panes:
@@ -92,12 +92,12 @@ MonoBehaviour:
     serializedVersion: 2
     x: 0
     y: 0
-    width: 500
-    height: 567
-  m_MinSize: {x: 500, y: 471}
+    width: 951
+    height: 800
+  m_MinSize: {x: 100, y: 121}
   m_MaxSize: {x: 4000, y: 4021}
   vertical: 0
-  controlID: 242
+  controlID: 972
 --- !u!114 &5
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -174,7 +174,7 @@ MonoBehaviour:
   m_MinSize: {x: 400, y: 200}
   m_MaxSize: {x: 32384, y: 16192}
   vertical: 0
-  controlID: 237
+  controlID: 15
 --- !u!114 &8
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -220,7 +220,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 200}
   m_MaxSize: {x: 8096, y: 16192}
   vertical: 1
-  controlID: 127
+  controlID: 16
 --- !u!114 &10
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -242,9 +242,9 @@ MonoBehaviour:
     height: 1301
   m_MinSize: {x: 202, y: 221}
   m_MaxSize: {x: 4002, y: 4021}
-  m_ActualView: {fileID: 16}
+  m_ActualView: {fileID: 17}
   m_Panes:
-  - {fileID: 16}
+  - {fileID: 17}
   m_Selected: 0
   m_LastSelected: 0
 --- !u!114 &11
@@ -268,9 +268,9 @@ MonoBehaviour:
     height: 1301
   m_MinSize: {x: 232, y: 271}
   m_MaxSize: {x: 10002, y: 10021}
-  m_ActualView: {fileID: 18}
+  m_ActualView: {fileID: 19}
   m_Panes:
-  - {fileID: 18}
+  - {fileID: 19}
   m_Selected: 0
   m_LastSelected: 0
 --- !u!114 &12
@@ -294,9 +294,9 @@ MonoBehaviour:
     height: 1301
   m_MinSize: {x: 276, y: 71}
   m_MaxSize: {x: 4001, y: 4021}
-  m_ActualView: {fileID: 17}
+  m_ActualView: {fileID: 18}
   m_Panes:
-  - {fileID: 17}
+  - {fileID: 18}
   m_Selected: 0
   m_LastSelected: 0
 --- !u!114 &13
@@ -320,9 +320,9 @@ MonoBehaviour:
     height: 667
   m_MinSize: {x: 201, y: 221}
   m_MaxSize: {x: 4001, y: 4021}
-  m_ActualView: {fileID: 20}
+  m_ActualView: {fileID: 21}
   m_Panes:
-  - {fileID: 20}
+  - {fileID: 21}
   m_Selected: 0
   m_LastSelected: 0
 --- !u!114 &14
@@ -335,7 +335,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 1
   m_Script: {fileID: 12006, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
+  m_Name: ConsoleWindow
   m_EditorClassIdentifier: 
   m_Children: []
   m_Position:
@@ -344,12 +344,13 @@ MonoBehaviour:
     y: 667
     width: 1202
     height: 634
-  m_MinSize: {x: 201, y: 221}
+  m_MinSize: {x: 101, y: 121}
   m_MaxSize: {x: 4001, y: 4021}
-  m_ActualView: {fileID: 19}
+  m_ActualView: {fileID: 16}
   m_Panes:
-  - {fileID: 19}
-  m_Selected: 0
+  - {fileID: 20}
+  - {fileID: 16}
+  m_Selected: 1
   m_LastSelected: 0
 --- !u!114 &15
 MonoBehaviour:
@@ -360,26 +361,2575 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 13401, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.HighDefinition.Editor:UnityEditor.Rendering.HighDefinition:HDWizard
-  m_MinSize: {x: 500, y: 450}
+  m_EditorClassIdentifier: 
+  m_MinSize: {x: 100, y: 100}
   m_MaxSize: {x: 4000, y: 4000}
   m_TitleContent:
-    m_Text: HDRP Wizard
+    m_Text: Test Runner
     m_Image: {fileID: 0}
     m_Tooltip: 
   m_Pos:
     serializedVersion: 2
-    x: 618
-    y: 637
-    width: 500
-    height: 546
+    x: 873
+    y: -940
+    width: 951
+    height: 779
   m_ViewDataDictionary: {fileID: 0}
   m_OverlayCanvas:
     m_LastAppliedPresetName: Default
     m_SaveData: []
+  m_Spl:
+    ID: 1068
+    splitterInitialOffset: 0
+    currentActiveSplitter: -1
+    realSizes:
+    - 532
+    - 177
+    relativeSizes:
+    - 0.75
+    - 0.25
+    minSizes:
+    - 32
+    - 32
+    maxSizes:
+    - 0
+    - 0
+    lastTotalSize: 709
+    splitSize: 6
+    xOffset: 0
+    m_Version: 1
+    oldRealSizes: 
+    oldMinSizes: 
+    oldMaxSizes: 
+    oldSplitSize: 0
+  m_TestTypeToolbarIndex: 0
+  m_PlayModeTestListGUI:
+    m_Window: {fileID: 15}
+    newResultList:
+    - id: 1033
+      uniqueId: '[GraphicsTestsHDRP][suite]'
+      name: GraphicsTestsHDRP
+      fullName: GraphicsTestsHDRP
+      resultStatus: 2
+      duration: 6.842047
+      messages: One or more child tests had errors
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 
+      parentUniqueId: 
+    - id: 1079
+      uniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+      name: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll
+      fullName: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll
+      resultStatus: 2
+      duration: 6.1935673
+      messages: One or more child tests had errors
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1033
+      parentUniqueId: '[GraphicsTestsHDRP][suite]'
+    - id: 1035
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests][suite]
+      name: TiledProjectionCameraRestoreTests
+      fullName: TiledProjectionCameraRestoreTests
+      resultStatus: 1
+      duration: 3.331595
+      messages: 
+      output: 'You are trying to create a MonoBehaviour using the ''new'' keyword. 
+        This is not allowed.  MonoBehaviours can only be added using AddComponent().
+        Alternatively, your script can inherit from ScriptableObject or no base class
+        at all
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1079
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+    - id: 1042
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+      name: CameraIsRestoredProperly
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly
+      resultStatus: 1
+      duration: 1.894201
+      messages: 
+      output: 'The referenced script (Unknown) on this Behaviour is missing!
+
+        The
+        referenced script on this Behaviour (Game Object ''<null>'') is missing!
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1035
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests][suite]
+    - id: 1036
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("Bloom")]
+      name: CameraIsRestoredProperly("Bloom")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("Bloom")
+      resultStatus: 1
+      duration: 0.4947957
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815546881,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Bloom_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815546960,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Bloom_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815546961,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Bloom_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1037
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("ChromaticAberration")]
+      name: CameraIsRestoredProperly("ChromaticAberration")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("ChromaticAberration")
+      resultStatus: 1
+      duration: 0.232444
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815547209,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_ChromaticAberration_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547210,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_ChromaticAberration_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547211,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_ChromaticAberration_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1038
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("CustomPostProcess")]
+      name: CameraIsRestoredProperly("CustomPostProcess")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("CustomPostProcess")
+      resultStatus: 1
+      duration: 0.2496138
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815547464,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_CustomPostProcess_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547465,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_CustomPostProcess_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547466,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_CustomPostProcess_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1039
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("FilmGrain")]
+      name: CameraIsRestoredProperly("FilmGrain")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("FilmGrain")
+      resultStatus: 1
+      duration: 0.24667
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815547720,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_FilmGrain_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547722,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_FilmGrain_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547723,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_FilmGrain_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1040
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("LensDistortion")]
+      name: CameraIsRestoredProperly("LensDistortion")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("LensDistortion")
+      resultStatus: 1
+      duration: 0.2171734
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815547942,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_LensDistortion_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547943,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_LensDistortion_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815547944,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_LensDistortion_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1041
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperly/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("Vignette")]
+      name: CameraIsRestoredProperly("Vignette")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperly("Vignette")
+      resultStatus: 1
+      duration: 0.2164045
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815548161,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Vignette_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548162,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Vignette_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548163,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperly_Vignette_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1042
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperly][suite]
+    - id: 1049
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties
+      resultStatus: 1
+      duration: 1.4114702
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1035
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests][suite]
+    - id: 1043
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("Bloom")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("Bloom")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("Bloom")
+      resultStatus: 1
+      duration: 0.2444831
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815548432,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Bloom_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548433,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Bloom_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548434,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Bloom_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1044
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("ChromaticAberration")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("ChromaticAberration")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("ChromaticAberration")
+      resultStatus: 1
+      duration: 0.2345764
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815548665,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_ChromaticAberration_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548666,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_ChromaticAberration_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548667,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_ChromaticAberration_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1045
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("CustomPostProcess")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("CustomPostProcess")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("CustomPostProcess")
+      resultStatus: 1
+      duration: 0.2351116
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815548900,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_CustomPostProcess_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548901,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_CustomPostProcess_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815548903,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_CustomPostProcess_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1046
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("FilmGrain")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("FilmGrain")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("FilmGrain")
+      resultStatus: 1
+      duration: 0.2185165
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815549122,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_FilmGrain_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549123,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_FilmGrain_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549124,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_FilmGrain_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1047
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("LensDistortion")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("LensDistortion")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("LensDistortion")
+      resultStatus: 1
+      duration: 0.2328135
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815549351,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_LensDistortion_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549352,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_LensDistortion_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549354,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_LensDistortion_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1048
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/CameraIsRestoredProperlyUsingPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("Vignette")]
+      name: CameraIsRestoredProperlyUsingPhysicalProperties("Vignette")
+      fullName: TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties("Vignette")
+      resultStatus: 1
+      duration: 0.215692
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815549584,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Vignette_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549585,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Vignette_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549586,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CameraIsRestoredProperlyUsingPhysicalProperties_Vignette_.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1049
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCameraRestoreTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCameraRestoreTests.CameraIsRestoredProperlyUsingPhysicalProperties][suite]
+    - id: 1050
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCustomPassTests][suite]
+      name: TiledProjectionCustomPassTests
+      fullName: TiledProjectionCustomPassTests
+      resultStatus: 2
+      duration: 0.3225538
+      messages: One or more child tests had errors
+      output: 'You are trying to create a MonoBehaviour using the ''new'' keyword. 
+        This is not allowed.  MonoBehaviours can only be added using AddComponent().
+        Alternatively, your script can inherit from ScriptableObject or no base class
+        at all
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1079
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+    - id: 1051
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCustomPassTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCustomPassTests.CompareVanillaAndStitchedCluster]
+      name: CompareVanillaAndStitchedCluster
+      fullName: TiledProjectionCustomPassTests.CompareVanillaAndStitchedCluster
+      resultStatus: 2
+      duration: 0.1817472
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0191187765f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815549847,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549848,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549849,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1050
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCustomPassTests][suite]
+    - id: 1052
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionCustomPassTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCustomPassTests.CompareVanillaAndStitchedClusterWithOverscan]
+      name: CompareVanillaAndStitchedClusterWithOverscan
+      fullName: TiledProjectionCustomPassTests.CompareVanillaAndStitchedClusterWithOverscan
+      resultStatus: 2
+      duration: 0.1270852
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0335936919f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815549966,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549966,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815549967,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1050
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionCustomPassTests][suite]
+    - id: 1053
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest][suite]
+      name: TiledProjectionPostProcessTest
+      fullName: TiledProjectionPostProcessTest
+      resultStatus: 2
+      duration: 1.9722486
+      messages: One or more child tests had errors
+      output: 'You are trying to create a MonoBehaviour using the ''new'' keyword. 
+        This is not allowed.  MonoBehaviours can only be added using AddComponent().
+        Alternatively, your script can inherit from ScriptableObject or no base class
+        at all
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1079
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+    - id: 1060
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+      name: CompareVanillaAndStitchedCluster
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster
+      resultStatus: 2
+      duration: 0.767049
+      messages: One or more child tests had errors
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1053
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest][suite]
+    - id: 1054
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("Bloom")]
+      name: CompareVanillaAndStitchedCluster("Bloom")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("Bloom")
+      resultStatus: 2
+      duration: 0.1256786
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0222381875f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550173,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Bloom_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550173,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Bloom_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550174,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Bloom_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1055
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("ChromaticAberration")]
+      name: CompareVanillaAndStitchedCluster("ChromaticAberration")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("ChromaticAberration")
+      resultStatus: 2
+      duration: 0.1247321
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0267923865f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550299,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_ChromaticAberration_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550300,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_ChromaticAberration_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550300,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_ChromaticAberration_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1056
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("CustomPostProcess")]
+      name: CompareVanillaAndStitchedCluster("CustomPostProcess")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("CustomPostProcess")
+      resultStatus: 2
+      duration: 0.1128644
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0191174112f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550412,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_CustomPostProcess_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550413,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_CustomPostProcess_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550413,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_CustomPostProcess_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1057
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("FilmGrain")]
+      name: CompareVanillaAndStitchedCluster("FilmGrain")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("FilmGrain")
+      resultStatus: 2
+      duration: 0.1092892
+      messages: 'Unhandled log message: ''[Error] Film grain test requires the HDRP_DEBUG_STATIC_POSTFX
+        scripting symbol to be defined in the Player Settings.''. Use UnityEngine.TestTools.LogAssert.Expect'
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550522,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550523,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550523,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.expected.png"}
+
+        Film
+        grain test requires the HDRP_DEBUG_STATIC_POSTFX scripting symbol to be defined
+        in the Player Settings.
+
+'
+      stacktrace: 'TiledProjectionPostProcessTest/<>c:<CompareVanillaAndStitchedCluster>b__5_0
+        () (at Assets/Tests/TiledProjectionPostProcessTests.cs:26)
+
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest/<RenderAndCompare>d__14:MoveNext
+        () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Tests/Runtime/ClusterRendererTest.cs:192)
+
+        UnityEngine.GUIUtility:ProcessEvent
+        (int,intptr,bool&)
+
+        
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1058
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("LensDistortion")]
+      name: CompareVanillaAndStitchedCluster("LensDistortion")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("LensDistortion")
+      resultStatus: 2
+      duration: 0.1179521
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0241357833f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550642,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_LensDistortion_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550643,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_LensDistortion_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550644,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_LensDistortion_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1059
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedCluster/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("Vignette")]
+      name: CompareVanillaAndStitchedCluster("Vignette")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster("Vignette")
+      resultStatus: 2
+      duration: 0.1155151
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0136788953f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550760,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Vignette_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550761,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Vignette_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550761,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_Vignette_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1060
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedCluster][suite]
+    - id: 1066
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+      name: CompareVanillaAndStitchedClusterWithOverscan
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan
+      resultStatus: 2
+      duration: 0.5865768
+      messages: One or more child tests had errors
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1053
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest][suite]
+    - id: 1061
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscan/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("Bloom")]
+      name: CompareVanillaAndStitchedClusterWithOverscan("Bloom")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("Bloom")
+      resultStatus: 2
+      duration: 0.1091396
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0342381671f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815550889,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Bloom_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550889,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Bloom_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815550890,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Bloom_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1066
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+    - id: 1062
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscan/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("ChromaticAberration")]
+      name: CompareVanillaAndStitchedClusterWithOverscan("ChromaticAberration")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("ChromaticAberration")
+      resultStatus: 2
+      duration: 0.1160419
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0397955775f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551002,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_ChromaticAberration_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551003,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_ChromaticAberration_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551004,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_ChromaticAberration_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1066
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+    - id: 1063
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscan/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("CustomPostProcess")]
+      name: CompareVanillaAndStitchedClusterWithOverscan("CustomPostProcess")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("CustomPostProcess")
+      resultStatus: 2
+      duration: 0.1159111
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0336871929f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551123,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_CustomPostProcess_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551124,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_CustomPostProcess_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551125,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_CustomPostProcess_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1066
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+    - id: 1064
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscan/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("LensDistortion")]
+      name: CompareVanillaAndStitchedClusterWithOverscan("LensDistortion")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("LensDistortion")
+      resultStatus: 2
+      duration: 0.1075505
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0390949734f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551232,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_LensDistortion_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551233,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_LensDistortion_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551234,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_LensDistortion_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1066
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+    - id: 1065
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscan/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("Vignette")]
+      name: CompareVanillaAndStitchedClusterWithOverscan("Vignette")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan("Vignette")
+      resultStatus: 2
+      duration: 0.1183267
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0249897633f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551350,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Vignette_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551351,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Vignette_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551352,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan_Vignette_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1066
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscan][suite]
+    - id: 1072
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties
+      resultStatus: 2
+      duration: 0.5911142
+      messages: One or more child tests had errors
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1053
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest][suite]
+    - id: 1067
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Bloom")]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Bloom")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Bloom")
+      resultStatus: 2
+      duration: 0.1140119
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0183733106f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551483,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Bloom_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551484,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Bloom_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551484,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Bloom_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1072
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+    - id: 1068
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("ChromaticAberration")]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("ChromaticAberration")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("ChromaticAberration")
+      resultStatus: 2
+      duration: 0.1113648
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.02297787f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551595,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_ChromaticAberration_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551596,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_ChromaticAberration_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551597,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_ChromaticAberration_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1072
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+    - id: 1069
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("CustomPostProcess")]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("CustomPostProcess")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("CustomPostProcess")
+      resultStatus: 2
+      duration: 0.1053253
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0206613392f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551704,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_CustomPostProcess_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551705,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_CustomPostProcess_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551705,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_CustomPostProcess_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1072
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+    - id: 1070
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("LensDistortion")]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("LensDistortion")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("LensDistortion")
+      resultStatus: 2
+      duration: 0.1121124
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0189838111f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551817,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_LensDistortion_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551818,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_LensDistortion_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551818,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_LensDistortion_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1072
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+    - id: 1071
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Vignette")]
+      name: CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Vignette")
+      fullName: TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties("Vignette")
+      resultStatus: 2
+      duration: 0.1303734
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.00902695581f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815551940,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Vignette_.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551941,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Vignette_.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815551941,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties_Vignette_.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1072
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionPostProcessTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionPostProcessTest.CompareVanillaAndStitchedClusterWithOverscanAndPhysicalProperties][suite]
+    - id: 1073
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionTest][suite]
+      name: TiledProjectionTest
+      fullName: TiledProjectionTest
+      resultStatus: 2
+      duration: 0.2901514
+      messages: One or more child tests had errors
+      output: 'You are trying to create a MonoBehaviour using the ''new'' keyword. 
+        This is not allowed.  MonoBehaviours can only be added using AddComponent().
+        Alternatively, your script can inherit from ScriptableObject or no base class
+        at all
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1079
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+    - id: 1074
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionTest.CompareVanillaAndStitchedCluster]
+      name: CompareVanillaAndStitchedCluster
+      fullName: TiledProjectionTest.CompareVanillaAndStitchedCluster
+      resultStatus: 2
+      duration: 0.1594158
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0220553875f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815552141,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815552141,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815552142,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1073
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionTest][suite]
+    - id: 1075
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TiledProjectionTest/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionTest.CompareVanillaAndStitchedClusterWithOverscan]
+      name: CompareVanillaAndStitchedClusterWithOverscan
+      fullName: TiledProjectionTest.CompareVanillaAndStitchedClusterWithOverscan
+      resultStatus: 2
+      duration: 0.1137688
+      messages: "  Expected: less than or equal to 0.00499999989f\r\n  But was: 
+        0.0338969603f\r\n"
+      output: '##utp:{"type":"ArtifactPublish","time":1643815552257,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815552258,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815552258,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedClusterWithOverscan.expected.png"}
+
+'
+      stacktrace: 'at UnityEngine.TestTools.Graphics.ImageAssert.AreEqual (UnityEngine.Texture2D
+        expected, UnityEngine.Texture2D actual, UnityEngine.TestTools.Graphics.ImageComparisonSettings
+        settings) [0x00436] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.testframework.graphics@7.8.14-preview\Runtime\ImageAssert.cs:290
+
+        at
+        Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest+<RenderAndCompare>d__14.MoveNext
+        () [0x00090] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\source\com.unity.cluster-display.graphics\Tests\Runtime\ClusterRendererTest.cs:182
+
+        at
+        UnityEngine.TestTools.EnumerableTestMethodCommand+<ExecuteEnumerableAndRecordExceptions>d__3.MoveNext
+        () [0x00023] in C:\Projects\MSG\ClusterDisplayDemoContainer\Packages\ClusterDisplay\TestProjects\GraphicsTestsHDRP\Library\PackageCache\com.unity.test-framework@1.1.18\UnityEngine.TestRunner\NUnitExtensions\Commands\EnumerableTestMethodCommand.cs:68
+
+'
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1073
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TiledProjectionTest][suite]
+    - id: 1076
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TrackedPerspectiveProjectionTests][suite]
+      name: TrackedPerspectiveProjectionTests
+      fullName: TrackedPerspectiveProjectionTests
+      resultStatus: 1
+      duration: 0.2442045
+      messages: 
+      output: 'You are trying to create a MonoBehaviour using the ''new'' keyword. 
+        This is not allowed.  MonoBehaviours can only be added using AddComponent().
+        Alternatively, your script can inherit from ScriptableObject or no base class
+        at all
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1079
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll][suite]'
+    - id: 1077
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TrackedPerspectiveProjectionTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TrackedPerspectiveProjectionTests.CompareVanillaAndStitchedCluster]
+      name: CompareVanillaAndStitchedCluster
+      fullName: TrackedPerspectiveProjectionTests.CompareVanillaAndStitchedCluster
+      resultStatus: 1
+      duration: 0.142959
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1076
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TrackedPerspectiveProjectionTests][suite]
+    - id: 1078
+      uniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/TrackedPerspectiveProjectionTests/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TrackedPerspectiveProjectionTests.CompareVanillaAndStitchedClusterWithOverscan]
+      name: CompareVanillaAndStitchedClusterWithOverscan
+      fullName: TrackedPerspectiveProjectionTests.CompareVanillaAndStitchedClusterWithOverscan
+      resultStatus: 1
+      duration: 0.0901192
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1076
+      parentUniqueId: Unity.ClusterDisplay.Graphics.Tests.HighDefinition.dll/[Unity.ClusterDisplay.Graphics.Tests.HighDefinition][TrackedPerspectiveProjectionTests][suite]
+    - id: 1113
+      uniqueId: '[UnityEngine.TestTools.Graphics.Tests.dll][suite]'
+      name: UnityEngine.TestTools.Graphics.Tests.dll
+      fullName: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/UnityEngine.TestTools.Graphics.Tests.dll
+      resultStatus: 1
+      duration: 0.6009688
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1033
+      parentUniqueId: '[GraphicsTestsHDRP][suite]'
+    - id: 1114
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/[UnityEngine][suite]
+      name: UnityEngine
+      fullName: UnityEngine
+      resultStatus: 1
+      duration: 0.5861356
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1113
+      parentUniqueId: '[UnityEngine.TestTools.Graphics.Tests.dll][suite]'
+    - id: 1115
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/[TestTools][suite]
+      name: TestTools
+      fullName: UnityEngine.TestTools
+      resultStatus: 1
+      duration: 0.5717267
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1114
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/[UnityEngine][suite]
+    - id: 1116
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/[Graphics][suite]
+      name: Graphics
+      fullName: UnityEngine.TestTools.Graphics
+      resultStatus: 1
+      duration: 0.5594834
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1115
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/[TestTools][suite]
+    - id: 1117
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests][suite]
+      name: Tests
+      fullName: UnityEngine.TestTools.Graphics.Tests
+      resultStatus: 1
+      duration: 0.5474578
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1116
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/[Graphics][suite]
+    - id: 1083
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.FailedImageMessageTests][suite]
+      name: FailedImageMessageTests
+      fullName: UnityEngine.TestTools.Graphics.Tests.FailedImageMessageTests
+      resultStatus: 1
+      duration: 0.0107586
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1117
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests][suite]
+    - id: 1084
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/FailedImageMessageTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.FailedImageMessageTests.SerializationRoundtrip_DefaultInstance]
+      name: SerializationRoundtrip_DefaultInstance
+      fullName: UnityEngine.TestTools.Graphics.Tests.FailedImageMessageTests.SerializationRoundtrip_DefaultInstance
+      resultStatus: 1
+      duration: 0.0032982
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1083
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.FailedImageMessageTests][suite]
+    - id: 1085
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+      name: ImageAssertTests
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests
+      resultStatus: 1
+      duration: 0.5232646
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1117
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests][suite]
+    - id: 1093
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_DestinationTextureResolution]
+      name: AreEqual_DestinationTextureResolution
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_DestinationTextureResolution
+      resultStatus: 1
+      duration: 0.0981891
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1094
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_TexturesAfterResize]
+      name: AreEqual_TexturesAfterResize
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_TexturesAfterResize
+      resultStatus: 1
+      duration: 0.352619
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1092
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WidthDifferentSizeImages_ThrowsAssertionException]
+      name: AreEqual_WidthDifferentSizeImages_ThrowsAssertionException
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WidthDifferentSizeImages_ThrowsAssertionException
+      resultStatus: 1
+      duration: 0.0032017
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553047,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WidthDifferentSizeImages_ThrowsAssertionException.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1089
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithIdenticalImage_Succeeds]
+      name: AreEqual_WithIdenticalImage_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithIdenticalImage_Succeeds
+      resultStatus: 1
+      duration: 0.0022463
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1088
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullActualImage_ThrowsArgumentNullException]
+      name: AreEqual_WithNullActualImage_ThrowsArgumentNullException
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullActualImage_ThrowsArgumentNullException
+      resultStatus: 1
+      duration: 0.0006368
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1086
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullCamera_ThrowsArgumentNullException]
+      name: AreEqual_WithNullCamera_ThrowsArgumentNullException
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullCamera_ThrowsArgumentNullException
+      resultStatus: 1
+      duration: 0.0003158
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1087
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullCameras_ThrowsArgumentNullException]
+      name: AreEqual_WithNullCameras_ThrowsArgumentNullException
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithNullCameras_ThrowsArgumentNullException
+      resultStatus: 1
+      duration: 0.0006003
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1091
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance]
+      name: AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance
+      resultStatus: 1
+      duration: 0.0032633
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553054,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553054,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553055,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithSlightlyDifferentImages_SucceedsWithAppropriateTolerance.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1090
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithTotallyDifferentImages_ThrowsAssertionException]
+      name: AreEqual_WithTotallyDifferentImages_ThrowsAssertionException
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.AreEqual_WithTotallyDifferentImages_ThrowsAssertionException
+      resultStatus: 1
+      duration: 0.0025993
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553057,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithTotallyDifferentImages_ThrowsAssertionException.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553058,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithTotallyDifferentImages_ThrowsAssertionException.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553059,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\AreEqual_WithTotallyDifferentImages_ThrowsAssertionException.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1112
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+      name: PerPixelTest
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest
+      resultStatus: 1
+      duration: 0.0437001
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1085
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests][suite]
+    - id: 1095
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_Identical_Succeeds]
+      name: PerPixel_Identical_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_Identical_Succeeds
+      resultStatus: 1
+      duration: 0.0013032
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1096
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_DisabledCount_Succeeds]
+      name: PerPixel_DisabledCount_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_DisabledCount_Succeeds
+      resultStatus: 1
+      duration: 0.0006297
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1097
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_DisabledGammaAlpha_Succeeds]
+      name: PerPixel_DisabledGammaAlpha_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_DisabledGammaAlpha_Succeeds
+      resultStatus: 1
+      duration: 0.0006534
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1098
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadColor_TestAlpha_Succeeds]
+      name: PerPixel_BadColor_TestAlpha_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadColor_TestAlpha_Succeeds
+      resultStatus: 1
+      duration: 0.0007012
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1099
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadAlpha_TestColor_Succeeds]
+      name: PerPixel_BadAlpha_TestColor_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadAlpha_TestColor_Succeeds
+      resultStatus: 1
+      duration: 0.0006103
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1100
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_31BadColor_Max32Bad_Succeeds]
+      name: PerPixel_31BadColor_Max32Bad_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_31BadColor_Max32Bad_Succeeds
+      resultStatus: 1
+      duration: 0.0006628
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1101
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_32BadColor_Max32Bad_Succeeds]
+      name: PerPixel_32BadColor_Max32Bad_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_32BadColor_Max32Bad_Succeeds
+      resultStatus: 1
+      duration: 0.0006036
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1102
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_33BadColor_Max32Bad_Throws]
+      name: PerPixel_33BadColor_Max32Bad_Throws
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_33BadColor_Max32Bad_Throws
+      resultStatus: 1
+      duration: 0.0037617
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553080,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadColor_Max32Bad_Throws.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553081,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadColor_Max32Bad_Throws.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553082,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadColor_Max32Bad_Throws.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1103
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_31BadAlpha_Max32Bad_Succeeds]
+      name: PerPixel_31BadAlpha_Max32Bad_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_31BadAlpha_Max32Bad_Succeeds
+      resultStatus: 1
+      duration: 0.0006554
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1104
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_32BadAlpha_Max32Bad_Succeeds]
+      name: PerPixel_32BadAlpha_Max32Bad_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_32BadAlpha_Max32Bad_Succeeds
+      resultStatus: 1
+      duration: 0.0006088
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1105
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_33BadAlpha_Max32Bad_Throws]
+      name: PerPixel_33BadAlpha_Max32Bad_Throws
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_33BadAlpha_Max32Bad_Throws
+      resultStatus: 1
+      duration: 0.0034199
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553086,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadAlpha_Max32Bad_Throws.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553087,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadAlpha_Max32Bad_Throws.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553087,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_33BadAlpha_Max32Bad_Throws.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1106
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_MultipleFailCountOnce_Succeeds]
+      name: PerPixel_MultipleFailCountOnce_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_MultipleFailCountOnce_Succeeds
+      resultStatus: 1
+      duration: 0.0007316
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1107
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_GoodColor_TestColor_Succeeds]
+      name: PerPixel_GoodColor_TestColor_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_GoodColor_TestColor_Succeeds
+      resultStatus: 1
+      duration: 0.0005913
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1108
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_GoodAlpha_TestAlpha_Succeeds]
+      name: PerPixel_GoodAlpha_TestAlpha_Succeeds
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_GoodAlpha_TestAlpha_Succeeds
+      resultStatus: 1
+      duration: 0.000616
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1109
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadR_Throws]
+      name: PerPixel_BadR_Throws
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadR_Throws
+      resultStatus: 1
+      duration: 0.0036999
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553092,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadR_Throws.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553093,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadR_Throws.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553094,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadR_Throws.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1110
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadG_Throws]
+      name: PerPixel_BadG_Throws
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadG_Throws
+      resultStatus: 1
+      duration: 0.0037982
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553097,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadG_Throws.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553098,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadG_Throws.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553099,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadG_Throws.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    - id: 1111
+      uniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/PerPixelTest/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadB_Throws]
+      name: PerPixel_BadB_Throws
+      fullName: UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixel_BadB_Throws
+      resultStatus: 1
+      duration: 0.0035683
+      messages: 
+      output: '##utp:{"type":"ArtifactPublish","time":1643815553101,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadB_Throws.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553102,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadB_Throws.diff.png"}
+
+        ##utp:{"type":"ArtifactPublish","time":1643815553103,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\PerPixel_BadB_Throws.expected.png"}
+
+'
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1112
+      parentUniqueId: UnityEngine.TestTools.Graphics.Tests.dll/UnityEngine/TestTools/Graphics/Tests/ImageAssertTests/[UnityEngine.TestTools.Graphics.Tests][UnityEngine.TestTools.Graphics.Tests.ImageAssertTests.PerPixelTest][suite]
+    m_ResultText: 'CompareVanillaAndStitchedCluster("FilmGrain") (0.109s)
+
+      ---
+
+      Unhandled
+      log message: ''[Error] Film grain test requires the HDRP_DEBUG_STATIC_POSTFX
+      scripting symbol to be defined in the Player Settings.''. Use UnityEngine.TestTools.LogAssert.Expect
+
+      ---
+
+      TiledProjectionPostProcessTest/<>c:<CompareVanillaAndStitchedCluster>b__5_0
+      () (at Assets/Tests/TiledProjectionPostProcessTests.cs:26)
+
+      Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest/<RenderAndCompare>d__14:MoveNext
+      () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Tests/Runtime/ClusterRendererTest.cs:192)
+
+      UnityEngine.GUIUtility:ProcessEvent
+      (int,intptr,bool&)
+
+      ---
+
+      ##utp:{"type":"ArtifactPublish","time":1643815550522,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.png"}
+
+      ##utp:{"type":"ArtifactPublish","time":1643815550523,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.diff.png"}
+
+      ##utp:{"type":"ArtifactPublish","time":1643815550523,"phase":"Immediate","version":2,"processId":39344,"errors":[],"destination":"C:\\Projects\\MSG\\ClusterDisplayDemoContainer\\Packages\\ClusterDisplay\\TestProjects\\GraphicsTestsHDRP\\Assets\\ActualImages\\Linear\\WindowsEditor\\Direct3D11\\None\\CompareVanillaAndStitchedCluster_FilmGrain_.expected.png"}
+
+      Film
+      grain test requires the HDRP_DEBUG_STATIC_POSTFX scripting symbol to be defined
+      in the Player Settings.'
+    m_ResultStacktrace: 'TiledProjectionPostProcessTest/<>c:<CompareVanillaAndStitchedCluster>b__5_0
+      () (at Assets/Tests/TiledProjectionPostProcessTests.cs:26)
+
+      Unity.ClusterDisplay.Graphics.Tests.ClusterRendererTest/<RenderAndCompare>d__14:MoveNext
+      () (at C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/source/com.unity.cluster-display.graphics/Tests/Runtime/ClusterRendererTest.cs:192)
+
+      UnityEngine.GUIUtility:ProcessEvent
+      (int,intptr,bool&)
+
+      
+
+'
+    m_TestListState:
+      scrollPos: {x: 0, y: 240}
+      m_SelectedIDs: 7fb48359
+      m_LastClickedID: 1501803647
+      m_ExpandedIDs: 63d19983cd8c4688c20c17944b81b8b37a67cbca35e78de0791e59e3d42f88e4c45e8fe5c3e685e67c0af903f421ac04558c361f9b87e04f08ee4b501b41d857a712af6306ddb56dbc73dd7290e5e072ffffff7f
+      m_RenameOverlay:
+        m_UserAcceptedRename: 0
+        m_Name: 
+        m_OriginalName: 
+        m_EditFieldRect:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 0
+          height: 0
+        m_UserData: 0
+        m_IsWaitingForDelay: 0
+        m_IsRenaming: 0
+        m_OriginalEventType: 11
+        m_IsRenamingFilename: 0
+        m_ClientGUIView: {fileID: 0}
+      m_SearchString: 
+    m_TestRunnerUIFilter:
+      PassedHidden: 0
+      FailedHidden: 0
+      NotRunHidden: 0
+      m_SearchString: 
+      selectedCategoryMask: 0
+      availableCategories:
+      - Uncategorized
+    m_SelectedOption: 0
+  m_EditModeTestListGUI:
+    m_Window: {fileID: 15}
+    newResultList:
+    - id: 1000
+      uniqueId: '[GraphicsTestsHDRP][suite]'
+      name: GraphicsTestsHDRP
+      fullName: GraphicsTestsHDRP
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 
+      parentUniqueId: 
+    - id: 1024
+      uniqueId: '[Unity.ClusterDisplay.Graphics.EditorTests.dll][suite]'
+      name: Unity.ClusterDisplay.Graphics.EditorTests.dll
+      fullName: C:/Projects/MSG/ClusterDisplayDemoContainer/Packages/ClusterDisplay/TestProjects/GraphicsTestsHDRP/Library/ScriptAssemblies/Unity.ClusterDisplay.Graphics.EditorTests.dll
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1000
+      parentUniqueId: '[GraphicsTestsHDRP][suite]'
+    - id: 1025
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/[Unity][suite]
+      name: Unity
+      fullName: Unity
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1024
+      parentUniqueId: '[Unity.ClusterDisplay.Graphics.EditorTests.dll][suite]'
+    - id: 1026
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/[ClusterDisplay][suite]
+      name: ClusterDisplay
+      fullName: Unity.ClusterDisplay
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1025
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/[Unity][suite]
+    - id: 1027
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/[Graphics][suite]
+      name: Graphics
+      fullName: Unity.ClusterDisplay.Graphics
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1026
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/[ClusterDisplay][suite]
+    - id: 1028
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests][suite]
+      name: EditorTests
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1027
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/[Graphics][suite]
+    - id: 1001
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.ClusterCameraTest][suite]
+      name: ClusterCameraTest
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.ClusterCameraTest
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1028
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests][suite]
+    - id: 1002
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/ClusterCameraTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.ClusterCameraTest.TracksActiveCamera]
+      name: TracksActiveCamera
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.ClusterCameraTest.TracksActiveCamera
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1001
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.ClusterCameraTest][suite]
+    - id: 1003
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest][suite]
+      name: GraphicsUtilTest
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1028
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests][suite]
+    - id: 1014
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan][suite]
+      name: ApplyOverscan
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1003
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest][suite]
+    - id: 1011
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ApplyOverscan/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),0,0,0)]
+      name: ApplyOverscan((x:0.00, y:0.00, width:1.00, height:1.00),0,0,0)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),0,0,0)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1014
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan][suite]
+    - id: 1012
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ApplyOverscan/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),128,512,512)]
+      name: ApplyOverscan((x:0.00, y:0.00, width:1.00, height:1.00),128,512,512)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),128,512,512)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1014
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan][suite]
+    - id: 1013
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ApplyOverscan/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),128,512,256)]
+      name: ApplyOverscan((x:0.00, y:0.00, width:1.00, height:1.00),128,512,256)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan((x:0.00,
+        y:0.00, width:1.00, height:1.00),128,512,256)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1014
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ApplyOverscan][suite]
+    - id: 1023
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing][suite]
+      name: FrustumSlicing
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1003
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest][suite]
+    - id: 1021
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/FrustumSlicing/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing(2,2)]
+      name: FrustumSlicing(2,2)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing(2,2)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1023
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing][suite]
+    - id: 1022
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/FrustumSlicing/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing(13,6)]
+      name: FrustumSlicing(13,6)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing(13,6)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1023
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.FrustumSlicing][suite]
+    - id: 1020
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+      name: ScreenCoordOverrideParams
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1003
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest][suite]
+    - id: 1015
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ScreenCoordOverrideParams/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(0)]
+      name: ScreenCoordOverrideParams(0)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(0)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1020
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+    - id: 1016
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ScreenCoordOverrideParams/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(3)]
+      name: ScreenCoordOverrideParams(3)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(3)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1020
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+    - id: 1017
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ScreenCoordOverrideParams/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(13)]
+      name: ScreenCoordOverrideParams(13)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(13)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1020
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+    - id: 1018
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ScreenCoordOverrideParams/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(29)]
+      name: ScreenCoordOverrideParams(29)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(29)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1020
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+    - id: 1019
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/ScreenCoordOverrideParams/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(67)]
+      name: ScreenCoordOverrideParams(67)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams(67)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1020
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.ScreenCoordOverrideParams][suite]
+    - id: 1010
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+      name: TileIndexToViewportSection
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 1
+      categories: []
+      parentId: 1003
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest][suite]
+    - id: 1004
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((0,
+        0),0)]
+      name: TileIndexToViewportSection((0, 0),0)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((0,
+        0),0)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    - id: 1005
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((1,
+        1),0)]
+      name: TileIndexToViewportSection((1, 1),0)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((1,
+        1),0)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    - id: 1006
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((2,
+        2),2)]
+      name: TileIndexToViewportSection((2, 2),2)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((2,
+        2),2)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    - id: 1007
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((2,
+        2),0)]
+      name: TileIndexToViewportSection((2, 2),0)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((2,
+        2),0)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    - id: 1008
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((3,
+        3),6)]
+      name: TileIndexToViewportSection((3, 3),6)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((3,
+        3),6)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    - id: 1009
+      uniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/TileIndexToViewportSection/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((3,
+        3),2)]
+      name: TileIndexToViewportSection((3, 3),2)
+      fullName: Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection((3,
+        3),2)
+      resultStatus: 0
+      duration: 0
+      messages: 
+      output: 
+      stacktrace: 
+      notRunnable: 0
+      ignoredOrSkipped: 0
+      description: 
+      isSuite: 0
+      categories:
+      - Uncategorized
+      parentId: 1010
+      parentUniqueId: Unity.ClusterDisplay.Graphics.EditorTests.dll/Unity/ClusterDisplay/Graphics/EditorTests/GraphicsUtilTest/[Unity.ClusterDisplay.Graphics.EditorTests][Unity.ClusterDisplay.Graphics.EditorTests.GraphicsUtilTest.TileIndexToViewportSection][suite]
+    m_ResultText: 
+    m_ResultStacktrace: 
+    m_TestListState:
+      scrollPos: {x: 0, y: 0}
+      m_SelectedIDs: 
+      m_LastClickedID: 0
+      m_ExpandedIDs: 505921877e3167972c0f37b57a67cbcaf22616d17d31f0e96424ecf35db455006091ae0743fb33525712515edd6a587bffffff7f
+      m_RenameOverlay:
+        m_UserAcceptedRename: 0
+        m_Name: 
+        m_OriginalName: 
+        m_EditFieldRect:
+          serializedVersion: 2
+          x: 0
+          y: 0
+          width: 0
+          height: 0
+        m_UserData: 0
+        m_IsWaitingForDelay: 0
+        m_IsRenaming: 0
+        m_OriginalEventType: 11
+        m_IsRenamingFilename: 0
+        m_ClientGUIView: {fileID: 0}
+      m_SearchString: 
+    m_TestRunnerUIFilter:
+      PassedHidden: 0
+      FailedHidden: 0
+      NotRunHidden: 0
+      m_SearchString: 
+      selectedCategoryMask: 0
+      availableCategories:
+      - Uncategorized
 --- !u!114 &16
+MonoBehaviour:
+  m_ObjectHideFlags: 52
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 12003, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_MinSize: {x: 100, y: 100}
+  m_MaxSize: {x: 4000, y: 4000}
+  m_TitleContent:
+    m_Text: Console
+    m_Image: {fileID: -4327648978806127646, guid: 0000000000000000d000000000000000, type: 0}
+    m_Tooltip: 
+  m_Pos:
+    serializedVersion: 2
+    x: 8
+    y: -692
+    width: 1201
+    height: 613
+  m_ViewDataDictionary: {fileID: 0}
+  m_OverlayCanvas:
+    m_LastAppliedPresetName: Default
+    m_SaveData: []
+--- !u!114 &17
 MonoBehaviour:
   m_ObjectHideFlags: 52
   m_CorrespondingSourceObject: {fileID: 0}
@@ -410,9 +2960,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 6eda0000
-      m_LastClickedID: 55918
-      m_ExpandedIDs: 6caeffff1eb0ffff5ab4ffff
+      m_SelectedIDs: 
+      m_LastClickedID: 0
+      m_ExpandedIDs: fc68ffff386affff6e85ffff6a8cffff268effffb8a9ffff3aadffff50adffff8ab0ffffdab4ffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -436,7 +2986,7 @@ MonoBehaviour:
       m_IsLocked: 0
     m_CurrentSortingName: TransformSorting
   m_WindowGUID: 024e25c5f67e8bc45997527070b76b4f
---- !u!114 &17
+--- !u!114 &18
 MonoBehaviour:
   m_ObjectHideFlags: 52
   m_CorrespondingSourceObject: {fileID: 0}
@@ -477,7 +3027,7 @@ MonoBehaviour:
   m_LockTracker:
     m_IsLocked: 0
   m_PreviewWindow: {fileID: 0}
---- !u!114 &18
+--- !u!114 &19
 MonoBehaviour:
   m_ObjectHideFlags: 52
   m_CorrespondingSourceObject: {fileID: 0}
@@ -517,8 +3067,7 @@ MonoBehaviour:
     m_ShowAllHits: 0
     m_SkipHidden: 0
     m_SearchArea: 1
-    m_Folders:
-    - Assets/Scenes
+    m_Folders: []
     m_Globs: []
     m_OriginalText: 
   m_ViewMode: 0
@@ -533,7 +3082,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 38630000
     m_LastClickedID: 25400
-    m_ExpandedIDs: 00000000ac9b000000ca9a3bffffff7f
+    m_ExpandedIDs: 
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -561,7 +3110,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: ffffffff00000000ac9b0000b49b000000ca9a3bffffff7f
+    m_ExpandedIDs: ffffffff5e6300003cc800003ec800006cc80000f2d0000020d1000046d10000ffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -617,7 +3166,7 @@ MonoBehaviour:
     m_GridSize: 64
   m_SkipHiddenPackages: 0
   m_DirectoriesAreaWidth: 115
---- !u!114 &19
+--- !u!114 &20
 MonoBehaviour:
   m_ObjectHideFlags: 52
   m_CorrespondingSourceObject: {fileID: 0}
@@ -651,7 +3200,7 @@ MonoBehaviour:
   m_ShowGizmos: 0
   m_TargetDisplay: 0
   m_ClearColor: {r: 0, g: 0, b: 0, a: 0}
-  m_TargetSize: {x: 1201, y: 592}
+  m_TargetSize: {x: 512, y: 512}
   m_TextureFilterMode: 0
   m_TextureHideFlags: 61
   m_RenderIMGUI: 1
@@ -665,16 +3214,16 @@ MonoBehaviour:
   m_PlayFocused: 0
   m_Gizmos: 0
   m_Stats: 0
-  m_SelectedSizes: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_SelectedSizes: 0a000000000000000000000000000000000000000000000000000000000000000000000000000000
   m_ZoomArea:
     m_HRangeLocked: 0
     m_VRangeLocked: 0
     hZoomLockedByDefault: 0
     vZoomLockedByDefault: 0
-    m_HBaseRangeMin: -600.5
-    m_HBaseRangeMax: 600.5
-    m_VBaseRangeMin: -296
-    m_VBaseRangeMax: 296
+    m_HBaseRangeMin: -256
+    m_HBaseRangeMax: 256
+    m_VBaseRangeMin: -256
+    m_VBaseRangeMax: 256
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1
@@ -683,7 +3232,7 @@ MonoBehaviour:
     m_HSlider: 0
     m_VSlider: 0
     m_IgnoreScrollWheelUntilClicked: 0
-    m_EnableMouseInput: 1
+    m_EnableMouseInput: 0
     m_EnableSliderZoomHorizontal: 0
     m_EnableSliderZoomVertical: 0
     m_UniformScale: 1
@@ -716,7 +3265,7 @@ MonoBehaviour:
   m_RenderTexture: {fileID: 0}
   m_showToolbar: 1
   m_showToolbarOnFullscreen: 0
---- !u!114 &20
+--- !u!114 &21
 MonoBehaviour:
   m_ObjectHideFlags: 52
   m_CorrespondingSourceObject: {fileID: 0}

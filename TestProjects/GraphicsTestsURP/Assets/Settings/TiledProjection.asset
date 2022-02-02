@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1933924b584769a45b617bf586c53a0b, type: 3}
   m_Name: TiledProjection
   m_EditorClassIdentifier: 
-  m_IsDebug: 1
   m_Settings:
     GridSize: {x: 2, y: 2}
     Bezel: {x: 0, y: 0}
@@ -27,6 +26,7 @@ MonoBehaviour:
       width: 1
       height: 0.854
     LayoutMode: 1
-    PresentClearColor: {r: 0, g: 0, b: 0, a: 0}
+    BezelColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 1
+  m_IsDebug: 1
