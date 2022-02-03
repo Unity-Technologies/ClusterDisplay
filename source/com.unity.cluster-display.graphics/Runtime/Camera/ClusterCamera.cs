@@ -9,19 +9,6 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    public static class ClusterCameraExtensions
-    {
-        public static bool TryGetClusterCamera (this Camera camera, out ClusterCamera clusterCamera)
-        {
-            if (camera == null)
-            {
-                clusterCamera = null;
-                return false;
-            }
-
-            return (clusterCamera = camera.gameObject.GetComponent<ClusterCamera>()) != null;
-        }
-    }
     /// <summary>
     /// Attach this script to a Camera object if you wish for it to be rendered by
     /// the cluster.
