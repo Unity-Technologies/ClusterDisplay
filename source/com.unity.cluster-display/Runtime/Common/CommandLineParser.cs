@@ -54,6 +54,11 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log(msg);
         }
         
+        #if UNITY_EDITOR
+        public delegate void OnPollArguments (List<string> arguments);
+        public static OnPollArguments onPollArguments;
+        #endif
+
         private static List<string> m_Arguments;
         internal static List<string> Arguments
         {
@@ -63,17 +68,11 @@ namespace Unity.ClusterDisplay
                 {
                     m_Arguments = new List<string>(20) {};
                     m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
-                    
-                    #if  UNITY_EDITOR
-                    if (EditorApplication.isPlayingOrWillChangePlaymode && 
-                        ClusterSync.TryGetInstance(out var clusterSync) && 
-                        !clusterSync.EditorConfig.m_IgnoreEditorCmdLine)
-                    {
-                        m_Arguments.AddRange(ClusterDisplayState.IsEmitter
-                            ? clusterSync.EditorConfig.m_EditorInstanceEmitterCmdLine.Split(' ')
-                            : clusterSync.EditorConfig.m_EditorInstanceRepeaterCmdLine.Split(' '));
-                    }
+
+                    #if UNITY_EDITOR
+                    onPollArguments?.Invoke(m_Arguments);
                     #endif
+
                     PrintArguments(m_Arguments);
                 }
                 

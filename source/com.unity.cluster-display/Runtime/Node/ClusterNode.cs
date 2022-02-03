@@ -93,9 +93,9 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString()
         {
-            if (ClusterSync.TryGetInstance(out var clusterSync) && clusterSync.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
+            if (ClusterSync.Instance.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
             {
-                var stats = clusterSync.CurrentNetworkStats;
+                var stats = ClusterSync.Instance.CurrentNetworkStats;
                 return $"Node {dynamicLocalNodeId} at {clusterSync.CurrentFrameID}\r\n" +
                        $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
                        $"State: { m_CurrentState.GetDebugString() }";

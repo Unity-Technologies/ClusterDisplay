@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -14,13 +15,20 @@ namespace Unity.ClusterDisplay
     {
         protected internal static readonly List<Type> singletonScriptableObjectTypes = new List<Type>();
         internal static Type[] GetSingleScriptableObjectTypes () => singletonScriptableObjectTypes.ToArray();
-        
+
         public static bool TryGetInstance(Type type, out SingletonScriptableObject outInstance, bool throwError = true)
         {
             UnityEngine.Object[] instances = null;
             try
             {
+                #if UNITY_EDITOR
+                instances = AssetDatabase
+                    .FindAssets($"t:{type.Name}")
+                    .Select(guid => AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), type))
+                    .ToArray();
+                #else
                 instances = Resources.LoadAll("", type);
+                #endif
             }
             
             catch (Exception e)
@@ -69,9 +77,9 @@ namespace Unity.ClusterDisplay
         }
     }
     
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [InitializeOnLoad]
-    #endif
+#endif
     public class SingletonScriptableObject<T> : SingletonScriptableObject where T : SingletonScriptableObject<T>
     {
         static SingletonScriptableObject () =>
@@ -126,7 +134,14 @@ namespace Unity.ClusterDisplay
                 T[] instances = null;
                 try
                 {
+                    #if UNITY_EDITOR
+                    instances = AssetDatabase
+                        .FindAssets($"t:{typeof(T).Name}")
+                        .Select(guid => AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid)))
+                        .ToArray();
+                    #else
                     instances = Resources.LoadAll<T>("");
+                    #endif
                 }
                 
                 catch (Exception e)

@@ -34,17 +34,16 @@ namespace Unity.ClusterDisplay
                     .ToArray();
             }
 
-            if (ClusterSync.TryGetInstance(out var clusterSync))
+            if (ClusterSyncEditorConfig.TryGetInstance(out var editorConfig))
             {
-                var editorConfig = clusterSync.EditorConfig;
-
+                bool modified = false;
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Is Emitter");
                 bool isEmitter = EditorGUILayout.Toggle(editorConfig.m_EditorInstanceIsEmitter);
                 if (isEmitter != editorConfig.m_EditorInstanceIsEmitter)
                 {
                     editorConfig.m_EditorInstanceIsEmitter = isEmitter;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -54,7 +53,7 @@ namespace Unity.ClusterDisplay
                 if (emitterCMD != editorConfig.m_EditorInstanceEmitterCmdLine)
                 {
                     editorConfig.m_EditorInstanceEmitterCmdLine = emitterCMD;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -64,7 +63,7 @@ namespace Unity.ClusterDisplay
                 if (repeaterCMD != editorConfig.m_EditorInstanceRepeaterCmdLine)
                 {
                     editorConfig.m_EditorInstanceRepeaterCmdLine = repeaterCMD;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -74,7 +73,7 @@ namespace Unity.ClusterDisplay
                 if (ignore != editorConfig.m_IgnoreEditorCmdLine)
                 {
                     editorConfig.m_IgnoreEditorCmdLine = ignore;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
 
@@ -84,7 +83,7 @@ namespace Unity.ClusterDisplay
                 if (useTargetFramerate != editorConfig.m_UseTargetFramerate)
                 {
                     editorConfig.m_UseTargetFramerate = useTargetFramerate;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
 
@@ -94,16 +93,20 @@ namespace Unity.ClusterDisplay
                 if (targetFrameRate != editorConfig.m_TargetFrameRate)
                 {
                     editorConfig.m_TargetFrameRate = targetFrameRate;
-                    clusterSync.EditorConfig = editorConfig;
+                    modified = true;
                 }
                 EditorGUILayout.EndHorizontal();
+
+                if (modified)
+                {
+                    EditorUtility.SetDirty(editorConfig);
+                }
 
                 if (GUILayout.Button("Play"))
                 {
                     editorConfig.SetupForEditorTesting(isEmitter: false);
                     editorConfig.UseEditorCmd(useEditorCmd: false);
                     
-                    clusterSync.EditorConfig = editorConfig;
                     EditorApplication.EnterPlaymode();
                 }
 
@@ -112,7 +115,6 @@ namespace Unity.ClusterDisplay
                     editorConfig.SetupForEditorTesting(isEmitter: true);
                     editorConfig.UseEditorCmd(useEditorCmd: true);
                     
-                    clusterSync.EditorConfig = editorConfig;
                     EditorApplication.EnterPlaymode();
                 }
 
@@ -121,7 +123,6 @@ namespace Unity.ClusterDisplay
                     editorConfig.SetupForEditorTesting(isEmitter: false);
                     editorConfig.UseEditorCmd(useEditorCmd: true);
                     
-                    clusterSync.EditorConfig = editorConfig;
                     EditorApplication.EnterPlaymode();
                 }
             }

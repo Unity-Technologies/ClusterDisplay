@@ -51,9 +51,6 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public override void InitState()
         {
-            if (!ClusterSync.TryGetInstance(out var clusterSync))
-                return;
-
             Stage = EStage.WaitingOnEmitterFrameData;
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();

@@ -20,40 +20,6 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    #if UNITY_EDITOR
-    [AttributeUsage(AttributeTargets.Field)]
-    public class ClusterSyncEditorConfigField : Attribute {}
-    
-    [System.Serializable]
-    public struct ClusterSyncEditorConfig
-    {
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
-        [SerializeField] public bool m_EditorInstanceIsEmitter;
-        
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceMasterCmdLine")]
-        [SerializeField] public string m_EditorInstanceEmitterCmdLine;
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceSlaveCmdLine")]
-        [SerializeField] public string m_EditorInstanceRepeaterCmdLine;
-
-        [SerializeField] public bool m_IgnoreEditorCmdLine;
-        public void SetupForEditorTesting(bool isEmitter) => m_EditorInstanceIsEmitter = isEmitter;
-        public void UseEditorCmd(bool useEditorCmd) => m_IgnoreEditorCmdLine = !useEditorCmd;
-
-        [SerializeField] public bool m_UseTargetFramerate;
-        [SerializeField] public int m_TargetFrameRate;
-
-        public ClusterSyncEditorConfig (bool editorInstanceIsEmitter)
-        {
-            m_EditorInstanceIsEmitter = editorInstanceIsEmitter;
-            m_EditorInstanceEmitterCmdLine = "-emitterNode 0 1 224.0.1.0:25691,25692";
-            m_EditorInstanceRepeaterCmdLine = "-node 1 224.0.1.0:25692,25691";
-
-            m_IgnoreEditorCmdLine = false;
-            m_UseTargetFramerate = false;
-            m_TargetFrameRate = 60;
-        }
-    }
-    #endif
     
     /// <summary>
     /// Need one and only one instance of this class in the scene.
@@ -62,27 +28,33 @@ namespace Unity.ClusterDisplay
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    [DefaultExecutionOrder(Int32.MinValue)]
-    [CreateAssetMenu(fileName = "ClusterSync", menuName = "Cluster Display/ClusterSync", order = 1)]
     #if UNITY_EDITOR
     [InitializeOnLoad]
     #endif
     internal class ClusterSync : 
-        SingletonScriptableObject<ClusterSync>, 
         IClusterSyncState,
         IClusterDisplayConfigurable
     {
+        static ClusterSync m_Instance;
+        public static ClusterSync Instance
+        {
+            get
+            {
+                if (m_Instance == null)
+                {
+                    m_Instance = new ClusterSync();
+                }
+
+                return m_Instance;
+            }
+        }
         static ClusterSync() => PreInitialize();
 
         [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void PreInitialize()
         {
             ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
-            ClusterDisplayManager.preInitialize += () =>
-            {
-                if (TryGetInstance(out var _this))
-                    _this.RegisterDelegates();
-            };
+            ClusterDisplayManager.preInitialize += () => Instance.RegisterDelegates();
         }
         
         
@@ -91,7 +63,8 @@ namespace Unity.ClusterDisplay
         private DebugPerf m_DelayMonitor = new DebugPerf();
 
         internal delegate void OnClusterDisplayStateChange();
-        static internal OnClusterDisplayStateChange onEnableClusterDisplay;
+        static internal OnClusterDisplayStateChange onPreEnableClusterDisplay;
+        static internal OnClusterDisplayStateChange onPostEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onDisableCLusterDisplay;
         
         [HideInInspector]
@@ -103,20 +76,6 @@ namespace Unity.ClusterDisplay
         public UInt64 CurrentFrameID => m_CurrentFrameID;
         private UInt64 m_CurrentFrameID;
         private bool m_NewFrame;
-
-        #if UNITY_EDITOR
-        [HideInInspector][SerializeField] internal ClusterSyncEditorConfig m_ClusterSyncEditorConfig = new ClusterSyncEditorConfig(editorInstanceIsEmitter: true);
-
-        public ClusterSyncEditorConfig EditorConfig
-        {
-            get => m_ClusterSyncEditorConfig;
-            set
-            {
-                m_ClusterSyncEditorConfig = value;
-                EditorUtility.SetDirty(this);
-            }
-        }
-        #endif
 
         internal ClusterNode m_LocalNode;
         ClusterNode IClusterSyncState.LocalNode => m_LocalNode;
@@ -169,8 +128,6 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onApplicationQuit += Quit;
         }
 
-        protected override void OnAwake() {}
-
         private void EnableClusterDisplay()
         {
             #if UNITY_EDITOR
@@ -178,34 +135,17 @@ namespace Unity.ClusterDisplay
                 return;
             #endif
 
-            /*
-            if (LocalNode != null)
-                CleanUp();
-            */
+            NodeState.Debugging = m_Debugging;
+
+            Application.targetFrameRate = CommandLineParser.targetFPS;
+            QualitySettings.vSyncCount = 0;
 
             stateSetter.SetIsActive(true);
             stateSetter.SetIsTerminated(false);
             stateSetter.SetCLusterLogicEnabled(false);
-            NodeState.Debugging = m_Debugging;
 
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = CommandLineParser.targetFPS;
+            onPreEnableClusterDisplay?.Invoke();
 
-            // Grab command line args related to cluster config
-            #if UNITY_EDITOR
-            if (!m_ClusterSyncEditorConfig.m_IgnoreEditorCmdLine)
-            {
-                var editorInstanceCmdLine = m_ClusterSyncEditorConfig.m_EditorInstanceIsEmitter ? 
-                    m_ClusterSyncEditorConfig.m_EditorInstanceEmitterCmdLine : 
-                    m_ClusterSyncEditorConfig.m_EditorInstanceRepeaterCmdLine;
-
-                CommandLineParser.OverrideArguments(editorInstanceCmdLine.Split(' ').ToList()); 
-            }
-
-            if (m_ClusterSyncEditorConfig.m_UseTargetFramerate)
-                Application.targetFrameRate = m_ClusterSyncEditorConfig.m_TargetFrameRate;
-            #endif
-            
             stateSetter.SetCLusterLogicEnabled(CommandLineParser.ClusterLogicSpecified);
             stateSetter.SetIsRepeater(false);
 
@@ -223,8 +163,7 @@ namespace Unity.ClusterDisplay
             }
 
             InjectSynchPointInPlayerLoop();
-            onEnableClusterDisplay?.Invoke();
-           // RPC.RPCExecutor.TrySetup();
+            onPostEnableClusterDisplay?.Invoke();
         }
 
         private void DisableClusterDisplay()
