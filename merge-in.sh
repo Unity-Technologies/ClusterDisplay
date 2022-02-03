@@ -9,5 +9,3 @@ rm -r templates
 rm -r source/com.unity.cluster-display.rpc
 rm -r source/com.unity.cluster-display.helpers
 rm -r source/com.unity.cluster-display.samples
-
-git commit -m "Merging in msg-merge"
