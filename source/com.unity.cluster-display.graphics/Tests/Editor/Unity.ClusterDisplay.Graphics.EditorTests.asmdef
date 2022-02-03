@@ -1,8 +1,6 @@
 {
     "name": "Unity.ClusterDisplay.Graphics.EditorTests",
-    "rootNamespace": "",
     "references": [
-        "Unity.ClusterDisplay",
         "Unity.ClusterDisplay.Graphics.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
