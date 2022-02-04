@@ -17,6 +17,7 @@ namespace Unity.ClusterDisplay.Graphics
         Camera m_Camera;
         HDAdditionalCameraData m_AdditionalCameraData;
         Color m_ClearColor;
+        bool m_DelayByOneFrame;
 
         public Color ClearColor
         {
@@ -32,8 +33,10 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.customRender -= OnCustomRender;
         }
 
-        public void Enable(GameObject gameObject)
+        public void Enable(GameObject gameObject, bool delayByOneFrame)
         {
+            m_DelayByOneFrame = delayByOneFrame;
+
             // Note: we use procedural components.
             // In edge cases, a user could have added a Camera to the GameObject, and we will modify this Camera.
             // The alternative would be to use a hidden procedural GameObject.
@@ -64,9 +67,7 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
 			var handle = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
 
-            if (Application.isPlaying && 
-                ClusterDisplayState.IsEmitter &&
-                CommandLineParser.delayRepeaters)
+            if (Application.isPlaying && m_DelayByOneFrame)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
 

@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
         public Color ClearColor { set; }
         // We expose the output camera since it may be used for capture.
         public Camera Camera { get; }
-        void Enable(GameObject gameObject);
+        void Enable(GameObject gameObject, bool delayByOneFrame);
         void Disable();
     }
 }

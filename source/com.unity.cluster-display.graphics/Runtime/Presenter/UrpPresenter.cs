@@ -14,6 +14,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         Camera m_Camera;
         Color m_ClearColor;
+        bool m_DelayByOneFrame;
         
         public Color ClearColor
         {
@@ -27,8 +28,10 @@ namespace Unity.ClusterDisplay.Graphics
             InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
         }
 
-        public void Enable(GameObject gameObject)
+        public void Enable(GameObject gameObject, bool delayByOneFrame)
         {
+            m_DelayByOneFrame = delayByOneFrame;
+
             m_Camera = gameObject.GetOrAddComponent<Camera>();
             m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
             // We use the camera to blit to screen.
@@ -60,9 +63,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
 
-            if (Application.isPlaying && 
-                ClusterDisplayState.IsEmitter &&
-                CommandLineParser.delayRepeaters)
+            if (Application.isPlaying && m_DelayByOneFrame)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
                 

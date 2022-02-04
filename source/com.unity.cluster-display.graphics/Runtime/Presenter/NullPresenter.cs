@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Camera Camera => null;
 
-        public void Enable(GameObject gameObject)
+        public void Enable(GameObject gameObject, bool delayByOneFrame)
         {
             throw new InvalidOperationException(
                 $"Using {nameof(NullPresenter)}, the current render pipeline is not supported.");

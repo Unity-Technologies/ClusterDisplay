@@ -116,7 +116,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
             // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
-            m_Presenter.Enable(gameObject);
+            m_Presenter.Enable(gameObject, delayByOneFrame: CommandLineParser.emitterSpecified && CommandLineParser.delayRepeaters);
             m_Presenter.Present += OnPresent;
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);

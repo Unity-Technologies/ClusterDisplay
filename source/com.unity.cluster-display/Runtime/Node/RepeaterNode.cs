@@ -7,10 +7,10 @@ namespace Unity.ClusterDisplay
     {
         public byte EmitterNodeId { get; set; }
         public UInt64 EmitterNodeIdMask => (UInt64) 1 << EmitterNodeId;
-        public bool DelayRepeaters { get; set; }
+        public bool DelayRepeater { get; set; }
 
-        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeaters, UDPAgent.Config config) : base(clusterSync, config) =>
-            DelayRepeaters = delayRepeaters;
+        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config) : base(clusterSync, config) =>
+            DelayRepeater = delayRepeater;
 
         public override bool TryStart()
         {
