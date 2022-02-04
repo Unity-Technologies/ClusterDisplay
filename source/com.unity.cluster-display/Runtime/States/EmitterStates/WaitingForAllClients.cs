@@ -99,11 +99,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 DestinationIDs = (UInt64)1 << rxHeader.OriginID,
             };
 
-            var clusterRuntimeConfig = new ClusterRuntimeConfig { headlessEmitter = (byte)(k_HeadlessEmitter ? 1 : 0) };
-            var payload = NetworkingHelpers.AllocateMessageWithPayload<ClusterRuntimeConfig>();
-            clusterRuntimeConfig.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
-            
-            LocalNode.UdpAgent.PublishMessage(header, payload);
+            LocalNode.UdpAgent.PublishMessage(header);
         }
 
         public override string GetDebugString()

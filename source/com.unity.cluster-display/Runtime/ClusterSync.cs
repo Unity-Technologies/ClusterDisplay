@@ -81,11 +81,6 @@ namespace Unity.ClusterDisplay
         ClusterNode IClusterSyncState.LocalNode => m_LocalNode;
 
         internal ClusterNode LocalNode => m_LocalNode;
-        
-        public void OnReceivedClusterRuntimeConfig(ClusterRuntimeConfig clusterRuntimeConfig)
-        {
-            stateSetter.SetEmitterIsHeadless(clusterRuntimeConfig.headlessEmitter == 1);
-        }
 
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 

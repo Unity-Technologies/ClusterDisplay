@@ -208,16 +208,4 @@ namespace Unity.ClusterDisplay
         public void StoreInBuffer(byte[] dest, int offset) =>
             NetworkingHelpers.StructToBytes(dest, offset, ref this);
     }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct ClusterRuntimeConfig : IBlittable<ClusterRuntimeConfig>
-    {
-        public byte headlessEmitter;
-        
-        public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-        
-        public void StoreInBuffer(byte[] dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-    }
 }

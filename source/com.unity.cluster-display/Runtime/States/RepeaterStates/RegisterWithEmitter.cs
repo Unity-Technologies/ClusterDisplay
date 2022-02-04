@@ -79,8 +79,6 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                                     LocalNode.EmitterNodeId = header.OriginID;
                                     LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
                                     
-                                    var config = IBlittable<ClusterRuntimeConfig>.FromByteArray(payload, header.OffsetToPayload);
-                                    clusterSync.OnReceivedClusterRuntimeConfig(config);
                                     return;
                                 }
                             }

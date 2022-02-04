@@ -9,6 +9,5 @@ namespace Unity.ClusterDisplay
     {
         UInt64 CurrentFrameID { get; }
         ClusterNode LocalNode { get; }
-        void OnReceivedClusterRuntimeConfig(ClusterRuntimeConfig clusterRuntimeConfig);
     }
 }
