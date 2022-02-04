@@ -104,7 +104,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
             else
             {
-                ClusterDebug.Log($"Repeater presenting current frame: {ClusterDisplayState.Frame}");
+                ClusterDebug.Log($"Presenting current frame: {ClusterDisplayState.Frame}");
                 cmd.SetRenderTarget(k_CameraTargetId);
             }
 

@@ -34,8 +34,11 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
+                if (!CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout))
+                    communicationTimeout = new TimeSpan(0, 0, 0, 5);
+
                 var newState = new EmitterSynchronization(clusterSync) {
-                    MaxTimeOut = ClusterParams.CommunicationTimeout,
+                    MaxTimeOut = communicationTimeout,
                 };
 
                 return newState.EnterState(this);

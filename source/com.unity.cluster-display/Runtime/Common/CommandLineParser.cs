@@ -92,8 +92,8 @@ namespace Unity.ClusterDisplay
         internal const string k_Overscan = "-overscan";
         internal const string k_PhysicalScreenSize = "-physicalScreenSize";
         internal const string k_AdapterNameArgument = "-adapterName";
-        internal const string k_HandShakeTimeoutArgument = "-handshakeTimeoutArgument";
-        internal const string k_CommunicationTimeoutArgument = "-communicationTimeoutArgument";
+        internal const string k_HandShakeTimeoutArgument = "-handshakeTimeout";
+        internal const string k_CommunicationTimeoutArgument = "-communicationTimeout";
         internal const string k_TargetFPS = "-targetFps";
 
         private static bool? m_HeadlessEmitter;

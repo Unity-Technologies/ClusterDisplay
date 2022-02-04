@@ -51,13 +51,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public override void InitState()
         {
-            // See the equivlant stage set in EmitterFrameSynch.cs. If we are delaying the repeaters by one frame. Then the repeaters
-            // will initially enter the "WaitingOnEmitterFrameData" stage to wait for the emitter finish it's first frame and send the
-            // data to the repeaters. Otherwise, we will enter the default stage: "EnteredNextFrame" to flag to the emitter that were
-            // ready to start our frames in sync with the emitter.
-            Stage = LocalNode.DelayRepeater ? 
-                        EStage.WaitingOnEmitterFrameData :
-                        EStage.EnteredNextFrame;
+            Stage = EStage.WaitingOnEmitterFrameData;
 
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
