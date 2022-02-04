@@ -12,6 +12,8 @@ namespace Unity.ClusterDisplay
 {
     internal class EmitterStateWriter
     {
+        private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
+
         private NativeArray<byte> m_PreviousStateSubBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
 
@@ -38,7 +40,7 @@ namespace Unity.ClusterDisplay
         {
             this.nodeState = nodeState;
             previousFrameRndState = UnityEngine.Random.state;
-            m_CurrentStateBuffer = new NativeArray<byte>(NodeStateConstants.k_MaxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            m_CurrentStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         }
 
         public void Dispose ()
