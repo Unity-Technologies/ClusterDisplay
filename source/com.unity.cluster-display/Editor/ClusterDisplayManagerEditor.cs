@@ -23,17 +23,6 @@ namespace Unity.ClusterDisplay
         
         private void OnGUI()
         {
-            if (cachedSingletonConfigurables == null || cachedSingletonConfigurables.Length == 0)
-            {
-                string[] paths = AssetDatabase.GetAllAssetPaths();
-                cachedSingletonConfigurables = paths
-                    .Where(path =>
-                        Path.GetExtension(path) == ".asset" &&
-                        typeof(IClusterDisplayConfigurable).IsAssignableFrom(AssetDatabase.GetMainAssetTypeAtPath(path)))
-                    .Select(path => AssetDatabase.LoadAssetAtPath<SingletonScriptableObject>(path))
-                    .ToArray();
-            }
-
             if (ClusterSyncEditorConfig.TryGetInstance(out var editorConfig))
             {
                 bool modified = false;
@@ -126,15 +115,6 @@ namespace Unity.ClusterDisplay
                     EditorApplication.EnterPlaymode();
                 }
             }
-
-            /*
-            for (int i = 0; i < cachedSingletonConfigurables.Length; i++)
-            {
-                SerializedObject serializedObject = new SerializedObject(cachedSingletonConfigurables[i]);
-                var editor = UnityEditor.Editor.CreateEditor(cachedSingletonConfigurables[i]);
-                editor.OnInspectorGUI();
-            }
-            */
         }
     }
 }

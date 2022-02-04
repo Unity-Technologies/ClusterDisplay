@@ -32,8 +32,7 @@ namespace Unity.ClusterDisplay
     [InitializeOnLoad]
     #endif
     internal class ClusterSync : 
-        IClusterSyncState,
-        IClusterDisplayConfigurable
+        IClusterSyncState
     {
         static ClusterSync m_Instance;
         public static ClusterSync Instance

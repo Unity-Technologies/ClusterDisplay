@@ -90,6 +90,7 @@ namespace Unity.ClusterDisplay
         }
     }
 
+    // Generic interface for defining a NetworkMessage.
     internal interface IBlittable<T> where T : unmanaged
     {
         void StoreInBuffer(NativeArray<byte> dest, int offset);
@@ -166,11 +167,6 @@ namespace Unity.ClusterDisplay
     [StructLayout(LayoutKind.Sequential)]
     internal struct EmitterLastFrameData : IBlittable<EmitterLastFrameData>
     {
-        public static Guid CoreTimeStateID = Guid.Parse("E9F8D0DD-AA7F-4DC3-B604-1011A482BD48");
-        public static Guid CoreInputStateID = Guid.Parse("07376B8C-9F18-4DA2-8795-25024F10E572");
-        public static Guid CoreRandomStateID = Guid.Parse("ADFB31A9-FE1D-4108-9A4F-D8A0BD1EA9BC");
-        public static Guid ClusterInputStateID = Guid.Parse("09D9220F-667A-4EA8-A384-01DAD099A786");
-
         public UInt64 FrameNumber;
 
         public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
