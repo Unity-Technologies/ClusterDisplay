@@ -60,10 +60,14 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             m_Emitter = new EmitterStateWriter(this);
 
+            // If the repeaters are delayed, then we can have the emitter step one frame by setting our initial
+            // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.
             Stage = CommandLineParser.delayRepeaters ? 
                 EStage.ReadyToProceed : 
                 EStage.WaitOnRepeatersNextFrame;
 
+            // If the repeaters were not delayed, we need to fill the frame data buffer for the repeater when
+            // enter this state for the first time.
             if (Stage == EStage.WaitOnRepeatersNextFrame)
                 m_Emitter.GatherFrameState(CurrentFrameID);
 
@@ -89,6 +93,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             using (m_MarkerDoFrame.Auto())
             {
+                // newFrame is false on the first frame if -delayRepeaters was defined. Therefore, we do not
+                // gather the frame state on the first frame.
                 if (newFrame)
                     m_Emitter.GatherFrameState(CurrentFrameID);
                 
@@ -200,14 +206,15 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             var respMsg = ClusterDisplay.IBlittable<RepeaterEnteredNextFrame>.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
             ClusterDebug.Log($"(Sequence ID: {msgHdr.SequenceID}, Frame: {respMsg.FrameNumber}): Received: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} message.");
 
-            // Repeater nodes will send FrameDone messages one frame behind, since the emitter will always be rendering 1 frame ahead.
-            // Therefore we just need to subtract the emitter's current frame by one to verify that we are still in sync with the repeaters.
+            // Repeater nodes will send FrameDone messages one frame behind if -delayRepeaters is defined as a command argument, since the emitter
+            // will always be rendering 1 frame ahead. Therefore we just need to subtract the emitter's current frame by one to verify that we are
+            // still in sync with the repeaters.
             ulong currentFrame = 
                 CommandLineParser.delayRepeaters ? 
-                    CurrentFrameID - 1 : 
+                    CurrentFrameID - 1 : // The emitter is one frame ahead.
                     CurrentFrameID;
 
-            if (respMsg.FrameNumber != currentFrame)
+            if (respMsg.FrameNumber != currentFrame) // Validate that were frame matching as expected.
             {
                 ClusterDebug.LogWarning( $"Message of type: {msgHdr.MessageType} with sequence ID: {msgHdr.SequenceID} is for frame: {respMsg.FrameNumber} when we are expecting {nameof(RepeaterEnteredNextFrame)} events from the previous frame: {currentFrame}. Any of the following could have occurred:\n\t1. We already interpreted the message, but an ACK was never sent to the repeater.\n\t2. We already interpreted the message, but our ACK never reached the repeater.\n\t3. We some how never received this message. Yet we proceeded to the next frame anyways.");
                 return;

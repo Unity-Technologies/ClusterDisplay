@@ -140,7 +140,15 @@ namespace Unity.ClusterDisplay
     internal abstract class EmitterState : NodeState
     {
         public EmitterState(IClusterSyncState clusterSync) : base(clusterSync) {}
-        protected ulong PreviousFrameID => CommandLineParser.delayRepeaters ? CurrentFrameID - 1 : CurrentFrameID;
+
+        // If the repeaters were delayed by one frame, then we need to send emitter's data from the
+        // last frame. That last frame data is sent with this previous frame number for validation
+        // by the repeater.
+        protected ulong PreviousFrameID => 
+            CommandLineParser.delayRepeaters ? 
+                CurrentFrameID - 1 : 
+                CurrentFrameID;
+
         protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
         protected EmitterNode LocalNode => (EmitterNode)clusterSync.LocalNode;
     }
