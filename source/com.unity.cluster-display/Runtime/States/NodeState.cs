@@ -140,7 +140,7 @@ namespace Unity.ClusterDisplay
     internal abstract class EmitterState : NodeState
     {
         public EmitterState(IClusterSyncState clusterSync) : base(clusterSync) {}
-        protected ulong PreviousFrameID => CurrentFrameID - 1;
+        protected ulong PreviousFrameID => CommandLineParser.delayRepeaters ? CurrentFrameID - 1 : CurrentFrameID;
         protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
         protected EmitterNode LocalNode => (EmitterNode)clusterSync.LocalNode;
     }

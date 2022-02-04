@@ -51,7 +51,10 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public override void InitState()
         {
-            Stage = EStage.WaitingOnEmitterFrameData;
+            Stage = CommandLineParser.delayRepeaters ? 
+                    EStage.WaitingOnEmitterFrameData :
+                    EStage.EnteredNextFrame;
+
             m_TsOfStage = m_Time.Elapsed;
             m_Cancellation = new CancellationTokenSource();
 

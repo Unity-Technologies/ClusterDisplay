@@ -38,6 +38,7 @@ namespace Unity.ClusterDisplay
             m_DebugFlag = null;
             m_EmitterSpecified = null;
             m_RepeaterSpecified = null;
+            m_DelayRepeaters = null;
             m_TargetFPS = null;
             m_GridSize = null;
             m_Bezel = null;
@@ -84,6 +85,7 @@ namespace Unity.ClusterDisplay
         internal const string k_HeadlessEmitterArgument = "-batchMode";
         internal const string k_RepeaterReplacesHeadlessEmitterArgument = "-replaceHeadlessEmitter";
         internal const string k_RepeaterNodeTypeArgument = "-node";
+        internal const string k_DelayRepeatersArgument = "-delayRepeaters";
         internal const string k_DebugArgument = "-clusterNode";
         internal const string k_GridSize = "-gridSize";
         internal const string k_Bezel = "-bezel";
@@ -107,6 +109,7 @@ namespace Unity.ClusterDisplay
         private static bool? m_DebugFlag;
         private static bool? m_EmitterSpecified;
         private static bool? m_RepeaterSpecified;
+        private static bool? m_DelayRepeaters;
         private static int? m_TargetFPS;
         private static Vector2Int? m_GridSize;
         private static Vector2Int? m_Bezel;
@@ -298,6 +301,23 @@ namespace Unity.ClusterDisplay
                 return m_EmitterSpecified.Value;
             }
         }
+
+        internal static bool delayRepeaters
+        {
+            get
+            {
+                if (m_DelayRepeaters == null)
+                {
+                    if (!TryGetIndexOfNodeTypeArgument(k_DelayRepeatersArgument, out var startIndex))
+                        return false;
+                    
+                    m_DelayRepeaters = startIndex != -1;
+                }
+
+                return m_DelayRepeaters.Value;
+            }
+        }
+
 
         internal static bool repeaterSpecified
         {

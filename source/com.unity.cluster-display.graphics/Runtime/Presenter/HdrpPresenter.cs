@@ -64,7 +64,9 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, Present.Invoke, false);
 			var handle = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
 
-            if (ClusterDisplayState.IsEmitter && Application.isPlaying)
+            if (Application.isPlaying && 
+                ClusterDisplayState.IsEmitter &&
+                CommandLineParser.delayRepeaters)
             {
                 ClusterDebug.Log($"Emitter presenting previous frame: {ClusterDisplayState.Frame - 1}");
 

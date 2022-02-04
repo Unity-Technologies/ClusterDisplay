@@ -59,7 +59,13 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             base.InitState();
 
             m_Emitter = new EmitterStateWriter(this);
-            Stage = EStage.ReadyToProceed;
+
+            Stage = CommandLineParser.delayRepeaters ? 
+                EStage.ReadyToProceed : 
+                EStage.WaitOnRepeatersNextFrame;
+
+            if (Stage == EStage.WaitOnRepeatersNextFrame)
+                m_Emitter.GatherFrameState(CurrentFrameID);
 
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
@@ -196,9 +202,14 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             // Repeater nodes will send FrameDone messages one frame behind, since the emitter will always be rendering 1 frame ahead.
             // Therefore we just need to subtract the emitter's current frame by one to verify that we are still in sync with the repeaters.
-            if (respMsg.FrameNumber != CurrentFrameID - 1)
+            ulong currentFrame = 
+                CommandLineParser.delayRepeaters ? 
+                    CurrentFrameID - 1 : 
+                    CurrentFrameID;
+
+            if (respMsg.FrameNumber != currentFrame)
             {
-                ClusterDebug.LogWarning( $"Message of type: {msgHdr.MessageType} with sequence ID: {msgHdr.SequenceID} is for frame: {respMsg.FrameNumber} when we are expecting {nameof(RepeaterEnteredNextFrame)} events from the previous frame: {CurrentFrameID - 1}. Any of the following could have occurred:\n\t1. We already interpreted the message, but an ACK was never sent to the repeater.\n\t2. We already interpreted the message, but our ACK never reached the repeater.\n\t3. We some how never received this message. Yet we proceeded to the next frame anyways.");
+                ClusterDebug.LogWarning( $"Message of type: {msgHdr.MessageType} with sequence ID: {msgHdr.SequenceID} is for frame: {respMsg.FrameNumber} when we are expecting {nameof(RepeaterEnteredNextFrame)} events from the previous frame: {currentFrame}. Any of the following could have occurred:\n\t1. We already interpreted the message, but an ACK was never sent to the repeater.\n\t2. We already interpreted the message, but our ACK never reached the repeater.\n\t3. We some how never received this message. Yet we proceeded to the next frame anyways.");
                 return;
             }
             
