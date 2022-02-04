@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
     internal class WaitingForAllClients : EmitterState
     {
         private readonly bool k_HeadlessEmitter;
+        private readonly bool k_RepeatersDelayed;
         public override bool ReadyToProceed => false;
         public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
 

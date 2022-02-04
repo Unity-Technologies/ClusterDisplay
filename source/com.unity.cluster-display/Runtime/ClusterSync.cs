@@ -224,6 +224,7 @@ namespace Unity.ClusterDisplay
                 new EmitterNode.Config
                 {
                     headlessEmitter = CommandLineParser.HeadlessEmitter,
+                    repeatersDelayed = CommandLineParser.delayRepeaters,
                     repeaterCount = CommandLineParser.repeaterCount,
                     udpAgentConfig = config
                 });
@@ -238,7 +239,10 @@ namespace Unity.ClusterDisplay
         private bool TryInitializeRepeater(UDPAgent.Config config)
         {
             // Emitter command line format: -node nodeId ip:rxport,txport
-            m_LocalNode = new RepeaterNode(this, config);
+            m_LocalNode = new RepeaterNode(
+                this, 
+                CommandLineParser.delayRepeaters, 
+                config);
             
             stateSetter.SetIsEmitter(false);
             stateSetter.SetIsRepeater(true);

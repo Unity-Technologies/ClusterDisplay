@@ -145,7 +145,7 @@ namespace Unity.ClusterDisplay
         // last frame. That last frame data is sent with this previous frame number for validation
         // by the repeater.
         protected ulong PreviousFrameID => 
-            CommandLineParser.delayRepeaters ? 
+            LocalNode.RepeatersDelayed ? 
                 CurrentFrameID - 1 : 
                 CurrentFrameID;
 

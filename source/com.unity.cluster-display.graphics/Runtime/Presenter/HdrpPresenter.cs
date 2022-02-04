@@ -112,7 +112,7 @@ namespace Unity.ClusterDisplay.Graphics
             Present.Invoke(new PresentArgs
             {
                 CommandBuffer = cmd,
-                FlipY = !ClusterDisplayState.IsEmitter,
+                FlipY = !(ClusterDisplayState.IsEmitter && CommandLineParser.delayRepeaters),
                 CameraPixelRect = m_Camera.pixelRect
             });
             

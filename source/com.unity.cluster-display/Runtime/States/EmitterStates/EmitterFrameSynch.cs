@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             // If the repeaters are delayed, then we can have the emitter step one frame by setting our initial
             // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.
-            Stage = CommandLineParser.delayRepeaters ? 
+            Stage = LocalNode.RepeatersDelayed ? 
                 EStage.ReadyToProceed : 
                 EStage.WaitOnRepeatersNextFrame;
 
@@ -210,7 +210,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // will always be rendering 1 frame ahead. Therefore we just need to subtract the emitter's current frame by one to verify that we are
             // still in sync with the repeaters.
             ulong currentFrame = 
-                CommandLineParser.delayRepeaters ? 
+                LocalNode.RepeatersDelayed ? 
                     CurrentFrameID - 1 : // The emitter is one frame ahead.
                     CurrentFrameID;
 
