@@ -156,31 +156,30 @@ namespace Unity.ClusterDisplay.Graphics
             readonly UniversalAdditionalCameraData m_AdditionalCameraData;
             readonly bool m_UseScreenCoordOverride;
 
-            public UrpCameraScope(
-                Camera camera, 
-                RenderFeature renderFeature, 
-                ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+            public UrpCameraScope(Camera camera, RenderFeature renderFeature)
             {
-                m_BaseCameraScope = new BaseCameraScope(camera, userPreCameraRenderDataOverride);
+                m_BaseCameraScope = new BaseCameraScope(camera);
                 m_Camera = camera;
                 m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<UniversalAdditionalCameraData>(camera.gameObject);
                 m_UseScreenCoordOverride = renderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
             }
 
-            public void Render(int nodeID, Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            public void Render(RenderTexture target,
+                Matrix4x4? projection,
+                Vector4? screenSizeOverride,
+                Vector4? screenCoordScaleBias,
+                Vector3? position,
+                Quaternion? rotation)
             {
-                m_BaseCameraScope.PreRender(nodeID, projection, target);
+                m_BaseCameraScope.PreRender(target, projection);
 
+                Debug.Assert(m_UseScreenCoordOverride == screenSizeOverride.HasValue);
+                
                 m_AdditionalCameraData.useScreenCoordOverride = m_UseScreenCoordOverride;
-                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;
 
                 m_Camera.Render();
-            }
-
-            public void Render(int nodeID, Matrix4x4 projection, RenderTexture target)
-            {
-                Render(nodeID, projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
             }
 
             public void Dispose()
@@ -203,7 +202,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
             return new HdrpCameraScope(camera, renderFeature);
 #elif CLUSTER_DISPLAY_URP
-            return new UrpCameraScope(camera, renderFeature, userPreCameraRenderDataOverride);
+            return new UrpCameraScope(camera, renderFeature);
 #else // TODO Add support for legacy render pipeline.
             return new NullCameraScope();
 #endif
