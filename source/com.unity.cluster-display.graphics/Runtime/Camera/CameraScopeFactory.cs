@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 #if CLUSTER_DISPLAY_HDRP
 using UnityEngine.Rendering.HighDefinition;
+
 #elif CLUSTER_DISPLAY_URP
 using UnityEngine.Rendering.Universal;
 #endif
@@ -25,7 +26,6 @@ namespace Unity.ClusterDisplay.Graphics
         readonly struct BaseCameraScope
         {
             readonly Camera m_Camera;
-            readonly ClusterRenderer.UserPreCameraRenderDataOverride m_UserPreCameraRenderDataOverride;
 
             readonly Vector3 m_Position;
             readonly Quaternion m_Rotation;
@@ -34,44 +34,48 @@ namespace Unity.ClusterDisplay.Graphics
             readonly bool m_UsePhysicalProperties;
             readonly int m_CullingMask;
 
-            public BaseCameraScope(
-                Camera camera, 
-                ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+            public BaseCameraScope(Camera camera)
             {
                 m_Camera = camera;
-                m_UserPreCameraRenderDataOverride = userPreCameraRenderDataOverride;
 
-                m_Position = camera.transform.position;
-                m_Rotation = camera.transform.rotation;
+                var transform = camera.transform;
+                m_Position = transform.position;
+                m_Rotation = transform.rotation;
 
                 m_UsePhysicalProperties = camera.usePhysicalProperties;
                 m_CullingMask = m_Camera.cullingMask;
                 m_Target = m_Camera.targetTexture;
             }
 
-            public void PreRender(int nodeID, Matrix4x4 projection, RenderTexture target)
+            public void PreRender(RenderTexture target,
+                Matrix4x4? projection,
+                Vector3? position = null,
+                Quaternion? rotation = null)
             {
-                var userModifiedProjectionMatrix = projection;
-                var userModifiedPosition = m_Camera.transform.position;
-                var userModifiedRotation = m_Camera.transform.rotation;
+                var transform = m_Camera.transform;
 
-                m_UserPreCameraRenderDataOverride?.Invoke(nodeID, ref userModifiedPosition, ref userModifiedRotation, ref userModifiedProjectionMatrix);
+                var userModifiedProjectionMatrix = projection ?? m_Camera.projectionMatrix;
+                var userModifiedPosition = position ?? transform.position;
+                var userModifiedRotation = rotation ?? transform.rotation;
 
                 m_Camera.targetTexture = target;
 
-                m_Camera.transform.position = userModifiedPosition;
-                m_Camera.transform.rotation = userModifiedRotation;
+                transform.position = userModifiedPosition;
+                transform.rotation = userModifiedRotation;
                 m_Camera.projectionMatrix = userModifiedProjectionMatrix;
 
-                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+                m_Camera.cullingMatrix = userModifiedProjectionMatrix * m_Camera.worldToCameraMatrix;
                 m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
             }
 
             public void Dispose()
             {
-                m_Camera.transform.position = m_Position;
-                m_Camera.transform.rotation = m_Rotation;
+                // Restore the original transform
+                var transform = m_Camera.transform;
+                transform.position = m_Position;
+                transform.rotation = m_Rotation;
 
+                // Takes care of restoring the projection matrix
                 ApplicationUtil.ResetCamera(m_Camera);
 
                 m_Camera.targetTexture = m_Target;
@@ -89,11 +93,10 @@ namespace Unity.ClusterDisplay.Graphics
             readonly bool m_HadCustomRenderSettings;
 
             public HdrpCameraScope(
-                Camera camera, 
-                RenderFeature renderFeature,
-                ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+                Camera camera,
+                RenderFeature renderFeature)
             {
-                m_BaseCameraScope = new BaseCameraScope(camera, userPreCameraRenderDataOverride);
+                m_BaseCameraScope = new BaseCameraScope(camera);
                 m_Camera = camera;
                 m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(camera.gameObject);
                 m_HadCustomRenderSettings = m_AdditionalCameraData.customRenderingSettings;
@@ -107,38 +110,38 @@ namespace Unity.ClusterDisplay.Graphics
 
                     if (renderFeature.HasFlag(RenderFeature.AsymmetricProjection))
                     {
-                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = true;
+                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.AsymmetricProjection] = true;
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, true);
                     }
 
                     if (renderFeature.HasFlag(RenderFeature.ScreenCoordOverride))
                     {
-                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = true;
+                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = true;
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
                     }
                 }
             }
 
-            public void Render(int nodeID, Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            public void Render(RenderTexture target,
+                Matrix4x4? projection,
+                Vector4? screenSizeOverride,
+                Vector4? screenCoordScaleBias,
+                Vector3? position,
+                Quaternion? rotation)
             {
-                m_BaseCameraScope.PreRender(nodeID, projection, target);
+                m_BaseCameraScope.PreRender(target, projection, position, rotation);
 
-                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;
 
                 m_Camera.Render();
-            }
-
-            public void Render(int nodeID, Matrix4x4 projection, RenderTexture target)
-            {
-                Render(nodeID, projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
             }
 
             public void Dispose()
             {
                 m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
-                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = false;
-                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = false;
+                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.AsymmetricProjection] = false;
+                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = false;
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
 
@@ -190,19 +193,15 @@ namespace Unity.ClusterDisplay.Graphics
         readonly struct NullCameraScope : ICameraScope
         {
             public void Dispose() { }
-
-            public void Render(int nodeID, Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target) { }
-
-            public void Render(int nodeID, Matrix4x4 projection, RenderTexture target) { }
+            public void Render(RenderTexture target, Matrix4x4? projection, Vector4? screenSizeOverride, Vector4? screenCoordScaleBias, Vector3? position, Quaternion? rotation) { }
         }
 
         public static ICameraScope Create(
-            Camera camera, 
-            RenderFeature renderFeature,
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+            Camera camera,
+            RenderFeature renderFeature)
         {
 #if CLUSTER_DISPLAY_HDRP
-            return new HdrpCameraScope(camera, renderFeature, userPreCameraRenderDataOverride);
+            return new HdrpCameraScope(camera, renderFeature);
 #elif CLUSTER_DISPLAY_URP
             return new UrpCameraScope(camera, renderFeature, userPreCameraRenderDataOverride);
 #else // TODO Add support for legacy render pipeline.

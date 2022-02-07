@@ -26,14 +26,6 @@ namespace Unity.ClusterDisplay.Graphics
         internal static Action Enabled = delegate { };
         internal static Action Disabled = delegate { };
 
-        public delegate void UserPreCameraRenderDataOverride(
-            int nodeId,
-            ref Vector3 position,
-            ref Quaternion rotation,
-            ref Matrix4x4 projectionMatrix);
-
-        public UserPreCameraRenderDataOverride userPreCameraRenderDataOverride;
-
         /// <summary>
         /// Placeholder type introduced since the PlayerLoop API requires types to be provided for the injected subsystem.
         /// </summary>
@@ -168,10 +160,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            m_ProjectionPolicy.UpdateCluster(
-                m_Settings, 
-                activeCamera, 
-                userPreCameraRenderDataOverride);
+            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
     }
 }

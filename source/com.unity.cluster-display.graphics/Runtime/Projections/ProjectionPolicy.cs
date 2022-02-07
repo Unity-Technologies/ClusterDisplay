@@ -26,10 +26,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// matrices, rendering to a <see cref="RenderTexture"/>, etc. Do not draw anything to the screen;
         /// that should happen in your <see cref="Present"/> method.
         /// </remarks>
-        public abstract void UpdateCluster(
-            ClusterRendererSettings clusterSettings, 
-            Camera activeCamera, 
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride);
+        public abstract void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera);
 
         /// <summary>
         /// Called after all rendering commands have been enqueued in the rendering pipeline.

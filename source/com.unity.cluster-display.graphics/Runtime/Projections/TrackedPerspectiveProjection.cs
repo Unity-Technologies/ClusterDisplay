@@ -22,7 +22,6 @@ namespace Unity.ClusterDisplay.Graphics
         int m_NodeIndexOverride;
 
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
-        Camera m_Camera;
         BlitCommand m_BlitCommand;
 
         readonly UnityEngine.Pool.ObjectPool<ProjectionPreview> m_PreviewPool =
@@ -59,10 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
             ClearPreviews();
         }
 
-        public override void UpdateCluster(
-            ClusterRendererSettings clusterSettings, 
-            Camera activeCamera,
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var nodeIndex = m_IsDebug || !ClusterDisplayState.IsActive ? m_NodeIndexOverride : ClusterDisplayState.NodeID;
 
@@ -75,20 +71,12 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
                 {
-                    RenderSurface(
-                        index, 
-                        clusterSettings, 
-                        activeCamera,
-                        userPreCameraRenderDataOverride);
+                    RenderSurface(index, clusterSettings, activeCamera);
                 }
             }
             else
             {
-                RenderSurface(
-                    nodeIndex, 
-                    clusterSettings, 
-                    activeCamera,
-                    userPreCameraRenderDataOverride);
+                RenderSurface(nodeIndex, clusterSettings, activeCamera);
             }
 
             m_BlitCommand = new BlitCommand(
@@ -193,10 +181,7 @@ namespace Unity.ClusterDisplay.Graphics
             return rt;
         }
 
-        void RenderSurface(int index,
-            ClusterRendererSettings clusterSettings,
-            Camera activeCamera,
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+        void RenderSurface(int index, ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var surface = m_ProjectionSurfaces[index];
             var overscannedSize = surface.ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
@@ -204,7 +189,6 @@ namespace Unity.ClusterDisplay.Graphics
             var surfacePlane = surface.GetFrustumPlane(Origin);
 
             var cameraTransform = activeCamera.transform;
-            var savedRotation = cameraTransform.rotation;
             var position = cameraTransform.position;
 
             var lookAtPoint = ProjectPointToPlane(position, surfacePlane);
@@ -215,23 +199,22 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             var upDir = surfacePlane.TopLeft - surfacePlane.BottomLeft;
-            activeCamera.transform.LookAt(lookAtPoint, upDir);
+            var alignedRotation = Quaternion.LookRotation(lookAtPoint - position, upDir);
+            var alignedCameraTransform = Matrix4x4.TRS(position, alignedRotation, Vector3.one);
 
-            var planeInViewCoords = surfacePlane.ApplyTransform(cameraTransform.worldToLocalMatrix);
+            var planeInViewCoords = surfacePlane.ApplyTransform(alignedCameraTransform.inverse);
 
             var projectionMatrix = GetProjectionMatrix(activeCamera.projectionMatrix,
                 planeInViewCoords,
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = CameraScopeFactory.Create(
-                activeCamera, 
-                RenderFeature.AsymmetricProjection,
-                userPreCameraRenderDataOverride);
+            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
             
-            cameraScope.Render(ClusterDisplayState.NodeID, projectionMatrix, GetRenderTexture(index, overscannedSize));
-            
-            cameraTransform.rotation = savedRotation;
+            cameraScope.Render(GetRenderTexture(index, overscannedSize), 
+                projectionMatrix,
+                position: cameraTransform.position,
+                rotation: alignedRotation);
         }
 
         static Vector3 ProjectPointToPlane(Vector3 pt, in ProjectionSurface.FrustumPlane plane)
