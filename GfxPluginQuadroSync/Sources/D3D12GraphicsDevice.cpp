@@ -1,8 +1,8 @@
-#include "D3D12GraphicDevice.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace GfxQuadroSync
 {
-    D3D12GraphicDevice::D3D12GraphicDevice(
+    D3D12GraphicsDevice::D3D12GraphicsDevice(
         ID3D12Device* const device,
         IDXGISwapChain* const swapChain,
         const UINT32 syncInterval,

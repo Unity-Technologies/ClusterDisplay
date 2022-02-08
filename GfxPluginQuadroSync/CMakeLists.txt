@@ -27,8 +27,8 @@ set( QUADROSYNC_WRAPPER_PROJECT_HEADERS
 	Includes/GfxQuadroSync.h
 	Includes/PluginUtils.h
 	Includes/IGraphicsDevice.h
-	Includes/D3D11GraphicDevice.h
-	Includes/D3D12GraphicDevice.h
+	Includes/D3D11GraphicsDevice.h
+	Includes/D3D12GraphicsDevice.h
 )
 
 set( QUADROSYNC_WRAPPER_PRIVATE_HEADERS
@@ -38,8 +38,8 @@ set( QUADROSYNC_WRAPPER_SOURCES
 	Sources/QuadroSync.cpp
 	Sources/GfxQuadroSync.cpp
 	Sources/PluginUtils.cpp
-	Sources/D3D11GraphicDevice.cpp
-	Sources/D3D12GraphicDevice.cpp
+	Sources/D3D11GraphicsDevice.cpp
+	Sources/D3D12GraphicsDevice.cpp
 )
 
 INCLUDE_DIRECTORIES(

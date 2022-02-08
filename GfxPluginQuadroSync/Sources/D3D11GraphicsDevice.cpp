@@ -1,8 +1,8 @@
-#include "D3D11GraphicDevice.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace GfxQuadroSync
 {
-    D3D11GraphicDevice::D3D11GraphicDevice(
+    D3D11GraphicsDevice::D3D11GraphicsDevice(
         ID3D11Device* const device, 
         IDXGISwapChain* const swapChain, 
         const UINT32 syncInterval, 

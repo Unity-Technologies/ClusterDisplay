@@ -2,7 +2,7 @@
 
 namespace GfxQuadroSync
 {
-    enum class GraphicDeviceType
+    enum class GraphicsDeviceType
     {
         GRAPHICS_DEVICE_D3D11 = 0,
         GRAPHICS_DEVICE_D3D12,
@@ -11,13 +11,13 @@ namespace GfxQuadroSync
         GRAPHICS_DEVICE_VULKAN,
     };
 
-    class IGraphicDevice
+    class IGraphicsDevice
     {
     public:
-        IGraphicDevice() {}
-        virtual ~IGraphicDevice() {}
+        IGraphicsDevice() {}
+        virtual ~IGraphicsDevice() {}
 
-        virtual GraphicDeviceType GetDeviceType() const = 0;
+        virtual GraphicsDeviceType GetDeviceType() const = 0;
 
         virtual IUnknown* GetDevice() const = 0;
         virtual IDXGISwapChain* GetSwapChain() const = 0;

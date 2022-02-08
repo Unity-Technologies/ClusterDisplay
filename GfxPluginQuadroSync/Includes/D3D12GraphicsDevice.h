@@ -6,18 +6,18 @@
 
 namespace GfxQuadroSync
 {
-    class D3D12GraphicDevice final : public IGraphicDevice
+    class D3D12GraphicsDevice final : public IGraphicsDevice
     {
     public:
-        D3D12GraphicDevice(
+        D3D12GraphicsDevice(
             ID3D12Device* device, 
             IDXGISwapChain* swapChain, 
             UINT32 interval, 
             UINT presentFlags);
 
-        virtual ~D3D12GraphicDevice() = default;
+        virtual ~D3D12GraphicsDevice() = default;
 
-        inline GraphicDeviceType GetDeviceType() const { return GraphicDeviceType::GRAPHICS_DEVICE_D3D12; }
+        inline GraphicsDeviceType GetDeviceType() const { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D12; }
 
         inline IUnknown*       GetDevice() const { return m_D3D12Device; }
         inline IDXGISwapChain* GetSwapChain() const { return m_SwapChain; }

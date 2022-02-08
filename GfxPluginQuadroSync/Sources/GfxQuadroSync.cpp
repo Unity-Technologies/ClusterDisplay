@@ -1,5 +1,5 @@
-#include "D3D11GraphicDevice.h"
-#include "D3D12GraphicDevice.h"
+#include "D3D11GraphicsDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include "QuadroSync.h"
 #include "GfxQuadroSync.h"
 #include "PluginUtils.h"
@@ -15,7 +15,7 @@ namespace GfxQuadroSync
 	static IUnityGraphicsD3D11* s_UnityGraphicsD3D11 = nullptr;
 	static IUnityGraphicsD3D12v7* s_UnityGraphicsD3D12 = nullptr;
 	
-	static IGraphicDevice* s_GraphicDevice = nullptr;
+	static IGraphicsDevice* s_GraphicsDevice = nullptr;
 	static PluginCSwapGroupClient s_SwapGroupClient;
 	static bool s_Initialized = false;
 
@@ -61,10 +61,10 @@ namespace GfxQuadroSync
 
 		return (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
 			? s_SwapGroupClient.Render(
-				s_GraphicDevice->GetDevice(),
-				s_GraphicDevice->GetSwapChain(),
-				s_GraphicDevice->GetSyncInterval(),
-				s_GraphicDevice->GetPresentFlags())
+				s_GraphicsDevice->GetDevice(),
+				s_GraphicsDevice->GetSwapChain(),
+				s_GraphicsDevice->GetSyncInterval(),
+				s_GraphicsDevice->GetPresentFlags())
 			: false;
 	}
 
@@ -102,10 +102,10 @@ namespace GfxQuadroSync
 			s_UnityGraphicsD3D11 = nullptr;
 			s_UnityGraphicsD3D12 = nullptr;
 
-			if (s_GraphicDevice != nullptr)
+			if (s_GraphicsDevice != nullptr)
 			{
-				delete(s_GraphicDevice);
-				s_GraphicDevice = nullptr;
+				delete(s_GraphicsDevice);
+				s_GraphicsDevice = nullptr;
 			}
 		}
 	}
@@ -150,12 +150,12 @@ namespace GfxQuadroSync
 		if (s_UnityGraphicsD3D11 != nullptr)
 		{
 			auto device = s_UnityGraphicsD3D11->GetDevice();
-			s_GraphicDevice->SetDevice(device);
+			s_GraphicsDevice->SetDevice(device);
 		}
 		else if (s_UnityGraphicsD3D12)
 		{
 			auto device = s_UnityGraphicsD3D12->GetDevice();
-			s_GraphicDevice->SetDevice(device);
+			s_GraphicsDevice->SetDevice(device);
 		}
 	}
 
@@ -164,12 +164,12 @@ namespace GfxQuadroSync
 		if (s_UnityGraphicsD3D11 != nullptr)
 		{
 			auto swapChain = s_UnityGraphicsD3D11->GetSwapChain();
-			s_GraphicDevice->SetSwapChain(swapChain);
+			s_GraphicsDevice->SetSwapChain(swapChain);
 		}
 		else if (s_UnityGraphicsD3D12)
 		{
 			auto swapChain = s_UnityGraphicsD3D12->GetSwapChain();
-			s_GraphicDevice->SetSwapChain(swapChain);
+			s_GraphicsDevice->SetSwapChain(swapChain);
 		}
 	}
 
@@ -183,7 +183,7 @@ namespace GfxQuadroSync
 			return false;
 		}
 
-		if (s_GraphicDevice == nullptr)
+		if (s_GraphicsDevice == nullptr)
 		{
 			return false;
 		}
@@ -195,29 +195,29 @@ namespace GfxQuadroSync
 			return false;
 		}
 
-		if (s_GraphicDevice->GetDevice() == nullptr)
+		if (s_GraphicsDevice->GetDevice() == nullptr)
 		{
 			WriteFileDebug("* Error: IsContextValid, GetDevice() == nullptr \n", true);
 			SetDevice();
 		}
 
-		if (s_GraphicDevice->GetSwapChain() == nullptr)
+		if (s_GraphicsDevice->GetSwapChain() == nullptr)
 		{
 			WriteFileDebug("* Error: IsContextValid, GetSwapChain() == nullptr \n", true);
 			SetSwapChain();
 		}
 
-		return (s_GraphicDevice->GetDevice() != nullptr && s_GraphicDevice->GetSwapChain() != nullptr);
+		return (s_GraphicsDevice->GetDevice() != nullptr && s_GraphicsDevice->GetSwapChain() != nullptr);
 	}
 
-	bool InitializeGraphicDevice()
+	bool InitializeGraphicsDevice()
 	{
 		// We cannot call this function earlier, because GetRenderer is sometimes
 		// not initialized at the right time (kUnityGfxRendererNull is returned).
 		auto renderer = s_UnityGraphics->GetRenderer();
 		GetRenderDeviceInterface(renderer);
 
-		if (s_GraphicDevice == nullptr)
+		if (s_GraphicsDevice == nullptr)
 		{
 			if (s_UnityGraphicsD3D11 != nullptr)
 			{
@@ -226,8 +226,8 @@ namespace GfxQuadroSync
 				auto syncInterval = s_UnityGraphicsD3D11->GetSyncInterval();
 				auto presentFlags = s_UnityGraphicsD3D11->GetPresentFlags();
 
-				s_GraphicDevice = new D3D11GraphicDevice(device, swapChain, syncInterval, presentFlags);
-				WriteFileDebug("* Success: D3D11GraphicDevice succesfully created\n");
+				s_GraphicsDevice = new D3D11GraphicsDevice(device, swapChain, syncInterval, presentFlags);
+				WriteFileDebug("* Success: D3D11GraphicsDevice succesfully created\n");
 			}
 			else if (s_UnityGraphicsD3D12 != nullptr)
 			{
@@ -236,8 +236,8 @@ namespace GfxQuadroSync
 				auto syncInterval = s_UnityGraphicsD3D12->GetSyncInterval();
 				auto presentFlags = s_UnityGraphicsD3D12->GetPresentFlags();
 
-				s_GraphicDevice = new D3D12GraphicDevice(device, swapChain, syncInterval, presentFlags);
-				WriteFileDebug("Success: D3D12GraphicDevice succesfully created\n");
+				s_GraphicsDevice = new D3D12GraphicsDevice(device, swapChain, syncInterval, presentFlags);
+				WriteFileDebug("Success: D3D12GraphicsDevice succesfully created\n");
 			}
 			else
 			{
@@ -251,7 +251,7 @@ namespace GfxQuadroSync
 	// Enable Workstation SwapGroup & potentially join the SwapGroup / Barrier
 	void QuadroSyncInitialize()
 	{
-		if (!InitializeGraphicDevice())
+		if (!InitializeGraphicsDevice())
 		{
 			WriteFileDebug("* Error: failed during QuadroSyncInitialize\n");
 			return;
@@ -262,8 +262,8 @@ namespace GfxQuadroSync
 
 		s_SwapGroupClient.SetupWorkStation();
 		s_SwapGroupClient.Initialize(
-			s_GraphicDevice->GetDevice(), 
-			s_GraphicDevice->GetSwapChain());
+			s_GraphicsDevice->GetDevice(),
+			s_GraphicsDevice->GetSwapChain());
 	}
 
 	// Query the actual frame count (master or custom one)
@@ -272,7 +272,7 @@ namespace GfxQuadroSync
 		if (!IsContextValid() || value == nullptr)
 			return;
 
-		auto frameCount = s_SwapGroupClient.QueryFrameCount(s_GraphicDevice->GetDevice());
+		auto frameCount = s_SwapGroupClient.QueryFrameCount(s_GraphicsDevice->GetDevice());
 		*value = (int)frameCount;
 	}
 
@@ -282,7 +282,7 @@ namespace GfxQuadroSync
 		if (!IsContextValid())
 			return;
 
-		s_SwapGroupClient.ResetFrameCount(s_GraphicDevice->GetDevice());
+		s_SwapGroupClient.ResetFrameCount(s_GraphicsDevice->GetDevice());
 	}
 
 	// Leave the Barrier and Swap Group, disable the Workstation SwapGroup
@@ -292,8 +292,8 @@ namespace GfxQuadroSync
 			return;
 
 		s_SwapGroupClient.Dispose(
-			s_GraphicDevice->GetDevice(), 
-			s_GraphicDevice->GetSwapChain());
+			s_GraphicsDevice->GetDevice(),
+			s_GraphicsDevice->GetSwapChain());
 
 		s_SwapGroupClient.DisposeWorkStation();
 	}
@@ -305,8 +305,8 @@ namespace GfxQuadroSync
 			return;
 
 		s_SwapGroupClient.EnableSystem(
-			s_GraphicDevice->GetDevice(), 
-			s_GraphicDevice->GetSwapChain(), value);
+			s_GraphicsDevice->GetDevice(),
+			s_GraphicsDevice->GetSwapChain(), value);
 	}
 
 	// Toggle to join/leave the SwapGroup
@@ -316,8 +316,8 @@ namespace GfxQuadroSync
 			return;
 
 		s_SwapGroupClient.EnableSwapGroup(
-			s_GraphicDevice->GetDevice(), 
-			s_GraphicDevice->GetSwapChain(), 
+			s_GraphicsDevice->GetDevice(),
+			s_GraphicsDevice->GetSwapChain(),
 			value);
 	}
 
@@ -328,7 +328,7 @@ namespace GfxQuadroSync
 			return;
 
 		s_SwapGroupClient.EnableSwapBarrier(
-			s_GraphicDevice->GetDevice(), 
+			s_GraphicsDevice->GetDevice(),
 			value);
 	}
 
