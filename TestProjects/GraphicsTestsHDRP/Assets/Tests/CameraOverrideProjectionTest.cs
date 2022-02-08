@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class CameraOverrideProjectionTest : ClusterRendererTest
+public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
 {
     [OneTimeSetUp]
     public void LoadScene()
@@ -33,6 +33,7 @@ public class CameraOverrideProjectionTest : ClusterRendererTest
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
             projection.ProjectionMatrix = m_Camera.projectionMatrix;
+            m_Volume.profile = LoadVolumeProfile(profileName);
         });
     }
 
@@ -52,6 +53,7 @@ public class CameraOverrideProjectionTest : ClusterRendererTest
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
             projection.ProjectionMatrix = m_Camera.projectionMatrix;
+            m_Volume.profile = LoadVolumeProfile(profileName);
         });
     }
 }
