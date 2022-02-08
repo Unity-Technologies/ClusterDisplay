@@ -123,7 +123,7 @@ namespace GfxQuadroSync
 					WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
 				}
 
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
 				std::ostringstream oss;
 				oss << "SwapGroup (" << m_GroupId << ") / (" << m_GSyncSwapGroups << ")\n";
 				std::string var = oss.str();
@@ -186,7 +186,7 @@ namespace GfxQuadroSync
 				return false;
 			}
 
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
 			std::ostringstream oss;
 			oss << "BindSwapBarrier (" << m_BarrierId << ") / (" << m_GSyncBarriers << ")\n";
 			std::string var = oss.str();
@@ -316,7 +316,7 @@ namespace GfxQuadroSync
 				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
 				WriteFileDebug("Values before Query:\n");
 
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
 				std::ostringstream ossBefore;
 				ossBefore << "m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")\n";
 				std::string var = ossBefore.str();

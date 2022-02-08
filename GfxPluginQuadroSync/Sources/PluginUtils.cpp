@@ -6,7 +6,7 @@ namespace GfxQuadroSync
 
     void WriteFileDebug(const char* const message, const bool append)
     {
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
         std::ofstream myfile;
         
         if (append)
@@ -25,7 +25,7 @@ namespace GfxQuadroSync
 
     void WriteFileDebug(const char* const message, int value, const bool append)
     {
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
         std::ofstream myfile;
 
         if (append)
@@ -44,7 +44,7 @@ namespace GfxQuadroSync
 
     void WriteFileDebug(const char* const message, unsigned long long value, const bool append)
     {
-#ifdef DEBUG_LOG
+#ifdef _DEBUG
         std::ofstream myfile;
 
         if (append)

@@ -43,9 +43,9 @@ set( QUADROSYNC_WRAPPER_SOURCES
 )
 
 INCLUDE_DIRECTORIES(
-   Unity
-   ../External/NvAPI
-   Includes
+   "Unity"
+   "../External/NvAPI"
+   "Includes"
 	include
 )
 
@@ -63,9 +63,6 @@ SET_TARGET_PROPERTIES( ${PROJECT_NAME} PROPERTIES
 )
 
 # Link libraries
-set( QUADROSYNC_WRAPPER_STATIC_DEPENDENCIES
-)
-
 set( QUADROSYNC_WRAPPER_DEPENDENCIES
 	"nvapi64"
 )

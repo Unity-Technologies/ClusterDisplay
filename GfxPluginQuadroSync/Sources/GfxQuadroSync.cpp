@@ -15,7 +15,7 @@ namespace GfxQuadroSync
 	static IUnityGraphicsD3D11* s_UnityGraphicsD3D11 = nullptr;
 	static IUnityGraphicsD3D12v7* s_UnityGraphicsD3D12 = nullptr;
 	
-	static IGraphicsDevice* s_GraphicsDevice = nullptr;
+	static std::unique_ptr<IGraphicsDevice> s_GraphicsDevice = nullptr;
 	static PluginCSwapGroupClient s_SwapGroupClient;
 	static bool s_Initialized = false;
 
@@ -101,12 +101,7 @@ namespace GfxQuadroSync
 			s_UnityGraphics = nullptr;
 			s_UnityGraphicsD3D11 = nullptr;
 			s_UnityGraphicsD3D12 = nullptr;
-
-			if (s_GraphicsDevice != nullptr)
-			{
-				delete(s_GraphicsDevice);
-				s_GraphicsDevice = nullptr;
-			}
+			s_GraphicsDevice = nullptr;
 		}
 	}
 
@@ -114,30 +109,30 @@ namespace GfxQuadroSync
 	static void UNITY_INTERFACE_API
 		OnRenderEvent(int eventID, void* data)
 	{
-		switch (eventID)
+		switch (static_cast<EQuadroSyncRenderEvent>(eventID))
 		{
-		case (int)EQuadroSyncRenderEvent::QuadroSyncInitialize:
+		case EQuadroSyncRenderEvent::QuadroSyncInitialize:
 			QuadroSyncInitialize();
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncQueryFrameCount:
+		case EQuadroSyncRenderEvent::QuadroSyncQueryFrameCount:
 			QuadroSyncQueryFrameCount(static_cast<int* const>(data));
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncResetFrameCount:
+		case EQuadroSyncRenderEvent::QuadroSyncResetFrameCount:
 			QuadroSyncResetFrameCount();
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncDispose:
+		case EQuadroSyncRenderEvent::QuadroSyncDispose:
 			QuadroSyncDispose();
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncEnableSystem:
+		case EQuadroSyncRenderEvent::QuadroSyncEnableSystem:
 			QuadroSyncEnableSystem(static_cast<bool>(data));
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncEnableSwapGroup:
+		case EQuadroSyncRenderEvent::QuadroSyncEnableSwapGroup:
 			QuadroSyncEnableSwapGroup(static_cast<bool>(data));
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncEnableSwapBarrier:
+		case EQuadroSyncRenderEvent::QuadroSyncEnableSwapBarrier:
 			QuadroSyncEnableSwapBarrier(static_cast<bool>(data));
 			break;
-		case (int)EQuadroSyncRenderEvent::QuadroSyncEnableSyncCounter:
+		case EQuadroSyncRenderEvent::QuadroSyncEnableSyncCounter:
 			QuadroSyncEnableSyncCounter(static_cast<bool>(data));
 			break;
 		default:
@@ -197,13 +192,13 @@ namespace GfxQuadroSync
 
 		if (s_GraphicsDevice->GetDevice() == nullptr)
 		{
-			WriteFileDebug("* Error: IsContextValid, GetDevice() == nullptr \n", true);
+			WriteFileDebug("* Warning: IsContextValid, GetDevice() == nullptr \n", true);
 			SetDevice();
 		}
 
 		if (s_GraphicsDevice->GetSwapChain() == nullptr)
 		{
-			WriteFileDebug("* Error: IsContextValid, GetSwapChain() == nullptr \n", true);
+			WriteFileDebug("* Warning: IsContextValid, GetSwapChain() == nullptr \n", true);
 			SetSwapChain();
 		}
 
@@ -226,7 +221,7 @@ namespace GfxQuadroSync
 				auto syncInterval = s_UnityGraphicsD3D11->GetSyncInterval();
 				auto presentFlags = s_UnityGraphicsD3D11->GetPresentFlags();
 
-				s_GraphicsDevice = new D3D11GraphicsDevice(device, swapChain, syncInterval, presentFlags);
+				s_GraphicsDevice = std::make_unique<D3D11GraphicsDevice>(device, swapChain, syncInterval, presentFlags);
 				WriteFileDebug("* Success: D3D11GraphicsDevice succesfully created\n");
 			}
 			else if (s_UnityGraphicsD3D12 != nullptr)
@@ -236,7 +231,7 @@ namespace GfxQuadroSync
 				auto syncInterval = s_UnityGraphicsD3D12->GetSyncInterval();
 				auto presentFlags = s_UnityGraphicsD3D12->GetPresentFlags();
 
-				s_GraphicsDevice = new D3D12GraphicsDevice(device, swapChain, syncInterval, presentFlags);
+				s_GraphicsDevice = std::make_unique<D3D12GraphicsDevice>(device, swapChain, syncInterval, presentFlags);
 				WriteFileDebug("Success: D3D12GraphicsDevice succesfully created\n");
 			}
 			else

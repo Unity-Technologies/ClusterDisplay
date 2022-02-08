@@ -17,15 +17,15 @@ namespace GfxQuadroSync
 
         virtual ~D3D12GraphicsDevice() = default;
 
-        inline GraphicsDeviceType GetDeviceType() const { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D12; }
+        GraphicsDeviceType GetDeviceType() const override { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D12; }
 
-        inline IUnknown*       GetDevice() const { return m_D3D12Device; }
-        inline IDXGISwapChain* GetSwapChain() const { return m_SwapChain; }
-        inline UINT32          GetSyncInterval() const { return m_SyncInterval; }
-        inline UINT            GetPresentFlags() const { return m_PresentFlags; }
+        IUnknown*       GetDevice() const override { return m_D3D12Device; }
+        IDXGISwapChain* GetSwapChain() const override { return m_SwapChain; }
+        UINT32          GetSyncInterval() const override { return m_SyncInterval; }
+        UINT            GetPresentFlags() const override { return m_PresentFlags; }
 
-        inline void SetDevice(IUnknown* const device) { m_D3D12Device = static_cast<ID3D12Device*>(device); }
-        inline void SetSwapChain(IDXGISwapChain* const swapChain) { m_SwapChain = swapChain; }
+        void SetDevice(IUnknown* const device) override { m_D3D12Device = static_cast<ID3D12Device*>(device); }
+        void SetSwapChain(IDXGISwapChain* const swapChain) override { m_SwapChain = swapChain; }
 
     private:
         ID3D12Device* m_D3D12Device;
