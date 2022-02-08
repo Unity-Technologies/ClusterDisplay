@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TrackedPerspectiveProjection.unity
     guid: 14b8c93aa2c7c5f469ab2e6050558d1a
+  - enabled: 1
+    path: Assets/Scenes/CameraOverrideProjection.unity
+    guid: 7ff3fd45d02a568488ff580354cfda54
   m_configObjects: {}
