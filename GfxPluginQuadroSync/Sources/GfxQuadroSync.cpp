@@ -28,11 +28,14 @@ namespace GfxQuadroSync
 			WriteFileDebug("* Success: UnityPluginLoad triggered\n", false);
 
 			s_UnityInterfaces = unityInterfaces;
-			const auto unityGraphics = unityInterfaces->Get<IUnityGraphics>();
-			if (unityGraphics)
+			s_UnityGraphics = unityInterfaces->Get<IUnityGraphics>();
+			if (s_UnityGraphics)
 			{
-				s_UnityGraphics = unityGraphics;
-				unityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+				s_UnityGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+
+				// Run OnGraphicsDeviceEvent(initialize) manually on plugin load
+				// to not miss the event in case the graphics device is already initialized
+				OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
 			}
 		}
 		else
@@ -89,9 +92,6 @@ namespace GfxQuadroSync
 		if (eventType == kUnityGfxDeviceEventInitialize && !s_Initialized)
 		{
 			WriteFileDebug("* Success: kUnityGfxDeviceEventInitialize called\n", true);
-			
-			auto renderer = s_UnityInterfaces->Get<IUnityGraphics>()->GetRenderer();
-			GetRenderDeviceInterface(renderer);
 			s_Initialized = true;
 		}
 		else if (eventType == kUnityGfxDeviceEventShutdown)
@@ -145,6 +145,34 @@ namespace GfxQuadroSync
 		}
 	}
 
+	void SetDevice()
+	{
+		if (s_UnityGraphicsD3D11 != nullptr)
+		{
+			auto device = s_UnityGraphicsD3D11->GetDevice();
+			s_GraphicDevice->SetDevice(device);
+		}
+		else if (s_UnityGraphicsD3D12)
+		{
+			auto device = s_UnityGraphicsD3D12->GetDevice();
+			s_GraphicDevice->SetDevice(device);
+		}
+	}
+
+	void SetSwapChain()
+	{
+		if (s_UnityGraphicsD3D11 != nullptr)
+		{
+			auto swapChain = s_UnityGraphicsD3D11->GetSwapChain();
+			s_GraphicDevice->SetSwapChain(swapChain);
+		}
+		else if (s_UnityGraphicsD3D12)
+		{
+			auto swapChain = s_UnityGraphicsD3D12->GetSwapChain();
+			s_GraphicDevice->SetSwapChain(swapChain);
+		}
+	}
+
 	// Verify if the D3D Device and the Swap Chain are valid.
 	// The Swapchain can be invalid (for obscure reason) during the first Unity frame.
 	bool IsContextValid()
@@ -157,26 +185,26 @@ namespace GfxQuadroSync
 
 		if (s_GraphicDevice == nullptr)
 		{
-			WriteFileDebug("* Error: IsContextValid, s_GraphicDevice == nullptr \n", true);
 			return false;
 		}
 
-		if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11)
+		if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11 &&
+			s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D12)
 		{
-			WriteFileDebug("* Error: s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11 \n", true);
+			WriteFileDebug("* Error: s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11-12 \n", true);
 			return false;
 		}
 
 		if (s_GraphicDevice->GetDevice() == nullptr)
 		{
-			WriteFileDebug("* Error: IsContextValid, s_D3D11Device == nullptr \n", true);
-			s_GraphicDevice->SetDevice(s_UnityGraphicsD3D11->GetDevice());
+			WriteFileDebug("* Error: IsContextValid, GetDevice() == nullptr \n", true);
+			SetDevice();
 		}
 
 		if (s_GraphicDevice->GetSwapChain() == nullptr)
 		{
-			WriteFileDebug("* Error: IsContextValid, s_D3D11SwapChain == nullptr \n", true);
-			s_GraphicDevice->SetSwapChain(s_UnityGraphicsD3D11->GetSwapChain());
+			WriteFileDebug("* Error: IsContextValid, GetSwapChain() == nullptr \n", true);
+			SetSwapChain();
 		}
 
 		return (s_GraphicDevice->GetDevice() != nullptr && s_GraphicDevice->GetSwapChain() != nullptr);
@@ -184,9 +212,14 @@ namespace GfxQuadroSync
 
 	bool InitializeGraphicDevice()
 	{
+		// We cannot call this function earlier, because GetRenderer is sometimes
+		// not initialized at the right time (kUnityGfxRendererNull is returned).
+		auto renderer = s_UnityGraphics->GetRenderer();
+		GetRenderDeviceInterface(renderer);
+
 		if (s_GraphicDevice == nullptr)
 		{
-			if (s_UnityGraphicsD3D11)
+			if (s_UnityGraphicsD3D11 != nullptr)
 			{
 				auto device = s_UnityGraphicsD3D11->GetDevice();
 				auto swapChain = s_UnityGraphicsD3D11->GetSwapChain();
@@ -196,7 +229,7 @@ namespace GfxQuadroSync
 				s_GraphicDevice = new D3D11GraphicDevice(device, swapChain, syncInterval, presentFlags);
 				WriteFileDebug("* Success: D3D11GraphicDevice succesfully created\n");
 			}
-			else if (s_UnityGraphicsD3D12)
+			else if (s_UnityGraphicsD3D12 != nullptr)
 			{
 				auto device = s_UnityGraphicsD3D12->GetDevice();
 				auto swapChain = s_UnityGraphicsD3D12->GetSwapChain();

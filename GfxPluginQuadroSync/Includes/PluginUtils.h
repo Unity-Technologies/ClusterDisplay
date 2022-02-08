@@ -3,8 +3,6 @@
 #include <fstream>
 #include <sstream>
 
-#define DEBUG_LOG
-
 namespace GfxQuadroSync
 {
     void WriteFileDebug(const char* const message, const bool append = true);
