@@ -153,10 +153,7 @@ namespace Unity.ClusterDisplay.Graphics
             return ClusterDisplayState.NodeID;
         }
 
-        public override void UpdateCluster(
-            ClusterRendererSettings clusterSettings, 
-            Camera activeCamera,
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride)
+        public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             // Move early return at the Update's top.
             if (!(m_Settings.GridSize.x > 0 && m_Settings.GridSize.y > 0))
@@ -221,17 +218,14 @@ namespace Unity.ClusterDisplay.Graphics
                 RenderStitcher(
                     m_TileRenderTargets, 
                     activeCamera, 
-                    userPreCameraRenderDataOverride,
                     ref renderContext, 
                     m_BlitCommands);
             }
             else
             {
                 RenderTile(
-                    currentTileIndex,
                     m_TileRenderTargets[0], 
                     activeCamera, 
-                    userPreCameraRenderDataOverride,
                     ref renderContext, 
                     m_BlitCommands);
             }
@@ -290,14 +284,12 @@ namespace Unity.ClusterDisplay.Graphics
         static void RenderStitcher(
             IReadOnlyList<RenderTexture> targets, 
             Camera camera, 
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride,
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
             using var cameraScope = CameraScopeFactory.Create(
                 camera, 
-                RenderFeature.AsymmetricProjectionAndScreenCoordOverride,
-                userPreCameraRenderDataOverride);
+                RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
             
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
@@ -309,7 +301,7 @@ namespace Unity.ClusterDisplay.Graphics
                 
                 var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
                 
-                cameraScope.Render(tileIndex, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, targets[tileIndex]);
+                cameraScope.Render(targets[tileIndex], asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
@@ -318,17 +310,14 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         static void RenderTile(
-            int nodeID, 
             RenderTexture target, 
             Camera camera, 
-            ClusterRenderer.UserPreCameraRenderDataOverride userPreCameraRenderDataOverride,
             ref TileProjectionContext tileProjectionContext, 
             List<BlitCommand> commands)
         {
             using var cameraScope = CameraScopeFactory.Create(
                 camera, 
-                RenderFeature.AsymmetricProjectionAndScreenCoordOverride,
-                userPreCameraRenderDataOverride);
+                RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
             
             var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
 
@@ -338,7 +327,7 @@ namespace Unity.ClusterDisplay.Graphics
                 
             var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
-            cameraScope.Render(nodeID, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias, target);
+            cameraScope.Render(target, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
 
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
         }
