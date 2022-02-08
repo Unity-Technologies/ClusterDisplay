@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
 
+[PopupItem("Camera Override")]
+[CreateAssetMenu(fileName = "CameraOverride", menuName = "Cluster Display/Camera Override Projection")]
 class CameraOverrideProjection : ProjectionPolicy
 {
     [Flags]
@@ -40,18 +42,6 @@ class CameraOverrideProjection : ProjectionPolicy
         set => m_ProjectionMatrix = value;
     }
 
-    public RenderFeature RenderFeature
-    {
-        get => m_RenderFeature;
-        set => m_RenderFeature = value;
-    }
-
-    public Vector2Int ScreenResolution
-    {
-        get => m_ScreenResolution;
-        set => m_ScreenResolution = value;
-    }
-
     [SerializeField]
     OverrideProperty m_Overrides;
     
@@ -64,40 +54,34 @@ class CameraOverrideProjection : ProjectionPolicy
     [SerializeField]
     Matrix4x4 m_ProjectionMatrix;
     
-    [SerializeField]
-    RenderFeature m_RenderFeature = RenderFeature.AsymmetricProjection;
-    
-    [SerializeField]
-    Vector2Int m_ScreenResolution;
-
     RenderTexture m_RenderTarget;
     BlitCommand m_BlitCommand;
     
     public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
     {
-        using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature))
+        var displaySize = new Vector2Int(Screen.width, Screen.height);
+        var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
+
+        GraphicsUtil.AllocateIfNeeded(ref m_RenderTarget, overscannedSize.x, overscannedSize.y);
+
+        var postEffectsParams = new PostEffectsParams(displaySize);
+        var viewport = new Viewport(new Vector2Int(1, 1), displaySize, Vector2.zero, clusterSettings.OverScanInPixels);
+        var subsection = viewport.GetSubsectionWithOverscan(0);
+        
+        using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride))
         {
-            cameraScope.Render(m_RenderTarget, 
-                projection: m_Overrides.HasFlag(OverrideProperty.ProjectionMatrix) ? m_ProjectionMatrix : null,
+            cameraScope.Render(m_RenderTarget,
+                screenSizeOverride: postEffectsParams.GetScreenSizeOverride(),
+                screenCoordScaleBias: PostEffectsParams.GetScreenCoordScaleBias(subsection),
+                projection: m_Overrides.HasFlag(OverrideProperty.ProjectionMatrix) ? m_ProjectionMatrix.GetFrustumSlice(subsection) : null,
                 position: m_Overrides.HasFlag(OverrideProperty.Position) ? m_Position : null,
                 rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
-        }
-        
-        var overscannedSize = ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
-
-        if (!GraphicsUtil.AllocateIfNeeded(
-            ref m_RenderTarget,
-            overscannedSize.x,
-            overscannedSize.y))
-        {
-            Debug.LogError("Unable to allocate render target");
-            return;
         }
         
         m_BlitCommand = new BlitCommand(
             m_RenderTarget,
             new BlitParams(
-                    ScreenResolution,
+                    displaySize,
                     clusterSettings.OverScanInPixels, Vector2.zero)
                 .ScaleBias,
             GraphicsUtil.k_IdentityScaleBias);
@@ -111,5 +95,14 @@ class CameraOverrideProjection : ProjectionPolicy
         }
 
         GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
+    }
+
+    void OnDisable()
+    {
+        GraphicsUtil.DeallocateIfNeeded(ref m_RenderTarget);
+            
+        // Used only on Legacy when supported.
+        // For SRP we use additional camera data.
+        GraphicsUtil.SetShaderKeyword(false);
     }
 }
