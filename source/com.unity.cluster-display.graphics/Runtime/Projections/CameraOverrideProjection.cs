@@ -1,8 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 [PopupItem("Camera Override")]
 [CreateAssetMenu(fileName = "CameraOverride", menuName = "Cluster Display/Camera Override Projection")]
@@ -89,20 +88,12 @@ class CameraOverrideProjection : ProjectionPolicy
 
     public override void Present(PresentArgs args)
     {
-        if (m_BlitCommand.texture == null)
-        {
-            return;
-        }
-
+        Assert.IsNotNull(m_BlitCommand.texture);
         GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
     }
 
     void OnDisable()
     {
         GraphicsUtil.DeallocateIfNeeded(ref m_RenderTarget);
-            
-        // Used only on Legacy when supported.
-        // For SRP we use additional camera data.
-        GraphicsUtil.SetShaderKeyword(false);
     }
 }

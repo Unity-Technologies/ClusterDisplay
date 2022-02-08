@@ -56,6 +56,11 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDisable()
         {
             ClearPreviews();
+            foreach (var rt in m_RenderTargets.Values)
+            {
+                rt.Release();
+            }
+            m_RenderTargets.Clear();
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
