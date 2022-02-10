@@ -113,7 +113,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            // TODO Needed?
+            if (Application.isPlaying && ProjectionPolicy != null)
+            {
+                ProjectionPolicy.ApplyCmdLineSettings();
+            }
+            
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif

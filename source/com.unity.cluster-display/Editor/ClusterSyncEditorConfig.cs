@@ -6,31 +6,13 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    [AttributeUsage(AttributeTargets.Field)]
-    public class ClusterSyncEditorConfigField : Attribute {}
-
     [CreateAssetMenu(fileName = "ClusterSyncEditorConfig", menuName = "Cluster Display/Cluster Sync Editor Config", order = 1)]
     [InitializeOnLoad]
     [Serializable]
-    public class ClusterSyncEditorConfig : SingletonScriptableObject<ClusterSyncEditorConfig>
+    class ClusterSyncEditorConfig : SingletonScriptableObject<ClusterSyncEditorConfig>
     {
         static ClusterSyncEditorConfig ()
         {
-            CommandLineParser.onPollArguments += (List<string> m_Arguments) =>
-            {
-                if (!TryGetInstance(out var editorConfig))
-                {
-                    return;
-                }
-
-                if (EditorApplication.isPlayingOrWillChangePlaymode && editorConfig.m_IgnoreEditorCmdLine)
-                {
-                    m_Arguments.AddRange(ClusterDisplayState.IsEmitter
-                        ? editorConfig.m_EditorInstanceEmitterCmdLine.Split(' ')
-                        : editorConfig.m_EditorInstanceRepeaterCmdLine.Split(' '));
-                }
-            };
-
             // Grab command line args related to cluster config
             ClusterSync.onPreEnableClusterDisplay += () =>
             {
@@ -47,10 +29,9 @@ namespace Unity.ClusterDisplay
 
                     CommandLineParser.OverrideArguments(editorInstanceCmdLine.Split(' ').ToList()); 
                 }
-
-                if (editorConfig.m_UseTargetFramerate)
-                    Application.targetFrameRate = editorConfig.m_TargetFrameRate;
             };
+
+            ClusterSync.onDisableCLusterDisplay += () => CommandLineParser.OverrideArguments(new List<string>());
         }
 
         [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
