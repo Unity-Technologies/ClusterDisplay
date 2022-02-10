@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                         {
                             if (header.MessageType == EMessageType.HelloEmitter)
                             {
-                                var roleInfo = IBlittable<RolePublication>.FromByteArray(payload, header.OffsetToPayload);
+                                var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
 
                                 RegisterRemoteNode(header, roleInfo);
                                 SendResponse(header);

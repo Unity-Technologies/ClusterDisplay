@@ -357,7 +357,7 @@ namespace Unity.ClusterDisplay
         {
             var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
 
-            var header = IBlittable<MessageHeader>.FromByteArray(receiveBytes, 0);
+            var header = receiveBytes.LoadStruct<MessageHeader>();
             if (header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
             {
                 ClusterDebug.Log($"(Sequence ID: {header.SequenceID}): Received message of type: {header.MessageType}");

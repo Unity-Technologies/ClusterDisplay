@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay
 
     internal static class NetworkingHelpers
     {
-        public static byte[] AllocateMessageWithPayload<T>() where T : struct
+        public static byte[] AllocateMessageWithPayload<T>() where T : unmanaged
         {
             return new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<T>()];
         }
@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay
                 return Marshal.PtrToStructure<T>((IntPtr)(ptr + offset));
         }
 
-        public unsafe static void StructToBytes<T>(byte[] dest, int offset, ref T s) where T : struct
+        public unsafe static void StructToBytes<T>(byte[] dest, int offset, ref T s) where T : unmanaged
         {
             fixed (byte* ptr = dest)
                 UnsafeUtility.MemCpy(
@@ -81,31 +81,29 @@ namespace Unity.ClusterDisplay
             return Marshal.PtrToStructure<T>((IntPtr)ptr);
         }
 
-        public unsafe static void StructToBytes<T>(NativeArray<byte> dest, int offset, ref T s) where T : struct
+        public unsafe static void StructToBytes<T>(NativeArray<byte> dest, int offset, ref T s) where T : unmanaged
         {
                 UnsafeUtility.MemCpy(
                     (byte*)dest.GetUnsafePtr() + offset, 
                     UnsafeUtility.AddressOf(ref s), 
                     Marshal.SizeOf<T>());
         }
-    }
-
-    // Generic interface for defining a NetworkMessage.
-    internal interface IBlittable<T> where T : unmanaged
-    {
-        void StoreInBuffer(NativeArray<byte> dest, int offset);
-
-        public static T FromByteArray(NativeArray<byte> arr, int offset) =>
-            NetworkingHelpers.BytesToStruct<T>(arr, offset);
         
-        void StoreInBuffer(byte[] dest, int offset);
-
-        public static T FromByteArray(byte[] arr, int offset) =>
-            NetworkingHelpers.BytesToStruct<T>(arr, offset);
+        public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset)
+            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
+      
+        public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset)
+            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
+        
+        public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
+            BytesToStruct<T>(arr, offset);
+        
+        public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
+            BytesToStruct<T>(arr, offset);
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct MessageHeader : IBlittable<MessageHeader>
+    internal struct MessageHeader
     {
         [Flags]
         public enum EFlag
@@ -156,28 +154,16 @@ namespace Unity.ClusterDisplay
 
             return arr;
         }
-
-        public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-
-        public void StoreInBuffer(byte[] dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct EmitterLastFrameData : IBlittable<EmitterLastFrameData>
+    internal struct EmitterLastFrameData
     {
         public UInt64 FrameNumber;
-
-        public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-        
-        public void StoreInBuffer(byte[] dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
     }
     
     [StructLayout(LayoutKind.Sequential)]
-    internal struct RolePublication : IBlittable<RolePublication>
+    internal struct RolePublication
     {
         private byte m_NodeRole; // see ENodeRole
         public ENodeRole NodeRole
@@ -185,23 +171,11 @@ namespace Unity.ClusterDisplay
             get => (ENodeRole)m_NodeRole;
             set => m_NodeRole = (byte)value;
         }
-
-        public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-        
-        public void StoreInBuffer(byte[] dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct RepeaterEnteredNextFrame : IBlittable<RepeaterEnteredNextFrame>
+    internal struct RepeaterEnteredNextFrame
     {
         public UInt64 FrameNumber;
-
-        public void StoreInBuffer(NativeArray<byte> dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
-        
-        public void StoreInBuffer(byte[] dest, int offset) =>
-            NetworkingHelpers.StructToBytes(dest, offset, ref this);
     }
 }

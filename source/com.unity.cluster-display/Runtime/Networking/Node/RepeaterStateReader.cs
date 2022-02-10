@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay
                 using (m_MarkerReceivedGoFromEmitter.Auto())
                 {
                     m_NetworkingOverhead.SampleNow();
-                    var respMsg = IBlittable<EmitterLastFrameData>.FromByteArray(outBuffer, msgHdr.OffsetToPayload);
+                    var respMsg = outBuffer.LoadStruct<EmitterLastFrameData>(msgHdr.OffsetToPayload);
 
                     // The emitter is on the next frame, so were matching against the previous frame.
                     if (respMsg.FrameNumber != currentFrameID)
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 // Read the state from the server
-                var msgHdr = IBlittable<MessageHeader>.FromByteArray(m_MsgFromEmitter, 0);
+                var msgHdr = m_MsgFromEmitter.LoadStruct<MessageHeader>();
 
                 // restore states
                 unsafe
