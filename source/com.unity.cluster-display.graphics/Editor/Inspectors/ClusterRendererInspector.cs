@@ -2,9 +2,6 @@
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
-#if CLUSTER_DISPLAY_URP
-using UnityEngine.Rendering.Universal;
-#endif
 using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
@@ -15,7 +12,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
         const string k_NoPolicyMessage = "No projection policy assigned. You can create a new Projection Policy using the \"Create/Cluster Display\" menu.";
-        const string k_UrpAssetDoesNotSupportScreenCoordOverride = "Universal Render Pipeline asset does not use Screen Coordinates Override. You can fix this by selecting the \"Screen Coordinates Override\" checkbox in the \"Post-processing\" section.";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
@@ -36,11 +32,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
 #if CLUSTER_DISPLAY_URP
             RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
-
-            if (UniversalRenderPipeline.asset is not { useScreenCoordOverride: true })
-            {
-                EditorGUILayout.HelpBox(k_UrpAssetDoesNotSupportScreenCoordOverride, MessageType.Warning);
-            }
 #endif
             CheckForClusterCameraComponents();
 
