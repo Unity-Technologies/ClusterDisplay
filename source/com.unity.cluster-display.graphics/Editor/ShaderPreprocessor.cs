@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
-    public class ShaderPreprocessor : IPreprocessShaders
+    class ShaderPreprocessor : IPreprocessShaders
     {
         public int callbackOrder => 0;
 
