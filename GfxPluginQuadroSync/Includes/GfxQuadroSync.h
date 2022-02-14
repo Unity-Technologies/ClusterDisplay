@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Unity/IUnityGraphics.h"
+#include "../Unity/IUnityGraphics.h"
 
 namespace GfxQuadroSync {
 
@@ -25,7 +25,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   Automatically called and used when the system is initialized or destroyed.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    eventType      Either specify that the Device has been initialized or destroyed.
 	///////////////////////////////////////////////////////////////////////////////
@@ -41,7 +41,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   Called from C# to use a specific Quadro Sync functionality.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    eventID      EQuadroSyncRenderEvent corresponding to the event.
 	//! \param [in]    data         Buffer containing the data related to the event.
@@ -58,7 +58,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   Use it internally, before calling any other functions related to NvAPI.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \retval ::true          The context is valid (D3D11 Device and the SwapChain)
 	//! \retval ::false         The context is invalid (either the D3D11 Device or/and the SwapChain)
@@ -77,7 +77,7 @@ namespace GfxQuadroSync {
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime to
 	//                 retrieve the actual frame count.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    value      Storage that will contain the frame count.
 	///////////////////////////////////////////////////////////////////////////////
@@ -94,7 +94,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime as a toggle.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	///////////////////////////////////////////////////////////////////////////////
 	void QuadroSyncResetFrameCount();
@@ -110,7 +110,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   At the start of the program, after NvAPI_Initialize function.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	///////////////////////////////////////////////////////////////////////////////
 	void QuadroSyncInitialize();
@@ -126,7 +126,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   At the end of the program.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	///////////////////////////////////////////////////////////////////////////////
 	void QuadroSyncDispose();
@@ -141,7 +141,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime as a toggle.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    value      Value that corresponds to the activation or not.
 	///////////////////////////////////////////////////////////////////////////////
@@ -157,7 +157,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime as a toggle.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    value      Value that corresponds to the activation or not.
 	//
@@ -174,7 +174,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime as a toggle.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    value      Value that corresponds to the activation or not.
 	//
@@ -191,7 +191,7 @@ namespace GfxQuadroSync {
 	//!
 	//! WHEN TO USE:   After the system has been initialized, use it in runtime as a toggle.
 	//!
-	//  SUPPORTED GFX: Direct3D 11
+	//  SUPPORTED GFX: D3D11 & D3D12
 	//!
 	//! \param [in]    value      Value that corresponds to the activation or not.
 	//

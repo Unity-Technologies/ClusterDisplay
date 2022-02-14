@@ -3,33 +3,13 @@
 #include <fstream>
 
 #include "d3d11.h"
-#include "dxgi.h"
+#include "d3d12.h"
 
-#include "D3D11QuadroSync.h"
+#include "QuadroSync.h"
+#include "PluginUtils.h"
 
 namespace GfxQuadroSync
 {
-
-#ifdef DEBUG_LOG_QUADRO_SYNC
-	void PluginCSwapGroupClient::WriteFileDebug(const char* const message,
-		const bool append)
-	{
-		std::ofstream myfile;
-
-		if (append)
-		{
-			myfile.open("C:/NVIDIA_QuadroSync_DebugFile.txt", std::ios_base::app | std::ios_base::out);
-		}
-		else
-		{
-			myfile.open("C:/NVIDIA_QuadroSync_DebugFile.txt");
-		}
-
-		myfile << message;
-		myfile.close();
-	}
-#endif
-
 	PluginCSwapGroupClient::PluginCSwapGroupClient()
 		: m_GroupId(1)
 		, m_BarrierId(1)
@@ -40,18 +20,13 @@ namespace GfxQuadroSync
 		, m_GSyncCounter(false)
 		, m_IsActive(false)
 	{
-#ifdef DEBUG_LOG_QUADRO_SYNC
-		WriteFileDebug("---- Initialize File ----\n", false);
-#endif
+		WriteFileDebug("* Info: Initialize PluginCSwapGroupClient\n", false);
 		Prepare();
 	}
 
 	PluginCSwapGroupClient::~PluginCSwapGroupClient()
 	{
-#ifdef DEBUG_LOG_QUADRO_SYNC
-		WriteFileDebug("---- Destroy File ----\n");
-		CloseHandle(m_fileDebug);
-#endif
+		WriteFileDebug("* Info: Destroy PluginCSwapGroupClient\n");
 	}
 
 	void PluginCSwapGroupClient::Prepare()
@@ -59,7 +34,6 @@ namespace GfxQuadroSync
 		// Prepare NVAPI for use in this application
 		NvAPI_Status status = NvAPI_Initialize();
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 		if (status != NVAPI_OK)
 		{
 			NvAPI_ShortString errorMessage;
@@ -69,7 +43,6 @@ namespace GfxQuadroSync
 		}
 		else
 			WriteFileDebug("* Success: NvAPI_Initialize\n");
-#endif
 	}
 
 	void PluginCSwapGroupClient::SetupWorkStation()
@@ -85,12 +58,10 @@ namespace GfxQuadroSync
 				// send request to enable NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP
 				status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[iGpu], NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP, 0);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
 					WriteFileDebug("* Success: NvAPI_GPU_WorkstationFeatureSetup\n");
 				else
 					WriteFileDebug("* Failed: NvAPI_GPU_WorkstationFeatureSetup\n");
-#endif
 			}
 		}
 	}
@@ -109,43 +80,32 @@ namespace GfxQuadroSync
 				// send request to disable NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP
 				status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[iGpu], 0, NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
 					WriteFileDebug("* Success: NvAPI_GPU_WorkstationFeatureSetup\n");
 				else
 					WriteFileDebug("* Failed: NvAPI_GPU_WorkstationFeatureSetup\n");
-#endif
 			}
 		}
 	}
 
-	// "DXGIFlipModel"::"iflipmode", check the sample! Either should works! (fullscreen / iflipmode, use the second abap)
-	// "configure driver" (diagnostics)
-	// Multi ways to drive multiple displays (check with Patrick)
-	// ("Mosaique mode") --> ("D3D12")
-
-	// Send documentation + code !
-
-	bool PluginCSwapGroupClient::Initialize(ID3D11Device* const pDevice,
-		IDXGISwapChain* const pSwapChain)
+	bool PluginCSwapGroupClient::Initialize(IUnknown* const pDevice,
+											IDXGISwapChain* const pSwapChain)
 	{
 		auto status = NVAPI_OK;
 
 		status = NvAPI_D3D1x_QueryMaxSwapGroup(pDevice, &m_GSyncSwapGroups, &m_GSyncBarriers);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 		if (status == NvAPI_Status::NVAPI_OK)
 			WriteFileDebug("* Success: NvAPI_D3D1x_QueryMaxSwapGroup\n");
 		else
 			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup\n");
-#endif
 
 		if (m_GSyncSwapGroups > 0)
 		{
 			if ((m_GroupId >= 0) && (m_GroupId <= m_GSyncSwapGroups))
 			{
 				status = NvAPI_D3D1x_JoinSwapGroup(pDevice, pSwapChain, m_GroupId, m_GroupId > 0 ? true : false);
-#ifdef DEBUG_LOG_QUADRO_SYNC
+				
 				if (status == NvAPI_Status::NVAPI_OK)
 				{
 					WriteFileDebug("* Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
@@ -163,6 +123,7 @@ namespace GfxQuadroSync
 					WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
 				}
 
+#ifdef _DEBUG
 				std::ostringstream oss;
 				oss << "SwapGroup (" << m_GroupId << ") / (" << m_GSyncSwapGroups << ")\n";
 				std::string var = oss.str();
@@ -195,7 +156,6 @@ namespace GfxQuadroSync
 				{
 					status = NvAPI_D3D1x_BindSwapBarrier(pDevice, m_GroupId, m_BarrierId);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 					if (status == NvAPI_Status::NVAPI_OK)
 					{
 						WriteFileDebug("* Success: NvAPI_D3D1x_BindSwapBarrier\n");
@@ -212,7 +172,7 @@ namespace GfxQuadroSync
 					{
 						WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
 					}
-#endif
+
 					if (status != NVAPI_OK)
 					{
 						return false;
@@ -221,14 +181,12 @@ namespace GfxQuadroSync
 			}
 			else if (m_BarrierId > 0)
 			{
-#ifdef DEBUG_LOG_QUADRO_SYNC
 				WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0 barriers\n");
-#endif
 				m_BarrierId = 0;
 				return false;
 			}
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
+#ifdef _DEBUG
 			std::ostringstream oss;
 			oss << "BindSwapBarrier (" << m_BarrierId << ") / (" << m_GSyncBarriers << ")\n";
 			std::string var = oss.str();
@@ -237,33 +195,27 @@ namespace GfxQuadroSync
 
 			status = NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &m_GroupId, &m_BarrierId);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			if (status == NvAPI_Status::NVAPI_OK)
 				WriteFileDebug("* Success: NvAPI_D3D1x_QuerySwapGroup\n");
 			else
 				WriteFileDebug("* Failed: NvAPI_D3D1x_QuerySwapGroup\n");
-#endif
 		}
 		else if (m_GroupId > 0)
 		{
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
-#endif
 			m_GroupId = 0;
 			return false;
 		}
 		else
 		{
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			WriteFileDebug("* Failed: NvAPI_D3D1x_QueryMaxSwapGroup returned 0\n");
-#endif
 		}
 
 		return (status == NVAPI_OK);
 	}
 
-	void PluginCSwapGroupClient::Dispose(ID3D11Device* const pDevice,
-		IDXGISwapChain* const pSwapChain)
+	void PluginCSwapGroupClient::Dispose(IUnknown* const pDevice,
+										 IDXGISwapChain* const pSwapChain)
 	{
 		NvAPI_Status status;
 		if (m_GroupId > 0)
@@ -283,8 +235,7 @@ namespace GfxQuadroSync
 		}
 	}
 
-	// Leave it more than take it:p 
-	NvU32 PluginCSwapGroupClient::QueryFrameCount(ID3D11Device* const pDevice)
+	NvU32 PluginCSwapGroupClient::QueryFrameCount(IUnknown* const pDevice)
 	{
 		NvU32 count = 0;
 
@@ -304,8 +255,7 @@ namespace GfxQuadroSync
 		return m_FrameCount;
 	}
 
-	// Same
-	void PluginCSwapGroupClient::ResetFrameCount(ID3D11Device* const pDevice)
+	void PluginCSwapGroupClient::ResetFrameCount(IUnknown* const pDevice)
 	{
 		if (m_GSyncMaster)
 		{
@@ -318,7 +268,7 @@ namespace GfxQuadroSync
 		}
 	}
 
-	bool PluginCSwapGroupClient::Render(ID3D11Device* const pDevice,
+	bool PluginCSwapGroupClient::Render(IUnknown* const pDevice,
 		IDXGISwapChain* const pSwapChain,
 		const int pVsync,
 		const int pFlags)
@@ -329,13 +279,12 @@ namespace GfxQuadroSync
 		{
 			return true;
 		}
-#ifdef DEBUG_LOG_QUADRO_SYNC
+
 		WriteFileDebug("* Failed: NvAPI_D3D1x_Present\n");
-#endif
 		return false;
 	}
 
-	void PluginCSwapGroupClient::EnableSystem(ID3D11Device* const pDevice,
+	void PluginCSwapGroupClient::EnableSystem(IUnknown* const pDevice,
 		IDXGISwapChain* const pSwapChain,
 		const bool value)
 	{
@@ -344,27 +293,20 @@ namespace GfxQuadroSync
 		EnableSwapBarrier(pDevice, value);
 	}
 
-	// (1) Try to leave first the barrier then the group
-
-	//!!! (2) Call the NvAPI_GetErrorMessage();
-
-	void PluginCSwapGroupClient::EnableSwapGroup(ID3D11Device* const pDevice,
-		IDXGISwapChain* const pSwapChain,
-		const bool value)
+	void PluginCSwapGroupClient::EnableSwapGroup(IUnknown* const pDevice,
+												 IDXGISwapChain* const pSwapChain,
+												 const bool value)
 	{
-#ifdef DEBUG_LOG_QUADRO_SYNC
 		if (value)
 			WriteFileDebug("EnableSwapGroup: (true), newSwapGroup ID is 1\n");
 		else
 			WriteFileDebug("EnableSwapGroup: (false), newSwapGroup ID is 0\n");
-#endif
 
 		const NvU32 newSwapGroup = (value) ? 1 : 0;
 		if ((newSwapGroup != m_GroupId) && (newSwapGroup <= m_GSyncSwapGroups))
 		{
 			const auto status = NvAPI_D3D1x_JoinSwapGroup(pDevice, pSwapChain, newSwapGroup, (newSwapGroup > 0));
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			if (status == NvAPI_Status::NVAPI_OK)
 			{
 				WriteFileDebug("* Success: NvAPI_D3D1x_JoinSwapGroup, NVAPI_OK\n");
@@ -374,6 +316,7 @@ namespace GfxQuadroSync
 				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_ERROR\n");
 				WriteFileDebug("Values before Query:\n");
 
+#ifdef _DEBUG
 				std::ostringstream ossBefore;
 				ossBefore << "m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")\n";
 				std::string var = ossBefore.str();
@@ -386,6 +329,7 @@ namespace GfxQuadroSync
 				oss << "m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")\n";
 				var = oss.str();
 				WriteFileDebug(var.c_str());
+#endif
 			}
 			else if (NVAPI_INVALID_ARGUMENT)
 			{
@@ -395,7 +339,6 @@ namespace GfxQuadroSync
 			{
 				WriteFileDebug("* Failed: NvAPI_D3D1x_JoinSwapGroup, NVAPI_API_NOT_INITIALIZED\n");
 			}
-#endif
 
 			if (status == NVAPI_OK)
 			{
@@ -404,24 +347,20 @@ namespace GfxQuadroSync
 		}
 	}
 
-	void PluginCSwapGroupClient::EnableSwapBarrier(ID3D11Device* const pDevice,
-		const bool value)
+	void PluginCSwapGroupClient::EnableSwapBarrier(IUnknown* const pDevice, const bool value)
 	{
 		if (m_GroupId == 1)
 		{
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			if (value)
 				WriteFileDebug("EnableSwapBarrier: (true), newSwapBarrier ID is 1\n");
 			else
 				WriteFileDebug("EnableSwapBarrier: (false), newSwapBarrier ID is 0\n");
-#endif
 
 			const NvU32 newSwapBarrier = (value) ? 1 : 0;
 			if ((newSwapBarrier != m_BarrierId) && (newSwapBarrier <= m_GSyncBarriers))
 			{
 				const auto status = NvAPI_D3D1x_BindSwapBarrier(pDevice, m_GroupId, newSwapBarrier);
 
-#ifdef DEBUG_LOG_QUADRO_SYNC
 				if (status == NvAPI_Status::NVAPI_OK)
 				{
 					WriteFileDebug("* Success: NvAPI_D3D1x_BindSwapBarrier, NVAPI_OK\n");
@@ -438,28 +377,22 @@ namespace GfxQuadroSync
 				{
 					WriteFileDebug("* Failed: NvAPI_D3D1x_BindSwapBarrier, NVAPI_API_NOT_INITIALIZED\n");
 				}
-#endif
 
 				if (status == NVAPI_OK)
 				{
 					m_BarrierId = newSwapBarrier;
 				}
 			}
-#ifdef DEBUG_LOG_QUADRO_SYNC
 			WriteFileDebug("EnableSwapBarrier: already set, nothing has been called\n");
-#endif
 		}
-#ifdef DEBUG_LOG_QUADRO_SYNC
 		else
 		{
 			WriteFileDebug("EnableSwapBarrier: (NULL), m_GroupId is diffent than 1\n");
 		}
-#endif
 	}
 
 	void PluginCSwapGroupClient::EnableSyncCounter(const bool value)
 	{
 		m_GSyncCounter = value;
 	}
-
 }
