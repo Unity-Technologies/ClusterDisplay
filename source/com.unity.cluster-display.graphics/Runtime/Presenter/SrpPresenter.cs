@@ -23,23 +23,25 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
             RenderPresent(context, cmd, backBuffer, m_Camera.pixelRect);
+            
+            GraphicsUtil.ExecuteCaptureIfNeeded(cmd, m_Camera, m_ClearColor, GetPresentAction(), false);
         }
 
         protected void DoPresentDelayed(ScriptableRenderContext context, RTHandle backBuffer)
         {
-            GraphicsUtil.ReAllocateIfNeeded(ref m_IntermediateTarget, backBuffer.rt.descriptor, FilterMode.Point, TextureWrapMode.Clamp);
+            RTHandlesUtil.ReAllocateIfNeeded(ref m_IntermediateTarget, backBuffer.rt.descriptor, FilterMode.Point, TextureWrapMode.Clamp);
 
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
             Blitter.BlitCameraTexture(cmd, m_IntermediateTarget, backBuffer);
 
             RenderPresent(context, cmd, m_IntermediateTarget, m_Camera.pixelRect);
+            
+            GraphicsUtil.ExecuteCaptureIfNeeded(cmd, m_Camera, m_IntermediateTarget);
         }
 
         void RenderPresent(ScriptableRenderContext context, CommandBuffer cmd, RTHandle target, Rect pixelRect)
         {
-            GraphicsUtil.ExecuteCaptureIfNeeded(m_Camera, cmd, m_ClearColor, GetPresentAction(), false);
-
             cmd.SetRenderTarget(target);
             cmd.ClearRenderTarget(true, true, m_ClearColor);
 

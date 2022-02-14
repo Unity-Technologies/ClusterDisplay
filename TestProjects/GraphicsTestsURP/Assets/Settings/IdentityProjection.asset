@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1933924b584769a45b617bf586c53a0b, type: 3}
+  m_Name: IdentityProjection
+  m_EditorClassIdentifier: 
+  m_IsDebug: 0
+  m_Settings:
+    GridSize: {x: 1, y: 1}
+    Bezel: {x: 0, y: 0}
+    PhysicalScreenSize: {x: 1600, y: 900}
+  m_DebugSettings:
+    TileIndexOverride: 0
+    UseDebugViewportSubsection: 0
+    ViewportSubsection:
+      serializedVersion: 2
+      x: 0
+      y: 0
+      width: 0.5
+      height: 0.5
+    LayoutMode: 0
+    PresentClearColor: {r: 0, g: 0, b: 0, a: 0}
+    ScaleBiasTextOffset: {x: 0, y: 0}
+    EnableKeyword: 0
