@@ -50,7 +50,11 @@ namespace Unity.ClusterDisplay.Graphics
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
-        internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
+        internal ProjectionPolicy ProjectionPolicy
+        {
+            get => m_ProjectionPolicy;
+            set => m_ProjectionPolicy = value;
+        }
 
         /// <summary>
         /// Specifies whether the current projection policy is in debug mode.

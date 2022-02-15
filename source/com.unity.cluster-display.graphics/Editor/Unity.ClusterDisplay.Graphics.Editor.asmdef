@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Unity.ClusterDisplay.Runtime",
+        "Unity.ClusterDisplay.Editor",
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Universal.Editor",
