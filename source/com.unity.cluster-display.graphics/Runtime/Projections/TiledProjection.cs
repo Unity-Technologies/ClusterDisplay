@@ -186,9 +186,7 @@ namespace Unity.ClusterDisplay.Graphics
             };
 
             // Allocate tiles targets.
-            var isStitcher =
-                m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher ||
-                Application.isEditor && !Application.isPlaying && !m_IsDebug;
+            var isStitcher = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
             var numTargets = isStitcher ? renderContext.NumTiles : 1;
 
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,

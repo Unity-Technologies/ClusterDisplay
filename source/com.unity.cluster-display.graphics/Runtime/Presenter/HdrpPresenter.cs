@@ -1,7 +1,6 @@
 ﻿#if CLUSTER_DISPLAY_HDRP
 using System;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
@@ -9,7 +8,9 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class HdrpPresenter : SrpPresenter, IPresenter
     {
-        public event Action<PresentArgs> Present = delegate {};
+        static RTHandle k_CameraTarget = RTHandles.Alloc(BuiltinRenderTextureType.CameraTarget);
+
+        public event Action<PresentArgs> Present = delegate { };
 
         bool m_Delayed;
         HDAdditionalCameraData m_AdditionalCameraData;
@@ -20,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public Camera Camera => m_Camera;
-        
+
         protected override Action<PresentArgs> GetPresentAction() => Present;
 
         public override void Disable()
@@ -35,7 +36,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 m_AdditionalCameraData.customRender -= OnCustomRender;
             }
-            
+
             base.Disable();
         }
 
@@ -47,10 +48,11 @@ namespace Unity.ClusterDisplay.Graphics
             // But it makes lifecycle management more difficult in edit mode as well as debugging.
             // We consider that making components Not Editable is enough to communicate our intent to users.
             m_Camera = gameObject.GetOrAddComponent<Camera>();
+
             // We use the camera to blit to screen.
             m_Camera.targetTexture = null;
             m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
-            
+
             m_AdditionalCameraData = gameObject.GetOrAddComponent<HDAdditionalCameraData>();
             m_AdditionalCameraData.flipYMode = HDAdditionalCameraData.FlipYMode.ForceFlipY;
 
@@ -59,7 +61,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_AdditionalCameraData.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
 
             m_Delayed = delayByOneFrame;
-            
+
             if (m_Delayed)
             {
                 m_AdditionalCameraData.customRender += OnCustomRenderDelayed;
@@ -69,12 +71,10 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData.customRender += OnCustomRender;
             }
         }
+        
+        void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera) => DoPresent(context, k_CameraTarget);
 
-        RTHandle GetBackBuffer() => m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
-        
-        void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera) => DoPresent(context, GetBackBuffer());
-        
-        void OnCustomRenderDelayed(ScriptableRenderContext context, HDCamera hdCamera) => DoPresentDelayed(context, GetBackBuffer());
+        void OnCustomRenderDelayed(ScriptableRenderContext context, HDCamera hdCamera) => DoPresentDelayed(context, k_CameraTarget);
     }
 }
 #endif
