@@ -2,12 +2,17 @@
 *.swp
 *.csproj
 .DS_Store
-TestProjects/*/obj
+.idea/
+bin/
+obj/
 TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
 TestProjects/*/UserSettings
-TestProjects/*/.idea
+
+# Exceptions for actual .net projects
+!MissionControl/**/*.sln
+!MissionControl/**/*.csproj
 
 # Our graphics tests generate reference images on the fly.
 TestProjects/GraphicsTestsURP/Assets/ActualImages
