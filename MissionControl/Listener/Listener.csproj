@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <AssemblyName>ClusterListener</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Win32.Registry" Version="6.0.0-preview.5.21301.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Editor\MissionControl\Common\BufferExtensions.cs">
+        <Link>Common\BufferExtensions.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\CommandListener.cs">
+        <Link>Common\CommandListener.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\Constants.cs">
+        <Link>Common\Constants.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\DirectorySyncInfo.cs">
+        <Link>Common\DirectorySyncInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\FolderUtils.cs">
+        <Link>Common\FolderUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\LaunchInfo.cs">
+        <Link>Common\LaunchInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\MessageBufferExtensions.cs">
+        <Link>Common\MessageBufferExtensions.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\MessageHeader.cs">
+        <Link>Common\MessageHeader.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\NetworkUtils.cs">
+        <Link>Common\NetworkUtils.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\NodeInfo.cs">
+        <Link>Common\NodeInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\PlayerInfo.cs">
+        <Link>Common\PlayerInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\Server.cs">
+        <Link>Common\Server.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\ServerInfo.cs">
+        <Link>Common\ServerInfo.cs</Link>
+      </Compile>
+      <Compile Include="..\Editor\MissionControl\Common\TaskExtensions.cs">
+        <Link>Common\TaskExtensions.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>
