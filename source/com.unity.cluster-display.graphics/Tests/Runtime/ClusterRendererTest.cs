@@ -27,9 +27,10 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_GraphicsTestSettings = FindObjectOfType<GraphicsTestSettings>();
             Assert.IsNotNull(m_GraphicsTestSettings, "Missing test settings for graphic tests.");
 
-            GraphicsTestUtil.SetGameViewSize(
+            var success = EditorBridge.SetGameViewSize(
                 m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth,
                 m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight);
+            Assert.IsTrue(success);
         }
 
         protected virtual void DisposeTest()
@@ -46,11 +47,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
-            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
-            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
+            var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
+            var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
+                
+            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
+            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
 
-            m_VanillaCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
-            m_ClusterCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
+            m_VanillaCaptureTex2D = new Texture2D(width, height);
+            m_ClusterCaptureTex2D = new Texture2D(width, height);
 
             // First we render "vanilla", that is, without Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(false);
@@ -58,22 +62,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_Camera.gameObject.SetActive(true);
             m_Camera.enabled = true;
 
-            using (new CameraCapture(m_Camera, m_VanillaCapture))
-            {
-                // Let a capture of the vanilla output happen.
-                yield return new WaitForEndOfFrame();
-            }
-
+            yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
+            
             // Then we activate Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(true);
 
             Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
 
-            using (new CameraCapture(m_ClusterRenderer.PresentCamera, m_ClusterCapture))
-            {
-                // Let a capture of the stitched output happen.
-                yield return new WaitForEndOfFrame();
-            }
+            yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCapture);
 
             m_ClusterRenderer.gameObject.SetActive(false);
         }
@@ -91,13 +87,16 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
+            
+            var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
+            var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
 
-            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
-            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, m_Camera.pixelWidth, m_Camera.pixelHeight);
+            GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture,  width, height);
+            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
 
-            m_VanillaCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
-            m_VanillaCapture2Tex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
-            m_ClusterCaptureTex2D = new Texture2D(m_Camera.pixelWidth, m_Camera.pixelHeight);
+            m_VanillaCaptureTex2D = new Texture2D(width, height);
+            m_VanillaCapture2Tex2D = new Texture2D(width, height);
+            m_ClusterCaptureTex2D = new Texture2D(width, height);
 
             // First we render "vanilla", that is, without Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(false);
@@ -105,22 +104,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_Camera.gameObject.SetActive(true);
             m_Camera.enabled = true;
 
-            using (new CameraCapture(m_Camera, m_VanillaCapture))
-            {
-                // Let a capture of the vanilla output happen.
-                yield return new WaitForEndOfFrame();
-            }
+            yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
 
             // Then we activate Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(true);
 
             Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
 
-            using (new CameraCapture(m_ClusterRenderer.PresentCamera, m_ClusterCapture))
-            {
-                // Let a capture of the stitched output happen.
-                yield return new WaitForEndOfFrame();
-            }
+            yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCapture);
 
             // We expect vanilla and cluster output to be different.
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
@@ -132,11 +123,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             // We expect the output to be restored to what it was before Cluster Display was activated.
             m_ClusterRenderer.gameObject.SetActive(false);
 
-            using (new CameraCapture(m_Camera, m_VanillaCapture))
-            {
-                // Let a capture of the vanilla output happen.
-                yield return new WaitForEndOfFrame();
-            }
+            yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
 
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCapture2Tex2D);
 

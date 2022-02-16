@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
     [RequireComponent(typeof(Camera))]
     public class TestCameraCapture : MonoBehaviour
     {
-        RenderTexture m_Target;
+        /*RenderTexture m_Target;
         CameraCapture m_Capture;
 
         void OnGUI()
@@ -33,6 +33,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         {
             m_Capture.Dispose();
             GraphicsUtil.DeallocateIfNeeded(ref m_Target);
-        }
+        }*/
     }
 }

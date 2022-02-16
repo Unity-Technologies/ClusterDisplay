@@ -1,7 +1,5 @@
 ﻿using System;
-// TODO Is referencing editor code an issue?
-using Unity.ClusterDisplay.Graphics.EditorTests;
-using UnityEditor;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.TestTools.Graphics;
@@ -11,9 +9,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 {
     public static class GraphicsTestUtil
     {
-        static string k_GameViewSizeName = "Graphic Test";
         const string k_MainCameraTag = "MainCamera";
-        
+
+        public static IEnumerator DoScreenCapture(RenderTexture target)
+        {
+            yield return new WaitForEndOfFrame();
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(target);
+        }
+
         public static Camera FindUniqueMainCamera()
         {
             var cameras = Object.FindObjectsOfType<Camera>(true);
@@ -27,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             return null;
         }
-        
+
         public static void CopyToTexture2D(RenderTexture source, Texture2D dest)
         {
             Assert.IsTrue(source.width == dest.width);
@@ -38,21 +41,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             dest.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
             dest.Apply();
             RenderTexture.active = restore;
-        }
-        
-        public static void SetGameViewSize(int width, int height)
-        {
-            if (GameViewUtils.SizeExists(GameViewSizeGroupType.Standalone, k_GameViewSizeName))
-            {
-                GameViewUtils.RemoveCustomSize(GameViewSizeGroupType.Standalone, GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
-            }
-
-            GameViewUtils.AddCustomSize(
-                GameViewUtils.GameViewSizeType.FixedResolution, 
-                GameViewSizeGroupType.Standalone, 
-                width, height, k_GameViewSizeName);
-
-            GameViewUtils.SetSize(GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
         }
 
         public static void AssertImagesAreNotEqual(Texture2D texA, Texture2D TexB, ImageComparisonSettings imageComparisonSettings)
@@ -69,7 +57,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             throw new InvalidOperationException($"{nameof(AssertImagesAreNotEqual)} failed, Images were equal.");
         }
-        
+
         public static ProjectionSurface AlignSurfaceWithCameraFrustum(ProjectionSurface surface, Camera camera, float nearPlaneOffset, Transform rendererTransform)
         {
             // Evaluate surface in local camera space.
@@ -78,16 +66,16 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             var width = height * camera.aspect;
 
             var cameraLocalSurfaceTransform = Matrix4x4.TRS(
-                camera.transform.forward * distance, 
-                Quaternion.AngleAxis(180, Vector3.up), 
+                camera.transform.forward * distance,
+                Quaternion.AngleAxis(180, Vector3.up),
                 new Vector3(width, height, 0));
 
             // Convert to local renderer space.
-            var rendererLocalSurfaceTransform = 
-                rendererTransform.worldToLocalMatrix * 
-                camera.transform.localToWorldMatrix * 
+            var rendererLocalSurfaceTransform =
+                rendererTransform.worldToLocalMatrix *
+                camera.transform.localToWorldMatrix *
                 cameraLocalSurfaceTransform;
-        
+
             surface.LocalPosition = rendererLocalSurfaceTransform.GetPosition();
             surface.LocalRotation = rendererLocalSurfaceTransform.rotation;
             var lossyScale = rendererLocalSurfaceTransform.lossyScale;

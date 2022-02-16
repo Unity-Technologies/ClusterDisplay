@@ -629,7 +629,7 @@ MonoBehaviour:
   m_Settings:
     m_OverscanInPixels: 0
   m_ProjectionPolicy: {fileID: 11400000, guid: ee489c9ede9446440a157e6092ce8d38, type: 2}
-  m_DelayPresentByOneFrame: 1
+  m_DelayPresentByOneFrame: 0
 --- !u!4 &567723789
 Transform:
   m_ObjectHideFlags: 0
@@ -1280,7 +1280,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82c66bfbf130426b810785c052588613, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Amount: 2
 --- !u!1 &1060004303
 GameObject:
   m_ObjectHideFlags: 0

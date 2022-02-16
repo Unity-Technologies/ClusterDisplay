@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1933924b584769a45b617bf586c53a0b, type: 3}
   m_Name: IdentityProjection
   m_EditorClassIdentifier: 
-  m_IsDebug: 1
+  m_IsDebug: 0
   m_Settings:
-    GridSize: {x: 3, y: 1}
-    Bezel: {x: 34, y: 34}
+    GridSize: {x: 1, y: 1}
+    Bezel: {x: 0, y: 0}
     PhysicalScreenSize: {x: 1600, y: 900}
   m_DebugSettings:
     TileIndexOverride: 0
@@ -27,6 +27,6 @@ MonoBehaviour:
       width: 0.32
       height: 0.22999999
     LayoutMode: 1
-    PresentClearColor: {r: 1, g: 0, b: 0, a: 1}
+    PresentClearColor: {r: 0, g: 0, b: 0, a: 1}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 0

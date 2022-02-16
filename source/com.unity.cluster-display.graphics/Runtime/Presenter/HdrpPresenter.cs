@@ -71,10 +71,16 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData.customRender += OnCustomRender;
             }
         }
-        
-        void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera) => DoPresent(context, k_CameraTarget);
 
-        void OnCustomRenderDelayed(ScriptableRenderContext context, HDCamera hdCamera) => DoPresentDelayed(context, k_CameraTarget);
+        void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera) => DoPresent(context, k_CameraTarget, true);
+
+        void OnCustomRenderDelayed(ScriptableRenderContext context, HDCamera hdCamera)
+        {
+            var intermediateTargetDescriptor = m_AdditionalCameraData.GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color).rt.descriptor;
+            intermediateTargetDescriptor.width = m_Camera.pixelWidth;
+            intermediateTargetDescriptor.height = m_Camera.pixelHeight;
+            DoPresentDelayed(context, intermediateTargetDescriptor, k_CameraTarget, true);
+        }
     }
 }
 #endif

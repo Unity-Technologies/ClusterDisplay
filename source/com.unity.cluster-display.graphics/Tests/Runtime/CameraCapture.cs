@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {
-    public class CameraCapture : IDisposable
+    /*public class CameraCapture : IDisposable
     {
         Camera m_Camera;
         RenderTexture m_Target;
@@ -27,5 +27,5 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         {
             cmd.Blit(source, m_Target);
         }
-    }
+    }*/
 }

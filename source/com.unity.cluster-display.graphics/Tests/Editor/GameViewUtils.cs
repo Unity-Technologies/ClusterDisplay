@@ -8,17 +8,17 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
     // Set game view size. Code comes from : https://answers.unity.com/questions/956123/add-and-select-game-view-resolution.html
     public static class GameViewUtils
     {
-        static object gameViewSizesInstance;
-        static MethodInfo getGroup;
-
+        static object s_GameViewSizesInstance;
+        static MethodInfo s_GetGroup;
+        
         static GameViewUtils()
         {
             // gameViewSizesInstance  = ScriptableSingleton<GameViewSizes>.instance;
             var sizesType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameViewSizes");
             var singleType = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
             var instanceProp = singleType.GetProperty("instance");
-            getGroup = sizesType.GetMethod("GetGroup");
-            gameViewSizesInstance = instanceProp.GetValue(null, null);
+            s_GetGroup = sizesType.GetMethod("GetGroup");
+            s_GameViewSizesInstance = instanceProp.GetValue(null, null);
         }
 
         public enum GameViewSizeType
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
             // group.AddCustomSize(new GameViewSize(viewSizeType, width, height, text);
 
             var group = GetGroup(sizeGroupType);
-            var addCustomSize = getGroup.ReturnType.GetMethod("AddCustomSize"); // or group.GetType().
+            var addCustomSize = s_GetGroup.ReturnType.GetMethod("AddCustomSize"); // or group.GetType().
             var gvsType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameViewSize");
             Type gvstType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
             var ctor = gvsType.GetConstructor(new System.Type[] { gvstType, typeof(int), typeof(int), typeof(string) });
@@ -127,13 +127,13 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
 
         static object GetGroup(GameViewSizeGroupType type)
         {
-            return getGroup.Invoke(gameViewSizesInstance, new object[] { (int)type });
+            return s_GetGroup.Invoke(s_GameViewSizesInstance, new object[] { (int)type });
         }
 
         public static GameViewSizeGroupType GetCurrentGroupType()
         {
-            var getCurrentGroupTypeProp = gameViewSizesInstance.GetType().GetProperty("currentGroupType");
-            return (GameViewSizeGroupType)(int)getCurrentGroupTypeProp.GetValue(gameViewSizesInstance, null);
+            var getCurrentGroupTypeProp = s_GameViewSizesInstance.GetType().GetProperty("currentGroupType");
+            return (GameViewSizeGroupType)(int)getCurrentGroupTypeProp.GetValue(s_GameViewSizesInstance, null);
         }
     }
 }

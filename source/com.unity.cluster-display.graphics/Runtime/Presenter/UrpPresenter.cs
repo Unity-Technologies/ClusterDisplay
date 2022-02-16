@@ -26,7 +26,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_Delayed)
             {
                 InjectionPointRenderPass.ExecuteRender -= ExecuteRenderDelayed;
-                m_IntermediateTarget.Release();
             }
             else
             {
@@ -67,7 +66,7 @@ namespace Unity.ClusterDisplay.Graphics
             // The render pass gets invoked for all cameras so we need to filter.
             if (renderingData.cameraData.camera == m_Camera)
             {
-                DoPresent(context, GetBackBuffer(renderingData));
+                DoPresent(context, GetBackBuffer(renderingData), false);
             }
         }
 
@@ -76,7 +75,7 @@ namespace Unity.ClusterDisplay.Graphics
             // The render pass gets invoked for all cameras so we need to filter.
             if (renderingData.cameraData.camera == m_Camera)
             {
-                DoPresentDelayed(context, GetBackBuffer(renderingData));
+                DoPresentDelayed(context, GetBackBuffer(renderingData), false);
             }
         }
     }

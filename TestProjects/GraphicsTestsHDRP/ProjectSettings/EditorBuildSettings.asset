@@ -20,4 +20,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/CameraOverrideProjection.unity
     guid: 30e0bcb92ff18f64a8f906e02df6ecb8
+  - enabled: 1
+    path: Assets/Scenes/DelayPresentation.unity
+    guid: fd8dca5eb15bb464ba7113924cfab977
   m_configObjects: {}
