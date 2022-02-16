@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-
 #if UNITY_EDITOR
 using UnityEditor;
+
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -20,9 +20,16 @@ namespace Unity.ClusterDisplay.Graphics
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
     public class ClusterRenderer : SingletonMonoBehaviour<ClusterRenderer>
     {
-        // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
-        static int s_ActiveInstancesCount;
-        internal static bool IsActive() => s_ActiveInstancesCount > 0;
+        internal static bool IsActive()
+        {
+            if (TryGetInstance(out var instance, false))
+            {
+                return instance.isActiveAndEnabled;
+            }
+
+            return false;
+        }
+
         internal static Action Enabled = delegate { };
         internal static Action Disabled = delegate { };
 
@@ -109,9 +116,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         // TODO Why do we need to "delete" the base implementation?
-        protected override void OnAwake()
-        {
-        }
+        protected override void OnAwake() { }
 
         void OnValidate()
         {
@@ -120,15 +125,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            ++s_ActiveInstancesCount;
-
-            // TODO More elegant / user friendly way to handle this.
-            // If we stick to inheriting SingletonMonoBehaviour, this may be removed.
-            if (s_ActiveInstancesCount > 1)
-            {
-                throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
-            }
-
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
@@ -155,7 +151,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            --s_ActiveInstancesCount;
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
@@ -171,7 +166,7 @@ namespace Unity.ClusterDisplay.Graphics
         static void OnClusterDisplayUpdate()
         {
             // It may be possible that a subsystem update occurs after de-registration with the new update-loop being used next frame.
-            if (TryGetInstance(out var clusterRenderer) &&
+            if (TryGetInstance(out var clusterRenderer) && clusterRenderer.isActiveAndEnabled &&
                 ClusterCameraManager.Instance.ActiveCamera is Camera activeCamera &&
                 clusterRenderer.m_ProjectionPolicy is ProjectionPolicy projectionPolicy)
             {
