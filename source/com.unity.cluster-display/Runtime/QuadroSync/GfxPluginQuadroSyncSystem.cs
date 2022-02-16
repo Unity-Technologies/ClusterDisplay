@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor.Tests")]
+
 namespace Unity.ClusterDisplay
 {
     /// <summary>
@@ -62,7 +63,6 @@ namespace Unity.ClusterDisplay
             QuadroSyncEnableSyncCounter
         };
 
-
         internal static class GfxPluginQuadroSyncUtilities
         {
 #if UNITY_EDITOR_WIN
@@ -85,15 +85,12 @@ namespace Unity.ClusterDisplay
         {
             get { return instance; }
         }
+
         private static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
 
-        static GfxPluginQuadroSyncSystem()
-        {
-        }
+        static GfxPluginQuadroSyncSystem() { }
 
-        private GfxPluginQuadroSyncSystem()
-        {
-        }
+        private GfxPluginQuadroSyncSystem() { }
 
         /// <summary>
         /// Executes a CommandBuffer related to the EQuadroSyncRenderEvent.
@@ -107,7 +104,7 @@ namespace Unity.ClusterDisplay
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 ||
                 SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
             {
-                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int)id, data);
+                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int) id, data);
             }
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);
