@@ -2012,10 +2012,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1367105497086002162, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
-      propertyPath: ImageComparisonSettings.AverageCorrectnessThreshold
-      value: 0.002
-      objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629904, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_Name
       value: Main Camera

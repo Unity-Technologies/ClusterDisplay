@@ -46,7 +46,7 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
             projection.Rotation = cameraTransform.rotation;
             projection.ProjectionMatrix = m_Camera.projectionMatrix;
             m_Volume.profile = LoadVolumeProfile(profileName);
-        });
+        }, null, exceptionHandler);
     }
 
     [UnityTest]

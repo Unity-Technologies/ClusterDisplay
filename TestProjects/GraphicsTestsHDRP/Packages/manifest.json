@@ -15,7 +15,8 @@
     "com.unity.visualscripting": "1.7.5",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
-    "com.unity.modules.physics": "1.0.0"
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.screencapture": "1.0.0"
   },
   "testables": [
     "com.unity.testframework.graphics",
