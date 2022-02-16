@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.TestTools.Graphics;
@@ -10,9 +11,16 @@ namespace Unity.ClusterDisplay.Graphics.Tests
     public static class GraphicsTestUtil
     {
         const string k_MainCameraTag = "MainCamera";
+        static readonly string k_DirectoryPath = Path.Combine(Application.dataPath, "RenderOutput");
+
+        public static IEnumerator PreWarm()
+        {
+            yield return new WaitForEndOfFrame();
+        }
 
         public static IEnumerator DoScreenCapture(RenderTexture target)
         {
+            // IMPORTANT: ScreenCapture may grab whatever editor panel is being rendered if this yield instruction is changed!
             yield return new WaitForEndOfFrame();
             ScreenCapture.CaptureScreenshotIntoRenderTexture(target);
         }
@@ -81,6 +89,22 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             var lossyScale = rendererLocalSurfaceTransform.lossyScale;
             surface.PhysicalSize = new Vector2(lossyScale.x, lossyScale.y);
             return surface;
+        }
+
+        public static void SaveAsPNG(Texture2D texture, string fileName)
+        {
+            var bytes = texture.EncodeToPNG();
+            var filePath = Path.Combine(k_DirectoryPath, fileName + ".png");
+            if (!Directory.Exists(k_DirectoryPath))
+            {
+                Directory.CreateDirectory(k_DirectoryPath);
+            }
+
+            File.WriteAllBytes(filePath, bytes);
+
+#if UNITY_EDITOR
+            UnityEditor.AssetDatabase.Refresh();
+#endif
         }
     }
 }

@@ -14,7 +14,32 @@ namespace Unity.ClusterDisplay.Graphics
         protected bool m_Enabled;
         protected Camera m_Camera;
         protected Color m_ClearColor;
-        protected RTHandle m_IntermediateTarget;
+
+        readonly DoubleBuffer m_DoubleBuffer = new DoubleBuffer();
+
+        class DoubleBuffer
+        {
+            RTHandle m_IntermediateTargetA;
+            RTHandle m_IntermediateTargetB;
+            bool m_Toggle;
+            
+            public void ReAllocateIfNeeded(RenderTextureDescriptor descriptor)
+            {
+                RTHandlesUtil.ReAllocateIfNeeded(ref m_IntermediateTargetA, descriptor, FilterMode.Point, TextureWrapMode.Clamp);
+                RTHandlesUtil.ReAllocateIfNeeded(ref m_IntermediateTargetB, descriptor, FilterMode.Point, TextureWrapMode.Clamp);
+            }
+
+            public void Dispose()
+            {
+                m_IntermediateTargetA?.Release();
+                m_IntermediateTargetB?.Release();
+            }
+
+            public RTHandle Front => m_Toggle ? m_IntermediateTargetA : m_IntermediateTargetB;
+            public RTHandle Back => m_Toggle ? m_IntermediateTargetB : m_IntermediateTargetA;
+            
+            public void Swap() => m_Toggle = !m_Toggle;
+        }
 
         public event Action<PresentArgs> Present = delegate { };
 
@@ -45,14 +70,17 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_Enabled = false;
             Unbind(m_Delayed);
-            m_IntermediateTarget?.Release();
+            m_DoubleBuffer.Dispose();
         }
 
         protected void DoPresent(ScriptableRenderContext context, RTHandle backBuffer, bool flipY)
         {
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
-            RenderPresent(context, cmd, backBuffer, m_Camera.pixelRect, flipY);
+            RenderPresent(cmd, backBuffer, m_Camera.pixelRect, flipY);
+            
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
         }
 
         protected void DoPresentDelayed(ScriptableRenderContext context, RTHandle backBuffer, bool flipY)
@@ -60,23 +88,26 @@ namespace Unity.ClusterDisplay.Graphics
             DoPresentDelayed(context, backBuffer.rt.descriptor, backBuffer, flipY);
         }
 
-        protected void DoPresentDelayed(ScriptableRenderContext context, RenderTextureDescriptor intermediateTargetDescriptor, RTHandle backBuffer, bool flipY)
+        protected void DoPresentDelayed(ScriptableRenderContext context, RenderTextureDescriptor descriptor, RTHandle backBuffer, bool flipY)
         {
-            RTHandlesUtil.ReAllocateIfNeeded(ref m_IntermediateTarget, intermediateTargetDescriptor, FilterMode.Point, TextureWrapMode.Clamp);
-
+            m_DoubleBuffer.ReAllocateIfNeeded(descriptor);
+            
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
-            //Blitter.BlitCameraTexture(cmd, m_IntermediateTarget, backBuffer);
+            RenderPresent(cmd, m_DoubleBuffer.Back, m_Camera.pixelRect, flipY);
             CoreUtils.SetRenderTarget(cmd, backBuffer);
-            Blitter.BlitTexture(cmd, m_IntermediateTarget, new Vector4(1, 1, 0, 0), 0, false);
-            RenderPresent(context, cmd, m_IntermediateTarget, m_Camera.pixelRect, flipY);
+            Blitter.BlitTexture(cmd, m_DoubleBuffer.Front, new Vector4(1, 1, 0, 0), 0, false);
+
+            m_DoubleBuffer.Swap();
+            
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
         }
 
-        void RenderPresent(ScriptableRenderContext context, CommandBuffer cmd, RTHandle target, Rect pixelRect, bool flipY)
+        void RenderPresent(CommandBuffer cmd, RTHandle target, Rect pixelRect, bool flipY)
         {
             cmd.SetRenderTarget(target);
-            //cmd.ClearRenderTarget(true, true, m_ClearColor);
-            cmd.ClearRenderTarget(true, true, Color.HSVToRGB(Random.value, 0.5f, 0.5f));
+            cmd.ClearRenderTarget(true, true, m_ClearColor);
 
             Present.Invoke(new PresentArgs
             {
@@ -84,9 +115,6 @@ namespace Unity.ClusterDisplay.Graphics
                 FlipY = flipY,
                 CameraPixelRect = pixelRect
             });
-
-            context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
         }
 
         protected abstract void Bind(bool delayed);

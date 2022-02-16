@@ -44,6 +44,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
         protected IEnumerator RenderVanillaAndOverscan()
         {
+            yield return GraphicsTestUtil.PreWarm();
+            
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
@@ -84,6 +86,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             {
                 preRender.Invoke();
             }
+            
+            yield return GraphicsTestUtil.PreWarm();
 
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
@@ -158,6 +162,9 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
+            
+            GraphicsTestUtil.SaveAsPNG(m_VanillaCaptureTex2D, "vanilla");
+            GraphicsTestUtil.SaveAsPNG(m_ClusterCaptureTex2D, "cluster");
 
             if (exceptionHandler == null)
             {

@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1933924b584769a45b617bf586c53a0b, type: 3}
-  m_Name: IdentityProjection
+  m_Name: TiledProjectionForDelay
   m_EditorClassIdentifier: 
-  m_IsDebug: 0
+  m_IsDebug: 1
   m_Settings:
-    GridSize: {x: 1, y: 1}
-    Bezel: {x: 0, y: 0}
+    GridSize: {x: 2, y: 2}
+    Bezel: {x: 45, y: 45}
     PhysicalScreenSize: {x: 1600, y: 900}
   m_DebugSettings:
     TileIndexOverride: 0
@@ -26,7 +26,7 @@ MonoBehaviour:
       y: 0
       width: 0.5
       height: 0.5
-    LayoutMode: 0
+    LayoutMode: 1
     PresentClearColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 0

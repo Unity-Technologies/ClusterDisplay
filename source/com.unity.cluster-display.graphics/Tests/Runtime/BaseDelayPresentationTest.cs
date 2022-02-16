@@ -66,11 +66,13 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         {
             InitializeTest();
 
+            yield return GraphicsTestUtil.PreWarm();
+
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
             Assert.IsTrue(m_ClusterRenderer.isActiveAndEnabled);
 
-            var moveAround = new MoveAround(m_Camera.transform, 2);
+            var moveAround = new MoveAround(m_Camera.transform, 4);
             var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
             var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
 
@@ -80,15 +82,12 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_ClusterCaptureNoDelayTex2D = new Texture2D(width, height);
             m_ClusterCaptureDelayedTex2D = new Texture2D(width, height);
 
-            var dryRun = true;
-            
-            if (!dryRun)
             {
                 m_ClusterRenderer.DelayPresentByOneFrame = false;
 
                 for (var i = 0; i != k_NumFrames; ++i)
                 {
-                    m_Camera.transform.position = moveAround.Update(i * 30);
+                    m_Camera.transform.position = moveAround.Update(i * 397);
 
                     yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCaptureNoDelay[i]);
                 }
@@ -99,30 +98,39 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
                 for (var i = 0; i != k_NumFrames; ++i)
                 {
-                    m_Camera.transform.position = moveAround.Update(i * 30);
+                    m_Camera.transform.position = moveAround.Update(i * 397);
 
                     yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCaptureDelayed[i]);
                 }
             }
 
-            if (!dryRun)
+            /*for (var i = 0; i != k_NumFrames; ++i)
             {
-                // Make sure the cluster output is delayed by one frame.
-                for (var i = 2; i != k_NumFrames - 1; ++i)
-                {
-                    GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
-                    GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i], m_ClusterCaptureDelayedTex2D);
 
-                    ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
-                }
+                GraphicsTestUtil.SaveAsPNG(m_ClusterCaptureNoDelayTex2D, $"no-delay-{i}");
+                GraphicsTestUtil.SaveAsPNG(m_ClusterCaptureDelayedTex2D, $"delayed-{i}");
+            }*/
+
+            // Make sure the cluster output is delayed by one frame.
+            for (var i = 0; i != k_NumFrames - 1; ++i)
+            {
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
+                
+                ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
             }
             
-
             // Make sure the test did not pass by accident. (Aka, the frames did change over time.)
-            /*GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[2], m_ClusterCaptureNoDelayTex2D);
-            GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[2], m_ClusterCaptureDelayedTex2D);
-            GraphicsTestUtil.AssertImagesAreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
-*/
+            for (var i = 0; i != k_NumFrames; ++i)
+            {
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
+                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i], m_ClusterCaptureDelayedTex2D);
+
+                GraphicsTestUtil.AssertImagesAreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+            }
+            
             DisposeTest();
         }
     }

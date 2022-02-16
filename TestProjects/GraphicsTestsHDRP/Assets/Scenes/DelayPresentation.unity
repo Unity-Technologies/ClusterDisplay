@@ -1762,7 +1762,7 @@ MonoBehaviour:
   m_Settings:
     m_OverscanInPixels: 0
   m_ProjectionPolicy: {fileID: 11400000, guid: d8dcc435da2439e4c9b8c2f3d1932b78, type: 2}
-  m_DelayPresentByOneFrame: 0
+  m_DelayPresentByOneFrame: 1
 --- !u!1 &1740479845
 GameObject:
   m_ObjectHideFlags: 0
@@ -2012,6 +2012,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1367105497086002162, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: ImageComparisonSettings.AverageCorrectnessThreshold
+      value: 0.002
+      objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629904, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_Name
       value: Main Camera
@@ -2026,11 +2030,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -2.828426
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1
+      value: -1.8284283
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2063,6 +2067,42 @@ PrefabInstance:
     - target: {fileID: 4971402384012629909, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: hasPersistentHistory
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenSizeOverride.w
+      value: 0.0009765625
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenSizeOverride.x
+      value: 1024
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenSizeOverride.y
+      value: 1024
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenSizeOverride.z
+      value: 0.0009765625
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenCoordScaleBias.w
+      value: 0.025
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenCoordScaleBias.x
+      value: 0.47187495
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenCoordScaleBias.y
+      value: 0.45
+      objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: screenCoordScaleBias.z
+      value: 0.5140625
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_AddedGameObjects: []
