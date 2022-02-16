@@ -2,6 +2,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Random = UnityEngine.Random;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -9,12 +10,41 @@ namespace Unity.ClusterDisplay.Graphics
     {
         const string k_CommandBufferName = "Present To Screen";
 
+        protected bool m_Delayed;
+        protected bool m_Enabled;
         protected Camera m_Camera;
         protected Color m_ClearColor;
         protected RTHandle m_IntermediateTarget;
 
+        public event Action<PresentArgs> Present = delegate { };
+
+        public void SetDelayed(bool value)
+        {
+            if (value != m_Delayed)
+            {
+                if (m_Enabled)
+                {
+                    Unbind(m_Delayed);
+                    m_Delayed = value;
+                    Bind(m_Delayed);
+                }
+                else
+                {
+                    m_Delayed = value;
+                }
+            }
+        }
+
+        public virtual void Enable(GameObject gameObject)
+        {
+            m_Enabled = true;
+            Bind(m_Delayed);
+        }
+
         public virtual void Disable()
         {
+            m_Enabled = false;
+            Unbind(m_Delayed);
             m_IntermediateTarget?.Release();
         }
 
@@ -45,9 +75,10 @@ namespace Unity.ClusterDisplay.Graphics
         void RenderPresent(ScriptableRenderContext context, CommandBuffer cmd, RTHandle target, Rect pixelRect, bool flipY)
         {
             cmd.SetRenderTarget(target);
-            cmd.ClearRenderTarget(true, true, m_ClearColor);
+            //cmd.ClearRenderTarget(true, true, m_ClearColor);
+            cmd.ClearRenderTarget(true, true, Color.HSVToRGB(Random.value, 0.5f, 0.5f));
 
-            GetPresentAction().Invoke(new PresentArgs
+            Present.Invoke(new PresentArgs
             {
                 CommandBuffer = cmd,
                 FlipY = flipY,
@@ -58,7 +89,9 @@ namespace Unity.ClusterDisplay.Graphics
             CommandBufferPool.Release(cmd);
         }
 
-        protected abstract Action<PresentArgs> GetPresentAction();
+        protected abstract void Bind(bool delayed);
+
+        protected abstract void Unbind(bool delayed);
     }
 }
 #endif

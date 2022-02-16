@@ -8,10 +8,6 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class UrpPresenter : SrpPresenter, IPresenter
     {
-        public event Action<PresentArgs> Present = delegate { };
-
-        bool m_Delayed;
-
         public Color ClearColor
         {
             set => m_ClearColor = value;
@@ -19,23 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Camera Camera => m_Camera;
 
-        protected override Action<PresentArgs> GetPresentAction() => Present;
-
-        public override void Disable()
-        {
-            if (m_Delayed)
-            {
-                InjectionPointRenderPass.ExecuteRender -= ExecuteRenderDelayed;
-            }
-            else
-            {
-                InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
-            }
-
-            base.Disable();
-        }
-
-        public void Enable(GameObject gameObject, bool delayByOneFrame)
+        public override void Enable(GameObject gameObject)
         {
             m_Camera = gameObject.GetOrAddComponent<Camera>();
             m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
@@ -47,15 +27,30 @@ namespace Unity.ClusterDisplay.Graphics
             m_Camera.clearFlags = CameraClearFlags.Nothing;
             m_Camera.depthTextureMode = DepthTextureMode.None;
 
-            m_Delayed = delayByOneFrame;
-
-            if (m_Delayed)
+            base.Enable(gameObject);
+        }
+        
+        protected override void Bind(bool delayed)
+        {
+            if (delayed)
             {
                 InjectionPointRenderPass.ExecuteRender += ExecuteRenderDelayed;
             }
             else
             {
                 InjectionPointRenderPass.ExecuteRender += ExecuteRender;
+            }
+        }
+
+        protected override void Unbind(bool delayed)
+        {
+            if (delayed)
+            {
+                InjectionPointRenderPass.ExecuteRender -= ExecuteRenderDelayed;
+            }
+            else
+            {
+                InjectionPointRenderPass.ExecuteRender -= ExecuteRender;
             }
         }
 

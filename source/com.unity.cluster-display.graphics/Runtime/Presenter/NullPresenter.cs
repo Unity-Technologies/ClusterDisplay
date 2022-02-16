@@ -14,13 +14,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         NullPresenter() { }
 
+        public void SetDelayed(bool value) { }
+
         public void Disable() { }
 
         public Color ClearColor { get; set; }
 
         public Camera Camera => null;
 
-        public void Enable(GameObject gameObject, bool delayByOneFrame)
+        public void Enable(GameObject gameObject)
         {
             throw new InvalidOperationException(
                 $"Using {nameof(NullPresenter)}, the current render pipeline is not supported.");

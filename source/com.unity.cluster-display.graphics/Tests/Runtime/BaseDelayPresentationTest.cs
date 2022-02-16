@@ -80,16 +80,11 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_ClusterCaptureNoDelayTex2D = new Texture2D(width, height);
             m_ClusterCaptureDelayedTex2D = new Texture2D(width, height);
 
-            void SetDelayed(bool value)
+            var dryRun = true;
+            
+            if (!dryRun)
             {
-                // We must enable/disable the renderer for the delay change to take effect
-                m_ClusterRenderer.enabled = false;
-                m_ClusterRenderer.DelayPresentByOneFrame = value;
-                m_ClusterRenderer.enabled = true;
-            }
-
-            {
-                SetDelayed(false);
+                m_ClusterRenderer.DelayPresentByOneFrame = false;
 
                 for (var i = 0; i != k_NumFrames; ++i)
                 {
@@ -100,7 +95,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             }
 
             {
-                SetDelayed(true);
+                m_ClusterRenderer.DelayPresentByOneFrame = true;
 
                 for (var i = 0; i != k_NumFrames; ++i)
                 {
@@ -110,14 +105,18 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 }
             }
 
-            // Make sure the cluster output is delayed by one frame.
-            for (var i = 2; i != k_NumFrames - 1; ++i)
+            if (!dryRun)
             {
-                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
-                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
+                // Make sure the cluster output is delayed by one frame.
+                for (var i = 2; i != k_NumFrames - 1; ++i)
+                {
+                    GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
+                    GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
 
-                ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                    ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                }
             }
+            
 
             // Make sure the test did not pass by accident. (Aka, the frames did change over time.)
             /*GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[2], m_ClusterCaptureNoDelayTex2D);

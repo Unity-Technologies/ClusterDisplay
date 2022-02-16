@@ -195,7 +195,7 @@ namespace Unity.ClusterDisplay.Graphics
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
 
-        internal static void ExecuteCaptureIfNeeded(CommandBuffer cmd, Camera camera, Color clearColor, Action<PresentArgs> render, bool flipY)
+        /*internal static void ExecuteCaptureIfNeeded(CommandBuffer cmd, Camera camera, Color clearColor, Action<PresentArgs> render, bool flipY)
         {
             var captureActions = CameraCaptureBridge.GetCaptureActions(camera);
             if (captureActions != null)
@@ -228,6 +228,6 @@ namespace Unity.ClusterDisplay.Graphics
                     captureActions.Current(target, cmd);
                 }
             }
-        }
+        }*/
     }
 }

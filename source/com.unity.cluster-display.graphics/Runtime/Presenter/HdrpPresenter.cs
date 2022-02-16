@@ -9,10 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
     class HdrpPresenter : SrpPresenter, IPresenter
     {
         static RTHandle k_CameraTarget = RTHandles.Alloc(BuiltinRenderTextureType.CameraTarget);
-
-        public event Action<PresentArgs> Present = delegate { };
-
-        bool m_Delayed;
+        
         HDAdditionalCameraData m_AdditionalCameraData;
 
         public Color ClearColor
@@ -21,26 +18,8 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public Camera Camera => m_Camera;
-
-        protected override Action<PresentArgs> GetPresentAction() => Present;
-
-        public override void Disable()
-        {
-            // We don't destroy procedural components, we may reuse them
-            // or they'll be destroyed with the ClusterRenderer.
-            if (m_Delayed)
-            {
-                m_AdditionalCameraData.customRender -= OnCustomRenderDelayed;
-            }
-            else
-            {
-                m_AdditionalCameraData.customRender -= OnCustomRender;
-            }
-
-            base.Disable();
-        }
-
-        public void Enable(GameObject gameObject, bool delayByOneFrame)
+        
+        public override void Enable(GameObject gameObject)
         {
             // Note: we use procedural components.
             // In edge cases, a user could have added a Camera to the GameObject, and we will modify this Camera.
@@ -60,15 +39,30 @@ namespace Unity.ClusterDisplay.Graphics
             // so we don't need to worry about the camera render involving wasteful operations.
             m_AdditionalCameraData.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
 
-            m_Delayed = delayByOneFrame;
+            base.Enable(gameObject);
+        }
 
-            if (m_Delayed)
+        protected override void Bind(bool delayed)
+        {
+            if (delayed)
             {
                 m_AdditionalCameraData.customRender += OnCustomRenderDelayed;
             }
             else
             {
                 m_AdditionalCameraData.customRender += OnCustomRender;
+            }
+        }
+
+        protected override void Unbind(bool delayed)
+        {
+            if (delayed)
+            {
+                m_AdditionalCameraData.customRender -= OnCustomRenderDelayed;
+            }
+            else
+            {
+                m_AdditionalCameraData.customRender -= OnCustomRender;
             }
         }
 

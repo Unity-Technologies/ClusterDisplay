@@ -61,7 +61,11 @@ namespace Unity.ClusterDisplay.Graphics
         internal bool DelayPresentByOneFrame
         {
             get => m_DelayPresentByOneFrame;
-            set => m_DelayPresentByOneFrame = value;
+            set
+            {
+                m_DelayPresentByOneFrame = value;
+                m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+            }
         }
 
         /// <summary>
@@ -109,6 +113,11 @@ namespace Unity.ClusterDisplay.Graphics
         {
         }
 
+        void OnValidate()
+        {
+            m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+        }
+
         void OnEnable()
         {
             ++s_ActiveInstancesCount;
@@ -120,7 +129,8 @@ namespace Unity.ClusterDisplay.Graphics
                 throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
             }
 
-            m_Presenter.Enable(gameObject, delayByOneFrame: m_DelayPresentByOneFrame);
+            m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+            m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);

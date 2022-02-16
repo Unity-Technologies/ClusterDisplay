@@ -227,8 +227,6 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
-                args.CommandBuffer.ClearRenderTarget(true, true, m_DebugSettings.PresentClearColor);
-
                 var presentRatio = args.CameraPixelRect.width / args.CameraPixelRect.height;
                 var stitchedRatio = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;
 
