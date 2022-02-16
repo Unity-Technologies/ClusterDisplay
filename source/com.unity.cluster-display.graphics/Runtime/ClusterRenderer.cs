@@ -168,15 +168,15 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        void OnClusterDisplayUpdate()
+        static void OnClusterDisplayUpdate()
         {
-            var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
-            if (activeCamera == null || m_ProjectionPolicy == null)
+            // It may be possible that a subsystem update occurs after de-registration with the new update-loop being used next frame.
+            if (TryGetInstance(out var clusterRenderer) &&
+                ClusterCameraManager.Instance.ActiveCamera is Camera activeCamera &&
+                clusterRenderer.m_ProjectionPolicy is ProjectionPolicy projectionPolicy)
             {
-                return;
+                projectionPolicy.UpdateCluster(clusterRenderer.m_Settings, activeCamera);
             }
-
-            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
     }
 }

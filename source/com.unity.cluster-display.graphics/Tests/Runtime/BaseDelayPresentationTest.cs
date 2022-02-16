@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 {
     public class BaseDelayPresentationTest : MonoBehaviour
     {
-        struct MoveAround
+        readonly struct MoveAround
         {
             readonly Vector3 m_Up;
             readonly Vector3 m_Forward;
@@ -103,15 +103,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                     yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCaptureDelayed[i]);
                 }
             }
-
-            /*for (var i = 0; i != k_NumFrames; ++i)
-            {
-                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
-                GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i], m_ClusterCaptureDelayedTex2D);
-
-                GraphicsTestUtil.SaveAsPNG(m_ClusterCaptureNoDelayTex2D, $"no-delay-{i}");
-                GraphicsTestUtil.SaveAsPNG(m_ClusterCaptureDelayedTex2D, $"delayed-{i}");
-            }*/
 
             // Make sure the cluster output is delayed by one frame.
             for (var i = 0; i != k_NumFrames - 1; ++i)

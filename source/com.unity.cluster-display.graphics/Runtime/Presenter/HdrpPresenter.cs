@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     class HdrpPresenter : SrpPresenter, IPresenter
     {
-        static RTHandle k_CameraTarget = RTHandles.Alloc(BuiltinRenderTextureType.CameraTarget);
+        static readonly RTHandle k_CameraTarget = RTHandles.Alloc(BuiltinRenderTextureType.CameraTarget);
         
         HDAdditionalCameraData m_AdditionalCameraData;
 

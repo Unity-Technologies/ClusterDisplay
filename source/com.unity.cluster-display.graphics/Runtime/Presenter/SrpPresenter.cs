@@ -9,20 +9,21 @@ namespace Unity.ClusterDisplay.Graphics
     abstract class SrpPresenter
     {
         const string k_CommandBufferName = "Present To Screen";
+        static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
         protected bool m_Delayed;
         protected bool m_Enabled;
         protected Camera m_Camera;
         protected Color m_ClearColor;
 
-        readonly DoubleBuffer m_DoubleBuffer = new DoubleBuffer();
+        readonly DoubleBuffer m_Buffers = new DoubleBuffer();
 
         class DoubleBuffer
         {
             RTHandle m_IntermediateTargetA;
             RTHandle m_IntermediateTargetB;
             bool m_Toggle;
-            
+
             public void ReAllocateIfNeeded(RenderTextureDescriptor descriptor)
             {
                 RTHandlesUtil.ReAllocateIfNeeded(ref m_IntermediateTargetA, descriptor, FilterMode.Point, TextureWrapMode.Clamp);
@@ -37,7 +38,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             public RTHandle Front => m_Toggle ? m_IntermediateTargetA : m_IntermediateTargetB;
             public RTHandle Back => m_Toggle ? m_IntermediateTargetB : m_IntermediateTargetA;
-            
+
             public void Swap() => m_Toggle = !m_Toggle;
         }
 
@@ -70,7 +71,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_Enabled = false;
             Unbind(m_Delayed);
-            m_DoubleBuffer.Dispose();
+            m_Buffers.Dispose();
         }
 
         protected void DoPresent(ScriptableRenderContext context, RTHandle backBuffer, bool flipY)
@@ -78,7 +79,7 @@ namespace Unity.ClusterDisplay.Graphics
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
             RenderPresent(cmd, backBuffer, m_Camera.pixelRect, flipY);
-            
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
@@ -90,16 +91,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         protected void DoPresentDelayed(ScriptableRenderContext context, RenderTextureDescriptor descriptor, RTHandle backBuffer, bool flipY)
         {
-            m_DoubleBuffer.ReAllocateIfNeeded(descriptor);
-            
+            m_Buffers.ReAllocateIfNeeded(descriptor);
+
             var cmd = CommandBufferPool.Get(k_CommandBufferName);
 
-            RenderPresent(cmd, m_DoubleBuffer.Back, m_Camera.pixelRect, flipY);
+            RenderPresent(cmd, m_Buffers.Back, m_Camera.pixelRect, flipY);
             CoreUtils.SetRenderTarget(cmd, backBuffer);
-            Blitter.BlitTexture(cmd, m_DoubleBuffer.Front, new Vector4(1, 1, 0, 0), 0, false);
+            Blitter.BlitTexture(cmd, m_Buffers.Front, k_IdentityScaleBias, 0, false);
 
-            m_DoubleBuffer.Swap();
-            
+            m_Buffers.Swap();
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }

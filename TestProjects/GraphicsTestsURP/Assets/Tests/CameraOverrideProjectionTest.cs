@@ -26,7 +26,6 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         {
             yield return "Bloom";
             yield return "ChromaticAberration";
-            yield return "CustomPostProcess";
             yield return "Vignette";
         }
     }
