@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay
     {
         private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
 
-        private NativeArray<byte> m_PreviousStateSubBuffer;
+        private NativeArray<byte> m_StagedStateBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
 
         private buint m_CurrentStateBufferEndPos = 0;
@@ -23,12 +23,14 @@ namespace Unity.ClusterDisplay
         private UnityEngine.Random.State previousFrameRndState;
         private byte[] m_MsgBuffer = new byte[0];
         
-        public bool ValidRawStateData => m_PreviousStateSubBuffer != default;
+        public bool ValidRawStateData => m_StagedStateBuffer != default;
 
         public IEmitterNodeSyncState nodeState;
 
         internal delegate bool OnStoreCustomData(NativeArray<byte> buffer, ref buint endPos);
         private static OnStoreCustomData onStoreCustomData;
+
+        private readonly bool k_RepeatersDelayed;
 
         internal static void RegisterOnStoreCustomDataDelegate (OnStoreCustomData _onStoreCustomData)
         {
@@ -36,11 +38,13 @@ namespace Unity.ClusterDisplay
             onStoreCustomData += _onStoreCustomData;
         }
 
-        public EmitterStateWriter (IEmitterNodeSyncState nodeState)
+        public EmitterStateWriter (IEmitterNodeSyncState nodeState, bool repeatersDelayed)
         {
             this.nodeState = nodeState;
             previousFrameRndState = UnityEngine.Random.state;
+
             m_CurrentStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            k_RepeatersDelayed = repeatersDelayed;
         }
 
         public void Dispose ()
@@ -51,9 +55,9 @@ namespace Unity.ClusterDisplay
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
         {
-            using (m_PreviousStateSubBuffer)
+            using (m_StagedStateBuffer)
             {
-                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_PreviousStateSubBuffer.Length;
+                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_StagedStateBuffer.Length;
 
                 if (m_MsgBuffer.Length != len)
                     m_MsgBuffer = new byte[len];
@@ -61,38 +65,73 @@ namespace Unity.ClusterDisplay
                 var msg = new EmitterLastFrameData() {FrameNumber = currentFrameId };
                 msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
-                Marshal.Copy((IntPtr) m_PreviousStateSubBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(), m_PreviousStateSubBuffer.Length);
+                Marshal.Copy((IntPtr) m_StagedStateBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(), m_StagedStateBuffer.Length);
 
                 var msgHdr = new MessageHeader()
                 {
                     MessageType = EMessageType.LastFrameData,
                     Flags = MessageHeader.EFlag.Broadcast,
-                    PayloadSize = (UInt16)m_PreviousStateSubBuffer.Length
+                    PayloadSize = (UInt16)m_StagedStateBuffer.Length
                 };
 
                 nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
             }
         }
 
-        public void GatherFrameState(ulong frame)
+        public void GatherPreFrameState ()
         {
-            if (m_CurrentStateResult)
-            {
-                onStoreCustomData?.Invoke(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
-                if (MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
-                    m_PreviousStateSubBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Temp);
-                else m_PreviousStateSubBuffer = default;
-            }
-
-            else m_PreviousStateSubBuffer = default;
-
             m_CurrentStateBufferEndPos = 0;
             m_CurrentStateResult =
                 StoreInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
                 StoreTimeState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
                 StoreClusterInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
                 StoreRndGeneratorState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
-                
+        }
+
+        private void FlushPreviousStateSubBuffer ()
+        {
+            if (m_StagedStateBuffer.IsCreated)
+            {
+                m_StagedStateBuffer.Dispose();
+            }
+
+            m_StagedStateBuffer = default;
+        }
+
+        private void StageCurrentStateBuffer ()
+        {
+            if (m_CurrentStateResult)
+            {
+                onStoreCustomData?.Invoke(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
+
+                if (MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
+                {
+                    m_StagedStateBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Temp);
+                }
+                else
+                {
+                    FlushPreviousStateSubBuffer();
+                }
+            }
+
+            else
+            {
+                FlushPreviousStateSubBuffer();
+            }
+        }
+
+        public void GatherFrameState(ulong frame)
+        {
+            if (!k_RepeatersDelayed)
+            {
+                GatherPreFrameState();
+                StageCurrentStateBuffer();
+
+                return;
+            }
+
+            StageCurrentStateBuffer();
+            GatherPreFrameState();
         }
 
         private static unsafe bool StoreInputState(NativeArray<byte> buffer, ref buint endPos)
