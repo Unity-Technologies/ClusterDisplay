@@ -204,7 +204,7 @@ namespace Unity.ClusterDisplay
             
             ClusterDebug.Log($"Binding to interface: \"{selectedNic.Name}\".");
 
-            foreach (var ip in selectedNic.GetIPProperties().MulticastAddresses)
+            foreach (var ip in selectedNic.GetIPProperties().UnicastAddresses)
             {
                 if (ip.Address.AddressFamily != AddressFamily.InterNetwork)
                     continue;
