@@ -1,8 +1,10 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -187,12 +189,13 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 }
             }
 
-            var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height);
+            var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height / 4);
             m_NodeListView?.OnGUI(rect);
 
             using (new EditorGUILayout.HorizontalScope())
             using (var check = new EditorGUI.ChangeCheckScope())
             {
+                EditorGUIUtility.labelWidth = 100;
                 var rootPath = EditorGUILayout.DelayedTextField(new GUIContent("Shared Folder"), settings.RootPath);
 
                 if (check.changed || GUILayout.Button("Refresh", GUILayout.Width(100)))
@@ -211,11 +214,14 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 m_ProjectListView.DoLayoutList();
             }
 
+            EditorGUIUtility.labelWidth = 200;
             settings.HandshakeTimeout = EditorGUILayout.IntField("Handshake Timeout", settings.HandshakeTimeout);
             settings.Timeout = EditorGUILayout.IntField("Communication Timeout", settings.Timeout);
             settings.DeleteRegistryKey = EditorGUILayout.Toggle(new GUIContent("Delete registry key",
                     "Enable if you are having trouble running in Exclusive Fullscreen"),
                 settings.DeleteRegistryKey);
+            settings.UseDeprecatedArgs = EditorGUILayout.Toggle("Use deprecated command line", settings.UseDeprecatedArgs);
+            settings.ExtraArgs = EditorGUILayout.TextField("Extra command line arguments", settings.ExtraArgs);
 
             if (GUILayout.Button("Run Selected Player") && m_ProjectListView.index >= 0 && m_PlayerList.Count > m_ProjectListView.index)
             {
@@ -229,7 +235,9 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                         numRepeaters,
                         settings.DeleteRegistryKey,
                         settings.HandshakeTimeout,
-                        settings.Timeout)));
+                        settings.Timeout,
+                        settings.ExtraArgs,
+                        settings.UseDeprecatedArgs)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
 
                 m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);

@@ -67,6 +67,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         [SerializeField]
         List<MutableNodeSettings> m_NodeSettings = new();
 
+        [SerializeField]
+        bool m_UseDeprecatedArgs = true;
+
+        [SerializeField]
+        string m_ExtraArgs;
+
         public string RootPath
         {
             get => m_RootPath;
@@ -101,6 +107,18 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         {
             get => m_NodeSettings;
             set => m_NodeSettings = value;
+        }
+
+        public bool UseDeprecatedArgs
+        {
+            get => m_UseDeprecatedArgs;
+            set => m_UseDeprecatedArgs = value;
+        }
+
+        public string ExtraArgs
+        {
+            get => m_ExtraArgs;
+            set => m_ExtraArgs = value;
         }
 
         public void Save()
