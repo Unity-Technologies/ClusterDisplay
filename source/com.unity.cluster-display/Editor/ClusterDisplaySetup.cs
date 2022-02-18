@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay
             typeof(GfxPluginQuadroSyncCallbacks)
         };
 
-        [MenuItem("Unity/Cluster Display/Setup Cluster Display")]
+        [MenuItem("Cluster Display/Setup Cluster Display")]
         internal static void SetupComponents ()
         {
             registerExpectedComponents?.Invoke(expectedTypes);

@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay
 {
     public class ClusterDisplayManagerEditor : EditorWindow
     {
-        [MenuItem("Unity/Cluster Display/Cluster Display Manager")]
+        [MenuItem("Cluster Display/Cluster Display Manager")]
         private static void Open()
         {
             var window = CreateWindow<ClusterDisplayManagerEditor>();

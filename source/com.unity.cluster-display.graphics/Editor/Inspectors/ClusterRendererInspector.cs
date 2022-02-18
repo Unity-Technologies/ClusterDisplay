@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
         }
 
-        static void AddMissingClusterCameraComponents()
+        internal static void AddMissingClusterCameraComponents()
         {
             foreach (var camera in SceneUtils.FindAllObjectsInScene<Camera>())
             {

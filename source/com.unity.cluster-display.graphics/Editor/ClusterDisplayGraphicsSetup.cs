@@ -1,6 +1,7 @@
 using System.Linq;
 using UnityEditor;
 using System;
+using static Unity.ClusterDisplay.Graphics.Editor.ClusterRendererInspector;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -9,7 +10,8 @@ namespace Unity.ClusterDisplay.Graphics
     {
         private static Type[] expectedTypes = new Type[]
         {
-            typeof(ClusterRenderer)
+            typeof(ClusterRenderer),
+            typeof(ClusterRendererCommandLineUtils)
         };
 
         static ClusterDisplayGraphicsSetup ()
@@ -30,6 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
                         .GUIDToAssetPath(guid))).FirstOrDefault();
 
                 clusterRenderer.ProjectionPolicy = firstProjectionPolicy;
+                AddMissingClusterCameraComponents();
             };
         }
     }
