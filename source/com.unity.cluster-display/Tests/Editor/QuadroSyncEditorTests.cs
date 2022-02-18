@@ -31,10 +31,8 @@ namespace Unity.ClusterDisplay.EditorTest
         [Test]
         public void LowLevelDLLFound()
         {
-            var d11 = GfxPluginQuadroSyncSystem.GfxPluginQuadroSyncUtilities.GetRenderEventFuncD3D11();
-            Assert.IsNotNull(d11);
-            var d12 = GfxPluginQuadroSyncSystem.GfxPluginQuadroSyncUtilities.GetRenderEventFuncD3D12();
-            Assert.IsNotNull(d12);
+            var quadroSync = GfxPluginQuadroSyncSystem.GfxPluginQuadroSyncUtilities.GetRenderEventFunc();
+            Assert.IsNotNull(quadroSync);
         }
     }
 }

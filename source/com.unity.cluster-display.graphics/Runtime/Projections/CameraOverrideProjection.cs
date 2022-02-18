@@ -5,7 +5,7 @@ using UnityEngine.Assertions;
 
 [PopupItem("Camera Override")]
 [CreateAssetMenu(fileName = "CameraOverride", menuName = "Cluster Display/Camera Override Projection")]
-class CameraOverrideProjection : ProjectionPolicy
+public class CameraOverrideProjection : ProjectionPolicy
 {
     [Flags]
     public enum OverrideProperty

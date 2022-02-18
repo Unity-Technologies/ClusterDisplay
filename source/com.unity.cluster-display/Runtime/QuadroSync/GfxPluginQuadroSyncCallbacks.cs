@@ -11,6 +11,7 @@ namespace Unity.ClusterDisplay
         static GfxPluginQuadroSyncCallbacks s_Instance;
         bool m_Initialized = false;
         const int k_InitDelayFrames = 2;
+        private int m_VSYNCMode;
 
         void Awake()
         {
@@ -26,14 +27,23 @@ namespace Unity.ClusterDisplay
         void OnEnable()
         {
             StartCoroutine(DelayedInit());
+
+            m_VSYNCMode = QualitySettings.vSyncCount;
+            ClusterDebug.Log("Enabling VSYNC");
+            QualitySettings.vSyncCount = 0;
         }
 
         void OnDisable()
         {
             if (m_Initialized)
             {
+                ClusterDebug.Log("Disposing Quadro Sync.");
+
                 Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
                 m_Initialized = false;
+
+                ClusterDebug.Log($"Reverting VSYNC mode to: {m_VSYNCMode}");
+                QualitySettings.vSyncCount = m_VSYNCMode;
             }
         }
 
@@ -46,6 +56,7 @@ namespace Unity.ClusterDisplay
                     yield return null;
                 }
 
+                ClusterDebug.Log("Initializing Quadro Sync.");
                 Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
                 m_Initialized = true;
             }

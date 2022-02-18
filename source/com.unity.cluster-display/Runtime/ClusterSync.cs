@@ -132,7 +132,6 @@ namespace Unity.ClusterDisplay
             NodeState.Debugging = m_Debugging;
 
             Application.targetFrameRate = CommandLineParser.targetFPS;
-            QualitySettings.vSyncCount = 0;
 
             stateSetter.SetIsActive(true);
             stateSetter.SetIsTerminated(false);

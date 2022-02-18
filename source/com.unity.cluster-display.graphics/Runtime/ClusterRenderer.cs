@@ -60,7 +60,11 @@ namespace Unity.ClusterDisplay.Graphics
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
-        internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
+        internal ProjectionPolicy ProjectionPolicy
+        {
+            get => m_ProjectionPolicy;
+            set => m_ProjectionPolicy = value;
+        }
 
         /// <summary>
         /// If true, buffers and delays the presentation of the camera output by one frame.

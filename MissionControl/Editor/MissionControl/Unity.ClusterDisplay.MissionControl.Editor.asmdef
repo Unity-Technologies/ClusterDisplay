@@ -1,0 +1,16 @@
+{
+    "name": "Unity.ClusterDisplay.MissionControl.Editor",
+    "rootNamespace": "Unity.ClusterDisplay.MissionControl.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
