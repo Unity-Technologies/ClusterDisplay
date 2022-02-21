@@ -17,7 +17,18 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
 
     static IEnumerable<string> VolumeProfileNames => Utils.VolumeProfileNames;
 
-    static IEnumerable<string> VolumeProfileOverscanSupportNames => Utils.VolumeProfileOverscanSupportNames;
+    // Note that LensDistortion is not in this collection.
+    // Overscan does its job of removing artefacts at the edge,
+    // but the vanilla capture will retain the artefact making the test fail.
+    static IEnumerable<string> VolumeProfileOverscanSupportNames
+    {
+        get
+        {
+            yield return "Bloom";
+            yield return "ChromaticAberration";
+            yield return "Vignette";
+        }
+    }
 
     [UnityTest]
     public IEnumerator CompareVanillaAndStitchedCluster([ValueSource("VolumeProfileNames")] string profileName)

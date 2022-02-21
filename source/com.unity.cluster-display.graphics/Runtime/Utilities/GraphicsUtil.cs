@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.Graphics
         // Will only be used for Legacy if we end up supporting it.
         // Otherwise see ScreenCoordOverrideUtils in SRP Core.
         const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
-        
+
         // Used to support the camera bridge capture API. 
         static readonly int k_RecorderTempRT = Shader.PropertyToID("TempRecorder");
 
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             return s_GraphicsFormat;
         }
-        
+
         static MaterialPropertyBlock GetPropertyBlock()
         {
             if (s_PropertyBlock == null)
@@ -78,7 +78,12 @@ namespace Unity.ClusterDisplay.Graphics
         {
             Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY);
         }
-        
+
+        public static void Blit(CommandBuffer cmd, RenderTexture source, bool flipY)
+        {
+            Blit(cmd, source, k_IdentityScaleBias, k_IdentityScaleBias, flipY);
+        }
+
         public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY)
         {
             var shaderPass = flipY ? 1 : 0;
@@ -174,7 +179,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             SetShaderKeyword(k_ShaderKeyword, enabled);
         }
-        
+
         public static void SetShaderKeyword(string keyword, bool enabled)
         {
             if (Shader.IsKeywordEnabled(keyword) == enabled)
@@ -194,28 +199,5 @@ namespace Unity.ClusterDisplay.Graphics
 
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
-
-        internal static void ExecuteCaptureIfNeeded(Camera camera, CommandBuffer cmd, Color clearColor, Action<PresentArgs> render, bool flipY)
-        {
-            var captureActions = CameraCaptureBridge.GetCaptureActions(camera);
-            if (captureActions != null)
-            {
-                cmd.GetTemporaryRT(k_RecorderTempRT, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Point, GetGraphicsFormat());
-                cmd.SetRenderTarget(k_RecorderTempRT);
-                cmd.ClearRenderTarget(true, true, clearColor);
-
-                render.Invoke(new PresentArgs
-                {
-                    CommandBuffer = cmd,
-                    FlipY = flipY,
-                    CameraPixelRect = camera.pixelRect
-                });
-
-                for (captureActions.Reset(); captureActions.MoveNext();)
-                {
-                    captureActions.Current(k_RecorderTempRT, cmd);
-                }
-            }
-        }
     }
 }

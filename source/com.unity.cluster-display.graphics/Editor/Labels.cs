@@ -2,6 +2,7 @@
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    // TODO use static GUIContents
     // A centralized place to store tooltip messages.
     // As they may be used for custom inspectors and runtime GUI, etc...
     static class Labels
@@ -24,6 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
             ScaleBiasOffset,
             ProjectionPolicy,
             DefaultProjectionSurface,
+            DelayPresentByOneFrame
         }
 
         static string GetName(Field field)
@@ -46,6 +48,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.ScaleBiasOffset: return "Scale Bias Offset";
                 case Field.ProjectionPolicy: return "Projection Policy";
                 case Field.DefaultProjectionSurface: return "New default (planar) surface";
+                case Field.DelayPresentByOneFrame: return "Delay Present By One Frame";
             }
 
             return string.Empty;
@@ -70,6 +73,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
                 case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";
                 case Field.ProjectionPolicy: return "The method with which the content is projected for display.";
+                case Field.DelayPresentByOneFrame: return "If true, delays presentation by one frame";
             }
 
             return string.Empty;

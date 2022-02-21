@@ -6,7 +6,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 {
     public class ClusterRendererPostProcessTest : ClusterRendererTest
     {
-        const string k_VolumeProfilesDirectory = "Assets/Settings/PostEffects";
 
         protected Volume m_Volume;
 
@@ -19,9 +18,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
         protected static VolumeProfile LoadVolumeProfile(string profileName)
         {
-            var path = $"{k_VolumeProfilesDirectory}/{profileName}.asset";
-            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(path);
-            Assert.IsNotNull(profile, $"Could not load volume profile at path \"{path}\"");
+            var profile = EditorBridge.LoadVolumeProfile(profileName);
+            Assert.IsNotNull(profile);
             return profile;
         }
     }

@@ -88,8 +88,10 @@ public class CameraOverrideProjection : ProjectionPolicy
 
     public override void Present(PresentArgs args)
     {
-        Assert.IsNotNull(m_BlitCommand.texture);
-        GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
+        if (m_BlitCommand.texture != null)
+        {
+            GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
+        }
     }
 
     void OnDisable()

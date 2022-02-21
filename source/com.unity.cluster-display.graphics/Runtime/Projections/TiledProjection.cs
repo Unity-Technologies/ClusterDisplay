@@ -81,10 +81,10 @@ namespace Unity.ClusterDisplay.Graphics
     sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
-        TiledProjectionSettings m_Settings = new() {GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900)};
+        TiledProjectionSettings m_Settings = new() { GridSize = new Vector2Int(2, 2), PhysicalScreenSize = new Vector2(1600, 900) };
 
         [SerializeField]
-        TiledProjectionDebugSettings m_DebugSettings = new() {ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f)};
+        TiledProjectionDebugSettings m_DebugSettings = new() { ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f) };
 
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
@@ -129,7 +129,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_RuntimeSettings = m_Settings;
         }
 
-		 private int GetTileIndex()
+        private int GetTileIndex()
         {
             if (m_IsDebug || !ClusterDisplayState.IsActive)
                 return m_DebugSettings.TileIndexOverride;
@@ -157,7 +157,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_DisplayMatrixSize = new Vector2Int(Settings.GridSize.x * displaySize.x, Settings.GridSize.y * displaySize.y);
 
             // Aspect must be updated *before* we pull the projection matrix.
-            activeCamera.aspect = m_DisplayMatrixSize.x / (float) m_DisplayMatrixSize.y;
+            activeCamera.aspect = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;
             var originalProjectionMatrix = activeCamera.projectionMatrix;
 
 #if UNITY_EDITOR
@@ -182,13 +182,11 @@ namespace Unity.ClusterDisplay.Graphics
                 BlitParams = blitParams,
                 PostEffectsParams = postEffectsParams,
                 DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
-                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.UseDebugViewportSubsection
+                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardTile && m_DebugSettings.UseDebugViewportSubsection
             };
 
             // Allocate tiles targets.
-            var isStitcher =
-                m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher ||
-                Application.isEditor && !Application.isPlaying && !m_IsDebug;
+            var isStitcher = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
             var numTargets = isStitcher ? renderContext.NumTiles : 1;
 
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,
@@ -229,10 +227,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
-                args.CommandBuffer.ClearRenderTarget(true, true, m_DebugSettings.PresentClearColor);
-
                 var presentRatio = args.CameraPixelRect.width / args.CameraPixelRect.height;
-                var stitchedRatio = m_DisplayMatrixSize.x / (float) m_DisplayMatrixSize.y;
+                var stitchedRatio = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;
 
                 if (!Mathf.Approximately(presentRatio, stitchedRatio))
                 {
