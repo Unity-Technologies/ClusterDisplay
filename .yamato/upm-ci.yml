@@ -71,11 +71,7 @@ test_trigger:
   commands:
   - dir
   triggers:
-    branches:
-      only:
-        - "/.*/"
-      except:
-        - master
+    expression: pull_request.target eq "dev"
   artifacts:
     logs:
       paths:
