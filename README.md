@@ -55,15 +55,9 @@ The packages required to set up Unity Cluster Display are currently available as
 ## Guide
 The following guides will help you setup your project with cluster display:
 
-[New Project Setup](source/com.unity.cluster-display/Documentation~/new-project-setup.md)
-
-[Existing Project Setup](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
-
 After you've setup your project, the following guides will help you setup synchronization between nodes in the cluster:
 
 [Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
-
-[Network Events](source/com.unity.cluster-display/Documentation~/network-events.md)
 
 [Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
 

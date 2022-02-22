@@ -20,7 +20,11 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    
+    public static class ClusterSyncDebug
+    {
+	public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
+    }
+
     /// <summary>
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the

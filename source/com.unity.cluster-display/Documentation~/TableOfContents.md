@@ -1,5 +1,0 @@
-* [Cluster Display overview](index.md)
-* [Project setup](project-setup.md)
-* [Hardware setup](hardware-setup.md)
-* [Cluster operation](cluster-operation.md)
-* [Reference](reference.md)

@@ -20,9 +20,6 @@ The emitter node automatically synchronizes the following data across the networ
 
 -   RPC events.
 
-## Synchronized UGUI Events
-\*Setting up UGUI to work with cluster display takes some additional steps, see the following: [Cluster Display & UGUI](cluster-display-and-ugui.md).
-
 ## Communication Phases and Timeouts
 The communication between the emitter and the clients happens in 2 phases:
 
