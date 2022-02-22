@@ -15,9 +15,6 @@
       <Compile Include="..\Editor\MissionControl\Common\BufferExtensions.cs">
         <Link>Common\BufferExtensions.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\CommandListener.cs">
-        <Link>Common\CommandListener.cs</Link>
-      </Compile>
       <Compile Include="..\Editor\MissionControl\Common\Constants.cs">
         <Link>Common\Constants.cs</Link>
       </Compile>
