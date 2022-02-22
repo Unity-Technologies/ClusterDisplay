@@ -11,7 +11,7 @@ public class RandomSleep : MonoBehaviour
         frame++;
         if (frame % 100 == 0)
         {
-            var rnd = new System.Random(ClusterSync.Instance.DynamicLocalNodeId + Time.frameCount);
+            var rnd = new System.Random(ClusterDisplayState.NodeID + Time.frameCount);
             var sleept = rnd.Next(100, 2000);
             Thread.Sleep(sleept);
         }

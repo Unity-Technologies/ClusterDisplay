@@ -44,8 +44,11 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} / {Stage} : {CurrentFrameID}, {m_RepeaterReceiver.LastReportedFrameDone}, {m_RepeaterReceiver.LastRxFrameStart}, {m_RepeaterReceiver.RxCount}, {m_RepeaterReceiver.TxCount}" +
-            $"\r\nNetwork: {m_RepeaterReceiver.NetworkingOverheadAverage * 1000:000.0}";
+            return $"{base.GetDebugString()} / {Stage}:\r\n\t\tLast Frame Reported Done: {m_RepeaterReceiver.LastReportedFrameDone}" +
+                $"\r\n\t\tLast Frame Received: {m_RepeaterReceiver.LastRxFrameStart}" +
+                $"\r\n\t\tReceive Count: {m_RepeaterReceiver.RxCount}" +
+                $"\r\n\t\tSend Count: {m_RepeaterReceiver.TxCount}" +
+                $"\r\n\t\tNetwork Overhead Average: {m_RepeaterReceiver.NetworkingOverheadAverage * 1000} ms";
         }
         //-------------------------------------------------
 

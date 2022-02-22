@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             base.ExitState(newState);
             m_Emitter?.Dispose();   
         }
-        public override string GetDebugString() => $"{base.GetDebugString()} / {(EStage)Stage} : {m_WaitingOnNodes}";
+        public override string GetDebugString() => $"{base.GetDebugString()} / {(EStage)Stage}:\r\n\t\tWaiting on Nodes: {Convert.ToString(m_WaitingOnNodes, 2)}";
 
         public override void InitState()
         {

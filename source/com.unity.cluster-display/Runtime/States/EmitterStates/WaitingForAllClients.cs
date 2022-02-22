@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()} : {LocalNode.m_RemoteNodes.Count}";
+            return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.m_RemoteNodes.Count}";
         }
 
     }

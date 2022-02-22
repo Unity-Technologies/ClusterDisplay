@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => LocalNode.GetDebugString() + $"\r\nFPS: { (1 / m_FrameRatePerf.Average):0000}, AvgSynchOvrhead:{m_DelayMonitor.Average*1000:00.0}";
+        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms\r\n\tAverage Sync Overhead Time: {m_DelayMonitor.Average * 1000} ms\r\n";
 
         private void RegisterDelegates()
         {
@@ -367,10 +367,11 @@ namespace Unity.ClusterDisplay
 
                     LocalNode.EndFrame();
                     
-                    ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
-                    stateSetter.SetFrame(++m_CurrentFrameID);
-
                     m_DelayMonitor.SampleNow();
+                    ClusterDebug.Log(GetDebugString());
+                    ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
+
+                    stateSetter.SetFrame(++m_CurrentFrameID);
                 }
             }
             

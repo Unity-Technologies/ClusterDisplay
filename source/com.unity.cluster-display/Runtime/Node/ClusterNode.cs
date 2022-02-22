@@ -96,9 +96,15 @@ namespace Unity.ClusterDisplay
             if (ClusterSync.Instance.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
             {
                 var stats = ClusterSync.Instance.CurrentNetworkStats;
-                return $"Node {dynamicLocalNodeId} at {clusterSync.CurrentFrameID}\r\n" +
-                       $"Network stats: tx[{stats.txQueueSize}], rx[{stats.rxQueueSize}], ack[{stats.pendingAckQueueSize}], rtx[{stats.totalResends}], tot[{stats.msgsSent}], abandoned[{stats.failedMsgs}]\r\n" +
-                       $"State: { m_CurrentState.GetDebugString() }";
+                return $"\tNode ID: {dynamicLocalNodeId}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
+                       $"\tState: {m_CurrentState.GetDebugString()}\r\n" + 
+                       $"\tNetwork stats: \r\n\t\tSend Queue Size: [{stats.txQueueSize}], " +
+                           $"\r\n\t\tReceive Queue Size:[{stats.rxQueueSize}], " +
+                           $"\r\n\t\tACK Queue Size: [{stats.pendingAckQueueSize}], " +
+                           $"\r\n\t\tTotal Resends: [{stats.totalResends}], " +
+                           $"\r\n\t\tMessages Sent: [{stats.msgsSent}], " +
+                           $"\r\n\t\tFailed Messages: [{stats.failedMsgs}]";
+                       
             }
 
             return null;

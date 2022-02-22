@@ -53,6 +53,9 @@ namespace Unity.ClusterDisplay
         private ConcurrentQueue<Message> m_RxQueue;
         private List<PendingAck> m_TxQueuePendingAcks;
 
+        public delegate void OnAckReceived(EMessageType messageType);
+        public event OnAckReceived onAckReceived;
+
         public bool AcksPending
         {
             get
@@ -381,7 +384,8 @@ namespace Unity.ClusterDisplay
                             // 3. 1010 &= 1011 = 1110 (AND)
                             pendingAck.m_MissingAcks &= ~((UInt64) 1 << header.OriginID);
                             
-                            ClusterDebug.Log($"Received ACK from node: {header.OriginID} with sequence ID: {header.SequenceID}");
+                            var roundTripTime = (m_ConnectionClock.Elapsed - pendingAck.ts);
+                            ClusterDebug.Log($"Received ACK from node: {header.OriginID} with sequence ID: {header.SequenceID} with a round trip time of {roundTripTime.TotalMilliseconds} ms.");
 
                             if (pendingAck.m_MissingAcks != 0)
                                 m_TxQueuePendingAcks[i] = pendingAck;  // Not all nodes have responded with ACK, so we keep it as pending.
@@ -389,10 +393,11 @@ namespace Unity.ClusterDisplay
                             else // All desired nodes has reported back with ACK, so remove the pending ACK.
                             {
                                 m_TxQueuePendingAcks.RemoveAt(i);
-                                var roundTripTime = (m_ConnectionClock.Elapsed - pendingAck.ts);
-                                ClusterDebug.Log($"All acks received after message round trip time of: ({roundTripTime.Seconds}s {(roundTripTime.TotalMilliseconds - (long)roundTripTime.TotalSeconds * 1000) + roundTripTime.Milliseconds}ms) with sequence ID: {header.SequenceID}");
+                                ClusterDebug.Log($"All acks received for sequence ID: {header.SequenceID}");
                             }
-                            
+
+                            onAckReceived?.Invoke(pendingAck.message.header.MessageType);
+
                             // We've found and processed our pending ack, so we don't need to search anymore.
                             break; 
                         }
@@ -406,7 +411,7 @@ namespace Unity.ClusterDisplay
                     RxWait.Set();
 
                     // Respond to the sending node with an ACK that we've received the message.
-                    SendMsgRxAck(ref header);
+                    SendMsgRxAck(ref header, msg.ts);
                 }
             }
 
@@ -414,7 +419,7 @@ namespace Unity.ClusterDisplay
                 m_Connection.BeginReceive(ReceiveMessage, null);
         }
 
-        private void SendMsgRxAck(ref MessageHeader rxHeader)
+        private void SendMsgRxAck(ref MessageHeader rxHeader, TimeSpan ts)
         {
             var ack = new MessageHeader()
             {
@@ -431,7 +436,7 @@ namespace Unity.ClusterDisplay
             var buffer = ack.ToByteArray();
             var ackMsg = new Message()
             {
-                ts = m_ConnectionClock.Elapsed,
+                ts = ts,
                 header = ack,
                 payload = buffer
             };
