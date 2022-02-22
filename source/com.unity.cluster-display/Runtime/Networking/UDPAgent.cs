@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -151,8 +152,19 @@ namespace Unity.ClusterDisplay
                     {
                         ClusterDebug.LogError(
                             $"Unable to use explicit interface: \"{nic.Name}\", the interface is down. Attempting to use the next available interface.");
-                        continue;
                     }
+                    continue;
+                }
+
+                var ipProperties = nic.GetIPProperties();
+                if (!ipProperties.MulticastAddresses.Any())
+                {
+                    continue;
+                }
+
+                if (!nic.SupportsMulticast)
+                {
+                    continue;
                 }
 
                 upNics.Add(nic);
@@ -209,9 +221,10 @@ namespace Unity.ClusterDisplay
                 if (ip.Address.AddressFamily != AddressFamily.InterNetwork)
                     continue;
                 
+                Debug.Log(ip.Address);
                 conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, ip.Address.GetAddressBytes());
             }
-
+            
             conn.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
             conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
             conn.Client.Bind(m_RxEndPoint);
@@ -355,6 +368,8 @@ namespace Unity.ClusterDisplay
 
         private void ReceiveMessage(IAsyncResult ar)
         {
+            if (m_Connection == null) return;
+
             var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
 
             var header = receiveBytes.LoadStruct<MessageHeader>();
