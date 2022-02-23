@@ -53,9 +53,6 @@ namespace Unity.ClusterDisplay
         private ConcurrentQueue<Message> m_RxQueue;
         private List<PendingAck> m_TxQueuePendingAcks;
 
-        public delegate void OnAckReceived(EMessageType messageType);
-        public event OnAckReceived onAckReceived;
-
         public bool AcksPending
         {
             get
@@ -395,8 +392,6 @@ namespace Unity.ClusterDisplay
                                 m_TxQueuePendingAcks.RemoveAt(i);
                                 ClusterDebug.Log($"All acks received for sequence ID: {header.SequenceID}");
                             }
-
-                            onAckReceived?.Invoke(pendingAck.message.header.MessageType);
 
                             // We've found and processed our pending ack, so we don't need to search anymore.
                             break; 
