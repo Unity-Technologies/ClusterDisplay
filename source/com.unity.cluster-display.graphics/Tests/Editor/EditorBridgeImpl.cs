@@ -1,4 +1,6 @@
-﻿using NUnit.Framework;
+﻿using System;
+using System.Reflection;
+using NUnit.Framework;
 using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEditor;
 using UnityEngine;
@@ -25,7 +27,12 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
 
             GameViewUtils.SetSize(GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
         }
-        
+
+        public void CaptureRenderDoc()
+        {
+            GameViewUtils.CaptureRenderDocScene();
+        }
+
         public VolumeProfile LoadVolumeProfile(string profileName)
         {
             var path = $"{k_VolumeProfilesDirectory}/{profileName}.asset";

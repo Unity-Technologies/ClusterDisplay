@@ -5,15 +5,22 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.Graphics.EditorTests
 {
-    // Set game view size. Code comes from : https://answers.unity.com/questions/956123/add-and-select-game-view-resolution.html
+    // (Modified) Original code comes from : https://answers.unity.com/questions/956123/add-and-select-game-view-resolution.html
     public static class GameViewUtils
     {
+        static readonly Type k_GuiViewType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GUIView");
+        static readonly Type k_GameViewType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView");
+        static readonly FieldInfo k_ParentInfo = k_GameViewType.GetField("m_Parent", 
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+        static readonly MethodInfo k_CaptureRenderDocSceneInfo = k_GuiViewType.GetMethod("CaptureRenderDocScene",
+            BindingFlags.Public | BindingFlags.Instance);
+        
         static object s_GameViewSizesInstance;
         static MethodInfo s_GetGroup;
         
         static GameViewUtils()
         {
-            // gameViewSizesInstance  = ScriptableSingleton<GameViewSizes>.instance;
+            // gameViewSizesInstance = ScriptableSingleton<GameViewSizes>.instance;
             var sizesType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameViewSizes");
             var singleType = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
             var instanceProp = singleType.GetProperty("instance");
@@ -27,12 +34,18 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
             FixedResolution
         }
 
+        public static void CaptureRenderDocScene()
+        {
+            var gameView = EditorWindow.GetWindow(k_GameViewType);
+            var parent = k_ParentInfo.GetValue(gameView);
+            k_CaptureRenderDocSceneInfo.Invoke(parent, null);
+        }
+
         public static void SetSize(int index)
         {
-            var gvWndType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.GameView");
-            var selectedSizeIndexProp = gvWndType.GetProperty("selectedSizeIndex",
+            var selectedSizeIndexProp = k_GameViewType.GetProperty("selectedSizeIndex",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            var gvWnd = EditorWindow.GetWindow(gvWndType);
+            var gvWnd = EditorWindow.GetWindow(k_GameViewType);
             selectedSizeIndexProp.SetValue(gvWnd, index, null);
         }
 
