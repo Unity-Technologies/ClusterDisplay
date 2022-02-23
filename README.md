@@ -59,6 +59,8 @@ After you've setup your project, the following guides will help you setup synchr
 
 [Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
 
+[Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
+
 [Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
 
 ## Send Us Your Logs!
