@@ -563,6 +563,7 @@ MonoBehaviour:
   m_Settings:
     m_OverscanInPixels: 0
   m_ProjectionPolicy: {fileID: 11400000, guid: e9ca4aa694dc1064d990e6e5cc2f3d7c, type: 2}
+  m_DelayPresentByOneFrame: 0
 --- !u!4 &567723789
 Transform:
   m_ObjectHideFlags: 0
@@ -2019,7 +2020,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
-    serializedVersion: 2
+    serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 400713408593692140, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
@@ -2084,4 +2085,5 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
