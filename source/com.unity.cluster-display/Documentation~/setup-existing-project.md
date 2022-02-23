@@ -64,7 +64,7 @@
 
 11. In the cluster display graphics package, find the ClusterDisplay prefab in: **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab** and drag it into your desired scene.
 
-    ![Cluster Display Prefab](images/cluster-display-prefab.png)
+    ![Cluster Display Prefab](images/cluster-display-setup-menu.png)
 
 12. Add the "ClusterCamera" component to the camera you want to render across your cluster:
 

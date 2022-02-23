@@ -134,6 +134,9 @@ echo $args[0] | C:\cluster_applications\Tools\NvidiaTests\configureDriver.exe
 
 ## Other Recommendations 
 
+### PSExec
+We do not recommend using PSExec or PSSessions to deploy and run your cluster as we've found that PSExec and PSSessions will start executables abnorbally with extra security measures preventing Quadro Sync from working. Instead we recommend using Cluster Display's MissionControl application or writing a Python script that receives a mesage and executes the executable locally.
+
 ### Operating system overlays – frame delay
 Whenever you have operating system managed overlays (e.g. Windows Taskbar, TeamViewer windows, Windows File Explorer) on top of your Fullscreen Unity application, this may introduce a one-frame delay causing cluster synchronization artefacts.
 
