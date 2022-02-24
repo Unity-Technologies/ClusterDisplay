@@ -16,9 +16,8 @@ namespace Unity.ClusterDisplay.MissionControl
             public readonly string Name;
             public readonly string Path;
             public readonly string Company;
-            
         }
-        
+
         static readonly string k_LocalPath = Environment.SpecialFolder.LocalApplicationData + "\\ClusterDisplayBuilds";
         const string k_CopyParams = "/MIR /FFT /Z /XA:H";
 
@@ -27,7 +26,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var projectName = new DirectoryInfo(sharedProjectDir).Name;
             return Path.Combine(k_LocalPath, projectName);
         }
-        
+
         public static async Task SyncProjectDir(string sharedProjectDir, CancellationToken token)
         {
             var localProjectionDir = GetLocalProjectDir(sharedProjectDir);
@@ -43,7 +42,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             };
             Console.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
-            
+
             copyProcess.Start();
             try
             {
@@ -67,16 +66,21 @@ namespace Unity.ClusterDisplay.MissionControl
             var outgoingPort = launchInfo.NodeID == 0 ? launchInfo.RxPort.ToString() : launchInfo.TxPort.ToString();
             var incomingPort = launchInfo.NodeID == 0 ? launchInfo.TxPort.ToString() : launchInfo.RxPort.ToString();
             var address = new IPAddress(launchInfo.MulticastAddress).ToString();
+            var isEmitter = launchInfo.NodeID == 0;
+            var emitterArg = launchInfo.UseDeprecatedArgNames ? "-masterNode" : "-emitterNode";
+            const string repeaterArg = "-node";
+
             var args = new List<string>
             {
-                launchInfo.NodeID == 0 ? "-masterNode" : "-node",
+                isEmitter ? emitterArg : repeaterArg,
                 launchInfo.NodeID.ToString(),
-                launchInfo.NodeID == 0 ? launchInfo.NumRepeaters.ToString() : string.Empty,
+                isEmitter ? launchInfo.NumRepeaters.ToString() : string.Empty,
                 $"{address}:{outgoingPort},{incomingPort}",
                 "-handshakeTimeout",
                 launchInfo.HandshakeTimeoutMilliseconds.ToString(),
                 "-communicationTimeout",
-                launchInfo.TimeoutMilliseconds.ToString()
+                launchInfo.TimeoutMilliseconds.ToString(),
+                launchInfo.ExtraArgs
             };
             return string.Join(" ", args);
         }
@@ -97,7 +101,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 {
                     FolderUtils.DeleteRegistryKey(playerInfo.CompanyName, playerInfo.ProductName);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Console.WriteLine($"Could not clear the registry key: {ex.Message}");
                 }

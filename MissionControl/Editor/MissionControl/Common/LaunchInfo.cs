@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.MissionControl
@@ -8,6 +7,8 @@ namespace Unity.ClusterDisplay.MissionControl
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
     public readonly struct LaunchInfo
     {
+        const int k_DefaultTxPort = 25690;
+        const int k_DefaultRxPort = 25689;
         static readonly byte[] k_DefaultAddress = {224, 0, 1, 0};
         public readonly int NodeID;
         public readonly int NumRepeaters;
@@ -32,7 +33,22 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public readonly bool ClearRegistry;
 
-        public LaunchInfo(string playerDir, int id, int numRepeaters, bool clearRegistry = false, int handshakeTimeout = 10000, int commTimeout = 5000)
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
+        public readonly string ExtraArgs;
+
+        public readonly bool UseDeprecatedArgNames;
+
+        public LaunchInfo(string playerDir,
+            int id,
+            int numRepeaters,
+            bool clearRegistry = false,
+            int handshakeTimeout = 10000,
+            int commTimeout = 5000,
+            string extraArgs = null,
+            bool useDeprecatedArgNames = false,
+            byte[] multicastAddress = null,
+            int txPort = k_DefaultTxPort,
+            int rxPort = k_DefaultRxPort)
         {
             PlayerDir = playerDir;
             NodeID = id;
@@ -40,10 +56,12 @@ namespace Unity.ClusterDisplay.MissionControl
             HandshakeTimeoutMilliseconds = handshakeTimeout;
             TimeoutMilliseconds = commTimeout;
 
-            MulticastAddress = k_DefaultAddress;
-            TxPort = 25690;
-            RxPort = 25689;
+            MulticastAddress = multicastAddress ?? k_DefaultAddress;
+            TxPort = txPort;
+            RxPort = rxPort;
             ClearRegistry = clearRegistry;
+            ExtraArgs = extraArgs;
+            UseDeprecatedArgNames = useDeprecatedArgNames;
         }
     }
 }
