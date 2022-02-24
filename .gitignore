@@ -5,6 +5,7 @@
 .idea/
 bin/
 obj/
+.multitool
 TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
@@ -25,4 +26,6 @@ TestProjects/GraphicsTestsURP/Assets/ActualImages.meta
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta
 
+# Generated files
 CMakeCache.txt
+packages-lock.json
