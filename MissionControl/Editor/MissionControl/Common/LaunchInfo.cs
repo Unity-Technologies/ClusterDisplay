@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public readonly bool ClearRegistry;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
         public readonly string ExtraArgs;
 
         public readonly bool UseDeprecatedArgNames;
@@ -45,7 +45,10 @@ namespace Unity.ClusterDisplay.MissionControl
             int handshakeTimeout = 10000,
             int commTimeout = 5000,
             string extraArgs = null,
-            bool useDeprecatedArgNames = false)
+            bool useDeprecatedArgNames = false,
+            byte[] multicastAddress = null,
+            int txPort = k_DefaultTxPort,
+            int rxPort = k_DefaultRxPort)
         {
             PlayerDir = playerDir;
             NodeID = id;
@@ -53,9 +56,9 @@ namespace Unity.ClusterDisplay.MissionControl
             HandshakeTimeoutMilliseconds = handshakeTimeout;
             TimeoutMilliseconds = commTimeout;
 
-            MulticastAddress = k_DefaultAddress;
-            TxPort = k_DefaultTxPort;
-            RxPort = k_DefaultRxPort;
+            MulticastAddress = multicastAddress ?? k_DefaultAddress;
+            TxPort = txPort;
+            RxPort = rxPort;
             ClearRegistry = clearRegistry;
             ExtraArgs = extraArgs;
             UseDeprecatedArgNames = useDeprecatedArgNames;
