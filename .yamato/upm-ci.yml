@@ -62,7 +62,7 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
   commands:
   - git submodule update --init
   - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
-  - upm-ci project test --unity-version {{ editor.version }}  --project-path  {{ project.info[0].path }}
+  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.info[0].path }}
   artifacts:
     logs.zip:
       paths:
