@@ -1811,6 +1811,7 @@ MonoBehaviour:
   m_Settings:
     m_OverscanInPixels: 0
   m_ProjectionPolicy: {fileID: 11400000, guid: 69aa423565dfed743a3cc800d9636052, type: 2}
+  m_DelayPresentByOneFrame: 0
 --- !u!1 &1740479845
 GameObject:
   m_ObjectHideFlags: 0
@@ -2057,7 +2058,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
-    serializedVersion: 2
+    serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 4971402384012629904, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
@@ -2164,6 +2165,14 @@ PrefabInstance:
       propertyPath: screenCoordScaleBias.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6764037574341968294, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      propertyPath: m_RenderingPathCustomFrameSettings.bitDatas.data1
+      value: 140666587840333
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4971402384012629904, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 963194229}
   m_SourcePrefab: {fileID: 100100000, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}

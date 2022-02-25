@@ -1,42 +1,69 @@
-# Cluster Display overview
+# Cluster Display
 
-The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering (large, multi-display configurations).
+The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering. This feature enables you, for example, to deploy your Unity project to large, multi-display configurations.
 
-## Prerequisites
+## Multiple displays
 
-* Unity 2020.1 or higher.
-* Unity 2020.2 or higher if using DX12 and Swap Barriers.
+In practice, you could use a single machine to render to multiple displays and/or high resolution displays (4K+), but the machine's computational power might present a limit to this approach. With Unity Cluster Display, you can scale up to an arbitrary number of machines, therefore an arbitrary number of displays: Unity Cluster Display currently supports up to 64 nodes. However, if you need to increase this number, it is technically possible.
 
-When installing add **Windows Build Support (IL2CPP)**.
+Note that Unity Cluster Display does not prevent the use of multiple displays per machine. The total number of pixels a machine can render to depends both on its hardware capabilities and the user project's complexity.
 
-If using **Swap Barriers**:
+## Clustering and synchronization
 
-* Only supported on Windows Vista and higher.
-* Only supported on DirectX 11 or DirectX 12.
-* Requires an [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/).
-* Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+A Cluster Display setup typically consists of **one emitter node** and **several repeater nodes**:
 
-### Hardware
-Required hardware is detailed in the [Cluster Display documentation](source/com.unity.cluster-display/Documentation~/index.md) in the 
+-   A single repeater node consists of a workstation and a display output.
 
-## Contents
+    -   Each workstation runs a copy of your Unity application with Cluster Display enabled.
 
-This repository contains in-development packages, tests and test projects, as well as files for building the NvAPI plugin for Swap Barrier support.
+    -   All the nodes run the same interactive content in lockstep, but each one only renders a subsection of the total display surface.
 
-| Folder | Description |
-|---------|----------------------|
-| [souce/com.unity.cluster-display](source/com.unity.cluster-display/Documentation~/index.md) | This package is **always required** for any Cluster Display setup. |
-| [source/com.unity.cluster-display.graphics](source/com.unity.cluster-display.graphics/Documentation~/index.md) | Use this additional package only if your Unity project is using High Definition Render Pipeline (**HDRP**). |
-| External | Contains the NvAPI files used to build the Quadro Sync DLLs. |
-| GfxPluginQuadroSyncD3D11 | Project containing the files to build the Quadro Sync D3D11 DLL. |
-| GfxPluginQuadroSyncD3D12 | Project containing the files to build the Quadro Sync D3D12 DLL. |
-| TestProjects/ClusterRenderTest | Test project built based on the legacy renderer used to test synchronization. |
-| [TestProjects/GraphicsDemoProject](TestProjects/GraphicsDemoProject/README.md) | Test project with a simple demo scene to demonstrate some HDRP features in a cluster environment. |
-| [TestProjects/GraphicsTestProject](TestProjects/GraphicsTestProject/README.md) | Test project to render multiple frames with different settings and compare the results against each other. |
-| TestProjects/QuadroSyncTest | Test project to validate NVIDIA Swap Barrier support. |
+-   The emitter is responsible for synchronizing the state for all repeater nodes.
 
-## Installation
+    -   The repeater nodes connect to the emitter node via a **wired** Local Area Network.
 
-The Cluster Display packages are currently experimental and must be installed manually. [See the documentation for installing a package from a local folder](https://docs.unity3d.com/Manual/upm-ui-local.html).
+    -   The emitter node does not technically need to be connected to a display, unless you configure it to also take the role of a repeater node.
 
-It is recommended to use [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for development.
+### Licensing
+
+Making cluster-enabled builds with Unity requires a special license. [Contact a Unity sales representative](https://create.unity3d.com/unity-sales) for more information.
+
+### Experimental packages
+
+The packages required to set up Unity Cluster Display are currently available as experimental packages, so they are not ready for production use. The features and documentation in these packages will change before they are verified for release.
+
+## Requirements
+
+* Requires Unity 2022.x+
+* Windows 10
+
+## Recommendations
+* Managed switch/router with access to [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings (See [Cluster Timesout After Period](troubleshooting.md)).
+* Choose a motherboard that supports [IPMI](https://en.wikipedia.org/wiki/Intelligent_Platform_Management_Interface) so you can remotely shutdown, restart and boot your nodes without needing physical access to the machines.
+* If your using Quadro Sync the following hardware is required:
+  * Requires one or more [NVIDIA Quadro GPU](https://www.nvidia.com/en-us/design-visualization/quadro/)s.
+  * Requires one or more [NVIDIA Quadro Sync II](https://www.nvidia.com/en-us/design-visualization/solutions/quadro-sync/) boards.
+
+## Terminology
+| Word | Definition |
+|--------------|-----------------|
+| **Node** | A node is a workstation that runs as part of a cluster.|
+| **Cluster** | A cluster is a collection of nodes that collaborate to render a larger image. |
+| **Emitter** | A emitter is a special node in a cluster that controls and distributes the necessary information for repeaters to be able to render their sections of a larger image. |
+| **Repeater** | A repeater is a special node in a cluster that receives the necessary information from an emitter to render their section of a larger image. |
+
+## Guide
+The following guides will help you setup your project with cluster display:
+
+After you've setup your project, the following guides will help you setup synchronization between nodes in the cluster:
+
+[Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
+
+[Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
+
+[Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
+
+## Send Us Your Logs!
+Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging and send those logs to us if something is broken. You can find where those logs are located by reading this [page](https://docs.unity3d.com/Manual/LogFiles.html).
+
+![Verbose Logging](source/com.unity.cluster-display/Documentation~/images/verbose-logging.png)

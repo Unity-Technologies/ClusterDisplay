@@ -9,6 +9,11 @@ TestProjects/*/Library
 TestProjects/*/Logs
 TestProjects/*/Temp
 TestProjects/*/UserSettings
+TestProjects/ClusterRenderTest/obj
+TestProjects/*/.idea
+
+bee.exe
+*.orig
 
 # Exceptions for actual .net projects
 !MissionControl/**/*.sln
@@ -19,3 +24,5 @@ TestProjects/GraphicsTestsURP/Assets/ActualImages
 TestProjects/GraphicsTestsURP/Assets/ActualImages.meta
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta
+
+CMakeCache.txt

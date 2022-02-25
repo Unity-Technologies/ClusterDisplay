@@ -4,7 +4,9 @@
         "Unity.ClusterDisplay.Graphics.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.ClusterDisplay.Graphics"
+        "Unity.ClusterDisplay.Graphics.Tests",
+        "Unity.ClusterDisplay.Graphics",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [
         "Editor"

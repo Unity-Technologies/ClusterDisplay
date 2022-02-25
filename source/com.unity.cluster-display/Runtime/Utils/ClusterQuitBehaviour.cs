@@ -1,4 +1,3 @@
-using System;
 using Unity.ClusterDisplay;
 using UnityEngine;
 
@@ -12,15 +11,17 @@ namespace ClusterDisplay.Utils
     {
         private void Update()
         {
-            if (ClusterSync.Active)
+            if (ClusterDisplayState.IsActive)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
+                {
                     ClusterSync.Instance.ShutdownAllClusterNodes();
+                }
 
             }
             else
             {
-                if (ClusterSync.Terminated)
+                if (ClusterDisplayState.IsTerminated)
                     Application.Quit(0);
             }
         }

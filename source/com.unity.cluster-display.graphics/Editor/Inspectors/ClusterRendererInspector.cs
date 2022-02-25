@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
+        SerializedProperty m_DelayPresentByOneFrameProp;
 
         NestedInspector m_PolicyEditor;
 
@@ -26,6 +27,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
+            m_DelayPresentByOneFrameProp = serializedObject.FindProperty("m_DelayPresentByOneFrame");
         }
 
         public override void OnInspectorGUI()
@@ -66,6 +68,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
+            EditorGUILayout.PropertyField(m_DelayPresentByOneFrameProp, Labels.GetGUIContent(Labels.Field.DelayPresentByOneFrame));
             
             if (currentPolicy != null && m_PolicyEditor != null)
             {
@@ -110,7 +113,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
         }
 
-        static void AddMissingClusterCameraComponents()
+        internal static void AddMissingClusterCameraComponents()
         {
             foreach (var camera in SceneUtils.FindAllObjectsInScene<Camera>())
             {

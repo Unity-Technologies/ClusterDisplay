@@ -1,0 +1,119 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
+
+namespace Unity.ClusterDisplay
+{
+    internal abstract class ClusterNode
+    {
+        protected NodeState m_CurrentState;
+        protected UDPAgent m_UDPAgent;
+        public UDPAgent UdpAgent => m_UDPAgent;
+
+        public byte NodeID => m_UDPAgent.LocalNodeID;
+        public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
+
+        protected internal IClusterSyncState clusterSync;
+
+        protected ClusterNode(
+            IClusterSyncState clusterSync,
+            UDPAgent.Config config)
+        {
+            if(config.nodeId >= UDPAgent.MaxSupportedNodeCount)
+                throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
+
+            m_UDPAgent = new UDPAgent(config);
+
+            this.clusterSync = clusterSync;
+            Stopwatch.StartNew();
+        }
+
+        public virtual bool TryStart()
+        {
+            try
+            {
+                if (!m_UDPAgent.Initialize())
+                {
+                    m_CurrentState = new FatalError(clusterSync, "Failed to start UDP Agent");
+                    m_CurrentState.EnterState(null);
+                    return false;
+                }
+
+                m_UDPAgent.OnError += OnNetworkingError;
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                ClusterDebug.LogError( $"Failed to start UDP Agent:\n{e.Message}");
+                m_CurrentState.EnterState(null);
+                return false;
+            }
+        }
+
+        public bool DoFrame(bool newFrame)
+        {
+            m_CurrentState = m_CurrentState?.ProcessFrame(newFrame);
+
+            if (m_CurrentState.GetType() == typeof(Shutdown))
+            {
+                if (m_UDPAgent.IsTxQueueEmpty)
+                {
+                    m_UDPAgent.Stop();
+                    return false;
+                }
+            }
+
+            return m_CurrentState.GetType() != typeof(FatalError);
+        }
+
+        public void EndFrame() => m_CurrentState?.OnEndFrame();
+
+        public void Exit()
+        {
+            if(m_CurrentState.GetType() != typeof(Shutdown))
+                m_CurrentState = (new Shutdown(clusterSync)).EnterState(m_CurrentState);
+            m_UDPAgent.Stop();
+        }
+
+        public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
+
+        public void BroadcastShutdownRequest()
+        {
+            var msgHdr = new MessageHeader()
+            {
+                MessageType = EMessageType.GlobalShutdownRequest,
+                Flags = MessageHeader.EFlag.LoopBackToSender | MessageHeader.EFlag.Broadcast,
+                OffsetToPayload = 0
+            };
+
+            UdpAgent.PublishMessage(msgHdr);
+        }
+
+        public virtual string GetDebugString()
+        {
+            if (ClusterSync.Instance.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
+            {
+                var stats = ClusterSync.Instance.CurrentNetworkStats;
+                return $"\tNode ID: {dynamicLocalNodeId}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
+                       $"\tState: {m_CurrentState.GetDebugString()}\r\n" + 
+                       $"\tNetwork stats: \r\n\t\tSend Queue Size: [{stats.txQueueSize}], " +
+                           $"\r\n\t\tReceive Queue Size:[{stats.rxQueueSize}], " +
+                           $"\r\n\t\tACK Queue Size: [{stats.pendingAckQueueSize}], " +
+                           $"\r\n\t\tTotal Resends: [{stats.totalResends}], " +
+                           $"\r\n\t\tMessages Sent: [{stats.msgsSent}], " +
+                           $"\r\n\t\tFailed Messages: [{stats.failedMsgs}]";
+                       
+            }
+
+            return null;
+        }
+
+        protected void OnNetworkingError( string message )
+        {
+            m_CurrentState.PendingStateChange = new FatalError(clusterSync, $"Networking error: {message}");
+        }
+    }
+
+}

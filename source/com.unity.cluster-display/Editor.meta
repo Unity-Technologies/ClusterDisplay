@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+<<<<<<<< HEAD:source/com.unity.cluster-display/Editor.meta
+guid: f7b219a1ee2829347a03a6b2faa34dbe
+========
+guid: 5c072e35de69c5a45b5c1bfaa8fd1426
+>>>>>>>> dev:source/com.unity.cluster-display.graphics/Editor.meta
+folderAsset: yes
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

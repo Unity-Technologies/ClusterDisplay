@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor.Tests")]
+
 namespace Unity.ClusterDisplay
 {
     /// <summary>
@@ -24,13 +25,13 @@ namespace Unity.ClusterDisplay
             QuadroSyncInitialize = 0,
 
             /// <summary>
-            /// Queries the actual frame count in Runtime for the Master Sync system
+            /// Queries the actual frame count in Runtime for the Emitter Sync system
             /// or for the custom frame count system.
             /// </summary>
             QuadroSyncQueryFrameCount,
 
             /// <summary>
-            /// Resets the frame count for the Master Sync system (NvAPI) or
+            /// Resets the frame count for the Emitter Sync system (NvAPI) or
             /// for the custom frame count system.
             /// </summary>
             QuadroSyncResetFrameCount,
@@ -57,7 +58,7 @@ namespace Unity.ClusterDisplay
             QuadroSyncEnableSwapBarrier,
 
             /// <summary>
-            /// Enables or disables the use of the Master sync counter system (NvAPI).
+            /// Enables or disables the use of the Emitter sync counter system (NvAPI).
             /// </summary>
             QuadroSyncEnableSyncCounter
         };
@@ -84,15 +85,12 @@ namespace Unity.ClusterDisplay
         {
             get { return instance; }
         }
+
         private static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
 
-        static GfxPluginQuadroSyncSystem()
-        {
-        }
+        static GfxPluginQuadroSyncSystem() { }
 
-        private GfxPluginQuadroSyncSystem()
-        {
-        }
+        private GfxPluginQuadroSyncSystem() { }
 
         /// <summary>
         /// Executes a CommandBuffer related to the EQuadroSyncRenderEvent.
@@ -106,7 +104,7 @@ namespace Unity.ClusterDisplay
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 ||
                 SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
             {
-                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int)id, data);
+                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int) id, data);
             }
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);

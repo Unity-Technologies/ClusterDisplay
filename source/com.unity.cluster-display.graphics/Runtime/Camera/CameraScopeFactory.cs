@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 #if CLUSTER_DISPLAY_HDRP
 using UnityEngine.Rendering.HighDefinition;
+
 #elif CLUSTER_DISPLAY_URP
 using UnityEngine.Rendering.Universal;
 #endif
@@ -25,6 +26,10 @@ namespace Unity.ClusterDisplay.Graphics
         readonly struct BaseCameraScope
         {
             readonly Camera m_Camera;
+
+            readonly Vector3 m_Position;
+            readonly Quaternion m_Rotation;
+
             readonly RenderTexture m_Target;
             readonly bool m_UsePhysicalProperties;
             readonly int m_CullingMask;
@@ -32,22 +37,47 @@ namespace Unity.ClusterDisplay.Graphics
             public BaseCameraScope(Camera camera)
             {
                 m_Camera = camera;
+
+                var transform = camera.transform;
+                m_Position = transform.position;
+                m_Rotation = transform.rotation;
+
                 m_UsePhysicalProperties = camera.usePhysicalProperties;
                 m_CullingMask = m_Camera.cullingMask;
                 m_Target = m_Camera.targetTexture;
             }
 
-            public void PreRender(Matrix4x4 projection, RenderTexture target)
+            public void PreRender(RenderTexture target,
+                Matrix4x4? projection,
+                Vector3? position = null,
+                Quaternion? rotation = null)
             {
+                var transform = m_Camera.transform;
+
+                var userModifiedProjectionMatrix = projection ?? m_Camera.projectionMatrix;
+                var userModifiedPosition = position ?? transform.position;
+                var userModifiedRotation = rotation ?? transform.rotation;
+
                 m_Camera.targetTexture = target;
-                m_Camera.projectionMatrix = projection;
-                m_Camera.cullingMatrix = projection * m_Camera.worldToCameraMatrix;
+
+                transform.position = userModifiedPosition;
+                transform.rotation = userModifiedRotation;
+                m_Camera.projectionMatrix = userModifiedProjectionMatrix;
+
+                m_Camera.cullingMatrix = userModifiedProjectionMatrix * m_Camera.worldToCameraMatrix;
                 m_Camera.cullingMask = m_CullingMask & ~(1 << ClusterRenderer.VirtualObjectLayer);
             }
 
             public void Dispose()
             {
+                // Restore the original transform
+                var transform = m_Camera.transform;
+                transform.position = m_Position;
+                transform.rotation = m_Rotation;
+
+                // Takes care of restoring the projection matrix
                 ApplicationUtil.ResetCamera(m_Camera);
+
                 m_Camera.targetTexture = m_Target;
                 m_Camera.cullingMask = m_CullingMask;
                 m_Camera.usePhysicalProperties = m_UsePhysicalProperties;
@@ -62,7 +92,9 @@ namespace Unity.ClusterDisplay.Graphics
             readonly HDAdditionalCameraData m_AdditionalCameraData;
             readonly bool m_HadCustomRenderSettings;
 
-            public HdrpCameraScope(Camera camera, RenderFeature renderFeature)
+            public HdrpCameraScope(
+                Camera camera,
+                RenderFeature renderFeature)
             {
                 m_BaseCameraScope = new BaseCameraScope(camera);
                 m_Camera = camera;
@@ -78,38 +110,38 @@ namespace Unity.ClusterDisplay.Graphics
 
                     if (renderFeature.HasFlag(RenderFeature.AsymmetricProjection))
                     {
-                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = true;
+                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.AsymmetricProjection] = true;
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, true);
                     }
 
                     if (renderFeature.HasFlag(RenderFeature.ScreenCoordOverride))
                     {
-                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = true;
+                        m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = true;
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
                     }
                 }
             }
 
-            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            public void Render(RenderTexture target,
+                Matrix4x4? projection,
+                Vector4? screenSizeOverride,
+                Vector4? screenCoordScaleBias,
+                Vector3? position,
+                Quaternion? rotation)
             {
-                m_BaseCameraScope.PreRender(projection, target);
+                m_BaseCameraScope.PreRender(target, projection, position, rotation);
 
-                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;
 
                 m_Camera.Render();
-            }
-
-            public void Render(Matrix4x4 projection, RenderTexture target)
-            {
-                Render(projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
             }
 
             public void Dispose()
             {
                 m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
-                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.AsymmetricProjection] = false;
-                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int)FrameSettingsField.ScreenCoordOverride] = false;
+                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.AsymmetricProjection] = false;
+                m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = false;
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.AsymmetricProjection, false);
                 m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, false);
 
@@ -132,20 +164,22 @@ namespace Unity.ClusterDisplay.Graphics
                 m_UseScreenCoordOverride = renderFeature.HasFlag(RenderFeature.ScreenCoordOverride);
             }
 
-            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target)
+            public void Render(RenderTexture target,
+                Matrix4x4? projection,
+                Vector4? screenSizeOverride,
+                Vector4? screenCoordScaleBias,
+                Vector3? position,
+                Quaternion? rotation)
             {
-                m_BaseCameraScope.PreRender(projection, target);
+                m_BaseCameraScope.PreRender(target, projection);
 
+                Debug.Assert(m_UseScreenCoordOverride == screenSizeOverride.HasValue);
+                
                 m_AdditionalCameraData.useScreenCoordOverride = m_UseScreenCoordOverride;
-                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride;
-                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias;
+                m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
+                m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;
 
                 m_Camera.Render();
-            }
-
-            public void Render(Matrix4x4 projection, RenderTexture target)
-            {
-                Render(projection, GraphicsUtil.k_IdentityScaleBias, GraphicsUtil.k_IdentityScaleBias, target);
             }
 
             public void Dispose()
@@ -158,13 +192,12 @@ namespace Unity.ClusterDisplay.Graphics
         readonly struct NullCameraScope : ICameraScope
         {
             public void Dispose() { }
-
-            public void Render(Matrix4x4 projection, Vector4 screenSizeOverride, Vector4 screenCoordScaleBias, RenderTexture target) { }
-
-            public void Render(Matrix4x4 projection, RenderTexture target) { }
+            public void Render(RenderTexture target, Matrix4x4? projection, Vector4? screenSizeOverride, Vector4? screenCoordScaleBias, Vector3? position, Quaternion? rotation) { }
         }
 
-        public static ICameraScope Create(Camera camera, RenderFeature renderFeature)
+        public static ICameraScope Create(
+            Camera camera,
+            RenderFeature renderFeature)
         {
 #if CLUSTER_DISPLAY_HDRP
             return new HdrpCameraScope(camera, renderFeature);

@@ -7,9 +7,10 @@ namespace Unity.ClusterDisplay.Graphics
     interface IPresenter
     {
         event Action<PresentArgs> Present;
-        public Color ClearColor { set; }
+        Color ClearColor { set; }
         // We expose the output camera since it may be used for capture.
-        public Camera Camera { get; }
+        Camera Camera { get; }
+        void SetDelayed(bool value);
         void Enable(GameObject gameObject);
         void Disable();
     }

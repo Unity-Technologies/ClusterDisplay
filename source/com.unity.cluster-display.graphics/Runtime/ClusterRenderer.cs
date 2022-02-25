@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-
 #if UNITY_EDITOR
 using UnityEditor;
+
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -18,11 +18,18 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    public class ClusterRenderer : MonoBehaviour
+    public class ClusterRenderer : SingletonMonoBehaviour<ClusterRenderer>
     {
-        // Temporary, we need a way to *not* procedurally deactivate cameras when no cluster rendering occurs.
-        static int s_ActiveInstancesCount;
-        internal static bool IsActive() => s_ActiveInstancesCount > 0;
+        internal static bool IsActive()
+        {
+            if (TryGetInstance(out var instance, false))
+            {
+                return instance.isActiveAndEnabled;
+            }
+
+            return false;
+        }
+
         internal static Action Enabled = delegate { };
         internal static Action Disabled = delegate { };
 
@@ -37,6 +44,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         ProjectionPolicy m_ProjectionPolicy;
 
+        [SerializeField]
+        bool m_DelayPresentByOneFrame;
+
 #if CLUSTER_DISPLAY_HDRP
         IPresenter m_Presenter = new HdrpPresenter();
 #elif CLUSTER_DISPLAY_URP
@@ -50,7 +60,24 @@ namespace Unity.ClusterDisplay.Graphics
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
-        internal ProjectionPolicy ProjectionPolicy => m_ProjectionPolicy;
+        internal ProjectionPolicy ProjectionPolicy
+        {
+            get => m_ProjectionPolicy;
+            set => m_ProjectionPolicy = value;
+        }
+
+        /// <summary>
+        /// If true, buffers and delays the presentation of the camera output by one frame.
+        /// </summary>
+        internal bool DelayPresentByOneFrame
+        {
+            get => m_DelayPresentByOneFrame;
+            set
+            {
+                m_DelayPresentByOneFrame = value;
+                m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+            }
+        }
 
         /// <summary>
         /// Specifies whether the current projection policy is in debug mode.
@@ -64,7 +91,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_ProjectionPolicy.IsDebug = value;
                 }
             }
-            get => m_ProjectionPolicy == null ? false : m_ProjectionPolicy.IsDebug;
+            get => m_ProjectionPolicy != null && m_ProjectionPolicy.IsDebug;
         }
 
         /// <summary>
@@ -92,24 +119,22 @@ namespace Unity.ClusterDisplay.Graphics
         }
 #endif
 
+        // TODO Why do we need to "delete" the base implementation?
+        protected override void OnAwake() { }
+
+        void OnValidate()
+        {
+            m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+        }
+
         void OnEnable()
         {
-            ++s_ActiveInstancesCount;
-
-            // TODO More elegant / user friendly way to handle this.
-            if (s_ActiveInstancesCount > 1)
-            {
-                throw new InvalidOperationException($"At most one instance of {nameof(ClusterRenderer)} can be active.");
-            }
-
-            // TODO Keyword should be set for one render only at a time. Ex: not when rendering the scene camera.
-            // EnableScreenCoordOverrideKeyword(m_DebugSettings.EnableKeyword);
+            m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
 
             PlayerLoopExtensions.RegisterUpdate<UnityEngine.PlayerLoop.PostLateUpdate, ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            // TODO Needed?
 #if UNITY_EDITOR
             SceneView.RepaintAll();
 #endif
@@ -130,7 +155,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayUpdate>(OnClusterDisplayUpdate);
 
-            --s_ActiveInstancesCount;
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
         }
@@ -143,15 +167,15 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        void OnClusterDisplayUpdate()
+        static void OnClusterDisplayUpdate()
         {
-            var activeCamera = ClusterCameraManager.Instance.ActiveCamera;
-            if (activeCamera == null || m_ProjectionPolicy == null)
+            // It may be possible that a subsystem update occurs after de-registration with the new update-loop being used next frame.
+            if (TryGetInstance(out var clusterRenderer) && clusterRenderer.isActiveAndEnabled &&
+                ClusterCameraManager.Instance.ActiveCamera is Camera activeCamera &&
+                clusterRenderer.m_ProjectionPolicy is ProjectionPolicy projectionPolicy)
             {
-                return;
+                projectionPolicy.UpdateCluster(clusterRenderer.m_Settings, activeCamera);
             }
-
-            m_ProjectionPolicy.UpdateCluster(m_Settings, activeCamera);
         }
     }
 }

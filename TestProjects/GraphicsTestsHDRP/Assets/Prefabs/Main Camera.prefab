@@ -121,6 +121,7 @@ MonoBehaviour:
     m_ShutterSpeed: 0.005
     m_Aperture: 16
     m_FocusDistance: 10
+    m_GateFit: 1
     m_BladeCount: 5
     m_Curvature: {x: 2, y: 11}
     m_BarrelClipping: 0.25
@@ -232,7 +233,7 @@ MonoBehaviour:
     PerPixelCorrectnessThreshold: 0.001
     PerPixelGammaThreshold: 0.003921569
     PerPixelAlphaThreshold: 0.003921569
-    AverageCorrectnessThreshold: 0.005
+    AverageCorrectnessThreshold: 0.002
     IncorrectPixelsThreshold: 0.0000038146973
     UseHDR: 0
     UseBackBuffer: 0

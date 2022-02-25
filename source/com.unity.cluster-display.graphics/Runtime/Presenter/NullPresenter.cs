@@ -14,6 +14,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         NullPresenter() { }
 
+        public void SetDelayed(bool value) { }
+
         public void Disable() { }
 
         public Color ClearColor { get; set; }
