@@ -1,5 +1,4 @@
 test_editors:
-- version: 2022.1
 - version: 2022.2
 - version: trunk
 test_platforms:
@@ -33,8 +32,8 @@ pack_{{ project.info[1].name }}:
     packages:
       paths:
       - "upm-ci~/packages/**/*"
-  dependencies:
-      - .yamato/upm-ci.yml#build_win
+  # dependencies:
+  #     - .yamato/upm-ci.yml#build_win
  {% endfor %}
 
 build_win:
@@ -53,13 +52,14 @@ build_win:
   {% for editor in test_editors %}
   {% for platform in test_platforms %}
   {% for project in all_test_projects %}
-test_{{ platform.name }}_{{ editor.version }}__{{ project.info[1].name }}:
+test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
   name : Test {{ project.info[1].name }} {{ editor.version }} {{ platform.name }}
   agent:
     type: {{ platform.type }}
     image: {{ platform.image }}
     flavor: {{ platform.flavor}}
   commands:
+  - git submodule update --init
   - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
   - upm-ci project test --unity-version {{ editor.version }}  --project-path  {{ project.info[0].path }}
   artifacts:
@@ -70,6 +70,26 @@ test_{{ platform.name }}_{{ editor.version }}__{{ project.info[1].name }}:
   - .yamato/upm-ci.yml#pack_{{ project.info[1].name }}
   {% endfor %}
   {% endfor %}
+  {% endfor %}
+
+  {% for project in all_test_projects %}
+test_win_2022_1_{{ project.info[1].name }}:
+  name : Test {{ project.info[1].name }} 2022.1 Windows
+  agent:
+    type: Unity::VM
+    image: package-ci/win10:stable
+    flavor: b1.large
+  commands:
+  - git submodule update --init
+  - git apply --directory=Graphics gfx-editor-2022.1-backport.patch
+  - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
+  - upm-ci project test --unity-version 2022.1 --project-path  {{ project.info[0].path }}
+  artifacts:
+    logs.zip:
+      paths:
+      - "upm-ci~/test-results/**/*"
+  dependencies:
+  - .yamato/upm-ci.yml#pack_{{ project.info[1].name }}
   {% endfor %}
 
 test_trigger:
