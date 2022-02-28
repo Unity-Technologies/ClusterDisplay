@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public readonly bool ClearRegistry;
 
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.MaxArgLength)]
         public readonly string ExtraArgs;
 
         public readonly bool UseDeprecatedArgNames;
