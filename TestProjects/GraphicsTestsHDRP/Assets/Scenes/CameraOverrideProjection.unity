@@ -2070,7 +2070,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4971402384012629906, guid: 8f53ede7eb95de2418f798d710fcadf0, type: 3}
       propertyPath: m_AllowMSAA

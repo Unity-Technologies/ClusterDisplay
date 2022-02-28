@@ -28,6 +28,11 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
             GameViewUtils.SetSize(GameViewUtils.FindSize(GameViewSizeGroupType.Standalone, k_GameViewSizeName));
         }
 
+        public void OpenGameView()
+        {
+            GameViewUtils.OpenGameView();
+        }
+        
         public void CaptureRenderDoc()
         {
             GameViewUtils.CaptureRenderDocScene();

@@ -48,6 +48,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_GraphicsTestSettings = FindObjectOfType<GraphicsTestSettings>();
             Assert.IsNotNull(m_GraphicsTestSettings, "Missing test settings for graphic tests.");
 
+            EditorBridge.OpenGameView();
+
             var success = EditorBridge.SetGameViewSize(
                 m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth,
                 m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight);
