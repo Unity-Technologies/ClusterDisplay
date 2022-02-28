@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,6 +28,9 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <param name="remoteEndPoint">The end point to connect to.</param>
         /// <returns>The IP address of the interface to use.</returns>
+#if !UNITY_EDITOR
+        [SupportedOSPlatform("windows")]
+#endif
         public static IPAddress QueryRoutingInterface(IPEndPoint remoteEndPoint)
         {
             var address = remoteEndPoint.Serialize();

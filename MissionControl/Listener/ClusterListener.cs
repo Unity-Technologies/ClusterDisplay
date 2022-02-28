@@ -2,13 +2,15 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
-    sealed class ClusterListener : IDisposable
+    [SupportedOSPlatform("windows")]
+    public sealed class ClusterListener : IDisposable
     {
         readonly byte[] m_SendBuffer = new byte[Constants.BufferSize];
         static readonly string k_MachineName = Environment.MachineName;
@@ -52,7 +54,12 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             Console.WriteLine("Cluster listener started");
             m_TaskCancellation = new CancellationTokenSource();
-            var cancellationToken = m_TaskCancellation.Token;
+            await Run(m_TaskCancellation.Token);
+        }
+
+        public async Task Run(CancellationToken cancellationToken)
+        {
+            Console.WriteLine("Cluster listener started");
 
             m_HeartbeatTask = DoHeartbeat(15000, cancellationToken);
             m_ListenTask = Listen(cancellationToken);
@@ -217,7 +224,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public async void Dispose()
         {
             m_MessageChannel.Writer.Complete();
-            m_TaskCancellation.Cancel();
+            m_TaskCancellation?.Cancel();
             try
             {
                 KillRunningProcess();

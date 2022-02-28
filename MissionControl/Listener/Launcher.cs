@@ -11,13 +11,6 @@ namespace Unity.ClusterDisplay.MissionControl
 {
     static class Launcher
     {
-        internal readonly struct ExecutableInfo
-        {
-            public readonly string Name;
-            public readonly string Path;
-            public readonly string Company;
-        }
-
         static readonly string k_LocalPath = Environment.SpecialFolder.LocalApplicationData + "\\ClusterDisplayBuilds";
         const string k_CopyParams = "/MIR /FFT /Z /XA:H";
 
