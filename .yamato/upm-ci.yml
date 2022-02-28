@@ -1,8 +1,6 @@
 test_editors:
-- version: 2020.1
-- version: 2020.2
+- version: 2022.2
 - version: trunk
-
 test_platforms:
 - name: win
   type: Unity::VM
@@ -12,25 +10,35 @@ test_platforms:
   type: Unity::VM::osx
   image: package-ci/mac:latest
   flavor: m1.mac
+all_test_projects:
+  - info:
+    - path : TestProjects/GraphicsTestsHDRP
+    - name : HDRPTest
+  - info:
+    - path : TestProjects/GraphicsTestsURP
+    - name : URPTest
 ---
-pack:
-  name: Pack
+{% for project in all_test_projects %}
+pack_{{ project.info[1].name }}:
+  name: Pack {{ project.info[1].name }}
   agent:
-    type: Unity::VM::osx
-    image: package-ci/mac:latest
-    flavor: m1.mac
+    type: Unity::VM
+    image: package-ci/ubuntu:stable
+    flavor: b1.large
   commands:
+    - git submodule update --init
     - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm 
-    - upm-ci package pack --package-path source/com.unity.cluster-display
+    - upm-ci project pack --project-path {{ project.info[0].path }}
   artifacts:
     packages:
       paths:
       - "upm-ci~/packages/**/*"
   dependencies:
       - .yamato/upm-ci.yml#build_win
+ {% endfor %}
 
 build_win:
-  name: Build native Quadro Symc
+  name: Build native Quadro Sync
   agent:
     type: Unity::VM
     image: package-ci/win10:stable
@@ -44,99 +52,36 @@ build_win:
 
   {% for editor in test_editors %}
   {% for platform in test_platforms %}
-test_{{ platform.name }}_{{ editor.version }}:
-  name : Test {{ editor.version }} on {{ platform.name }}
+  {% for project in all_test_projects %}
+test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
+  name : Test {{ project.info[1].name }} {{ editor.version }} {{ platform.name }}
   agent:
     type: {{ platform.type }}
     image: {{ platform.image }}
     flavor: {{ platform.flavor}}
   commands:
+  - git submodule update --init
   - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
-  - upm-ci package test --unity-version {{ editor.version }}  --package-path source/com.unity.cluster-display
+  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.info[0].path }}
   artifacts:
     logs.zip:
       paths:
       - "upm-ci~/test-results/**/*"
   dependencies:
-  - .yamato/upm-ci.yml#pack
+  - .yamato/upm-ci.yml#pack_{{ project.info[1].name }}
+  {% endfor %}
   {% endfor %}
   {% endfor %}
 
 test_trigger:
-  name: Tests Trigger
-  agent:
-    type: Unity::VM
-    image: package-ci/win10:stable
-    flavor: b1.large
-  commands:
-  - dir
+  name: Run tests after package changes
   triggers:
     expression: pull_request.target eq "dev"
-  artifacts:
-    logs:
-      paths:
-      - "upm-ci~/test-results/**/*"
-    packages:
-      paths:
-      - "upm-ci~/packages/**/*"
   dependencies:
-  - .yamato/upm-ci.yml#pack
     {% for editor in test_editors %}
     {% for platform in test_platforms %}
-  - .yamato/upm-ci.yml#test_{{platform.name}}_{{editor.version}}
+    {% for project in all_test_projects %}
+  - .yamato/upm-ci.yml#test_{{platform.name}}_{{editor.version}}_{{ project.info[1].name }}
     {% endfor %}
-    {% endfor %}
-
-nightly_test_trigger:
-  name: Nightly tests Trigger
-  agent:
-    type: Unity::VM
-    image: package-ci/win10:stable
-    flavor: b1.large
-  commands:
-    - dir
-  triggers:
-    recurring:
-      - branch: develop
-        frequency: daily
-      - branch: stable
-        frequency: daily
-  artifacts:
-    logs:
-      paths:
-        - "upm-ci~/test-results/**/*"
-    packages:
-      paths:
-        - "upm-ci~/packages/**/*"
-  dependencies:
-    - .yamato/upm-ci.yml#pack
-      {% for editor in test_editors %}
-      {% for platform in test_platforms %}
-    - .yamato/upm-ci.yml#test_{{platform.name}}_{{editor.version}}
-      {% endfor %}
-      {% endfor %}
-
-publish:
-  name: Publish to Internal Registry
-  agent:
-    type: Unity::VM
-    image: package-ci/win10:stable
-    flavor: b1.large
-  commands:
-  - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
-  - upm-ci package publish --package-path source/com.unity.cluster-display
-  triggers:
-    tags:
-      only:
-      - /^(r|R)(c|C)-\d+\.\d+\.\d+(-preview(\.\d+)?)?$/
-  artifacts:
-    artifacts.zip:
-      paths:
-      - "upm-ci~/packages/*.tgz"
-  dependencies:
-  - .yamato/upm-ci.yml#pack
-    {% for editor in test_editors %}
-    {% for platform in test_platforms %}
-  - .yamato/upm-ci.yml#test_{{ platform.name }}_{{ editor.version }}
     {% endfor %}
     {% endfor %}
