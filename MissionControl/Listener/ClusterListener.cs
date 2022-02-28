@@ -52,14 +52,14 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public async Task Run()
         {
-            Console.WriteLine("Cluster listener started");
+            Trace.WriteLine("Cluster listener started");
             m_TaskCancellation = new CancellationTokenSource();
             await Run(m_TaskCancellation.Token);
         }
 
         public async Task Run(CancellationToken cancellationToken)
         {
-            Console.WriteLine("Cluster listener started");
+            Trace.WriteLine("Cluster listener started");
 
             m_HeartbeatTask = DoHeartbeat(15000, cancellationToken);
             m_ListenTask = Listen(cancellationToken);
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         void HandleServerBroadcast(in MessageHeader header, in ServerInfo _)
         {
-            // Console.WriteLine($"Discovery request from {header.HostName}");
+            // Trace.WriteLine($"Discovery request from {header.HostName}");
             Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
 
             m_LocalEndPoint ??= new IPEndPoint(
@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.MissionControl
                         ReportNodeStatus(NodeStatus.Ready);
                     }))
                 {
-                    Console.WriteLine("Unsupported message type received");
+                    Trace.WriteLine("Unsupported message type received");
                 };
             }
         }
@@ -120,11 +120,11 @@ namespace Unity.ClusterDisplay.MissionControl
                 try
                 {
                     m_SubProcessTask.Wait(5000);
-                    Console.WriteLine("Subprocess killed");
+                    Trace.WriteLine("Subprocess killed");
                 }
                 catch (AggregateException e)
                 {
-                    Console.WriteLine(e.Message);
+                    Trace.WriteLine(e.Message);
                 }
             }
 
@@ -155,7 +155,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         async Task SyncPlayerFiles(DirectorySyncInfo syncInfo)
         {
-            Console.WriteLine("Project sync requested");
+            Trace.WriteLine("Project sync requested");
             KillRunningProcess();
             m_SubProcessCancellation = new CancellationTokenSource();
             
@@ -163,14 +163,14 @@ namespace Unity.ClusterDisplay.MissionControl
             if (await Launcher.SyncProjectDir(syncInfo.RemoteDirectory, m_SubProcessCancellation.Token)
                 .WithErrorHandling(ex => ReportNodeStatus(NodeStatus.Error, ex.Message)))
             {
-                Console.Write("Sync successful");
+                Trace.WriteLine("Sync successful");
                 ReportNodeStatus(NodeStatus.Ready);
             }
         }
 
         async Task RunPlayer(LaunchInfo launchInfo)
         {
-            Console.WriteLine("Launch requested");
+            Trace.WriteLine("Launch requested");
             
             KillRunningProcess();
             m_SubProcessCancellation = new CancellationTokenSource();
@@ -197,11 +197,11 @@ namespace Unity.ClusterDisplay.MissionControl
                 {
                     var size = m_SendBuffer.WriteMessage(k_MachineName, m_LocalEndPoint, nodeInfo);
 
-                    // Console.WriteLine($"Sending status {nodeInfo.Status} to {m_ServerEndPoint}");
+                    // Trace.WriteLine($"Sending status {nodeInfo.Status} to {m_ServerEndPoint}");
                     var bytesSent = await m_UdpClient.SendAsync(m_SendBuffer, size, m_ServerEndPoint).WithCancellation(token);
                     if (bytesSent < size)
                     {
-                        Console.WriteLine($"Sent {bytesSent}; expected {size}");
+                        Trace.WriteLine($"Sent {bytesSent}; expected {size}");
                     }
                 }
             }
@@ -213,7 +213,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 if (m_ServerEndPoint != null && (DateTime.Now - m_LastHeardFromServer).TotalMilliseconds > intervalMilliseconds * 2)
                 {
-                    Console.WriteLine("Server lost");
+                    Trace.WriteLine("Server lost");
                     m_ServerEndPoint = null;
                 }
 
@@ -232,11 +232,11 @@ namespace Unity.ClusterDisplay.MissionControl
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Tasks cancelled");
+                Trace.WriteLine("Tasks cancelled");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Trace.WriteLine(e);
             }
 
             m_UdpClient.Dispose();
