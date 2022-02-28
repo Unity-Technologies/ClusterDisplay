@@ -246,7 +246,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             if (GUILayout.Button("Stop All"))
             {
                 m_LaunchCancellationTokenSource?.Cancel();
-                m_Server.StopAll().WithErrorHandling(LogException);
+                m_Server.StopAll(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
             }
 
             if (GUI.changed)
