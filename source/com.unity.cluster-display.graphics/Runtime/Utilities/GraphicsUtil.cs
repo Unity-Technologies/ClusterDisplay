@@ -11,9 +11,6 @@ namespace Unity.ClusterDisplay.Graphics
         // Otherwise see ScreenCoordOverrideUtils in SRP Core.
         const string k_ShaderKeyword = "SCREEN_COORD_OVERRIDE";
 
-        // Used to support the camera bridge capture API. 
-        static readonly int k_RecorderTempRT = Shader.PropertyToID("TempRecorder");
-
         static GraphicsFormat s_GraphicsFormat = GraphicsFormat.None;
 
         public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
@@ -174,29 +171,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             rt = null;
         }
-
-        public static void SetShaderKeyword(bool enabled)
-        {
-            SetShaderKeyword(k_ShaderKeyword, enabled);
-        }
-
-        public static void SetShaderKeyword(string keyword, bool enabled)
-        {
-            if (Shader.IsKeywordEnabled(keyword) == enabled)
-            {
-                return;
-            }
-
-            if (enabled)
-            {
-                Shader.EnableKeyword(keyword);
-            }
-            else
-            {
-                Shader.DisableKeyword(keyword);
-            }
-        }
-
+        
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }
