@@ -4,8 +4,9 @@ test_editors:
 test_platforms:
 - name: win
   type: Unity::VM::GPU
-  image: package-ci/win10:stable
-  flavor: b1.large
+  image: graphics-foundation/win10-dxr:stable
+  flavor: b1.xlarge
+  model: rtx2080
 all_test_projects:
   - info:
     - path : TestProjects/GraphicsTestsHDRP
