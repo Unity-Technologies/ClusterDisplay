@@ -292,16 +292,20 @@ namespace Unity.ClusterDisplay.MissionControl
             return true;
         }
 
-        public async Task StopAll()
+        public async Task StopAll(CancellationToken cancellationToken)
         {
             var dgram = new byte[Constants.BufferSize];
 
-            foreach (var node in Nodes)
+            // Gather up all the client tasks instead of awaiting each individually in a foreach.
+            // The reason for that is the Nodes collection could change from under us while we're awaiting.
+            var tasks = Nodes.Select(node =>
             {
                 var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new KillInfo());
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
-                await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
-            }
+                return m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
+            }).ToList();
+
+            await Task.WhenAll(tasks).WithCancellation(cancellationToken);
         }
 
         void OnNodeAdded(ExtendedNodeInfo extendedNode)

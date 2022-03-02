@@ -11,27 +11,25 @@ namespace Unity.ClusterDisplay.MissionControl
 {
     static class Launcher
     {
-        internal readonly struct ExecutableInfo
-        {
-            public readonly string Name;
-            public readonly string Path;
-            public readonly string Company;
-        }
-
-        static readonly string k_LocalPath = Environment.SpecialFolder.LocalApplicationData + "\\ClusterDisplayBuilds";
         const string k_CopyParams = "/MIR /FFT /Z /XA:H";
+
+        static string ExecutablePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ClusterDisplayBuilds");
 
         public static string GetLocalProjectDir(string sharedProjectDir)
         {
             var projectName = new DirectoryInfo(sharedProjectDir).Name;
-            return Path.Combine(k_LocalPath, projectName);
+            return Path.Combine(ExecutablePath, projectName);
         }
 
         public static async Task SyncProjectDir(string sharedProjectDir, CancellationToken token)
         {
             var localProjectionDir = GetLocalProjectDir(sharedProjectDir);
+            if (!Directory.Exists(localProjectionDir))
+            {
+                Directory.CreateDirectory(localProjectionDir);
+            }
 
-            Console.WriteLine($"Syncing project from {sharedProjectDir} to {localProjectionDir}");
+            Trace.WriteLine($"Syncing project from {sharedProjectDir} to {localProjectionDir}");
 
             var copyProcess = new Process
             {
@@ -41,7 +39,7 @@ namespace Unity.ClusterDisplay.MissionControl
                     Arguments = $"{sharedProjectDir} {localProjectionDir} {k_CopyParams}"
                 }
             };
-            Console.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
+            Trace.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
 
             copyProcess.Start();
             try
@@ -103,7 +101,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Could not clear the registry key: {ex.Message}");
+                    Trace.WriteLine($"Could not clear the registry key: {ex.Message}");
                 }
             }
 
@@ -117,7 +115,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             };
 
-            Console.WriteLine($"Running...\n{playerInfo.ExecutablePath} {argString}");
+            Trace.WriteLine($"Running...\n{playerInfo.ExecutablePath} {argString}");
             runProjectProcess.Start();
 
             try
@@ -126,7 +124,7 @@ namespace Unity.ClusterDisplay.MissionControl
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Trace.WriteLine(e.Message);
             }
             finally
             {
@@ -134,6 +132,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 {
                     runProjectProcess.Kill();
                 }
+                Trace.WriteLine($"Process exited with code {runProjectProcess.ExitCode}");
             }
         }
     }
