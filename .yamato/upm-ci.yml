@@ -4,9 +4,8 @@ test_editors:
 test_platforms:
 - name: win
   type: Unity::VM::GPU
-  image: graphics-foundation/win10-dxr:stable
-  flavor: b1.xlarge
-  model: rtx2080
+  image: package-ci/win10:stable
+  flavor: b1.large
 all_test_projects:
   - info:
     - path : TestProjects/GraphicsTestsHDRP
@@ -56,7 +55,6 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
     type: {{ platform.type }}
     image: {{ platform.image }}
     flavor: {{ platform.flavor}}
-    model: {{ platform.model}}
   commands:
   - git submodule update --init
   - choco install unity-downloader-cli -y    
