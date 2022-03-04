@@ -17,4 +17,13 @@
     <ItemGroup>
       <ProjectReference Include="..\Listener\Listener.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <None Update="InstallListener.ps1">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="UninstallListener.ps1">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 </Project>
