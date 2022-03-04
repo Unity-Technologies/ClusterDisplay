@@ -6,6 +6,7 @@
         <AssemblyName>ListenerService</AssemblyName>
         <RootNamespace>ListenerService</RootNamespace>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <OutputType>WinExe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
