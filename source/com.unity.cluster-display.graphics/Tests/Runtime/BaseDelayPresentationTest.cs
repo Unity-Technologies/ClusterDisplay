@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             }
         }
 
-        const int k_NumFrames = 12;
+        const int k_NumFrames = 3;
 
         protected Camera m_Camera;
         protected ClusterRenderer m_ClusterRenderer;
