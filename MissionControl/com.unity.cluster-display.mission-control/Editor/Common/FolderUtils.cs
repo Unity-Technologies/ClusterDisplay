@@ -28,41 +28,37 @@ namespace Unity.ClusterDisplay.MissionControl
             info = default;
 
             var dirInfo = new DirectoryInfo(path);
-            if (dirInfo.GetFiles(k_PlayerDllName, SearchOption.TopDirectoryOnly).Length == 0)
-            {
-                return false;
-            }
 
             if (dirInfo.GetFiles("*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault() is not { } exeFileInfo)
             {
                 return false;
             }
 
-            var appFileInfo = dirInfo.GetFiles("app.info", new EnumerationOptions
+            var productName = string.Empty;
+            var companyName = string.Empty;
+            if (dirInfo.GetFiles(k_PlayerDllName, SearchOption.TopDirectoryOnly).Length > 0)
             {
-                RecurseSubdirectories = true
-            }).FirstOrDefault();
+                var appFileInfo = dirInfo.GetFiles("app.info", new EnumerationOptions
+                {
+                    RecurseSubdirectories = true
+                }).FirstOrDefault();
 
-            if (appFileInfo == null)
-            {
-                return false;
+                if (appFileInfo != null)
+                {
+                    using var lines = File.ReadLines(appFileInfo.FullName).GetEnumerator();
+
+                    if (lines.MoveNext())
+                    {
+                        companyName = lines.Current;
+                        if (lines.MoveNext())
+                        {
+                            productName = lines.Current;
+                        }
+                    }
+                }
             }
 
-            using var lines = File.ReadLines(appFileInfo.FullName).GetEnumerator();
-
-            if (!lines.MoveNext())
-            {
-                return false;
-            }
-
-            var companyName = lines.Current;
-
-            if (!lines.MoveNext())
-            {
-                return false;
-            }
-
-            info = new PlayerInfo(lines.Current, companyName, exeFileInfo.FullName);
+            info = new PlayerInfo(productName, companyName, exeFileInfo.FullName);
 
             return true;
         }

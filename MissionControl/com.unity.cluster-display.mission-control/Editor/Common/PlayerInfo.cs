@@ -9,9 +9,14 @@ namespace Unity.ClusterDisplay.MissionControl
         public string ExecutablePath { get; }
 
         public string DirectoryName => new DirectoryInfo(ExecutablePath).Parent?.Name;
-        
+
         public override string ToString()
         {
+            if (string.IsNullOrEmpty(ProductName) || string.IsNullOrEmpty(CompanyName))
+            {
+                return $"{DirectoryName} [Non-Unity application {new FileInfo(ExecutablePath).Name}]";
+            }
+
             return $"{DirectoryName} [{ProductName} - {CompanyName}]";
         }
 

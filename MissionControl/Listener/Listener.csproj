@@ -11,43 +11,43 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Include="..\Editor\MissionControl\Common\BufferExtensions.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\BufferExtensions.cs">
         <Link>Common\BufferExtensions.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\Constants.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\Constants.cs">
         <Link>Common\Constants.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\DirectorySyncInfo.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\DirectorySyncInfo.cs">
         <Link>Common\DirectorySyncInfo.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\FolderUtils.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\FolderUtils.cs">
         <Link>Common\FolderUtils.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\LaunchInfo.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\LaunchInfo.cs">
         <Link>Common\LaunchInfo.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\MessageBufferExtensions.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\MessageBufferExtensions.cs">
         <Link>Common\MessageBufferExtensions.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\MessageHeader.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\MessageHeader.cs">
         <Link>Common\MessageHeader.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\NetworkUtils.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\NetworkUtils.cs">
         <Link>Common\NetworkUtils.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\NodeInfo.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\NodeInfo.cs">
         <Link>Common\NodeInfo.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\PlayerInfo.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\PlayerInfo.cs">
         <Link>Common\PlayerInfo.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\Server.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\Server.cs">
         <Link>Common\Server.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\ServerInfo.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\ServerInfo.cs">
         <Link>Common\ServerInfo.cs</Link>
       </Compile>
-      <Compile Include="..\Editor\MissionControl\Common\TaskExtensions.cs">
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\TaskExtensions.cs">
         <Link>Common\TaskExtensions.cs</Link>
       </Compile>
     </ItemGroup>

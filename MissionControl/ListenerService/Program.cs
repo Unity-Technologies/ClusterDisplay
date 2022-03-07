@@ -4,12 +4,13 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace ClusterListenerService
+namespace Unity.ClusterDisplay.MissionControl
 {
     public static class Program
     {
         public static void Main(string[] args)
         {
+            ConsoleHelper.CreateConsole();
             var logListener = new DefaultTraceListener();
             var consoleListener = new ConsoleTraceListener();
             logListener.LogFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "listener.log");
