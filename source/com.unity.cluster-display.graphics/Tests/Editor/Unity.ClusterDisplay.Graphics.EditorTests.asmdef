@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "Unity.ClusterDisplay.Graphics.Tests",
         "Unity.ClusterDisplay.Graphics",
-        "Unity.RenderPipelines.Core.Runtime"
+        "Unity.RenderPipelines.Core.Runtime",
+        "UnityEngine.TestTools.Graphics"
     ],
     "includePlatforms": [
         "Editor"

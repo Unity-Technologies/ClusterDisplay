@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         protected Texture2D m_VanillaCaptureTex2D;
         protected Texture2D m_VanillaCapture2Tex2D; // Used when making sure camera is restored properly.
         protected Texture2D m_ClusterCaptureTex2D;
-        protected GraphicsTestSettings m_GraphicsTestSettings;
+        protected ImageComparisonSettings m_ImageComparisonSettings;
 
         protected virtual void InitializeTest()
         {
@@ -24,14 +24,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_Camera, "Could not find main camera.");
             m_ClusterRenderer = FindObjectOfType<ClusterRenderer>(true);
             Assert.IsNotNull(m_ClusterRenderer, $"Could not find {nameof(ClusterRenderer)}");
-            m_GraphicsTestSettings = FindObjectOfType<GraphicsTestSettings>();
-            Assert.IsNotNull(m_GraphicsTestSettings, "Missing test settings for graphic tests.");
+            m_ImageComparisonSettings = FindObjectOfType<ImageComparisonSettings>();
+            Assert.IsNotNull(m_ImageComparisonSettings, "Missing image comparison settings.");
 
             EditorBridge.OpenGameView();
             
             var success = EditorBridge.SetGameViewSize(
-                m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth,
-                m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight);
+                m_ImageComparisonSettings.TargetWidth,
+                m_ImageComparisonSettings.TargetHeight);
             Assert.IsTrue(success);
         }
 
@@ -49,8 +49,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
-            var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
-            var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
+            var width = m_ImageComparisonSettings.TargetWidth;
+            var height = m_ImageComparisonSettings.TargetHeight;
                 
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
@@ -92,8 +92,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
             
-            var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
-            var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
+            var width = m_ImageComparisonSettings.TargetWidth;
+            var height = m_ImageComparisonSettings.TargetHeight;
 
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture,  width, height);
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
@@ -121,7 +121,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
 
-            GraphicsTestUtil.AssertImagesAreNotEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+            _ImageAssert.AreNotEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
 
             // Then we deactivate Cluster Display.
             // We expect the output to be restored to what it was before Cluster Display was activated.
@@ -131,7 +131,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCapture2Tex2D);
 
-            ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_VanillaCapture2Tex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+            _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_VanillaCapture2Tex2D, m_ImageComparisonSettings);
 
             if (postRender != null)
             {
@@ -167,13 +167,13 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             
             if (exceptionHandler == null)
             {
-                ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
             }
             else
             {
                 try
                 {
-                    ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                    _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
                 }
                 catch (Exception)
                 {
