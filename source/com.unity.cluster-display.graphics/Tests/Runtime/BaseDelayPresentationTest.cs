@@ -2,7 +2,6 @@
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.TestTools.Graphics;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {

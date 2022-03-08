@@ -5,7 +5,6 @@ using NUnit.Framework;
 using Unity.TestProtocol;
 using Unity.TestProtocol.Messages;
 using UnityEngine;
-using UnityEngine.TestTools.Graphics;
 using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Tests

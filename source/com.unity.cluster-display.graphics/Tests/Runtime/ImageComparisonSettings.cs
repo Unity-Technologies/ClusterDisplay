@@ -1,6 +1,5 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.TestTools.Graphics;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {
@@ -40,23 +39,5 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         /// </summary>
         [Tooltip("The maximum permitted average error value across the entire image.")]
         public float AverageCorrectnessThreshold;
-
-        [ContextMenu("CopyFromImageSettings")]
-        public void CopyFromImageSettings()
-        {
-            var graphicsTestSettings = GetComponent<GraphicsTestSettings>();
-            if (graphicsTestSettings == null)
-            {
-                Debug.LogError($"Could not find component {nameof(GraphicsTestSettings)}");
-                return;
-            }
-
-            var imageComparisonSettings = graphicsTestSettings.ImageComparisonSettings;
-
-            TargetWidth = imageComparisonSettings.TargetWidth;
-            TargetHeight = imageComparisonSettings.TargetHeight;
-            PerPixelCorrectnessThreshold = imageComparisonSettings.PerPixelCorrectnessThreshold;
-            AverageCorrectnessThreshold = imageComparisonSettings.AverageCorrectnessThreshold;
-        }
     }
 }
