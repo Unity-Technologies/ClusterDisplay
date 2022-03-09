@@ -120,7 +120,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
 
-            _ImageAssert.AreNotEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+            ImageAssert.AreNotEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
 
             // Then we deactivate Cluster Display.
             // We expect the output to be restored to what it was before Cluster Display was activated.
@@ -130,7 +130,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCapture2Tex2D);
 
-            _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_VanillaCapture2Tex2D, m_ImageComparisonSettings);
+            ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_VanillaCapture2Tex2D, m_ImageComparisonSettings);
 
             if (postRender != null)
             {
@@ -166,13 +166,13 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             
             if (exceptionHandler == null)
             {
-                _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+                ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
             }
             else
             {
                 try
                 {
-                    _ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+                    ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
                 }
                 catch (Exception)
                 {

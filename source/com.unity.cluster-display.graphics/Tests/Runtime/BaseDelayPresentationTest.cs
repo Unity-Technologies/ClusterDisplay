@@ -111,7 +111,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
                 
-                _ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
+                ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
             }
             
             // Make sure the test did not pass by accident. (Aka, the frames did change over time.)
@@ -120,7 +120,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i], m_ClusterCaptureDelayedTex2D);
 
-                _ImageAssert.AreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
+                ImageAssert.AreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
             }
             
             DisposeTest();

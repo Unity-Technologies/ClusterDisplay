@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
     /// We also test that images are not equal in some instances.
     /// (While the original version only expects images asserted to be equal.)
     /// </remarks>>
-    public class _ImageAssert
+    public class ImageAssert
     {
         const int k_BatchSize = 1024;
 

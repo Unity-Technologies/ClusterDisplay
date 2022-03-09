@@ -56,11 +56,8 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
     flavor: {{ platform.flavor}}
   commands:
   - git submodule update --init
-  - choco install unity-downloader-cli -y -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local
-  - unity-downloader-cli -u {{ editor.version }} -c editor --wait --published --fast
-  - choco install standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
-  - choco upgrade standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
-  - UnifiedTestRunner.exe --suite=playmode --testproject={{ project.info[0].path }} --editor-location=.Editor --artifacts_path=test-results 
+  - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
+  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.info[0].path }}
   artifacts:
     logs.zip:
       paths:
