@@ -83,15 +83,10 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.name }}:
 test_trigger_gfx:
   name: Run GFX tests after package changes
   triggers:
-    pull_requests:
-    - targets:
-        only:
-          - "dev"
-    changes:
-      only: 
-        - source/com.unity.cluster-display.graphics/**/*
-        - TestProjects/GraphicsTestsHDRP/**/*
-        - TestProjects/GraphicsTestsURP/**/*
+    expression: |
+      pull_request.target eq "dev" AND
+      (push.changes.any match "source/com.unity.cluster-display.graphics/**" OR
+      push.changes.any match "TestProjects/GraphicsTests*/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
@@ -106,14 +101,10 @@ test_trigger_gfx:
 test_trigger:
   name: Run core tests after package changes
   triggers:
-    pull_requests:
-    - targets:
-        only:
-          - "dev"
-    changes:
-      only: 
-        - source/com.unity.cluster-display/**/*
-        - TestProjects/ClusterSyncTests/**/*
+    expression: |
+      pull_request.target eq "dev" AND
+      (push.changes.any match "source/com.unity.cluster-display/**" OR
+      push.changes.any match "TestProjects/ClusterSyncTests/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
