@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.unity.cluster-display": {
-      "version": "file:C:/Users/wen.zhang/dev/CD2/source/com.unity.cluster-display",
+      "version": "file:../../../source/com.unity.cluster-display",
       "depth": 0,
       "source": "local",
       "dependencies": {}
