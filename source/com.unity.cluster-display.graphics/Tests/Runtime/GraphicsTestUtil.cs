@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.IO;
+using NUnit.Framework;
+using Unity.TestProtocol;
+using Unity.TestProtocol.Messages;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.TestTools.Graphics;
 using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
@@ -51,21 +52,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             RenderTexture.active = restore;
         }
 
-        public static void AssertImagesAreNotEqual(Texture2D texA, Texture2D TexB, ImageComparisonSettings imageComparisonSettings)
-        {
-            try
-            {
-                ImageAssert.AreEqual(texA, TexB, imageComparisonSettings);
-            }
-            catch (Exception)
-            {
-                // Deliberately swallow the exception.
-                return;
-            }
-
-            throw new InvalidOperationException($"{nameof(AssertImagesAreNotEqual)} failed, Images were equal.");
-        }
-
         public static ProjectionSurface AlignSurfaceWithCameraFrustum(ProjectionSurface surface, Camera camera, float nearPlaneOffset, Transform rendererTransform)
         {
             // Evaluate surface in local camera space.
@@ -91,20 +77,28 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             return surface;
         }
 
+        public static void ReportArtifact(string artifactPath)
+        {
+            var fullPath = Path.GetFullPath(artifactPath);
+            var message = ArtifactPublishMessage.Create(fullPath);
+            Debug.Log(UnityTestProtocolMessageBuilder.Serialize(message));
+        }
+
         public static void SaveAsPNG(Texture2D texture, string fileName)
         {
+            SaveAsPNG(texture, k_DirectoryPath, fileName);
+        }
+
+        public static void SaveAsPNG(Texture2D texture, string directory, string fileName)
+        {
             var bytes = texture.EncodeToPNG();
-            var filePath = Path.Combine(k_DirectoryPath, fileName + ".png");
-            if (!Directory.Exists(k_DirectoryPath))
+            var filePath = Path.Combine(directory, fileName + ".png");
+            if (!Directory.Exists(directory))
             {
-                Directory.CreateDirectory(k_DirectoryPath);
+                Directory.CreateDirectory(directory);
             }
 
             File.WriteAllBytes(filePath, bytes);
-
-#if UNITY_EDITOR
-            UnityEditor.AssetDatabase.Refresh();
-#endif
         }
     }
 }

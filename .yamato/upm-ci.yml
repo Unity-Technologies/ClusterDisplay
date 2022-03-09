@@ -1,15 +1,10 @@
 test_editors:
-- version: 2022.2
 - version: trunk
 test_platforms:
 - name: win
-  type: Unity::VM
+  type: Unity::VM::GPU
   image: package-ci/win10:stable
   flavor: b1.large
-- name: mac
-  type: Unity::VM::osx
-  image: package-ci/mac:latest
-  flavor: m1.mac
 all_test_projects:
   - info:
     - path : TestProjects/GraphicsTestsHDRP

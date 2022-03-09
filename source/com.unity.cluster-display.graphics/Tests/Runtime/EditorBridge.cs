@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             void SetGameViewSize(int width, int height);
             VolumeProfile LoadVolumeProfile(string profileName);
             void CaptureRenderDoc();
+            void OpenGameView();
         }
 
         static IEditorBridgeImpl s_Impl;
@@ -34,6 +35,17 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             }
 
             return null;
+        }
+
+        public static bool OpenGameView()
+        {
+            if (s_Impl != null)
+            {
+                s_Impl.OpenGameView();
+                return true;
+            }
+
+            return false;
         }
         
         public static bool CaptureRenderDoc()

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4971402384012629906}
   - component: {fileID: 4971402384012629907}
   - component: {fileID: 6764037574341968294}
-  - component: {fileID: 1367105497086002162}
+  - component: {fileID: 3944806799036304508}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -49,9 +49,17 @@ Camera:
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
   m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
-  m_FocalLength: 50
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
@@ -215,7 +223,7 @@ MonoBehaviour:
       enableFptlForForwardOpaque: 0
       enableBigTilePrepass: 0
       isFptlEnabled: 0
---- !u!114 &1367105497086002162
+--- !u!114 &3944806799036304508
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -224,19 +232,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 4971402384012629904}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 20f198885badb1f4fa1e65869995ff82, type: 3}
+  m_Script: {fileID: 11500000, guid: 4de5710d176f4282bf183ba05bf24dca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ImageComparisonSettings:
-    TargetWidth: 512
-    TargetHeight: 512
-    PerPixelCorrectnessThreshold: 0.001
-    PerPixelGammaThreshold: 0.003921569
-    PerPixelAlphaThreshold: 0.003921569
-    AverageCorrectnessThreshold: 0.002
-    IncorrectPixelsThreshold: 0.0000038146973
-    UseHDR: 0
-    UseBackBuffer: 0
-    ImageResolution: 0
-    ActiveImageTests: 1
-    ActivePixelTests: 7
+  TargetWidth: 512
+  TargetHeight: 512
+  PerPixelCorrectnessThreshold: 0.001
+  PerPixelGammaThreshold: 0.003921569
+  PerPixelAlphaThreshold: 0.003921569
+  AverageCorrectnessThreshold: 0.002
+  IncorrectPixelsThreshold: 0.0000038146973
+  UseHDR: 0

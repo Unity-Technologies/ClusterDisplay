@@ -121,11 +121,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
 
-            // Used only on Legacy when supported.
-            // For SRP we use additional camera data.
-            GraphicsUtil.SetShaderKeyword(false);
-
-            Debug.Log("OnDisable");
             m_RuntimeSettings = m_Settings;
         }
 
@@ -145,10 +140,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 return;
             }
-
-            // Used only on Legacy when supported.
-            // For SRP we use additional camera data.
-            GraphicsUtil.SetShaderKeyword(!m_IsDebug || m_DebugSettings.EnableKeyword);
 
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
