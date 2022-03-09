@@ -47,6 +47,8 @@ namespace Unity.ClusterDisplay.Tests
                 timeOut = k_TimeoutSeconds,
                 adapterName = nic.Name
             };
+            
+            // Set up UDPAgent to broadcast/receive from nodes 1 and 2
             m_Agent = new UDPAgent(config)
             {
                 AllNodesMask = k_AllNodesMask
@@ -207,6 +209,13 @@ namespace Unity.ClusterDisplay.Tests
             return (header, buffer);
         }
         
+        /// <summary>
+        /// Create a client that is able to listen to receive multicast messages
+        /// </summary>
+        /// <param name="multicastAddress">Multicast address to listen on</param>
+        /// <param name="rxPort">Receive port number</param>
+        /// <param name="localAddress">The IP address assigned to the interface that we'd like to use</param>
+        /// <returns></returns>
         public static UdpClient CreateClient(string multicastAddress, int rxPort, IPAddress localAddress)
         {
             Debug.Log(localAddress);
@@ -236,6 +245,9 @@ namespace Unity.ClusterDisplay.Tests
 
         public static NetworkInterface SelectNic()
         {
+            // Assume that the first operational interface is capable of multicast.
+            // This is similar to the logic that UDPAgent uses to select an interface when none is specified,
+            // so it should pick the same interface as the UdpClients that we're using in this test
             return NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up);
         }
     }
