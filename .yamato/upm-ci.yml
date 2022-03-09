@@ -2,28 +2,34 @@ test_editors:
 - version: trunk
 test_platforms:
 - name: win
-  type: Unity::VM::GPU
+  type: Unity::VM
+  type_gpu: Unity::VM::GPU
   image: package-ci/win10:stable
   flavor: b1.large
 all_test_projects:
-  - info:
-    - path : TestProjects/GraphicsTestsHDRP
-    - name : HDRPTest
-  - info:
-    - path : TestProjects/GraphicsTestsURP
-    - name : URPTest
+  - path : TestProjects/GraphicsTestsHDRP
+    name : HDRPTest
+    gfx : true
+  - path : TestProjects/GraphicsTestsURP
+    name : URPTest
+    gfx : true
+  - path : TestProjects/ClusterSyncTests
+    name : CoreSync
+    gfx : false
 ---
 {% for project in all_test_projects %}
-pack_{{ project.info[1].name }}:
-  name: Pack {{ project.info[1].name }}
+pack_{{ project.name }}:
+  name: Pack {{ project.name }}
   agent:
     type: Unity::VM
     image: package-ci/ubuntu:stable
     flavor: b1.large
   commands:
+{% if project.gfx == "true" -%}
     - git submodule update --init
+{% endif -%}
     - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm 
-    - upm-ci project pack --project-path {{ project.info[0].path }}
+    - upm-ci project pack --project-path {{ project.path }}
   artifacts:
     packages:
       paths:
@@ -48,22 +54,24 @@ build_win:
   {% for editor in test_editors %}
   {% for platform in test_platforms %}
   {% for project in all_test_projects %}
-test_{{ platform.name }}_{{ editor.version }}_{{ project.info[1].name }}:
-  name : Test {{ project.info[1].name }} {{ editor.version }} {{ platform.name }}
+test_{{ platform.name }}_{{ editor.version }}_{{ project.name }}:
+  name : Test {{ project.name }} {{ editor.version }} {{ platform.name }}
   agent:
-    type: {{ platform.type }}
+    type: {% if project.gfx == "true" %}{{ platform.type_gpu }}{% else %}{{ platform.type }}{% endif %}
     image: {{ platform.image }}
     flavor: {{ platform.flavor}}
   commands:
+{% if project.gfx == "true" -%}
   - git submodule update --init
+{% endif -%}
   - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
-  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.info[0].path }}
+  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.path }}
   artifacts:
     logs.zip:
       paths:
       - "upm-ci~/test-results/**/*"
   dependencies:
-  - .yamato/upm-ci.yml#pack_{{ project.info[1].name }}
+  - .yamato/upm-ci.yml#pack_{{ project.name }}
   {% endfor %}
   {% endfor %}
   {% endfor %}
@@ -76,7 +84,7 @@ test_trigger:
     {% for editor in test_editors %}
     {% for platform in test_platforms %}
     {% for project in all_test_projects %}
-  - .yamato/upm-ci.yml#test_{{platform.name}}_{{editor.version}}_{{ project.info[1].name }}
+  - .yamato/upm-ci.yml#test_{{platform.name}}_{{editor.version}}_{{ project.name }}
     {% endfor %}
     {% endfor %}
     {% endfor %}
