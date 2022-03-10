@@ -85,8 +85,8 @@ test_trigger_gfx:
   triggers:
     expression: |
       pull_request.target eq "dev" AND
-      (push.changes.any match "source/com.unity.cluster-display.graphics/**" OR
-      push.changes.any match "TestProjects/GraphicsTests*/**")
+      (pull_request.push.changes.any match "source/com.unity.cluster-display.graphics/**" OR
+      pull_request.push.changes.any match "TestProjects/GraphicsTests*/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
@@ -102,9 +102,9 @@ test_trigger:
   name: Run core tests after package changes
   triggers:
     expression: |
-      pull_request.target eq "dev" AND
-      (push.changes.any match "source/com.unity.cluster-display/**" OR
-      push.changes.any match "TestProjects/ClusterSyncTests/**")
+      pull_request.target eq "dev" AND NOT
+      (pull_request.push.changes.all match "source/com.unity.cluster-display.graphics/**" OR
+      pull_request.push.changes.all match "TestProjects/GraphicsTests*/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
