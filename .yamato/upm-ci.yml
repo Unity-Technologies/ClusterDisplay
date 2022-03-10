@@ -1,16 +1,11 @@
 test_editors:
-  - version: trunk
+- version: trunk
 test_platforms:
-  - name: win
-    type: Unity::VM
-    type_gpu: Unity::VM::GPU
-    image: package-ci/win10:stable
-    flavor: b1.large
-  - name: macOS
-    type: Unity::VM::osx
-    type_gpu: Unity::VM::osx
-    image: package-ci/mac:stable
-    flavor: m1.mac
+- name: win
+  type: Unity::VM
+  type_gpu: Unity::VM::GPU
+  image: package-ci/win10:stable
+  flavor: b1.large
 all_test_projects:
   - path : TestProjects/GraphicsTestsHDRP
     name : HDRPTest
@@ -80,7 +75,7 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.name }}:
       - "upm-ci~/test-results/**/*"
   dependencies:
   - .yamato/upm-ci.yml#pack_{{ project.name }}
-  
+
 {% endfor -%}
 {% endfor -%}
 {% endfor -%}
