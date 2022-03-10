@@ -115,3 +115,15 @@ test_trigger:
 {% endfor -%}
 {% endfor -%}
 {% endfor -%}
+
+trigger_sandbox:
+  name: Trying out different trigger expressions
+  agent:
+    type: Unity::VM
+    image: package-ci/ubuntu:stable
+    flavor: b1.small
+  triggers:
+    expression: |
+      push.changes.any match ".yamato/**"
+  commands:
+    - ls
