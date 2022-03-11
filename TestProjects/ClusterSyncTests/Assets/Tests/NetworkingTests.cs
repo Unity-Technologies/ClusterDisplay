@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             var nic = SelectNic();
             Assert.NotNull(nic);
-            
+
             var config = new UDPAgent.Config
             {
                 nodeId = k_AgentNodeId,
@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.Tests
                 timeOut = k_TimeoutSeconds,
                 adapterName = nic.Name
             };
-            
+
             // Set up UDPAgent to broadcast/receive from nodes 1 and 2
             m_Agent = new UDPAgent(config)
             {
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Tests
             var localAddress = nic.GetIPProperties().UnicastAddresses
                 .Select(addr => addr.Address)
                 .FirstOrDefault(addr => addr.AddressFamily == AddressFamily.InterNetwork);
-            
+
             m_TestClients = new[]
             {
                 CreateClient(k_MulticastAddress, k_TxPort, localAddress),
@@ -82,6 +82,12 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator TestPublishAsync()
         {
             return TestAsyncTask(TestPublish(), k_TimeoutSeconds);
+        }
+
+        [UnityTest]
+        public IEnumerator TestResendAsync()
+        {
+            return TestAsyncTask(TestResend(), k_TimeoutSeconds);
         }
 
         async Task TestReceiveMessage()
@@ -119,22 +125,9 @@ namespace Unity.ClusterDisplay.Tests
 
             // Agent should now be waiting for ACK messages
             Assert.True(m_Agent.AcksPending);
-            var ackBuffer = new byte[headerSize];
-
-            async Task<int> SendAck(int index)
-            {
-                var ackHeader = new MessageHeader
-                {
-                    MessageType = EMessageType.AckMsgRx,
-                    DestinationIDs = 1 << k_AgentNodeId,
-                    OriginID = k_TestNodes[index]
-                };
-                ackHeader.StoreInBuffer(ackBuffer);
-                return await m_TestClients[index].SendAsync(ackBuffer, ackBuffer.Length, k_AgentEndPoint);
-            }
 
             // Send one ACK, agent should still be waiting
-            var result = await SendAck(0);
+            var result = await m_TestClients[0].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[0]);
             Assert.That(result, Is.GreaterThan(0));
             var retries = 0;
             while (retries < 5)
@@ -145,7 +138,7 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             // Send remaining ACK, agent should be done waiting
-            result = await SendAck(1);
+            result = await m_TestClients[1].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[1]);
             Assert.That(result, Is.GreaterThan(0));
 
             retries = 0;
@@ -156,6 +149,30 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             Assert.False(m_Agent.AcksPending);
+        }
+
+        async Task TestResend()
+        {
+            // Send a message to multiple nodes
+            var (header, rawMsg) = GenerateTestMessage(k_AgentNodeId, k_TestNodes.Take(1));
+            Assert.True(m_Agent.PublishMessage(header, rawMsg));
+            var client = m_TestClients[0];
+
+            // Receive the initial message
+            await client.ReceiveMessage<RepeaterEnteredNextFrame>();
+
+            // Agent should now be waiting for ACK messages
+            Assert.True(m_Agent.AcksPending);
+
+            // Wait for agent to resend after 1 second
+            try
+            {
+                await client.ReceiveMessage<RepeaterEnteredNextFrame>(2000);
+            }
+            catch (TimeoutException)
+            {
+                Assert.Fail("Timed out waiting for resend");
+            }
         }
     }
 
@@ -180,10 +197,30 @@ namespace Unity.ClusterDisplay.Tests
             });
         }
 
-        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessage<T>(this UdpClient agent) where T : unmanaged
+        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessage<T>(this UdpClient agent, int timeoutMilliseconds = -1) where T : unmanaged
         {
-            var result = await agent.ReceiveAsync();
-            return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
+            if (timeoutMilliseconds > 0)
+            {
+                var delay = Task.Run(async () =>
+                {
+                    await Task.Delay(timeoutMilliseconds);
+                    return default(UdpReceiveResult);
+                });
+                var receive = agent.ReceiveAsync();
+                var completedTask = await Task.WhenAny(delay, receive);
+                var result = await completedTask;
+                if (result.Buffer == null)
+                {
+                    throw new TimeoutException("The read operation timed out.");
+                }
+
+                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
+            }
+            else
+            {
+                var result = await agent.ReceiveAsync();
+                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
+            }
         }
 
         public static (MessageHeader header, byte[] rawMsg) GenerateTestMessage(byte originId, IEnumerable<byte> destinations)
@@ -208,7 +245,7 @@ namespace Unity.ClusterDisplay.Tests
 
             return (header, buffer);
         }
-        
+
         /// <summary>
         /// Create a client that is able to listen to receive multicast messages
         /// </summary>
@@ -224,7 +261,7 @@ namespace Unity.ClusterDisplay.Tests
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             client.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
             client.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, localAddress.GetAddressBytes());
-            
+
             client.Client.Bind(new IPEndPoint(IPAddress.Any, rxPort));
             client.JoinMulticastGroup(IPAddress.Parse(multicastAddress));
             return client;
@@ -249,6 +286,20 @@ namespace Unity.ClusterDisplay.Tests
             // This is similar to the logic that UDPAgent uses to select an interface when none is specified,
             // so it should pick the same interface as the UdpClients that we're using in this test
             return NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up);
+        }
+
+        public static async Task<int> SendAck(this UdpClient client, IPEndPoint agentEndPoint, byte agentId, byte originId)
+        {
+            var ackBuffer = new byte[headerSize];
+            var ackHeader = new MessageHeader
+            {
+                MessageType = EMessageType.AckMsgRx,
+                DestinationIDs = 1UL << agentId,
+                OriginID = originId
+            };
+
+            ackHeader.StoreInBuffer(ackBuffer);
+            return await client.SendAsync(ackBuffer, ackBuffer.Length, agentEndPoint);
         }
     }
 }
