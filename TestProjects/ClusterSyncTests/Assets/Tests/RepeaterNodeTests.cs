@@ -1,89 +1,36 @@
 using System;
 using System.Collections;
-using System.Threading.Tasks;
+using System.Threading;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Unity.ClusterDisplay.RepeaterStateMachine;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
-using static Unity.ClusterDisplay.Tests.Utils;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    class MockClusterSync : IClusterSyncState
-    {
-        public const byte nodeId = 1;
-        public const int rxPort = 12345;
-        public const int txPort = 12346;
-        public const string multicastAddress = "224.0.1.0";
-        public const int timeoutSeconds = 10;
-        public const int maxRetries = 20;
-
-        public static readonly string adapterName = SelectNic().Name;
-        
-        public static readonly UDPAgent.Config udpConfig = new UDPAgent.Config
-        {
-            nodeId = nodeId,
-            ip = multicastAddress,
-            rxPort = rxPort,
-            txPort = txPort,
-            timeOut = timeoutSeconds,
-            adapterName = adapterName
-        };
-
-        public MockClusterSync()
-        {
-            LocalNode = new MockRepeaterNode(this, false, udpConfig);
-        }
-
-        public ulong CurrentFrameID { get; } = 0;
-        public ClusterNode LocalNode { get; }
-
-        // A node state placeholder
-        class NullState : NodeState
-        {
-            public NullState(IClusterSyncState clusterSync)
-                : base(clusterSync) { }
-        }
-
-        // A Repeater node that doesn't do anything
-        class MockRepeaterNode : RepeaterNode
-        {
-            public MockRepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
-                : base(clusterSync, delayRepeater, config)
-            {
-                var oldState = m_CurrentState;
-                m_CurrentState = new NullState(clusterSync);
-                m_CurrentState.EnterState(oldState);
-            }
-        }
-    }
-
     public class RepeaterNodeTests
     {
         MockClusterSync m_ClusterSync;
         UDPAgent m_TestAgent;
+        const byte k_EmitterId = 0;
+        const byte k_RepeaterId = 1;
 
         [SetUp]
         public void SetUp()
         {
-            m_ClusterSync = new MockClusterSync();
+            m_ClusterSync = new MockClusterSync(MockClusterSync.NodeType.Repeater);
 
             var testConfig = MockClusterSync.udpConfig;
-            testConfig.nodeId = 0;
+            testConfig.nodeId = k_EmitterId;
             testConfig.rxPort = MockClusterSync.udpConfig.txPort;
             testConfig.txPort = MockClusterSync.udpConfig.rxPort;
-            
+
             m_TestAgent = new UDPAgent(testConfig);
         }
 
         [UnityTest]
-        public IEnumerator TestRegisterWithEmitterAsync()
-        {
-            return TestAsyncTask(TestRegisterWithEmitter(), MockClusterSync.timeoutSeconds);
-        }
-
-        async Task TestRegisterWithEmitter()
+        public IEnumerator TestRegisterWithEmitter()
         {
             // Create the state under test
             var registerState = new RegisterWithEmitter(m_ClusterSync)
@@ -91,12 +38,20 @@ namespace Unity.ClusterDisplay.Tests
                 MaxTimeOut = TimeSpan.FromSeconds(MockClusterSync.timeoutSeconds)
             };
 
+            var allNodesMask = m_ClusterSync.LocalNode.UdpAgent.AllNodesMask;
+            Assert.Zero(allNodesMask & ((ulong) 1 << k_EmitterId));
+
             // Before receiving a WelcomeRepeater, we should be staying in this state
             registerState.EnterState(null);
             Assert.That(registerState.ProcessFrame(true), Is.EqualTo(registerState));
 
             // The state should be broadcasting HelloEmitter messages
-            var (header, rolePublication) = await m_TestAgent.ReceiveMessage<RolePublication>();
+            var task = m_TestAgent.ReceiveMessage<RolePublication>().ToCoroutine();
+            yield return task.WaitForCompletion(MockClusterSync.timeoutSeconds);
+
+            Assert.IsTrue(task.IsSuccessful);
+
+            var (header, rolePublication) = task.Result;
             Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
             Assert.That(rolePublication.NodeRole == ENodeRole.Repeater);
 
@@ -107,22 +62,103 @@ namespace Unity.ClusterDisplay.Tests
             m_TestAgent.PublishMessage(new MessageHeader
             {
                 MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = (ulong)1 << header.OriginID,
+                DestinationIDs = (ulong) 1 << header.OriginID,
             });
 
             // Wait for the state to transition
             var canExitState = false;
             for (var i = 0; i < MockClusterSync.maxRetries; i++)
             {
-                await Task.Delay(100);
                 if (registerState.ProcessFrame(true) is RepeaterSynchronization)
                 {
                     canExitState = true;
                     break;
                 }
+
+                // In practice, frames do not advance in this loop,
+                // but here we'll be nice and not lock up the UI during
+                // the test
+                yield return new WaitForSeconds(0.5f);
             }
 
             Assert.True(canExitState);
+
+            allNodesMask = m_ClusterSync.LocalNode.UdpAgent.AllNodesMask;
+            Assert.NotZero(allNodesMask & ((ulong) 1 << k_EmitterId));
+        }
+
+        [UnityTest]
+        public IEnumerator TestRepeaterSynchronization()
+        {
+            var repeaterSynchronization = new RepeaterSynchronization(m_ClusterSync);
+            repeaterSynchronization.EnterState(null);
+
+            // Simulate several frames
+            const int kNumFrames = 4;
+            for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
+            {
+                m_ClusterSync.CurrentFrameID = frameNum;
+
+                // The state should waiting for the emitter data that marks the sync point
+                // at th beginning of the frame
+                Assert.False(repeaterSynchronization.ReadyToProceed);
+                Assert.AreEqual(repeaterSynchronization.Stage, RepeaterSynchronization.EStage.WaitingOnEmitterFrameData);
+
+                var (header, lastFrameMsg) = GenerateMessage(k_EmitterId, 
+                    new byte[] {k_RepeaterId}, 
+                    EMessageType.LastFrameData, 
+                    new EmitterLastFrameData()
+                    {
+                        FrameNumber = frameNum
+                    },
+                    MessageHeader.EFlag.Broadcast, 
+                    1); // trailing 0 to indicate empty state data
+
+                m_TestAgent.PublishMessage(header, lastFrameMsg);
+
+                bool canProceed = false;
+                for (int i = 0; i < MockClusterSync.maxRetries; i++)
+                {
+                    repeaterSynchronization.ProcessFrame(false);
+                    if (repeaterSynchronization.ReadyToProceed)
+                    {
+                        canProceed = true;
+                        break;
+                    }
+                    Thread.Sleep(100);
+                }
+                
+                Assert.True(canProceed);
+
+                // In practice, this would be the start of a new frame on the emitter side
+                yield return null;
+                repeaterSynchronization.ProcessFrame(newFrame: true);
+                Assert.AreEqual(repeaterSynchronization.Stage, RepeaterSynchronization.EStage.EnteredNextFrame);
+                
+                // Repeater signals start of new frame and waits for ack
+                repeaterSynchronization.ProcessFrame(false);
+                Assert.AreEqual(repeaterSynchronization.Stage, RepeaterSynchronization.EStage.WaitForEmitterACK);
+
+                // Expect to receive a signal that node as entered a new frame
+                var receiveMessage = m_TestAgent
+                    .ReceiveMessage<RepeaterEnteredNextFrame>()
+                    .ToCoroutine();
+
+                yield return receiveMessage.WaitForCompletion(MockClusterSync.timeoutSeconds);
+                Assert.True(receiveMessage.IsSuccessful);
+                var (rxHeader, contents) = receiveMessage.Result;
+                Assert.AreEqual(rxHeader.MessageType, EMessageType.EnterNextFrame);
+
+                // Now wait for the state to transition back to WaitingOnEmitterData
+                for (int i = 0; i < MockClusterSync.maxRetries; i++)
+                {
+                    repeaterSynchronization.ProcessFrame(false);
+                    if (repeaterSynchronization.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData)
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         [TearDown]

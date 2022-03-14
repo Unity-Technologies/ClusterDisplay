@@ -8,7 +8,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
-using static Unity.ClusterDisplay.Tests.Utils;
+using static Unity.ClusterDisplay.Tests.TestUtils;
 
 namespace Unity.ClusterDisplay.Tests
 {

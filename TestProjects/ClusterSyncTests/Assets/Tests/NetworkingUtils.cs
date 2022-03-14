@@ -63,18 +63,24 @@ namespace Unity.ClusterDisplay.Tests
         public static (MessageHeader header, byte[] rawMsg) GenerateMessage<T>(byte originId,
             IEnumerable<byte> destinations,
             EMessageType messageType,
-            T contents) where T : unmanaged
+            T contents,
+            MessageHeader.EFlag flags = MessageHeader.EFlag.None,
+            int zeroPadding = 0) where T : unmanaged
         {
             // Generate and send message
             var header = new MessageHeader
             {
                 MessageType = messageType,
                 DestinationIDs = destinations.ToMask(),
-                OriginID = originId
+                OriginID = originId,
+                PayloadSize = (ushort) Marshal.SizeOf<T>(),
+                OffsetToPayload = (ushort) headerSize,
+                Flags = flags
             };
 
-            var bufferLen = headerSize + Marshal.SizeOf<T>();
+            var bufferLen = headerSize + Marshal.SizeOf<T>() + zeroPadding;
             var buffer = new byte[bufferLen];
+            
 
             header.StoreInBuffer(buffer);
             contents.StoreInBuffer(buffer, headerSize);
