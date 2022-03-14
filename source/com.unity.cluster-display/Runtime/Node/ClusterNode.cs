@@ -24,32 +24,10 @@ namespace Unity.ClusterDisplay
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
 
             m_UDPAgent = new UDPAgent(config);
+            m_UDPAgent.OnError += OnNetworkingError;
 
             this.clusterSync = clusterSync;
             Stopwatch.StartNew();
-        }
-
-        public virtual bool TryStart()
-        {
-            try
-            {
-                if (!m_UDPAgent.Initialize())
-                {
-                    m_CurrentState = new FatalError(clusterSync, "Failed to start UDP Agent");
-                    m_CurrentState.EnterState(null);
-                    return false;
-                }
-
-                m_UDPAgent.OnError += OnNetworkingError;
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                ClusterDebug.LogError( $"Failed to start UDP Agent:\n{e.Message}");
-                m_CurrentState.EnterState(null);
-                return false;
-            }
         }
 
         public bool DoFrame(bool newFrame)

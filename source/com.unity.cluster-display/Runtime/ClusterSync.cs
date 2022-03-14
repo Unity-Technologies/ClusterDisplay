@@ -221,36 +221,50 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeEmitter(UDPAgent.Config config)
         {
-            // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
-            m_LocalNode = new EmitterNode(
-                this,
-                new EmitterNode.Config
-                {
-                    headlessEmitter = CommandLineParser.HeadlessEmitter,
-                    repeatersDelayed = CommandLineParser.delayRepeaters,
-                    repeaterCount = CommandLineParser.repeaterCount,
-                    udpAgentConfig = config
-                });
+            try
+            {
+                // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
+                m_LocalNode = new EmitterNode(
+                    this,
+                    new EmitterNode.Config
+                    {
+                        headlessEmitter = CommandLineParser.HeadlessEmitter,
+                        repeatersDelayed = CommandLineParser.delayRepeaters,
+                        repeaterCount = CommandLineParser.repeaterCount,
+                        udpAgentConfig = config
+                    });
             
-            stateSetter.SetIsEmitter(true);
-            stateSetter.SetEmitterIsHeadless(CommandLineParser.HeadlessEmitter);
-            stateSetter.SetIsRepeater(false);
-
-            return m_LocalNode.TryStart();
+                stateSetter.SetIsEmitter(true);
+                stateSetter.SetEmitterIsHeadless(CommandLineParser.HeadlessEmitter);
+                stateSetter.SetIsRepeater(false);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Cannot initialize emitter node: {e.Message}");
+                return false;
+            }
         }
 
         private bool TryInitializeRepeater(UDPAgent.Config config)
         {
-            // Emitter command line format: -node nodeId ip:rxport,txport
-            m_LocalNode = new RepeaterNode(
-                this, 
-                CommandLineParser.delayRepeaters, 
-                config);
+            try
+            {
+                // Emitter command line format: -node nodeId ip:rxport,txport
+                m_LocalNode = new RepeaterNode(
+                    this, 
+                    CommandLineParser.delayRepeaters, 
+                    config);
             
-            stateSetter.SetIsEmitter(false);
-            stateSetter.SetIsRepeater(true);
-
-            return m_LocalNode.TryStart();
+                stateSetter.SetIsEmitter(false);
+                stateSetter.SetIsRepeater(true);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Cannot initialize repeater node: {e.Message}");
+                return false;
+            }
         }
         
         private bool TryInitialize()

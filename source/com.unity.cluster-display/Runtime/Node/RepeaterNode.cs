@@ -9,18 +9,12 @@ namespace Unity.ClusterDisplay
         public UInt64 EmitterNodeIdMask => (UInt64) 1 << EmitterNodeId;
         public bool DelayRepeater { get; set; }
 
-        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config) : base(clusterSync, config) =>
-            DelayRepeater = delayRepeater;
-
-        public override bool TryStart()
+        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
+            : base(clusterSync, config)
         {
-            if (!base.TryStart())
-                return false;
-
-            m_CurrentState = new RegisterWithEmitter(clusterSync, this) {MaxTimeOut = ClusterParams.RegisterTimeout};
+            m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
             m_CurrentState.EnterState(null);
-
-            return true;
+            DelayRepeater = delayRepeater;
         }
     }
 }
