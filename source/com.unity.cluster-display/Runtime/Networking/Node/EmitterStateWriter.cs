@@ -10,7 +10,7 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay
 {
-    internal class EmitterStateWriter
+    internal class EmitterStateWriter : IDisposable
     {
         private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
 
@@ -47,10 +47,28 @@ namespace Unity.ClusterDisplay
             k_RepeatersDelayed = repeatersDelayed;
         }
 
-        public void Dispose ()
+        void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                // TODO: Dispose managed objects
+            }
+            
             if (m_CurrentStateBuffer.IsCreated)
                 m_CurrentStateBuffer.Dispose();
+            if (m_StagedStateBuffer.IsCreated)
+                m_StagedStateBuffer.Dispose();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~EmitterStateWriter()
+        {
+            Dispose(false);
         }
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
