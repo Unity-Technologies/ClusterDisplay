@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
@@ -22,6 +23,19 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         public static CoroutineTask<T> ToCoroutine<T>(this ValueTask<T> task) => new(task);
+        public static bool LoopUntil(Func<bool> pred, int maxRetries)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                if (pred())
+                {
+                    return true;
+                }
+                Thread.Sleep(100);
+            }
+
+            return false;
+        }
     }
 
     /// <summary>

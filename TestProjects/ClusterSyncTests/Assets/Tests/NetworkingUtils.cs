@@ -21,20 +21,22 @@ namespace Unity.ClusterDisplay.Tests
 
         public static ulong ToMask(this IEnumerable<byte> ids) => ids.Aggregate(0UL, (mask, id) => mask | ToMask((byte) id));
 
-        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessage<T>(this UDPAgent agent, int timeout = 1000) where T : unmanaged
-        {
-            return await Task.Run(() =>
+        public static (MessageHeader header, T contents) ReceiveMessage<T>(this UDPAgent agent, int timeout = 1000) where T : unmanaged
+        {   
+            if (agent.RxWait.WaitOne(timeout * 1000) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
             {
-                if (agent.RxWait.WaitOne(timeout * 1000) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
-                {
-                    return (header, outBuffer.LoadStruct<T>(headerSize));
-                }
+                return (header, outBuffer.LoadStruct<T>(headerSize));
+            }
 
-                return default;
-            });
+            return default;
         }
 
-        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessage<T>(this UdpClient agent, int timeoutMilliseconds = -1) where T : unmanaged
+        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessageAsync<T>(this UDPAgent agent, int timeout = 1000) where T : unmanaged
+        {
+            return await Task.Run(() => agent.ReceiveMessage<T>(timeout));
+        }
+
+        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessageAsync<T>(this UdpClient client, int timeoutMilliseconds = -1) where T : unmanaged
         {
             if (timeoutMilliseconds > 0)
             {
@@ -43,7 +45,7 @@ namespace Unity.ClusterDisplay.Tests
                     await Task.Delay(timeoutMilliseconds);
                     return default(UdpReceiveResult);
                 });
-                var receive = agent.ReceiveAsync();
+                var receive = client.ReceiveAsync();
                 var completedTask = await Task.WhenAny(delay, receive);
                 var result = await completedTask;
                 if (result.Buffer == null)
@@ -55,7 +57,7 @@ namespace Unity.ClusterDisplay.Tests
             }
             else
             {
-                var result = await agent.ReceiveAsync();
+                var result = await client.ReceiveAsync();
                 return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
             }
         }

@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(result, Is.EqualTo(testMessage.Length));
 
             // Do the receive and parse the results
-            var (header, contents) = await m_Agent.ReceiveMessage<RepeaterEnteredNextFrame>(k_TimeoutSeconds);
+            var (header, contents) = await m_Agent.ReceiveMessageAsync<RepeaterEnteredNextFrame>(k_TimeoutSeconds);
             Assert.That(header.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
             Assert.That(contents.FrameNumber, Is.EqualTo(1));
 
@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay.Tests
             for (var i = 0; i < m_TestClients.Length; i++)
             {
                 var client = m_TestClients[i];
-                var (msgHeader, contents) = await client.ReceiveMessage<RepeaterEnteredNextFrame>();
+                var (msgHeader, contents) = await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
                 Assert.That(msgHeader.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
                 Assert.That(msgHeader.OriginID, Is.EqualTo(k_AgentNodeId));
                 Assert.NotZero(msgHeader.DestinationIDs & k_TestNodes[i].ToMask());
@@ -156,7 +156,7 @@ namespace Unity.ClusterDisplay.Tests
             var client = m_TestClients[0];
 
             // Receive the initial message
-            await client.ReceiveMessage<RepeaterEnteredNextFrame>();
+            await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
 
             // Agent should now be waiting for ACK messages
             Assert.True(m_Agent.AcksPending);
@@ -164,7 +164,7 @@ namespace Unity.ClusterDisplay.Tests
             // Wait for agent to resend after 1 second
             try
             {
-                await client.ReceiveMessage<RepeaterEnteredNextFrame>(2000);
+                await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>(2000);
             }
             catch (TimeoutException)
             {
