@@ -12,9 +12,15 @@ namespace Unity.ClusterDisplay
         public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
             : base(clusterSync, config)
         {
+            DelayRepeater = delayRepeater;
+        }
+
+        public override void Start()
+        {
+            base.Start();
+            
             m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
             m_CurrentState.EnterState(null);
-            DelayRepeater = delayRepeater;
         }
     }
 }

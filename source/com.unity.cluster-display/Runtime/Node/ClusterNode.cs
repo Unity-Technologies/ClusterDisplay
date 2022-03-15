@@ -29,6 +29,10 @@ namespace Unity.ClusterDisplay
             this.clusterSync = clusterSync;
             Stopwatch.StartNew();
         }
+        
+        public virtual void Start()
+        {
+        }
 
         public bool DoFrame(bool newFrame)
         {

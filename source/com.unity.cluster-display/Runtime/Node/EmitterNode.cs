@@ -34,6 +34,11 @@ namespace Unity.ClusterDisplay
                 MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
+        }
+
+        public override void Start()
+        {
+            base.Start();
             m_CurrentState.EnterState(null);
         }
 

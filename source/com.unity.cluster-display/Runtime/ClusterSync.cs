@@ -237,6 +237,8 @@ namespace Unity.ClusterDisplay
                 stateSetter.SetIsEmitter(true);
                 stateSetter.SetEmitterIsHeadless(CommandLineParser.HeadlessEmitter);
                 stateSetter.SetIsRepeater(false);
+
+                LocalNode.Start();
                 return true;
             }
             catch (Exception e)
@@ -258,6 +260,8 @@ namespace Unity.ClusterDisplay
             
                 stateSetter.SetIsEmitter(false);
                 stateSetter.SetIsRepeater(true);
+
+                LocalNode.Start();
                 return true;
             }
             catch (Exception e)
