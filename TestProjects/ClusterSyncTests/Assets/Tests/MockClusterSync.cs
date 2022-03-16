@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.Tests
         public const int rxPort = 12345;
         public const int txPort = 12346;
         public const string multicastAddress = "224.0.1.0";
-        public const int timeoutSeconds = 10;
+        public const int timeoutSeconds = NetworkingUtils.receiveTimeout * 1000;
         public const int maxRetries = 20;
 
         public static readonly string adapterName = NetworkingUtils.SelectNic().Name;

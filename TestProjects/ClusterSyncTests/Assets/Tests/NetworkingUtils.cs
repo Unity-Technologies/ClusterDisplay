@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -15,23 +16,25 @@ namespace Unity.ClusterDisplay.Tests
 {
     static class NetworkingUtils
     {
-        public static readonly int headerSize = Marshal.SizeOf<MessageHeader>();
+        static readonly int k_HeaderSize = Marshal.SizeOf<MessageHeader>();
 
+        public const int receiveTimeout = 5000;
+        
         public static ulong ToMask(this byte id) => 1UL << id;
 
         public static ulong ToMask(this IEnumerable<byte> ids) => ids.Aggregate(0UL, (mask, id) => mask | ToMask((byte) id));
 
-        public static (MessageHeader header, T contents) ReceiveMessage<T>(this UDPAgent agent, int timeout = 1000) where T : unmanaged
+        public static (MessageHeader header, T contents) ReceiveMessage<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
         {   
-            if (agent.RxWait.WaitOne(timeout * 1000) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
+            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
             {
-                return (header, outBuffer.LoadStruct<T>(headerSize));
+                return (header, outBuffer.LoadStruct<T>(k_HeaderSize));
             }
 
-            return default;
+            throw new IOException("Received timed out.");
         }
 
-        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessageAsync<T>(this UDPAgent agent, int timeout = 1000) where T : unmanaged
+        public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessageAsync<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
         {
             return await Task.Run(() => agent.ReceiveMessage<T>(timeout));
         }
@@ -53,12 +56,12 @@ namespace Unity.ClusterDisplay.Tests
                     throw new TimeoutException("The read operation timed out.");
                 }
 
-                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
+                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(k_HeaderSize));
             }
             else
             {
                 var result = await client.ReceiveAsync();
-                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(headerSize));
+                return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(k_HeaderSize));
             }
         }
         
@@ -67,7 +70,7 @@ namespace Unity.ClusterDisplay.Tests
             EMessageType messageType,
             T contents,
             MessageHeader.EFlag flags = MessageHeader.EFlag.None,
-            int zeroPadding = 0) where T : unmanaged
+            byte[] extraData = null) where T : unmanaged
         {
             // Generate and send message
             var header = new MessageHeader
@@ -76,16 +79,17 @@ namespace Unity.ClusterDisplay.Tests
                 DestinationIDs = destinations.ToMask(),
                 OriginID = originId,
                 PayloadSize = (ushort) Marshal.SizeOf<T>(),
-                OffsetToPayload = (ushort) headerSize,
+                OffsetToPayload = (ushort) k_HeaderSize,
                 Flags = flags
             };
 
-            var bufferLen = headerSize + Marshal.SizeOf<T>() + zeroPadding;
+            var contentSize = Marshal.SizeOf<T>();
+            var bufferLen = k_HeaderSize + contentSize + (extraData?.Length ?? 0);
             var buffer = new byte[bufferLen];
             
-
             header.StoreInBuffer(buffer);
-            contents.StoreInBuffer(buffer, headerSize);
+            contents.StoreInBuffer(buffer, k_HeaderSize);
+            extraData?.CopyTo(buffer, k_HeaderSize + contentSize);
 
             return (header, buffer);
         }
@@ -124,7 +128,7 @@ namespace Unity.ClusterDisplay.Tests
 
         public static async Task<int> SendAck(this UdpClient client, IPEndPoint agentEndPoint, byte agentId, byte originId)
         {
-            var ackBuffer = new byte[headerSize];
+            var ackBuffer = new byte[k_HeaderSize];
             var ackHeader = new MessageHeader
             {
                 MessageType = EMessageType.AckMsgRx,
