@@ -14,6 +14,7 @@ namespace Unity.ClusterDisplay
     {
         private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
 
+        bool m_Disposed = false;
         private NativeArray<byte> m_StagedStateBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
 
@@ -49,15 +50,24 @@ namespace Unity.ClusterDisplay
 
         void Dispose(bool disposing)
         {
-            if (disposing)
+            if (m_Disposed)
             {
-                // TODO: Dispose managed objects
+                return;
             }
             
+            if (disposing)
+            {
+                // Dispose managed objects here
+            }
+            
+            // NativeArrays look like regular IDisposable objects but they
+            // behave more like unmanaged objects
             if (m_CurrentStateBuffer.IsCreated)
                 m_CurrentStateBuffer.Dispose();
-            if (m_StagedStateBuffer.IsCreated)
+            if (m_StagedStateBuffer != default && m_StagedStateBuffer.IsCreated)
                 m_StagedStateBuffer.Dispose();
+
+            m_Disposed = true;
         }
 
         public void Dispose()
@@ -73,27 +83,24 @@ namespace Unity.ClusterDisplay
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
         {
-            using (m_StagedStateBuffer)
+            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_StagedStateBuffer.Length;
+
+            if (m_MsgBuffer.Length != len)
+                m_MsgBuffer = new byte[len];
+
+            var msg = new EmitterLastFrameData() {FrameNumber = currentFrameId };
+            msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
+
+            Marshal.Copy((IntPtr) m_StagedStateBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(), m_StagedStateBuffer.Length);
+
+            var msgHdr = new MessageHeader()
             {
-                var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_StagedStateBuffer.Length;
+                MessageType = EMessageType.LastFrameData,
+                Flags = MessageHeader.EFlag.Broadcast,
+                PayloadSize = (UInt16)m_StagedStateBuffer.Length
+            };
 
-                if (m_MsgBuffer.Length != len)
-                    m_MsgBuffer = new byte[len];
-
-                var msg = new EmitterLastFrameData() {FrameNumber = currentFrameId };
-                msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
-
-                Marshal.Copy((IntPtr) m_StagedStateBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(), m_StagedStateBuffer.Length);
-
-                var msgHdr = new MessageHeader()
-                {
-                    MessageType = EMessageType.LastFrameData,
-                    Flags = MessageHeader.EFlag.Broadcast,
-                    PayloadSize = (UInt16)m_StagedStateBuffer.Length
-                };
-
-                nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
-            }
+            nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
         }
 
         public void GatherPreFrameState ()
@@ -118,23 +125,15 @@ namespace Unity.ClusterDisplay
 
         private void StageCurrentStateBuffer ()
         {
-            if (m_CurrentStateResult)
+            FlushPreviousStateSubBuffer();
+            if (m_CurrentStateResult && m_CurrentStateBuffer.IsCreated)
             {
                 onStoreCustomData?.Invoke(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
 
                 if (MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
                 {
-                    m_StagedStateBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Temp);
+                    m_StagedStateBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Persistent);
                 }
-                else
-                {
-                    FlushPreviousStateSubBuffer();
-                }
-            }
-
-            else
-            {
-                FlushPreviousStateSubBuffer();
             }
         }
 

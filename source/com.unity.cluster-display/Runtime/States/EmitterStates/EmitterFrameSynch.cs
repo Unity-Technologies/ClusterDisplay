@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class EmitterSynchronization : EmitterState, IEmitterNodeSyncState
     {
-        enum EStage
+        internal enum EStage
         {
             WaitOneFrame,
             WaitOnRepeatersNextFrame,
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         private Int64 m_WaitingOnNodes; 
 
         private EStage m_Stage;
-        private EStage Stage
+        internal EStage Stage
         {
             get => m_Stage;
             set
