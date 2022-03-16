@@ -423,7 +423,10 @@ namespace Unity.ClusterDisplay
                     RxWait.Set();
 
                     // Respond to the sending node with an ACK that we've received the message.
-                    SendMsgRxAck(ref header, msg.ts);
+                    if (!header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck))
+                    {
+                        SendMsgRxAck(ref header, msg.ts);
+                    }
                 }
             }
 

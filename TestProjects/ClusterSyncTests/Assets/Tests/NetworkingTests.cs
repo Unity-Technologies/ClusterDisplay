@@ -86,6 +86,12 @@ namespace Unity.ClusterDisplay.Tests
         {
             return TestAsyncTask(TestResend(), k_TimeoutSeconds);
         }
+        
+        [UnityTest]
+        public IEnumerator TestNoAckAsync()
+        {
+            return TestAsyncTask(TestNoAck(), k_TimeoutSeconds);
+        }
 
         async Task TestReceiveMessage()
         {
@@ -170,6 +176,22 @@ namespace Unity.ClusterDisplay.Tests
             {
                 Assert.Fail("Timed out waiting for resend");
             }
+        }
+
+        async Task TestNoAck()
+        {
+            // Send a message to multiple nodes
+            var (header, rawMsg) = GenerateTestMessage(k_AgentNodeId, k_TestNodes.Take(1));
+            header.Flags |= MessageHeader.EFlag.DoesNotRequireAck;
+            
+            Assert.True(m_Agent.PublishMessage(header, rawMsg));
+            var client = m_TestClients[0];
+
+            // Receive the initial message
+            await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
+
+            // Agent should NOT be waiting for ACKs
+            Assert.IsFalse(m_Agent.AcksPending);
         }
     }
 }
