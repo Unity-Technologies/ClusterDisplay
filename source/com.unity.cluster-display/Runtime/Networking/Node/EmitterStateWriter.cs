@@ -26,6 +26,12 @@ namespace Unity.ClusterDisplay
         
         public bool ValidRawStateData => m_StagedStateBuffer != default;
 
+        internal NativeArray<byte>.ReadOnly StagedStateBuffer => m_StagedStateBuffer.AsReadOnly();
+        internal NativeArray<byte>.ReadOnly CurrentStateBuffer =>
+            m_CurrentStateBuffer.GetSubArray(0,
+                    (int) m_CurrentStateBufferEndPos)
+                .AsReadOnly();
+
         public IEmitterNodeSyncState nodeState;
 
         internal delegate bool OnStoreCustomData(NativeArray<byte> buffer, ref buint endPos);
@@ -255,5 +261,21 @@ namespace Unity.ClusterDisplay
 
         internal static unsafe void StoreStateID(NativeArray<byte> buffer, ref buint endPos, byte id) =>
             *((byte*)buffer.GetUnsafePtr() + endPos++) = id;
+    }
+
+    // This class is used for testing purposes and isn't very safe.
+    // USE WITH CAUTION
+    internal class EmitterStateReader
+    {
+        EmitterStateWriter m_State;
+
+        public EmitterStateReader(EmitterStateWriter emitter)
+        {
+            m_State = emitter;
+        }
+
+        public NativeArray<byte>.ReadOnly StagedStateBuffer => m_State.StagedStateBuffer;
+        public NativeArray<byte>.ReadOnly CurrentStateBuffer => m_State.CurrentStateBuffer;
+
     }
 }

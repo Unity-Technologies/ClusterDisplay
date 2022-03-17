@@ -35,6 +35,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private EmitterStateWriter m_Emitter;
 
+        internal EmitterStateReader StateReader => m_Emitter == null ? null : new EmitterStateReader(m_Emitter);
+
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
 
         public UDPAgent NetworkAgent => LocalNode.UdpAgent;
@@ -59,6 +61,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             base.InitState();
 
             m_Emitter = new EmitterStateWriter(this, LocalNode.RepeatersDelayed);
+            
 
             // If the repeaters are delayed, then we can have the emitter step one frame by setting our initial
             // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.
