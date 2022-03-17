@@ -6,33 +6,32 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    // Before you change the name of this class, make sure you also change the referencing name in CommandLineParser.
     [CreateAssetMenu(fileName = "ClusterSyncEditorConfig", menuName = "Cluster Display/Cluster Sync Editor Config", order = 1)]
     [InitializeOnLoad]
     [Serializable]
     class ClusterSyncEditorConfig : SingletonScriptableObject<ClusterSyncEditorConfig>
     {
-        static ClusterSyncEditorConfig ()
+        // This is called by CommandLineParser in the editor only through reflection.
+        [CommandLineParser.CommandLineInjectionMethod]
+        private static void PollArguments ()
         {
-            // Grab command line args related to cluster config
-            ClusterSync.onPreEnableClusterDisplay += () =>
+            if (!TryGetInstance(out var editorConfig))
             {
-                if (!TryGetInstance(out var editorConfig))
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (!editorConfig.m_IgnoreEditorCmdLine)
-                {
-                    var editorInstanceCmdLine = editorConfig.m_EditorInstanceIsEmitter ? 
-                        editorConfig.m_EditorInstanceEmitterCmdLine : 
-                        editorConfig.m_EditorInstanceRepeaterCmdLine;
+            if (!editorConfig.m_IgnoreEditorCmdLine)
+            {
+                var editorInstanceCmdLine = editorConfig.m_EditorInstanceIsEmitter ? 
+                    editorConfig.m_EditorInstanceEmitterCmdLine : 
+                    editorConfig.m_EditorInstanceRepeaterCmdLine;
 
-                    CommandLineParser.OverrideArguments(editorInstanceCmdLine.Split(' ').ToList()); 
-                }
-            };
-
-            ClusterSync.onDisableCLusterDisplay += () => CommandLineParser.OverrideArguments(new List<string>());
+                CommandLineParser.OverrideArguments(editorInstanceCmdLine.Split(' ').ToList()); 
+            }
         }
+
+        static ClusterSyncEditorConfig () => ClusterSync.onDisableCLusterDisplay += () => CommandLineParser.OverrideArguments(new List<string>());
 
         [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
         [SerializeField] public bool m_EditorInstanceIsEmitter;
