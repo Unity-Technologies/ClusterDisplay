@@ -31,7 +31,26 @@ namespace Unity.ClusterDisplay.Tests
                 return (header, outBuffer.LoadStruct<T>(k_HeaderSize));
             }
 
-            throw new IOException("Received timed out.");
+            return default;
+        }
+        
+        public static (MessageHeader header, T contents, byte[] extraData) ReceiveMessageWithData<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
+        {   
+            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
+            {
+                var msgLength = k_HeaderSize + Marshal.SizeOf<T>();
+                var extraData = new byte[outBuffer.Length - msgLength];
+                
+                Array.Copy(sourceArray: outBuffer,
+                    sourceIndex: msgLength,
+                    destinationArray: extraData,
+                    destinationIndex: 0,
+                    length: extraData.Length);
+                
+                return (header, outBuffer.LoadStruct<T>(k_HeaderSize), extraData);
+            }
+
+            return default;
         }
 
         public static async ValueTask<(MessageHeader header, T contents)> ReceiveMessageAsync<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged

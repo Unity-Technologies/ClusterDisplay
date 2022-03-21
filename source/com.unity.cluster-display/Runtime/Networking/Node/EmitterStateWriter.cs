@@ -21,16 +21,9 @@ namespace Unity.ClusterDisplay
         private buint m_CurrentStateBufferEndPos = 0;
         private bool m_CurrentStateResult = false;
 
-        private UnityEngine.Random.State previousFrameRndState;
         private byte[] m_MsgBuffer = new byte[0];
         
         public bool ValidRawStateData => m_StagedStateBuffer != default;
-
-        internal NativeArray<byte>.ReadOnly StagedStateBuffer => m_StagedStateBuffer.AsReadOnly();
-        internal NativeArray<byte>.ReadOnly CurrentStateBuffer =>
-            m_CurrentStateBuffer.GetSubArray(0,
-                    (int) m_CurrentStateBufferEndPos)
-                .AsReadOnly();
 
         public IEmitterNodeSyncState nodeState;
 
@@ -48,9 +41,8 @@ namespace Unity.ClusterDisplay
         public EmitterStateWriter (IEmitterNodeSyncState nodeState, bool repeatersDelayed)
         {
             this.nodeState = nodeState;
-            previousFrameRndState = UnityEngine.Random.state;
 
-            m_CurrentStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            m_CurrentStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent);
             k_RepeatersDelayed = repeatersDelayed;
         }
 
@@ -115,19 +107,20 @@ namespace Unity.ClusterDisplay
             m_CurrentStateResult = m_CurrentStateBufferEndPos > 0;
         }
 
-        internal static uint StoreFrameState(NativeArray<byte> buffer)
+        internal static uint StoreFrameState(NativeArray<byte> buffer, bool markEnd = false)
         {
             uint endPos = 0;
+            var success = false;
         
             if (StoreInputState(buffer, ref endPos) &&
                 StoreTimeState(buffer, ref endPos) &&
                 StoreClusterInputState(buffer, ref endPos) &&
                 StoreRndGeneratorState(buffer, ref endPos))
             {
-                return endPos;
+                success = !markEnd || MarkStatesEnd(buffer, ref endPos);
             }
 
-            return 0;
+            return success ? endPos : 0;
         }
 
         private void FlushPreviousStateSubBuffer ()
@@ -270,21 +263,5 @@ namespace Unity.ClusterDisplay
 
         internal static unsafe void StoreStateID(NativeArray<byte> buffer, ref buint endPos, byte id) =>
             *((byte*)buffer.GetUnsafePtr() + endPos++) = id;
-    }
-
-    // This class is used for testing purposes and isn't very safe.
-    // USE WITH CAUTION
-    internal class EmitterStateReader
-    {
-        EmitterStateWriter m_State;
-
-        public EmitterStateReader(EmitterStateWriter emitter)
-        {
-            m_State = emitter;
-        }
-
-        public NativeArray<byte>.ReadOnly StagedStateBuffer => m_State.StagedStateBuffer;
-        public NativeArray<byte>.ReadOnly CurrentStateBuffer => m_State.CurrentStateBuffer;
-
     }
 }
