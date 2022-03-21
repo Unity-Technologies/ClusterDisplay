@@ -44,7 +44,7 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
             projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
-            projection.ProjectionMatrix = m_Camera.projectionMatrix;
+            projection.ProjectionMatrix = Matrix4x4.Perspective(m_Camera.fieldOfView, 1, m_Camera.nearClipPlane, m_Camera.farClipPlane);
             m_Volume.profile = LoadVolumeProfile(profileName);
         }, null, exceptionHandler);
     }
@@ -63,7 +63,7 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
             projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
-            projection.ProjectionMatrix = m_Camera.projectionMatrix;
+            projection.ProjectionMatrix = Matrix4x4.Perspective(m_Camera.fieldOfView, 1, m_Camera.nearClipPlane, m_Camera.farClipPlane);
             m_Volume.profile = LoadVolumeProfile(profileName);
         });
     }

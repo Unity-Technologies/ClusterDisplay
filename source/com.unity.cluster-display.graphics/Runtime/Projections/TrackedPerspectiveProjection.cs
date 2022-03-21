@@ -58,7 +58,10 @@ namespace Unity.ClusterDisplay.Graphics
             ClearPreviews();
             foreach (var rt in m_RenderTargets.Values)
             {
-                rt.Release();
+                if (rt != null)
+                {
+                    rt.Release();
+                }
             }
             m_RenderTargets.Clear();
         }

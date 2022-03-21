@@ -92,7 +92,7 @@ namespace Unity.ClusterDisplay
         public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset)
             where T : unmanaged => StructToBytes(dest, offset, ref blittable);
       
-        public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset)
+        public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset = 0)
             where T : unmanaged => StructToBytes(dest, offset, ref blittable);
         
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>

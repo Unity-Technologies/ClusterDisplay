@@ -34,6 +34,12 @@ namespace Unity.ClusterDisplay.Graphics.EditorTests
             FixedResolution
         }
 
+        public static void OpenGameView()
+        {
+            var gameView = EditorWindow.GetWindow(k_GameViewType);
+            gameView.Show();
+        }
+
         public static void CaptureRenderDocScene()
         {
             var gameView = EditorWindow.GetWindow(k_GameViewType);

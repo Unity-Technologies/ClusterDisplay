@@ -90,10 +90,11 @@ namespace Unity.ClusterDisplay.MissionControl
             token.ThrowIfCancellationRequested();
             if (!FolderUtils.TryGetPlayerInfo(GetLocalProjectDir(launchInfo.PlayerDir), out var playerInfo))
             {
-                throw new ArgumentException("Not a valid Unity player");
+                throw new ArgumentException("Folder does not contain an executable");
             }
 
-            if (launchInfo.ClearRegistry)
+            var isUnityPlayer = !string.IsNullOrEmpty(playerInfo.ProductName);
+            if (isUnityPlayer && launchInfo.ClearRegistry)
             {
                 try
                 {
@@ -105,13 +106,14 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             }
 
-            var argString = GetCommandLineArgString(launchInfo);
+            var argString = isUnityPlayer ? GetCommandLineArgString(launchInfo) : launchInfo.ExtraArgs;
             var runProjectProcess = new Process
             {
                 StartInfo =
                 {
                     FileName = playerInfo.ExecutablePath,
-                    Arguments = argString
+                    Arguments = argString,
+                    WorkingDirectory = Directory.GetParent(playerInfo.ExecutablePath)?.FullName ?? string.Empty
                 }
             };
 
@@ -132,6 +134,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 {
                     runProjectProcess.Kill();
                 }
+
                 Trace.WriteLine($"Process exited with code {runProjectProcess.ExitCode}");
             }
         }
