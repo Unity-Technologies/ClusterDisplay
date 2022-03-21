@@ -109,14 +109,25 @@ namespace Unity.ClusterDisplay
             nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
         }
 
-        public void GatherPreFrameState ()
+        void GatherPreFrameState ()
         {
-            m_CurrentStateBufferEndPos = 0;
-            m_CurrentStateResult =
-                StoreInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
-                StoreTimeState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
-                StoreClusterInputState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos) &&
-                StoreRndGeneratorState(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
+            m_CurrentStateBufferEndPos = StoreFrameState(m_CurrentStateBuffer);
+            m_CurrentStateResult = m_CurrentStateBufferEndPos > 0;
+        }
+
+        internal static uint StoreFrameState(NativeArray<byte> buffer)
+        {
+            uint endPos = 0;
+        
+            if (StoreInputState(buffer, ref endPos) &&
+                StoreTimeState(buffer, ref endPos) &&
+                StoreClusterInputState(buffer, ref endPos) &&
+                StoreRndGeneratorState(buffer, ref endPos))
+            {
+                return endPos;
+            }
+
+            return 0;
         }
 
         private void FlushPreviousStateSubBuffer ()
@@ -233,7 +244,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref buint endPos)
+        private static unsafe bool StoreRndGeneratorState(NativeArray<byte> buffer, ref buint endPos)
         {
             if ((endPos + Marshal.SizeOf<int>() + Marshal.SizeOf<UnityEngine.Random.State>()) >= buffer.Length)
             {
@@ -241,7 +252,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            var rndState = previousFrameRndState;
+            var rndState = UnityEngine.Random.state;
 
             StoreStateID(buffer, ref endPos, (byte)StateID.Random);
 
@@ -254,8 +265,6 @@ namespace Unity.ClusterDisplay
             buint sizeOfRandomState = (buint)Marshal.SizeOf<UnityEngine.Random.State>();
             endPos += sizeOfRandomState;
             *((buint*)((byte*)buffer.GetUnsafePtr() + sizePos)) = sizeOfRandomState;
-            
-            previousFrameRndState = UnityEngine.Random.state;
             return true;
         }
 
