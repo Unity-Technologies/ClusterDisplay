@@ -2,7 +2,6 @@
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.TestTools.Graphics;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {
@@ -29,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             }
         }
 
-        const int k_NumFrames = 12;
+        const int k_NumFrames = 4;
 
         protected Camera m_Camera;
         protected ClusterRenderer m_ClusterRenderer;
@@ -37,7 +36,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         protected RenderTexture[] m_ClusterCaptureDelayed;
         protected Texture2D m_ClusterCaptureNoDelayTex2D;
         protected Texture2D m_ClusterCaptureDelayedTex2D;
-        protected GraphicsTestSettings m_GraphicsTestSettings;
+        protected ImageComparisonSettings m_ImageComparisonSettings;
 
         protected virtual void InitializeTest()
         {
@@ -45,12 +44,14 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_Camera, "Could not find main camera.");
             m_ClusterRenderer = FindObjectOfType<ClusterRenderer>(true);
             Assert.IsNotNull(m_ClusterRenderer, $"Could not find {nameof(ClusterRenderer)}");
-            m_GraphicsTestSettings = FindObjectOfType<GraphicsTestSettings>();
-            Assert.IsNotNull(m_GraphicsTestSettings, "Missing test settings for graphic tests.");
+            m_ImageComparisonSettings = FindObjectOfType<ImageComparisonSettings>();
+            Assert.IsNotNull(m_ImageComparisonSettings, "Missing image comparison settings.");
+
+            EditorBridge.OpenGameView();
 
             var success = EditorBridge.SetGameViewSize(
-                m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth,
-                m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight);
+                m_ImageComparisonSettings.TargetWidth,
+                m_ImageComparisonSettings.TargetHeight);
             Assert.IsTrue(success);
         }
 
@@ -73,8 +74,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsTrue(m_ClusterRenderer.isActiveAndEnabled);
 
             var moveAround = new MoveAround(m_Camera.transform, 4);
-            var width = m_GraphicsTestSettings.ImageComparisonSettings.TargetWidth;
-            var height = m_GraphicsTestSettings.ImageComparisonSettings.TargetHeight;
+            var width = m_ImageComparisonSettings.TargetWidth;
+            var height = m_ImageComparisonSettings.TargetHeight;
 
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCaptureNoDelay, k_NumFrames, width, height, "vanilla-capture");
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCaptureDelayed, k_NumFrames, width, height, "cluster-capture");
@@ -110,7 +111,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i + 1], m_ClusterCaptureDelayedTex2D);
                 
-                ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                ImageAssert.AreEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
             }
             
             // Make sure the test did not pass by accident. (Aka, the frames did change over time.)
@@ -119,7 +120,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureNoDelay[i], m_ClusterCaptureNoDelayTex2D);
                 GraphicsTestUtil.CopyToTexture2D(m_ClusterCaptureDelayed[i], m_ClusterCaptureDelayedTex2D);
 
-                GraphicsTestUtil.AssertImagesAreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_GraphicsTestSettings.ImageComparisonSettings);
+                ImageAssert.AreNotEqual(m_ClusterCaptureNoDelayTex2D, m_ClusterCaptureDelayedTex2D, m_ImageComparisonSettings, i.ToString());
             }
             
             DisposeTest();

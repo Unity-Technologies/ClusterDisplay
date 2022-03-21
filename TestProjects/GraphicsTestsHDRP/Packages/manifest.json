@@ -10,7 +10,6 @@
     "com.unity.test-framework": "1.1.18",
     "com.unity.test-framework.build": "0.0.1-preview.14",
     "com.unity.test-framework.utp-reporter": "1.0.2-preview",
-    "com.unity.testframework.graphics": "7.8.14-preview",
     "com.unity.visualeffectgraph": "file:../../../Graphics/com.unity.visualeffectgraph",
     "com.unity.visualscripting": "1.7.5",
     "com.unity.modules.imageconversion": "1.0.0",
@@ -19,7 +18,6 @@
     "com.unity.modules.screencapture": "1.0.0"
   },
   "testables": [
-    "com.unity.testframework.graphics",
     "com.unity.cluster-display.graphics"
   ]
 }

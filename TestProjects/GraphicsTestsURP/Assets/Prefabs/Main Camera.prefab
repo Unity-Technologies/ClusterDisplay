@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 400713408593692140}
   - component: {fileID: 400713408593692143}
   - component: {fileID: 400713408593692142}
-  - component: {fileID: 400713408593692136}
+  - component: {fileID: 8069668509433061490}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -42,16 +42,24 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 400713408593692146}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
   m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
-  m_FocalLength: 50
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
@@ -126,7 +134,7 @@ MonoBehaviour:
   m_RequiresDepthTexture: 0
   m_RequiresColorTexture: 0
   m_Version: 2
---- !u!114 &400713408593692136
+--- !u!114 &8069668509433061490
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -135,19 +143,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 400713408593692146}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 20f198885badb1f4fa1e65869995ff82, type: 3}
+  m_Script: {fileID: 11500000, guid: 4de5710d176f4282bf183ba05bf24dca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ImageComparisonSettings:
-    TargetWidth: 512
-    TargetHeight: 512
-    PerPixelCorrectnessThreshold: 0.001
-    PerPixelGammaThreshold: 0.003921569
-    PerPixelAlphaThreshold: 0.003921569
-    AverageCorrectnessThreshold: 0.002
-    IncorrectPixelsThreshold: 0.0000038146973
-    UseHDR: 0
-    UseBackBuffer: 0
-    ImageResolution: 0
-    ActiveImageTests: 1
-    ActivePixelTests: 7
+  TargetWidth: 512
+  TargetHeight: 512
+  PerPixelCorrectnessThreshold: 0.001
+  PerPixelGammaThreshold: 0.003921569
+  PerPixelAlphaThreshold: 0.003921569
+  AverageCorrectnessThreshold: 0.002
+  IncorrectPixelsThreshold: 0.0000038146973
+  UseHDR: 0
