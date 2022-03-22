@@ -39,6 +39,8 @@ namespace Unity.ClusterDisplay
             onStoreCustomData += _onStoreCustomData;
         }
 
+        internal static void UnregisterOnStoreCustomDataDelegates() => onStoreCustomData = null;
+
         public EmitterStateWriter (IEmitterNodeSyncState nodeState, bool repeatersDelayed)
         {
             this.nodeState = nodeState;
@@ -226,7 +228,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static unsafe bool MarkStatesEnd(NativeArray<byte> buffer, ref buint endPos)
+        internal static unsafe bool MarkStatesEnd(NativeArray<byte> buffer, ref buint endPos)
         {
             ClusterDebug.Assert(endPos < buffer.Length, "Buffer to small to store end marker");
             if (endPos >= buffer.Length)

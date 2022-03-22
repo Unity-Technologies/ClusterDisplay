@@ -3,6 +3,7 @@ using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Tests
@@ -23,7 +24,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         public static CoroutineTask<T> ToCoroutine<T>(this ValueTask<T> task) => new(task);
-        
+
         public static bool LoopUntil(Func<bool> pred, int maxRetries)
         {
             for (int i = 0; i < maxRetries; i++)
@@ -32,10 +33,17 @@ namespace Unity.ClusterDisplay.Tests
                 {
                     return true;
                 }
+
                 Thread.Sleep(100);
             }
 
             return false;
+        }
+
+        public static int AppendCustomData<T>(this NativeArray<T> array, int pos, T[] data) where T : struct
+        {
+            array.GetSubArray(pos, data.Length).CopyFrom(data);
+            return pos + data.Length;
         }
     }
 
@@ -50,7 +58,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Task.IsCompletedSuccessfully
                 ? m_Task.Result
                 : throw new InvalidOperationException("Task is was not complete, or it was faulted");
-        
+
         ValueTask<T> m_Task;
 
         public bool IsSuccessful => m_Task.IsCompletedSuccessfully;

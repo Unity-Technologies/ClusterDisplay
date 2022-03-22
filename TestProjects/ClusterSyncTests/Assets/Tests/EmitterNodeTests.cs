@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using System.Linq;
+using System.Text;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.TestTools;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
@@ -36,6 +38,10 @@ namespace Unity.ClusterDisplay.Tests
 
             m_Node = m_ClusterSync.LocalNode as EmitterNode;
             Assert.IsNotNull(m_Node);
+
+            // Watch out for static global states!
+            // Potential refactoring target.
+            EmitterStateWriter.UnregisterOnStoreCustomDataDelegates();
         }
 
         [Test]
@@ -106,6 +112,14 @@ namespace Unity.ClusterDisplay.Tests
 
             using var rawStateBuffer = new NativeArray<byte>(ushort.MaxValue, Allocator.Persistent);
 
+            // Make the emitter attach some custom data to the frame.
+            byte[] GetCustomData() => Encoding.ASCII.GetBytes($"Hello World {m_ClusterSync.CurrentFrameID}");
+            EmitterStateWriter.RegisterOnStoreCustomDataDelegate((NativeArray<byte> buffer, ref uint pos) =>
+            {
+                pos = (uint) buffer.AppendCustomData((int) pos, GetCustomData());
+                return true;
+            });
+
             // Simulate several frames
             const int kNumFrames = 4;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
@@ -123,9 +137,11 @@ namespace Unity.ClusterDisplay.Tests
 
                 emitterSync.ProcessFrame(false);
 
-                // The is the current state data
-                var stateSize = (int) EmitterStateWriter.StoreFrameState(rawStateBuffer, true);
-                var stateBuffer = rawStateBuffer.GetSubArray(0, stateSize);
+                // The is the current state data, with custom data appended
+                var stateSize = EmitterStateWriter.StoreFrameState(rawStateBuffer, false);
+                stateSize = (uint) rawStateBuffer.AppendCustomData((int) stateSize, GetCustomData());
+                EmitterStateWriter.MarkStatesEnd(rawStateBuffer, ref stateSize);
+                var stateBuffer = rawStateBuffer.GetSubArray(0, (int) stateSize);
 
                 // ======== Nodes receive FrameData packet ======
                 foreach (var testAgent in m_TestAgents)
@@ -134,7 +150,8 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(header.MessageType, Is.EqualTo(EMessageType.LastFrameData));
                     Assert.That(message.FrameNumber == frameNum);
 
-                    // Check that state data is received and it corresponds to the current frame
+                    // Check that state data is received and it corresponds to the current frame.
+                    // The received data should also contain custom data at the end.
                     Assert.That(frameData, Is.EqualTo(stateBuffer));
                 }
 
