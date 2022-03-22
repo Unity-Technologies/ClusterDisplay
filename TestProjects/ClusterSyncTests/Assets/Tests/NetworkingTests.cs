@@ -72,25 +72,25 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestReceiveMessageAsync()
         {
-            return TestAsyncTask(TestReceiveMessage(), k_TimeoutSeconds);
+            yield return TestReceiveMessage().ToCoroutine(k_TimeoutSeconds);
         }
 
         [UnityTest]
         public IEnumerator TestPublishAsync()
         {
-            return TestAsyncTask(TestPublish(), k_TimeoutSeconds);
+            yield return TestPublish().ToCoroutine(k_TimeoutSeconds);
         }
 
         [UnityTest]
         public IEnumerator TestResendAsync()
         {
-            return TestAsyncTask(TestResend(), k_TimeoutSeconds);
+            yield return TestResend().ToCoroutine(k_TimeoutSeconds);
         }
         
         [UnityTest]
         public IEnumerator TestNoAckAsync()
         {
-            return TestAsyncTask(TestNoAck(), k_TimeoutSeconds);
+            yield return TestNoAck().ToCoroutine(k_TimeoutSeconds);
         }
 
         async Task TestReceiveMessage()

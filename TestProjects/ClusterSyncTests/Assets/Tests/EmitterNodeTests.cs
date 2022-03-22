@@ -109,25 +109,24 @@ namespace Unity.ClusterDisplay.Tests
             const int kNumFrames = 4;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
-                // ======= Start of Frame ===========
+                // ======= Start of Emitter frame ===========
                 m_ClusterSync.CurrentFrameID = frameNum;
 
                 // At the beginning of the frame, wait until all nodes have arrived at the new frame
-                Assert.That(emitterSync.Stage, Is.EqualTo(EmitterSynchronization.EStage.WaitOnRepeatersNextFrame));
+                Assert.IsTrue(RunStateUtil(emitterSync,
+                    state => state.Stage == EmitterSynchronization.EStage.WaitOnRepeatersNextFrame));
 
                 // Next send the current frame data to the repeaters.
                 Assert.IsTrue(RunStateUtil(emitterSync,
                     state => state.Stage == EmitterSynchronization.EStage.EmitLastFrameData));
-
-
-                Assert.That(emitterSync.Stage, Is.EqualTo(EmitterSynchronization.EStage.EmitLastFrameData));
+                
                 emitterSync.ProcessFrame(false);
 
                 // The is the current state data
                 var stateSize = (int) EmitterStateWriter.StoreFrameState(rawStateBuffer, true);
                 var stateBuffer = rawStateBuffer.GetSubArray(0, stateSize);
 
-                // We should receive a FrameData packet here
+                // ======== Nodes receive FrameData packet ======
                 foreach (var testAgent in m_TestAgents)
                 {
                     var (header, message, frameData) = testAgent.ReceiveMessageWithData<EmitterLastFrameData>();
@@ -138,14 +137,14 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(frameData, Is.EqualTo(stateBuffer));
                 }
 
-                // Once repeaters have ACK'ed, should be ready to continue this frame
+                // Once repeaters have ACK'ed, emitter should be ready to continue this frame
                 Assert.IsTrue(RunStateUntilReady(emitterSync));
 
                 // ======= End of Frame ===========
                 yield return null;
                 emitterSync.ProcessFrame(true);
 
-                // Repeaters send their NextFrame signal
+                // ======= Repeaters start new frame =========
                 foreach (var (id, agent) in k_RepeaterIds.Zip(m_TestAgents, Tuple.Create))
                 {
                     var (header, rawMsg) = GenerateMessage(id,
@@ -190,39 +189,32 @@ namespace Unity.ClusterDisplay.Tests
             NativeArray<byte> lastFrameState = default;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
-                // ======= Start of Frame ===========
+                // ======= Start of Emitter frame =========
                 m_ClusterSync.CurrentFrameID = frameNum;
 
-                // The emitter is going to run a frame ahead, so it's going to start right away without
+                // The emitter is going to run a frame ahead, so on frame 0 it's going to start right away without
                 // waiting for all the nodes to report in.
                 if (m_ClusterSync.CurrentFrameID == 0)
                 {
                     Assert.That(emitterSync.ReadyToProceed, Is.True);
                 }
 
-                emitterSync.ProcessFrame(true);
-
-                if (m_ClusterSync.CurrentFrameID > 1)
-                {
-                    // On Frames 0 and 1 we don't wait for repeaters to enter the next frame because we haven't kicked
-                    // them off yet.
-                    Assert.That(emitterSync.Stage, Is.EqualTo(EmitterSynchronization.EStage.WaitOnRepeatersNextFrame));
-                    emitterSync.ProcessFrame(false);
-                }
-
                 if (m_ClusterSync.CurrentFrameID > 0)
                 {
-                    Assert.That(emitterSync.Stage, Is.EqualTo(EmitterSynchronization.EStage.EmitLastFrameData));
+                    Assert.That(RunStateUtil(emitterSync,
+                            state => state.Stage == EmitterSynchronization.EStage.EmitLastFrameData),
+                        Is.True);
                     emitterSync.ProcessFrame(false);
                 }
 
-                // We should receive a FrameData packet here
+                // ======== Nodes receive FrameData packet (maybe) ======
                 foreach (var testAgent in m_TestAgents)
                 {
                     var (rxHeader, message, frameData) = testAgent.ReceiveMessageWithData<EmitterLastFrameData>(2000);
 
                     if (m_ClusterSync.CurrentFrameID > 0)
                     {
+                        // Emitter starts publishing LastFrameData on frame 1
                         Assert.That(rxHeader.MessageType, Is.EqualTo(EMessageType.LastFrameData));
 
                         // FrameID (frame number) should be behind the emitter by 1
@@ -238,6 +230,7 @@ namespace Unity.ClusterDisplay.Tests
                     }
                     else
                     {
+                        // Repeaters should not be receiving anything on frame 0
                         Assert.That(rxHeader.MessageType, Is.EqualTo(default(EMessageType)));
                     }
                 }
@@ -254,7 +247,9 @@ namespace Unity.ClusterDisplay.Tests
                 // ======= End of Frame ===========
                 yield return null;
 
-                // Repeaters send their NextFrame signal
+                emitterSync.ProcessFrame(true);
+                
+                // ======= Repeaters start new frame =========
                 m_ClusterSync.CurrentFrameID = frameNum + 1;
                 foreach (var (id, agent) in k_RepeaterIds.Zip(m_TestAgents, Tuple.Create))
                 {

@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.Tests
 {
     static class TestUtils
     {
-        public static IEnumerator TestAsyncTask(Task task, float timeoutSeconds)
+        public static IEnumerator ToCoroutine(this Task task, float timeoutSeconds)
         {
             var elapsed = 0f;
             while (!task.IsCompleted && elapsed < timeoutSeconds)
@@ -23,6 +23,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         public static CoroutineTask<T> ToCoroutine<T>(this ValueTask<T> task) => new(task);
+        
         public static bool LoopUntil(Func<bool> pred, int maxRetries)
         {
             for (int i = 0; i < maxRetries; i++)

@@ -2,6 +2,11 @@
 
 namespace Unity.ClusterDisplay.Tests
 {
+    /// <summary>
+    /// IClusterSyncState implementation that stands up a dummy
+    /// LocalNode and a functioning UDPAgent. Used for testing
+    /// NodeStates.
+    /// </summary>
     class MockClusterSync : IClusterSyncState
     {
         public enum NodeType
@@ -50,30 +55,39 @@ namespace Unity.ClusterDisplay.Tests
         public ClusterNode LocalNode { get; }
     }
 
-    // A node state placeholder
+    /// <summary>
+    /// A dummy NodeState: when we require a state that does nothing.
+    /// </summary>
     class NullState : NodeState
     {
         public NullState(IClusterSyncState clusterSync)
             : base(clusterSync) { }
     }
 
-    // A Repeater node that doesn't do anything
+    /// <summary>
+    /// A RepeaterNode that defaults to NullState.
+    /// </summary>
     class MockRepeaterNode : RepeaterNode
     {
         public MockRepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
             : base(clusterSync, delayRepeater, config)
         {
+            // Exit the starting state immediately
             var oldState = m_CurrentState;
             m_CurrentState = new NullState(clusterSync);
             m_CurrentState.EnterState(oldState);
         }
     }
 
+    /// <summary>
+    /// An EmitterNode that defaults to NullState.
+    /// </summary>
     class MockEmitterNode : EmitterNode
     {
         public MockEmitterNode(IClusterSyncState clusterSync, Config config)
             : base(clusterSync, config)
         {
+            // Exit the starting state immediately
             var oldState = m_CurrentState;
             m_CurrentState = new NullState(clusterSync);
             m_CurrentState.EnterState(oldState);
@@ -85,7 +99,7 @@ namespace Unity.ClusterDisplay.Tests
         public static bool RunStateUtil<T>(T state,
             Func<T, bool> pred,
             int maxRetries = MockClusterSync.maxRetries) where T : NodeState =>
-            TestUtils.LoopUntil(() => state != state.ProcessFrame(false) || pred(state), MockClusterSync.maxRetries);
+            TestUtils.LoopUntil(() => pred(state) || state != state.ProcessFrame(false), MockClusterSync.maxRetries);
 
         public static NodeState RunStateUntilTransition(NodeState state, int maxRetries = MockClusterSync.maxRetries)
         {
