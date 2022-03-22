@@ -17,6 +17,7 @@ namespace Unity.ClusterDisplay
         bool m_Disposed = false;
         private NativeArray<byte> m_StagedStateBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
+        int m_StagedBufferLength = 0;
 
         private buint m_CurrentStateBufferEndPos = 0;
         private bool m_CurrentStateResult = false;
@@ -43,6 +44,7 @@ namespace Unity.ClusterDisplay
             this.nodeState = nodeState;
 
             m_CurrentStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent);
+            m_StagedStateBuffer = new NativeArray<byte>(k_MaxFrameNetworkByteBufferSize, Allocator.Persistent);
             k_RepeatersDelayed = repeatersDelayed;
         }
 
@@ -62,7 +64,7 @@ namespace Unity.ClusterDisplay
             // behave more like unmanaged objects
             if (m_CurrentStateBuffer.IsCreated)
                 m_CurrentStateBuffer.Dispose();
-            if (m_StagedStateBuffer != default && m_StagedStateBuffer.IsCreated)
+            if (m_StagedStateBuffer.IsCreated)
                 m_StagedStateBuffer.Dispose();
 
             m_Disposed = true;
@@ -81,21 +83,24 @@ namespace Unity.ClusterDisplay
 
         public unsafe void PublishCurrentState(ulong currentFrameId)
         {
-            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_StagedStateBuffer.Length;
+            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>() + m_StagedBufferLength;
 
-            if (m_MsgBuffer.Length != len)
+            if (m_MsgBuffer.Length < len)
                 m_MsgBuffer = new byte[len];
 
             var msg = new EmitterLastFrameData() {FrameNumber = currentFrameId };
             msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
 
-            Marshal.Copy((IntPtr) m_StagedStateBuffer.GetUnsafePtr(), m_MsgBuffer, Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(), m_StagedStateBuffer.Length);
+            Marshal.Copy((IntPtr) m_StagedStateBuffer.GetUnsafePtr(),
+                m_MsgBuffer, 
+                Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>(),
+                m_StagedBufferLength);
 
             var msgHdr = new MessageHeader()
             {
                 MessageType = EMessageType.LastFrameData,
                 Flags = MessageHeader.EFlag.Broadcast,
-                PayloadSize = (UInt16)m_StagedStateBuffer.Length
+                PayloadSize = (UInt16)m_StagedBufferLength
             };
 
             nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
@@ -123,28 +128,24 @@ namespace Unity.ClusterDisplay
             return success ? endPos : 0;
         }
 
-        private void FlushPreviousStateSubBuffer ()
-        {
-            if (m_StagedStateBuffer.IsCreated)
-            {
-                m_StagedStateBuffer.Dispose();
-            }
-
-            m_StagedStateBuffer = default;
-        }
-
         private void StageCurrentStateBuffer ()
         {
-            FlushPreviousStateSubBuffer();
-            if (m_CurrentStateResult && m_CurrentStateBuffer.IsCreated)
+            if (m_CurrentStateResult)
             {
                 onStoreCustomData?.Invoke(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos);
 
                 if (MarkStatesEnd(m_CurrentStateBuffer, ref m_CurrentStateBufferEndPos))
                 {
-                    m_StagedStateBuffer = new NativeArray<byte>(m_CurrentStateBuffer.GetSubArray(0, (int)m_CurrentStateBufferEndPos), Allocator.Persistent);
+                    Swap(ref m_CurrentStateBuffer, ref m_StagedStateBuffer);
+                    m_StagedBufferLength = (int) m_CurrentStateBufferEndPos;
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static void Swap<T>(ref T a, ref T b) where T : struct
+        {
+            (a, b) = (b, a);
         }
 
         public void GatherFrameState(ulong frame)
