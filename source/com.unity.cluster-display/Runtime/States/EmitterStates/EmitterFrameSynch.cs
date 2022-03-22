@@ -70,6 +70,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // enter this state for the first time.
             if (Stage == EStage.WaitOnRepeatersNextFrame)
                 m_Emitter.GatherFrameState(CurrentFrameID);
+            else m_Emitter.GatherPreFrameState();
 
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = 0;
@@ -93,11 +94,6 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             using (m_MarkerDoFrame.Auto())
             {
-                // newFrame is false on the first frame if -delayRepeaters was defined. Therefore, we do not
-                // gather the frame state on the first frame.
-                if (newFrame)
-                    m_Emitter.GatherFrameState(CurrentFrameID);
-                
                 switch ((EStage)Stage)
                 {
                     case EStage.WaitOnRepeatersNextFrame:
@@ -156,8 +152,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private void OnEmitFrameData()
         {
-            if (!m_Emitter.ValidRawStateData) // 1st frame only
-                m_Emitter.GatherFrameState(CurrentFrameID);
+            m_Emitter.GatherFrameState(CurrentFrameID);
 
             ClusterDebug.Assert(m_Emitter.ValidRawStateData, $"(Frame: {CurrentFrameID}): State buffer is empty!");
             
