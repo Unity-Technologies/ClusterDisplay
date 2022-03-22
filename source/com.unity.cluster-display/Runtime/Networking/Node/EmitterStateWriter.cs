@@ -106,7 +106,7 @@ namespace Unity.ClusterDisplay
             nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
         }
 
-        void GatherPreFrameState ()
+        internal void GatherPreFrameState ()
         {
             m_CurrentStateBufferEndPos = StoreFrameState(m_CurrentStateBuffer);
             m_CurrentStateResult = m_CurrentStateBufferEndPos > 0;

@@ -103,8 +103,9 @@ namespace Unity.ClusterDisplay.Tests
             {
                 m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
             }
-            
+
             using var rawStateBuffer = new NativeArray<byte>(ushort.MaxValue, Allocator.Persistent);
+
             // Simulate several frames
             const int kNumFrames = 4;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
@@ -119,7 +120,7 @@ namespace Unity.ClusterDisplay.Tests
                 // Next send the current frame data to the repeaters.
                 Assert.IsTrue(RunStateUtil(emitterSync,
                     state => state.Stage == EmitterSynchronization.EStage.EmitLastFrameData));
-                
+
                 emitterSync.ProcessFrame(false);
 
                 // The is the current state data
@@ -219,14 +220,10 @@ namespace Unity.ClusterDisplay.Tests
 
                         // FrameID (frame number) should be behind the emitter by 1
                         Assert.That(message.FrameNumber, Is.EqualTo(m_ClusterSync.CurrentFrameID - 1));
-                        
-                        // Bug: Data for Frame 0 is broken
-                        if (message.FrameNumber > 0)
-                        {
-                            // Check that the frame state is from the previous frame
-                            Assert.IsNotNull(lastFrameState);
-                            Assert.That(frameData, Is.EqualTo(lastFrameState));
-                        }
+
+                        // Check that the frame state is from the previous frame
+                        Assert.IsNotNull(lastFrameState);
+                        Assert.That(frameData, Is.EqualTo(lastFrameState));
                     }
                     else
                     {
@@ -243,12 +240,12 @@ namespace Unity.ClusterDisplay.Tests
                 // Store the state data for the current frame
                 var stateSize = (int) EmitterStateWriter.StoreFrameState(rawStateBuffer, true);
                 lastFrameState = rawStateBuffer.GetSubArray(0, stateSize);
-                
+
                 // ======= End of Frame ===========
                 yield return null;
 
                 emitterSync.ProcessFrame(true);
-                
+
                 // ======= Repeaters start new frame =========
                 m_ClusterSync.CurrentFrameID = frameNum + 1;
                 foreach (var (id, agent) in k_RepeaterIds.Zip(m_TestAgents, Tuple.Create))
