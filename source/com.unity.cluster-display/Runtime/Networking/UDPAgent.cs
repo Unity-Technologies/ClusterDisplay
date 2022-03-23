@@ -52,9 +52,8 @@ namespace Unity.ClusterDisplay
         private IPEndPoint m_TxEndPoint;
         private IPEndPoint m_RxEndPoint;
 
-        private BlockingCollection<Message> m_TxQueue;
-        private ConcurrentQueue<Message> m_RxQueue;
-        private List<PendingAck> m_TxQueuePendingAcks;
+        readonly ConcurrentQueue<Message> m_RxQueue;
+        readonly List<PendingAck> m_TxQueuePendingAcks;
 
         public bool AcksPending
         {
@@ -86,7 +85,6 @@ namespace Unity.ClusterDisplay
                     var stats = new NetworkingStats()
                     {
                         rxQueueSize = m_RxQueue != null ? m_RxQueue.Count : 0,
-                        txQueueSize = m_TxQueue != null ? m_TxQueue.Count : 0,
                         pendingAckQueueSize = m_TxQueuePendingAcks != null ? m_TxQueuePendingAcks.Count : 0,
                         failedMsgs = m_DeadMessages != null ? m_DeadMessages.Count : 0,
                         totalResends = m_TotalResendCount,
@@ -99,7 +97,6 @@ namespace Unity.ClusterDisplay
         }
 
         public AutoResetEvent RxWait { get; private set; }
-        public bool IsTxQueueEmpty => m_TxQueue == null || m_TxQueue.Count == 0;
 
         public struct Config
         {
@@ -130,7 +127,6 @@ namespace Unity.ClusterDisplay
             m_MessageAckTimeout = new TimeSpan(0, 0, 0, config.timeOut);
             m_AdapterName = config.adapterName;
             
-            m_TxQueue = new BlockingCollection<Message>();
             m_RxQueue = new ConcurrentQueue<Message>();
             m_TxQueuePendingAcks = new List<PendingAck>();
             m_CTS = new CancellationTokenSource();
@@ -249,14 +245,10 @@ namespace Unity.ClusterDisplay
             {
                 m_CTS.Cancel();
 
-                m_TxQueue.CompleteAdding();
-                m_TxQueue.Dispose();
-
                 m_Connection.Close();
                 m_Connection.Dispose();
 
                 m_CTS = null;
-                m_TxQueue = null;
                 m_Connection = null;
             }
             catch { }

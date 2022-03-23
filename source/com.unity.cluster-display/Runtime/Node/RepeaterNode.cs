@@ -17,8 +17,6 @@ namespace Unity.ClusterDisplay
 
         public override void Start()
         {
-            base.Start();
-            
             m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
             m_CurrentState.EnterState(null);
         }

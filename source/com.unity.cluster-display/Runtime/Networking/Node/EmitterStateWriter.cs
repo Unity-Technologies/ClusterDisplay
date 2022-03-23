@@ -14,10 +14,10 @@ namespace Unity.ClusterDisplay
     {
         private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
 
-        bool m_Disposed = false;
+        bool m_Disposed;
         private NativeArray<byte> m_StagedStateBuffer;
         private NativeArray<byte> m_CurrentStateBuffer;
-        int m_StagedBufferLength = 0;
+        int m_StagedBufferLength;
 
         private buint m_CurrentStateBufferEndPos = 0;
         private bool m_CurrentStateResult = false;

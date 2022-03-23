@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay
             IClusterSyncState clusterSync,
             UDPAgent.Config config)
         {
-            if(config.nodeId >= UDPAgent.MaxSupportedNodeCount)
+            if (config.nodeId >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
 
             m_UDPAgent = new UDPAgent(config);
@@ -29,10 +29,8 @@ namespace Unity.ClusterDisplay
             this.clusterSync = clusterSync;
             Stopwatch.StartNew();
         }
-        
-        public virtual void Start()
-        {
-        }
+
+        public abstract void Start();
 
         public bool DoFrame(bool newFrame)
         {
@@ -40,11 +38,7 @@ namespace Unity.ClusterDisplay
 
             if (m_CurrentState.GetType() == typeof(Shutdown))
             {
-                if (m_UDPAgent.IsTxQueueEmpty)
-                {
-                    m_UDPAgent.Stop();
-                    return false;
-                }
+                m_UDPAgent.Stop();
             }
 
             return m_CurrentState.GetType() != typeof(FatalError);
@@ -54,7 +48,7 @@ namespace Unity.ClusterDisplay
 
         public void Exit()
         {
-            if(m_CurrentState.GetType() != typeof(Shutdown))
+            if (m_CurrentState.GetType() != typeof(Shutdown))
                 m_CurrentState = (new Shutdown(clusterSync)).EnterState(m_CurrentState);
             m_UDPAgent.Stop();
         }
@@ -79,23 +73,21 @@ namespace Unity.ClusterDisplay
             {
                 var stats = ClusterSync.Instance.CurrentNetworkStats;
                 return $"\tNode ID: {dynamicLocalNodeId}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
-                       $"\tState: {m_CurrentState.GetDebugString()}\r\n" + 
-                       $"\tNetwork stats: \r\n\t\tSend Queue Size: [{stats.txQueueSize}], " +
-                           $"\r\n\t\tReceive Queue Size:[{stats.rxQueueSize}], " +
-                           $"\r\n\t\tACK Queue Size: [{stats.pendingAckQueueSize}], " +
-                           $"\r\n\t\tTotal Resends: [{stats.totalResends}], " +
-                           $"\r\n\t\tMessages Sent: [{stats.msgsSent}], " +
-                           $"\r\n\t\tFailed Messages: [{stats.failedMsgs}]";
-                       
+                    $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
+                    $"\tNetwork stats: \r\n\t\tSend Queue Size: [{stats.txQueueSize}], " +
+                    $"\r\n\t\tReceive Queue Size:[{stats.rxQueueSize}], " +
+                    $"\r\n\t\tACK Queue Size: [{stats.pendingAckQueueSize}], " +
+                    $"\r\n\t\tTotal Resends: [{stats.totalResends}], " +
+                    $"\r\n\t\tMessages Sent: [{stats.msgsSent}], " +
+                    $"\r\n\t\tFailed Messages: [{stats.failedMsgs}]";
             }
 
             return null;
         }
 
-        protected void OnNetworkingError( string message )
+        protected void OnNetworkingError(string message)
         {
             m_CurrentState.PendingStateChange = new FatalError(clusterSync, $"Networking error: {message}");
         }
     }
-
 }

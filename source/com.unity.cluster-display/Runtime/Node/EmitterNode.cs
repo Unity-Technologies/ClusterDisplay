@@ -38,7 +38,6 @@ namespace Unity.ClusterDisplay
 
         public override void Start()
         {
-            base.Start();
             m_CurrentState.EnterState(null);
         }
 
