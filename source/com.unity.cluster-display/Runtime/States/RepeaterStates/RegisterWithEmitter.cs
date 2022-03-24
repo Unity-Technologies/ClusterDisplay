@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
         
-        public RegisterWithEmitter(IClusterSyncState clusterSync, RepeaterNode node) : base(clusterSync)
+        public RegisterWithEmitter(IClusterSyncState clusterSync) : base(clusterSync)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();

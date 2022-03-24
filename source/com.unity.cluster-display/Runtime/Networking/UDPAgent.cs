@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -26,6 +27,7 @@ namespace Unity.ClusterDisplay
             public byte[] payload;
             public TimeSpan ts;
         }
+
         private struct PendingAck
         {
             public Message message;
@@ -50,9 +52,8 @@ namespace Unity.ClusterDisplay
         private IPEndPoint m_TxEndPoint;
         private IPEndPoint m_RxEndPoint;
 
-        private BlockingCollection<Message> m_TxQueue;
-        private ConcurrentQueue<Message> m_RxQueue;
-        private List<PendingAck> m_TxQueuePendingAcks;
+        readonly ConcurrentQueue<Message> m_RxQueue;
+        readonly List<PendingAck> m_TxQueuePendingAcks;
 
         public bool AcksPending
         {
@@ -62,13 +63,13 @@ namespace Unity.ClusterDisplay
                     return m_TxQueuePendingAcks.Count > 0;
             }
         }
-        
+
         private CancellationTokenSource m_CTS;
 
         private ConcurrentQueue<MessageHeader> m_DeadMessages;
 
         private Stopwatch m_ConnectionClock = new Stopwatch();
-        private TimeSpan m_AcceptedAckDelay = new TimeSpan(0,0,0,1,000);
+        private TimeSpan m_AcceptedAckDelay = new TimeSpan(0, 0, 0, 1, 000);
         private TimeSpan m_MessageAckTimeout;
 
         private MessageHeader.EFlag m_ExtraHdrFlags = MessageHeader.EFlag.None;
@@ -84,22 +85,19 @@ namespace Unity.ClusterDisplay
                     var stats = new NetworkingStats()
                     {
                         rxQueueSize = m_RxQueue != null ? m_RxQueue.Count : 0,
-                        txQueueSize = m_TxQueue != null ? m_TxQueue.Count : 0,
                         pendingAckQueueSize = m_TxQueuePendingAcks != null ? m_TxQueuePendingAcks.Count : 0,
                         failedMsgs = m_DeadMessages != null ? m_DeadMessages.Count : 0,
                         totalResends = m_TotalResendCount,
                         msgsSent = m_TotalSentCount,
                     };
-                    
+
                     return stats;
                 }
             }
         }
 
-
         public AutoResetEvent RxWait { get; private set; }
-        public bool IsTxQueueEmpty => m_TxQueue == null || m_TxQueue.Count == 0;
-        
+
         public struct Config
         {
             public byte nodeId;
@@ -128,6 +126,12 @@ namespace Unity.ClusterDisplay
             m_MulticastAddress = IPAddress.Parse(config.ip);
             m_MessageAckTimeout = new TimeSpan(0, 0, 0, config.timeOut);
             m_AdapterName = config.adapterName;
+            
+            m_RxQueue = new ConcurrentQueue<Message>();
+            m_TxQueuePendingAcks = new List<PendingAck>();
+            m_CTS = new CancellationTokenSource();
+            m_DeadMessages = new ConcurrentQueue<MessageHeader>();
+            Initialize();
         }
 
         ~UDPAgent() => Dispose();
@@ -153,6 +157,7 @@ namespace Unity.ClusterDisplay
                         ClusterDebug.LogError(
                             $"Unable to use explicit interface: \"{nic.Name}\", the interface is down. Attempting to use the next available interface.");
                     }
+
                     continue;
                 }
 
@@ -170,7 +175,7 @@ namespace Unity.ClusterDisplay
                 upNics.Add(nic);
                 if (!isExplicitNic)
                     continue;
-                
+
                 selectedNic = nic;
                 ClusterDebug.Log($"Selecting explicit interface: \"{selectedNic.Name}\".");
             }
@@ -182,7 +187,7 @@ namespace Unity.ClusterDisplay
                     ClusterDebug.LogError($"There are NO available interfaces to bind cluster display to.");
                     return false;
                 }
-                
+
                 selectedNic = upNics[0];
                 ClusterDebug.Log($"No explicit interface defined, defaulting to interface: \"{selectedNic.Name}\".");
             }
@@ -190,14 +195,8 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        public bool Initialize()
+        void Initialize()
         {
-            m_TxQueue = new BlockingCollection<Message>();
-            m_RxQueue = new ConcurrentQueue<Message>();
-            m_TxQueuePendingAcks = new List<PendingAck>();
-            m_CTS = new CancellationTokenSource();
-            m_DeadMessages = new ConcurrentQueue<MessageHeader>();
-            
             if (Application.isEditor)
                 m_ExtraHdrFlags = MessageHeader.EFlag.SentFromEditorProcess;
 
@@ -212,29 +211,30 @@ namespace Unity.ClusterDisplay
 
             // Bind a particular NIC
             if (!SelectNetworkInterface(out var selectedNic))
-                return false;
-            
+            {
+                throw new IOException("There are no available network interfaces that support Cluster Display");
+            }
+
             ClusterDebug.Log($"Binding to interface: \"{selectedNic.Name}\".");
 
             foreach (var ip in selectedNic.GetIPProperties().UnicastAddresses)
             {
                 if (ip.Address.AddressFamily != AddressFamily.InterNetwork)
                     continue;
-                
+
                 Debug.Log(ip.Address);
                 conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, ip.Address.GetAddressBytes());
             }
-            
-            conn.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
+
+            conn.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
             conn.Client.Bind(m_RxEndPoint);
 
             conn.JoinMulticastGroup(m_MulticastAddress);
             m_Connection = conn;
-            
+
             m_Connection.BeginReceive(ReceiveMessage, null);
-            Task.Run( () => ResendDroppedMsgs(m_CTS.Token), m_CTS.Token);
-            return true;
+            Task.Run(() => ResendDroppedMsgs(m_CTS.Token), m_CTS.Token);
         }
 
         public void Stop() => Dispose();
@@ -244,30 +244,24 @@ namespace Unity.ClusterDisplay
             try
             {
                 m_CTS.Cancel();
-                
-                m_TxQueue.CompleteAdding();
-                m_TxQueue.Dispose();
-                
+
                 m_Connection.Close();
                 m_Connection.Dispose();
-                
+
                 m_CTS = null;
-                m_TxQueue = null;
                 m_Connection = null;
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         public UInt64 NewNodeNotification(byte newNodeId)
         {
             if (newNodeId + 1 > MaxSupportedNodeCount)
             {
-                OnError( $"Node id must be in the range of [0,{MaxSupportedNodeCount - 1}]");
+                OnError($"Node id must be in the range of [0,{MaxSupportedNodeCount - 1}]");
             }
             else
-                 AllNodesMask |= (UInt64)1 << newNodeId;
+                AllNodesMask |= (UInt64) 1 << newNodeId;
 
             return AllNodesMask;
         }
@@ -280,7 +274,7 @@ namespace Unity.ClusterDisplay
                 payload = msg.payload;
                 return true;
             }
-            
+
             header = default;
             payload = null;
             return false;
@@ -292,7 +286,7 @@ namespace Unity.ClusterDisplay
             msgHeader.m_Version = MessageHeader.CurrentVersion;
             msgHeader.OriginID = LocalNodeID;
             msgHeader.SequenceID = m_NextMessageId++;
-            msgHeader.OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>();
+            msgHeader.OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>();
             msgHeader.Flags |= m_ExtraHdrFlags;
 
             if (msgHeader.DestinationIDs == 0)
@@ -325,7 +319,7 @@ namespace Unity.ClusterDisplay
                 msgHeader.m_Version = MessageHeader.CurrentVersion;
                 msgHeader.OriginID = LocalNodeID;
                 msgHeader.SequenceID = m_NextMessageId++;
-                msgHeader.OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>();
+                msgHeader.OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>();
                 msgHeader.Flags |= m_ExtraHdrFlags;
 
                 if (msgHeader.DestinationIDs == 0)
@@ -351,12 +345,12 @@ namespace Unity.ClusterDisplay
 
                 if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
                 {
-                    var rxmsg = new Message() { header = msgHeader, payload = msg.payload };
+                    var rxmsg = new Message() {header = msgHeader, payload = msg.payload};
                     m_RxQueue.Enqueue(rxmsg);
                     RxWait.Set();
                 }
             }
-            
+
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);
@@ -376,7 +370,7 @@ namespace Unity.ClusterDisplay
             if (header.OriginID != LocalNodeID && (header.DestinationIDs &= LocalNodeIDMask) == LocalNodeIDMask)
             {
                 ClusterDebug.Log($"(Sequence ID: {header.SequenceID}): Received message of type: {header.MessageType}");
-                
+
                 // If we've received an ACK from some node (emitter or repeater).
                 if (header.MessageType == EMessageType.AckMsgRx)
                 {
@@ -387,21 +381,21 @@ namespace Unity.ClusterDisplay
                         {
                             if (m_TxQueuePendingAcks[i].message.header.SequenceID != header.SequenceID)
                                 continue;
-                            
+
                             var pendingAck = m_TxQueuePendingAcks[i];
-                            
+
                             // Operation Example with 4 bits:
                             // 1. (1 << 3) = 0100 (Bit shift over by ID)
                             // 2. ~0100 = 1011 (NOT) 
                             // 3. 1010 &= 1011 = 1110 (AND)
                             pendingAck.m_MissingAcks &= ~((UInt64) 1 << header.OriginID);
-                            
+
                             var roundTripTime = (m_ConnectionClock.Elapsed - pendingAck.ts);
                             ClusterDebug.Log($"Received ACK from node: {header.OriginID} with sequence ID: {header.SequenceID} with a round trip time of {roundTripTime.TotalMilliseconds} ms.");
 
                             if (pendingAck.m_MissingAcks != 0)
-                                m_TxQueuePendingAcks[i] = pendingAck;  // Not all nodes have responded with ACK, so we keep it as pending.
-                            
+                                m_TxQueuePendingAcks[i] = pendingAck; // Not all nodes have responded with ACK, so we keep it as pending.
+
                             else // All desired nodes has reported back with ACK, so remove the pending ACK.
                             {
                                 m_TxQueuePendingAcks.RemoveAt(i);
@@ -409,11 +403,11 @@ namespace Unity.ClusterDisplay
                             }
 
                             // We've found and processed our pending ack, so we don't need to search anymore.
-                            break; 
+                            break;
                         }
                     }
                 }
-                
+
                 else // If we've received some message that ss NOT an ACK from some node (emitter or repeater).
                 {
                     var msg = new Message() {header = header, payload = receiveBytes};
@@ -421,7 +415,10 @@ namespace Unity.ClusterDisplay
                     RxWait.Set();
 
                     // Respond to the sending node with an ACK that we've received the message.
-                    SendMsgRxAck(ref header, msg.ts);
+                    if (!header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck))
+                    {
+                        SendMsgRxAck(ref header, msg.ts);
+                    }
                 }
             }
 
@@ -433,14 +430,14 @@ namespace Unity.ClusterDisplay
         {
             var ack = new MessageHeader()
             {
-                DestinationIDs = (UInt64)1 << rxHeader.OriginID,
+                DestinationIDs = (UInt64) 1 << rxHeader.OriginID,
                 OriginID = LocalNodeID,
                 MessageType = EMessageType.AckMsgRx,
                 SequenceID = rxHeader.SequenceID,
                 PayloadSize = 0,
                 m_Version = MessageHeader.CurrentVersion,
                 Flags = MessageHeader.EFlag.DoesNotRequireAck | m_ExtraHdrFlags,
-                OffsetToPayload = (UInt16)Marshal.SizeOf<MessageHeader>()
+                OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>()
             };
 
             var buffer = ack.ToByteArray();
@@ -462,8 +459,8 @@ namespace Unity.ClusterDisplay
                 OnError($"Unable to send message of type: {msg.header.MessageType}, the message payload is larger then the MTU size: {ushort.MaxValue}");
                 return;
             }
-            
-            ClusterDebug.Log($"(Sequence ID: {msg.header.SequenceID}): Sending message of type: {msg.header.MessageType} of size: {msg.payload.Length}");
+
+            ClusterDebug.Log($"(Sequence ID: {msg.header.SequenceID}): Sending message of type: {msg.header.MessageType} of size: {msg.payload.Length} to:  {m_TxEndPoint}");
 
             if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck) &&
                 !msg.header.Flags.HasFlag(MessageHeader.EFlag.Resending))
@@ -502,13 +499,13 @@ namespace Unity.ClusterDisplay
                     {
                         if ((tsNow - m_TxQueuePendingAcks[i].ts) < m_AcceptedAckDelay)
                             continue;
-                        
+
                         if (expiredCount >= expired.Length)
                         {
                             ClusterDebug.LogError($"There are to many expired ACKs! Cannot queue pending ACK: (Sequence ID: {m_TxQueuePendingAcks[i].message.header.SequenceID}, Message Type: {m_TxQueuePendingAcks[i].message.header.MessageType})");
                             break;
                         }
-                                
+
                         ClusterDebug.LogWarning($"Never received ACK from node: {m_TxQueuePendingAcks[i].message.header.DestinationIDs} for message: (Sequence ID: {m_TxQueuePendingAcks[i].message.header.SequenceID}, Message Type: {m_TxQueuePendingAcks[i].message.header.MessageType}), queuing message for resend.");
                         expired[expiredCount++] = i;
                     }
@@ -517,40 +514,40 @@ namespace Unity.ClusterDisplay
                 // These acks are late in coming, so re-sending messages
                 if (expiredCount == 0)
                     continue;
-                
+
                 ClusterDebug.LogWarning($"Attempting to resend: {expiredCount} ACKs.");
-                
+
                 int resentACKs = 0;
                 for (var i = 0; i < expiredCount; i++)
                 {
                     PendingAck expiredAck;
-                    lock(m_TxQueuePendingAcks)
-                        expiredAck = m_TxQueuePendingAcks[expired[i]]; 
+                    lock (m_TxQueuePendingAcks)
+                        expiredAck = m_TxQueuePendingAcks[expired[i]];
 
                     expiredAck.message.header.DestinationIDs = expiredAck.m_MissingAcks;
                     if (tsNow - expiredAck.message.ts > m_MessageAckTimeout)
                     {
-                        ClusterDebug.LogWarning( $"Message of type: {expiredAck.message.header.MessageType} with sequence ID: {expiredAck.message.header.SequenceID} could not be delivered after multiple resends. Either the message was:\n\t1. Never received.\n\t2. The receiver never responded with an ACK.\n\t3. We never received the ACK and the packet was dropped.");
-                        
-                        lock(m_TxQueuePendingAcks)
+                        ClusterDebug.LogWarning($"Message of type: {expiredAck.message.header.MessageType} with sequence ID: {expiredAck.message.header.SequenceID} could not be delivered after multiple resends. Either the message was:\n\t1. Never received.\n\t2. The receiver never responded with an ACK.\n\t3. We never received the ACK and the packet was dropped.");
+
+                        lock (m_TxQueuePendingAcks)
                             m_TxQueuePendingAcks.RemoveAt(expired[i]);
-                        
+
                         continue;
                     }
-                    
+
                     expiredAck.message.header.Flags |= MessageHeader.EFlag.Resending;
                     expiredAck.message.header.StoreInBuffer(expiredAck.message.payload, 0);
                     expiredAck.ts = m_ConnectionClock.Elapsed;
-                    
+
                     m_TxQueuePendingAcks[expired[i]] = expiredAck; // updates entry (struct)
-                    
+
                     m_TotalResendCount++;
                     resentACKs++;
-                    
+
                     ClusterDebug.LogWarning($"Resending message of type: {expiredAck.message.header.MessageType} with sequence ID: {expiredAck.message.header.SequenceID}");
                     SendMessage(ref expiredAck.message);
                 }
-                
+
                 ClusterDebug.LogWarning($"Remaining ACKs to resend: {expiredCount - resentACKs}");
             }
         }

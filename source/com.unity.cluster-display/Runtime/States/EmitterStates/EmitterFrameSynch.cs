@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class EmitterSynchronization : EmitterState, IEmitterNodeSyncState
     {
-        enum EStage
+        internal enum EStage
         {
             WaitOneFrame,
             WaitOnRepeatersNextFrame,
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         private Int64 m_WaitingOnNodes; 
 
         private EStage m_Stage;
-        private EStage Stage
+        internal EStage Stage
         {
             get => m_Stage;
             set
@@ -59,6 +59,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             base.InitState();
 
             m_Emitter = new EmitterStateWriter(this, LocalNode.RepeatersDelayed);
+            
 
             // If the repeaters are delayed, then we can have the emitter step one frame by setting our initial
             // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.

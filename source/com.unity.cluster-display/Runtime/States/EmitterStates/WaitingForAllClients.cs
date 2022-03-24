@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -8,13 +7,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class WaitingForAllClients : EmitterState
     {
-        private readonly bool k_HeadlessEmitter;
-        private readonly bool k_RepeatersDelayed;
         public override bool ReadyToProceed => false;
-        public AccumulateFrameDataDelegate m_AccumulateFrameDataDelegate;
-
-        public WaitingForAllClients(IClusterSyncState clusterSync, bool headlessEmitter) : base(clusterSync) =>
-            k_HeadlessEmitter = headlessEmitter;
+        
+        public WaitingForAllClients(IClusterSyncState clusterSync)
+            : base(clusterSync) { }
 
         public override void InitState()
         {

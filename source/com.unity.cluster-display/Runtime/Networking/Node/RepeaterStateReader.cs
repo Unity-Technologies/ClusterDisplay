@@ -64,6 +64,8 @@ namespace Unity.ClusterDisplay
                 using (m_MarkerReceivedGoFromEmitter.Auto())
                 {
                     m_NetworkingOverhead.SampleNow();
+                    ClusterDebug.Assert(outBuffer.Length > 0, "invalid buffer!");
+                    
                     var respMsg = outBuffer.LoadStruct<EmitterLastFrameData>(msgHdr.OffsetToPayload);
 
                     // The emitter is on the next frame, so were matching against the previous frame.
@@ -73,7 +75,6 @@ namespace Unity.ClusterDisplay
                         continue;
                     }
 
-                    ClusterDebug.Assert(outBuffer.Length > 0, "invalid buffer!");
                     m_MsgFromEmitter = new NativeArray<byte>(outBuffer, Allocator.Persistent);
 
                     RestoreEmitterFrameData();

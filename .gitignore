@@ -3,6 +3,7 @@
 *.csproj
 .DS_Store
 .idea/
+.vscode
 bin/
 obj/
 .multitool
@@ -12,6 +13,7 @@ TestProjects/*/Temp
 TestProjects/*/UserSettings
 TestProjects/ClusterRenderTest/obj
 TestProjects/*/.idea
+TestProjects/**/CodeCoverage
 
 bee.exe
 *.orig
@@ -29,3 +31,6 @@ TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta
 # Generated files
 CMakeCache.txt
 packages-lock.json
+
+# CI artifacts
+upm-ci~/
