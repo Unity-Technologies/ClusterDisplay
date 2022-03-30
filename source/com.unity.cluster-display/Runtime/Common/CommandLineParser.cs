@@ -7,9 +7,6 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Helpers")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
-
 namespace Unity.ClusterDisplay
 {
     internal static class CommandLineParser

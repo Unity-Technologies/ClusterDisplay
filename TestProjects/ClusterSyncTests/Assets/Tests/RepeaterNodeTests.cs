@@ -133,7 +133,7 @@ namespace Unity.ClusterDisplay.Tests
             new NullState(m_ClusterSync).EnterState(m_State);
             
             m_ClusterSync.LocalNode.Exit();
-            m_TestAgent.Stop();
+            m_TestAgent.Dispose();
         }
     }
 }

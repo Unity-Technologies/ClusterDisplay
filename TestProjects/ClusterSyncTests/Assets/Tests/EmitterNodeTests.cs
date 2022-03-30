@@ -5,7 +5,6 @@ using System.Text;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.TestTools;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
@@ -294,7 +293,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Node.Exit();
             foreach (var testAgent in m_TestAgents)
             {
-                testAgent.Stop();
+                testAgent.Dispose();
             }
         }
     }

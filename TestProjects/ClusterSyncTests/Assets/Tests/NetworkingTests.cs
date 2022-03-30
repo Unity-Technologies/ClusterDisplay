@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay.Tests
         [TearDown]
         public void TearDown()
         {
-            m_Agent.Stop();
+            m_Agent.Dispose();
         }
 
         [UnityTest]

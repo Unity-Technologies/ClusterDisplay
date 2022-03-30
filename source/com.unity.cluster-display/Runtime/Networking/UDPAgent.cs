@@ -15,7 +15,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
-    internal class UDPAgent
+    internal class UDPAgent : IDisposable
     {
         public static int MaxSupportedNodeCount {get => 64;}
 
@@ -239,7 +239,7 @@ namespace Unity.ClusterDisplay
 
         public void Stop() => Dispose();
 
-        private void Dispose()
+        public void Dispose()
         {
             try
             {

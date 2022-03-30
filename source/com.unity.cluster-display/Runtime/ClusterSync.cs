@@ -3,7 +3,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.LowLevel;
-using System.Runtime.CompilerServices;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -12,11 +11,6 @@ using UnityEngine.InputSystem;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics.Example")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 
 namespace Unity.ClusterDisplay
 {
