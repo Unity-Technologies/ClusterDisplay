@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Unity.ClusterDisplay.EmitterStateMachine;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -78,7 +79,7 @@ namespace Unity.ClusterDisplay
                 if (node.ID == NodeId)
                 {
                     m_RemoteNodes.RemoveAt(i);
-                    UdpAgent.AllNodesMask = UdpAgent.AllNodesMask & ~(UInt64) (1<<NodeId);
+                    UdpAgent.AllNodesMask = UdpAgent.AllNodesMask.UnsetBit(NodeId);
                     TotalExpectedRemoteNodesCount--;
                     break; //No Duplicates
                 }

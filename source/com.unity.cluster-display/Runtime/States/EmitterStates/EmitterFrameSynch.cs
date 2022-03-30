@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -17,7 +18,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         }
 
         // Bit mask of node id's that we are waiting on to say they are ready for work.
-        private Int64 m_WaitingOnNodes; 
+        BitVector m_WaitingOnNodes;
 
         private EStage m_Stage;
         internal EStage Stage
@@ -52,7 +53,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             base.ExitState(newState);
             m_Emitter?.Dispose();   
         }
-        public override string GetDebugString() => $"{base.GetDebugString()} / {(EStage)Stage}:\r\n\t\tWaiting on Nodes: {Convert.ToString(m_WaitingOnNodes, 2)}";
+        public override string GetDebugString() =>
+            $"{base.GetDebugString()} / {(EStage) Stage}:\r\n\t\tWaiting on Nodes: {m_WaitingOnNodes}";
 
         public override void InitState()
         {
@@ -74,7 +76,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             else m_Emitter.GatherPreFrameState();
 
             m_TsOfStage = m_Time.Elapsed;
-            m_WaitingOnNodes = 0;
+            m_WaitingOnNodes = new BitVector();
         }
 
         public override void OnEndFrame()
@@ -129,7 +131,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 PumpMessages();
 
                 if ((m_Time.Elapsed - m_TsOfStage) > MaxTimeOut)
-                    ClusterDebug.Assert(m_WaitingOnNodes != 0, $"(Frame: {CurrentFrameID}): Have been waiting on repeaters nodes for: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} for more than {MaxTimeOut.Seconds} seconds!");
+                    ClusterDebug.Assert(m_WaitingOnNodes.Any(), $"(Frame: {CurrentFrameID}): Have been waiting on repeaters nodes for: {nameof(ClusterDisplay.RepeaterEnteredNextFrame)} for more than {MaxTimeOut.Seconds} seconds!");
 
                 if ((m_Time.Elapsed - m_TsOfStage) >= m_FrameDoneTimeout)
                 {
@@ -159,8 +161,6 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             
             using (m_MarkerPublishState.Auto())
                 m_Emitter.PublishCurrentState(PreviousFrameID);
-
-            m_WaitingOnNodes = (Int64)(LocalNode.UdpAgent.AllNodesMask & ~LocalNode.NodeIDMask);
             
             Stage = EStage.WaitForRepeatersToACK;
             m_TsOfStage = m_Time.Elapsed;
@@ -172,6 +172,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             {
                 Stage = EStage.WaitOnRepeatersNextFrame;
                 m_TsOfStage = m_Time.Elapsed;
+                m_WaitingOnNodes = LocalNode.UdpAgent.AllNodesMask.UnsetBit(LocalNode.NodeID);
             }
         }
 
@@ -188,9 +189,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 ProcessUnhandledMessage(msgHdr);
             }
             
-            if (m_WaitingOnNodes != 0)
+            if (m_WaitingOnNodes.Any())
                 return;
             
+            ClusterDebug.Log($"(Frame: {CurrentFrameID}): All nodes entered new frame.");
             Stage = EStage.EmitLastFrameData;
             m_TsOfStage = m_Time.Elapsed;
         }
@@ -216,31 +218,20 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 return;
             }
             
-            // This operation performs: Bitshift + NOT.
-            var repeaterNodeBitMask = ~((Int64) 1 << msgHdr.OriginID);
-            do
-            {
-                var waitingNodesBitField = m_WaitingOnNodes;
-                Interlocked.CompareExchange(ref m_WaitingOnNodes, waitingNodesBitField & repeaterNodeBitMask, waitingNodesBitField);
-                
-            } while ((m_WaitingOnNodes & ((Int64) 1 << msgHdr.OriginID)) != 0); // Wait for all nodes to send FrameDone.
-            
-            ClusterDebug.Log($"(Frame: {CurrentFrameID}): All nodes finished with their frame.");
+            m_WaitingOnNodes = m_WaitingOnNodes.UnsetBit(msgHdr.OriginID);
         }
 
         private void KickLateClients()
         {
             ClusterDebug.LogError($"(Frame: {CurrentFrameID}): The following repeaters are late reporting back: {m_WaitingOnNodes} after {MaxTimeOut.TotalMilliseconds}ms. Continuing without them.");
-            for (byte id = 0; id < sizeof(UInt64); ++id)
+            for (byte id = 0; id < BitVector.Length; ++id)
             {
-                if ((1 << id & m_WaitingOnNodes) != 0)
+                if (m_WaitingOnNodes[id])
                 {
                     ClusterDebug.LogError($"(Frame: {CurrentFrameID}): Unregistering node {id}");
                     LocalNode.UnRegisterNode(id);
                 }
             }
-
-            m_WaitingOnNodes = 0;
         }
     }
 }

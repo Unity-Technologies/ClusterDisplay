@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
@@ -97,7 +98,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             var header = new MessageHeader()
             {
                 MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = (UInt64)1 << rxHeader.OriginID,
+                DestinationIDs = BitVector.FromIndex(rxHeader.OriginID),
             };
 
             LocalNode.UdpAgent.PublishMessage(header);

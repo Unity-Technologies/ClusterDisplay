@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -36,7 +37,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
         
-        public ulong EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
+        public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
         
         public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
         {

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Debug = UnityEngine.Debug;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         var header = new MessageHeader()
                         {
                             MessageType = EMessageType.HelloEmitter,
-                            DestinationIDs = UInt64.MaxValue, // Shout it out! make sure to also use DoesNotRequireAck
+                            DestinationIDs = BitVector.Ones, // Shout it out! make sure to also use DoesNotRequireAck
                             Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                         };
 
@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         {
                             if (header.MessageType == EMessageType.WelcomeRepeater)
                             {
-                                if ((header.DestinationIDs & LocalNode.NodeIDMask) == LocalNode.NodeIDMask)
+                                if (header.DestinationIDs[LocalNode.NodeID])
                                 {
                                     ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
                                     m_EmitterFound = true;

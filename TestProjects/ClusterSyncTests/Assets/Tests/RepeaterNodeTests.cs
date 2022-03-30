@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Unity.ClusterDisplay.RepeaterStateMachine;
+using Unity.ClusterDisplay.Utils;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
 using static Unity.ClusterDisplay.Tests.NodeTestUtils;
 
@@ -41,7 +42,7 @@ namespace Unity.ClusterDisplay.Tests
             };
 
             var allNodesMask = m_ClusterSync.LocalNode.UdpAgent.AllNodesMask;
-            Assert.Zero(allNodesMask & ((ulong) 1 << k_EmitterId));
+            Assert.IsFalse(allNodesMask[k_EmitterId]);
 
             // Before receiving a WelcomeRepeater, we should be staying in this state
             registerState.EnterState(null);
@@ -59,7 +60,7 @@ namespace Unity.ClusterDisplay.Tests
             m_TestAgent.PublishMessage(new MessageHeader
             {
                 MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = (ulong) 1 << header.OriginID,
+                DestinationIDs = BitVector.FromIndex(header.OriginID),
             });
 
             // Wait for the state to transition
@@ -67,7 +68,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(m_State, Is.TypeOf<RepeaterSynchronization>());
 
             allNodesMask = m_ClusterSync.LocalNode.UdpAgent.AllNodesMask;
-            Assert.NotZero(allNodesMask & ((ulong) 1 << k_EmitterId));
+            Assert.IsTrue(allNodesMask[k_EmitterId]);
         }
 
         [UnityTest]

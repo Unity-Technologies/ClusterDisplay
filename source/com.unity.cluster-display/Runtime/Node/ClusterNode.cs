@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 
 namespace Unity.ClusterDisplay
 {
@@ -12,7 +10,6 @@ namespace Unity.ClusterDisplay
         public UDPAgent UdpAgent => m_UDPAgent;
 
         public byte NodeID => m_UDPAgent.LocalNodeID;
-        public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
         protected internal IClusterSyncState clusterSync;
 

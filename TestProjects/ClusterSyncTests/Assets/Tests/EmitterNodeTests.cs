@@ -81,9 +81,9 @@ namespace Unity.ClusterDisplay.Tests
 
             node.RegisterNode(new RemoteNodeComContext() {ID = 3, Role = ENodeRole.Repeater});
             node.RegisterNode(new RemoteNodeComContext() {ID = 5, Role = ENodeRole.Repeater});
-            Assert.NotZero(node.UdpAgent.AllNodesMask & (1 << 3));
-            Assert.NotZero(node.UdpAgent.AllNodesMask & (1 << 5));
-            Assert.Zero(node.UdpAgent.AllNodesMask & (1 << 2));
+            Assert.IsTrue(node.UdpAgent.AllNodesMask[3]);
+            Assert.IsTrue(node.UdpAgent.AllNodesMask[5]);
+            Assert.IsFalse(node.UdpAgent.AllNodesMask[2]);
 
             Assert.That(node.m_RemoteNodes, Has.Count.EqualTo(2));
             var nodeIds = node.m_RemoteNodes.Select(x => x.ID).ToArray();

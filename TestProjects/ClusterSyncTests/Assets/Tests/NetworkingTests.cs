@@ -5,10 +5,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
-using static Unity.ClusterDisplay.Tests.TestUtils;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Tests
         const int k_TimeoutSeconds = 10;
         const int k_MaxRetries = 50;
 
-        static readonly ulong k_AllNodesMask = k_TestNodes.ToMask() | k_AgentNodeId.ToMask();
+        static readonly BitVector k_AllNodesMask = k_TestNodes.ToMask().SetBit(k_AgentNodeId);
 
         [SetUp]
         public void SetUp()
@@ -102,7 +102,8 @@ namespace Unity.ClusterDisplay.Tests
             // Do the receive and parse the results
             var (header, contents) = await m_Agent.ReceiveMessageAsync<RepeaterEnteredNextFrame>(k_TimeoutSeconds);
             Assert.That(header.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
-            Assert.That(contents.FrameNumber, Is.EqualTo(1));
+            Assert.That(header.SequenceID, Is.EqualTo(10));
+            Assert.That(contents.FrameNumber, Is.EqualTo(5));
 
             // Check that we receive an ACK
             var ack = await m_TestClients[0].ReceiveAsync();
@@ -122,8 +123,8 @@ namespace Unity.ClusterDisplay.Tests
                 var (msgHeader, contents) = await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
                 Assert.That(msgHeader.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
                 Assert.That(msgHeader.OriginID, Is.EqualTo(k_AgentNodeId));
-                Assert.NotZero(msgHeader.DestinationIDs & k_TestNodes[i].ToMask());
-                Assert.That(contents.FrameNumber, Is.EqualTo(1));
+                Assert.IsTrue(msgHeader.DestinationIDs[k_TestNodes[i]]);
+                Assert.That(contents.FrameNumber, Is.EqualTo(5));
             }
 
             // Agent should now be waiting for ACK messages
@@ -157,20 +158,29 @@ namespace Unity.ClusterDisplay.Tests
         async Task TestResend()
         {
             // Send a message to multiple nodes
-            var (header, rawMsg) = GenerateTestMessage(k_AgentNodeId, k_TestNodes.Take(1));
+            var (header, rawMsg) = GenerateTestMessage(k_AgentNodeId, k_TestNodes);
             Assert.True(m_Agent.PublishMessage(header, rawMsg));
             var client = m_TestClients[0];
 
             // Receive the initial message
-            await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
+            var rxData = await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
+            Assert.That(rxData.header.MessageType, Is.EqualTo(header.MessageType));
+            Assert.That(rxData.contents.FrameNumber, Is.EqualTo(5));
 
             // Agent should now be waiting for ACK messages
             Assert.True(m_Agent.AcksPending);
+            
+            // Ack with node 1
+            await m_TestClients[1].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[1]);
 
             // Wait for agent to resend after 1 second
             try
             {
-                await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>(2000);
+                var rxResent = await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>(2000);
+                Assert.IsTrue(rxResent.header.Flags.HasFlag(MessageHeader.EFlag.Resending));
+                Assert.IsTrue(rxResent.header.DestinationIDs[k_TestNodes[0]]);
+                Assert.IsFalse(rxResent.header.DestinationIDs[k_TestNodes[1]]);
+                Assert.That(rxResent.contents, Is.EqualTo(rxData.contents));
             }
             catch (TimeoutException)
             {

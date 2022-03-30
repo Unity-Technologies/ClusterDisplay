@@ -1,12 +1,13 @@
 ﻿using System;
 using Unity.ClusterDisplay.RepeaterStateMachine;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
     internal class RepeaterNode : ClusterNode
     {
         public byte EmitterNodeId { get; set; }
-        public UInt64 EmitterNodeIdMask => (UInt64) 1 << EmitterNodeId;
+        public BitVector EmitterNodeIdMask => BitVector.FromIndex(EmitterNodeId);
         public bool DelayRepeater { get; set; }
 
         public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)

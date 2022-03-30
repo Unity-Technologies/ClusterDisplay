@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Unity.ClusterDisplay.Utils;
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPCs")]
 
@@ -7,7 +8,7 @@ namespace Unity.ClusterDisplay
 {
     internal interface IRepeaterNodeSyncState : INodeSyncState
     {
-        UInt64 EmitterNodeIdMask { get; }
+        BitVector EmitterNodeIdMask { get; }
         void OnUnhandledNetworkMessage(MessageHeader msgHeader);
         void OnNonMatchingFrame(byte originID, ulong frameNumber);
         void OnReceivedEmitterFrameData();
