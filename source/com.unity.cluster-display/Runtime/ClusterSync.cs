@@ -82,6 +82,23 @@ namespace Unity.ClusterDisplay
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
         /// <summary>
+        /// Gets or sets whether there is a layer of synchronization performed
+        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
+        /// </summary>
+        /// <remarks>
+        /// When set to <c>false</c>, all nodes signal when they are ready
+        /// to begin a new frame, and the emitter will wait until it receives
+        /// the signal from all nodes before allowing the cluster to proceed.
+        /// Set this to <c>true</c> if your hardware enforces this at a low level
+        /// and it is safe to bypass the wait.
+        /// </remarks>
+        public bool HasHardwareSync
+        {
+            get => LocalNode.HasHardwareSync;
+            set => LocalNode.HasHardwareSync = value;
+        }
+
+        /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
         /// </summary>
         public void ShutdownAllClusterNodes() => LocalNode?.BroadcastShutdownRequest(); // matters not who triggers it

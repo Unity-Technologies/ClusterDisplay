@@ -18,6 +18,18 @@ namespace Unity.ClusterDisplay
         public int TotalExpectedRemoteNodesCount { get; set; }
         public bool RepeatersDelayed { get; set; }
 
+        public override bool HasHardwareSync
+        {
+            get => m_CurrentState is EmitterSynchronization {HasHardwareSync: true};
+            set
+            {
+                if (m_CurrentState is EmitterSynchronization emitter)
+                {
+                    emitter.HasHardwareSync = value;
+                }
+            }
+        }
+
         public struct Config
         {
             public bool headlessEmitter;

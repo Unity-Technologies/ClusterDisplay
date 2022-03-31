@@ -126,6 +126,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private void OnWaitOnRepeatersNextFrame()
         {
+            if (HasHardwareSync)
+            {
+                Stage = EStage.EmitLastFrameData;
+                m_TsOfStage = m_Time.Elapsed;
+                return;
+            }
             using (m_MarkerWaitingOnFramesDoneMsgs.Auto())
             {
                 PumpMessages();
@@ -233,5 +239,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 }
             }
         }
+
+        public bool HasHardwareSync { get; set; }
     }
 }

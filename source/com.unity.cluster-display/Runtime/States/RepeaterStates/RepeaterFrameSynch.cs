@@ -39,6 +39,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         
         public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
         
+        public bool HasHardwareSync { get; set; }
+        
         public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
         {
         }
@@ -106,7 +108,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         
         private void OnWaitForEmitterACK ()
         {
-            if (LocalNode.UdpAgent.AcksPending)
+            if (!HasHardwareSync && LocalNode.UdpAgent.AcksPending)
             {
                 // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
                 return;

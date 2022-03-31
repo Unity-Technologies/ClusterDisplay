@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay
         public byte NodeID => m_UDPAgent.LocalNodeID;
 
         protected internal IClusterSyncState clusterSync;
+        public virtual bool HasHardwareSync { get; set; } = false;
 
         protected ClusterNode(
             IClusterSyncState clusterSync,
