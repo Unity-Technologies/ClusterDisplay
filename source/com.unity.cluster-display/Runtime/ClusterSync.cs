@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.LowLevel;
+using UnityEngine.PlayerLoop;
+using Unity.ClusterDisplay.Utils;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -56,8 +55,9 @@ namespace Unity.ClusterDisplay
         
         
         private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
-        private DebugPerf m_FrameRatePerf = new DebugPerf();
-        private DebugPerf m_DelayMonitor = new DebugPerf();
+        private DebugPerf m_FrameRatePerf = new ();
+        DebugPerf m_StartDelayMonitor = new ();
+        DebugPerf m_EndDelayMonitor = new ();
 
         internal delegate void OnClusterDisplayStateChange();
         static internal OnClusterDisplayStateChange onPreEnableClusterDisplay;
@@ -123,7 +123,9 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms\r\n\tAverage Sync Overhead Time: {m_DelayMonitor.Average * 1000} ms\r\n";
+        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}" +
+            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
+            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
 
         private void RegisterDelegates()
         {
@@ -181,53 +183,22 @@ namespace Unity.ClusterDisplay
             CleanUp();
         }
 
-        private void InjectSynchPointInPlayerLoop()
+        struct ClusterDisplayStartFrame { }
+
+        struct ClusterDisplayLateUpdate { }
+
+        void InjectSynchPointInPlayerLoop()
         {
-            // Inject into player loop
-            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
-            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
-
-            var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            if (initList.Any((x) => x.type == this.GetType()))
-                return; // We don't need to assert or insert anything if our loop already exists.
-
-            var indexOfPlayerUpdateTime = initList.FindIndex((x) =>
-                
-            #if UNITY_2020_2_OR_NEWER
-                x.type == typeof(UnityEngine.PlayerLoop.TimeUpdate.WaitForLastPresentationAndUpdateTime));
-            #else
-                x.type == typeof(UnityEngine.PlayerLoop.Initialization.PlayerUpdateTime));
-            #endif
-            
-            Assert.IsTrue(indexOfPlayerUpdateTime != -1, "Can't find insertion point in player loop for ClusterRendering system");
-
-            initList.Insert(indexOfPlayerUpdateTime + 1, new PlayerLoopSystem()
-            {
-                type = this.GetType(),
-                updateDelegate = SystemUpdate
-            });
-
-
-            newLoop.subSystemList[0].subSystemList = initList.ToArray();
-
-            PlayerLoop.SetPlayerLoop(newLoop);
-
+            PlayerLoopExtensions
+                .RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
+                    SystemUpdate);
+            PlayerLoopExtensions.RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        private void RemoveSynchPointFromPlayerLoop()
+        void RemoveSynchPointFromPlayerLoop()
         {
-            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
-            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
-
-            var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
-            if (entryToDel == -1)
-                return; // If the subsystem does not doesn't contain our loop, then we don't need to remove it.
-            initList.RemoveAt(entryToDel);
-
-            newLoop.subSystemList[0].subSystemList = initList.ToArray();
-
-            PlayerLoop.SetPlayerLoop(newLoop);
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
+            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
         private bool TryInitializeEmitter(UDPAgent.Config config)
@@ -346,6 +317,16 @@ namespace Unity.ClusterDisplay
             onDisableCLusterDisplay?.Invoke();
         }
 
+        void SystemLateUpdate()
+        {
+            m_EndDelayMonitor.RefPoint();
+            while (!LocalNode.IsReadyForNextFrame)
+            {
+                LocalNode.DoLateFrame();
+            }
+            m_EndDelayMonitor.SampleNow();
+        }
+
         private void SystemUpdate()
         {
 #if ENABLE_INPUT_SYSTEM
@@ -372,8 +353,8 @@ namespace Unity.ClusterDisplay
                     m_NewFrame = LocalNode.ReadyToProceed;
                     if (m_NewFrame)
                     {
-                        m_DelayMonitor.SampleNow();
-                        m_DelayMonitor.RefPoint();
+                        m_StartDelayMonitor.SampleNow();
+                        m_StartDelayMonitor.RefPoint();
                     }
                 }
                 else
@@ -384,7 +365,7 @@ namespace Unity.ClusterDisplay
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
                     
                     var newFrame = true;
-                    m_DelayMonitor.RefPoint();
+                    m_StartDelayMonitor.RefPoint();
                     do
                     {
 
@@ -399,7 +380,7 @@ namespace Unity.ClusterDisplay
 
                     LocalNode.EndFrame();
                     
-                    m_DelayMonitor.SampleNow();
+                    m_StartDelayMonitor.SampleNow();
                     ClusterDebug.Log(GetDebugString());
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
 

@@ -39,12 +39,14 @@ namespace Unity.ClusterDisplay
         }
 
         public EmitterNode(
-            IClusterSyncState clusterSync, 
+            IClusterSyncState clusterSync,
             Config config)
             : base(clusterSync, config.udpAgentConfig)
         {
-            m_CurrentState = new WaitingForAllClients(clusterSync) {
-                MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
+            m_CurrentState = new WaitingForAllClients(clusterSync)
+            {
+                MaxTimeOut = ClusterParams.RegisterTimeout
+            };
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }
@@ -65,7 +67,7 @@ namespace Unity.ClusterDisplay
             return -1;
         }
 
-        public void RegisterNode(RemoteNodeComContext nodeCtx )
+        public void RegisterNode(RemoteNodeComContext nodeCtx)
         {
             var nodeIndex = FindNodeByID(nodeCtx.ID);
             if (nodeIndex == -1)
@@ -85,7 +87,7 @@ namespace Unity.ClusterDisplay
 
         public void UnRegisterNode(byte NodeId)
         {
-            for (var i = 0;i<m_RemoteNodes.Count;++i)
+            for (var i = 0; i < m_RemoteNodes.Count; ++i)
             {
                 var node = m_RemoteNodes[i];
                 if (node.ID == NodeId)

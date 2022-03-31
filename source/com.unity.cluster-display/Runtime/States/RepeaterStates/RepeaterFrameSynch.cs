@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         
         private void OnWaitForEmitterACK ()
         {
-            if (!HasHardwareSync && LocalNode.UdpAgent.AcksPending)
+            if (!HasHardwareSync && LocalNode.UdpAgent.HasPendingAcks)
             {
                 // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
                 return;

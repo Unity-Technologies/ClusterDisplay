@@ -22,14 +22,14 @@ namespace Unity.ClusterDisplay
 
         private bool m_ExtensiveLogging = false;
 
-        private struct Message
+        internal struct Message
         {
             public MessageHeader header;
             public byte[] payload;
             public TimeSpan ts;
         }
 
-        private struct PendingAck
+        internal struct PendingAck
         {
             public Message message;
             public byte nodeId;
@@ -56,7 +56,9 @@ namespace Unity.ClusterDisplay
         readonly ConcurrentQueue<Message> m_RxQueue;
         readonly ConcurrentDictionary<(ulong, byte), PendingAck> m_TxQueuePendingAcks;
 
-        public bool AcksPending => m_TxQueuePendingAcks.Count > 0;
+        public bool HasPendingAcks => !m_TxQueuePendingAcks.IsEmpty;
+        
+        internal ICollection<PendingAck> PendingAcks => m_TxQueuePendingAcks.Values;
 
         private CancellationTokenSource m_CTS;
 

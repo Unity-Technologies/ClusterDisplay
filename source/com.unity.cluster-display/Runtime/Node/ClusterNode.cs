@@ -42,6 +42,8 @@ namespace Unity.ClusterDisplay
             return m_CurrentState.GetType() != typeof(FatalError);
         }
 
+        public void DoLateFrame() => m_CurrentState?.ProcessLateFrame();
+
         public void EndFrame() => m_CurrentState?.OnEndFrame();
 
         public void Exit()
@@ -52,6 +54,7 @@ namespace Unity.ClusterDisplay
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
+        public bool IsReadyForNextFrame => m_CurrentState?.IsReadyForNextFrame ?? true;
 
         public void BroadcastShutdownRequest()
         {
