@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Utils
         /// <typeparam name="TSystem">The system to add the subsystem to.</typeparam>
         /// <typeparam name="TSubSystem">The system to add the <paramref name="update"/> callback to.</typeparam>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="update"/> is null.</exception>
-        public static bool RegisterUpdate<TSystem, TSubSystem>(this PlayerLoopSystem.UpdateFunction update, int index = -1)
+        public static bool RegisterUpdate<TSystem, TSubSystem>(PlayerLoopSystem.UpdateFunction update, int index = -1)
         {
             if (update == null)
                 throw new ArgumentNullException(nameof(update));

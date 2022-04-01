@@ -99,12 +99,12 @@ namespace Unity.ClusterDisplay.Tests
         public static bool RunStateUpdateUntil<T>(T state,
             Func<T, bool> pred,
             int maxRetries = MockClusterSync.maxRetries) where T : NodeState =>
-            TestUtils.LoopUntil(() => pred(state) || state != state.ProcessFrame(false), maxRetries);
+            Utilities.LoopUntil(() => pred(state) || state != state.ProcessFrame(false), maxRetries);
 
         public static bool RunStateLateUpdateUntil<T>(T state,
             Func<T, bool> pred,
             int maxRetries = MockClusterSync.maxRetries) where T : NodeState =>
-            TestUtils.LoopUntil(() =>
+            Utilities.LoopUntil(() =>
             {
                 var condition = pred(state);
                 if (!condition)
@@ -117,7 +117,7 @@ namespace Unity.ClusterDisplay.Tests
         public static NodeState RunStateUntilTransition(NodeState state, int maxRetries = MockClusterSync.maxRetries)
         {
             NodeState nextState = state;
-            TestUtils.LoopUntil(() =>
+            Utilities.LoopUntil(() =>
             {
                 nextState = state.ProcessFrame(false);
                 return nextState != state;

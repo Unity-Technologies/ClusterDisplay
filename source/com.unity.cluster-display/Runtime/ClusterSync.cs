@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
-using Unity.ClusterDisplay.Utils;
+using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay
 {
     public static class ClusterSyncDebug
     {
-	public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
+        public static string GetDebugString() => ClusterSync.Instance.GetDebugString();
     }
 
     /// <summary>
@@ -25,13 +25,14 @@ namespace Unity.ClusterDisplay
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [InitializeOnLoad]
-    #endif
-    internal class ClusterSync : 
+#endif
+    internal class ClusterSync :
         IClusterSyncState
     {
         static ClusterSync m_Instance;
+
         public static ClusterSync Instance
         {
             get
@@ -44,6 +45,7 @@ namespace Unity.ClusterDisplay
                 return m_Instance;
             }
         }
+
         static ClusterSync() => PreInitialize();
 
         [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -52,25 +54,26 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
             ClusterDisplayManager.preInitialize += () => Instance.RegisterDelegates();
         }
-        
-        
+
         private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
-        private DebugPerf m_FrameRatePerf = new ();
-        DebugPerf m_StartDelayMonitor = new ();
-        DebugPerf m_EndDelayMonitor = new ();
+        private DebugPerf m_FrameRatePerf = new();
+        DebugPerf m_StartDelayMonitor = new();
+        DebugPerf m_EndDelayMonitor = new();
 
         internal delegate void OnClusterDisplayStateChange();
+
         static internal OnClusterDisplayStateChange onPreEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onPostEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onDisableCLusterDisplay;
-        
+
         [HideInInspector]
         bool m_Debugging;
-        
+
         /// <summary>
         /// Returns the number of frames rendered by the Cluster Display.
         /// </summary>
         public UInt64 CurrentFrameID => m_CurrentFrameID;
+
         private UInt64 m_CurrentFrameID;
         private bool m_NewFrame;
 
@@ -107,7 +110,7 @@ namespace Unity.ClusterDisplay
         /// The Local Cluster Node Id.
         /// </summary>
         /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
-        public bool TryGetDynamicLocalNodeId (out byte dynamicLocalNodeId)
+        public bool TryGetDynamicLocalNodeId(out byte dynamicLocalNodeId)
         {
             if (!ClusterDisplayState.IsClusterLogicEnabled || LocalNode == null)
             {
@@ -131,20 +134,20 @@ namespace Unity.ClusterDisplay
         {
             ClusterDisplayManager.onEnable -= EnableClusterDisplay;
             ClusterDisplayManager.onEnable += EnableClusterDisplay;
-            
+
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
-            
+
             ClusterDisplayManager.onApplicationQuit -= Quit;
             ClusterDisplayManager.onApplicationQuit += Quit;
         }
 
         private void EnableClusterDisplay()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
-            #endif
+#endif
 
             NodeState.Debugging = m_Debugging;
 
@@ -189,16 +192,15 @@ namespace Unity.ClusterDisplay
 
         void InjectSynchPointInPlayerLoop()
         {
-            PlayerLoopExtensions
-                .RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
-                    SystemUpdate);
-            PlayerLoopExtensions.RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
+            RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
+                SystemUpdate);
+            RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
         void RemoveSynchPointFromPlayerLoop()
         {
-            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
-            PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
+            DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
+            DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
         private bool TryInitializeEmitter(UDPAgent.Config config)
@@ -215,7 +217,7 @@ namespace Unity.ClusterDisplay
                         repeaterCount = CommandLineParser.repeaterCount.Value,
                         udpAgentConfig = config
                     });
-            
+
                 stateSetter.SetIsEmitter(true);
             	stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
                 stateSetter.SetIsRepeater(false);
@@ -239,7 +241,7 @@ namespace Unity.ClusterDisplay
                     this, 
                 	CommandLineParser.delayRepeaters.Value,
                     config);
-            
+
                 stateSetter.SetIsEmitter(false);
                 stateSetter.SetIsRepeater(true);
 
@@ -252,7 +254,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
         }
-        
+
         private bool TryInitialize()
         {
             try
@@ -286,12 +288,12 @@ namespace Unity.ClusterDisplay
 
                 throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.");
             }
-            
+
             catch (Exception e)
             {
                 ClusterDebug.LogError("Invalid command line arguments for configuring ClusterRendering.");
                 ClusterDebug.LogException(e);
-                
+
                 CleanUp();
                 return false;
             }
@@ -306,11 +308,11 @@ namespace Unity.ClusterDisplay
             m_LocalNode = null;
 
             RemoveSynchPointFromPlayerLoop();
-            
+
             m_CurrentFrameID = 0;
             stateSetter.SetIsActive(false);
             stateSetter.SetCLusterLogicEnabled(false);
-            
+
             ClusterDisplayManager.onEnable -= EnableClusterDisplay;
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
 
@@ -320,10 +322,11 @@ namespace Unity.ClusterDisplay
         void SystemLateUpdate()
         {
             m_EndDelayMonitor.RefPoint();
-            while (!LocalNode.ReadyForNextFrame)
+            while (LocalNode is {ReadyForNextFrame: false} node)
             {
-                LocalNode.DoLateFrame();
+                node.DoLateFrame();
             }
+
             m_EndDelayMonitor.SampleNow();
         }
 
@@ -363,12 +366,11 @@ namespace Unity.ClusterDisplay
                     m_FrameRatePerf.RefPoint();
 
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
-                    
+
                     var newFrame = true;
                     m_StartDelayMonitor.RefPoint();
                     do
                     {
-
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!
@@ -379,7 +381,7 @@ namespace Unity.ClusterDisplay
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
 
                     LocalNode.EndFrame();
-                    
+
                     m_StartDelayMonitor.SampleNow();
                     ClusterDebug.Log(GetDebugString());
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
@@ -387,13 +389,13 @@ namespace Unity.ClusterDisplay
                     stateSetter.SetFrame(++m_CurrentFrameID);
                 }
             }
-            
+
             catch (Exception e)
             {
                 stateSetter.SetIsTerminated(true);
                 ClusterDebug.LogException(e);
             }
-            
+
             finally
             {
                 if (ClusterDisplayState.IsTerminated)

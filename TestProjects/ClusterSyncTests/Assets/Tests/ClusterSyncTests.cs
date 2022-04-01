@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
@@ -136,7 +137,7 @@ namespace Unity.ClusterDisplay.Tests
             testAgent.PublishMessage(new MessageHeader
             {
                 MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = (ulong) 1 << k_RepeaterId,
+                DestinationIDs = BitVector.FromIndex(k_RepeaterId),
             });
             
             // Send a GO message

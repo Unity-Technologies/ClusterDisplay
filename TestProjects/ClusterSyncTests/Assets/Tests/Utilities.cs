@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    static class TestUtils
+    static class Utilities
     {
         public static IEnumerator ToCoroutine(this Task task, float timeoutSeconds)
         {
@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Tests
     }
 
     /// <summary>
-    /// Class for running an async Task<T> as a coroutine and keeping track of the
+    /// Class for running an async <see cref="Task{TResult}"/> as a coroutine and keeping track of the
     /// return value. 
     /// </summary>
     /// <typeparam name="T"></typeparam>
