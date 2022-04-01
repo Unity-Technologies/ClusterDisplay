@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.RPC
     #endif
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>
     {
-        public class GetInstanceMarker : System.Attribute {}
+        internal class GetInstanceMarker : System.Attribute {}
 
         /// <summary>
         /// RPCIL references objects through this method to directly call methods on the instance. 
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.RPC
         private readonly static PipeConfig[] m_PipeIdToInstanceConfig = new PipeConfig[IDManager.MaxIDCount];
         private readonly static Dictionary<int, ushort> m_InstanceIdToPipeId = new Dictionary<int, ushort>();
 
-        public static bool IsSerializing { protected set; get; }
+        internal static bool IsSerializing { set; get; }
 
         private static bool UseDictionary 
         {
@@ -90,11 +90,11 @@ namespace Unity.ClusterDisplay.RPC
             return false;
         }
 
-        public static bool TryPopPipeId(out ushort pipeId) => m_PipeIdManager.TryPopId(out pipeId);
-        public static void PushPipeId(ushort pipeId) => m_PipeIdManager.PushUnutilizedId(pipeId);
+        internal static bool TryPopPipeId(out ushort pipeId) => m_PipeIdManager.TryPopId(out pipeId);
+        internal static void PushPipeId(ushort pipeId) => m_PipeIdManager.PushUnutilizedId(pipeId);
 
-        public static PipeConfig GetPipeConfig(ushort pipeId) => m_PipeIdToInstanceConfig[pipeId];
-        public static RPCConfig GetRPCConfig(ushort pipeId, ushort rpcId)
+        internal static PipeConfig GetPipeConfig(ushort pipeId) => m_PipeIdToInstanceConfig[pipeId];
+        internal static RPCConfig GetRPCConfig(ushort pipeId, ushort rpcId)
         {
             var configs = m_PipeIdToInstanceConfig[pipeId].configs;
             if (configs == null || rpcId >= configs.Length)
@@ -107,7 +107,7 @@ namespace Unity.ClusterDisplay.RPC
             return configs[rpcId];
         }
 
-        public static void SetRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
+        internal static void SetRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
             var pipeConfig = m_PipeIdToInstanceConfig[pipeId];
             RPCConfig[] rpcConfigs = null;
@@ -184,7 +184,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static void ClearAccessors ()
+        internal static void ClearAccessors ()
         {
             m_PipeIdManager.Clear();
             m_InstanceIdToPipeId.Clear();

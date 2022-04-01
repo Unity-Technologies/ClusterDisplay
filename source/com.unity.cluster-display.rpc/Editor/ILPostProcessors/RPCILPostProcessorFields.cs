@@ -5,7 +5,7 @@ using Mono.Cecil;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    public partial class RPCILPostProcessor
+    internal partial class RPCILPostProcessor
     {
         private RPCStub[] cachedSerializedRPCS = null;
 

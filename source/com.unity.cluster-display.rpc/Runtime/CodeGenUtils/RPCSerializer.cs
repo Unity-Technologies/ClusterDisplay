@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public static class RPCSerializer
+    internal static class RPCSerializer
     {
         // Nested address are formatted in the following way: {root type namespace}.{root type}/{nested type}/{nested nested type}/{nested nested nested type}
         public static bool TryParseNestedAddressIfAvailable (string addressStr, out string rootTypeNamespace, out string[] nestedTypeNames)

@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public static class SourceGeneratorUtils
+    internal static class SourceGeneratorUtils
     {
         public static bool TryGetExistingCompilationUnit (string filePath, out CompilationUnitSyntax compilationUnit)
         {

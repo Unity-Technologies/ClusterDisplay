@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     /// This class asynchronously loads in recently compiled assemblies 
     /// and determines whether we should manipulate them.
     /// </summary>
-    public class AssemblyILPostProcessor : ILPostProcessor
+    internal class AssemblyILPostProcessor : ILPostProcessor
     {
         private static readonly Dictionary<string, string> cachedAssemblyPath = new Dictionary<string, string>();
         
@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        internal class PostProcessorReflectionImporterProvider : IReflectionImporterProvider
+        internal sealed class PostProcessorReflectionImporterProvider : IReflectionImporterProvider
         {
             public IReflectionImporter GetReflectionImporter(ModuleDefinition module) => new PostProcessorReflectionImporter(module);
             internal class PostProcessorReflectionImporter : DefaultReflectionImporter
@@ -78,67 +78,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         base.ImportReference(reference);
             }
         }
-
-        /*internal class CoreLibMetadataImporterProvider : IMetadataImporterProvider
-        {
-            public IMetadataImporter GetMetadataImporter(ModuleDefinition module) => new CoreLibMetadataImporter(module);
-            
-            internal class CoreLibMetadataImporter : IMetadataImporter
-            {
-                private const string SystemPrivateCoreLib = "System.Private.CoreLib";
-                
-                private AssemblyNameReference _correctCorlib;
-                
-                private readonly DefaultMetadataImporter defaultMetadataImporter;
-                private readonly ModuleDefinition module;
-                
-                public IMetadataImporter GetMetadataImporter(ModuleDefinition module) => new CoreLibMetadataImporter(module);
-
-                public CoreLibMetadataImporter(ModuleDefinition module)
-                {
-                    _correctCorlib = module.AssemblyReferences.FirstOrDefault(a => a.Name == "mscorlib" || a.Name == "netstandard" || a.Name == SystemPrivateCoreLib);
-                    defaultMetadataImporter = new DefaultMetadataImporter(module); 
-                    this.module = module;
-                }
-
-                public AssemblyNameReference ImportReference(AssemblyNameReference reference) =>
-                    _correctCorlib != null && reference.Name == SystemPrivateCoreLib ? 
-                        _correctCorlib : 
-                        defaultMetadataImporter.ImportReference(reference);
-
-                public TypeReference ImportReference(TypeReference type, IGenericParameterProvider context)
-                {
-                    var importedRef = this.defaultMetadataImporter.ImportReference(type, context);
-                    importedRef.GetElementType().Scope = module.TypeSystem.CoreLibrary;
-                    return importedRef;
-                }
-
-                public FieldReference ImportReference(FieldReference field, IGenericParameterProvider context)
-                {
-                    var importedRef = this.defaultMetadataImporter.ImportReference(field, context);
-                    importedRef.FieldType.GetElementType().Scope = module.TypeSystem.CoreLibrary;
-                    return importedRef;
-                }
-
-                public MethodReference ImportReference(MethodReference method, IGenericParameterProvider context)
-                {
-                    var importedRef = this.defaultMetadataImporter.ImportReference(method, context);
-                    importedRef.DeclaringType.GetElementType().Scope = module.TypeSystem.CoreLibrary;
-
-                    foreach (var parameter in importedRef.Parameters)
-                    {
-                        if (parameter.ParameterType.Scope == module.TypeSystem.CoreLibrary)
-                            continue;
-                        parameter.ParameterType.GetElementType().Scope = module.TypeSystem.CoreLibrary;
-                    }
-
-                    if (importedRef.ReturnType.Scope != module.TypeSystem.CoreLibrary)
-                        importedRef.ReturnType.GetElementType().Scope = module.TypeSystem.CoreLibrary;
-
-                    return importedRef;
-                }
-            }
-        }*/
 
         /// <summary>
         /// Loads the assembly into memory and builds a Cecil AssemblyDefinition.

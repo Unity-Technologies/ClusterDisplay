@@ -166,14 +166,6 @@ namespace Unity.ClusterDisplay.RPC
                 targetObjectType = null;
             }
 
-            var sceneObjectRegistry = FindObjectsOfType<SceneObjectsRegistry>();
-            for (int i = 0; i < sceneObjectRegistry.Length; i++)
-            {
-                RPCEditorGUICommon.HorizontalLine();
-                var editor = UnityEditor.Editor.CreateEditor(sceneObjectRegistry[i], typeof(SceneObjectsRegistry.SceneObjectsRegistryEditor)) as SceneObjectsRegistry.SceneObjectsRegistryEditor;
-                editor.PresentGUI();
-            }
-
             RPCEditorGUICommon.HorizontalLine();
         }
     }

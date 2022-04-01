@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         public static System.Type GetMemberType(MemberInfo memberInfo) => 
             memberInfo is FieldInfo ?

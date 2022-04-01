@@ -4,8 +4,11 @@ using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.RPC
 {
+    /// <summary>
+    /// RPCs are serialized into an array of these structs and written to a stubs file, see serialization and deserialization in RPCRegistry.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public struct RPMethodStub
+    internal struct RPMethodStub
     {
         public bool declaringAssemblyIsPostProcessable;
         public bool isStatic;

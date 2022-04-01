@@ -4,7 +4,7 @@ using Unity.Collections;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         public static bool TypeIsInPostProcessableAssembly (string rootFolder, Type type)
         {

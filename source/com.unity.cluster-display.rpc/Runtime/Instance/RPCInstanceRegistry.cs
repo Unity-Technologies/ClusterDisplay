@@ -139,7 +139,7 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="assembly">The assembly were lookin in.</param>
         /// <returns>Whether that generated type exists.</returns>
-        public static bool HasImplementationInAssembly (System.Reflection.Assembly assembly) => 
+        internal static bool HasImplementationInAssembly (System.Reflection.Assembly assembly) => 
             assembly
                 .GetTypes()
                 .Any(type => type.Name == "RPCIL");
@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay
         /// <param name="assembly">The registered assembly where we are getting the type.</param>
         /// <param name="assemblyIndex">The index of the registered RPC.</param>
         /// <returns></returns>
-        public static bool TryCreateImplementationInstance (System.Reflection.Assembly assembly, out ushort assemblyIndex)
+        internal static bool TryCreateImplementationInstance (System.Reflection.Assembly assembly, out ushort assemblyIndex)
         {
             var rpcILType = assembly
                 .GetTypes()
@@ -219,7 +219,7 @@ namespace Unity.ClusterDisplay
         /// <param name="parametersPayloadSize">The total byte count of all the RPC argument values.</param>
         /// <param name="rpcsBufferPosition">The position where the RPC arguments start in the RPC buffer.</param>
         /// <returns>Whether we successfully invoked the RPC or not.</returns>
-        public static bool TryCallInstance (
+        internal static bool TryCallInstance (
             ushort assemblyIndex,
             ushort rpcId, 
             ushort pipeId, 
@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public static bool TryCallStatic(
+        internal static bool TryCallStatic(
             ushort assemblyIndex,
             ushort rpcId,
             buint parametersPayloadSize,
@@ -294,7 +294,7 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Calling method: (RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, Assembly: \"{assembly.GetName().Name}\").");
         }
 
-        public static void BeforeFixedUpdate()
+        internal static void BeforeFixedUpdate()
         {
             if (beforeFixedUpdateRPCQueue.Count == 0)
                 return;

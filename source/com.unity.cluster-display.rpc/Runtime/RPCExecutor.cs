@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.RPC
     /// we get the current RPCExecutionStage + 1 within the frame from this class and embed
     /// into the RPC's header.
     /// </summary>
-    public static class RPCExecutor
+    internal static class RPCExecutor
     {
         #if UNITY_EDITOR
         static RPCExecutor () => SetupDelegates();

@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Unity.ClusterDisplay
 {
-    public class SharedMutex : IDisposable
+    internal class SharedMutex : IDisposable
     {
         private readonly string mutexName;
         private Mutex mutex = null;

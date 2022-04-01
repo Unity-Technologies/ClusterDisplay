@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         private static Type[] cachedAllTypes;
 

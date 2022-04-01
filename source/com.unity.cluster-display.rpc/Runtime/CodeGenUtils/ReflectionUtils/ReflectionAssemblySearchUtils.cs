@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         private static Assembly cachedDefaultAssembly = null;
         public static bool TryGetDefaultAssembly(out Assembly defaultAssembly, bool logError = true)

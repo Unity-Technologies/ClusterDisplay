@@ -7,7 +7,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
-    public class CodeGenDebug
+    internal class CodeGenDebug
     {
         #if UNITY_EDITOR
         private static bool IsILPostProcessRunner = false;

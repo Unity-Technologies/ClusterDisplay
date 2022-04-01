@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         public static (PropertyInfo, MethodInfo)[] GetAllPropertySetMethods (
             System.Type type, 

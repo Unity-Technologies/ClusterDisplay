@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public static class WrapperUtils
+    internal static class WrapperUtils
     {
         /// <summary>
         /// All wrappers are placed inside this namespace.

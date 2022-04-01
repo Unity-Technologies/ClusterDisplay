@@ -3,7 +3,7 @@
 namespace Unity.ClusterDisplay
 {
     [System.Serializable]
-    public struct PipeConfig
+    internal struct PipeConfig
     {
         [SerializeField] public RPCConfig[] configs;
     }

@@ -5,7 +5,7 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    public static class RPCEditorGUICommon
+    internal static class RPCEditorGUICommon
     {
         public static void HorizontalLine () => EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
         public static void ListMethods(

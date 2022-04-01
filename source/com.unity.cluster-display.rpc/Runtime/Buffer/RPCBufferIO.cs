@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         private static buint rpcBufferSize;
 
-        public static buint RPCBufferSize => rpcBufferSize;
+        internal static buint RPCBufferSize => rpcBufferSize;
 
         // The RPC header is represented by 3 unsigned shorts and a payload size:
         private readonly static buint MinimumRPCPayloadSize = (buint)Marshal.SizeOf<ushort>() * 3 + (buint)Marshal.SizeOf<buint>();

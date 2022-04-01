@@ -12,7 +12,7 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    public partial class RPCILPostProcessor
+    internal partial class RPCILPostProcessor
     {
         private static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 

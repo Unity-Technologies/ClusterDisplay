@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public static class Constants
+    internal static class Constants
     {
         public const uint MaxRPCID = ushort.MaxValue;
 

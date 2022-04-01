@@ -4,7 +4,7 @@
 namespace Unity.ClusterDisplay.RPC
 {
     [StructLayout(LayoutKind.Sequential)]
-    public struct RPCStub
+    internal struct RPCStub
     {
         public bool isStatic;
         public bool overrideRPCExecutionStage;

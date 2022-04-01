@@ -9,7 +9,7 @@ using Mono.Cecil.Cil;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    public partial class RPCILPostProcessor
+    internal partial class RPCILPostProcessor
     {
         private IEnumerable<MethodReference> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
         {

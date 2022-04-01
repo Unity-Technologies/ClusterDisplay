@@ -21,24 +21,8 @@ using UnityEngine.Rendering.HighDefinition;
 namespace Unity.ClusterDisplay.Editor.SourceGenerators
 {
     [InitializeOnLoad]
-    public static class InspectorGenerator
+    internal static class InspectorGenerator
     {
-        /*
-        private struct AssemblyDefinitionBasis
-        {
-            private string name;
-            private string[] references;
-            private string[] includePlatforms;
-
-            public AssemblyDefinitionBasis (string[] referencedAssemblyGUIDs)
-            {
-                name = "Unity.ClusterDisplay.Editor.Inspectors.Generated";
-                references = referencedAssemblyGUIDs;
-                includePlatforms = new string[] { "Editor" };
-            }
-        }
-        */
-
         private static string GetTypeNameWithoutGenericArugmentCount (System.Type genericType, out int genericArgumentCount)
         {
             genericArgumentCount = genericType.GetGenericArguments().Count();

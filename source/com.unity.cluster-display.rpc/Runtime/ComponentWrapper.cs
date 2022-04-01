@@ -2,7 +2,7 @@
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public class ComponentWrapper<InstanceType> : MonoBehaviour
+    public abstract class ComponentWrapper<InstanceType> : MonoBehaviour
         where InstanceType : UnityEngine.Component
     {
         [SerializeField] private InstanceType instance;
@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="outInstance"></param>
         /// <returns></returns>
-        public bool TryGetInstance (out InstanceType outInstance)
+        internal bool TryGetInstance (out InstanceType outInstance)
         {
             if (instance == null)
             {
@@ -45,5 +45,5 @@ namespace Unity.ClusterDisplay.RPC
         /// component instance you want to wrap.
         /// </summary>
         /// <param name="instance"></param>
-        public void SetInstance(InstanceType instance) => this.instance = instance;
+        internal void SetInstance(InstanceType instance) => this.instance = instance;
     } }

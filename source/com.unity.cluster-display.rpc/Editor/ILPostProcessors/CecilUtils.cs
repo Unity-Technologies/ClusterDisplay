@@ -10,7 +10,7 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    public static class CecilUtils
+    internal static class CecilUtils
     {
         public static string ComputeMethodHash(MethodReference methodRef)
         {

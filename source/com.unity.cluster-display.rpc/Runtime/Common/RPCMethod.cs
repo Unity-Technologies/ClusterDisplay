@@ -8,7 +8,11 @@ namespace Unity.ClusterDisplay.RPC
     {
         // IF YOU CHANGE THE ORDER OF THESE ATTRIBUTE FIELDS, THEN YOU MUST ALSO CHANGE THE ORDER IN THE IL POST PROCESSOR.
         public readonly RPCExecutionStage rpcExecutionStage;
+
+        // The hash of this RPC's method signature.
         public readonly string rpcHash;
+
+        // The the RPC's former method signature, not the hash.
         public readonly string formarlySerializedAs;
 
         /// <summary>

@@ -15,43 +15,43 @@ namespace Unity.ClusterDisplay.RPC
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class RPCCallMarker : Attribute {}
+        internal class RPCCallMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class StaticRPCCallMarker : Attribute {}
+        internal class StaticRPCCallMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCStringParameterValueMarker : Attribute {}
+        internal class AppendRPCStringParameterValueMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCArrayParameterValueMarker : Attribute {}
+        internal class AppendRPCArrayParameterValueMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCNativeArrayParameterValueMarker : Attribute {}
+        internal class AppendRPCNativeArrayParameterValueMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCValueTypeParameterValueMarker : Attribute {}
+        internal class AppendRPCValueTypeParameterValueMarker : Attribute {}
         
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class AppendRPCCharParameterValueMarker : Attribute {}
+        internal class AppendRPCCharParameterValueMarker : Attribute {}
 
         /// <summary>
         /// Were done writing to the RPC buffer, so latching essentialy copies the RPC buffer to our network frame buffer.

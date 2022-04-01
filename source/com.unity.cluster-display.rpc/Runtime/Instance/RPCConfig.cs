@@ -3,7 +3,7 @@
 namespace Unity.ClusterDisplay
 {
     [System.Serializable]
-    public struct RPCConfig
+    internal struct RPCConfig
     {
         [SerializeField] public bool enabled;
     }

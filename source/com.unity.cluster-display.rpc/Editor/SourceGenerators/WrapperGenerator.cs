@@ -12,7 +12,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Editor.SourceGenerators
 {
     [InitializeOnLoad]
-    public static class WrapperGenerator
+    internal static class WrapperGenerator
     {
         static WrapperGenerator ()
         {
@@ -235,7 +235,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                             SyntaxFactory.ParseName(typeof(RequireComponent).Name),
                             SyntaxFactory.AttributeArgumentList(
                                 SyntaxFactory.SingletonSeparatedList(requireComponentAttributeArgumentExpression))))))
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
+                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.InternalKeyword))
                     .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(wrapperTypeName, consumeFullText: true)));
         }
 

@@ -17,31 +17,31 @@ namespace Unity.ClusterDisplay.RPC
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseStringMarker : Attribute {}
+        internal class ParseStringMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseArrayMarker : Attribute {}
+        internal class ParseArrayMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseNativeArrayMarker : Attribute {}
+        internal class ParseNativeArrayMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseCharMarker : Attribute {}
+        internal class ParseCharMarker : Attribute {}
 
         /// <summary>
         /// This is used by the ILPostProcessor to find and perform the call.
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        public class ParseStructureMarker : Attribute {}
+        internal class ParseStructureMarker : Attribute {}
         
         /// <summary>
         /// Pipe our RPC invocation request into a specific queue to be later executed when we reach that point in the frame.
@@ -218,7 +218,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="buffer">This is a copy of the network frame buffer slice of bytes that represents the RPC buffer.</param>
         /// <param name="frame">The current frame were on for logging/debugging purposes.</param>
         /// <returns></returns>
-        public static unsafe bool Unlatch (NativeArray<byte> buffer)
+        internal static unsafe bool Unlatch (NativeArray<byte> buffer)
         {
             buint bufferPos = 0;
             // If this is true, then there are no RPCs to invoke in the buffer.

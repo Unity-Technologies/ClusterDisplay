@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         public const string DefaultUserAssemblyName = "Assembly-CSharp";
 

@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
+    internal class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
         [SerializeField][HideInInspector] private Camera m_ActiveCamera;
         public static Camera ActiveCamera
@@ -34,11 +34,8 @@ namespace Unity.ClusterDisplay
         }
 
         public delegate void OnChangeActiveCamera (Camera previousCamera, Camera newCamera);
-
         public delegate void ClusterDisplayBehaviourDelegate();
-
         public delegate void ClusterDisplayOnFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
-
         public delegate void ClusterDisplayOnCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
 
         public static ClusterDisplayBehaviourDelegate preInitialize;
@@ -51,15 +48,12 @@ namespace Unity.ClusterDisplay
         public static ClusterDisplayBehaviourDelegate update;
         public static ClusterDisplayBehaviourDelegate lateUpdate;
         public static ClusterDisplayBehaviourDelegate onDrawGizmos;
-
         public static ClusterDisplayBehaviourDelegate onBeforePresent;
-        private Coroutine endOfFrameCoroutine;
-
-        public static OnChangeActiveCamera onChangeActiveCamera;
         public static ClusterDisplayOnFrameRenderDelegate onBeginFrameRender;
         public static ClusterDisplayOnCameraRenderDelegate onBeginCameraRender;
         public static ClusterDisplayOnCameraRenderDelegate onEndCameraRender;
         public static ClusterDisplayOnFrameRenderDelegate onEndFrameRender;
+        public static OnChangeActiveCamera onChangeActiveCamera;
 
         private void RegisterRenderPipelineDelegates ()
         {
@@ -85,7 +79,7 @@ namespace Unity.ClusterDisplay
         {
             ClusterDebug.Log("Cluster Display started bootstrap.");
 
-            endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
+            StartCoroutine(BeforePresentCoroutine());
 
             preInitialize?.Invoke();
 

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public class IDManager
+    internal class IDManager
     {
         public const ulong MaxIDCount = ushort.MaxValue;
 

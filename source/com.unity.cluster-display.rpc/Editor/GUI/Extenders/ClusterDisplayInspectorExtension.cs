@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         void PollReflectorGUI(InstanceType instance, bool anyStreamablesRegistered);
     }
 
-    public struct MethodMemberData
+    internal struct MethodMemberData
     {
         public bool isRegistered;
 
@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.Editor.Inspectors
         public MethodGUIFunc onGUI;
     }
 
-    public struct PropertyMemberData
+    internal struct PropertyMemberData
     {
         public bool isRegistered;
 

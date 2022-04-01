@@ -8,7 +8,7 @@ using UnityEditor;
 namespace Unity.ClusterDisplay.RPC
 {
     [System.Serializable]
-    public struct SerializedInstanceRPCData
+    internal struct SerializedInstanceRPCData
     {
         // [SerializeField] public ushort pipeId;
         [SerializeField] public Component instance;
@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.RPC
             RPCRegistry.InitializeWhenReady(GatherSceneInstances);
         }
 
-        public void UpdateRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
+        internal void UpdateRPCConfig(ushort pipeId, ushort rpcId, ref RPCConfig rpcConfig)
         {
             SetRPCConfig(pipeId, rpcId, ref rpcConfig);
             SerializeRPCSceneInstances();

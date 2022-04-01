@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace Unity.ClusterDisplay
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class DedicatedAttribute : Attribute {}
+    internal class DedicatedAttribute : Attribute {}
 
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         private readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
 

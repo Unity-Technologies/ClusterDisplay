@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public partial class RPCRegistry
+    internal partial class RPCRegistry
     {
         private Dictionary<string, RPMethodStub> stagedMethods = new Dictionary<string, RPMethodStub>();
 

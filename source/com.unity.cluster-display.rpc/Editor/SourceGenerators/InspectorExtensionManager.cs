@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay
 {
     [CreateAssetMenu(fileName = "InspectorExtensionManager", menuName = "Cluster Display/Inspector Extension Manager")]
-    public class InspectorExtensionManager : SingletonScriptableObject<InspectorExtensionManager>
+    internal class InspectorExtensionManager : SingletonScriptableObject<InspectorExtensionManager>
     {
         protected override void OnAwake()
         {

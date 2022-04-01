@@ -5,7 +5,7 @@ using Mono.Cecil.Cil;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    public partial class RPCILPostProcessor
+    internal partial class RPCILPostProcessor
     {
         sealed class RPCILGenerator
         {

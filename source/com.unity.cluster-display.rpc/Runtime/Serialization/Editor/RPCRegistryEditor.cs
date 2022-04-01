@@ -9,7 +9,7 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
+    internal partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
         private class RPCRegistrySettingsProvider : SettingsProvider
         {

@@ -9,12 +9,15 @@ using DeserializedRPCList = System.Collections.Generic.List<(string rpcHash, boo
 
 namespace Unity.ClusterDisplay.RPC
 {
+    /// <summary>
+    /// This class operate as a cache and registry for managing, serializing and deserializing RPCs.
+    /// </summary>
     [CreateAssetMenu(fileName = "RPCRegistry", menuName = "Cluster Display/RPC Registry")]
     [DefaultExecutionOrder(int.MinValue)]
     #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoad]
     #endif
-    public partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
+    internal partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>, ISerializationCallbackReceiver
     {
         public const int MaxRPCCount = 256;
         private static RPCMethodInfo?[] m_RPCs = new RPCMethodInfo?[MaxRPCCount];
@@ -23,8 +26,12 @@ namespace Unity.ClusterDisplay.RPC
         public static int RPCCount => m_RPCCount;
         private static int m_LargestRPCId;
 
+        // LUT for retreiving and RPC ID by it's signature in in the form of a hash. 
         private static readonly Dictionary<string, ushort> m_MethodUniqueIdToRPCId = new Dictionary<string, ushort>();
+
+        // LUT for retrieving a list of RPC ID defined by type. 
         private static readonly Dictionary<System.Type, List<ushort>> m_TypeToRPCIds = new Dictionary<System.Type, List<ushort>>();
+
         private static readonly string[] rpcHashs = new string[ushort.MaxValue];
 
         public static bool RPCIdToRPCHash(ushort rpcId, out string rpcHash) => !string.IsNullOrEmpty(rpcHash = rpcHashs[rpcId]);
@@ -70,14 +77,20 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
+        // Get an RPC's assembly by RPC ID.
         public static Assembly GetAssembly(ushort rpcId) =>
             m_TargetAssemblies[m_AssemblyIndexLookUp[rpcId] - 1];
 
         [SerializeField][HideInInspector] private IDManager m_IDManager = new IDManager();
 
+        // The RPC stubs file is a binary file where we store the serialized RPCs. This needs to be stored
+        // as a file so it can be read by the ILPostProcessor which is a different process entirely.
         public const string k_RPCStubsFileName = "RPCStubs.bin";
+
+        // We store this stubs file in resources so that it's included in the build as well.
         public readonly string k_RPCStubsResourcesPath = $"Assets/Resources/ClusterDisplay/{k_RPCStubsFileName}";
         public const string k_RPCStagedPath = "./Temp/ClusterDisplay/RPCStaged.bin";
+
         [SerializeField][HideInInspector] private byte[] m_RPCStubBytes;
 
         public delegate void OnTriggerRecompileDelegate();
@@ -864,6 +877,7 @@ namespace Unity.ClusterDisplay.RPC
         public bool IsSerializing => m_IsSerializing;
         private void ToggleSerializationState(bool isSerializing) => this.m_IsSerializing = isSerializing;
 
+        // Where serialization of RPCs begins.
         public void OnBeforeSerialize()
         {
             ToggleSerializationState(true);
@@ -871,6 +885,7 @@ namespace Unity.ClusterDisplay.RPC
             ToggleSerializationState(false);
         }
 
+        // Where deserialization of RPCs begins.
         public void OnAfterDeserialize()
         {
             ToggleSerializationState(true);

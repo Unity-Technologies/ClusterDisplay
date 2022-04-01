@@ -11,7 +11,7 @@ using MethodGUIFunc = System.Func<UnityEngine.Component, System.Object[], System
 
 namespace Unity.ClusterDisplay.Editor.Inspectors
 {
-    public class ClusterDisplayInspectorUtils : MonoBehaviour
+    internal class ClusterDisplayInspectorUtils : MonoBehaviour
     {
         private class FloatFieldAttribute : DedicatedAttribute {}
         private class DoubleFieldAttribute : DedicatedAttribute {}

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    public struct RPCMethodInfo
+    internal struct RPCMethodInfo
     {
         public readonly MethodInfo methodInfo;
         public readonly string rpcHash;

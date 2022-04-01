@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 
 namespace Unity.ClusterDisplay
 {
-    public static partial class ReflectionUtils
+    internal static partial class ReflectionUtils
     {
         public static string ComputeMethodHash(MethodInfo methodInfo)
         {
