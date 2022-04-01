@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay
             this.clusterSync = clusterSync;
 
         public virtual bool ReadyToProceed => true;
-        public virtual bool IsReadyForNextFrame => true;
+        public virtual bool ReadyForNextFrame => true;
 
         public NodeState EnterState(NodeState oldState)
         {

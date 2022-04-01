@@ -320,7 +320,7 @@ namespace Unity.ClusterDisplay
         void SystemLateUpdate()
         {
             m_EndDelayMonitor.RefPoint();
-            while (!LocalNode.IsReadyForNextFrame)
+            while (!LocalNode.ReadyForNextFrame)
             {
                 LocalNode.DoLateFrame();
             }

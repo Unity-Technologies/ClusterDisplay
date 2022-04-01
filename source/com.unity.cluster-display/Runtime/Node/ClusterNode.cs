@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay
         public byte NodeID => m_UDPAgent.LocalNodeID;
 
         protected internal IClusterSyncState clusterSync;
-        public virtual bool HasHardwareSync { get; set; } = false;
+        public virtual bool HasHardwareSync { get; set; }
 
         protected ClusterNode(
             IClusterSyncState clusterSync,
@@ -34,12 +34,12 @@ namespace Unity.ClusterDisplay
         {
             m_CurrentState = m_CurrentState?.ProcessFrame(newFrame);
 
-            if (m_CurrentState.GetType() == typeof(Shutdown))
+            if (m_CurrentState is Shutdown)
             {
                 m_UDPAgent.Stop();
             }
 
-            return m_CurrentState.GetType() != typeof(FatalError);
+            return m_CurrentState is not FatalError;
         }
 
         public void DoLateFrame() => m_CurrentState?.ProcessLateFrame();
@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
-        public bool IsReadyForNextFrame => m_CurrentState?.IsReadyForNextFrame ?? true;
+        public bool ReadyForNextFrame => m_CurrentState?.ReadyForNextFrame ?? true;
 
         public void BroadcastShutdownRequest()
         {

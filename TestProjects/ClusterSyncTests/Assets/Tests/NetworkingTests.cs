@@ -128,7 +128,7 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             // Agent should now be waiting for ACK messages
-            Assert.True(m_Agent.AcksPending);
+            Assert.True(m_Agent.HasPendingAcks);
 
             // Send one ACK, agent should still be waiting
             var result = await m_TestClients[0].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[0]);
@@ -136,7 +136,7 @@ namespace Unity.ClusterDisplay.Tests
             var retries = 0;
             while (retries < 5)
             {
-                Assert.True(m_Agent.AcksPending);
+                Assert.True(m_Agent.HasPendingAcks);
                 await Task.Delay(100);
                 retries++;
             }
@@ -146,13 +146,13 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(result, Is.GreaterThan(0));
 
             retries = 0;
-            while (m_Agent.AcksPending && retries < k_MaxRetries)
+            while (m_Agent.HasPendingAcks && retries < k_MaxRetries)
             {
                 await Task.Delay(100);
                 retries++;
             }
 
-            Assert.False(m_Agent.AcksPending);
+            Assert.False(m_Agent.HasPendingAcks);
         }
 
         async Task TestResend()
@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(rxData.contents.FrameNumber, Is.EqualTo(5));
 
             // Agent should now be waiting for ACK messages
-            Assert.True(m_Agent.AcksPending);
+            Assert.True(m_Agent.HasPendingAcks);
             
             // Ack with node 1
             await m_TestClients[1].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[1]);
@@ -201,7 +201,7 @@ namespace Unity.ClusterDisplay.Tests
             await client.ReceiveMessageAsync<RepeaterEnteredNextFrame>();
 
             // Agent should NOT be waiting for ACKs
-            Assert.IsFalse(m_Agent.AcksPending);
+            Assert.IsFalse(m_Agent.HasPendingAcks);
         }
     }
 }

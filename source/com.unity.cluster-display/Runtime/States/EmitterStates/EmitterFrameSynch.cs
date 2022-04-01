@@ -16,7 +16,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             ReadyToProceed,
         }
 
-        // Bit mask of node id's that we are waiting on to say they are ready for work.
+        /// <summary>
+        /// Bit mask of node id's that we are waiting on to say they are ready for work.
+        /// </summary>
+        /// <remarks>
+        /// Used only when there is a software sync at the beginning of each frame (no hardware sync).
+        /// </remarks>
         BitVector m_WaitingOnNodes;
 
         private EStage m_Stage;
@@ -32,13 +37,13 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         }
 
         private TimeSpan m_TsOfStage;
-        
+
         private EmitterStateWriter m_Emitter;
-        
+
         public bool HasHardwareSync { get; set; }
-        
+
         public override bool ReadyToProceed => Stage is EStage.WaitForRepeatersToACK or EStage.ReadyToProceed;
-        public override bool IsReadyForNextFrame => Stage == EStage.ReadyToProceed;
+        public override bool ReadyForNextFrame => Stage == EStage.ReadyToProceed;
 
         public UDPAgent NetworkAgent => LocalNode.UdpAgent;
 
@@ -132,6 +137,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             if (HasHardwareSync)
             {
+                // When we have hardware sync, we can assume that by this point all nodes have finished presenting
+                // the previous frame and is ready to start a new frame.
                 Stage = EStage.EmitLastFrameData;
                 m_TsOfStage = m_Time.Elapsed;
                 return;
@@ -139,6 +146,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             using (m_MarkerWaitingOnFramesDoneMsgs.Auto())
             {
+                // Otherwise, wait for nodes to report in.
                 PumpMessages();
 
                 if (m_Time.Elapsed - m_TsOfStage >= MaxTimeOut)
@@ -151,7 +159,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         void OnWaitForRepeatersToACK()
         {
             var ready = true;
-            if (LocalNode.UdpAgent.HasPendingAcks)
+            if (NetworkAgent.HasPendingAcks)
             {
                 ready = false;
                 if (m_Time.Elapsed - m_TsOfStage >= MaxTimeOut)
@@ -179,10 +187,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
             Stage = EStage.WaitForRepeatersToACK;
             m_TsOfStage = m_Time.Elapsed;
-            
-            // These flags track the EnteredNextFrame messages,
-            // not the LastFrameData acks.
-            m_WaitingOnNodes = LocalNode.UdpAgent.AllNodesMask.UnsetBit(LocalNode.NodeID);
+
+            // These flags track the EnteredNextFrame messages for the following frame,
+            // not the LastFrameData acks. This logic could be made clearer.
+            m_WaitingOnNodes = NetworkAgent.AllNodesMask.UnsetBit(LocalNode.NodeID);
         }
 
         private void ProceededToNextFrame(bool newFrame)
@@ -228,8 +236,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             ulong currentFrame =
                 LocalNode.RepeatersDelayed
                     ? CurrentFrameID - 1
-                    : // The emitter is one frame ahead.
-                    CurrentFrameID;
+                    : CurrentFrameID;
 
             if (respMsg.FrameNumber != currentFrame) // Validate that were frame matching as expected.
             {
@@ -261,7 +268,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// </summary>
         void KickUnresponsiveNodes()
         {
-            foreach (var pendingAck in LocalNode.UdpAgent.PendingAcks)
+            foreach (var pendingAck in NetworkAgent.PendingAcks)
             {
                 ClusterDebug.LogError($"(Frame: {CurrentFrameID}): node {pendingAck.nodeId} has not reported back after {MaxTimeOut.TotalMilliseconds}ms. Continuing without it.");
                 LocalNode.UnRegisterNode(pendingAck.nodeId);

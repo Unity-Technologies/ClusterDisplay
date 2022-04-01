@@ -81,13 +81,16 @@ namespace Unity.ClusterDisplay.Tests
             const int kNumFrames = 4;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
+                // ======= Start of Repeater frame ===========
                 m_ClusterSync.CurrentFrameID = frameNum;
 
                 // The state should waiting for the emitter data that marks the sync point
-                // at th beginning of the frame
-                Assert.False(repeaterSynchronization.ReadyToProceed);
-                Assert.That(repeaterSynchronization.Stage, Is.EqualTo(RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
+                // at the beginning of the frame
+                Assert.IsFalse(repeaterSynchronization.ReadyToProceed);
+                Assert.IsTrue(RunStateUpdateUntil(repeaterSynchronization,
+                    state => state.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
 
+                // Simulate a EmitterLastFrameData message from the emitter
                 var (header, lastFrameMsg) = GenerateMessage(k_EmitterId,
                     new byte[] {k_RepeaterId},
                     EMessageType.LastFrameData,
@@ -100,10 +103,15 @@ namespace Unity.ClusterDisplay.Tests
 
                 m_TestAgent.PublishMessage(header, lastFrameMsg);
 
-                Assert.IsTrue(RunStateUntilReady(repeaterSynchronization));
+                // LastFrameData received. Continue with the frame.
+                Assert.IsTrue(RunStateUntilReadyToProceed(repeaterSynchronization));
+                Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
 
-                // This is where a new frame would start in a real cluster
+                // ======= End of Frame ===========
                 yield return null;
+                
+                // ======= Start of frame > 0 ===========
+                // Do the EnteredNextFrame signal exchange
                 m_State = repeaterSynchronization.ProcessFrame(newFrame: true);
                 Assert.That(repeaterSynchronization.Stage, Is.EqualTo(RepeaterSynchronization.EStage.EnteredNextFrame));
 
@@ -111,19 +119,62 @@ namespace Unity.ClusterDisplay.Tests
                 m_State = repeaterSynchronization.ProcessFrame(false);
                 Assert.That(repeaterSynchronization.Stage, Is.EqualTo(RepeaterSynchronization.EStage.WaitForEmitterACK));
 
-                // Expect to receive a signal that node as entered a new frame
+                // Emitter expects to receive a signal that node as entered a new frame
+                // (ack is taken care of internally by UDPAgent)
                 var receiveMessage = m_TestAgent
                     .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
                     .ToCoroutine();
 
                 yield return receiveMessage.WaitForCompletion(MockClusterSync.timeoutSeconds);
+                
                 Assert.True(receiveMessage.IsSuccessful);
-                var (rxHeader, contents) = receiveMessage.Result;
+                var (rxHeader, _) = receiveMessage.Result;
                 Assert.That(rxHeader.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
+            }
+        }
 
-                // Now wait for the state to transition back to WaitingOnEmitterData
-                Assert.IsTrue(RunStateUtil(repeaterSynchronization,
+        [UnityTest]
+        public IEnumerator TestRepeaterSynchronizationHardwareSync()
+        {
+            var repeaterSynchronization = new RepeaterSynchronization(m_ClusterSync)
+            {
+                HasHardwareSync = true
+            };
+            repeaterSynchronization.EnterState(null);
+
+            // Simulate several frames
+            const int kNumFrames = 4;
+            for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
+            {
+                // ======= Start of Repeater frame ===========
+                m_ClusterSync.CurrentFrameID = frameNum;
+
+                // The state should waiting for the emitter data that marks the sync point
+                // at the beginning of the frame
+                repeaterSynchronization.ProcessFrame(true);
+                Assert.IsFalse(repeaterSynchronization.ReadyToProceed);
+                Assert.IsTrue(RunStateUpdateUntil(repeaterSynchronization,
                     state => state.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
+
+                // Simulate a EmitterLastFrameData message from the emitter
+                var (header, lastFrameMsg) = GenerateMessage(k_EmitterId,
+                    new byte[] {k_RepeaterId},
+                    EMessageType.LastFrameData,
+                    new EmitterLastFrameData()
+                    {
+                        FrameNumber = frameNum
+                    },
+                    MessageHeader.EFlag.Broadcast,
+                    new byte[] {0}); // trailing 0 to indicate empty state data
+
+                m_TestAgent.PublishMessage(header, lastFrameMsg);
+
+                // LastFrameData received. Continue with the frame.
+                Assert.IsTrue(RunStateUntilReadyToProceed(repeaterSynchronization));
+                Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
+
+                // ======= End of Frame ===========
+                yield return null;
             }
         }
 
