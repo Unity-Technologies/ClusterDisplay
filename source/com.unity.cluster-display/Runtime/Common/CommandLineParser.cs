@@ -8,10 +8,6 @@ using UnityEditor;
 using System.Reflection;
 #endif
 
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Helpers")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor")]
-
 namespace Unity.ClusterDisplay
 {
     public static class CommandLineArguments

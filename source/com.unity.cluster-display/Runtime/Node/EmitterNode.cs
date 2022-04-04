@@ -30,20 +30,15 @@ namespace Unity.ClusterDisplay
             Config config)
             : base(clusterSync, config.udpAgentConfig)
         {
-            m_CurrentState = new WaitingForAllClients(clusterSync, config.headlessEmitter) {
+            m_CurrentState = new WaitingForAllClients(clusterSync) {
                 MaxTimeOut = ClusterParams.RegisterTimeout };// 15 sec waiting for clients
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }
 
-        public override bool TryStart()
+        public override void Start()
         {
-            if (!base.TryStart())
-                return false;
-
             m_CurrentState.EnterState(null);
-
-            return true;
         }
 
         public int FindNodeByID(byte nodeId)
