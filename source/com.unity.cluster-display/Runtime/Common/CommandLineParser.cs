@@ -156,6 +156,8 @@ namespace Unity.ClusterDisplay
 
             internal override void Reset ()
             {
+                ClusterDebug.Log($"Resetting cache for: \"{ArgumentName}\" cluster display argument.");
+
                 m_Cached = false;
                 m_Value = default(T);
             }
@@ -296,7 +298,7 @@ namespace Unity.ClusterDisplay
         };
 
         // Since this property is referenced by some arguments when this class is initialized, this will be one of the very first things called.
-        private static string nodeType => emitterSpecified.Value ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
+        private static string nodeType => Arguments.Contains(k_EmitterNodeTypeArgument) ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
 
         /// <summary>
         /// We are using this as the argument name resolver.
@@ -385,6 +387,8 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
+            ClusterDebug.Log("Resetting command line arguments.");
+
             m_Arguments.Clear();
             m_Arguments = null;
 
@@ -392,6 +396,14 @@ namespace Unity.ClusterDisplay
             {
                 baseArguments[i].Reset();
             }
+        }
+
+        internal static void Override (List<string> arguments)
+        {
+            Reset();
+
+            ClusterDebug.Log("Overriding command line arguments.");
+            m_Arguments.AddRange(arguments);
         }
 
         private static void PrintArguments(List<string> arguments)

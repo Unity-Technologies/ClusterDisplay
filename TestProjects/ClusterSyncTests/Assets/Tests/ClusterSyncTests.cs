@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.Tests
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} " +
                 $"-adapterName {m_InterfaceName}";
             
-            CommandLineParser.Reset();
+            CommandLineParser.Override(args.Split(' ').ToList());
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
             
@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay.Tests
             
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
             
-            CommandLineParser.Reset();
+            CommandLineParser.Override(args.Split(' ').ToList());
             
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
             
