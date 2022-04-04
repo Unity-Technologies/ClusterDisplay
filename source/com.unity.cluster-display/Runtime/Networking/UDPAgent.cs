@@ -18,6 +18,7 @@ namespace Unity.ClusterDisplay
 {
     class UDPAgent : IDisposable
     {
+        const int k_RxQueueCapacity = 256;
         public static int MaxSupportedNodeCount = BitVector.Length;
 
         private bool m_ExtensiveLogging = false;
@@ -53,16 +54,16 @@ namespace Unity.ClusterDisplay
         private IPEndPoint m_TxEndPoint;
         private IPEndPoint m_RxEndPoint;
 
-        readonly ConcurrentQueue<Message> m_RxQueue;
+        readonly BlockingCollection<Message> m_RxQueue;
         readonly ConcurrentDictionary<(ulong, byte), PendingAck> m_TxQueuePendingAcks;
 
         public bool HasPendingAcks => !m_TxQueuePendingAcks.IsEmpty;
-        
+
         internal ICollection<PendingAck> PendingAcks => m_TxQueuePendingAcks.Values;
 
-        private CancellationTokenSource m_CTS;
+        readonly CancellationTokenSource m_CTS;
 
-        private ConcurrentQueue<MessageHeader> m_DeadMessages;
+        readonly ConcurrentQueue<MessageHeader> m_DeadMessages;
 
         private Stopwatch m_ConnectionClock = new Stopwatch();
         private TimeSpan m_AcceptedAckDelay = new TimeSpan(0, 0, 0, 1, 000);
@@ -78,8 +79,8 @@ namespace Unity.ClusterDisplay
             {
                 var stats = new NetworkingStats()
                 {
-                    rxQueueSize = m_RxQueue?.Count ?? 0,
-                    pendingAckQueueSize = m_TxQueuePendingAcks?.Count ?? 0,
+                    rxQueueSize = m_RxQueue.Count,
+                    pendingAckQueueSize = m_TxQueuePendingAcks.Count,
                     failedMsgs = m_DeadMessages?.Count ?? 0,
                     totalResends = m_TotalResendCount,
                     msgsSent = m_TotalSentCount,
@@ -88,8 +89,6 @@ namespace Unity.ClusterDisplay
                 return stats;
             }
         }
-
-        public AutoResetEvent RxWait { get; private set; }
 
         public struct Config
         {
@@ -112,7 +111,6 @@ namespace Unity.ClusterDisplay
         /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
         public UDPAgent(Config config)
         {
-            RxWait = new AutoResetEvent(false);
             LocalNodeID = config.nodeId;
             m_RxPort = config.rxPort;
             m_TxPort = config.txPort;
@@ -120,7 +118,7 @@ namespace Unity.ClusterDisplay
             m_MessageAckTimeout = new TimeSpan(0, 0, 0, config.timeOut);
             m_AdapterName = config.adapterName;
 
-            m_RxQueue = new ConcurrentQueue<Message>();
+            m_RxQueue = new BlockingCollection<Message>(k_RxQueueCapacity);
 
             m_TxQueuePendingAcks = new ConcurrentDictionary<(ulong, byte), PendingAck>();
             m_CTS = new CancellationTokenSource();
@@ -242,8 +240,8 @@ namespace Unity.ClusterDisplay
 
                 m_Connection.Close();
                 m_Connection.Dispose();
+                m_RxQueue.Dispose();
 
-                m_CTS = null;
                 m_Connection = null;
             }
             catch { }
@@ -263,9 +261,30 @@ namespace Unity.ClusterDisplay
             return AllNodesMask;
         }
 
+        public bool NextAvailableRxMsg(out MessageHeader header, out byte[] payload, int timeoutMilliseconds)
+        {
+            try
+            {
+                if (m_RxQueue.TryTake(out var msg, timeoutMilliseconds, m_CTS.Token))
+                {
+                    header = msg.header;
+                    payload = msg.payload;
+                    return true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                ClusterDebug.Log("UDPAgent operation cancelled");
+            }
+
+            header = default;
+            payload = null;
+            return false;
+        }
+
         public bool NextAvailableRxMsg(out MessageHeader header, out byte[] payload)
         {
-            if (m_RxQueue.TryDequeue(out var msg))
+            if (m_RxQueue.TryTake(out var msg))
             {
                 header = msg.header;
                 payload = msg.payload;
@@ -343,8 +362,10 @@ namespace Unity.ClusterDisplay
                 if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
                 {
                     var rxmsg = new Message() {header = msgHeader, payload = msg.payload};
-                    m_RxQueue.Enqueue(rxmsg);
-                    RxWait.Set();
+                    if (!m_RxQueue.TryAdd(rxmsg))
+                    {
+                        ClusterDebug.LogWarning("Receive queue is full. Messages will be dropped.");
+                    }
                 }
             }
 
@@ -384,8 +405,10 @@ namespace Unity.ClusterDisplay
                 else // If we've received some message that ss NOT an ACK from some node (emitter or repeater).
                 {
                     var msg = new Message() {header = header, payload = receiveBytes};
-                    m_RxQueue.Enqueue(msg);
-                    RxWait.Set();
+                    if (!m_RxQueue.TryAdd(msg))
+                    {
+                        ClusterDebug.LogWarning("Receive queue is full. Messages will be dropped.");
+                    }
 
                     // Respond to the sending node with an ACK that we've received the message.
                     if (!header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck))
@@ -532,12 +555,12 @@ namespace Unity.ClusterDisplay
                     header.Flags |= MessageHeader.EFlag.Resending;
                     msg.header = header;
                     updatedAck.message = msg;
-                    
+
                     updatedAck.ts = m_ConnectionClock.Elapsed;
 
                     // Need to overwrite the header data in the payload field also
                     updatedAck.message.header.StoreInBuffer(updatedAck.message.payload);
-                    
+
                     if (m_TxQueuePendingAcks.TryUpdate(expired[i], updatedAck, expiredAck))
                     {
                         m_TotalResendCount++;

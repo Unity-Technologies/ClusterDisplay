@@ -23,17 +23,16 @@ namespace Unity.ClusterDisplay.Tests
 
         public static (MessageHeader header, T contents) ReceiveMessage<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
         {
-            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
-            {
-                return (header, outBuffer.LoadStruct<T>(k_HeaderSize));
-            }
-
-            return default;
+            return agent.NextAvailableRxMsg(out var header,
+                out var outBuffer,
+                timeout)
+                ? (header, outBuffer.LoadStruct<T>(k_HeaderSize))
+                : default;
         }
 
         public static (MessageHeader header, T contents, byte[] extraData) ReceiveMessageWithData<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
         {
-            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
+            if (agent.NextAvailableRxMsg(out var header, out var outBuffer, timeout))
             {
                 var msgLength = k_HeaderSize + Marshal.SizeOf<T>();
                 var extraData = new byte[outBuffer.Length - msgLength];
@@ -162,7 +161,9 @@ namespace Unity.ClusterDisplay.Tests
             // Assume that the first operational interface is capable of multicast.
             // This is similar to the logic that UDPAgent uses to select an interface when none is specified,
             // so it should pick the same interface as the UdpClients that we're using in this test
-            return NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up);
+            return NetworkInterface
+                .GetAllNetworkInterfaces()
+                .FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.SupportsMulticast);
         }
     }
 }

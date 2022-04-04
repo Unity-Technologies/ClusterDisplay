@@ -19,6 +19,17 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
+        protected override void ExitState(NodeState newState)
+        {
+            if (m_Task != null)
+            {
+                m_Cancellation.Cancel();
+                m_Task.Wait(MaxTimeOut);
+            }
+
+            base.ExitState(newState);
+        }
+
         protected override NodeState DoFrame(bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
@@ -52,26 +63,23 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 do
                 {
                     // Wait for a client to announce itself
-                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
+                    // Consume messages
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                     {
-                        // Consume messages
-                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        if (header.MessageType == EMessageType.HelloEmitter)
                         {
-                            if (header.MessageType == EMessageType.HelloEmitter)
-                            {
-                                var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
+                            var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
 
-                                RegisterRemoteNode(header, roleInfo);
-                                SendResponse(header);
-                            }
-                            else
-                            {
-                                ProcessUnhandledMessage(header);
-                            }
+                            RegisterRemoteNode(header, roleInfo);
+                            SendResponse(header);
+                        }
+                        else
+                        {
+                            ProcessUnhandledMessage(header);
                         }
                     }
-
-                } while ( (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
+                } while (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount &&
+                    !ctk.IsCancellationRequested);
             }
             catch (Exception e)
             {

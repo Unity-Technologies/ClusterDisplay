@@ -65,27 +65,24 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     }
 
                     // Wait for a response
-                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
+                    // Consume messages
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out _))
                     {
-                        // Consume messages
-                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        if (header.MessageType == EMessageType.WelcomeRepeater)
                         {
-                            if (header.MessageType == EMessageType.WelcomeRepeater)
+                            if (header.DestinationIDs[LocalNode.NodeID])
                             {
-                                if (header.DestinationIDs[LocalNode.NodeID])
-                                {
-                                    ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
-                                    m_EmitterFound = true;
-                                    LocalNode.EmitterNodeId = header.OriginID;
-                                    LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
-                                    
-                                    return;
-                                }
+                                ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
+                                m_EmitterFound = true;
+                                LocalNode.EmitterNodeId = header.OriginID;
+                                LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
+
+                                return;
                             }
-                            
-                            else
-                                ProcessUnhandledMessage(header);
                         }
+
+                        else
+                            ProcessUnhandledMessage(header);
                     }
 
                     if (m_Timer.Elapsed > MaxTimeOut)
