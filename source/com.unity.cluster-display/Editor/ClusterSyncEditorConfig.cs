@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    // Before you change the name of this class, make sure you also change the referencing name in CommandLineParser.
+    /// Before you change the name of this class, make sure you also change the referencing name in CommandLineParser.
     [CreateAssetMenu(fileName = "ClusterSyncEditorConfig", menuName = "Cluster Display/Cluster Sync Editor Config", order = 1)]
     [InitializeOnLoad]
     [Serializable]
@@ -14,24 +14,26 @@ namespace Unity.ClusterDisplay
     {
         // This is called by CommandLineParser in the editor only through reflection.
         [CommandLineParser.CommandLineInjectionMethod]
-        private static void PollArguments ()
+        private static List<string> PollArguments (bool overrideIsEmitter)
         {
             if (!TryGetInstance(out var editorConfig))
             {
-                return;
+                return null;
             }
 
             if (!editorConfig.m_IgnoreEditorCmdLine)
             {
-                var editorInstanceCmdLine = editorConfig.m_EditorInstanceIsEmitter ? 
-                    editorConfig.m_EditorInstanceEmitterCmdLine : 
-                    editorConfig.m_EditorInstanceRepeaterCmdLine;
+                bool isEmitter = overrideIsEmitter ? editorConfig.m_EditorInstanceIsEmitter : false;
 
-                CommandLineParser.OverrideArguments(editorInstanceCmdLine.Split(' ').ToList()); 
+                return (isEmitter ? 
+                    editorConfig.m_EditorInstanceEmitterCmdLine : 
+                    editorConfig.m_EditorInstanceRepeaterCmdLine).Split(' ').ToList();
             }
+
+            return new List<string>();
         }
 
-        static ClusterSyncEditorConfig () => ClusterSync.onDisableCLusterDisplay += () => CommandLineParser.OverrideArguments(new List<string>());
+        static ClusterSyncEditorConfig () => ClusterSync.onDisableCLusterDisplay += CommandLineParser.Reset;
 
         [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
         [SerializeField] public bool m_EditorInstanceIsEmitter;

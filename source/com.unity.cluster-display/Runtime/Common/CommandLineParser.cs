@@ -27,28 +27,48 @@ namespace Unity.ClusterDisplay
     {
 
 #if UNITY_EDITOR
-        // This attribute is used to search for a method in ClusterSyncEditorConfig so we
-        // can call it through reflection.
+        /// This attribute is used to search for a method in ClusterSyncEditorConfig so we
+        /// can call it through reflection.
         [AttributeUsage(AttributeTargets.Method)]
         public class CommandLineInjectionMethodAttribute : Attribute { }
 #endif
 
         internal delegate bool TryParseDelegate<T>(string argumentName, out T result);
+        internal delegate string ArgumentNameResolver();
 
-        internal abstract class BaseArgument<T>
+        internal abstract class BaseArgument 
         {
-            // If this is true, this class will throw an error complaining
-            // that the argument is not defined to the user.
+            internal abstract void Reset();
+        }
+
+        internal abstract class BaseArgument<T> : BaseArgument
+        {
+            /// If this is true, this class will throw an error complaining
+            /// that the argument is not defined to the user.
             public readonly bool k_Required; 
 
-            public readonly string k_ArgumentName;
+            readonly ArgumentNameResolver argumentNameResolver; 
+            string m_ArgumentName;
+
+            public string ArgumentName
+            {
+                get
+                {
+                    if (argumentNameResolver != null)
+                    {
+                        return argumentNameResolver();
+                    }
+
+                    return m_ArgumentName;
+                }
+            }
 
             protected bool m_Defined; // If the argument is defined and valid.
             protected bool m_Cached; // If we've already a parse.
 
             protected T m_Value;
 
-            // Each argument has a default parser that can be overriden.
+            /// Each argument has a default parser that can be overriden.
             readonly TryParseDelegate<T> tryParse;
 
             public bool Defined => GenericCheck(tryParse);
@@ -73,7 +93,7 @@ namespace Unity.ClusterDisplay
                     // Return true or false if the argument was defined and we successfully parsed it.
                     m_Defined = 
                         tryParse != null && 
-                        tryParse(k_ArgumentName, out m_Value);
+                        tryParse(ArgumentName, out m_Value);
 
                     m_Cached = true;
                 }
@@ -83,8 +103,10 @@ namespace Unity.ClusterDisplay
 
             internal BaseArgument(string argumentName, bool required = false)
             {
+                Reset();
+
                 k_Required = required;
-                k_ArgumentName = argumentName;
+                m_ArgumentName = argumentName;
 
                 m_Cached = false;
                 m_Value = default(T);
@@ -92,15 +114,30 @@ namespace Unity.ClusterDisplay
                 tryParse = DefaultParser;
             }
 
-            internal BaseArgument(string argumentName, TryParseDelegate<T> tryParse, bool required = false)
+            internal BaseArgument(string argumentName, TryParseDelegate<T> tryParseDelegate, bool required = false)
             {
-                k_Required = required;
-                k_ArgumentName = argumentName;
+                Reset();
 
+                k_Required = required;
+                m_ArgumentName = argumentName;
+
+                tryParse = tryParseDelegate;
+            }
+
+            internal BaseArgument(ArgumentNameResolver argumentNameResolverDelegate, TryParseDelegate<T> tryParseDelegate, bool required = false)
+            {
+                Reset();
+
+                k_Required = required;
+
+                tryParse = tryParseDelegate;
+                argumentNameResolver = argumentNameResolverDelegate;
+            }
+
+            internal override void Reset ()
+            {
                 m_Cached = false;
                 m_Value = default(T);
-
-                this.tryParse = tryParse;
             }
         }
 
@@ -108,12 +145,12 @@ namespace Unity.ClusterDisplay
         {
             protected override bool DefaultParser(string argumentName, out bool parsedResult)
             {
-                parsedResult = TryGetIndexOfNodeTypeArgument(k_ArgumentName, out var startIndex);
+                parsedResult = TryGetIndexOfNodeTypeArgument(ArgumentName, out var startIndex);
 
                 if (!parsedResult)
                 {
                     if (k_Required)
-                        ClusterDebug.LogError($"There is no argument with name: \"{k_ArgumentName}\" specified.");
+                        ClusterDebug.LogError($"There is no argument with name: \"{ArgumentName}\" specified.");
 
                     return false;
                 }
@@ -127,44 +164,49 @@ namespace Unity.ClusterDisplay
 
         internal class StringArgument : BaseArgument<string>
         {
-            protected override bool DefaultParser(string argumentName, out string parsedResult) => TryParseStringArgument(k_ArgumentName, out parsedResult, k_Required);
+            protected override bool DefaultParser(string argumentName, out string parsedResult) => TryParseStringArgument(ArgumentName, out parsedResult, k_Required);
 
             internal StringArgument(string argumentName, bool required = false) : base(argumentName, required) { }
             internal StringArgument(string argumentName, TryParseDelegate<string> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal StringArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<string> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
 
             public static implicit operator string(StringArgument argument) => !argument.Defined ? null : argument.Value;
         }
 
         internal class FloatArgument : BaseArgument<float>
         {
-            protected override bool DefaultParser(string argumentName, out float parsedResult) => TryParseFloatArgument(k_ArgumentName, out parsedResult, required: k_Required);
+            protected override bool DefaultParser(string argumentName, out float parsedResult) => TryParseFloatArgument(ArgumentName, out parsedResult, required: k_Required);
 
             internal FloatArgument(string argumentName, bool required = false) : base(argumentName, required) { }
             internal FloatArgument(string argumentName, TryParseDelegate<float> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal FloatArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<float> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
         }
 
         internal class IntArgument : BaseArgument<int>
         {
-            protected override bool DefaultParser(string argumentName, out int result) => TryParseIntArgument(k_ArgumentName, out result, k_Required);
+            protected override bool DefaultParser(string argumentName, out int result) => TryParseIntArgument(ArgumentName, out result, k_Required);
 
             internal IntArgument(string argumentName, bool required = false) : base(argumentName, required) { }
             internal IntArgument(string argumentName, TryParseDelegate<int> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal IntArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<int> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
         }
 
         internal class ByteArgument : BaseArgument<byte>
         {
-            protected override bool DefaultParser(string argumentName, out byte result) => TryParseByteArgument(k_ArgumentName, out result, k_Required);
+            protected override bool DefaultParser(string argumentName, out byte result) => TryParseByteArgument(ArgumentName, out result, k_Required);
 
             internal ByteArgument(string argumentName, bool required = false) : base(argumentName, required) { }
             internal ByteArgument(string argumentName, TryParseDelegate<byte> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal ByteArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<byte> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
         }
 
         internal class Vector2IntArgument : BaseArgument<Vector2Int>
         {
-            protected override bool DefaultParser(string argumentName, out Vector2Int result) => TryParseVector2Int(k_ArgumentName, out result, k_Required);
+            protected override bool DefaultParser(string argumentName, out Vector2Int result) => TryParseVector2Int(ArgumentName, out result, k_Required);
 
             internal Vector2IntArgument(string argumentName, bool required = false) : base(argumentName, required) { }
             internal Vector2IntArgument(string argumentName, TryParseDelegate<Vector2Int> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal Vector2IntArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<Vector2Int> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
         }
 
         internal const string k_EmitterNodeTypeArgument = "-emitterNode";
@@ -173,14 +215,14 @@ namespace Unity.ClusterDisplay
         internal static readonly BoolArgument debugFlag                     = new BoolArgument("-clusterNode");
 
         internal static readonly BoolArgument emitterSpecified              = new BoolArgument("-emitterNode");
-        internal readonly static BoolArgument headlessEmitter               = new BoolArgument("-batchMode");
+        internal static readonly BoolArgument headlessEmitter               = new BoolArgument("-batchMode");
         internal static readonly BoolArgument replaceHeadlessEmitter        = new BoolArgument("-replaceHeadlessEmitter");
 
         internal static readonly BoolArgument repeaterSpecified             = new BoolArgument("-node");
         internal static readonly BoolArgument delayRepeaters                = new BoolArgument("-delayRepeaters");
 
-        internal static readonly ByteArgument nodeID                        = new ByteArgument(nodeType, tryParse: ParseNodeID);
-        internal readonly static IntArgument repeaterCount                  = new IntArgument(nodeType, tryParse: ParseRepeaterCount);
+        internal static readonly ByteArgument nodeID                        = new ByteArgument(GetNodeType, tryParse: ParseNodeID);
+        internal readonly static IntArgument repeaterCount                  = new IntArgument(GetNodeType, tryParse: ParseRepeaterCount);
 
         internal static readonly Vector2IntArgument gridSize                = new Vector2IntArgument("-gridSize");
         internal static readonly Vector2IntArgument bezel                   = new Vector2IntArgument("-bezel");
@@ -197,18 +239,103 @@ namespace Unity.ClusterDisplay
         internal static readonly FloatArgument linesRotationSpeed           = new FloatArgument("-linesRotationSpeed");
 
         internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
-        internal static readonly StringArgument multicastAddress            = new StringArgument(nodeType, tryParse: ParseMulticastAddress);
-        internal static readonly IntArgument rxPort                         = new IntArgument(nodeType, ParseRXPort);
-        internal static readonly IntArgument txPort                         = new IntArgument(nodeType, ParseTXPort);
+        internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);
+        internal static readonly IntArgument rxPort                         = new IntArgument(GetNodeType, ParseRXPort);
+        internal static readonly IntArgument txPort                         = new IntArgument(GetNodeType, ParseTXPort);
 
         internal static readonly IntArgument handshakeTimeout               = new IntArgument("-handshakeTimeout");
         internal static readonly IntArgument communicationTimeout           = new IntArgument("-communicationTimeout");
 
+        internal readonly static BaseArgument[] baseArguments = new BaseArgument[] 
+        { 
+            debugFlag,
+            emitterSpecified,
+            headlessEmitter,
+            replaceHeadlessEmitter,
+            repeaterSpecified,
+            delayRepeaters,
+            nodeID,
+            repeaterCount,
+            gridSize,
+            bezel,
+            physicalScreenSize,
+            targetFps,
+            overscan,
+            quadroSyncInitDelay,
+            linesThickness,
+            linesScale,
+            linesShiftSpeed,
+            linesAngle,
+            linesRotationSpeed,
+            adapterName,
+            multicastAddress,
+            rxPort,
+            txPort,
+            handshakeTimeout,
+            communicationTimeout
+        };
+
         // Since this property is referenced by some arguments when this class is initialized, this will be one of the very first things called.
         private static string nodeType => emitterSpecified.Value ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
+        private static string GetNodeType() => nodeType;
 
         internal static bool clusterDisplayLogicSpecified => emitterSpecified.Value || repeaterSpecified.Value;
         private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
+
+        internal static void CacheArguments (bool overrideIsEmitter = false)
+        {
+            Reset();
+
+            m_Arguments = new List<string>(20) { };
+
+            m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
+
+#if UNITY_EDITOR
+            // This section of code is kind of a hack, but it's purpose is to retrieve the editor only scriptable
+            // object: "ClusterSyncEditorConfig" and through reflection call a method to override the arguments
+            // with the arguments stored in the scriptable object.
+            var assets = AssetDatabase.FindAssets("t:ClusterSyncEditorConfig"); // Make sure that if you rename this class, you need to change that here as well.
+
+            if (assets.Length > 0)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(assets[0]);
+                var type = AssetDatabase.GetMainAssetTypeAtPath(path);
+
+                var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
+
+                var privateStaticMethods = type.GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                MethodInfo targetMethod = null;
+
+                foreach (var method in privateStaticMethods)
+                {
+                    if (method.GetCustomAttribute<CommandLineInjectionMethodAttribute>() == null)
+                    {
+                        continue;
+                    }
+
+                    targetMethod = method;
+                    break;
+                }
+
+                if (targetMethod == null)
+                {
+                    throw new Exception($"The type: \"ClusterSyncEditorConfig\" must contain a private static method with the attribute: \"{nameof(CommandLineInjectionMethodAttribute)} in order to inject the command line arguments from the cluster display manager.");
+                }
+
+                // Call ClusterSyncEditorConfig.PollArguments()
+                var list = targetMethod.Invoke(clusterSyncEditorConfig, new object[1] { overrideIsEmitter }) as List<string>;
+
+                Debug.Assert(list != null, "Received a NULL list while attempting to retrieve command line arguments from editor config");
+
+                if (list.Count > 0)
+                {
+                    m_Arguments.AddRange(list);
+                }
+            }
+#endif
+
+            PrintArguments(m_Arguments);
+        }
 
         private static List<string> m_Arguments;
         internal static List<string> Arguments
@@ -217,65 +344,29 @@ namespace Unity.ClusterDisplay
             {
                 if (m_Arguments == null)
                 {
-                    m_Arguments = new List<string>(20) { };
-                    m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
-
-#if UNITY_EDITOR
-                    // This section of code is kind of a hack, but it's purpose is to retrieve the editor only scriptable
-                    // object: "ClusterSyncEditorConfig" and through reflection call a method to override the arguments
-                    // with the arguments stored in the scriptable object.
-                    var assets = AssetDatabase.FindAssets("t:ClusterSyncEditorConfig"); // Make sure that if you rename this class, you need to change that here as well.
-
-                    if (assets.Length > 0)
-                    {
-                        var path = AssetDatabase.GUIDToAssetPath(assets[0]);
-                        var type = AssetDatabase.GetMainAssetTypeAtPath(path);
-
-                        var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
-
-                        var privateStaticMethods = type.GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                        MethodInfo targetMethod = null;
-
-                        foreach (var method in privateStaticMethods)
-                        {
-                            if (method.GetCustomAttribute<CommandLineInjectionMethodAttribute>() == null)
-                            {
-                                continue;
-                            }
-
-                            targetMethod = method;
-                            break;
-                        }
-
-                        if (targetMethod == null)
-                        {
-                            throw new Exception($"The type: \"ClusterSyncEditorConfig\" must contain a private static method with the attribute: \"{nameof(CommandLineInjectionMethodAttribute)} in order to inject the command line arguments from the cluster display manager.");
-                        }
-
-                        // Call ClusterSyncEditorConfig.PollArguments()
-                        targetMethod.Invoke(clusterSyncEditorConfig, null);
-                    }
-#endif
-
-                    PrintArguments(m_Arguments);
+                    CacheArguments();
                 }
 
                 return m_Arguments;
             }
         }
 
-        internal static void OverrideArguments(List<string> overridingArguments)
-        {
-            ResetCache();
-            PrintArguments(overridingArguments);
-            m_Arguments = overridingArguments;
-        }
-
         private static void LogNoArgument (string argumentName) => ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
-        private static void ResetCache()
+        internal static void Reset()
         {
+            if (m_Arguments == null)
+            {
+                return;
+            }
+
+            m_Arguments.Clear();
             m_Arguments = null;
+
+            for (int i = 0; i < baseArguments.Length; i++)
+            {
+                baseArguments[i].Reset();
+            }
         }
 
         private static void PrintArguments(List<string> arguments)
