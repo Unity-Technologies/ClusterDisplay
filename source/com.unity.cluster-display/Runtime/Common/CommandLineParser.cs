@@ -403,6 +403,8 @@ namespace Unity.ClusterDisplay
             Reset();
 
             ClusterDebug.Log("Overriding command line arguments.");
+
+            m_Arguments = new List<string>();
             m_Arguments.AddRange(arguments);
         }
 

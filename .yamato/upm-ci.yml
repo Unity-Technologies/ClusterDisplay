@@ -16,9 +16,6 @@ all_test_projects:
   - path : TestProjects/ClusterSyncTests
     name : CoreSync
     gfx : false
-  - path : TestProjects/ArgumentsTests
-    name : ArgumentsTests
-    gfx : false
 ---
 {% for project in all_test_projects -%}
 pack_{{ project.name }}:
