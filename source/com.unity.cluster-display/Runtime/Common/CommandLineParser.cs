@@ -33,9 +33,25 @@ namespace Unity.ClusterDisplay
         public class CommandLineInjectionMethodAttribute : Attribute { }
 #endif
 
+        /// <summary>
+        ///  This delegate is used to override the parsing of an argument's parameters.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="argumentName">The name of the command line argument.</param>
+        /// <param name="result">The output value.</param>
+        /// <returns></returns>
         internal delegate bool TryParseDelegate<T>(string argumentName, out T result);
+
+        /// <summary>
+        /// For testing purposes, some command line argument names change. For example, we need to test both emitter and repeater
+        /// command line arguments and this resolver helps us resolve argument names dynamically.
+        /// </summary>
+        /// <returns></returns>
         internal delegate string ArgumentNameResolver();
 
+        /// <summary>
+        /// This allows us to have array's of arguments abstractly.
+        /// </summary>
         internal abstract class BaseArgument 
         {
             internal abstract void Reset();
@@ -47,13 +63,21 @@ namespace Unity.ClusterDisplay
             /// that the argument is not defined to the user.
             public readonly bool k_Required; 
 
+            /// <summary>
+            /// For dynamically resolving the argument name instead of using m_ArgumentName.
+            /// </summary>
             readonly ArgumentNameResolver argumentNameResolver; 
-            string m_ArgumentName;
+            readonly string m_ArgumentName;
 
+            /// <summary>
+            /// A switch that will either retrieve the argument using the resolver, or use the readonly
+            /// argument name string set on construction.
+            /// </summary>
             public string ArgumentName
             {
                 get
                 {
+                    // If we have a name resolver, lets use that instead.
                     if (argumentNameResolver != null)
                     {
                         return argumentNameResolver();
@@ -277,12 +301,17 @@ namespace Unity.ClusterDisplay
 
         // Since this property is referenced by some arguments when this class is initialized, this will be one of the very first things called.
         private static string nodeType => emitterSpecified.Value ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
+
+        /// <summary>
+        /// We are using this as the argument name resolver.
+        /// </summary>
+        /// <returns></returns>
         private static string GetNodeType() => nodeType;
 
         internal static bool clusterDisplayLogicSpecified => emitterSpecified.Value || repeaterSpecified.Value;
         private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
 
-        internal static void CacheArguments (bool overrideIsEmitter = false)
+        internal static void CacheArguments (bool ? overrideIsEmitter = null)
         {
             Reset();
 

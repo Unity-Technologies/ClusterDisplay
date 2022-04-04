@@ -25,7 +25,7 @@ public class TestArguments
         Debug.Assert(CommandLineParser.gridSize.Value == new Vector2Int(2, 2), $"The flag: \"{CommandLineParser.gridSize.ArgumentName}\" is NOT 2x2.");
 
         Debug.Assert(CommandLineParser.bezel.Defined, $"The flag: \"{CommandLineParser.bezel.ArgumentName}\" is NOT defined.");
-        Debug.Assert(CommandLineParser.bezel.Value == new Vector2Int(2, 2), $"The flag: \"{CommandLineParser.bezel.ArgumentName}\" is NOT 2x2.");
+        Debug.Assert(CommandLineParser.bezel.Value == new Vector2Int(4, 4), $"The flag: \"{CommandLineParser.bezel.ArgumentName}\" is NOT 2x2.");
 
         Debug.Assert(CommandLineParser.physicalScreenSize.Defined, $"The flag: \"{CommandLineParser.physicalScreenSize.ArgumentName}\" is NOT defined.");
         Debug.Assert(CommandLineParser.physicalScreenSize.Value == new Vector2Int(1920, 1080), $"The flag: \"{CommandLineParser.physicalScreenSize.ArgumentName}\" is NOT 1920x1080.");
@@ -34,7 +34,7 @@ public class TestArguments
         Debug.Assert(CommandLineParser.targetFps.Value == 60, $"The flag: \"{CommandLineParser.targetFps.ArgumentName}\" is NOT 60.");
 
         Debug.Assert(CommandLineParser.overscan.Defined, $"The flag: \"{CommandLineParser.overscan.ArgumentName}\" is NOT defined.");
-        Debug.Assert(CommandLineParser.overscan.Value == 64, $"The flag: \"{CommandLineParser.overscan.ArgumentName}\" is NOT 64.");
+        Debug.Assert(CommandLineParser.overscan.Value == 128, $"The flag: \"{CommandLineParser.overscan.ArgumentName}\" is NOT 64.");
 
         Debug.Assert(CommandLineParser.quadroSyncInitDelay.Defined, $"The flag: \"{CommandLineParser.quadroSyncInitDelay.ArgumentName}\" is NOT defined.");
         Debug.Assert(CommandLineParser.quadroSyncInitDelay.Value == 66, $"The flag: \"{CommandLineParser.quadroSyncInitDelay.ArgumentName}\" is NOT 66.");

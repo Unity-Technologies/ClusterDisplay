@@ -12,9 +12,14 @@ namespace Unity.ClusterDisplay
     [Serializable]
     class ClusterSyncEditorConfig : SingletonScriptableObject<ClusterSyncEditorConfig>
     {
-        // This is called by CommandLineParser in the editor only through reflection.
+        /// This is called by CommandLineParser in the editor only through reflection.
+        /// - overrideIsEmitter is used by test runner and it's used to override whether the node is the emitter or the repeater regardless of whether a cluster is running.
+        /// - If overrideIsEmitter is true, then the test runner is validating emitter arguments.
+        /// - If overrideIsEmitter is false, then the test runner is validating repreater arguments.
+        /// - If overrideIsEmitter is NULL, then we are using the setting specified in this scriptable object of whether it's the repeter or emitter.
+        /// See CommandLineParser.CacheArguments
         [CommandLineParser.CommandLineInjectionMethod]
-        private static List<string> PollArguments (bool overrideIsEmitter)
+        private static List<string> PollArguments (bool ? overrideIsEmitter = null)
         {
             if (!TryGetInstance(out var editorConfig))
             {
@@ -23,7 +28,7 @@ namespace Unity.ClusterDisplay
 
             if (!editorConfig.m_IgnoreEditorCmdLine)
             {
-                bool isEmitter = overrideIsEmitter ? editorConfig.m_EditorInstanceIsEmitter : false;
+                bool isEmitter = overrideIsEmitter != null ? overrideIsEmitter.Value : editorConfig.m_EditorInstanceIsEmitter;
 
                 return (isEmitter ? 
                     editorConfig.m_EditorInstanceEmitterCmdLine : 
@@ -44,7 +49,11 @@ namespace Unity.ClusterDisplay
         [SerializeField] public string m_EditorInstanceRepeaterCmdLine;
 
         [SerializeField] public bool m_IgnoreEditorCmdLine;
-        public void SetupForEditorTesting(bool isEmitter) => m_EditorInstanceIsEmitter = isEmitter;
+        public void SetupForEditorTesting(bool isEmitter)
+        {
+            m_EditorInstanceIsEmitter = isEmitter;
+        }
+
         public void UseEditorCmd(bool useEditorCmd) => m_IgnoreEditorCmdLine = !useEditorCmd;
 
         [SerializeField] public bool m_UseTargetFramerate;

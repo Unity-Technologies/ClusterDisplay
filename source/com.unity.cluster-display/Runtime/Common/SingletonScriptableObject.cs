@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 
 #if UNITY_EDITOR
+using System.IO;
 using UnityEditor;
 #endif
 
@@ -125,6 +126,31 @@ namespace Unity.ClusterDisplay
             outInstance = instances[0];
             return true;
         }
+
+#if UNITY_EDITOR
+        internal static bool TryGetInstanceOrCreate (out T outInstance)
+        {
+            if (instance == null)
+            {
+                if (TryGetInstance(out outInstance, throwError: false))
+                {
+                    return true;
+                }
+
+                instance = CreateInstance<T>();
+
+                var path = "Assets/Cluster Display/";
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+
+                AssetDatabase.CreateAsset(instance, $"{path}/{typeof(T).Name}.asset");
+                AssetDatabase.SaveAssets();
+            }
+
+            outInstance = instance;
+            return true;
+        }
+#endif
 
         [SingletonScriptableObjectTryGetInstanceMarker]
         public static bool TryGetInstance (out T outInstance, bool throwError = true)
