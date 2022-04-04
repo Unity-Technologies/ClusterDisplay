@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
         
         public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
-        
+
         public bool HasHardwareSync { get; set; }
         
         public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
@@ -100,10 +100,15 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private void OnEnteredNextFrame()
         {
             using (m_MarkerReadyToProcessFrame.Auto())
-                m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+            {
+                if (!HasHardwareSync)
+                {
+                    m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+                }
 
-            Stage = EStage.WaitForEmitterACK;
-            m_TsOfStage = m_Time.Elapsed;
+                Stage = EStage.WaitForEmitterACK;
+                m_TsOfStage = m_Time.Elapsed;
+            }
         }
         
         private void OnWaitForEmitterACK ()
