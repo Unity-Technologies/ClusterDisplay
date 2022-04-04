@@ -67,6 +67,10 @@ namespace Unity.ClusterDisplay.Tests
         public void TearDown()
         {
             m_Agent.Dispose();
+            foreach (var client in m_TestClients)
+            {
+                client.Dispose();
+            }
         }
 
         [UnityTest]
