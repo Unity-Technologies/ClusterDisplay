@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Tests
             // from underneath us. The following lines of code are
             // workarounds to ensure we start the test with a "clean" slate.
             ClusterSync.onPreEnableClusterDisplay = null;
-            CommandLineParser.OverrideArguments(new List<string>());
+            CommandLineParser.Reset();
 
             m_InterfaceName = SelectNic().Name;
         }
@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.Tests
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} " +
                 $"-adapterName {m_InterfaceName}";
             
-            CommandLineParser.OverrideArguments(args.Split(" ").ToList());
+            CommandLineParser.Reset();
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
             
@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay.Tests
             
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
             
-            CommandLineParser.OverrideArguments(args.Split(" ").ToList());
+            CommandLineParser.Reset();
             
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
             
