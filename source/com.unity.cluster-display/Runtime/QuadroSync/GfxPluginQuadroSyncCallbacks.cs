@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay
         static GfxPluginQuadroSyncCallbacks s_Instance;
         bool m_Initialized = false;
 
-        int k_DefaultInitDelayFrames = 10;
+        const int k_DefaultInitDelayFrames = 10;
         int m_InitDelayFrames;
 
         private int m_VSYNCMode;
@@ -63,9 +63,6 @@ namespace Unity.ClusterDisplay
         {
             if (m_Initialized)
                 return;
-
-            if (QualitySettings.vSyncCount != 1)
-                QualitySettings.vSyncCount = 1;
 
             ClusterDebug.Log("Initializing Quadro Sync.");
             Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
