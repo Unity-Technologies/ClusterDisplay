@@ -11,15 +11,6 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    public static class CommandLineArguments
-    {
-        public static float? linesThickness => CommandLineParser.linesThickness.Defined ? CommandLineParser.linesThickness.Value : null;
-        public static float? linesScale => CommandLineParser.linesThickness.Defined ? CommandLineParser.linesScale.Value : null;
-        public static float? linesAngle => CommandLineParser.linesThickness.Defined ? CommandLineParser.linesAngle.Value : null;
-        public static float? linesShiftSpeed => CommandLineParser.linesThickness.Defined ? CommandLineParser.linesShiftSpeed.Value : null;
-        public static float? linesRotationSpeed => CommandLineParser.linesThickness.Defined ? CommandLineParser.linesRotationSpeed.Value : null;
-    }
-
     internal static class CommandLineParser
     {
 
