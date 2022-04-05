@@ -64,24 +64,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(CommandLineParser.quadroSyncInitDelay.Defined);
             Assert.That(CommandLineParser.quadroSyncInitDelay.Value == 66);
 
-            Assert.That(CommandLineParser.linesThickness.Defined);
-            Assert.That(CommandLineParser.linesThickness.Value == 1.2345f);
-
-            Assert.That(CommandLineParser.linesThickness.Defined);
-            Assert.That(CommandLineParser.linesThickness.Value == 1.2345f);
-
-            Assert.That(CommandLineParser.linesScale.Defined);
-            Assert.That(CommandLineParser.linesScale.Value == 1.2345f);
-
-            Assert.That(CommandLineParser.linesShiftSpeed.Defined);
-            Assert.That(CommandLineParser.linesShiftSpeed.Value == 1.2345f);
-
-            Assert.That(CommandLineParser.linesAngle.Defined);
-            Assert.That(CommandLineParser.linesAngle.Value == 1.2345f);
-
-            Assert.That(CommandLineParser.linesRotationSpeed.Defined);
-            Assert.That(CommandLineParser.linesRotationSpeed.Value == 1.2345f);
-
             Assert.That(CommandLineParser.adapterName.Defined);
             Assert.That(CommandLineParser.adapterName.Value == "Ethernet");
 
