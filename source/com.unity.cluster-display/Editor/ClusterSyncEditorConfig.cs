@@ -12,40 +12,15 @@ namespace Unity.ClusterDisplay
     [Serializable]
     class ClusterSyncEditorConfig : SingletonScriptableObject<ClusterSyncEditorConfig>
     {
-        /// This is called by CommandLineParser in the editor only through reflection.
-        /// - overrideIsEmitter is used by test runner and it's used to override whether the node is the emitter or the repeater regardless of whether a cluster is running.
-        /// - If overrideIsEmitter is true, then the test runner is validating emitter arguments.
-        /// - If overrideIsEmitter is false, then the test runner is validating repreater arguments.
-        /// - If overrideIsEmitter is NULL, then we are using the setting specified in this scriptable object of whether it's the repeter or emitter.
-        /// See CommandLineParser.CacheArguments
-        [CommandLineParser.CommandLineInjectionMethod]
-        private static List<string> PollArguments (bool ? overrideIsEmitter = null)
-        {
-            if (!TryGetInstance(out var editorConfig))
-            {
-                return null;
-            }
-
-            if (!editorConfig.m_IgnoreEditorCmdLine)
-            {
-                bool isEmitter = overrideIsEmitter != null ? overrideIsEmitter.Value : editorConfig.m_EditorInstanceIsEmitter;
-
-                return (isEmitter ? 
-                    editorConfig.m_EditorInstanceEmitterCmdLine : 
-                    editorConfig.m_EditorInstanceRepeaterCmdLine).Split(' ').ToList();
-            }
-
-            return new List<string>();
-        }
-
         static ClusterSyncEditorConfig () => ClusterSync.onDisableCLusterDisplay += CommandLineParser.Reset;
 
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceIsMaster")]
+        [CommandLineParser.IsEmitterField]
         [SerializeField] public bool m_EditorInstanceIsEmitter;
         
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceMasterCmdLine")]
+        [CommandLineParser.EmitterCommandLineInjectionField]
         [SerializeField] public string m_EditorInstanceEmitterCmdLine;
-        [UnityEngine.Serialization.FormerlySerializedAs("m_EditorInstanceSlaveCmdLine")]
+
+        [CommandLineParser.RepeaterCommandLineInjectionField]
         [SerializeField] public string m_EditorInstanceRepeaterCmdLine;
 
         [SerializeField] public bool m_IgnoreEditorCmdLine;

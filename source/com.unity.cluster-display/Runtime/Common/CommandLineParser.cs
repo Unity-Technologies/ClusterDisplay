@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using System.Linq;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -23,10 +24,18 @@ namespace Unity.ClusterDisplay
     {
 
 #if UNITY_EDITOR
-        /// This attribute is used to search for a method in ClusterSyncEditorConfig so we
+        /// These attributes are used to search for properties in ClusterSyncEditorConfig so we
         /// can call it through reflection.
-        [AttributeUsage(AttributeTargets.Method)]
-        public class CommandLineInjectionMethodAttribute : Attribute { }
+
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class IsEmitterFieldAttribute : Attribute { }
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class EmitterCommandLineInjectionFieldAttribute : Attribute { }
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class RepeaterCommandLineInjectionFieldAttribute : Attribute { }
 #endif
 
         /// <summary>
@@ -309,6 +318,37 @@ namespace Unity.ClusterDisplay
         internal static bool clusterDisplayLogicSpecified => emitterSpecified.Value || repeaterSpecified.Value;
         private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
 
+#if UNITY_EDITOR
+        private static FieldInfo GetField (Type type, Type attributeType, Type expectedTypeField)
+        {
+            var publicInstanceFields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            FieldInfo field = null;
+
+            foreach (var fields in publicInstanceFields)
+            {
+                if (fields.GetCustomAttribute(attributeType) == null)
+                {
+                    continue;
+                }
+
+                field = fields;
+                break;
+            }
+
+            if (field == null)
+            {
+                throw new Exception($"The type: \"{type.Name}\" must contain a field with the attribute: \"{attributeType.Name}\".");
+            }
+
+            if (field.FieldType != expectedTypeField)
+            {
+                throw new Exception($"The type: \"{type.Name}\" with the field: \"{field.Name}\" is not the expected type: \"{expectedTypeField.Name}\".");
+            }
+
+            return field;
+        }
+#endif
+
         internal static void CacheArguments (bool ? overrideIsEmitter = null)
         {
             Reset();
@@ -329,31 +369,24 @@ namespace Unity.ClusterDisplay
                 var type = AssetDatabase.GetMainAssetTypeAtPath(path);
 
                 var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
+                var isEmitterFieldAttribute = typeof(IsEmitterFieldAttribute);
 
-                var privateStaticMethods = type.GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                MethodInfo targetMethod = null;
+                var isEmitterField = GetField(type, isEmitterFieldAttribute, typeof(bool));
 
-                foreach (var method in privateStaticMethods)
-                {
-                    if (method.GetCustomAttribute<CommandLineInjectionMethodAttribute>() == null)
-                    {
-                        continue;
-                    }
+                bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
 
-                    targetMethod = method;
-                    break;
-                }
+                var cmdLineFieldAttribute = 
+                    (isEmitter && overrideIsEmitter == null) || // If we are NOT running a test.
+                    (overrideIsEmitter != null && overrideIsEmitter.Value) ? // If were not runnming a test.
+                        typeof(EmitterCommandLineInjectionFieldAttribute) : 
+                        typeof(RepeaterCommandLineInjectionFieldAttribute);
 
-                if (targetMethod == null)
-                {
-                    throw new Exception($"The type: \"ClusterSyncEditorConfig\" must contain a private static method with the attribute: \"{nameof(CommandLineInjectionMethodAttribute)} in order to inject the command line arguments from the cluster display manager.");
-                }
+                var cmdLineField = GetField(type, cmdLineFieldAttribute, typeof(string));
+                var value = cmdLineField.GetValue(clusterSyncEditorConfig) as string;
 
-                // Call ClusterSyncEditorConfig.PollArguments()
-                var list = targetMethod.Invoke(clusterSyncEditorConfig, new object[1] { overrideIsEmitter }) as List<string>;
+                Debug.Assert(!string.IsNullOrEmpty(value), "Received a NULL arguments string while attempting to retrieve command line arguments from editor config");
 
-                Debug.Assert(list != null, "Received a NULL list while attempting to retrieve command line arguments from editor config");
-
+                var list = value.Split(' ').ToList();
                 if (list.Count > 0)
                 {
                     m_Arguments.AddRange(list);
