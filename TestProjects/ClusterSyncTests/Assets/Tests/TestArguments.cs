@@ -4,15 +4,38 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Unity.ClusterDisplay;
+using System.Linq;
 
 namespace Unity.ClusterDisplay.Tests
 {
     public class TestArguments
     {
+        private const string commonArguments =
+                "-clusterNode " +
+                "-batchMode " +
+                "-replaceHeadlessEmitter " +
+                "-delayRepeaters " +
+                "-gridSize 2x2 " +
+                "-bezel 4x4 " +
+                "-physicalScreenSize 1920x1080 " +
+                "-targetFps 60 -overscan 128 " +
+                "-quadroSyncInitDelay 66 " +
+                "-linesThickness 1.2345 " +
+                "-linesScale 1.2345 " +
+                "-linesShiftSpeed 1.2345 " +
+                "-linesAngle 1.2345 " +
+                "-linesRotationSpeed 1.2345 " +
+                "-adapterName Ethernet " +
+                "-handshakeTimeout 5000 " +
+                "-communicationTimeout 5000 " +
+                "-adapterName Ethernet ";
+
         [Test]
         public void TestCommonArguments()
         {
-            CommandLineParser.CacheArguments();
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+
+            CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.debugFlag.Defined);
             Assert.That(CommandLineParser.debugFlag.Value);
@@ -73,7 +96,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestEmitterArguments()
         {
-            CommandLineParser.CacheArguments(overrideIsEmitter: true);
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.emitterSpecified.Defined);
             Assert.That(CommandLineParser.emitterSpecified.Value);
@@ -97,7 +121,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestRepeaterArguments()
         {
-            CommandLineParser.CacheArguments(overrideIsEmitter: false);
+            var cmd = commonArguments + "-node 1 224.0.1.0:25692,25691";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.repeaterSpecified.Defined);
             Assert.That(CommandLineParser.repeaterSpecified.Value);

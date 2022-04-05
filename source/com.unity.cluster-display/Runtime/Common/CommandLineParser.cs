@@ -349,7 +349,7 @@ namespace Unity.ClusterDisplay
         }
 #endif
 
-        internal static void CacheArguments (bool ? overrideIsEmitter = null)
+        internal static void CacheArguments ()
         {
             Reset();
 
@@ -376,8 +376,7 @@ namespace Unity.ClusterDisplay
                 bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
 
                 var cmdLineFieldAttribute = 
-                    (isEmitter && overrideIsEmitter == null) || // If we are NOT running a test.
-                    (overrideIsEmitter != null && overrideIsEmitter.Value) ? // If were not runnming a test.
+                    isEmitter ?
                         typeof(EmitterCommandLineInjectionFieldAttribute) : 
                         typeof(RepeaterCommandLineInjectionFieldAttribute);
 
