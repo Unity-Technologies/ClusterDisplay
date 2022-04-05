@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay
         
         private void OnGUI()
         {
-            if (!ClusterSyncEditorConfig.TryGetInstanceOrCreate(out var editorConfig))
+            if (!ClusterSyncEditorConfig.TryGetInstance(out var editorConfig))
             {
                 return;
             }
