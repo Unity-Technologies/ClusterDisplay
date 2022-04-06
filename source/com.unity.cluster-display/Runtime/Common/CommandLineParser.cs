@@ -63,7 +63,7 @@ namespace Unity.ClusterDisplay
             /// For dynamically resolving the argument name instead of using m_ArgumentName.
             /// </summary>
             readonly ArgumentNameResolver argumentNameResolver; 
-            readonly string m_ArgumentName;
+            string m_ArgumentName;
 
             /// <summary>
             /// A switch that will either retrieve the argument using the resolver, or use the readonly
@@ -76,7 +76,8 @@ namespace Unity.ClusterDisplay
                     // If we have a name resolver, lets use that instead.
                     if (argumentNameResolver != null)
                     {
-                        return argumentNameResolver();
+                        m_ArgumentName = argumentNameResolver();
+                        return m_ArgumentName;
                     }
 
                     return m_ArgumentName;
@@ -156,6 +157,8 @@ namespace Unity.ClusterDisplay
 
             internal override void Reset ()
             {
+                ClusterDebug.Log($"Resetting cache for: \"{m_ArgumentName}\" cluster display argument.");
+
                 m_Cached = false;
                 m_Value = default(T);
             }
