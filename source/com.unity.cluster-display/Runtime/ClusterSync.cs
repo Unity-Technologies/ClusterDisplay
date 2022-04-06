@@ -129,7 +129,7 @@ namespace Unity.ClusterDisplay
 
             NodeState.Debugging = m_Debugging;
 
-            Application.targetFrameRate = CommandLineParser.targetFPS;
+            Application.targetFrameRate = CommandLineParser.targetFps.Value;
 
             stateSetter.SetIsActive(true);
             stateSetter.SetIsTerminated(false);
@@ -137,7 +137,7 @@ namespace Unity.ClusterDisplay
 
             onPreEnableClusterDisplay?.Invoke();
 
-            stateSetter.SetCLusterLogicEnabled(CommandLineParser.ClusterLogicSpecified);
+            stateSetter.SetCLusterLogicEnabled(CommandLineParser.clusterDisplayLogicSpecified);
             stateSetter.SetIsRepeater(false);
 
             if (!ClusterDisplayState.IsClusterLogicEnabled)
@@ -222,14 +222,14 @@ namespace Unity.ClusterDisplay
                     this,
                     new EmitterNode.Config
                     {
-                        headlessEmitter = CommandLineParser.HeadlessEmitter,
-                        repeatersDelayed = CommandLineParser.delayRepeaters,
-                        repeaterCount = CommandLineParser.repeaterCount,
+                        headlessEmitter = CommandLineParser.headlessEmitter.Value,
+                        repeatersDelayed = CommandLineParser.delayRepeaters.Value,
+                        repeaterCount = CommandLineParser.repeaterCount.Value,
                         udpAgentConfig = config
                     });
             
                 stateSetter.SetIsEmitter(true);
-                stateSetter.SetEmitterIsHeadless(CommandLineParser.HeadlessEmitter);
+            	stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
                 stateSetter.SetIsRepeater(false);
 
                 LocalNode.Start();
@@ -249,7 +249,7 @@ namespace Unity.ClusterDisplay
                 // Emitter command line format: -node nodeId ip:rxport,txport
                 m_LocalNode = new RepeaterNode(
                     this, 
-                    CommandLineParser.delayRepeaters, 
+                	CommandLineParser.delayRepeaters.Value,
                     config);
             
                 stateSetter.SetIsEmitter(false);
@@ -269,25 +269,24 @@ namespace Unity.ClusterDisplay
         {
             try
             {
-                m_Debugging = CommandLineParser.debugFlag;
+                m_Debugging = CommandLineParser.debugFlag.Value;
                 
-                if (CommandLineParser.TryParseHandshakeTimeout(out var handshakeTimeout))
-                    ClusterParams.RegisterTimeout = handshakeTimeout;
-                
-                if (CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout))
-                    ClusterParams.CommunicationTimeout = communicationTimeout;
+                if (CommandLineParser.handshakeTimeout.Defined)
+                    ClusterParams.RegisterTimeout = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Value);
+                if (CommandLineParser.communicationTimeout.Defined)
+                    ClusterParams.CommunicationTimeout = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Value);
 
                 var udpAgentConfig = new UDPAgent.Config
                 {
-                    nodeId = CommandLineParser.nodeID,
+                    nodeId = CommandLineParser.nodeID.Value,
                     ip = CommandLineParser.multicastAddress,
-                    rxPort = CommandLineParser.rxPort,
-                    txPort = CommandLineParser.txPort,
+                    rxPort = CommandLineParser.rxPort.Value,
+                    txPort = CommandLineParser.txPort.Value,
                     timeOut = 30,
-                    adapterName = CommandLineParser.adapterName
+                    adapterName = (string)CommandLineParser.adapterName.Value
                 };
                 
-                if (CommandLineParser.emitterSpecified)
+                if (CommandLineParser.emitterSpecified.Value)
                 {
                     if (!TryInitializeEmitter(udpAgentConfig))
                         return false;

@@ -241,6 +241,7 @@ namespace Unity.ClusterDisplay
 
         public void Dispose()
         {
+            ClusterDebug.Log($"Disposing {nameof(UDPAgent)}.");
             try
             {
                 m_CTS.Cancel();

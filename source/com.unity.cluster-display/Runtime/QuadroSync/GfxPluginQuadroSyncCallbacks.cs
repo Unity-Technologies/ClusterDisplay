@@ -10,7 +10,10 @@ namespace Unity.ClusterDisplay
     {
         static GfxPluginQuadroSyncCallbacks s_Instance;
         bool m_Initialized = false;
-        const int k_InitDelayFrames = 2;
+
+        const int k_DefaultInitDelayFrames = 10;
+        int m_InitDelayFrames;
+
         private int m_VSYNCMode;
 
         void Awake()
@@ -20,17 +23,26 @@ namespace Unity.ClusterDisplay
                 Destroy(s_Instance.gameObject);
             }
 
+            m_InitDelayFrames = CommandLineParser.quadroSyncInitDelay != null ? CommandLineParser.quadroSyncInitDelay.Value : k_DefaultInitDelayFrames;
             DontDestroyOnLoad(gameObject);
             s_Instance = this;
         }
 
         void OnEnable()
         {
-            StartCoroutine(DelayedInit());
-
             m_VSYNCMode = QualitySettings.vSyncCount;
             ClusterDebug.Log("Enabling VSYNC");
-            QualitySettings.vSyncCount = 0;
+            QualitySettings.vSyncCount = 1;
+
+            if (m_InitDelayFrames >= 0)
+            {
+                StartCoroutine(DelayedInit());
+            }
+
+            else
+            {
+                InitializeQuadroSync();
+            }
         }
 
         void OnDisable()
@@ -47,18 +59,26 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        void InitializeQuadroSync ()
+        {
+            if (m_Initialized)
+                return;
+
+            ClusterDebug.Log("Initializing Quadro Sync.");
+            Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
+            m_Initialized = true;
+        }
+
         IEnumerator DelayedInit()
         {
             if (!m_Initialized)
             {
-                for (int i = 0; i < k_InitDelayFrames; i++)
+                for (int i = 0; i < m_InitDelayFrames; i++)
                 {
                     yield return null;
                 }
 
-                ClusterDebug.Log("Initializing Quadro Sync.");
-                Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-                m_Initialized = true;
+                InitializeQuadroSync();
             }
         }
     }

@@ -6,3 +6,4 @@
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Tests")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Runtime")]
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Helpers")]
