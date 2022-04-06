@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Tests
             // from underneath us. The following lines of code are
             // workarounds to ensure we start the test with a "clean" slate.
             ClusterSync.onPreEnableClusterDisplay = null;
-            CommandLineParser.Reset();
+            CommandLineParser.Override(new List<string>());
 
             m_InterfaceName = SelectNic().Name;
         }
