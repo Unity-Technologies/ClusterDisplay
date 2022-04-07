@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb283b500fa7afd4bb3571a2cf251cbd, type: 3}
   m_Name: ClusterSyncEditorConfig
   m_EditorClassIdentifier: 
-  m_EditorInstanceIsEmitter: 0
-  m_EditorInstanceEmitterCmdLine: -emitterNode 0 2 224.0.1.0:25691,25692
-  m_EditorInstanceRepeaterCmdLine: -node 1 224.0.1.0:25692,25691
+  m_EditorInstanceIsEmitter: 1
+  m_EditorInstanceEmitterCmdLine: -adapterName Ethernet -gridMode 2x1 -emitterNode
+    0 1 224.0.1.0:25691,25692
+  m_EditorInstanceRepeaterCmdLine: -adapterName Ethernet -delayRepeaters -gridMode
+    2x1  -node 1 224.0.1.0:25692,25691
   m_IgnoreEditorCmdLine: 0
   m_UseTargetFramerate: 0
-  m_TargetFrameRate: 0
+  m_TargetFrameRate: 60

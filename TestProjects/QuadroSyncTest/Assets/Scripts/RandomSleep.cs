@@ -6,6 +6,11 @@ using UnityEngine;
 public class RandomSleep : MonoBehaviour
 {
     private int frame = 0;
+
+    private void Awake()
+    {
+    }
+
     private void Update()
     {
         frame++;

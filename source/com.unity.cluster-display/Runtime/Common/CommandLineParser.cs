@@ -253,7 +253,15 @@ namespace Unity.ClusterDisplay
 
         internal readonly static IntArgument targetFps                      = new IntArgument("-targetFps", tryParse: ParseTargetFPS);
         internal static readonly IntArgument overscan                       = new IntArgument("-overscan");
+		
+		internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
         internal static readonly IntArgument quadroSyncInitDelay            = new IntArgument("-quadroSyncInitDelay");
+		
+        internal static readonly FloatArgument linesThickness               = new FloatArgument("-linesThickness");
+        internal static readonly FloatArgument linesScale                   = new FloatArgument("-linesScale");
+        internal static readonly FloatArgument linesShiftSpeed              = new FloatArgument("-linesShiftSpeed");
+        internal static readonly FloatArgument linesAngle                   = new FloatArgument("-linesAngle");
+        internal static readonly FloatArgument linesRotationSpeed           = new FloatArgument("-linesRotationSpeed");
 
         internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
         internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);

@@ -11,11 +11,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         static ClusterBuildSettings()
         {
-            EditorApplication.update += Update;
+            // EditorApplication.update += Update;
         }
 
         static void Update()
         {
+            /*
             if (QualitySettings.vSyncCount != k_VSyncCount)
             {
                 QualitySettings.vSyncCount = k_VSyncCount;
@@ -23,6 +24,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             EditorApplication.update -= Update;
+            */
         }
     }
 }
