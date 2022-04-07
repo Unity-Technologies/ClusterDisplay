@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay
         internal readonly static IntArgument targetFps                      = new IntArgument("-targetFps", tryParse: ParseTargetFPS);
         internal static readonly IntArgument overscan                       = new IntArgument("-overscan");
 		
-		internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
+        internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
         internal static readonly IntArgument quadroSyncInitDelay            = new IntArgument("-quadroSyncInitDelay");
 		
         internal static readonly FloatArgument linesThickness               = new FloatArgument("-linesThickness");
