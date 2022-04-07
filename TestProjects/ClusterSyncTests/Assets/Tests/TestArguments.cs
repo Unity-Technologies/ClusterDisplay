@@ -17,6 +17,11 @@ namespace Unity.ClusterDisplay.Tests
                 "-delayRepeaters " +
                 "-gridSize 2x2 " +
                 "-bezel 4x4 " +
+                "-linesAngle 1.2345 " +
+                "-linesRotationSpeed 1.2345 " +
+                "-linesScale 1.2345 " +
+                "-linesShiftSpeed 1.2345 " +
+                "-linesThickness 1.2345 " +
                 "-physicalScreenSize 1920x1080 " +
                 "-targetFps 60 -overscan 128 " +
                 "-quadroSyncInitDelay 66 " +
@@ -72,6 +77,21 @@ namespace Unity.ClusterDisplay.Tests
 
             Assert.That(CommandLineParser.communicationTimeout.Defined);
             Assert.That(CommandLineParser.communicationTimeout.Value == 5000);
+
+            Assert.That(CommandLineParser.linesAngle.Defined);
+            Assert.That(CommandLineParser.linesAngle.Value == 1.2345f);
+
+            Assert.That(CommandLineParser.linesRotationSpeed.Defined);
+            Assert.That(CommandLineParser.linesRotationSpeed.Value == 1.2345f);
+
+            Assert.That(CommandLineParser.linesScale.Defined);
+            Assert.That(CommandLineParser.linesScale.Value == 1.2345f);
+
+            Assert.That(CommandLineParser.linesShiftSpeed.Defined);
+            Assert.That(CommandLineParser.linesShiftSpeed.Value == 1.2345f);
+
+            Assert.That(CommandLineParser.linesThickness.Defined);
+            Assert.That(CommandLineParser.linesThickness.Value == 1.2345f);
         }
 
         // A Test behaves as an ordinary method
