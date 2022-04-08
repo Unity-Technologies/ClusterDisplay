@@ -96,24 +96,40 @@ namespace Unity.ClusterDisplay.Tests
 
     static class NodeTestUtils
     {
-        public static bool RunStateUtil<T>(T state,
+        public static bool RunStateUpdateUntil<T>(T state,
             Func<T, bool> pred,
             int maxRetries = MockClusterSync.maxRetries) where T : NodeState =>
-            TestUtils.LoopUntil(() => pred(state) || state != state.ProcessFrame(false), MockClusterSync.maxRetries);
+            Utilities.LoopUntil(() => pred(state) || state != state.ProcessFrame(false), maxRetries);
+
+        public static bool RunStateLateUpdateUntil<T>(T state,
+            Func<T, bool> pred,
+            int maxRetries = MockClusterSync.maxRetries) where T : NodeState =>
+            Utilities.LoopUntil(() =>
+            {
+                var condition = pred(state);
+                if (!condition)
+                {
+                    state.ProcessLateFrame();
+                }
+                return condition;
+            }, maxRetries);
 
         public static NodeState RunStateUntilTransition(NodeState state, int maxRetries = MockClusterSync.maxRetries)
         {
             NodeState nextState = state;
-            TestUtils.LoopUntil(() =>
+            Utilities.LoopUntil(() =>
             {
                 nextState = state.ProcessFrame(false);
                 return nextState != state;
             }, maxRetries);
-            
+
             return nextState;
         }
 
-        public static bool RunStateUntilReady(NodeState state, int maxRetries = MockClusterSync.maxRetries) =>
-            RunStateUtil(state, nodeState => nodeState.ReadyToProceed, maxRetries);
+        public static bool RunStateUntilReadyToProceed(NodeState state, int maxRetries = MockClusterSync.maxRetries) =>
+            RunStateUpdateUntil(state, nodeState => nodeState.ReadyToProceed, maxRetries);
+
+        public static bool RunStateUntilReadyForNextFrame(NodeState state, int maxRetries = MockClusterSync.maxRetries) =>
+            RunStateLateUpdateUntil(state, nodeState => nodeState.ReadyForNextFrame, maxRetries);
     }
 }

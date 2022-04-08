@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Debug = UnityEngine.Debug;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         var header = new MessageHeader()
                         {
                             MessageType = EMessageType.HelloEmitter,
-                            DestinationIDs = UInt64.MaxValue, // Shout it out! make sure to also use DoesNotRequireAck
+                            DestinationIDs = BitVector.Ones, // Shout it out! make sure to also use DoesNotRequireAck
                             Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                         };
 
@@ -65,27 +65,24 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     }
 
                     // Wait for a response
-                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
+                    // Consume messages
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out _))
                     {
-                        // Consume messages
-                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        if (header.MessageType == EMessageType.WelcomeRepeater)
                         {
-                            if (header.MessageType == EMessageType.WelcomeRepeater)
+                            if (header.DestinationIDs[LocalNode.NodeID])
                             {
-                                if ((header.DestinationIDs & LocalNode.NodeIDMask) == LocalNode.NodeIDMask)
-                                {
-                                    ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
-                                    m_EmitterFound = true;
-                                    LocalNode.EmitterNodeId = header.OriginID;
-                                    LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
-                                    
-                                    return;
-                                }
+                                ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
+                                m_EmitterFound = true;
+                                LocalNode.EmitterNodeId = header.OriginID;
+                                LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
+
+                                return;
                             }
-                            
-                            else
-                                ProcessUnhandledMessage(header);
                         }
+
+                        else
+                            ProcessUnhandledMessage(header);
                     }
 
                     if (m_Timer.Elapsed > MaxTimeOut)

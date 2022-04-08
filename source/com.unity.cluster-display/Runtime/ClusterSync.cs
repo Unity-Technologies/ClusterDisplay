@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.LowLevel;
+using UnityEngine.PlayerLoop;
+using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -16,7 +15,7 @@ namespace Unity.ClusterDisplay
 {
     public static class ClusterSyncDebug
     {
-	public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
+        public static string GetDebugString() => ClusterSync.Instance.GetDebugString();
     }
 
     /// <summary>
@@ -26,13 +25,14 @@ namespace Unity.ClusterDisplay
     /// 
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [InitializeOnLoad]
-    #endif
-    internal class ClusterSync : 
+#endif
+    internal class ClusterSync :
         IClusterSyncState
     {
         static ClusterSync m_Instance;
+
         public static ClusterSync Instance
         {
             get
@@ -45,6 +45,7 @@ namespace Unity.ClusterDisplay
                 return m_Instance;
             }
         }
+
         static ClusterSync() => PreInitialize();
 
         [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -53,24 +54,26 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
             ClusterDisplayManager.preInitialize += () => Instance.RegisterDelegates();
         }
-        
-        
+
         private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
-        private DebugPerf m_FrameRatePerf = new DebugPerf();
-        private DebugPerf m_DelayMonitor = new DebugPerf();
+        private DebugPerf m_FrameRatePerf = new();
+        DebugPerf m_StartDelayMonitor = new();
+        DebugPerf m_EndDelayMonitor = new();
 
         internal delegate void OnClusterDisplayStateChange();
+
         static internal OnClusterDisplayStateChange onPreEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onPostEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onDisableCLusterDisplay;
-        
+
         [HideInInspector]
         bool m_Debugging;
-        
+
         /// <summary>
         /// Returns the number of frames rendered by the Cluster Display.
         /// </summary>
         public UInt64 CurrentFrameID => m_CurrentFrameID;
+
         private UInt64 m_CurrentFrameID;
         private bool m_NewFrame;
 
@@ -82,6 +85,23 @@ namespace Unity.ClusterDisplay
         internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
         /// <summary>
+        /// Gets or sets whether there is a layer of synchronization performed
+        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
+        /// </summary>
+        /// <remarks>
+        /// When set to <c>false</c>, all nodes signal when they are ready
+        /// to begin a new frame, and the emitter will wait until it receives
+        /// the signal from all nodes before allowing the cluster to proceed.
+        /// Set this to <c>true</c> if your hardware enforces this at a low level
+        /// and it is safe to bypass the wait.
+        /// </remarks>
+        public bool HasHardwareSync
+        {
+            get => LocalNode.HasHardwareSync;
+            set => LocalNode.HasHardwareSync = value;
+        }
+
+        /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
         /// </summary>
         public void ShutdownAllClusterNodes() => LocalNode?.BroadcastShutdownRequest(); // matters not who triggers it
@@ -90,7 +110,7 @@ namespace Unity.ClusterDisplay
         /// The Local Cluster Node Id.
         /// </summary>
         /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
-        public bool TryGetDynamicLocalNodeId (out byte dynamicLocalNodeId)
+        public bool TryGetDynamicLocalNodeId(out byte dynamicLocalNodeId)
         {
             if (!ClusterDisplayState.IsClusterLogicEnabled || LocalNode == null)
             {
@@ -106,26 +126,28 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms\r\n\tAverage Sync Overhead Time: {m_DelayMonitor.Average * 1000} ms\r\n";
+        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}" +
+            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
+            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
 
         private void RegisterDelegates()
         {
             ClusterDisplayManager.onEnable -= EnableClusterDisplay;
             ClusterDisplayManager.onEnable += EnableClusterDisplay;
-            
+
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
-            
+
             ClusterDisplayManager.onApplicationQuit -= Quit;
             ClusterDisplayManager.onApplicationQuit += Quit;
         }
 
         private void EnableClusterDisplay()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
-            #endif
+#endif
 
             NodeState.Debugging = m_Debugging;
 
@@ -164,53 +186,21 @@ namespace Unity.ClusterDisplay
             CleanUp();
         }
 
-        private void InjectSynchPointInPlayerLoop()
+        struct ClusterDisplayStartFrame { }
+
+        struct ClusterDisplayLateUpdate { }
+
+        void InjectSynchPointInPlayerLoop()
         {
-            // Inject into player loop
-            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
-            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
-
-            var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            if (initList.Any((x) => x.type == this.GetType()))
-                return; // We don't need to assert or insert anything if our loop already exists.
-
-            var indexOfPlayerUpdateTime = initList.FindIndex((x) =>
-                
-            #if UNITY_2020_2_OR_NEWER
-                x.type == typeof(UnityEngine.PlayerLoop.TimeUpdate.WaitForLastPresentationAndUpdateTime));
-            #else
-                x.type == typeof(UnityEngine.PlayerLoop.Initialization.PlayerUpdateTime));
-            #endif
-            
-            Assert.IsTrue(indexOfPlayerUpdateTime != -1, "Can't find insertion point in player loop for ClusterRendering system");
-
-            initList.Insert(indexOfPlayerUpdateTime + 1, new PlayerLoopSystem()
-            {
-                type = this.GetType(),
-                updateDelegate = SystemUpdate
-            });
-
-
-            newLoop.subSystemList[0].subSystemList = initList.ToArray();
-
-            PlayerLoop.SetPlayerLoop(newLoop);
-
+            RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
+                SystemUpdate);
+            RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        private void RemoveSynchPointFromPlayerLoop()
+        void RemoveSynchPointFromPlayerLoop()
         {
-            var newLoop = PlayerLoop.GetCurrentPlayerLoop();
-            Assert.IsTrue(newLoop.subSystemList != null && newLoop.subSystemList.Length > 0);
-
-            var initList = newLoop.subSystemList[0].subSystemList.ToList();
-            var entryToDel = initList.FindIndex((x) => x.type == this.GetType());
-            if (entryToDel == -1)
-                return; // If the subsystem does not doesn't contain our loop, then we don't need to remove it.
-            initList.RemoveAt(entryToDel);
-
-            newLoop.subSystemList[0].subSystemList = initList.ToArray();
-
-            PlayerLoop.SetPlayerLoop(newLoop);
+            DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
+            DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
         private bool TryInitializeEmitter(UDPAgent.Config config)
@@ -227,7 +217,7 @@ namespace Unity.ClusterDisplay
                         repeaterCount = CommandLineParser.repeaterCount.Value,
                         udpAgentConfig = config
                     });
-            
+
                 stateSetter.SetIsEmitter(true);
             	stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
                 stateSetter.SetIsRepeater(false);
@@ -251,7 +241,7 @@ namespace Unity.ClusterDisplay
                     this, 
                 	CommandLineParser.delayRepeaters.Value,
                     config);
-            
+
                 stateSetter.SetIsEmitter(false);
                 stateSetter.SetIsRepeater(true);
 
@@ -264,7 +254,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
         }
-        
+
         private bool TryInitialize()
         {
             try
@@ -298,12 +288,12 @@ namespace Unity.ClusterDisplay
 
                 throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.");
             }
-            
+
             catch (Exception e)
             {
                 ClusterDebug.LogError("Invalid command line arguments for configuring ClusterRendering.");
                 ClusterDebug.LogException(e);
-                
+
                 CleanUp();
                 return false;
             }
@@ -318,15 +308,26 @@ namespace Unity.ClusterDisplay
             m_LocalNode = null;
 
             RemoveSynchPointFromPlayerLoop();
-            
+
             m_CurrentFrameID = 0;
             stateSetter.SetIsActive(false);
             stateSetter.SetCLusterLogicEnabled(false);
-            
+
             ClusterDisplayManager.onEnable -= EnableClusterDisplay;
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
 
             onDisableCLusterDisplay?.Invoke();
+        }
+
+        void SystemLateUpdate()
+        {
+            m_EndDelayMonitor.RefPoint();
+            while (LocalNode is {ReadyForNextFrame: false} node)
+            {
+                node.DoLateFrame();
+            }
+
+            m_EndDelayMonitor.SampleNow();
         }
 
         private void SystemUpdate()
@@ -355,8 +356,8 @@ namespace Unity.ClusterDisplay
                     m_NewFrame = LocalNode.ReadyToProceed;
                     if (m_NewFrame)
                     {
-                        m_DelayMonitor.SampleNow();
-                        m_DelayMonitor.RefPoint();
+                        m_StartDelayMonitor.SampleNow();
+                        m_StartDelayMonitor.RefPoint();
                     }
                 }
                 else
@@ -365,12 +366,11 @@ namespace Unity.ClusterDisplay
                     m_FrameRatePerf.RefPoint();
 
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
-                    
+
                     var newFrame = true;
-                    m_DelayMonitor.RefPoint();
+                    m_StartDelayMonitor.RefPoint();
                     do
                     {
-
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!
@@ -381,21 +381,21 @@ namespace Unity.ClusterDisplay
                     } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
 
                     LocalNode.EndFrame();
-                    
-                    m_DelayMonitor.SampleNow();
+
+                    m_StartDelayMonitor.SampleNow();
                     ClusterDebug.Log(GetDebugString());
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
 
                     stateSetter.SetFrame(++m_CurrentFrameID);
                 }
             }
-            
+
             catch (Exception e)
             {
                 stateSetter.SetIsTerminated(true);
                 ClusterDebug.LogException(e);
             }
-            
+
             finally
             {
                 if (ClusterDisplayState.IsTerminated)
