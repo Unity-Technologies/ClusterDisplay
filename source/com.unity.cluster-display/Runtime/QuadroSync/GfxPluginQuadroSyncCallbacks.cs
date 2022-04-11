@@ -14,7 +14,8 @@ namespace Unity.ClusterDisplay
         const int k_DefaultInitDelayFrames = 10;
         int m_InitDelayFrames;
 
-        private int m_VSYNCMode;
+        int m_previousVsync;
+        int m_previewFrameQueue;
 
         void Awake()
         {
@@ -32,9 +33,11 @@ namespace Unity.ClusterDisplay
         {
             if (!CommandLineParser.disableQuadroSync.Defined || !CommandLineParser.disableQuadroSync.Value)
             {
-                m_VSYNCMode = QualitySettings.vSyncCount;
+                m_previousVsync = QualitySettings.vSyncCount;
+                m_previewFrameQueue = QualitySettings.maxQueuedFrames;
                 ClusterDebug.Log("Enabling VSYNC");
                 QualitySettings.vSyncCount = 1;
+                QualitySettings.maxQueuedFrames = 1;
 
                 if (m_InitDelayFrames >= 0)
                 {
@@ -57,8 +60,10 @@ namespace Unity.ClusterDisplay
                 Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncDispose, new IntPtr());
                 m_Initialized = false;
 
-                ClusterDebug.Log($"Reverting VSYNC mode to: {m_VSYNCMode}");
-                QualitySettings.vSyncCount = m_VSYNCMode;
+                ClusterDebug.Log($"Reverting VSYNC mode to: {m_previousVsync}");
+                QualitySettings.vSyncCount = m_previousVsync;
+                QualitySettings.maxQueuedFrames = m_previewFrameQueue;
+                ClusterSync.Instance.HasHardwareSync = false;
             }
         }
 
@@ -70,6 +75,7 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log("Initializing Quadro Sync.");
             Instance.ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
             m_Initialized = true;
+            ClusterSync.Instance.HasHardwareSync = true;
         }
 
         IEnumerator DelayedInit()

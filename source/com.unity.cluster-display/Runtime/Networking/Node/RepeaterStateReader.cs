@@ -51,7 +51,8 @@ namespace Unity.ClusterDisplay
 
         public void PumpMsg (ulong currentFrameID)
         {
-            while (nodeSyncState.NetworkAgent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
+            var agent = nodeSyncState.NetworkAgent;
+            while (agent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
             {
                 m_RxCount++;
 

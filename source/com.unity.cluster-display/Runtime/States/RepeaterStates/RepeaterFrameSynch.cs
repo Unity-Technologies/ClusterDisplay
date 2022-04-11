@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -36,7 +37,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
         
-        public ulong EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
+        public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
+
+        public bool HasHardwareSync { get; set; }
         
         public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
         {
@@ -97,15 +100,20 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private void OnEnteredNextFrame()
         {
             using (m_MarkerReadyToProcessFrame.Auto())
-                m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+            {
+                if (!HasHardwareSync)
+                {
+                    m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+                }
 
-            Stage = EStage.WaitForEmitterACK;
-            m_TsOfStage = m_Time.Elapsed;
+                Stage = EStage.WaitForEmitterACK;
+                m_TsOfStage = m_Time.Elapsed;
+            }
         }
         
         private void OnWaitForEmitterACK ()
         {
-            if (LocalNode.UdpAgent.AcksPending)
+            if (!HasHardwareSync && LocalNode.UdpAgent.HasPendingAcks)
             {
                 // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
                 return;
