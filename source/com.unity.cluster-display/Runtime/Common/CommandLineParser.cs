@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// This allows us to have array's of arguments abstractly.
         /// </summary>
-        internal abstract class BaseArgument 
+        internal abstract class BaseArgument
         {
             internal abstract void Reset();
         }
@@ -57,12 +57,12 @@ namespace Unity.ClusterDisplay
         {
             /// If this is true, this class will throw an error complaining
             /// that the argument is not defined to the user.
-            public readonly bool k_Required; 
+            public readonly bool k_Required;
 
             /// <summary>
             /// For dynamically resolving the argument name instead of using m_ArgumentName.
             /// </summary>
-            readonly ArgumentNameResolver argumentNameResolver; 
+            readonly ArgumentNameResolver argumentNameResolver;
             string m_ArgumentName;
 
             /// <summary>
@@ -112,14 +112,14 @@ namespace Unity.ClusterDisplay
                 if (!m_Cached) // We should only enter in here once.
                 {
                     // Return true or false if the argument was defined and we successfully parsed it.
-                    m_Defined = 
-                        tryParse != null && 
+                    m_Defined =
+                        tryParse != null &&
                         tryParse(ArgumentName, out m_Value);
 
                     m_Cached = true;
                 }
 
-                return m_Defined; 
+                return m_Defined;
             }
 
             internal BaseArgument(string argumentName, bool required = false)
@@ -265,8 +265,8 @@ namespace Unity.ClusterDisplay
         internal static readonly IntArgument handshakeTimeout               = new IntArgument("-handshakeTimeout");
         internal static readonly IntArgument communicationTimeout           = new IntArgument("-communicationTimeout");
 
-        internal readonly static BaseArgument[] baseArguments = new BaseArgument[] 
-        { 
+        internal readonly static BaseArgument[] baseArguments = new BaseArgument[]
+        {
             debugFlag,
             emitterSpecified,
             headlessEmitter,
@@ -280,7 +280,6 @@ namespace Unity.ClusterDisplay
             physicalScreenSize,
             targetFps,
             overscan,
-            quadroSyncInitDelay,
             adapterName,
             multicastAddress,
             rxPort,
@@ -358,9 +357,9 @@ namespace Unity.ClusterDisplay
 
                 bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
 
-                var cmdLineFieldAttribute = 
+                var cmdLineFieldAttribute =
                     isEmitter ?
-                        typeof(EmitterCommandLineInjectionFieldAttribute) : 
+                        typeof(EmitterCommandLineInjectionFieldAttribute) :
                         typeof(RepeaterCommandLineInjectionFieldAttribute);
 
                 var cmdLineField = GetField(type, cmdLineFieldAttribute, typeof(string));

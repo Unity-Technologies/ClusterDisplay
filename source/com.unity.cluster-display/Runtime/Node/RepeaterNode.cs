@@ -9,8 +9,7 @@ namespace Unity.ClusterDisplay
         public byte EmitterNodeId { get; set; }
         public BitVector EmitterNodeIdMask => BitVector.FromIndex(EmitterNodeId);
         public bool DelayRepeater { get; set; }
-        
-        
+
         public override bool HasHardwareSync
         {
             get => m_CurrentState is RepeaterSynchronization {HasHardwareSync: true};
@@ -31,7 +30,7 @@ namespace Unity.ClusterDisplay
 
         public override void Start()
         {
-            m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
+            m_CurrentState = HardwareSyncInitState.Create(clusterSync);
             m_CurrentState.EnterState(null);
         }
     }
