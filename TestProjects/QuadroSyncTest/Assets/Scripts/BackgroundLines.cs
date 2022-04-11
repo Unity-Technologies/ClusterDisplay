@@ -11,6 +11,12 @@ public class BackgroundLines : MonoBehaviour
     [SerializeField][HideInInspector]
     private MeshRenderer m_MeshRenderer;
 
+    static readonly CommandLineParser.FloatArgument linesThickness               = new CommandLineParser.FloatArgument("-linesThickness");
+    static readonly CommandLineParser.FloatArgument linesScale                   = new CommandLineParser.FloatArgument("-linesScale");
+    static readonly CommandLineParser.FloatArgument linesShiftSpeed              = new CommandLineParser.FloatArgument("-linesShiftSpeed");
+    static readonly CommandLineParser.FloatArgument linesAngle                   = new CommandLineParser.FloatArgument("-linesAngle");
+    static readonly CommandLineParser.FloatArgument linesRotationSpeed           = new CommandLineParser.FloatArgument("-linesRotationSpeed");
+
     private void OnValidate() => m_MeshRenderer = GetComponent<MeshRenderer>();
 
     private void OnEnable ()
@@ -22,20 +28,20 @@ public class BackgroundLines : MonoBehaviour
         if (m_Material == null)
             throw new System.Exception($"No material assigned to {nameof(MeshRenderer)} attached to: \"{gameObject.name}");
 
-        if (CommandLineParser.linesThickness.Defined)
-            m_Material.SetFloat("_LinesThickness", CommandLineParser.linesThickness.Value);
+        if (linesThickness.Defined)
+            m_Material.SetFloat("_LinesThickness", linesThickness.Value);
 
-        if (CommandLineParser.linesScale.Defined)
-            m_Material.SetFloat("_LinesScale", CommandLineParser.linesScale.Value);
+        if (linesScale.Defined)
+            m_Material.SetFloat("_LinesScale", linesScale.Value);
 
-        if (CommandLineParser.linesShiftSpeed.Defined)
-            m_Material.SetFloat("_LinesShiftSpeed", CommandLineParser.linesShiftSpeed.Value);
+        if (linesShiftSpeed.Defined)
+            m_Material.SetFloat("_LinesShiftSpeed", linesShiftSpeed.Value);
 
-        if (CommandLineParser.linesAngle.Defined)
-            m_Material.SetFloat("_LinesAngle", CommandLineParser.linesAngle.Value);
+        if (linesAngle.Defined)
+            m_Material.SetFloat("_LinesAngle", linesAngle.Value);
 
-        if (CommandLineParser.linesRotationSpeed.Defined)
-            m_Material.SetFloat("_LinesRotationSpeed", CommandLineParser.linesRotationSpeed.Value);
+        if (linesRotationSpeed.Defined)
+            m_Material.SetFloat("_LinesRotationSpeed", linesRotationSpeed.Value);
 
         m_MeshRenderer.material = m_Material;
     }
