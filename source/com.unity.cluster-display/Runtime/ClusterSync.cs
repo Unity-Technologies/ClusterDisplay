@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
 using System.Collections.Generic;
+using System.Linq;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -152,8 +153,10 @@ namespace Unity.ClusterDisplay
             RegisterDelegates();
         }
 
-        private readonly SyncState syncState = new SyncState();
+        readonly SyncState syncState = new SyncState();
         public IState state => syncState;
+
+        ClusterParams ? m_ClusterParams = null;
 
         private DebugPerf m_FrameRatePerf = new();
         DebugPerf m_StartDelayMonitor = new();
@@ -246,9 +249,9 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onApplicationQuit -= Quit;
         }
 
-        private void EnableClusterDisplay ()
+        internal void PrePopulateClusterParams ()
         {
-            var clusterParams = new ClusterParams
+            m_ClusterParams = new ClusterParams
             {
                 m_DebugFlag                 = CommandLineParser.debugFlag.Value,
                 m_ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
@@ -265,12 +268,20 @@ namespace Unity.ClusterDisplay
                 m_HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Value),
                 m_CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Value)
             };
+        }
 
-            EnableClusterDisplay(clusterParams);
+        private void EnableClusterDisplay ()
+        {
+            if (m_ClusterParams != null)
+                PrePopulateClusterParams();
+
+            EnableClusterDisplay(m_ClusterParams.Value);
         }
 
         private void EnableClusterDisplay(ClusterParams clusterParams)
         {
+            ClusterDebug.Log($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
+
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
@@ -328,6 +339,7 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
+            ClusterDebug.Log($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for emitter.");
             try
             {
                 // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
@@ -359,6 +371,8 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
         {
+            ClusterDebug.Log($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for repeater.");
+
             try
             {
                 // Emitter command line format: -node nodeId ip:rxport,txport
@@ -385,7 +399,6 @@ namespace Unity.ClusterDisplay
         }
 
         private bool TryInitialize(ClusterParams clusterParams)
-
         {
             try
             {
@@ -441,6 +454,7 @@ namespace Unity.ClusterDisplay
             UnRegisterDelegates();
 
             onDisableCLusterDisplay?.Invoke();
+            k_Instances.Remove(m_InstanceName);
         }
 
         void SystemLateUpdate()
@@ -454,7 +468,7 @@ namespace Unity.ClusterDisplay
             m_EndDelayMonitor.SampleNow();
         }
 
-        private void SystemUpdate()
+        private void PreFrame ()
         {
 #if ENABLE_INPUT_SYSTEM
             if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
@@ -464,66 +478,137 @@ namespace Unity.ClusterDisplay
                 Quit();
 #endif
 
+            if (m_Debugging)
+            {
+                if (m_NewFrame)
+                    m_FrameRatePerf.SampleNow();
+
+                if (!LocalNode.DoFrame(m_NewFrame))
+                {
+                    // Game Over!
+                    syncState.SetIsTerminated(true);
+                }
+
+                m_NewFrame = LocalNode.ReadyToProceed;
+                if (m_NewFrame)
+                {
+                    m_StartDelayMonitor.SampleNow();
+                    m_StartDelayMonitor.RefPoint();
+                }
+            }
+
+            else
+            {
+                m_FrameRatePerf.SampleNow();
+                m_FrameRatePerf.RefPoint();
+
+                ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
+
+                m_StartDelayMonitor.RefPoint();
+            }
+
+            newFrame = true;
+        }
+
+        private bool newFrame = false;
+
+        private void OnException (Exception e)
+        {
+            syncState.SetIsTerminated(true);
+            ClusterDebug.LogException(e);
+        }
+
+        private void OnFinally ()
+        {
+            if (ClusterDisplayState.IsTerminated)
+                CleanUp();
+        }
+
+        private void DoFrame (out bool readyToProceed, out bool isTerminated)
+        {
+            readyToProceed = LocalNode.ReadyToProceed;
+            isTerminated = ClusterDisplayState.IsTerminated;
+
             try
             {
-                if (m_Debugging)
+                if (!LocalNode.DoFrame(newFrame))
                 {
-                    if (m_NewFrame)
-                        m_FrameRatePerf.SampleNow();
-
-                    if (!LocalNode.DoFrame(m_NewFrame))
-                    {
-                        // Game Over!
-                        syncState.SetIsTerminated(true);
-                    }
-
-                    m_NewFrame = LocalNode.ReadyToProceed;
-                    if (m_NewFrame)
-                    {
-                        m_StartDelayMonitor.SampleNow();
-                        m_StartDelayMonitor.RefPoint();
-                    }
+                    // Game Over!
+                    syncState.SetIsTerminated(true);
                 }
-                else
-                {
-                    m_FrameRatePerf.SampleNow();
-                    m_FrameRatePerf.RefPoint();
 
-                    ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
-
-                    var newFrame = true;
-                    m_StartDelayMonitor.RefPoint();
-                    do
-                    {
-                        if (!LocalNode.DoFrame(newFrame))
-                        {
-                            // Game Over!
-                            syncState.SetIsTerminated(true);
-                        }
-
-                        newFrame = false;
-                    } while (!LocalNode.ReadyToProceed && !ClusterDisplayState.IsTerminated);
-
-                    LocalNode.EndFrame();
-
-                    m_StartDelayMonitor.SampleNow();
-                    ClusterDebug.Log(GetDebugString());
-                    ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
-
-                    syncState.SetFrame(++m_CurrentFrameID);
-                }
+                readyToProceed = LocalNode.ReadyToProceed;
+                isTerminated = ClusterDisplayState.IsTerminated;
+                newFrame = false;
             }
 
             catch (Exception e)
             {
-                syncState.SetIsTerminated(true);
-                ClusterDebug.LogException(e);
+                OnException(e);
             }
 
             finally
             {
-                if (ClusterDisplayState.IsTerminated)
-                    CleanUp();
+                OnFinally();
+            }
+
+        }
+
+        private void PostFrame ()
+        {
+            try
+            {
+                LocalNode.EndFrame();
+
+                m_StartDelayMonitor.SampleNow();
+                ClusterDebug.Log(GetDebugString());
+                ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
+
+                syncState.SetFrame(++m_CurrentFrameID);
+            }
+
+            catch (Exception e)
+            {
+                OnException(e);
+            }
+
+            finally
+            {
+                OnFinally();
+            }
+        }
+
+        private static void SystemUpdate()
+        {
+            var instances = k_Instances.Values.ToArray();
+            bool allReadyToProceed, allIsTerminated;
+
+            foreach (var instance in instances)
+            {
+                instance.PreFrame();
+            }
+
+            do
+            {
+                allReadyToProceed = true;
+                allIsTerminated = false;
+
+                foreach (var instance in instances)
+                {
+                    if (instance.m_Debugging)
+                        continue;
+
+                    instance.DoFrame(out var readyToProceed, out var isTermindated);
+
+                    allReadyToProceed &= readyToProceed;
+                    allIsTerminated &= isTermindated;
+                }
+
+            } while (allReadyToProceed && !allIsTerminated);
+
+            foreach (var instance in instances)
+            {
+                instance.PostFrame();
             }
         }
     }

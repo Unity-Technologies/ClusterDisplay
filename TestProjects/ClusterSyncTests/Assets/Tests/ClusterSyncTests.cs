@@ -77,8 +77,9 @@ namespace Unity.ClusterDisplay.Tests
 
             CommandLineParser.Override(args);
 
-            var clusterSync = ClusterSync.GetUniqueInstance("Emitter");
+            var emitterClusterSync = ClusterSync.GetUniqueInstance("Emitter");
             ClusterSync.PushInstance("Emitter");
+            emitterClusterSync.PrePopulateClusterParams();
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
@@ -91,7 +92,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsActive, Is.True);
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
 
-            var node = clusterSync.LocalNode as EmitterNode;
+            var node = emitterClusterSync.LocalNode as EmitterNode;
 
             Assert.That(node, Is.Not.Null);
             Assert.That(node.m_RemoteNodes.Count, Is.Zero);
@@ -103,11 +104,11 @@ namespace Unity.ClusterDisplay.Tests
                 new RolePublication {NodeRole = ENodeRole.Repeater});
 
             testAgent.PublishMessage(header, rawMsg);
-            ClusterSync.PopInstance();
 
             yield return null;
 
             Assert.That(node.m_RemoteNodes.Count, Is.EqualTo(numRepeaters));
+            ClusterSync.PopInstance();
         }
 
         [UnityTest]
@@ -122,8 +123,9 @@ namespace Unity.ClusterDisplay.Tests
             args.Add(m_InterfaceName);
 
             CommandLineParser.Override(args);
-            var clusterSync = ClusterSync.GetUniqueInstance("Repeater");
+            var repeaterClusterSync = ClusterSync.GetUniqueInstance("Repeater");
             ClusterSync.PushInstance("Repeater");
+            repeaterClusterSync.PrePopulateClusterParams();
             
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
             
@@ -137,7 +139,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsActive, Is.True);
             Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_RepeaterId));
 
-            var node = clusterSync.LocalNode as RepeaterNode;
+            var node = repeaterClusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
 
             var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
@@ -168,6 +170,42 @@ namespace Unity.ClusterDisplay.Tests
             yield return null;
 
             Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+            ClusterSync.PopInstance();
+        }
+
+        [UnityTest]
+        public IEnumerator TestEmitterAndRepeater()
+        {
+            const int numRepeaters = 1;
+            var emitterArgsString =
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+
+            var emitterArgs = emitterArgsString.Split(" ").ToList();
+            emitterArgs.Add("-adapterName");
+            emitterArgs.Add(m_InterfaceName);
+
+            CommandLineParser.Override(emitterArgs);
+
+            var emitterClusterSync = ClusterSync.GetUniqueInstance("Emitter");
+            emitterClusterSync.PrePopulateClusterParams();
+
+            var repeaterArgsString =
+                $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+            
+            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
+            repeaterArgs.Add("-adapterName");
+            repeaterArgs.Add(m_InterfaceName);
+
+            CommandLineParser.Override(repeaterArgs);
+            var repeaterClusterSync = ClusterSync.GetUniqueInstance("Repeater");
+            repeaterClusterSync.PrePopulateClusterParams();
+
+            m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
+            
+            yield return null;
+
             ClusterSync.PopInstance();
         }
 
