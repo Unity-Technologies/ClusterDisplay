@@ -12,8 +12,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private bool m_EmitterFound;
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
-        
-        public RegisterWithEmitter(IClusterSyncState clusterSync) : base(clusterSync)
+
+        public RegisterWithEmitter(IClusterSyncState clusterSync)
+            : base(clusterSync)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
@@ -25,18 +26,16 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override NodeState DoFrame( bool frameAdvance)
+        protected override NodeState DoFrame(bool frameAdvance)
         {
             if (m_EmitterFound)
             {
-                var nextState = new RepeaterSynchronization(clusterSync){MaxTimeOut = ClusterParams.CommunicationTimeout};
-                nextState.EnterState(this);
-                return nextState;
+                return new RepeaterSynchronization(clusterSync) {MaxTimeOut = ClusterParams.CommunicationTimeout};
             }
 
             return this;
         }
-        
+
         public override bool ReadyToProceed => false;
 
         private void ProcessMessages(CancellationToken ctk)
@@ -55,7 +54,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                             Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                         };
 
-                        var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
+                        var roleInfo = new RolePublication {NodeRole = ENodeRole.Repeater};
                         var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
                         roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
 
@@ -91,17 +90,12 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-
-            }
+            catch (OperationCanceledException) { }
             catch (Exception e)
             {
-                var err = new FatalError( clusterSync, $"Error occured while registering with emitter node: {e.Message}");
+                var err = new FatalError(clusterSync, $"Error occured while registering with emitter node: {e.Message}");
                 PendingStateChange = err;
             }
         }
-
     }
-
 }
