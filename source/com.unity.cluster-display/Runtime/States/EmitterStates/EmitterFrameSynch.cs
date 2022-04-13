@@ -127,10 +127,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         protected override void DoLateFrame()
         {
             base.DoLateFrame();
-            if (Stage == EStage.WaitForRepeatersToACK)
-            {
-                OnWaitForRepeatersToACK();
-            }
+            OnWaitForRepeatersToACK();
         }
 
         private void OnWaitOnRepeatersNextFrame()
