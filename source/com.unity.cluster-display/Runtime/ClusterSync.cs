@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
     public static class ClusterSyncDebug
     {
         public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
-        public static string GetDebugString(string instanceName) => ClusterSync.GetInstance(instanceName).GetDebugString();
+        public static string GetDebugString(string instanceName) => ClusterSync.GetUniqueInstance(instanceName).GetDebugString();
     }
 
     /// <summary>
@@ -33,52 +33,128 @@ namespace Unity.ClusterDisplay
     internal class ClusterSync :
         IClusterSyncState
     {
+        internal interface IState
+        {
+            public bool IsEmitter { get; }
+            public bool EmitterIsHeadless { get; }
+            public bool IsRepeater { get; }
+            public bool IsClusterLogicEnabled { get; }
+            public bool IsActive { get; }
+            public bool IsTerminated { get; }
+            public ulong Frame { get; }
+            public ushort NodeID { get; }
+        }
+
+        private class SyncState : IState
+        {
+            private bool m_IsEmitter;
+            private bool m_EmitterIsHeadless;
+            private bool m_IsRepeater;
+            private bool m_IsClusterLogicEnabled;
+            private bool m_IsActive;
+            private bool m_IsTerminated;
+            private ulong m_Frame;
+            private ushort m_NodeID;
+
+            public bool IsEmitter => m_IsEmitter;
+            public bool EmitterIsHeadless => !Application.isEditor && m_EmitterIsHeadless;
+            public bool IsRepeater => m_IsRepeater;
+            public bool IsClusterLogicEnabled => m_IsClusterLogicEnabled;
+            public bool IsActive => m_IsActive;
+            public bool IsTerminated => m_IsTerminated;
+            public ulong Frame => m_Frame;
+            public ushort NodeID => m_NodeID;
+
+            public void SetIsActive(bool isActive) => m_IsActive = isActive;
+            public void SetCLusterLogicEnabled(bool clusterLogicEnabled) => m_IsClusterLogicEnabled = clusterLogicEnabled;
+            public void SetIsEmitter(bool isEmitter) => m_IsEmitter = isEmitter;
+            public void SetEmitterIsHeadless(bool headlessEmitter) => m_EmitterIsHeadless = headlessEmitter;
+            public void SetIsRepeater(bool isRepeater) => m_IsRepeater = isRepeater;
+            public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
+            public void SetFrame(ulong frame) => m_Frame = frame;
+            public void SetNodeID (ushort nodeId) => m_NodeID = nodeId;
+        }
+
         readonly static Dictionary<string, ClusterSync> k_Instances = new Dictionary<string, ClusterSync>();
         const string k_DefaultName = "DefaultClusterSync";
 
         public string InstanceName => m_InstanceName;
-        private readonly string m_InstanceName;
+        readonly string m_InstanceName;
 
-        public static ClusterSync Instance => GetInstance(k_DefaultName);
-        public static ClusterSync GetInstance (string instanceName)
+        static string m_InstanceInContext = k_DefaultName;
+
+        internal static void PushInstance(string instanceName)
         {
             if (string.IsNullOrEmpty(instanceName))
                 throw new ArgumentNullException(nameof(instanceName));
 
+            if (!k_Instances.ContainsKey(instanceName))
+                throw new Exception($"Instance: \"{instanceName}\" does not exist.");
+
+            m_InstanceInContext = instanceName;
+        }
+
+        internal static bool InstanceExists (string instanceName)
+        {
+            if (string.IsNullOrEmpty(instanceName))
+                throw new ArgumentNullException(nameof(instanceName));
+            return k_Instances.ContainsKey(instanceName);
+        }
+
+        internal static void PopInstance () => m_InstanceInContext = k_DefaultName;
+
+        public static ClusterSync Instance => GetUniqueInstance(m_InstanceInContext);
+        public static ClusterSync GetUniqueInstance (string instanceName)
+        {
+            if (string.IsNullOrEmpty(instanceName))
+            {
+                throw new ArgumentNullException(nameof(instanceName));
+            }
+
             if (!k_Instances.TryGetValue(instanceName, out var instance))
             {
-                return CreateInstance(k_DefaultName);
+                return CreateInstance(instanceName);
             }
 
             return instance;
         }
 
-        private static ClusterSync CreateInstance (string instanceName)
+        private static ClusterSync CreateInstance (string instanceName) =>
+            new ClusterSync(instanceName);
+
+        internal static void ClearInstances ()
         {
-            var instance = new ClusterSync(instanceName);
-            k_Instances.Add(instanceName, instance);
-            return instance;
+            foreach (var instance in k_Instances.Values)
+            {
+                instance.CleanUp();
+            }
+
+            k_Instances.Clear();
         }
 
 #if !UNITY_INCLUDE_TESTS
         static ClusterSync() => PreInitialize();
 
         [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void PreInitialize() => PreInitialize(k_DefaultName);
-
-        internal static void PreInitialize(string instanceName)
+        internal static void PreInitialize()
         {
             ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
-            ClusterDisplayManager.preInitialize += () => GetInstance(instanceName).RegisterDelegates();
+            ClusterDisplayManager.preInitialize += () =>
+                GetUniqueInstance(k_DefaultName).RegisterDelegates();
         }
 #endif
 
         private ClusterSync (string instanceName)
         {
             m_InstanceName = instanceName;
+            k_Instances.Add(instanceName, this);
+
             RegisterDelegates();
         }
-        private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
+
+        private readonly SyncState syncState = new SyncState();
+        public IState state => syncState;
+
         private DebugPerf m_FrameRatePerf = new();
         DebugPerf m_StartDelayMonitor = new();
         DebugPerf m_EndDelayMonitor = new();
@@ -156,14 +232,18 @@ namespace Unity.ClusterDisplay
 
         private void RegisterDelegates()
         {
-            ClusterDisplayManager.onEnable -= EnableClusterDisplay;
+            UnRegisterDelegates();
+
             ClusterDisplayManager.onEnable += EnableClusterDisplay;
-
-            ClusterDisplayManager.onDisable -= DisableClusterDisplay;
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
-
-            ClusterDisplayManager.onApplicationQuit -= Quit;
             ClusterDisplayManager.onApplicationQuit += Quit;
+        }
+
+        private void UnRegisterDelegates()
+        {
+            ClusterDisplayManager.onEnable -= EnableClusterDisplay;
+            ClusterDisplayManager.onDisable -= DisableClusterDisplay;
+            ClusterDisplayManager.onApplicationQuit -= Quit;
         }
 
         private void EnableClusterDisplay ()
@@ -174,12 +254,14 @@ namespace Unity.ClusterDisplay
                 m_ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
                 m_EmitterSpecified          = CommandLineParser.emitterSpecified.Value,
                 m_NodeID                    = CommandLineParser.nodeID.Value,
+                m_RepeaterCount             = CommandLineParser.emitterSpecified.Value ? CommandLineParser.repeaterCount.Value : 0,
                 m_RXPort                    = CommandLineParser.rxPort.Value,
                 m_TXPort                    = CommandLineParser.txPort.Value,
                 m_MulticastAddress          = CommandLineParser.multicastAddress.Value,
                 m_AdapterName               = CommandLineParser.adapterName.Value,
                 m_TargetFps                 = CommandLineParser.targetFps.Value,
                 m_DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
+                m_HeadlessEmitter           = CommandLineParser.headlessEmitter.Value,
                 m_HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Value),
                 m_CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Value)
             };
@@ -198,25 +280,26 @@ namespace Unity.ClusterDisplay
 
             Application.targetFrameRate = clusterParams.m_TargetFps;
 
-            stateSetter.SetIsActive(true);
-            stateSetter.SetIsTerminated(false);
-            stateSetter.SetCLusterLogicEnabled(false);
+            syncState.SetIsActive(true);
+            syncState.SetIsTerminated(false);
+            syncState.SetCLusterLogicEnabled(false);
+            syncState.SetNodeID(clusterParams.m_NodeID);
 
             onPreEnableClusterDisplay?.Invoke();
 
-            stateSetter.SetCLusterLogicEnabled(clusterParams.m_ClusterLogicSpecified);
-            stateSetter.SetIsRepeater(false);
+            syncState.SetCLusterLogicEnabled(clusterParams.m_ClusterLogicSpecified);
+            syncState.SetIsRepeater(false);
 
             if (!ClusterDisplayState.IsClusterLogicEnabled)
             {
                 ClusterDebug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
-                stateSetter.SetIsEmitter(true);
+                syncState.SetIsEmitter(true);
                 return;
             }
 
             if (!TryInitialize(clusterParams))
             {
-                stateSetter.SetCLusterLogicEnabled(false);
+                syncState.SetCLusterLogicEnabled(false);
                 return;
             }
 
@@ -224,12 +307,7 @@ namespace Unity.ClusterDisplay
             onPostEnableClusterDisplay?.Invoke();
         }
 
-        private void DisableClusterDisplay()
-        {
-            if (!ClusterDisplayState.IsClusterLogicEnabled)
-                return;
-            CleanUp();
-        }
+        private void DisableClusterDisplay() => CleanUp();
 
         struct ClusterDisplayStartFrame { }
 
@@ -264,9 +342,9 @@ namespace Unity.ClusterDisplay
                         udpAgentConfig      = config
                     });
             
-                stateSetter.SetIsEmitter(true);
-                stateSetter.SetEmitterIsHeadless(clusterParams.m_HeadlessEmitter);
-                stateSetter.SetIsRepeater(false);
+                syncState.SetIsEmitter(true);
+                syncState.SetEmitterIsHeadless(clusterParams.m_HeadlessEmitter);
+                syncState.SetIsRepeater(false);
 
 
                 LocalNode.Start();
@@ -290,11 +368,11 @@ namespace Unity.ClusterDisplay
                     {
                         handshakeTimeout = clusterParams.m_HandshakeTimeout,
                         delayRepeater = clusterParams.m_DelayRepeaters,
-                        config = config,
+                        udpAgentConfig = config,
                     });
 
-                stateSetter.SetIsEmitter(false);
-                stateSetter.SetIsRepeater(true);
+                syncState.SetIsEmitter(false);
+                syncState.SetIsRepeater(true);
 
                 LocalNode.Start();
                 return true;
@@ -357,11 +435,10 @@ namespace Unity.ClusterDisplay
             RemoveSynchPointFromPlayerLoop();
 
             m_CurrentFrameID = 0;
-            stateSetter.SetIsActive(false);
-            stateSetter.SetCLusterLogicEnabled(false);
+            syncState.SetIsActive(false);
+            syncState.SetCLusterLogicEnabled(false);
 
-            ClusterDisplayManager.onEnable -= EnableClusterDisplay;
-            ClusterDisplayManager.onDisable -= DisableClusterDisplay;
+            UnRegisterDelegates();
 
             onDisableCLusterDisplay?.Invoke();
         }
@@ -397,7 +474,7 @@ namespace Unity.ClusterDisplay
                     if (!LocalNode.DoFrame(m_NewFrame))
                     {
                         // Game Over!
-                        stateSetter.SetIsTerminated(true);
+                        syncState.SetIsTerminated(true);
                     }
 
                     m_NewFrame = LocalNode.ReadyToProceed;
@@ -421,7 +498,7 @@ namespace Unity.ClusterDisplay
                         if (!LocalNode.DoFrame(newFrame))
                         {
                             // Game Over!
-                            stateSetter.SetIsTerminated(true);
+                            syncState.SetIsTerminated(true);
                         }
 
                         newFrame = false;
@@ -433,13 +510,13 @@ namespace Unity.ClusterDisplay
                     ClusterDebug.Log(GetDebugString());
                     ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
 
-                    stateSetter.SetFrame(++m_CurrentFrameID);
+                    syncState.SetFrame(++m_CurrentFrameID);
                 }
             }
 
             catch (Exception e)
             {
-                stateSetter.SetIsTerminated(true);
+                syncState.SetIsTerminated(true);
                 ClusterDebug.LogException(e);
             }
 

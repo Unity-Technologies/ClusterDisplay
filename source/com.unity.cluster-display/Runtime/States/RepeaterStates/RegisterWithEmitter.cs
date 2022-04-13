@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -13,10 +13,10 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        private TimeSpan m_CommunicationTimeout;
+        private TimeSpan m_HandshakeTimeout;
         public struct Config
         {
-            public TimeSpan communicationTimeout;
+            public TimeSpan handshakeTimeout;
         }
         
         public RegisterWithEmitter(IClusterSyncState clusterSync, Config config) : base(clusterSync)
@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_Timer = new Stopwatch();
             m_Timer.Start();
 
-            m_CommunicationTimeout = config.communicationTimeout;
+            m_HandshakeTimeout = config.handshakeTimeout;
         }
 
         public override void InitState()
@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             if (m_EmitterFound)
             {
-                var nextState = new RepeaterSynchronization(clusterSync) { MaxTimeOut = m_CommunicationTimeout };
+                var nextState = new RepeaterSynchronization(clusterSync) { MaxTimeOut = m_HandshakeTimeout };
                 nextState.EnterState(this);
                 return nextState;
             }

@@ -27,6 +27,7 @@ namespace Unity.ClusterDisplay.Tests
             // workarounds to ensure we start the test with a "clean" slate.
             ClusterSync.onPreEnableClusterDisplay = null;
             CommandLineParser.Override(new List<string>());
+            ClusterSync.ClearInstances();
 
             m_InterfaceName = SelectNic().Name;
         }
@@ -76,6 +77,9 @@ namespace Unity.ClusterDisplay.Tests
 
             CommandLineParser.Override(args);
 
+            var clusterSync = ClusterSync.GetUniqueInstance("Emitter");
+            ClusterSync.PushInstance("Emitter");
+
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
@@ -87,7 +91,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsActive, Is.True);
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
 
-            var clusterSync = ClusterSync.Instance;
             var node = clusterSync.LocalNode as EmitterNode;
 
             Assert.That(node, Is.Not.Null);
@@ -100,7 +103,10 @@ namespace Unity.ClusterDisplay.Tests
                 new RolePublication {NodeRole = ENodeRole.Repeater});
 
             testAgent.PublishMessage(header, rawMsg);
+            ClusterSync.PopInstance();
+
             yield return null;
+
             Assert.That(node.m_RemoteNodes.Count, Is.EqualTo(numRepeaters));
         }
 
@@ -114,10 +120,12 @@ namespace Unity.ClusterDisplay.Tests
             var args = argString.Split(" ").ToList();
             args.Add("-adapterName");
             args.Add(m_InterfaceName);
+
+            CommandLineParser.Override(args);
+            var clusterSync = ClusterSync.GetUniqueInstance("Repeater");
+            ClusterSync.PushInstance("Repeater");
             
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
-            
-            CommandLineParser.Override(args);
             
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
@@ -128,8 +136,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsRepeater, Is.True);
             Assert.That(ClusterDisplayState.IsActive, Is.True);
             Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_RepeaterId));
-
-            var clusterSync = ClusterSync.Instance;
 
             var node = clusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
@@ -160,7 +166,9 @@ namespace Unity.ClusterDisplay.Tests
             testAgent.PublishMessage(txHeader, lastFrameMsg);
 
             yield return null;
+
             Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+            ClusterSync.PopInstance();
         }
 
         [TearDown]
@@ -171,7 +179,19 @@ namespace Unity.ClusterDisplay.Tests
                 Object.Destroy(m_TestGameObject);
             }
 
-            ClusterSync.Instance?.ShutdownAllClusterNodes();
+            if (ClusterSync.InstanceExists("Emitter"))
+            {
+                ClusterSync.PushInstance("Emitter");
+                ClusterSync.Instance.ShutdownAllClusterNodes();
+            }
+
+            if (ClusterSync.InstanceExists("Repeater"))
+            {
+                ClusterSync.PushInstance("Repeater");
+                ClusterSync.Instance.ShutdownAllClusterNodes();
+            }
+
+            ClusterSync.ClearInstances();
         }
     }
 }

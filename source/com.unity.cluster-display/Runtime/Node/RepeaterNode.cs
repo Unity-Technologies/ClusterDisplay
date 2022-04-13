@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.ClusterDisplay.RepeaterStateMachine;
 using Unity.ClusterDisplay.Utils;
 
@@ -24,28 +24,25 @@ namespace Unity.ClusterDisplay
         }
 
         TimeSpan m_HandshakeTimeout;
-        TimeSpan m_CommunicationTimeout;
 
         public struct Config
         {
             public TimeSpan handshakeTimeout;
-            public TimeSpan communicationTimeout;
 
             public bool delayRepeater;
-            public UDPAgent.Config config;
+            public UDPAgent.Config udpAgentConfig;
         }
 
         public RepeaterNode(IClusterSyncState clusterSync, Config config)
-            : base(clusterSync, config.config)
+            : base(clusterSync, config.udpAgentConfig)
         {
             DelayRepeater = config.delayRepeater;
             m_HandshakeTimeout = config.handshakeTimeout;
-            m_CommunicationTimeout = config.communicationTimeout;
         }
 
         public override void Start()
         {
-            m_CurrentState = new RegisterWithEmitter(clusterSync, new RegisterWithEmitter.Config { communicationTimeout = m_CommunicationTimeout });
+            m_CurrentState = new RegisterWithEmitter(clusterSync, new RegisterWithEmitter.Config { handshakeTimeout = m_HandshakeTimeout });
             m_CurrentState.EnterState(null);
         }
     }
