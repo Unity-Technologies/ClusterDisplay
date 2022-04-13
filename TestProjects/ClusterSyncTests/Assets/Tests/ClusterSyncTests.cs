@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
@@ -110,15 +111,13 @@ namespace Unity.ClusterDisplay.Tests
             var argString =
                 $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-            
+
             var args = argString.Split(" ").ToList();
             args.Add("-adapterName");
             args.Add(m_InterfaceName);
-            
-            using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
-            
+
             CommandLineParser.Override(args);
-            
+
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
             Assert.That(ClusterDisplayState.IsActive, Is.True);
@@ -134,33 +133,34 @@ namespace Unity.ClusterDisplay.Tests
             var node = clusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
 
-            var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
-            Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-            Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
-            Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
-
-            // Send an acceptance message
-            testAgent.PublishMessage(new MessageHeader
+            // Note: we need to run handshake logic in a thread because ClusterSync
+            // blocks the game loop.
+            var testHandshake = Task.Run(() =>
             {
-                MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = BitVector.FromIndex(k_RepeaterId),
+                using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
+                var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
+                Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
+                Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
+                Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
+
+                // Send an acceptance message
+                testAgent.PublishMessage(new MessageHeader {MessageType = EMessageType.WelcomeRepeater, DestinationIDs = BitVector.FromIndex(k_RepeaterId),});
+
+                // Send a GO message
+                var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
+                    new byte[] {k_RepeaterId},
+                    EMessageType.LastFrameData,
+                    new EmitterLastFrameData() {FrameNumber = 0},
+                    MessageHeader.EFlag.Broadcast,
+                    new byte[] {0}); // trailing 0 to indicate empty state data
+
+                testAgent.PublishMessage(txHeader, lastFrameMsg);
+
+                Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
             });
 
-            // Send a GO message
-            var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
-                new byte[] {k_RepeaterId},
-                EMessageType.LastFrameData,
-                new EmitterLastFrameData()
-                {
-                    FrameNumber = 0
-                },
-                MessageHeader.EFlag.Broadcast,
-                new byte[] {0}); // trailing 0 to indicate empty state data
-
-            testAgent.PublishMessage(txHeader, lastFrameMsg);
-
             yield return null;
-            Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+            Assert.IsTrue(testHandshake.Wait(MockClusterSync.timeoutSeconds * 1000));
         }
 
         [TearDown]
