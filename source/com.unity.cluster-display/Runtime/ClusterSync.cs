@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
+using System.Collections.Generic;
 
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -15,7 +16,8 @@ namespace Unity.ClusterDisplay
 {
     public static class ClusterSyncDebug
     {
-        public static string GetDebugString() => ClusterSync.Instance.GetDebugString();
+        public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
+        public static string GetDebugString(string instanceName) => ClusterSync.GetInstance(instanceName).GetDebugString();
     }
 
     /// <summary>
@@ -31,30 +33,51 @@ namespace Unity.ClusterDisplay
     internal class ClusterSync :
         IClusterSyncState
     {
-        static ClusterSync m_Instance;
+        readonly static Dictionary<string, ClusterSync> k_Instances = new Dictionary<string, ClusterSync>();
+        const string k_DefaultName = "DefaultClusterSync";
 
-        public static ClusterSync Instance
+        public string InstanceName => m_InstanceName;
+        private readonly string m_InstanceName;
+
+        public static ClusterSync Instance => GetInstance(k_DefaultName);
+        public static ClusterSync GetInstance (string instanceName)
         {
-            get
-            {
-                if (m_Instance == null)
-                {
-                    m_Instance = new ClusterSync();
-                }
+            if (string.IsNullOrEmpty(instanceName))
+                throw new ArgumentNullException(nameof(instanceName));
 
-                return m_Instance;
+            if (!k_Instances.TryGetValue(instanceName, out var instance))
+            {
+                return CreateInstance(k_DefaultName);
             }
+
+            return instance;
         }
 
+        private static ClusterSync CreateInstance (string instanceName)
+        {
+            var instance = new ClusterSync(instanceName);
+            k_Instances.Add(instanceName, instance);
+            return instance;
+        }
+
+#if !UNITY_INCLUDE_TESTS
         static ClusterSync() => PreInitialize();
 
         [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
-        public static void PreInitialize()
+        private static void PreInitialize() => PreInitialize(k_DefaultName);
+
+        internal static void PreInitialize(string instanceName)
         {
             ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
-            ClusterDisplayManager.preInitialize += () => Instance.RegisterDelegates();
+            ClusterDisplayManager.preInitialize += () => GetInstance(instanceName).RegisterDelegates();
         }
+#endif
 
+        private ClusterSync (string instanceName)
+        {
+            m_InstanceName = instanceName;
+            RegisterDelegates();
+        }
         private readonly ClusterDisplayState.IClusterDisplayStateSetter stateSetter = ClusterDisplayState.GetStateStoreSetter();
         private DebugPerf m_FrameRatePerf = new();
         DebugPerf m_StartDelayMonitor = new();
@@ -126,9 +149,10 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => $"Frame Stats:\r\n{LocalNode.GetDebugString()}" +
-            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
-            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
+        public string GetDebugString()
+        {
+            return $"Cluster Sync Instance: {m_InstanceName},\r\nFrame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms\r\n\tAverage Sync Overhead Time: {m_DelayMonitor.Average * 1000} ms\r\n";
+        }
 
         private void RegisterDelegates()
         {
@@ -142,7 +166,31 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onApplicationQuit += Quit;
         }
 
-        private void EnableClusterDisplay()
+        private void EnableClusterDisplay ()
+        {
+            CommandLineParser.TryParseHandshakeTimeout(out var handshakeTimeout);
+            CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout);
+
+            var clusterParams = new ClusterParams
+            {
+                m_DebugFlag                 = CommandLineParser.debugFlag,
+                m_ClusterLogicSpecified     = CommandLineParser.ClusterLogicSpecified,
+                m_EmitterSpecified          = CommandLineParser.emitterSpecified,
+                m_NodeID                    = CommandLineParser.nodeID,
+                m_RXPort                    = CommandLineParser.rxPort,
+                m_TXPort                    = CommandLineParser.txPort,
+                m_MulticastAddress          = CommandLineParser.multicastAddress,
+                m_AdapterName               = CommandLineParser.adapterName,
+                m_TargetFps                 = CommandLineParser.targetFPS,
+                m_DelayRepeaters            = CommandLineParser.delayRepeaters,
+                m_HandshakeTimeout          = handshakeTimeout,
+                m_CommunicationTimeout      = communicationTimeout
+            };
+
+            EnableClusterDisplay(clusterParams);
+        }
+
+        private void EnableClusterDisplay(ClusterParams clusterParams)
         {
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
@@ -151,7 +199,7 @@ namespace Unity.ClusterDisplay
 
             NodeState.Debugging = m_Debugging;
 
-            Application.targetFrameRate = CommandLineParser.targetFps.Value;
+            Application.targetFrameRate = clusterParams.m_TargetFps;
 
             stateSetter.SetIsActive(true);
             stateSetter.SetIsTerminated(false);
@@ -159,7 +207,7 @@ namespace Unity.ClusterDisplay
 
             onPreEnableClusterDisplay?.Invoke();
 
-            stateSetter.SetCLusterLogicEnabled(CommandLineParser.clusterDisplayLogicSpecified);
+            stateSetter.SetCLusterLogicEnabled(clusterParams.m_ClusterLogicSpecified);
             stateSetter.SetIsRepeater(false);
 
             if (!ClusterDisplayState.IsClusterLogicEnabled)
@@ -169,7 +217,7 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-            if (!TryInitialize())
+            if (!TryInitialize(clusterParams))
             {
                 stateSetter.SetCLusterLogicEnabled(false);
                 return;
@@ -203,7 +251,7 @@ namespace Unity.ClusterDisplay
             DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        private bool TryInitializeEmitter(UDPAgent.Config config)
+        private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
             try
             {
@@ -212,15 +260,17 @@ namespace Unity.ClusterDisplay
                     this,
                     new EmitterNode.Config
                     {
-                        headlessEmitter = CommandLineParser.headlessEmitter.Value,
-                        repeatersDelayed = CommandLineParser.delayRepeaters.Value,
-                        repeaterCount = CommandLineParser.repeaterCount.Value,
-                        udpAgentConfig = config
+                        headlessEmitter     = clusterParams.m_HeadlessEmitter,
+                        repeatersDelayed    = clusterParams.m_DelayRepeaters,
+                        repeaterCount       = clusterParams.m_RepeaterCount,
+                        handshakeTimeout    = clusterParams.m_HandshakeTimeout,
+                        udpAgentConfig      = config
                     });
-
+            
                 stateSetter.SetIsEmitter(true);
-            	stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
+                stateSetter.SetEmitterIsHeadless(clusterParams.m_HeadlessEmitter);
                 stateSetter.SetIsRepeater(false);
+
 
                 LocalNode.Start();
                 return true;
@@ -232,15 +282,19 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private bool TryInitializeRepeater(UDPAgent.Config config)
+        private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
         {
             try
             {
                 // Emitter command line format: -node nodeId ip:rxport,txport
                 m_LocalNode = new RepeaterNode(
                     this, 
-                	CommandLineParser.delayRepeaters.Value,
-                    config);
+                    new RepeaterNode.Config
+                    {
+                        handshakeTimeout = clusterParams.m_HandshakeTimeout,
+                        delayRepeater = clusterParams.m_DelayRepeaters,
+                        config = config,
+                    });
 
                 stateSetter.SetIsEmitter(false);
                 stateSetter.SetIsRepeater(true);
@@ -255,35 +309,31 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private bool TryInitialize()
+        private bool TryInitialize(ClusterParams clusterParams)
+
         {
             try
             {
-                m_Debugging = CommandLineParser.debugFlag.Value;
-                
-                if (CommandLineParser.handshakeTimeout.Defined)
-                    ClusterParams.RegisterTimeout = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Value);
-                if (CommandLineParser.communicationTimeout.Defined)
-                    ClusterParams.CommunicationTimeout = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Value);
+                m_Debugging = clusterParams.m_DebugFlag;
 
                 var udpAgentConfig = new UDPAgent.Config
                 {
-                    nodeId = CommandLineParser.nodeID.Value,
-                    ip = CommandLineParser.multicastAddress,
-                    rxPort = CommandLineParser.rxPort.Value,
-                    txPort = CommandLineParser.txPort.Value,
-                    timeOut = 30,
-                    adapterName = (string)CommandLineParser.adapterName.Value
+                    nodeId          = clusterParams.m_NodeID,
+                    ip              = clusterParams.m_MulticastAddress,
+                    rxPort          = clusterParams.m_RXPort,
+                    txPort          = clusterParams.m_TXPort,
+                    timeOut         = 30,
+                    adapterName     = clusterParams.m_AdapterName
                 };
                 
-                if (CommandLineParser.emitterSpecified.Value)
+                if (clusterParams.m_EmitterSpecified)
                 {
-                    if (!TryInitializeEmitter(udpAgentConfig))
+                    if (!TryInitializeEmitter(clusterParams, udpAgentConfig))
                         return false;
                     return true;
                 }
 
-                if (TryInitializeRepeater(udpAgentConfig))
+                if (TryInitializeRepeater(clusterParams, udpAgentConfig))
                     return true;
 
                 throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.");

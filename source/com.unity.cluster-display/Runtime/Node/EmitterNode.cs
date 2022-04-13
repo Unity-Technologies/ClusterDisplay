@@ -35,6 +35,7 @@ namespace Unity.ClusterDisplay
             public bool headlessEmitter;
             public bool repeatersDelayed;
             public int repeaterCount;
+            public TimeSpan handshakeTimeout;
             public UDPAgent.Config udpAgentConfig;
         }
 
@@ -43,10 +44,9 @@ namespace Unity.ClusterDisplay
             Config config)
             : base(clusterSync, config.udpAgentConfig)
         {
-            m_CurrentState = new WaitingForAllClients(clusterSync)
-            {
-                MaxTimeOut = ClusterParams.RegisterTimeout
-            };
+            m_CurrentState = new WaitingForAllClients(clusterSync) {
+                MaxTimeOut = config.handshakeTimeout };// 15 sec waiting for clients
+
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }

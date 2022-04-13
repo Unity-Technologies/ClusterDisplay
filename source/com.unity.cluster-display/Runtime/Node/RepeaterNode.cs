@@ -23,15 +23,29 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
-            : base(clusterSync, config)
+        TimeSpan m_HandshakeTimeout;
+        TimeSpan m_CommunicationTimeout;
+
+        public struct Config
         {
-            DelayRepeater = delayRepeater;
+            public TimeSpan handshakeTimeout;
+            public TimeSpan communicationTimeout;
+
+            public bool delayRepeater;
+            public UDPAgent.Config config;
+        }
+
+        public RepeaterNode(IClusterSyncState clusterSync, Config config)
+            : base(clusterSync, config.config)
+        {
+            DelayRepeater = config.delayRepeater;
+            m_HandshakeTimeout = config.handshakeTimeout;
+            m_CommunicationTimeout = config.communicationTimeout;
         }
 
         public override void Start()
         {
-            m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
+            m_CurrentState = new RegisterWithEmitter(clusterSync, new RegisterWithEmitter.Config { communicationTimeout = m_CommunicationTimeout });
             m_CurrentState.EnterState(null);
         }
     }

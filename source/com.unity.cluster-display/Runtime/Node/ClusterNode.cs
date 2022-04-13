@@ -68,8 +68,9 @@ namespace Unity.ClusterDisplay
             UdpAgent.PublishMessage(msgHdr);
         }
 
-        public virtual string GetDebugString()
+        public virtual string GetDebugString(NetworkingStats networkStats)
         {
+<<<<<<< Updated upstream
             if (ClusterSync.Instance.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
             {
                 var stats = ClusterSync.Instance.CurrentNetworkStats;
@@ -84,6 +85,16 @@ namespace Unity.ClusterDisplay
             }
 
             return null;
+=======
+            return $"\tNode ID: {ClusterDisplayState.NodeID}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
+                $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
+                $"\tNetwork stats: \r\n\t\tSend Queue Size: [{networkStats.txQueueSize}], " +
+                $"\r\n\t\tReceive Queue Size:[{networkStats.rxQueueSize}], " +
+                $"\r\n\t\tACK Queue Size: [{networkStats.pendingAckQueueSize}], " +
+                $"\r\n\t\tTotal Resends: [{networkStats.totalResends}], " +
+                $"\r\n\t\tMessages Sent: [{networkStats.msgsSent}], " +
+                $"\r\n\t\tFailed Messages: [{networkStats.failedMsgs}]";
+>>>>>>> Stashed changes
         }
 
         protected void OnNetworkingError(string message)
