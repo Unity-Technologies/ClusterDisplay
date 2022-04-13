@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
@@ -149,10 +149,10 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString()
-        {
-            return $"Cluster Sync Instance: {m_InstanceName},\r\nFrame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms\r\n\tAverage Sync Overhead Time: {m_DelayMonitor.Average * 1000} ms\r\n";
-        }
+        public string GetDebugString() => $"Cluster Sync Instance: {m_InstanceName},\r\n" +
+			"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
+            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
+            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
 
         private void RegisterDelegates()
         {
@@ -168,23 +168,20 @@ namespace Unity.ClusterDisplay
 
         private void EnableClusterDisplay ()
         {
-            CommandLineParser.TryParseHandshakeTimeout(out var handshakeTimeout);
-            CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout);
-
             var clusterParams = new ClusterParams
             {
-                m_DebugFlag                 = CommandLineParser.debugFlag,
-                m_ClusterLogicSpecified     = CommandLineParser.ClusterLogicSpecified,
-                m_EmitterSpecified          = CommandLineParser.emitterSpecified,
-                m_NodeID                    = CommandLineParser.nodeID,
-                m_RXPort                    = CommandLineParser.rxPort,
-                m_TXPort                    = CommandLineParser.txPort,
-                m_MulticastAddress          = CommandLineParser.multicastAddress,
-                m_AdapterName               = CommandLineParser.adapterName,
-                m_TargetFps                 = CommandLineParser.targetFPS,
-                m_DelayRepeaters            = CommandLineParser.delayRepeaters,
-                m_HandshakeTimeout          = handshakeTimeout,
-                m_CommunicationTimeout      = communicationTimeout
+                m_DebugFlag                 = CommandLineParser.debugFlag.Value,
+                m_ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
+                m_EmitterSpecified          = CommandLineParser.emitterSpecified.Value,
+                m_NodeID                    = CommandLineParser.nodeID.Value,
+                m_RXPort                    = CommandLineParser.rxPort.Value,
+                m_TXPort                    = CommandLineParser.txPort.Value,
+                m_MulticastAddress          = CommandLineParser.multicastAddress.Value,
+                m_AdapterName               = CommandLineParser.adapterName.Value,
+                m_TargetFps                 = CommandLineParser.targetFps.Value,
+                m_DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
+                m_HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Value),
+                m_CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Value)
             };
 
             EnableClusterDisplay(clusterParams);

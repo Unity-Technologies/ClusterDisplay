@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 
 namespace Unity.ClusterDisplay
@@ -70,22 +70,6 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkingStats networkStats)
         {
-<<<<<<< Updated upstream
-            if (ClusterSync.Instance.TryGetDynamicLocalNodeId(out var dynamicLocalNodeId))
-            {
-                var stats = ClusterSync.Instance.CurrentNetworkStats;
-                return $"\tNode ID: {dynamicLocalNodeId}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
-                    $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
-                    $"\tNetwork stats: \r\n\t\tSend Queue Size: [{stats.txQueueSize}], " +
-                    $"\r\n\t\tReceive Queue Size:[{stats.rxQueueSize}], " +
-                    $"\r\n\t\tACK Queue Size: [{stats.pendingAckQueueSize}], " +
-                    $"\r\n\t\tTotal Resends: [{stats.totalResends}], " +
-                    $"\r\n\t\tMessages Sent: [{stats.msgsSent}], " +
-                    $"\r\n\t\tFailed Messages: [{stats.failedMsgs}]";
-            }
-
-            return null;
-=======
             return $"\tNode ID: {ClusterDisplayState.NodeID}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
                 $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
                 $"\tNetwork stats: \r\n\t\tSend Queue Size: [{networkStats.txQueueSize}], " +
@@ -94,7 +78,6 @@ namespace Unity.ClusterDisplay
                 $"\r\n\t\tTotal Resends: [{networkStats.totalResends}], " +
                 $"\r\n\t\tMessages Sent: [{networkStats.msgsSent}], " +
                 $"\r\n\t\tFailed Messages: [{networkStats.failedMsgs}]";
->>>>>>> Stashed changes
         }
 
         protected void OnNetworkingError(string message)
