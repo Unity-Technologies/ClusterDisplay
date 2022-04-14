@@ -13,35 +13,27 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        private TimeSpan m_HandshakeTimeout;
-        public struct Config
-        {
-            public TimeSpan handshakeTimeout;
-        }
-        
-        public RegisterWithEmitter(IClusterSyncState clusterSync, Config config) : base(clusterSync)
+        public RegisterWithEmitter(IClusterSyncState clusterSync) : base(clusterSync)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
-
-            m_HandshakeTimeout = config.handshakeTimeout;
         }
 
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override NodeState DoFrame( bool frameAdvance)
+        protected override NodeState DoFrame (bool frameAdvance)
         {
             if (m_EmitterFound)
             {
-                var nextState = new RepeaterSynchronization(clusterSync) { MaxTimeOut = m_HandshakeTimeout };
+                var nextState = new RepeaterSynchronization(clusterSync) { MaxTimeOut = this.MaxTimeOut };
                 nextState.EnterState(this);
                 return nextState;
             }
 
+            ProcessMessages(m_Cancellation.Token);
             return this;
         }
         
@@ -51,58 +43,59 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             try
             {
-                while (!ctk.IsCancellationRequested && !m_EmitterFound)
+                if (ctk.IsCancellationRequested)
+                    return;
+
+                // Periodically broadcast presence
+                if (m_Timer.Elapsed - m_LastSend > TimeSpan.FromSeconds(1))
                 {
-                    // Periodically broadcast presence
-                    if (m_Timer.Elapsed - m_LastSend > TimeSpan.FromSeconds(1))
+                    var header = new MessageHeader()
                     {
-                        var header = new MessageHeader()
-                        {
-                            MessageType = EMessageType.HelloEmitter,
-                            DestinationIDs = BitVector.Ones, // Shout it out! make sure to also use DoesNotRequireAck
-                            Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
-                        };
+                        MessageType = EMessageType.HelloEmitter,
+                        DestinationIDs = BitVector.Ones, // Shout it out! make sure to also use DoesNotRequireAck
+                        Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
+                    };
 
-                        var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
-                        var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
-                        roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
+                    var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
+                    var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
+                    roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
 
-                        LocalNode.UdpAgent.PublishMessage(header, payload);
+                    LocalNode.UdpAgent.PublishMessage(header, payload);
+                    m_LastSend = m_Timer.Elapsed;
+                }
 
-                        m_LastSend = m_Timer.Elapsed;
-                    }
-
-                    // Wait for a response
-                    // Consume messages
-                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out _))
+                // Wait for a response
+                // Consume messages
+                while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out _))
+                {
+                    if (header.MessageType == EMessageType.WelcomeRepeater)
                     {
-                        if (header.MessageType == EMessageType.WelcomeRepeater)
+                        if (header.DestinationIDs[LocalNode.NodeID])
                         {
-                            if (header.DestinationIDs[LocalNode.NodeID])
-                            {
-                                ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
-                                m_EmitterFound = true;
-                                LocalNode.EmitterNodeId = header.OriginID;
-                                LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
+                            ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
+                            m_EmitterFound = true;
+                            LocalNode.EmitterNodeId = header.OriginID;
+                            LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
 
-                                return;
-                            }
+                            return;
                         }
-
-                        else
-                            ProcessUnhandledMessage(header);
                     }
 
-                    if (m_Timer.Elapsed > MaxTimeOut)
-                    {
-                        throw new Exception($"Emitter not found after {MaxTimeOut.TotalMilliseconds}ms.");
-                    }
+                    else
+                        ProcessUnhandledMessage(header);
+                }
+
+                if (m_Timer.Elapsed > MaxTimeOut)
+                {
+                    throw new Exception($"Emitter not found after {MaxTimeOut.TotalMilliseconds}ms.");
                 }
             }
+
             catch (OperationCanceledException)
             {
 
             }
+
             catch (Exception e)
             {
                 var err = new FatalError( clusterSync, $"Error occured while registering with emitter node: {e.Message}");

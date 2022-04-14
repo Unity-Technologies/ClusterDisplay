@@ -8,32 +8,18 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class WaitingForAllClients : EmitterState
     {
-        public override bool ReadyToProceed => false;
-
         public WaitingForAllClients(IClusterSyncState clusterSync)
             : base(clusterSync) {}
 
         public override void InitState()
         {
             m_Cancellation = new CancellationTokenSource();
-            m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override void ExitState(NodeState newState)
-        {
-            if (m_Task != null)
-            {
-                m_Cancellation.Cancel();
-                m_Task.Wait(MaxTimeOut);
-            }
-
-            base.ExitState(newState);
-        }
-
-        protected override NodeState DoFrame(bool frameAdvance)
+        protected override NodeState DoFrame (bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut )
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
@@ -52,7 +38,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
                 return newState.EnterState(this);
             }
-            
+
+            ProcessMessages(m_Cancellation.Token);
             return this;
         }
 
@@ -60,27 +47,27 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             try
             {
-                do
-                {
-                    // Wait for a client to announce itself
-                    // Consume messages
-                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
-                    {
-                        if (header.MessageType == EMessageType.HelloEmitter)
-                        {
-                            var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
+                if (ctk.IsCancellationRequested)
+                    return;
 
-                            RegisterRemoteNode(header, roleInfo);
-                            SendResponse(header);
-                        }
-                        else
-                        {
-                            ProcessUnhandledMessage(header);
-                        }
+                // Wait for a client to announce itself
+                // Consume messages
+                while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                {
+                    if (header.MessageType == EMessageType.HelloEmitter)
+                    {
+                        var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
+
+                        RegisterRemoteNode(header, roleInfo);
+                        SendResponse(header);
                     }
-                } while (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount &&
-                    !ctk.IsCancellationRequested);
+                    else
+                    {
+                        ProcessUnhandledMessage(header);
+                    }
+                }
             }
+
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);

@@ -177,14 +177,6 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator EmitterAndRepeaterLockstepFor10Frames()
         {
             const int numRepeaters = 1;
-            var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
-                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-
-            var emitterArgs = emitterArgsString.Split(" ").ToList();
-            emitterArgs.Add("-adapterName");
-            emitterArgs.Add(m_InterfaceName);
-
             var repeaterArgsString =
                 $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
@@ -193,30 +185,29 @@ namespace Unity.ClusterDisplay.Tests
             repeaterArgs.Add("-adapterName");
             repeaterArgs.Add(m_InterfaceName);
 
-            var emitterClusterSync = ClusterSync.GetUniqueInstance("Emitter");
-            var repeaterClusterSync = ClusterSync.GetUniqueInstance("Repeater");
+            var emitterArgsString =
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
 
-            ClusterSync.PushInstance("Emitter");
-            CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.PrePopulateClusterParams();
+            var emitterArgs = emitterArgsString.Split(" ").ToList();
+            emitterArgs.Add("-adapterName");
+            emitterArgs.Add(m_InterfaceName);
+
+            var repeaterClusterSync = ClusterSync.GetUniqueInstance("Repeater");
+            var emitterClusterSync = ClusterSync.GetUniqueInstance("Emitter");
 
             ClusterSync.PushInstance("Repeater");
             CommandLineParser.Override(repeaterArgs);
             repeaterClusterSync.PrePopulateClusterParams();
 
+            ClusterSync.PushInstance("Emitter");
+            CommandLineParser.Override(emitterArgs);
+            emitterClusterSync.PrePopulateClusterParams();
+
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
             
             while (emitterClusterSync.state.Frame < 10 && repeaterClusterSync.state.Frame < 10)
             {
-                ClusterSync.PushInstance("Emitter");
-                Assert.That(ClusterDisplayState.IsActive, Is.True);
-                Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
-
-                Assert.That(ClusterDisplayState.IsEmitter, Is.True);
-                Assert.That(ClusterDisplayState.IsRepeater, Is.False);
-                Assert.That(ClusterDisplayState.IsActive, Is.True);
-                Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(0));
-
                 ClusterSync.PushInstance("Repeater");
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
                 Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
@@ -225,6 +216,15 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(ClusterDisplayState.IsRepeater, Is.True);
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
                 Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_RepeaterId));
+
+                ClusterSync.PushInstance("Emitter");
+                Assert.That(ClusterDisplayState.IsActive, Is.True);
+                Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
+
+                Assert.That(ClusterDisplayState.IsEmitter, Is.True);
+                Assert.That(ClusterDisplayState.IsRepeater, Is.False);
+                Assert.That(ClusterDisplayState.IsActive, Is.True);
+                Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(0));
 
                 yield return null;
             }

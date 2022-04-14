@@ -36,7 +36,10 @@ namespace Unity.ClusterDisplay.Tests
         public void TestRegisterWithEmitter()
         {
             // Create the state under test
-            var registerState = new RegisterWithEmitter(m_ClusterSync, new RegisterWithEmitter.Config { handshakeTimeout = TimeSpan.FromSeconds(MockClusterSync.timeoutSeconds) });
+            var registerState = new RegisterWithEmitter(m_ClusterSync)
+            {
+                MaxTimeOut = TimeSpan.FromSeconds(MockClusterSync.timeoutSeconds)
+            };
 
             var allNodesMask = m_ClusterSync.LocalNode.UdpAgent.AllNodesMask;
             Assert.IsFalse(allNodesMask[k_EmitterId]);

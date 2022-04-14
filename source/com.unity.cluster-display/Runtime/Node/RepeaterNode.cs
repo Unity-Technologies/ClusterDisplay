@@ -42,7 +42,11 @@ namespace Unity.ClusterDisplay
 
         public override void Start()
         {
-            m_CurrentState = new RegisterWithEmitter(clusterSync, new RegisterWithEmitter.Config { handshakeTimeout = m_HandshakeTimeout });
+            m_CurrentState = new RegisterWithEmitter(clusterSync)
+            {
+                MaxTimeOut = m_HandshakeTimeout
+            };
+
             m_CurrentState.EnterState(null);
         }
     }
