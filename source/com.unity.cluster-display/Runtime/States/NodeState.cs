@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay
 
                 default:
                 {
-                    throw new Exception("Unexpected network message received: ");
+                    throw new Exception($"Unexpected network message received: \"{msgHeader.MessageType}\".");
                 }
             }
         }

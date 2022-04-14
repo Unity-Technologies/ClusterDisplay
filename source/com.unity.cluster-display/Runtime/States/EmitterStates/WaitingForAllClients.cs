@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.ClusterDisplay.Utils;
@@ -9,9 +9,9 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
     internal class WaitingForAllClients : EmitterState
     {
         public override bool ReadyToProceed => false;
-        
+
         public WaitingForAllClients(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+            : base(clusterSync) {}
 
         public override void InitState()
         {

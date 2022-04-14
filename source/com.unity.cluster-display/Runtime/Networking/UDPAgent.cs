@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -111,6 +111,8 @@ namespace Unity.ClusterDisplay
         /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
         public UDPAgent(Config config)
         {
+            ClusterDebug.Log($"Constructed new {nameof(UDPAgent)}.");
+
             LocalNodeID = config.nodeId;
             m_RxPort = config.rxPort;
             m_TxPort = config.txPort;
