@@ -28,11 +28,7 @@ namespace Unity.ClusterDisplay
         void Start()
         {
             m_Frames = 0;
-
-            if (ClusterDisplayState.IsActive)
-            {
-                debugText.text = ClusterDisplayState.IsActive ? $"Node {ClusterDisplayState.NodeID}" : "Cluster Rendering inactive";
-            }
+            debugText.text = ClusterDisplayState.IsActive ? $"Node {ClusterDisplayState.NodeID}" : "Cluster Rendering inactive";
         }
 
         void Update()
