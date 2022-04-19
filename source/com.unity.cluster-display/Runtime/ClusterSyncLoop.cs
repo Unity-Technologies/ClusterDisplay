@@ -59,12 +59,6 @@ namespace Unity.ClusterDisplay
             readyToProceed = LocalNode.ReadyToProceed;
             isTerminated = state.IsTerminated;
 
-            if (readyToProceed)
-            {
-                newFrame = false;
-                return;
-            }
-
             if (!LocalNode.DoFrame(newFrame))
             {
                 // Game Over!
@@ -109,7 +103,6 @@ namespace Unity.ClusterDisplay
 
                     foreach (var instance in instances)
                     {
-
                         PushInstance(instance.m_InstanceName);
                         if (instance.m_Debugging)
                         {
