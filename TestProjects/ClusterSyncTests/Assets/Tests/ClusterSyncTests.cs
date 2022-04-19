@@ -212,8 +212,8 @@ namespace Unity.ClusterDisplay.Tests
             };
         }
 
-        [Test]
-        public void EmitterAndRepeaterLockstepFor10Frames()
+        [UnityTest]
+        public IEnumerator EmitterAndRepeaterLockstepFor10Frames()
         {
             const int numRepeaters = 1;
             var repeaterArgsString =
@@ -267,6 +267,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(0));
                 ClusterSync.PopInstance();
             };
+
+            while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
+                yield return null;
         }
 
         [TearDown]
