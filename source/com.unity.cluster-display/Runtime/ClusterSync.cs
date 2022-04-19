@@ -31,120 +31,8 @@ namespace Unity.ClusterDisplay
 #if UNITY_EDITOR
     [InitializeOnLoad]
 #endif
-    internal class ClusterSync :
-        IClusterSyncState
+    internal partial class ClusterSync : IClusterSyncState
     {
-        internal interface IState
-        {
-            public bool IsEmitter { get; }
-            public bool EmitterIsHeadless { get; }
-            public bool IsRepeater { get; }
-            public bool IsClusterLogicEnabled { get; }
-            public bool IsActive { get; }
-            public bool IsTerminated { get; }
-            public ulong Frame { get; }
-            public ushort NodeID { get; }
-        }
-
-        private class SyncState : IState
-        {
-            private bool m_IsEmitter;
-            private bool m_EmitterIsHeadless;
-            private bool m_IsRepeater;
-            private bool m_IsClusterLogicEnabled;
-            private bool m_IsActive;
-            private bool m_IsTerminated;
-            private ulong m_Frame;
-            private ushort m_NodeID;
-
-            public bool IsEmitter => m_IsEmitter;
-            public bool EmitterIsHeadless => !Application.isEditor && m_EmitterIsHeadless;
-            public bool IsRepeater => m_IsRepeater;
-            public bool IsClusterLogicEnabled => m_IsClusterLogicEnabled;
-            public bool IsActive => m_IsActive;
-            public bool IsTerminated => m_IsTerminated;
-            public ulong Frame => m_Frame;
-            public ushort NodeID => m_NodeID;
-
-            public void SetIsActive(bool isActive) => m_IsActive = isActive;
-            public void SetClusterLogicEnabled(bool clusterLogicEnabled) => m_IsClusterLogicEnabled = clusterLogicEnabled;
-            public void SetIsEmitter(bool isEmitter) => m_IsEmitter = isEmitter;
-            public void SetEmitterIsHeadless(bool headlessEmitter) => m_EmitterIsHeadless = headlessEmitter;
-            public void SetIsRepeater(bool isRepeater) => m_IsRepeater = isRepeater;
-            public void SetIsTerminated(bool isTerminated) => m_IsTerminated = isTerminated;
-            public void SetFrame(ulong frame) => m_Frame = frame;
-            public void SetNodeID (ushort nodeId) => m_NodeID = nodeId;
-        }
-
-        readonly static Dictionary<string, ClusterSync> k_Instances = new Dictionary<string, ClusterSync>();
-        const string k_DefaultName = "DefaultClusterSync";
-
-        public string InstanceName => m_InstanceName;
-        readonly string m_InstanceName;
-
-        static string m_InstanceInContext = k_DefaultName;
-
-        internal static void PushInstance(string instanceName)
-        {
-            if (m_InstanceInContext == instanceName)
-                return;
-
-            if (string.IsNullOrEmpty(instanceName))
-                throw new ArgumentNullException(nameof(instanceName));
-
-            if (!k_Instances.ContainsKey(instanceName))
-                throw new Exception($"Instance: \"{instanceName}\" does not exist.");
-
-            ClusterDebug.Log($"Pushing {nameof(ClusterSync)} instance: \"{instanceName}\".");
-            m_InstanceInContext = instanceName;
-        }
-
-        internal static bool InstanceExists (string instanceName)
-        {
-            if (string.IsNullOrEmpty(instanceName))
-                throw new ArgumentNullException(nameof(instanceName));
-            return k_Instances.ContainsKey(instanceName);
-        }
-
-        internal static void PopInstance()
-        {
-            if (m_InstanceInContext == k_DefaultName)
-                return;
-
-            ClusterDebug.Log($"Popping {nameof(ClusterSync)} instance from: \"{m_InstanceInContext}\" back to the default instance: \"{k_DefaultName}\".");
-            m_InstanceInContext = k_DefaultName;
-        }
-
-        public static ClusterSync Instance => GetUniqueInstance(m_InstanceInContext);
-        public static ClusterSync GetUniqueInstance (string instanceName)
-        {
-            if (string.IsNullOrEmpty(instanceName))
-            {
-                throw new ArgumentNullException(nameof(instanceName));
-            }
-
-            if (!k_Instances.TryGetValue(instanceName, out var instance))
-            {
-                return CreateInstance(instanceName);
-            }
-
-            return instance;
-        }
-
-        private static ClusterSync CreateInstance (string instanceName) =>
-            new ClusterSync(instanceName);
-
-        internal static void ClearInstances ()
-        {
-            ClusterDebug.Log($"Flushing all instances of: {nameof(ClusterSync)}.");
-            foreach (var instance in k_Instances.Values)
-            {
-                instance.CleanUp();
-            }
-
-            k_Instances.Clear();
-        }
-
 #if !CLUSTER_DISPLAY_TESTS
         static ClusterSync() => PreInitialize();
 
@@ -166,9 +54,6 @@ namespace Unity.ClusterDisplay
 
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
-
-        readonly SyncState syncState = new SyncState();
-        public IState state => syncState;
 
         ClusterParams ? m_ClusterParams = null;
 
@@ -247,6 +132,8 @@ namespace Unity.ClusterDisplay
             $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
             $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
 
+        private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{m_InstanceName}\"]: {msg}");
+
         private void RegisterDelegates()
         {
             UnRegisterDelegates();
@@ -297,7 +184,7 @@ namespace Unity.ClusterDisplay
 
         private void EnableClusterDisplay(ClusterParams clusterParams)
         {
-            ClusterDebug.Log($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
+            InstanceLog($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
 
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
@@ -317,7 +204,7 @@ namespace Unity.ClusterDisplay
 
             if (!state.IsClusterLogicEnabled)
             {
-                ClusterDebug.Log("ClusterRendering is missing command line configuration. Will be dormant.");
+                InstanceLog("ClusterRendering is missing command line configuration. Will be dormant.");
                 syncState.SetIsEmitter(true);
                 return;
             }
@@ -358,7 +245,7 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            ClusterDebug.Log($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for emitter.");
+            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for emitter.");
             try
             {
                 // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
@@ -390,7 +277,7 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            ClusterDebug.Log($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for repeater.");
+            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for repeater.");
 
             try
             {
@@ -477,151 +364,7 @@ namespace Unity.ClusterDisplay
             if (k_Instances.ContainsKey(m_InstanceName))
                 k_Instances.Remove(m_InstanceName);
 
-            ClusterDebug.Log($"Flushed instance of: {nameof(ClusterSync)} with name: \"{m_InstanceName}\".");
-        }
-
-        void SystemLateUpdate()
-        {
-            m_EndDelayMonitor.RefPoint();
-            while (LocalNode is {ReadyForNextFrame: false} node)
-            {
-                node.DoLateFrame();
-            }
-
-            m_EndDelayMonitor.SampleNow();
-        }
-
-        private void PreFrame ()
-        {
-#if ENABLE_INPUT_SYSTEM
-            if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
-                Quit();
-#elif ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                Quit();
-#endif
-
-            if (m_Debugging)
-            {
-                if (m_NewFrame)
-                    m_FrameRatePerf.SampleNow();
-
-                if (!LocalNode.DoFrame(m_NewFrame))
-                {
-                    // Game Over!
-                    syncState.SetIsTerminated(true);
-                }
-
-                m_NewFrame = LocalNode.ReadyToProceed;
-                if (m_NewFrame)
-                {
-                    m_StartDelayMonitor.SampleNow();
-                    m_StartDelayMonitor.RefPoint();
-                }
-            }
-
-            else
-            {
-                m_FrameRatePerf.SampleNow();
-                m_FrameRatePerf.RefPoint();
-
-                ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
-
-                m_StartDelayMonitor.RefPoint();
-            }
-
-            newFrame = true;
-        }
-
-        private bool newFrame = false;
-
-        private void DoFrame (out bool readyToProceed, out bool isTerminated)
-        {
-            readyToProceed = LocalNode.ReadyToProceed;
-            isTerminated = state.IsTerminated;
-
-            if (!LocalNode.DoFrame(newFrame))
-            {
-                // Game Over!
-                syncState.SetIsTerminated(true);
-            }
-
-            readyToProceed = LocalNode.ReadyToProceed;
-            isTerminated = state.IsTerminated;
-            newFrame = false;
-        }
-
-        private void PostFrame ()
-        {
-            LocalNode.EndFrame();
-
-            m_StartDelayMonitor.SampleNow();
-            ClusterDebug.Log(GetDebugString());
-            ClusterDebug.Log($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
-
-            syncState.SetFrame(++m_CurrentFrameID);
-        }
-
-        private static void SystemUpdate()
-        {
-            var instances = k_Instances.Values.ToArray();
-            bool allReadyToProceed, allIsTerminated;
-
-            try
-            {
-                foreach (var instance in instances)
-                {
-                    instance.PreFrame();
-                }
-
-                do
-                {
-                    allReadyToProceed = true;
-                    allIsTerminated = false;
-
-                    foreach (var instance in instances)
-                    {
-                        PushInstance(instance.m_InstanceName);
-                        if (instance.m_Debugging)
-                            continue;
-
-                        instance.DoFrame(out var readyToProceed, out var isTermindated);
-
-                        allReadyToProceed &= readyToProceed;
-                        allIsTerminated &= isTermindated;
-
-                        PopInstance();
-                    }
-
-                } while (!allReadyToProceed && !allIsTerminated);
-
-                foreach (var instance in instances)
-                {
-                    instance.PostFrame();
-                }
-            }
-
-            catch (Exception e)
-            {
-                Instance.OnException(e);
-            }
-
-            finally
-            {
-                Instance.OnFinally();
-            }
-        }
-
-        private void OnException (Exception e)
-        {
-            syncState.SetIsTerminated(true);
-            ClusterDebug.LogException(e);
-        }
-
-        private void OnFinally ()
-        {
-            if (state.IsTerminated)
-                CleanUp();
+            InstanceLog($"Flushed.");
         }
     }
 }

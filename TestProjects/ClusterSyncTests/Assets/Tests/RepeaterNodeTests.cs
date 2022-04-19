@@ -50,6 +50,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // The state should be broadcasting HelloEmitter messages
             var (header, rolePublication) = m_TestAgent.ReceiveMessage<RolePublication>();
+
             Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
             Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
 

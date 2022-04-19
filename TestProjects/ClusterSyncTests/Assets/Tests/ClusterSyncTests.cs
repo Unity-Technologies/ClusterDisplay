@@ -63,8 +63,8 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.False);
         }
 
-        [UnityTest]
-        public IEnumerator TestClusterSetupEmitter()
+        [Test]
+        public void TestClusterSetupEmitter()
         {
             const int numRepeaters = 1;
             var argString =
@@ -78,6 +78,7 @@ namespace Unity.ClusterDisplay.Tests
             CommandLineParser.Override(args);
 
             var emitterClusterSync = ClusterSync.GetUniqueInstance("Emitter");
+
             ClusterSync.PushInstance("Emitter");
             emitterClusterSync.PrePopulateClusterParams();
 
@@ -85,39 +86,55 @@ namespace Unity.ClusterDisplay.Tests
 
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
-            Assert.That(ClusterDisplayState.IsEmitter, Is.True);
-            Assert.That(ClusterDisplayState.IsRepeater, Is.False);
+            var state = (HelloEmitter: 0, CheckRemoteNodes: 1);
+            int currentState = 0;
 
-            Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_EmitterId));
-            Assert.That(ClusterDisplayState.IsActive, Is.True);
-            Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
+            // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
+            ClusterSync.onSyncTick = (TimeSpan elapsed) =>
+            {
+                if (elapsed.TotalMilliseconds <= 1)
+                    return;
 
-            var node = emitterClusterSync.LocalNode as EmitterNode;
+                if (currentState == state.HelloEmitter)
+                {
+                    var node = emitterClusterSync.LocalNode as EmitterNode;
 
-            Assert.That(node, Is.Not.Null);
-            Assert.That(node.m_RemoteNodes.Count, Is.Zero);
-            Assert.That(node.TotalExpectedRemoteNodesCount, Is.EqualTo(numRepeaters));
+                    Assert.That(ClusterDisplayState.IsEmitter, Is.True);
+                    Assert.That(ClusterDisplayState.IsRepeater, Is.False);
 
-            var (header, rawMsg) = GenerateMessage(k_RepeaterId,
-                new byte[] {k_EmitterId},
-                EMessageType.HelloEmitter,
-                new RolePublication {NodeRole = ENodeRole.Repeater});
+                    Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_EmitterId));
+                    Assert.That(ClusterDisplayState.IsActive, Is.True);
+                    Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.True);
 
-            testAgent.PublishMessage(header, rawMsg);
+                    Assert.That(node, Is.Not.Null);
+                    Assert.That(node.m_RemoteNodes.Count, Is.Zero);
+                    Assert.That(node.TotalExpectedRemoteNodesCount, Is.EqualTo(numRepeaters));
 
-            yield return null;
+                    var (header, rawMsg) = GenerateMessage(k_RepeaterId,
+                        new byte[] {k_EmitterId},
+                        EMessageType.HelloEmitter,
+                        new RolePublication {NodeRole = ENodeRole.Repeater});
 
-            Assert.That(node.m_RemoteNodes.Count, Is.EqualTo(numRepeaters));
-            ClusterSync.PopInstance();
+                    testAgent.PublishMessage(header, rawMsg);
+                }
+
+                else if (currentState == state.CheckRemoteNodes)
+                {
+                    var node = emitterClusterSync.LocalNode as EmitterNode;
+                    Assert.That(node.m_RemoteNodes.Count, Is.EqualTo(numRepeaters));
+                }
+
+                currentState++;
+            };
         }
 
-        [UnityTest]
-        public IEnumerator TestClusterSetupRepeater()
+        [Test]
+        public void TestClusterSetupRepeater()
         {
             var argString =
                 $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-            
+
             var args = argString.Split(" ").ToList();
             args.Add("-adapterName");
             args.Add(m_InterfaceName);
@@ -126,9 +143,9 @@ namespace Unity.ClusterDisplay.Tests
             var repeaterClusterSync = ClusterSync.GetUniqueInstance("Repeater");
             ClusterSync.PushInstance("Repeater");
             repeaterClusterSync.PrePopulateClusterParams();
-            
+
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
-            
+
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
             Assert.That(ClusterDisplayState.IsActive, Is.True);
@@ -142,39 +159,61 @@ namespace Unity.ClusterDisplay.Tests
             var node = repeaterClusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
 
-            var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
-            Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-            Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
-            Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
+            var state = (HelloEmitter: 0, WelcomeRepeater: 1, LastFrameData: 2);
+            int currentState = 0;
 
-            // Send an acceptance message
-            testAgent.PublishMessage(new MessageHeader
+            // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
+            ClusterSync.onSyncTick = (TimeSpan elapsed) =>
             {
-                MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = BitVector.FromIndex(k_RepeaterId),
-            });
+                if (elapsed.TotalMilliseconds <= 5)
+                    return;
 
-            // Send a GO message
-            var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
-                new byte[] {k_RepeaterId},
-                EMessageType.LastFrameData,
-                new EmitterLastFrameData()
+                if (currentState == state.HelloEmitter)
                 {
-                    FrameNumber = 0
-                },
-                MessageHeader.EFlag.Broadcast,
-                new byte[] {0}); // trailing 0 to indicate empty state data
+                    var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
+                    if (header.MessageType == EMessageType.AckMsgRx)
+                        return;
 
-            testAgent.PublishMessage(txHeader, lastFrameMsg);
+                    Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
+                    Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
+                    Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
+                }
 
-            yield return null;
+                else if (currentState == state.WelcomeRepeater)
+                {
+                    // Send an acceptance message
+                    testAgent.PublishMessage(new MessageHeader
+                    {
+                        MessageType = EMessageType.WelcomeRepeater,
+                        DestinationIDs = BitVector.FromIndex(k_RepeaterId),
+                    });
+                }
 
-            Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
-            ClusterSync.PopInstance();
+                else if (currentState == state.LastFrameData)
+                {
+                    Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+
+                    // Send a GO message
+                    var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
+                        new byte[] {k_RepeaterId},
+                        EMessageType.LastFrameData,
+                        new EmitterLastFrameData()
+                        {
+                            FrameNumber = 0
+                        },
+                        MessageHeader.EFlag.Broadcast,
+                        new byte[] {0}); // trailing 0 to indicate empty state data
+
+                    testAgent.PublishMessage(txHeader, lastFrameMsg);
+                }
+
+                // Step to the next state.
+                currentState++;
+            };
         }
 
-        [UnityTest]
-        public IEnumerator EmitterAndRepeaterLockstepFor10Frames()
+        [Test]
+        public void EmitterAndRepeaterLockstepFor10Frames()
         {
             const int numRepeaters = 1;
             var repeaterArgsString =
@@ -205,8 +244,8 @@ namespace Unity.ClusterDisplay.Tests
             emitterClusterSync.PrePopulateClusterParams();
 
             m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
-            
-            while (emitterClusterSync.state.Frame < 10 && repeaterClusterSync.state.Frame < 10)
+
+            ClusterSync.onSyncTick = (TimeSpan elapsed) =>
             {
                 ClusterSync.PushInstance("Repeater");
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
@@ -216,6 +255,7 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(ClusterDisplayState.IsRepeater, Is.True);
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
                 Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(k_RepeaterId));
+                ClusterSync.PopInstance();
 
                 ClusterSync.PushInstance("Emitter");
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
@@ -225,9 +265,8 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(ClusterDisplayState.IsRepeater, Is.False);
                 Assert.That(ClusterDisplayState.IsActive, Is.True);
                 Assert.That(ClusterDisplayState.NodeID, Is.EqualTo(0));
-
-                yield return null;
-            }
+                ClusterSync.PopInstance();
+            };
         }
 
         [TearDown]

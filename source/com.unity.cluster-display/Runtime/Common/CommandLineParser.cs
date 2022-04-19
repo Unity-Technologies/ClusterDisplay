@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -116,6 +116,9 @@ namespace Unity.ClusterDisplay
                         tryParse != null && 
                         tryParse(ArgumentName, out m_Value);
 
+                    if (m_Defined && k_Required)
+                        ClusterDebug.LogError($"There is no argument with name: \"{ArgumentName}\" specified.");
+
                     m_Cached = true;
                 }
 
@@ -169,16 +172,7 @@ namespace Unity.ClusterDisplay
             protected override bool DefaultParser(string argumentName, out bool parsedResult)
             {
                 parsedResult = TryGetIndexOfNodeTypeArgument(ArgumentName, out var startIndex);
-
-                if (!parsedResult)
-                {
-                    if (k_Required)
-                        ClusterDebug.LogError($"There is no argument with name: \"{ArgumentName}\" specified.");
-
-                    return false;
-                }
-
-                return true;
+                return parsedResult;
             }
 
             internal BoolArgument(string argumentName, bool required = false) : base(argumentName, required) { }
@@ -437,7 +431,6 @@ namespace Unity.ClusterDisplay
 
             if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
             {
-                LogNoArgument(argumentName);
                 return false;
             }
 
@@ -450,7 +443,6 @@ namespace Unity.ClusterDisplay
             address = null;
             if (!TryGetIndexOfNodeTypeArgument(argumentName, out var startIndex))
             {
-                LogNoArgument(argumentName);
                 return false;
             }
 
@@ -466,7 +458,6 @@ namespace Unity.ClusterDisplay
             port = -1;
             if (!TryParsePorts(out port, out var tx))
             {
-                ClusterDebug.LogError($"Unable to parse RX port.");
                 return false;
             }
 
@@ -480,7 +471,6 @@ namespace Unity.ClusterDisplay
             port = -1;
             if (!TryParsePorts(out var rx, out port))
             {
-                ClusterDebug.LogError($"Unable to parse TX port.");
                 return false;
             }
 

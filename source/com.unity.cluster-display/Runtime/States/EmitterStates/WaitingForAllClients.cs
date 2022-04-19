@@ -8,6 +8,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class WaitingForAllClients : EmitterState
     {
+        // We should never proceed out of the while loop since we are immediately going to
+        // enter the EmitterSynchronization state before exiting the loop.
+        public override bool ReadyToProceed => false;
+
         public WaitingForAllClients(IClusterSyncState clusterSync)
             : base(clusterSync) {}
 

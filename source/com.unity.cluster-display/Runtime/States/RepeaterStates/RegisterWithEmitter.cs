@@ -9,6 +9,10 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
     internal class RegisterWithEmitter : RepeaterState
     {
+        // We should never proceed out of the while loop since we are immediately going to
+        // enter the RepeaterSynchronization state before exiting the loop.
+        public override bool ReadyToProceed => false;
+
         private bool m_EmitterFound;
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
@@ -17,6 +21,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
+
+            m_LastSend = m_Timer.Elapsed - new TimeSpan(0, 0, 0, 1);
         }
 
         public override void InitState()
@@ -37,8 +43,6 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             return this;
         }
         
-        public override bool ReadyToProceed => false;
-
         private void ProcessMessages(CancellationToken ctk)
         {
             try
@@ -47,7 +51,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     return;
 
                 // Periodically broadcast presence
-                if (m_Timer.Elapsed - m_LastSend > TimeSpan.FromSeconds(1))
+                if (m_Timer.Elapsed - m_LastSend >= TimeSpan.FromSeconds(1))
                 {
                     var header = new MessageHeader()
                     {
