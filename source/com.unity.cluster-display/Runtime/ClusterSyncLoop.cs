@@ -59,6 +59,12 @@ namespace Unity.ClusterDisplay
             readyToProceed = LocalNode.ReadyToProceed;
             isTerminated = state.IsTerminated;
 
+            if (readyToProceed)
+            {
+                newFrame = false;
+                return;
+            }
+
             if (!LocalNode.DoFrame(newFrame))
             {
                 // Game Over!
