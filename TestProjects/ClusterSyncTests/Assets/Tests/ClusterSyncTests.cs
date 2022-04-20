@@ -63,8 +63,8 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.False);
         }
 
-        [Test]
-        public void TestClusterSetupEmitter()
+        [UnityTest]
+        public IEnumerator TestClusterSetupEmitter()
         {
             const int numRepeaters = 1;
             var argString =
@@ -93,7 +93,9 @@ namespace Unity.ClusterDisplay.Tests
             ClusterSync.onSyncTick = (TimeSpan elapsed) =>
             {
                 if (elapsed.TotalMilliseconds <= 1)
+                {
                     return;
+                }
 
                 if (currentState == state.HelloEmitter)
                 {
@@ -126,10 +128,15 @@ namespace Unity.ClusterDisplay.Tests
 
                 currentState++;
             };
+
+            while (emitterClusterSync.CurrentFrameID < 1)
+            {
+                yield return null;
+            }
         }
 
-        [Test]
-        public void TestClusterSetupRepeater()
+        [UnityTest]
+        public IEnumerator TestClusterSetupRepeater()
         {
             var argString =
                 $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
@@ -165,14 +172,18 @@ namespace Unity.ClusterDisplay.Tests
             // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
             ClusterSync.onSyncTick = (TimeSpan elapsed) =>
             {
-                if (elapsed.TotalMilliseconds <= 5)
+                if (elapsed.TotalMilliseconds <= 1)
+                {
                     return;
+                }
 
                 if (currentState == state.HelloEmitter)
                 {
                     var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
                     if (header.MessageType == EMessageType.AckMsgRx)
+                    {
                         return;
+                    }
 
                     Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
                     Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
@@ -210,6 +221,9 @@ namespace Unity.ClusterDisplay.Tests
                 // Step to the next state.
                 currentState++;
             };
+
+            while (repeaterClusterSync.CurrentFrameID == 0)
+                yield return null;
         }
 
         [UnityTest]
