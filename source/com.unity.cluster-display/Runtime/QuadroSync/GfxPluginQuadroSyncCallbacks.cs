@@ -31,20 +31,23 @@ namespace Unity.ClusterDisplay
 
         void OnEnable()
         {
-            m_previousVsync = QualitySettings.vSyncCount;
-            m_previewFrameQueue = QualitySettings.maxQueuedFrames;
-            ClusterDebug.Log("Enabling VSYNC");
-            QualitySettings.vSyncCount = 1;
-            QualitySettings.maxQueuedFrames = 1;
-
-            if (m_InitDelayFrames >= 0)
+            if (!CommandLineParser.disableQuadroSync.Defined || !CommandLineParser.disableQuadroSync.Value)
             {
-                StartCoroutine(DelayedInit());
-            }
+                m_previousVsync = QualitySettings.vSyncCount;
+                m_previewFrameQueue = QualitySettings.maxQueuedFrames;
+                ClusterDebug.Log("Enabling VSYNC");
+                QualitySettings.vSyncCount = 1;
+                QualitySettings.maxQueuedFrames = 1;
 
-            else
-            {
-                InitializeQuadroSync();
+                if (m_InitDelayFrames >= 0)
+                {
+                    StartCoroutine(DelayedInit());
+                }
+
+                else
+                {
+                    InitializeQuadroSync();
+                }
             }
         }
 

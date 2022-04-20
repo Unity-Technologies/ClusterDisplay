@@ -219,7 +219,7 @@ namespace Unity.ClusterDisplay
                     });
 
                 stateSetter.SetIsEmitter(true);
-            	stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
+                stateSetter.SetEmitterIsHeadless(CommandLineParser.headlessEmitter.Value);
                 stateSetter.SetIsRepeater(false);
 
                 LocalNode.Start();
@@ -239,7 +239,7 @@ namespace Unity.ClusterDisplay
                 // Emitter command line format: -node nodeId ip:rxport,txport
                 m_LocalNode = new RepeaterNode(
                     this, 
-                	CommandLineParser.delayRepeaters.Value,
+                    CommandLineParser.delayRepeaters.Value, 
                     config);
 
                 stateSetter.SetIsEmitter(false);
