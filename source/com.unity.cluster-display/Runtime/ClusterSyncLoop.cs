@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay
                 }
 
                 readyToProceed &= LocalNode.ReadyToProceed;
-                isTerminated &= state.IsTerminated;
+                isTerminated |= state.IsTerminated;
                 newFrame = false;
             }
 
