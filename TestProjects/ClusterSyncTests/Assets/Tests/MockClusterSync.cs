@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.Tests
             LocalNode = nodeType switch
             {
                 NodeType.Emitter => new MockEmitterNode(this, emitterConfig),
-                NodeType.Repeater => new MockRepeaterNode(this, udpConfig),
+                NodeType.Repeater => new MockRepeaterNode(this, false, udpConfig),
                 _ => throw new ArgumentOutOfRangeException(nameof(nodeType), nodeType, null)
             };
         }
@@ -71,8 +71,8 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     class MockRepeaterNode : RepeaterNode
     {
-        public MockRepeaterNode(IClusterSyncState clusterSync, UDPAgent.Config config)
-            : base(clusterSync, false, config)
+        public MockRepeaterNode(IClusterSyncState clusterSync, bool delayRepeaters, UDPAgent.Config config)
+            : base(clusterSync, delayRepeaters, config)
         {
             // Exit the starting state immediately
             var oldState = m_CurrentState;
