@@ -218,7 +218,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [UnityTest]
-        public IEnumerator EmitterAndRepeaterLockstepFor10Frames()
+        public IEnumerator EmitterThenRepeaterLockstepFor10Frames()
         {
             const int numRepeaters = 1;
 
@@ -274,6 +274,69 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(repeaterClusterSync.state.IsRepeater, Is.True);
                 Assert.That(repeaterClusterSync.state.IsActive, Is.True);
                 Assert.That(repeaterClusterSync.state.NodeID, Is.EqualTo(k_RepeaterId));
+            };
+
+            while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
+                yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator RepeaterThenEmitterLockstepFor10Frames()
+        {
+            const int numRepeaters = 1;
+
+            var repeaterArgsString =
+                $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+            
+            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
+            repeaterArgs.Add("-adapterName");
+            repeaterArgs.Add(m_InterfaceName);
+
+            var emitterArgsString =
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+
+            var emitterArgs = emitterArgsString.Split(" ").ToList();
+            emitterArgs.Add("-adapterName");
+            emitterArgs.Add(m_InterfaceName);
+
+            var repeaterClusterSync = new ClusterSync("Repeater");
+            var emitterClusterSync = new ClusterSync("Emitter");
+
+            m_Instances.Add(repeaterClusterSync);
+            m_Instances.Add(emitterClusterSync);
+
+            CommandLineParser.Override(repeaterArgs);
+            repeaterClusterSync.PrePopulateClusterParams();
+            repeaterClusterSync.EnableClusterDisplay();
+
+            CommandLineParser.Override(emitterArgs);
+            emitterClusterSync.PrePopulateClusterParams();
+            emitterClusterSync.EnableClusterDisplay();
+
+            // m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
+
+            ClusterSync.onInstanceTick = (ClusterSync.TickType tickType) =>
+            {
+                if (tickType != ClusterSync.TickType.DoFrame)
+                {
+                    return;
+                }
+
+                Assert.That(repeaterClusterSync.state.IsActive, Is.True);
+                Assert.That(repeaterClusterSync.state.IsClusterLogicEnabled, Is.True);
+                Assert.That(repeaterClusterSync.state.IsEmitter, Is.False);
+                Assert.That(repeaterClusterSync.state.IsRepeater, Is.True);
+                Assert.That(repeaterClusterSync.state.IsActive, Is.True);
+                Assert.That(repeaterClusterSync.state.NodeID, Is.EqualTo(k_RepeaterId));
+
+                Assert.That(emitterClusterSync.state.IsActive, Is.True);
+                Assert.That(emitterClusterSync.state.IsClusterLogicEnabled, Is.True);
+                Assert.That(emitterClusterSync.state.IsEmitter, Is.True);
+                Assert.That(emitterClusterSync.state.IsRepeater, Is.False);
+                Assert.That(emitterClusterSync.state.IsActive, Is.True);
+                Assert.That(emitterClusterSync.state.NodeID, Is.EqualTo(0));
             };
 
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)

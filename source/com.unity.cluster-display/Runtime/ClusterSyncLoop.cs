@@ -18,9 +18,9 @@ namespace Unity.ClusterDisplay
         internal delegate void OnInstanceTick(TickType tickType);
 
         private delegate void OnInstanceDoPreFrame();
-        private delegate void OnInstanceDoFrame(out bool readyToProceed, out bool isTerminated);
+        private delegate void OnInstanceDoFrame(ref bool readyToProceed, ref bool isTerminated);
         private delegate void OnInstancePostFrame();
-        private delegate void OnInstanceDoLateFrame(out bool readForLateFrame);
+        private delegate void OnInstanceDoLateFrame(ref bool readForLateFrame);
 
         private static OnInstanceDoPreFrame onInstanceDoPreFrame;
         private static OnInstanceDoFrame onInstanceDoFrame;
@@ -85,24 +85,18 @@ namespace Unity.ClusterDisplay
         }
 
         private bool newFrame = false;
-        internal void DoFrame (out bool readyToProceed, out bool isTerminated)
+        internal void DoFrame (ref bool readyToProceed, ref bool isTerminated)
         {
-            readyToProceed = true;
-            isTerminated = false;
-
             try
             {
-                readyToProceed = LocalNode.ReadyToProceed;
-                isTerminated = state.IsTerminated;
-
                 if (!LocalNode.DoFrame(newFrame))
                 {
                     // Game Over!
                     syncState.SetIsTerminated(true);
                 }
 
-                readyToProceed = LocalNode.ReadyToProceed;
-                isTerminated = state.IsTerminated;
+                readyToProceed &= LocalNode.ReadyToProceed;
+                isTerminated &= state.IsTerminated;
                 newFrame = false;
             }
 
@@ -154,7 +148,7 @@ namespace Unity.ClusterDisplay
                 allReadyToProceed = true;
                 allIsTerminated = false;
 
-                onInstanceDoFrame?.Invoke(out allReadyToProceed, out allIsTerminated);
+                onInstanceDoFrame?.Invoke(ref allReadyToProceed, ref allIsTerminated);
                 onInstanceTick?.Invoke(TickType.DoFrame);
 
             } while (!allReadyToProceed && !allIsTerminated);
@@ -162,15 +156,13 @@ namespace Unity.ClusterDisplay
             onInstancePostFrame?.Invoke();
         }
 
-        internal void DoLateFrame (out bool readyForLateFrame)
+        internal void DoLateFrame (ref bool readyForLateFrame)
         {
-            readyForLateFrame = true;
-
             try
             {
                 m_EndDelayMonitor.RefPoint();
                 LocalNode.DoLateFrame();
-                readyForLateFrame = LocalNode.ReadyForNextFrame;
+                readyForLateFrame &= LocalNode.ReadyForNextFrame;
                 m_EndDelayMonitor.SampleNow();
             }
 
@@ -192,7 +184,7 @@ namespace Unity.ClusterDisplay
             while (!allReadyForNextFrame)
             {
                 allReadyForNextFrame = true;
-                onInstanceDoLateFrame?.Invoke(out allReadyForNextFrame);
+                onInstanceDoLateFrame?.Invoke(ref allReadyForNextFrame);
                 onInstanceTick?.Invoke(TickType.DoLateFrame);
             }
         }
