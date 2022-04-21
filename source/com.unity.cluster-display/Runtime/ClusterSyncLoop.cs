@@ -147,7 +147,7 @@ namespace Unity.ClusterDisplay
             bool allReadyToProceed, allIsTerminated;
 
             onInstanceDoPreFrame?.Invoke();
-            onInstanceTick.Invoke(TickType.DoPreFrame);
+            onInstanceTick?.Invoke(TickType.DoPreFrame);
 
             do
             {
@@ -159,7 +159,7 @@ namespace Unity.ClusterDisplay
 
             } while (!allReadyToProceed && !allIsTerminated);
 
-            onInstancePostFrame.Invoke();
+            onInstancePostFrame?.Invoke();
         }
 
         internal void DoLateFrame (out bool readyForLateFrame)

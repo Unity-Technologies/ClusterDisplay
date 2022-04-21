@@ -7,8 +7,22 @@ namespace Unity.ClusterDisplay
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
+    #if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoad]
+    #endif
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
+        #if !CLUSTER_DISPLAY_TESTS
+        static ClusterDisplayManager() => PreInitialize();
+
+        [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
+        internal static void PreInitialize()
+        {
+            ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterDisplayManager)}\".");
+            CreateClusterSyncInstance();
+        }
+        #endif
+
         [SerializeField][HideInInspector] private Camera m_ActiveCamera;
         public static Camera ActiveCamera
         {
@@ -100,12 +114,6 @@ namespace Unity.ClusterDisplay
         protected override void OnAwake()
         {
             ClusterDebug.Log("Cluster Display started bootstrap.");
-
-            if (clusterSyncInstance == null)
-            {
-                CreateClusterSyncInstance();
-            }
-
             endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
 
             preInitialize?.Invoke();
