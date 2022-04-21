@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
@@ -18,7 +18,6 @@ namespace Unity.ClusterDisplay
     public static class ClusterSyncDebug
     {
         public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
-        public static string GetDebugString(string instanceName) => ClusterSync.GetUniqueInstance(instanceName).GetDebugString();
     }
 
     /// <summary>
@@ -33,23 +32,15 @@ namespace Unity.ClusterDisplay
 #endif
     internal partial class ClusterSync : IClusterSyncState
     {
-#if !CLUSTER_DISPLAY_TESTS
-        static ClusterSync() => PreInitialize();
+        internal static ClusterSync Instance => ClusterDisplayManager.ClusterSyncInstance;
 
-        [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
-        internal static void PreInitialize()
-        {
-            ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterSync)}\".");
-            ClusterDisplayManager.preInitialize += () =>
-                GetUniqueInstance(k_DefaultName).RegisterDelegates();
-        }
-#endif
+        internal const string k_DefaultName = "DefaultClusterSync";
+        public string InstanceName => m_InstanceName;
+        readonly string m_InstanceName;
 
-        private ClusterSync (string instanceName)
+        internal ClusterSync (string instanceName = k_DefaultName)
         {
             m_InstanceName = instanceName;
-            k_Instances.Add(instanceName, this);
-
             RegisterDelegates();
 
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
@@ -141,6 +132,11 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onEnable += EnableClusterDisplay;
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
             ClusterDisplayManager.onApplicationQuit += Quit;
+
+            onInstanceDoPreFrame += PreFrame;
+            onInstanceDoFrame += DoFrame;
+            onInstancePostFrame += PostFrame;
+            onInstanceDoLateFrame += DoLateFrame;
         }
 
         private void UnRegisterDelegates()
@@ -148,6 +144,11 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onEnable -= EnableClusterDisplay;
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
             ClusterDisplayManager.onApplicationQuit -= Quit;
+
+            onInstanceDoPreFrame -= PreFrame;
+            onInstanceDoFrame -= DoFrame;
+            onInstancePostFrame -= PostFrame;
+            onInstanceDoLateFrame -= DoLateFrame;
         }
 
         internal void PrePopulateClusterParams ()
@@ -171,7 +172,7 @@ namespace Unity.ClusterDisplay
             };
         }
 
-        private void EnableClusterDisplay ()
+        internal void EnableClusterDisplay ()
         {
             if (syncState.IsActive)
                 return;
@@ -219,7 +220,7 @@ namespace Unity.ClusterDisplay
             onPostEnableClusterDisplay?.Invoke();
         }
 
-        private void DisableClusterDisplay()
+        internal void DisableClusterDisplay()
         {
             if (!state.IsClusterLogicEnabled)
                 return;
@@ -230,14 +231,14 @@ namespace Unity.ClusterDisplay
 
         struct ClusterDisplayLateUpdate { }
 
-        void InjectSynchPointInPlayerLoop()
+        static void InjectSynchPointInPlayerLoop()
         {
             RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
                 SystemUpdate);
             RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        void RemoveSynchPointFromPlayerLoop()
+        static void RemoveSynchPointFromPlayerLoop()
         {
             DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
             DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
@@ -346,7 +347,7 @@ namespace Unity.ClusterDisplay
         private void Quit() =>
             ShutdownAllClusterNodes();
 
-        private void CleanUp()
+        internal void CleanUp()
         {
             LocalNode?.Exit();
             m_LocalNode = null;
@@ -360,9 +361,6 @@ namespace Unity.ClusterDisplay
             UnRegisterDelegates();
 
             onDisableCLusterDisplay?.Invoke();
-
-            if (k_Instances.ContainsKey(m_InstanceName))
-                k_Instances.Remove(m_InstanceName);
 
             InstanceLog($"Flushed.");
         }

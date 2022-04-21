@@ -41,6 +41,22 @@ namespace Unity.ClusterDisplay
 
         public delegate void ClusterDisplayOnCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
 
+        private static ClusterSync clusterSyncInstance;
+        internal static ClusterSync ClusterSyncInstance
+        {
+            get
+            {
+                if (clusterSyncInstance == null)
+                {
+                    CreateClusterSyncInstance();
+                }
+
+                return clusterSyncInstance;
+            }
+        }
+
+        private static void CreateClusterSyncInstance () => clusterSyncInstance = new ClusterSync();
+
         public static ClusterDisplayBehaviourDelegate preInitialize;
         public static ClusterDisplayBehaviourDelegate awake;
         public static ClusterDisplayBehaviourDelegate start;
@@ -84,6 +100,11 @@ namespace Unity.ClusterDisplay
         protected override void OnAwake()
         {
             ClusterDebug.Log("Cluster Display started bootstrap.");
+
+            if (clusterSyncInstance == null)
+            {
+                CreateClusterSyncInstance();
+            }
 
             endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
 
