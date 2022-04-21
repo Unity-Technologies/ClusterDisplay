@@ -115,10 +115,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                         ProceededToNextFrame(newFrame);
                         break;
                     case EStage.WaitForRepeatersToACK:
-                        if (newFrame)
-                        {
-                            throw new InvalidOperationException("Should not be waiting for ack at the beginning of the frame");
-                        }
+                        // if (newFrame)
+                        // {
+                        //     throw new InvalidOperationException("Should not be waiting for ack at the beginning of the frame");
+                        // }
                         break;
 
                     default:
