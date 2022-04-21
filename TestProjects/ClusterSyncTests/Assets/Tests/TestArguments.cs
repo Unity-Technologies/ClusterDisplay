@@ -61,8 +61,8 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(CommandLineParser.overscan.Defined);
             Assert.That(CommandLineParser.overscan.Value == 128);
 
-            Assert.That(CommandLineParser.quadroSyncInitDelay.Defined);
-            Assert.That(CommandLineParser.quadroSyncInitDelay.Value == 66);
+            // Assert.That(CommandLineParser.quadroSyncInitDelay.Defined);
+            // Assert.That(CommandLineParser.quadroSyncInitDelay.Value == 66);
 
             Assert.That(CommandLineParser.adapterName.Defined);
             Assert.That(CommandLineParser.adapterName.Value == "Ethernet");

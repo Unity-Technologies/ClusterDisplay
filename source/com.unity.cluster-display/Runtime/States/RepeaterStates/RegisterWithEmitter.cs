@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -17,7 +17,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        public RegisterWithEmitter(IClusterSyncState clusterSync) : base(clusterSync)
+        public RegisterWithEmitter(IClusterSyncState clusterSync)
+            : base(clusterSync)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
@@ -30,7 +31,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_Cancellation = new CancellationTokenSource();
         }
 
-        protected override NodeState DoFrame (bool frameAdvance)
+        protected override NodeState DoFrame(bool frameAdvance)
         {
             if (m_EmitterFound)
             {
@@ -42,7 +43,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             ProcessMessages(m_Cancellation.Token);
             return this;
         }
-        
+
         private void ProcessMessages(CancellationToken ctk)
         {
             try
@@ -95,18 +96,13 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                 }
             }
 
-            catch (OperationCanceledException)
-            {
-
-            }
+            catch (OperationCanceledException) { }
 
             catch (Exception e)
             {
-                var err = new FatalError( clusterSync, $"Error occured while registering with emitter node: {e.Message}");
+                var err = new FatalError(clusterSync, $"Error occured while registering with emitter node: {e.Message}");
                 PendingStateChange = err;
             }
         }
-
     }
-
 }

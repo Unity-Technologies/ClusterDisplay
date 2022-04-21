@@ -41,22 +41,14 @@ namespace Unity.ClusterDisplay.Tests
                 headlessEmitter = headlessEmitter,
                 repeatersDelayed = delayRepeaters,
                 repeaterCount = numRepeaters,
-                handshakeTimeout = new TimeSpan(0, 0, timeoutSeconds),
                 udpAgentConfig = udpConfig,
                 
-            };
-
-            var repeaterConfig = new RepeaterNode.Config
-            {
-                handshakeTimeout = new TimeSpan(0, 0, timeoutSeconds),
-                delayRepeater = false,
-                udpAgentConfig = udpConfig,
             };
 
             LocalNode = nodeType switch
             {
                 NodeType.Emitter => new MockEmitterNode(this, emitterConfig),
-                NodeType.Repeater => new MockRepeaterNode(this, repeaterConfig),
+                NodeType.Repeater => new MockRepeaterNode(this, udpConfig),
                 _ => throw new ArgumentOutOfRangeException(nameof(nodeType), nodeType, null)
             };
         }
@@ -79,8 +71,8 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     class MockRepeaterNode : RepeaterNode
     {
-        public MockRepeaterNode(IClusterSyncState clusterSync, Config config)
-            : base(clusterSync, config)
+        public MockRepeaterNode(IClusterSyncState clusterSync, UDPAgent.Config config)
+            : base(clusterSync, false, config)
         {
             // Exit the starting state immediately
             var oldState = m_CurrentState;

@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
     /// node logic each frame by injecting a call back in the player loop.
-    /// 
+    ///
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
 #if UNITY_EDITOR
@@ -58,7 +58,6 @@ namespace Unity.ClusterDisplay
         static internal OnClusterDisplayStateChange onPostEnableClusterDisplay;
         static internal OnClusterDisplayStateChange onDisableCLusterDisplay;
 
-        [HideInInspector]
         bool m_Debugging;
 
         /// <summary>
@@ -257,7 +256,6 @@ namespace Unity.ClusterDisplay
                         headlessEmitter     = clusterParams.m_HeadlessEmitter,
                         repeatersDelayed    = clusterParams.m_DelayRepeaters,
                         repeaterCount       = clusterParams.m_RepeaterCount,
-                        handshakeTimeout    = clusterParams.m_HandshakeTimeout,
                         udpAgentConfig      = config
                     });
             
@@ -284,13 +282,9 @@ namespace Unity.ClusterDisplay
             {
                 // Emitter command line format: -node nodeId ip:rxport,txport
                 m_LocalNode = new RepeaterNode(
-                    this, 
-                    new RepeaterNode.Config
-                    {
-                        handshakeTimeout = clusterParams.m_HandshakeTimeout,
-                        delayRepeater = clusterParams.m_DelayRepeaters,
-                        udpAgentConfig = config,
-                    });
+                    this,
+                    clusterParams.m_DelayRepeaters,
+                    config);
 
                 syncState.SetIsEmitter(false);
                 syncState.SetIsRepeater(true);
@@ -310,6 +304,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 m_Debugging = clusterParams.m_DebugFlag;
+                
 
                 var udpAgentConfig = new UDPAgent.Config
                 {
@@ -320,7 +315,7 @@ namespace Unity.ClusterDisplay
                     timeOut         = 30,
                     adapterName     = clusterParams.m_AdapterName
                 };
-                
+
                 if (clusterParams.m_EmitterSpecified)
                 {
                     if (!TryInitializeEmitter(clusterParams, udpAgentConfig))

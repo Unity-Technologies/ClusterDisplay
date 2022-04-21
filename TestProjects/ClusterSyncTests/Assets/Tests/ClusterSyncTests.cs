@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
@@ -197,14 +198,13 @@ namespace Unity.ClusterDisplay.Tests
                     var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
                         new byte[] {k_RepeaterId},
                         EMessageType.LastFrameData,
-                        new EmitterLastFrameData()
-                        {
-                            FrameNumber = 0
-                        },
+                        new EmitterLastFrameData() { FrameNumber = 0 },
                         MessageHeader.EFlag.Broadcast,
                         new byte[] {0}); // trailing 0 to indicate empty state data
 
                     testAgent.PublishMessage(txHeader, lastFrameMsg);
+					Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+					
                     ClusterSync.onInstanceTick -= onInstanceTick;
                 }
 
