@@ -132,6 +132,7 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
             ClusterDisplayManager.onApplicationQuit += Quit;
 
+            // Register Do(X) methods with ClusterSyncLooper network fences.
             ClusterSyncLooper.onInstanceDoPreFrame += PreFrame;
             ClusterSyncLooper.onInstanceDoFrame += DoFrame;
             ClusterSyncLooper.onInstancePostFrame += PostFrame;

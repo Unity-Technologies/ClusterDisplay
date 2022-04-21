@@ -114,6 +114,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                     case EStage.ReadyToProceed:
                         ProceededToNextFrame(newFrame);
                         break;
+                    // It is possible that we will land on here if there are multiple ClusterSyncs registered with ClusterSyncLooper.
                     case EStage.WaitForRepeatersToACK:
                         break;
 

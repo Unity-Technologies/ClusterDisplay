@@ -217,6 +217,13 @@ namespace Unity.ClusterDisplay.Tests
                 yield return null;
         }
 
+        /// <summary>
+        ///  This test FIRST initializes a EMITTER ClusterSync, then a REPEATER
+        ///  ClusterSync. Then lets the connection run for 10 frames. This
+        ///  demonstrates that the we can change the order with SystemUpdate and
+        ///  everything works.
+        /// </summary>
+        /// <returns></returns>
         [UnityTest]
         public IEnumerator EmitterThenRepeaterLockstepFor10Frames()
         {
@@ -252,8 +259,7 @@ namespace Unity.ClusterDisplay.Tests
             repeaterClusterSync.PrePopulateClusterParams();
             repeaterClusterSync.EnableClusterDisplay();
 
-            // m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
-
+            // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
             ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
@@ -280,6 +286,13 @@ namespace Unity.ClusterDisplay.Tests
                 yield return null;
         }
 
+        /// <summary>
+        ///  This test FIRST initializes a REPEATER ClusterSync, then a EMITTER
+        ///  ClusterSync. Then lets the connection run for 10 frames. This
+        ///  demonstrates that the we can change the order with SystemUpdate and
+        ///  everything works.
+        /// </summary>
+        /// <returns></returns>
         [UnityTest]
         public IEnumerator RepeaterThenEmitterLockstepFor10Frames()
         {
@@ -315,8 +328,7 @@ namespace Unity.ClusterDisplay.Tests
             emitterClusterSync.PrePopulateClusterParams();
             emitterClusterSync.EnableClusterDisplay();
 
-            // m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
-
+            // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
             ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
