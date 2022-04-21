@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
@@ -44,7 +45,7 @@ namespace Unity.ClusterDisplay
         public int msgsSent;
     }
 
-    internal enum StateID : byte
+    enum StateID : byte
     {
         End = 0,
         Time = 1,
@@ -60,21 +61,21 @@ namespace Unity.ClusterDisplay
             return new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<T>()];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static T BytesToStruct<T>(ReadOnlySpan<byte> arr,
             int offset) where T : unmanaged =>
             MemoryMarshal.Read<T>(arr.Slice(offset));
 
-        static void StructToBytes<T>(Span<byte> arr,
-            int offset,
-            ref T s) where T : unmanaged =>
-            MemoryMarshal.Write(arr.Slice(offset),
-                ref s);
+        public static int StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
+            where T : unmanaged => blittable.StoreInBuffer(dest.AsSpan(), offset);
 
-        public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
-            where T : unmanaged => StructToBytes(dest.AsSpan(), offset, ref blittable);
-
-        public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset = 0)
-            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
+        public static int StoreInBuffer<T>(ref this T blittable,
+            Span<byte> dest,
+            int offset = 0) where T : unmanaged =>
+            MemoryMarshal.TryWrite(dest.Slice(offset),
+                ref blittable)
+                ? Marshal.SizeOf<T>()
+                : throw new ArgumentOutOfRangeException();
 
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
             BytesToStruct<T>(arr.AsReadOnlySpan(), offset);
@@ -82,10 +83,10 @@ namespace Unity.ClusterDisplay
         public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
             BytesToStruct<T>(arr, offset);
 
-        static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+        public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
 
-        static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+        public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafeReadOnlyPtr(), arr.Length);
     }
 

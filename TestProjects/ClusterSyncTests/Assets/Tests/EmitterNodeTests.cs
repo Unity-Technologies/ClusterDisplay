@@ -109,14 +109,15 @@ namespace Unity.ClusterDisplay.Tests
                 m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
             }
 
-            using var rawStateBuffer = new NativeArray<byte>(ushort.MaxValue, Allocator.Persistent);
+            using var stateBuffer = new StateBuffer(ushort.MaxValue);
 
             // Make the emitter attach some custom data to the frame.
             byte[] GetCustomData() => Encoding.ASCII.GetBytes($"Hello World {m_ClusterSync.CurrentFrameID}");
-            EmitterStateWriter.RegisterOnStoreCustomDataDelegate((NativeArray<byte> buffer, ref uint pos) =>
+            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(buffer =>
             {
-                pos = (uint) buffer.AppendCustomData((int) pos, GetCustomData());
-                return true;
+                var data = GetCustomData();
+                data.CopyTo(buffer);
+                return data.Length;
             });
 
             // Simulate several frames
@@ -136,10 +137,12 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.IsTrue(RunStateUntilReadyToProceed(emitterSync));
 
                 // The is the current state data, with custom data appended
-                var stateSize = EmitterStateWriter.StoreFrameState(rawStateBuffer, false);
-                stateSize = (uint) rawStateBuffer.AppendCustomData((int) stateSize, GetCustomData());
-                EmitterStateWriter.MarkStatesEnd(rawStateBuffer, ref stateSize);
-                var stateBuffer = rawStateBuffer.GetSubArray(0, (int) stateSize);
+                stateBuffer.StoreAllStates();
+                var writable = stateBuffer.BeginWrite();
+                var customData = GetCustomData();
+                customData.CopyTo(writable);
+                stateBuffer.EndWrite(customData.Length);
+                stateBuffer.StoreState(StateID.End);
 
                 // ======== Nodes receive FrameData packet ======
                 foreach (var testAgent in m_TestAgents)
@@ -150,7 +153,7 @@ namespace Unity.ClusterDisplay.Tests
 
                     // Check that state data is received and it corresponds to the current frame.
                     // The received data should also contain custom data at the end.
-                    Assert.That(frameData, Is.EqualTo(stateBuffer));
+                    Assert.That(frameData, Is.EqualTo(stateBuffer.Data));
                 }
 
                 // ======= PostLateUpdate ===========
@@ -268,8 +271,8 @@ namespace Unity.ClusterDisplay.Tests
 
             // Simulate several frames
             const int kNumFrames = 3;
-            using var rawStateBuffer = new NativeArray<byte>(ushort.MaxValue, Allocator.Persistent);
-            NativeArray<byte> lastFrameState = default;
+            using var lastFrameState = new StateBuffer(ushort.MaxValue);
+
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
                 // ======= Start of Emitter frame =========
@@ -304,8 +307,8 @@ namespace Unity.ClusterDisplay.Tests
                         Assert.That(message.FrameNumber, Is.EqualTo(m_ClusterSync.CurrentFrameID - 1));
 
                         // Check that the frame state is from the previous frame
-                        Assert.IsNotNull(lastFrameState);
-                        Assert.That(frameData, Is.EqualTo(lastFrameState));
+                        Assert.That(lastFrameState.IsValid);
+                        Assert.That(frameData, Is.EqualTo(lastFrameState.Data));
                     }
                     else
                     {
@@ -324,8 +327,8 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.IsTrue(RunStateUntilReadyForNextFrame(emitterSync));
 
                 // Store the state data for the current frame
-                var stateSize = (int) EmitterStateWriter.StoreFrameState(rawStateBuffer, true);
-                lastFrameState = rawStateBuffer.GetSubArray(0, stateSize);
+                lastFrameState.StoreAllStates();
+                lastFrameState.StoreState(StateID.End);
 
                 // ======= End of Frame ===========
                 yield return null;
