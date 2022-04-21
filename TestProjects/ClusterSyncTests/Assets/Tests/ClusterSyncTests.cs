@@ -87,10 +87,10 @@ namespace Unity.ClusterDisplay.Tests
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
-            ClusterSync.OnInstanceTick onInstanceTick = null;
-            onInstanceTick = (ClusterSync.TickType tickType) =>
+            ClusterSyncLooper.OnInstanceTick onInstanceTick = null;
+            onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
-                if (tickType == ClusterSync.TickType.DoFrame)
+                if (tickType == ClusterSyncLooper.TickType.DoFrame)
                 {
                     var node = emitterClusterSync.LocalNode as EmitterNode;
 
@@ -111,11 +111,11 @@ namespace Unity.ClusterDisplay.Tests
                         new RolePublication {NodeRole = ENodeRole.Repeater});
 
                     testAgent.PublishMessage(header, rawMsg);
-                    ClusterSync.onInstanceTick -= onInstanceTick;
+                    ClusterSyncLooper.onInstanceTick -= onInstanceTick;
                 }
             };
 
-            ClusterSync.onInstanceTick = onInstanceTick;
+            ClusterSyncLooper.onInstanceTick = onInstanceTick;
 
             var node = emitterClusterSync.LocalNode as EmitterNode;
             while (node.m_RemoteNodes.Count != numRepeaters)
@@ -159,10 +159,10 @@ namespace Unity.ClusterDisplay.Tests
             int currentStep = 0;
 
             // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
-            ClusterSync.OnInstanceTick onInstanceTick = null;
-            onInstanceTick = (ClusterSync.TickType tickType) =>
+            ClusterSyncLooper.OnInstanceTick onInstanceTick = null;
+            onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
-                if (tickType != ClusterSync.TickType.DoFrame)
+                if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
                     return;
                 }
@@ -205,14 +205,14 @@ namespace Unity.ClusterDisplay.Tests
                     testAgent.PublishMessage(txHeader, lastFrameMsg);
 					Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
 					
-                    ClusterSync.onInstanceTick -= onInstanceTick;
+                    ClusterSyncLooper.onInstanceTick -= onInstanceTick;
                 }
 
                 // Step to the next state.
                 currentStep++;
             };
 
-            ClusterSync.onInstanceTick = onInstanceTick;
+            ClusterSyncLooper.onInstanceTick = onInstanceTick;
             while (currentStep < step.LastFrameData)
                 yield return null;
         }
@@ -254,9 +254,9 @@ namespace Unity.ClusterDisplay.Tests
 
             // m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
-            ClusterSync.onInstanceTick = (ClusterSync.TickType tickType) =>
+            ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
-                if (tickType != ClusterSync.TickType.DoFrame)
+                if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
                     return;
                 }
@@ -317,9 +317,9 @@ namespace Unity.ClusterDisplay.Tests
 
             // m_TestGameObject = new GameObject("Manager", typeof(ClusterDisplayManager));
 
-            ClusterSync.onInstanceTick = (ClusterSync.TickType tickType) =>
+            ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
-                if (tickType != ClusterSync.TickType.DoFrame)
+                if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
                     return;
                 }

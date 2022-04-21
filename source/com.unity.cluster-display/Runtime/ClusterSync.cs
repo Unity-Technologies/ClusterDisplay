@@ -132,10 +132,10 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onDisable += DisableClusterDisplay;
             ClusterDisplayManager.onApplicationQuit += Quit;
 
-            onInstanceDoPreFrame += PreFrame;
-            onInstanceDoFrame += DoFrame;
-            onInstancePostFrame += PostFrame;
-            onInstanceDoLateFrame += DoLateFrame;
+            ClusterSyncLooper.onInstanceDoPreFrame += PreFrame;
+            ClusterSyncLooper.onInstanceDoFrame += DoFrame;
+            ClusterSyncLooper.onInstancePostFrame += PostFrame;
+            ClusterSyncLooper.onInstanceDoLateFrame += DoLateFrame;
         }
 
         private void UnRegisterDelegates()
@@ -144,10 +144,10 @@ namespace Unity.ClusterDisplay
             ClusterDisplayManager.onDisable -= DisableClusterDisplay;
             ClusterDisplayManager.onApplicationQuit -= Quit;
 
-            onInstanceDoPreFrame -= PreFrame;
-            onInstanceDoFrame -= DoFrame;
-            onInstancePostFrame -= PostFrame;
-            onInstanceDoLateFrame -= DoLateFrame;
+            ClusterSyncLooper.onInstanceDoPreFrame -= PreFrame;
+            ClusterSyncLooper.onInstanceDoFrame -= DoFrame;
+            ClusterSyncLooper.onInstancePostFrame -= PostFrame;
+            ClusterSyncLooper.onInstanceDoLateFrame -= DoLateFrame;
         }
 
         internal void PrePopulateClusterParams ()
@@ -215,7 +215,7 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-            InjectSynchPointInPlayerLoop();
+            ClusterSyncLooper.InjectSynchPointInPlayerLoop();
             onPostEnableClusterDisplay?.Invoke();
         }
 
@@ -226,22 +226,6 @@ namespace Unity.ClusterDisplay
             CleanUp();
         }
 
-        struct ClusterDisplayStartFrame { }
-
-        struct ClusterDisplayLateUpdate { }
-
-        static void InjectSynchPointInPlayerLoop()
-        {
-            RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
-                SystemUpdate);
-            RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
-        }
-
-        static void RemoveSynchPointFromPlayerLoop()
-        {
-            DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
-            DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
-        }
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
@@ -347,7 +331,7 @@ namespace Unity.ClusterDisplay
             LocalNode?.Exit();
             m_LocalNode = null;
 
-            RemoveSynchPointFromPlayerLoop();
+            ClusterSyncLooper.RemoveSynchPointFromPlayerLoop();
 
             m_CurrentFrameID = 0;
             syncState.SetIsActive(false);
@@ -358,6 +342,149 @@ namespace Unity.ClusterDisplay
             onDisableCLusterDisplay?.Invoke();
 
             InstanceLog($"Flushed.");
+        }
+
+        private void PreFrame ()
+        {
+            try
+            {
+#if ENABLE_INPUT_SYSTEM
+                if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
+                    Quit();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+                if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
+                    Quit();
+#endif
+
+                if (m_Debugging)
+                {
+                    if (m_NewFrame)
+                        m_FrameRatePerf.SampleNow();
+
+                    if (!LocalNode.DoFrame(m_NewFrame))
+                    {
+                        // Game Over!
+                        syncState.SetIsTerminated(true);
+                    }
+
+                    m_NewFrame = LocalNode.ReadyToProceed;
+                    if (m_NewFrame)
+                    {
+                        m_StartDelayMonitor.SampleNow();
+                        m_StartDelayMonitor.RefPoint();
+                    }
+                }
+
+                else
+                {
+                    m_FrameRatePerf.SampleNow();
+                    m_FrameRatePerf.RefPoint();
+
+                    InstanceLog($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
+
+                    m_StartDelayMonitor.RefPoint();
+                }
+
+                newFrame = true;
+            }
+
+            catch (Exception e)
+            {
+                OnException(e);
+            }
+
+            finally
+            {
+                OnFinally();
+            }
+        }
+
+        private bool newFrame = false;
+        private void DoFrame (ref bool readyToProceed, ref bool isTerminated)
+        {
+            try
+            {
+                if (!LocalNode.DoFrame(newFrame))
+                {
+                    // Game Over!
+                    syncState.SetIsTerminated(true);
+                }
+
+                readyToProceed &= LocalNode.ReadyToProceed;
+                isTerminated |= state.IsTerminated;
+                newFrame = false;
+            }
+
+            catch (Exception e)
+            {
+                OnException(e);
+            }
+
+            finally
+            {
+                OnFinally();
+            }
+        }
+
+        private void PostFrame ()
+        {
+            try
+            {
+                LocalNode.EndFrame();
+
+                m_StartDelayMonitor.SampleNow();
+                InstanceLog(GetDebugString());
+                InstanceLog($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
+
+                syncState.SetFrame(++m_CurrentFrameID);
+            }
+
+            catch (Exception e)
+            {
+                OnException(e);
+            }
+
+            finally
+            {
+                OnFinally();
+            }
+        }
+
+        internal void DoLateFrame (ref bool readyForLateFrame)
+        {
+            try
+            {
+                m_EndDelayMonitor.RefPoint();
+                LocalNode.DoLateFrame();
+                readyForLateFrame &= LocalNode.ReadyForNextFrame;
+                m_EndDelayMonitor.SampleNow();
+            }
+
+            catch (Exception e)
+            {
+                OnException(e);
+            }
+
+            finally
+            {
+                OnFinally();
+            }
+        }
+
+        private void OnException (Exception e)
+        {
+            syncState.SetIsTerminated(true);
+
+            InstanceLog($"Encountered exception.");
+            ClusterDebug.LogException(e);
+        }
+
+        private void OnFinally ()
+        {
+            if (state.IsTerminated)
+            {
+                CleanUp();
+            }
         }
     }
 }
