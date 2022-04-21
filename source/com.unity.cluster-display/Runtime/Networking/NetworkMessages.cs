@@ -60,46 +60,33 @@ namespace Unity.ClusterDisplay
             return new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<T>()];
         }
 
-        public unsafe static T BytesToStruct<T>(byte[] arr, int offset) where T : unmanaged
-        {
-            fixed (byte * ptr = arr)
-                return Marshal.PtrToStructure<T>((IntPtr)(ptr + offset));
-        }
+        static T BytesToStruct<T>(ReadOnlySpan<byte> arr,
+            int offset) where T : unmanaged =>
+            MemoryMarshal.Read<T>(arr.Slice(offset));
 
-        public unsafe static void StructToBytes<T>(byte[] dest, int offset, ref T s) where T : unmanaged
-        {
-            fixed (byte* ptr = dest)
-                UnsafeUtility.MemCpy(
-                    ptr + offset, 
-                    UnsafeUtility.AddressOf(ref s), 
-                    Marshal.SizeOf<T>());
-        }
-        
-        public unsafe static T BytesToStruct<T>(NativeArray<byte> arr, int offset) where T : unmanaged
-        {
-            var ptr = (byte*)arr.GetUnsafePtr() + offset;
-            return Marshal.PtrToStructure<T>((IntPtr)ptr);
-        }
+        static void StructToBytes<T>(Span<byte> arr,
+            int offset,
+            ref T s) where T : unmanaged =>
+            MemoryMarshal.Write(arr.Slice(offset),
+                ref s);
 
-        public unsafe static void StructToBytes<T>(NativeArray<byte> dest, int offset, ref T s) where T : unmanaged
-        {
-                UnsafeUtility.MemCpy(
-                    (byte*)dest.GetUnsafePtr() + offset, 
-                    UnsafeUtility.AddressOf(ref s), 
-                    Marshal.SizeOf<T>());
-        }
-        
-        public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset)
-            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
-      
+        public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
+            where T : unmanaged => StructToBytes(dest.AsSpan(), offset, ref blittable);
+
         public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset = 0)
             where T : unmanaged => StructToBytes(dest, offset, ref blittable);
-        
+
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
-            BytesToStruct<T>(arr, offset);
-        
+            BytesToStruct<T>(arr.AsReadOnlySpan(), offset);
+
         public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
             BytesToStruct<T>(arr, offset);
+
+        static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+            new(arr.GetUnsafePtr(), arr.Length);
+
+        static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+            new(arr.GetUnsafeReadOnlyPtr(), arr.Length);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -161,7 +148,7 @@ namespace Unity.ClusterDisplay
     {
         public UInt64 FrameNumber;
     }
-    
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct RolePublication
     {
