@@ -158,7 +158,8 @@ namespace Unity.ClusterDisplay.Tests
             int currentStep = 0;
 
             // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
-            ClusterSync.onInstanceTick = (ClusterSync.TickType tickType) =>
+            ClusterSync.OnInstanceTick onInstanceTick = null;
+            onInstanceTick = (ClusterSync.TickType tickType) =>
             {
                 if (tickType != ClusterSync.TickType.DoFrame)
                 {
@@ -204,13 +205,15 @@ namespace Unity.ClusterDisplay.Tests
                         new byte[] {0}); // trailing 0 to indicate empty state data
 
                     testAgent.PublishMessage(txHeader, lastFrameMsg);
+                    ClusterSync.onInstanceTick -= onInstanceTick;
                 }
 
                 // Step to the next state.
                 currentStep++;
             };
 
-            while (repeaterClusterSync.CurrentFrameID < 1)
+            ClusterSync.onInstanceTick = onInstanceTick;
+            while (currentStep < step.LastFrameData)
                 yield return null;
         }
 
