@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
     internal class WaitingForAllClients : EmitterState
     {
         public override bool ReadyToProceed => false;
-        
+
         public WaitingForAllClients(IClusterSyncState clusterSync)
             : base(clusterSync) { }
 
@@ -19,26 +19,15 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             m_Task = Task.Run(() => ProcessMessages(m_Cancellation.Token), m_Cancellation.Token);
         }
 
-        protected override void ExitState(NodeState newState)
-        {
-            if (m_Task != null)
-            {
-                m_Cancellation.Cancel();
-                m_Task.Wait(MaxTimeOut);
-            }
-
-            base.ExitState(newState);
-        }
-
         protected override NodeState DoFrame(bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut )
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with {LocalNode.m_RemoteNodes.Count} nodes ");
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
@@ -46,13 +35,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 if (CommandLineParser.communicationTimeout.Defined)
                     communicationTimeout = new TimeSpan(0, 0, 0, 0, (int)CommandLineParser.communicationTimeout.Value);
 
-                var newState = new EmitterSynchronization(clusterSync) {
+                return new EmitterSynchronization(clusterSync)
+                {
                     MaxTimeOut = communicationTimeout
                 };
-
-                return newState.EnterState(this);
             }
-            
+
             return this;
         }
 
@@ -84,30 +72,22 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);
-                var err = new FatalError( clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
+                var err = new FatalError(clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
                 PendingStateChange = err;
             }
         }
 
-        private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo )
+        private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo)
         {
-            ClusterDebug.Log("Discovered remote node: " + header.OriginID );
+            ClusterDebug.Log("Discovered remote node: " + header.OriginID);
 
-            var commCtx = new RemoteNodeComContext
-            {
-                ID = header.OriginID,
-                Role = roleInfo.NodeRole,
-            };
+            var commCtx = new RemoteNodeComContext {ID = header.OriginID, Role = roleInfo.NodeRole,};
             LocalNode.RegisterNode(commCtx);
         }
 
         private void SendResponse(MessageHeader rxHeader)
         {
-            var header = new MessageHeader()
-            {
-                MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = BitVector.FromIndex(rxHeader.OriginID),
-            };
+            var header = new MessageHeader() {MessageType = EMessageType.WelcomeRepeater, DestinationIDs = BitVector.FromIndex(rxHeader.OriginID),};
 
             LocalNode.UdpAgent.PublishMessage(header);
         }
@@ -116,7 +96,5 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.m_RemoteNodes.Count}";
         }
-
     }
-
 }

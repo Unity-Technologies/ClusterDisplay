@@ -43,10 +43,7 @@ namespace Unity.ClusterDisplay
             Config config)
             : base(clusterSync, config.udpAgentConfig)
         {
-            m_CurrentState = new WaitingForAllClients(clusterSync)
-            {
-                MaxTimeOut = ClusterParams.RegisterTimeout
-            };
+            m_CurrentState = HardwareSyncInitState.Create(clusterSync);
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }

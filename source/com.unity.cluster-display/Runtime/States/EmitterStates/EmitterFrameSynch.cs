@@ -56,9 +56,9 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public EmitterSynchronization(IClusterSyncState clusterSync)
             : base(clusterSync) { }
 
-        protected override void ExitState(NodeState newState)
+        protected override void ExitState()
         {
-            base.ExitState(newState);
+            base.ExitState();
             m_Emitter?.Dispose();
         }
 
@@ -127,10 +127,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         protected override void DoLateFrame()
         {
             base.DoLateFrame();
-            if (Stage == EStage.WaitForRepeatersToACK)
-            {
-                OnWaitForRepeatersToACK();
-            }
+            OnWaitForRepeatersToACK();
         }
 
         private void OnWaitOnRepeatersNextFrame()

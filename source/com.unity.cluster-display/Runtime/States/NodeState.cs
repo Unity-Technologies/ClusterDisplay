@@ -23,14 +23,14 @@ namespace Unity.ClusterDisplay
         public NodeState(IClusterSyncState clusterSync) =>
             this.clusterSync = clusterSync;
 
-        public virtual bool ReadyToProceed => true;
-        public virtual bool ReadyForNextFrame => true;
+        public virtual bool ReadyToProceed => false;
+        public virtual bool ReadyForNextFrame => false;
 
         public NodeState EnterState(NodeState oldState)
         {
             if (oldState != this)
             {
-                oldState?.ExitState(this);
+                oldState?.ExitState();
                 m_Time = new Stopwatch();
                 m_Time.Start();
 
@@ -58,7 +58,10 @@ namespace Unity.ClusterDisplay
         {
             var res = DoFrame(newFrame);
             if (res != this)
+            {
+                res.EnterState(this);
                 return res;
+            }
 
             // RemoveMe
             if (Debugging)
@@ -104,7 +107,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        protected virtual void ExitState(NodeState newState)
+        protected virtual void ExitState()
         {
             ClusterDebug.Log("Exiting State:" + GetType().Name);
 
@@ -132,7 +135,7 @@ namespace Unity.ClusterDisplay
         }
     }
 
-    // RepeaterState state -------------------------------------------------------- 
+    // RepeaterState state --------------------------------------------------------
     internal abstract class RepeaterState : NodeState
     {
         public RepeaterState(IClusterSyncState clusterSync)
@@ -143,7 +146,7 @@ namespace Unity.ClusterDisplay
         protected RepeaterNode LocalNode => (RepeaterNode) clusterSync.LocalNode;
     }
 
-    // EmitterState state -------------------------------------------------------- 
+    // EmitterState state --------------------------------------------------------
     internal abstract class EmitterState : NodeState
     {
         public EmitterState(IClusterSyncState clusterSync)
@@ -159,14 +162,14 @@ namespace Unity.ClusterDisplay
         protected EmitterNode LocalNode => (EmitterNode) clusterSync.LocalNode;
     }
 
-    // Shutdown state -------------------------------------------------------- 
+    // Shutdown state --------------------------------------------------------
     internal class Shutdown : NodeState
     {
         public Shutdown(IClusterSyncState clusterSync)
             : base(clusterSync) { }
     }
 
-    // FatalError state -------------------------------------------------------- 
+    // FatalError state --------------------------------------------------------
     internal class FatalError : NodeState
     {
         public FatalError(IClusterSyncState clusterSync, string msg)
@@ -175,9 +178,9 @@ namespace Unity.ClusterDisplay
             Message = msg;
         }
 
-        protected override void ExitState(NodeState newState)
+        protected override void ExitState()
         {
-            base.ExitState(newState);
+            base.ExitState();
             ClusterDebug.LogError(Message);
         }
 
