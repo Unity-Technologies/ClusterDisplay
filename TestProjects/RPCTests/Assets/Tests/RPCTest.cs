@@ -9,7 +9,7 @@ using Unity.ClusterDisplay.RPC;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    public class ClusterSyncTests
+    public class RPCTest
     {
         [SetUp]
         public void SetUp()
