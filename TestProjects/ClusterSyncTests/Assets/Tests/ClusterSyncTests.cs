@@ -198,7 +198,7 @@ namespace Unity.ClusterDisplay.Tests
                         EMessageType.LastFrameData,
                         new EmitterLastFrameData() { FrameNumber = 0 },
                         MessageHeader.EFlag.Broadcast,
-                        new byte[] {0}); // trailing 0 to indicate empty state data
+                        Enumerable.Repeat((byte)0, 32).ToArray()); // trailing 0s to indicate empty state data
 
                     testAgent.PublishMessage(txHeader, lastFrameMsg);
 					Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));

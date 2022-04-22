@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Watch out for static global states!
             // Potential refactoring target.
-            EmitterStateWriter.UnregisterOnStoreCustomDataDelegates();
+            EmitterStateWriter.ClearCustomDataDelegates();
         }
 
         [Test]
@@ -109,16 +109,17 @@ namespace Unity.ClusterDisplay.Tests
                 m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
             }
 
-            using var stateBuffer = new StateBuffer(ushort.MaxValue);
+            using var frameDataBuffer = new FrameDataBuffer(ushort.MaxValue);
 
             // Make the emitter attach some custom data to the frame.
             byte[] GetCustomData() => Encoding.ASCII.GetBytes($"Hello World {m_ClusterSync.CurrentFrameID}");
-            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(buffer =>
+            int StoreCustomData(NativeArray<byte> buffer)
             {
                 var data = GetCustomData();
-                data.CopyTo(buffer);
+                buffer.GetSubArray(0, data.Length).CopyFrom(data);
                 return data.Length;
-            });
+            }
+            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(42, StoreCustomData);
 
             // Simulate several frames
             const int kNumFrames = 4;
@@ -137,12 +138,10 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.IsTrue(RunStateUntilReadyToProceed(emitterSync));
 
                 // The is the current state data, with custom data appended
-                stateBuffer.StoreAllStates();
-                var writable = stateBuffer.BeginWrite();
-                var customData = GetCustomData();
-                customData.CopyTo(writable);
-                stateBuffer.EndWrite(customData.Length);
-                stateBuffer.StoreState(StateID.End);
+                frameDataBuffer.Clear();
+                EmitterStateWriter.StoreStateData(frameDataBuffer);
+                frameDataBuffer.Store(42, StoreCustomData);
+                frameDataBuffer.Store((byte) StateID.End);
 
                 // ======== Nodes receive FrameData packet ======
                 foreach (var testAgent in m_TestAgents)
@@ -153,7 +152,7 @@ namespace Unity.ClusterDisplay.Tests
 
                     // Check that state data is received and it corresponds to the current frame.
                     // The received data should also contain custom data at the end.
-                    Assert.That(frameData, Is.EqualTo(stateBuffer.Data));
+                    Assert.That(frameData, Is.EqualTo(frameDataBuffer.Data));
                 }
 
                 // ======= PostLateUpdate ===========
@@ -271,7 +270,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Simulate several frames
             const int kNumFrames = 3;
-            using var lastFrameState = new StateBuffer(ushort.MaxValue);
+            using var lastFrameDataBuffer = new FrameDataBuffer(ushort.MaxValue);
 
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
@@ -307,8 +306,8 @@ namespace Unity.ClusterDisplay.Tests
                         Assert.That(message.FrameNumber, Is.EqualTo(m_ClusterSync.CurrentFrameID - 1));
 
                         // Check that the frame state is from the previous frame
-                        Assert.That(lastFrameState.IsValid);
-                        Assert.That(frameData, Is.EqualTo(lastFrameState.Data));
+                        Assert.That(lastFrameDataBuffer.IsValid);
+                        Assert.That(frameData, Is.EqualTo(lastFrameDataBuffer.Data));
                     }
                     else
                     {
@@ -316,6 +315,11 @@ namespace Unity.ClusterDisplay.Tests
                         Assert.That(rxHeader.MessageType, Is.EqualTo(default(EMessageType)));
                     }
                 }
+
+                // Store the state data for the current frame
+                lastFrameDataBuffer.Clear();
+                EmitterStateWriter.StoreStateData(lastFrameDataBuffer);
+                lastFrameDataBuffer.Store((byte) StateID.End);
 
                 // ======= PostLateUpdate ===========
                 // Wait for repeaters to ack before starting the next frame.
@@ -325,10 +329,6 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(emitterSync.Stage, Is.EqualTo(EmitterSynchronization.EStage.WaitForRepeatersToACK));
                 }
                 Assert.IsTrue(RunStateUntilReadyForNextFrame(emitterSync));
-
-                // Store the state data for the current frame
-                lastFrameState.StoreAllStates();
-                lastFrameState.StoreState(StateID.End);
 
                 // ======= End of Frame ===========
                 yield return null;

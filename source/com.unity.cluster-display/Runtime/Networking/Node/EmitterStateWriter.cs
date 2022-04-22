@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Engine state data gets collected on each frame but may be published on a delay.
         /// </summary>
-        static readonly (byte, FrameDataBuffer.CustomDataDelegate)[] k_StateDataDelegates =
+        static readonly (byte, FrameDataBuffer.StoreDataDelegate)[] k_StateDataDelegates =
         {
             ((byte)StateID.Time, ClusterSerialization.SaveTimeManagerState),
             ((byte)StateID.Input, ClusterSerialization.SaveInputManagerState),
@@ -40,13 +40,13 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Custom data gets published on the same frame that delegates are invoked.
         /// </summary>
-        static readonly Dictionary<byte, FrameDataBuffer.CustomDataDelegate> k_CustomDataDelegates = new();
+        static readonly Dictionary<byte, FrameDataBuffer.StoreDataDelegate> k_CustomDataDelegates = new();
 
         private readonly bool k_RepeatersDelayed;
 
-        internal static void RegisterOnStoreCustomDataDelegate (byte id, FrameDataBuffer.CustomDataDelegate customDataDelegate)
+        internal static void RegisterOnStoreCustomDataDelegate (byte id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
         {
-            k_CustomDataDelegates[id] = customDataDelegate;
+            k_CustomDataDelegates[id] = storeDataDelegate;
         }
 
         internal static void UnregisterCustomDataDelegate(byte id) => k_CustomDataDelegates.Remove(id);

@@ -61,13 +61,16 @@ namespace Unity.ClusterDisplay
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static T LoadStruct<T>(this ReadOnlySpan<byte> arr,
-            int offset) where T : unmanaged =>
+        public static T LoadStruct<T>(this ReadOnlySpan<byte> arr, int offset = 0) where T : unmanaged =>
             MemoryMarshal.Read<T>(arr.Slice(offset));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
-            where T : unmanaged => blittable.StoreInBuffer(dest.AsSpan(), offset);
+            where T : unmanaged
+        {
+            dest.ReinterpretStore(offset, blittable);
+            return Marshal.SizeOf<T>();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int StoreInBuffer<T>(ref this T blittable,
@@ -80,7 +83,7 @@ namespace Unity.ClusterDisplay
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
-            arr.AsReadOnlySpan().LoadStruct<T>(offset);
+            arr.ReinterpretLoad<T>(offset);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
@@ -89,10 +92,6 @@ namespace Unity.ClusterDisplay
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
-            new(arr.GetUnsafeReadOnlyPtr(), arr.Length);
     }
 
     [StructLayout(LayoutKind.Sequential)]

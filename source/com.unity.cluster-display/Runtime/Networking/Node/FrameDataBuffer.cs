@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
-using static Unity.ClusterDisplay.NetworkingHelpers;
 
 namespace Unity.ClusterDisplay
 {
@@ -12,22 +10,28 @@ namespace Unity.ClusterDisplay
     {
         NativeArray<byte> m_Data;
 
-        public bool IsValid => m_Data.IsCreated;
+        bool m_Disposed;
+
+        public bool IsValid => m_Data.IsCreated && !m_Disposed;
         public int Length { get; private set; }
 
-        public delegate int CustomDataDelegate(NativeArray<byte> writeableBuffer);
+        public delegate int StoreDataDelegate(NativeArray<byte> writeableBuffer);
 
         public IEnumerable<byte> Data => m_Data.GetSubArray(0, Length);
 
-        public FrameDataBuffer(int capacity)
+        public FrameDataBuffer(int capacity = ushort.MaxValue)
         {
             m_Data = new NativeArray<byte>(capacity, Allocator.Persistent);
+            m_Disposed = false;
             Length = 0;
         }
 
         public void Dispose()
         {
-            m_Data.Dispose();
+            if (!m_Disposed)
+                m_Data.Dispose();
+
+            m_Disposed = true;
         }
 
         public void CopyTo(Span<byte> dest,
@@ -41,7 +45,7 @@ namespace Unity.ClusterDisplay
             Length = 0;
         }
 
-        public void Store(byte id, CustomDataDelegate saveFunc)
+        public void Store(byte id, StoreDataDelegate saveFunc)
         {
             Length += id.StoreInBuffer(m_Data, Length);
 
@@ -61,10 +65,9 @@ namespace Unity.ClusterDisplay
             Length += dataSize;
         }
 
-        public void Store(StateID stateId)
+        public void Store(byte id)
         {
-            var idByte = (byte)stateId;
-            Length += idByte.StoreInBuffer(m_Data, Length);
+            Length += id.StoreInBuffer(m_Data, Length);
 
             var sizeBytes = 0;
             Length += sizeBytes.StoreInBuffer(m_Data, Length);
@@ -74,9 +77,50 @@ namespace Unity.ClusterDisplay
         {
             Length += id.StoreInBuffer(m_Data, Length);
 
-            var sizeBytes = Marshal.SizeOf<int>();
+            var sizeBytes = Marshal.SizeOf<T>();
             Length += sizeBytes.StoreInBuffer(m_Data, Length);
             Length += data.StoreInBuffer(m_Data, Length);
+        }
+    }
+
+    struct FrameDataReader
+    {
+        NativeArray<byte> m_Data;
+
+        public FrameDataReader(NativeArray<byte> data)
+        {
+            m_Data = data;
+        }
+
+        public FrameDataEnumerator GetEnumerator() => new(m_Data);
+    }
+
+    struct FrameDataEnumerator
+    {
+        NativeArray<byte> m_Data;
+        int m_ReadHead;
+        byte m_CurrentId;
+        int m_CurrentBlockSize;
+        static readonly int k_IdSize = Marshal.SizeOf<byte>();
+        static readonly int k_MetadataSize = Marshal.SizeOf<byte>() + Marshal.SizeOf<int>();
+
+        public FrameDataEnumerator(NativeArray<byte> bufferData)
+        {
+            m_Data = bufferData;
+            m_ReadHead = -k_MetadataSize;
+            m_CurrentBlockSize = 0;
+            m_CurrentId = 0;
+        }
+
+        public (byte id, NativeArray<byte> data) Current =>
+            (m_CurrentId, m_Data.GetSubArray(m_ReadHead + k_MetadataSize, m_CurrentBlockSize));
+
+        public bool MoveNext()
+        {
+            m_ReadHead += k_MetadataSize + m_CurrentBlockSize;
+            m_CurrentId = m_Data.LoadStruct<byte>(m_ReadHead);
+            m_CurrentBlockSize = m_Data.LoadStruct<int>(m_ReadHead + k_IdSize);
+            return m_CurrentId != (byte) StateID.End;
         }
     }
 }

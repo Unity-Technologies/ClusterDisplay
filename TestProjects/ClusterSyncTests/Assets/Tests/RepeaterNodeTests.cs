@@ -1,6 +1,6 @@
 using System;
 using System.Collections;
-using System.Threading;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -30,6 +30,8 @@ namespace Unity.ClusterDisplay.Tests
             testConfig.txPort = MockClusterSync.udpConfig.rxPort;
 
             m_TestAgent = new UDPAgent(testConfig);
+
+            RepeaterStateReader.ClearOnLoadDataDelegates();
         }
 
         [Test]
@@ -78,6 +80,23 @@ namespace Unity.ClusterDisplay.Tests
             var repeaterSynchronization = new RepeaterSynchronization(m_ClusterSync);
             repeaterSynchronization.EnterState(null);
 
+            // listener for custom frame data
+            const byte customId = 42;
+            const int magicNumber = 12345;
+            var customDataCallCount = 0;
+            RepeaterStateReader.RegisterOnLoadDataDelegate(customId, data =>
+            {
+                if (data.LoadStruct<int>() == magicNumber)
+                {
+                    customDataCallCount++;
+                }
+                return true;
+            });
+
+            // Buffer to hold custom data
+            using var frameData = new FrameDataBuffer(128);
+            var customData = new byte[128];
+
             // Simulate several frames
             const int kNumFrames = 4;
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
@@ -92,6 +111,12 @@ namespace Unity.ClusterDisplay.Tests
                     state => state.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
 
                 // Simulate a EmitterLastFrameData message from the emitter
+                // The FrameData contains just a custom message.
+                frameData.Clear();
+                var someValue = magicNumber;
+                frameData.Store(customId, ref someValue);
+                frameData.Store((byte) StateID.End);
+                frameData.CopyTo(customData);
                 var (header, lastFrameMsg) = GenerateMessage(k_EmitterId,
                     new byte[] {k_RepeaterId},
                     EMessageType.LastFrameData,
@@ -100,7 +125,7 @@ namespace Unity.ClusterDisplay.Tests
                         FrameNumber = frameNum
                     },
                     MessageHeader.EFlag.Broadcast,
-                    new byte[] {0}); // trailing 0 to indicate empty state data
+                    customData);
 
                 m_TestAgent.PublishMessage(header, lastFrameMsg);
 
@@ -110,7 +135,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // ======= End of Frame ===========
                 yield return null;
-                
+
                 // ======= Start of frame > 0 ===========
                 // Do the EnteredNextFrame signal exchange
                 m_State = repeaterSynchronization.ProcessFrame(newFrame: true);
@@ -127,11 +152,13 @@ namespace Unity.ClusterDisplay.Tests
                     .ToCoroutine();
 
                 yield return receiveMessage.WaitForCompletion(MockClusterSync.timeoutSeconds);
-                
+
                 Assert.True(receiveMessage.IsSuccessful);
                 var (rxHeader, _) = receiveMessage.Result;
                 Assert.That(rxHeader.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
             }
+
+            Assert.That(customDataCallCount, Is.EqualTo(kNumFrames));
         }
 
         [UnityTest]
@@ -166,7 +193,7 @@ namespace Unity.ClusterDisplay.Tests
                         FrameNumber = frameNum
                     },
                     MessageHeader.EFlag.Broadcast,
-                    new byte[] {0}); // trailing 0 to indicate empty state data
+                    Enumerable.Repeat<byte>(0, 32).ToArray()); // Pad with zeros to signal end of data
 
                 m_TestAgent.PublishMessage(header, lastFrameMsg);
 
@@ -184,7 +211,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             // Awkward way to invoke m_State.ExitState
             new NullState(m_ClusterSync).EnterState(m_State);
-            
+
             m_ClusterSync.LocalNode.Exit();
             m_TestAgent.Dispose();
         }
