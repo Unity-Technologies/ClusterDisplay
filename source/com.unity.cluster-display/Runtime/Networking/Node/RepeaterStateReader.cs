@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
         private byte[] m_OutBuffer = new byte[0];
 
         private IRepeaterNodeSyncState nodeSyncState;
-        
+
         // For debugging ----------------------------------
         private UInt64 m_LastReportedFrameDone = 0;
         private UInt64 m_LastRxFrameStart = 0;
@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay
         public float NetworkingOverheadAverage => m_NetworkingOverhead.Average;
 
         internal delegate bool OnRestoreCustomData(NativeArray<byte> stateData);
-        private readonly static OnRestoreCustomData[] delegates = new OnRestoreCustomData[byte.MaxValue];
+        private readonly static OnRestoreCustomData[] delegates = new OnRestoreCustomData[byte.MaxValue + 1];
 
         internal static void RegisterOnRestoreCustomDataDelegate (byte id, OnRestoreCustomData _onRestoreCustomData)
         {
@@ -61,12 +61,12 @@ namespace Unity.ClusterDisplay
                     nodeSyncState.OnUnhandledNetworkMessage(msgHdr);
                     continue;
                 }
-                
+
                 using (m_MarkerReceivedGoFromEmitter.Auto())
                 {
                     m_NetworkingOverhead.SampleNow();
                     ClusterDebug.Assert(outBuffer.Length > 0, "invalid buffer!");
-                    
+
                     var respMsg = outBuffer.LoadStruct<EmitterLastFrameData>(msgHdr.OffsetToPayload);
 
                     // The emitter is on the next frame, so were matching against the previous frame.
@@ -92,58 +92,51 @@ namespace Unity.ClusterDisplay
                 var msgHdr = m_MsgFromEmitter.LoadStruct<MessageHeader>();
 
                 // restore states
-                unsafe
+                var bufferPos = msgHdr.OffsetToPayload + Marshal.SizeOf<EmitterLastFrameData>();
+
+                var buffer = m_MsgFromEmitter.AsReadOnlySpan();
+                ClusterDebug.Assert(buffer != null, "msg buffer is null");
+
+                do
                 {
-                    var bufferPos = msgHdr.OffsetToPayload + Marshal.SizeOf<EmitterLastFrameData>();
+                    var id = buffer[bufferPos++];
+                    if ((StateID)id == StateID.End)
+                        break;
 
-                    var buffer = (byte*) m_MsgFromEmitter.GetUnsafePtr();
-                    ClusterDebug.Assert(buffer != null, "msg buffer is null");
+                    var stateSize = buffer.LoadStruct<int>(bufferPos);
+                    bufferPos += Marshal.SizeOf<int>();
 
-                    do
+                    // Reached end of list
+                    if (stateSize <= 0)
                     {
-                        byte id = (*(buffer + bufferPos++));
-                        if ((StateID)id == StateID.End)
+                        ClusterDebug.LogWarning($"Received invalid state with id: {id} of size: {stateSize}");
+                        break;
+                    }
+
+                    var stateData = m_MsgFromEmitter.GetSubArray(bufferPos, stateSize);
+                    bufferPos += stateSize;
+
+                    switch ((StateID)id)
+                    {
+                        case StateID.Time:
+                            ClusterSerialization.RestoreTimeManagerState(stateData);
                             break;
 
-                        var stateSize = *(int*)(buffer + bufferPos);
-                        bufferPos += Marshal.SizeOf<int>();
-
-                        // Reached end of list
-                        if (stateSize <= 0)
-                        {
-                            ClusterDebug.LogWarning($"Received invalid state with id: {id} of size: {stateSize}");
+                        case StateID.Input:
+                            ClusterSerialization.RestoreInputManagerState(stateData);
                             break;
-                        }
 
-                        var stateData = m_MsgFromEmitter.GetSubArray(bufferPos, stateSize);
-                        bufferPos += stateSize;
+                        case StateID.Random:
+                            RestoreRndGeneratorState(stateData);
+                            break;
 
-                        switch ((StateID)id)
+                        default:
                         {
-                            case StateID.Time:
-                                ClusterSerialization.RestoreTimeManagerState(stateData);
-                                break;
+                            delegates[(byte)id]?.Invoke(stateData);
+                        } break;
+                    }
 
-                            case StateID.Input:
-                                ClusterSerialization.RestoreInputManagerState(stateData);
-                                break;
-
-                            case StateID.Random:
-                                RestoreRndGeneratorState(stateData);
-                                break;
-
-                            case StateID.ClusterInput:
-                                ClusterSerialization.RestoreClusterInputState(stateData);
-                                break;
-
-                            default:
-                            {
-                                delegates[(byte)id]?.Invoke(stateData);
-                            } break;
-                        }
-
-                    } while (true);
-                }
+                } while (true);
             }
 
             finally

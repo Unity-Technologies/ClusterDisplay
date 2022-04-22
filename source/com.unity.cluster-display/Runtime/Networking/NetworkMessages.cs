@@ -50,8 +50,7 @@ namespace Unity.ClusterDisplay
         End = 0,
         Time = 1,
         Input = 2,
-        Random = 3,
-        ClusterInput = 4
+        Random = 3
     }
 
     internal static class NetworkingHelpers
@@ -62,13 +61,15 @@ namespace Unity.ClusterDisplay
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static T BytesToStruct<T>(ReadOnlySpan<byte> arr,
+        public static T LoadStruct<T>(this ReadOnlySpan<byte> arr,
             int offset) where T : unmanaged =>
             MemoryMarshal.Read<T>(arr.Slice(offset));
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
             where T : unmanaged => blittable.StoreInBuffer(dest.AsSpan(), offset);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int StoreInBuffer<T>(ref this T blittable,
             Span<byte> dest,
             int offset = 0) where T : unmanaged =>
@@ -77,15 +78,19 @@ namespace Unity.ClusterDisplay
                 ? Marshal.SizeOf<T>()
                 : throw new ArgumentOutOfRangeException();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
-            BytesToStruct<T>(arr.AsReadOnlySpan(), offset);
+            arr.AsReadOnlySpan().LoadStruct<T>(offset);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
-            BytesToStruct<T>(arr, offset);
+            LoadStruct<T>((ReadOnlySpan<byte>) arr, offset);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafeReadOnlyPtr(), arr.Length);
     }
