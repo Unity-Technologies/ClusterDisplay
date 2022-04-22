@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -33,11 +33,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             {
                 if (lastSwitchCaseInstruction == null)
                     lastSwitchCaseInstruction = ilProcessor.Body.Instructions[0];
-                var lastInstruction = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 1];
+                var lastInstruction = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
                 
-                if (rpcHash == "319249A669B53F2684CF79162F60AC96CBE2EFFA")
-                    CodeGenDebug.Log("TEST");
-
                 Instruction firstInstructionOfCaseImpl;
                 var targetMethodDef = targetMethod.Resolve();
                 if (targetMethodDef.IsStatic)
@@ -47,7 +44,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         ilProcessor,
                         beforeInstruction: lastInstruction,
                         targetMethodRef: targetMethod,
-                        isImmediateRPCExeuction: false,
                         firstInstructionOfInjection: out firstInstructionOfCaseImpl))
                         return false;
                 }
@@ -57,16 +53,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     ilProcessor,
                     beforeInstruction: lastInstruction,
                     executionTarget: targetMethod,
-                    isImmediateRPCExeuction: false,
                     firstInstructionOfInjection: out firstInstructionOfCaseImpl))
                     return false;
                 
                 if (!TryInjectSwitchCaseForRPC(
                     ilProcessor,
-                    afterInstruction: lastSwitchCaseInstruction,
                     valueToPushForBeq: rpcHash,
                     jmpToInstruction: firstInstructionOfCaseImpl,
-                    lastInstructionOfSwitchJmp: out lastSwitchCaseInstruction))
+                    afterInstruction: ref lastSwitchCaseInstruction))
                     return false;
 
                 return true;

@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Tests")]
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC.Editor")]
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using buint = System.UInt32;
@@ -15,12 +15,24 @@ namespace Unity.ClusterDisplay.RPC
     #endif
     public static partial class RPCBufferIO
     {
+        public class IsEmitterMarker : Attribute {}
+
         private static NativeArray<byte> rpcBuffer;
         private const int k_MaxRPCByteBufferSize = ushort.MaxValue;
         private const int k_MaxSingleRPCParameterByteSize = ushort.MaxValue;
         private const int k_MaxSingleRPCByteSize = ushort.MaxValue;
 
         private const byte k_RPCStateID = 128;
+
+        [IsEmitterMarker]
+        public static bool CaptureExecution => ClusterDisplayState.IsEmitter && ClusterDisplayState.IsActive || m_OverrideCaptureExecution;
+        private static bool m_OverrideCaptureExecution = false;
+
+        static void OverrideCaptureExecution (bool capture)
+        {
+            ClusterDebug.Log($"Turned {(capture ? "on" : "off")} RPC method execution capture.");
+            m_OverrideCaptureExecution = capture;
+        }
 
         /// <summary>
         /// This is the current size of our RPC buffer which grows as were writing it. The actual RPC 
@@ -34,10 +46,17 @@ namespace Unity.ClusterDisplay.RPC
         private readonly static buint MinimumRPCPayloadSize = (buint)Marshal.SizeOf<ushort>() * 3 + (buint)Marshal.SizeOf<buint>();
 
         [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-        private static void Initialize ()
+        internal static void Initialize (bool overrideCaptureExecution = false)
         {
             ClusterDebug.Log("Initializing RPC buffer.");
+            SetupBuffer();
+            SetupDelegates();
 
+            OverrideCaptureExecution(overrideCaptureExecution);
+        }
+
+        static void SetupDelegates()
+        {
             Application.quitting -= Dispose;
             Application.quitting += Dispose;
 
@@ -46,16 +65,22 @@ namespace Unity.ClusterDisplay.RPC
             AssemblyReloadEvents.beforeAssemblyReload += Dispose;
             #endif
 
-            rpcBuffer = new NativeArray<byte>(k_MaxRPCByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            rpcBufferSize = 0;
-
             RepeaterStateReader.RegisterOnRestoreCustomDataDelegate(k_RPCStateID, Unlatch);
             EmitterStateWriter.RegisterOnStoreCustomDataDelegate(StoreRPCs);
         }
 
+        static void SetupBuffer ()
+        {
+            if (rpcBuffer.IsCreated)
+                rpcBuffer.Dispose();
+
+            rpcBuffer = new NativeArray<byte>(k_MaxRPCByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            rpcBufferSize = 0;
+        }
+
         static RPCBufferIO() => Initialize();
 
-        private static void Dispose()
+        internal static void Dispose()
         {
             if (rpcBuffer.IsCreated)
                 rpcBuffer.Dispose();

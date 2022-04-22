@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="buffer">The network frame buffer that contains more then just RPC data.</param>
         /// <param name="endPos">Where we want to start writing into the network frame buffer.</param>
         /// <returns></returns>
-        private static unsafe bool Latch (NativeArray<byte> buffer, ref buint endPos)
+        internal static unsafe bool Latch (NativeArray<byte> buffer, ref buint endPos)
         {
             UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
             endPos += rpcBufferSize;
@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static unsafe bool StoreRPCs (NativeArray<byte> buffer, ref buint endPos)
+        internal static unsafe bool StoreRPCs (NativeArray<byte> buffer, ref buint endPos)
         {
             if (RPCBufferSize == 0)
                 return true;
@@ -87,9 +87,6 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCStringParameterValueMarker]
         public static unsafe void AppendRPCStringParameterValue(string value)
         {
-            if (!ClusterDisplayState.IsActive)
-                return;
-
             int strSize = value.Length;
             if (rpcBufferSize + Marshal.SizeOf<buint>() + strSize >= rpcBuffer.Length)
                 throw new System.Exception("RPC Buffer is full.");
@@ -190,7 +187,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCNativeArrayParameterValueMarker]
         public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> buffer) where T : unmanaged
         {
-            if (!ClusterDisplayState.IsActive || !CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
+            if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
                 return;
 
             CopyCountToRPCBuffer((buint)buffer.Length);
@@ -205,7 +202,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCArrayParameterValueMarker]
         public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : unmanaged
         {
-            if (!ClusterDisplayState.IsActive || value == null || !CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
+            if (value == null || !CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
                 return;
 
             CopyCountToRPCBuffer((buint)value.Length);
@@ -225,7 +222,7 @@ namespace Unity.ClusterDisplay.RPC
             // In this case we do not use Marshal.SizeOf with charsince Marshal assumes you use the char
             // in interop unmanaged code which it'll interpret as 1 byte. We need 2 bytes for unicode.
             buint charSize = sizeof(char);
-            if (!ClusterDisplayState.IsActive || rpcBufferSize + charSize >= rpcBuffer.Length)
+            if (rpcBufferSize + charSize >= rpcBuffer.Length)
                 return;
 
             // Perform the copy.
@@ -245,7 +242,7 @@ namespace Unity.ClusterDisplay.RPC
         [AppendRPCValueTypeParameterValueMarker]
         public static unsafe void AppendRPCValueTypeParameterValue<T>(T value) where T : struct
         {
-            if (!ClusterDisplayState.IsActive || !CanWriteValueTypeToRPCBuffer(value, out var structSize))
+            if (!CanWriteValueTypeToRPCBuffer(value, out var structSize))
                 return;
 
             // Perform the copy.
@@ -269,10 +266,16 @@ namespace Unity.ClusterDisplay.RPC
             rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (ushort)RPCExecutor.CurrentExecutionStage);
 
             if (rpcExecutionStage > (ushort)RPCExecutionStage.AfterLateUpdate)
+            {
                 rpcExecutionStage = (ushort)RPCExecutionStage.AfterLateUpdate;
+            }
 
-            else if (rpcExecutionStage < (ushort)RPCExecutionStage.BeforeFixedUpdate)
+            else if (
+                rpcExecutionStage != (ushort)RPCExecutionStage.ImmediatelyOnArrival &&
+                rpcExecutionStage < (ushort)RPCExecutionStage.ImmediatelyOnArrival)
+            {
                 rpcExecutionStage = (ushort)RPCExecutionStage.BeforeFixedUpdate;
+            }
 
             return rpcExecutionStage;
         }
@@ -291,10 +294,6 @@ namespace Unity.ClusterDisplay.RPC
             ushort rpcExecutionStage, 
             buint parametersPayloadSize)
         {
-             // This becomes true when we make a successful connection to the cluster display network.
-            if (!ClusterDisplayState.IsActive) 
-                return;
-            
             if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
                 return;
 
@@ -344,9 +343,6 @@ namespace Unity.ClusterDisplay.RPC
             ushort rpcExecutionStage, 
             buint parametersPayloadSize)
         {
-            if (!ClusterDisplayState.IsActive)
-                return;
-            
             if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
                 return;
 

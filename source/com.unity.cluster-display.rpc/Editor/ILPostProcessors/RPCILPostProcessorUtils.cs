@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -617,7 +617,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             ILProcessor ilProcessor,
             Instruction beforeInstruction,
             MethodReference executionTarget,
-            bool isImmediateRPCExeuction,
             out Instruction firstInstructionOfInjection)
         {
             if (beforeInstruction == null)
@@ -649,8 +648,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 // Call method on target object without any parameters.
                 CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, executionTarget);
 
-                if (isImmediateRPCExeuction)
-                    CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
                 CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                 return true;
@@ -664,10 +662,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                  ref afterInstruction);
 
             CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, executionTarget);
-
-            if (isImmediateRPCExeuction)
-                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
-
+            CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
             CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
             return true;
         }
@@ -677,7 +672,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             ILProcessor ilProcessor,
             Instruction beforeInstruction,
             MethodReference targetMethodRef,
-            bool isImmediateRPCExeuction,
             out Instruction firstInstructionOfInjection)
         {
             var method = ilProcessor.Body.Method;
@@ -703,8 +697,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
                     CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
 
-                if (isImmediateRPCExeuction)
-                    CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
                 CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
                 return true;
@@ -724,8 +717,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (targetMethodRef.ReturnType.Module.Name != voidTypeRef.Module.Name || targetMethodRef.ReturnType.FullName != voidTypeRef.FullName)
                 CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Pop);
 
-            if (isImmediateRPCExeuction)
-                CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
+            CecilUtils.InsertPushIntAfter(ilProcessor, ref afterInstruction, 1);
 
             CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Ret);
             return true;
@@ -733,28 +725,24 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         private static bool TryInjectSwitchCaseForRPC (
             ILProcessor ilProcessor,
-            Instruction afterInstruction,
             string valueToPushForBeq,
             Instruction jmpToInstruction,
-            out Instruction lastInstructionOfSwitchJmp)
+            ref Instruction afterInstruction)
         {
             if (afterInstruction == null)
             {
                 CodeGenDebug.LogError("Unable to inject switch jump instructions, the instruction we want to inject AFTER is null!");
-                lastInstructionOfSwitchJmp = null;
                 return false;
             }
 
             if (jmpToInstruction == null)
             {
                 CodeGenDebug.LogError("Unable to inject switch jump instructions, the target instruction to jump to is null!");
-                lastInstructionOfSwitchJmp = null;
                 return false;
             }
 
             if (!CecilUtils.TryFindParameterWithAttribute<RPCInterfaceRegistry.RPCHashMarker>(ilProcessor.Body.Method, out var rpcHashParamDef))
             {
-                lastInstructionOfSwitchJmp = null;
                 return false;
             }
 
@@ -765,17 +753,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             var opEqualityMethodInfo = typeof(string).GetMethod("op_Equality");
             if (!CecilUtils.TryImport(ilProcessor.Body.Method.Module, opEqualityMethodInfo, out var opEqualityMethodRef))
             {
-                lastInstructionOfSwitchJmp = null;
                 return false;
             }
-
-            // var opEqualityMethodDef = ilProcessor.Body.Method.Module.TypeSystem.String.Resolve().Methods
-            //     .FirstOrDefault(method => method.Name == "op_Equality");
-            // var opEqualityMethodRef = CecilUtils.Import(ilProcessor.Body.Method.Module, opEqualityMethodDef);
             
             CecilUtils.InsertCallAfter(ilProcessor, ref afterInstruction, opEqualityMethodRef);
             CecilUtils.InsertAfter(ilProcessor, ref afterInstruction, OpCodes.Brtrue, jmpToInstruction);
-            lastInstructionOfSwitchJmp = afterInstruction;
 
             return true;
         }
@@ -890,7 +872,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             parametersPayloadSize = NewParameterPayloadSizeParameter(compiledAssemblyDef, bufferIndexTypeRef);
             rpcBufferParameterPosition = NewPCBufferParameterPosition(compiledAssemblyDef, bufferIndexTypeRef);
 
-            var executeQueuedRPCMethodDef = new MethodDefinition("ExecuteQueuedRPC", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Void);
+            var executeQueuedRPCMethodDef = new MethodDefinition("ExecuteQueuedRPC", Mono.Cecil.MethodAttributes.Private | Mono.Cecil.MethodAttributes.Static, compiledAssemblyDef.MainModule.TypeSystem.Boolean);
             executeQueuedRPCMethodDef.Parameters.Add(rpcHashParameterDef);
             executeQueuedRPCMethodDef.Parameters.Add(pipeParameterDef);
             executeQueuedRPCMethodDef.Parameters.Add(parametersPayloadSize);
@@ -898,6 +880,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             CecilUtils.AddCustomAttributeToMethod<RPCInterfaceRegistry.ExecuteQueuedRPC>(compiledAssemblyDef.MainModule, executeQueuedRPCMethodDef);
             il = executeQueuedRPCMethodDef.Body.GetILProcessor();
             il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ldc_I4_0);
             il.Emit(OpCodes.Ret);
 
             newTypeDef.Methods.Add(onTryCallInstanceMethodDef);

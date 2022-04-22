@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -41,15 +41,12 @@ namespace Unity.ClusterDisplay
             public void SetFrame(ulong frame) => m_Frame = frame;
         }
 
-        public class IsEmitterMarker : Attribute {}
-
         private readonly static ClusterDisplayStateStore stateStore = new ClusterDisplayStateStore();
         internal static IClusterDisplayStateSetter GetStateStoreSetter () => stateStore;
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync.
         /// </summary>
-        [IsEmitterMarker]
         public static bool IsEmitter => stateStore.m_IsEmitter;
 
         /// <summary>

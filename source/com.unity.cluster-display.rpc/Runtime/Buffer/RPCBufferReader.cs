@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay.RPC
                     return false;
                 }
 
-                return false;
+                return true;
             }
 
             #if !CLUSTER_DISPLAY_DISABLE_VALIDATION

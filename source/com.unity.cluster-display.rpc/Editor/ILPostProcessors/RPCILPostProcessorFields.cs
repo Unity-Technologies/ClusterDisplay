@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using Mono.Cecil;
@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         private static bool TryGetCachedGetIsEmitterMarkerMethod (out MethodInfo getIsEmitterMethod)
         {
-            if (!CecilUtils.TryFindPropertyGetMethodWithAttribute<ClusterDisplayState.IsEmitterMarker>(typeof(ClusterDisplayState), out getIsEmitterMethod))
+            if (!CecilUtils.TryFindPropertyGetMethodWithAttribute<RPCBufferIO.IsEmitterMarker>(typeof(RPCBufferIO), out getIsEmitterMethod))
             {
                 getIsEmitterMethod = null;
                 return false;
@@ -56,6 +56,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (!queuedRPCILGenerator.TrySetup())
                 return false;
 
+            cachedQueuedRPCILGenerators.Add(compiledAssemblyDef.FullName, queuedRPCILGenerator);
+
             return true;
         }
 
@@ -73,6 +75,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (!rpcILGenerator.TrySetup(typeof(RPCInterfaceRegistry.OnTryCallMarker)))
                 return false;
 
+            cachedOnTryCallProcessors.Add(compiledAssemblyDef.FullName, rpcILGenerator);
+
             return true;
         }
 
@@ -89,6 +93,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             rpcILGenerator = new RPCILGenerator(cachedGeneratedRPCILTypeRef);
             if (!rpcILGenerator.TrySetup(typeof(RPCInterfaceRegistry.OnTryStaticCallMarker)))
                 return false;
+
+            cachedOnTryStaticCallProcessors.Add(compiledAssemblyDef.FullName, rpcILGenerator);
 
             return true;
         }

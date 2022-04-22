@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.ClusterDisplay.RPC;
@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay
         /// <param name="parametersPayloadSize">The total byte count of all of the RPC's argument values.</param>
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
-        [ExecuteQueuedRPCDelegateMarker] protected delegate void ExecuteQueuedRPCDelegate(
+        [ExecuteQueuedRPCDelegateMarker] protected delegate bool ExecuteQueuedRPCDelegate(
             string rpcId, 
             ushort pipeId, 
             buint parametersPayloadSize, 
@@ -271,10 +271,16 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                return m_OnTryStaticCallInstanceDelegate[assemblyIndex](
-                    rpcHash, 
-                    parametersPayloadSize, 
-                    ref rpcsBufferPosition);
+                if(!m_OnTryStaticCallInstanceDelegate[assemblyIndex](
+                    rpcHash,
+                    parametersPayloadSize,
+                    ref rpcsBufferPosition))
+                {
+                    ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): No method available to execute RPC: {rpcId}");
+                    return false;
+                }
+
+                return true;
             }
 
             catch (System.Exception exception)
@@ -294,6 +300,38 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Calling method: (RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, Assembly: \"{assembly.GetName().Name}\").");
         }
 
+        static void LogMissingMethod (QueuedRPCCall queuedRPCCall) =>
+            ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): No method available to execute RPC: {queuedRPCCall.rpcRequest.rpcId}");
+
+        static void ExecuteQueued (QueuedRPCCall queuedRPCCall)
+        {
+            if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
+                return;
+
+            if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
+                return;
+            
+            LogCall(queuedRPCCall);
+
+            try
+            {
+                if (!m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
+                    rpcHash, 
+                    queuedRPCCall.rpcRequest.pipeId, 
+                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
+                    queuedRPCCall.rpcsBufferParametersStartPosition))
+                {
+                    LogMissingMethod(queuedRPCCall);
+                }
+            }
+
+            catch (System.Exception exception)
+            {
+                LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
+                ClusterDebug.LogException(exception);
+            }
+        }
+
         internal static void BeforeFixedUpdate()
         {
             if (beforeFixedUpdateRPCQueue.Count == 0)
@@ -308,29 +346,7 @@ namespace Unity.ClusterDisplay
 
             while (beforeFixedUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = beforeFixedUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-                
-                LogCall(queuedRPCCall);
-                
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(beforeFixedUpdateRPCQueue.Dequeue());
             }
         }
 
@@ -348,29 +364,7 @@ namespace Unity.ClusterDisplay
 
             while (afterFixedUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = afterFixedUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-                
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-
-                LogCall(queuedRPCCall);
-
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(afterFixedUpdateRPCQueue.Dequeue());
             }
         }
 
@@ -388,29 +382,7 @@ namespace Unity.ClusterDisplay
 
             while (beforeUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = beforeUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-                
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-
-                LogCall(queuedRPCCall);
-
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(beforeUpdateRPCQueue.Dequeue());
             }
         }
 
@@ -428,29 +400,7 @@ namespace Unity.ClusterDisplay
 
             while (afterUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = afterUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-                
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-                
-                LogCall(queuedRPCCall);
-
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(afterUpdateRPCQueue.Dequeue());
             }
         }
 
@@ -468,29 +418,7 @@ namespace Unity.ClusterDisplay
 
             while (beforeLateUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = beforeLateUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-                
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-                
-                LogCall(queuedRPCCall);
-
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(beforeLateUpdateRPCQueue.Dequeue());
             }
         }
 
@@ -508,29 +436,7 @@ namespace Unity.ClusterDisplay
 
             while (afterLateUpdateRPCQueue.Count > 0)
             {
-                var queuedRPCCall = afterLateUpdateRPCQueue.Dequeue();
-                if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
-                    continue;
-                
-                if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
-                    continue;
-                
-                LogCall(queuedRPCCall);
-
-                try
-                {
-                    m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                        rpcHash, 
-                        queuedRPCCall.rpcRequest.pipeId, 
-                        queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                        queuedRPCCall.rpcsBufferParametersStartPosition);
-                }
-
-                catch (System.Exception exception)
-                {
-                    LogPreExceptionMessageForQueuedRPC(queuedRPCCall);
-                    ClusterDebug.LogException(exception);
-                }
+                ExecuteQueued(afterLateUpdateRPCQueue.Dequeue());
             }
         }
 

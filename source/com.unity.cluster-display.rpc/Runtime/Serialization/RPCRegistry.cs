@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -146,7 +146,7 @@ namespace Unity.ClusterDisplay.RPC
             ClusterDisplayManager.awake += Initialize;
         }
 
-        private static void Initialize ()
+        internal static void Initialize ()
         {
             ClusterDebug.Log($"Initializing {nameof(RPCRegistry)}");
 

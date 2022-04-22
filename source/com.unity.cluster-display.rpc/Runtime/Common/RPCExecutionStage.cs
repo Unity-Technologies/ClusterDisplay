@@ -1,4 +1,4 @@
-﻿namespace Unity.ClusterDisplay.RPC
+namespace Unity.ClusterDisplay.RPC
 {
     [System.Serializable]
     /// <summary>
@@ -20,19 +20,19 @@
         Automatic = 0,
 
         /// <summary>
-        /// Execute immediately on receipt, this could potentially be executed
-        /// before Awake, Start or OnEnable if the RPC is sent on the first frame.
-        /// </summary>
-        ImmediatelyOnArrival = 1,
-
-        /// <summary>
         /// RPCs explicitly marked with this execution stage will automatically 
         /// get executed in the "BeforeFixedUpdateQueue". Futhermore, When the RPCExecutionStage
         /// is set to RPCExecutionStage.automatic and this RPC gets executed in Awake, OnEnable 
         /// or Start, the RPCExecutionStage is added by 1 to become the next stage which
         ///  in this case is RPCExecutionSTage.BeforeFixedUpdate.
         /// </summary>
-        AfterInitialization = 2,
+        AfterInitialization = 1,
+
+        /// <summary>
+        /// Execute immediately on receipt, this could potentially be executed
+        /// before Awake, Start or OnEnable if the RPC is sent on the first frame.
+        /// </summary>
+        ImmediatelyOnArrival = 2,
 
         BeforeFixedUpdate = 3,
         AfterFixedUpdate = 4,
