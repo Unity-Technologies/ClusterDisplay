@@ -2,63 +2,381 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using System.Linq;
 
 #if UNITY_EDITOR
 using UnityEditor;
+using System.Reflection;
 #endif
-
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Helpers")]
-[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics")]
 
 namespace Unity.ClusterDisplay
 {
     internal static class CommandLineParser
     {
-        internal static void OverrideArguments(List<string> overridingArguments)
+
+#if UNITY_EDITOR
+        /// These attributes are used to search for properties in ClusterSyncEditorConfig so we
+        /// can call it through reflection.
+
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class IsEmitterFieldAttribute : Attribute { }
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class EmitterCommandLineInjectionFieldAttribute : Attribute { }
+
+        [AttributeUsage(AttributeTargets.Field)]
+        public class RepeaterCommandLineInjectionFieldAttribute : Attribute { }
+#endif
+
+        /// <summary>
+        ///  This delegate is used to override the parsing of an argument's parameters.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="argumentName">The name of the command line argument.</param>
+        /// <param name="result">The output value.</param>
+        /// <returns></returns>
+        internal delegate bool TryParseDelegate<T>(string argumentName, out T result);
+
+        /// <summary>
+        /// For testing purposes, some command line argument names change. For example, we need to test both emitter and repeater
+        /// command line arguments and this resolver helps us resolve argument names dynamically.
+        /// </summary>
+        /// <returns></returns>
+        internal delegate string ArgumentNameResolver();
+
+        /// <summary>
+        /// This allows us to have array's of arguments abstractly.
+        /// </summary>
+        internal abstract class BaseArgument
         {
-            ResetCache();
-            PrintArguments(overridingArguments);
-            m_Arguments = overridingArguments;   
+            internal abstract void Reset();
         }
 
-        private static void ResetCache()
+        internal abstract class BaseArgument<T> : BaseArgument
         {
-            m_Arguments = null;
+            /// If this is true, this class will throw an error complaining
+            /// that the argument is not defined to the user.
+            public readonly bool k_Required;
 
-            m_HeadlessEmitter = null;
-            m_RepeaterReplacesHeadlessEmitter = null;
-            m_ClusterLogicSpecified = null;
-            m_NodeTypeStr = null;
-            m_NodeID = null;
-            m_MulticastAddress = null;
-            m_RXPort = null;
-            m_TXPort = null;
-            m_AdapterName = null;
-            m_RepeaterCount = null;
-            m_DebugFlag = null;
-            m_EmitterSpecified = null;
-            m_RepeaterSpecified = null;
-            m_DelayRepeaters = null;
-            m_TargetFPS = null;
-            m_GridSize = null;
-            m_Bezel = null;
-            m_PhysicalScreenSize = null;
+            /// <summary>
+            /// For dynamically resolving the argument name instead of using m_ArgumentName.
+            /// </summary>
+            readonly ArgumentNameResolver argumentNameResolver;
+            string m_ArgumentName;
+
+            /// <summary>
+            /// A switch that will either retrieve the argument using the resolver, or use the readonly
+            /// argument name string set on construction.
+            /// </summary>
+            public string ArgumentName
+            {
+                get
+                {
+                    // If we have a name resolver, lets use that instead.
+                    if (argumentNameResolver != null)
+                    {
+                        m_ArgumentName = argumentNameResolver();
+                        return m_ArgumentName;
+                    }
+
+                    return m_ArgumentName;
+                }
+            }
+
+            protected bool m_Defined; // If the argument is defined and valid.
+            protected bool m_Cached; // If we've already a parse.
+
+            protected T m_Value;
+
+            /// Each argument has a default parser that can be overriden.
+            readonly TryParseDelegate<T> tryParse;
+
+            public bool Defined => GenericCheck(tryParse);
+
+            public T Value
+            {
+                get
+                {
+                    GenericCheck(tryParse);
+                    return m_Value;
+                }
+            }
+
+            public void SetValue(T value) => m_Value = value;
+
+            protected abstract bool DefaultParser(string argumentName, out T parsedResult);
+
+            internal bool GenericCheck(TryParseDelegate<T> tryParse)
+            {
+                if (!m_Cached) // We should only enter in here once.
+                {
+                    // Return true or false if the argument was defined and we successfully parsed it.
+                    m_Defined =
+                        tryParse != null &&
+                        tryParse(ArgumentName, out m_Value);
+
+                    m_Cached = true;
+                }
+
+                return m_Defined;
+            }
+
+            internal BaseArgument(string argumentName, bool required = false)
+            {
+                Reset();
+
+                k_Required = required;
+                m_ArgumentName = argumentName;
+
+                m_Cached = false;
+                m_Value = default(T);
+
+                tryParse = DefaultParser;
+            }
+
+            internal BaseArgument(string argumentName, TryParseDelegate<T> tryParseDelegate, bool required = false)
+            {
+                Reset();
+
+                k_Required = required;
+                m_ArgumentName = argumentName;
+
+                tryParse = tryParseDelegate;
+            }
+
+            internal BaseArgument(ArgumentNameResolver argumentNameResolverDelegate, TryParseDelegate<T> tryParseDelegate, bool required = false)
+            {
+                Reset();
+
+                k_Required = required;
+
+                tryParse = tryParseDelegate;
+                argumentNameResolver = argumentNameResolverDelegate;
+            }
+
+            internal override void Reset ()
+            {
+                ClusterDebug.Log($"Resetting cache for: \"{m_ArgumentName}\" cluster display argument.");
+
+                m_Cached = false;
+                m_Value = default(T);
+            }
         }
 
-        private static void PrintArguments(List<string> arguments)
+        internal class BoolArgument : BaseArgument<bool>
         {
-            string msg = "Arguments:";
+            protected override bool DefaultParser(string argumentName, out bool parsedResult)
+            {
+                parsedResult = TryGetIndexOfNodeTypeArgument(ArgumentName, out var startIndex);
 
-            for (int i = 0; i < arguments.Count; i++)
-                msg = $"{msg}\n\t{arguments[i]}";
-            
-            ClusterDebug.Log(msg);
+                if (!parsedResult)
+                {
+                    if (k_Required)
+                        ClusterDebug.LogError($"There is no argument with name: \"{ArgumentName}\" specified.");
+
+                    return false;
+                }
+
+                return true;
+            }
+
+            internal BoolArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal BoolArgument(string argumentName, TryParseDelegate<bool> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
         }
-        
-        #if UNITY_EDITOR
-        public delegate void OnPollArguments (List<string> arguments);
-        public static OnPollArguments onPollArguments;
-        #endif
+
+        internal class StringArgument : BaseArgument<string>
+        {
+            protected override bool DefaultParser(string argumentName, out string parsedResult) => TryParseStringArgument(ArgumentName, out parsedResult, k_Required);
+
+            internal StringArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal StringArgument(string argumentName, TryParseDelegate<string> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal StringArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<string> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
+
+            public static implicit operator string(StringArgument argument) => !argument.Defined ? null : argument.Value;
+        }
+
+        internal class FloatArgument : BaseArgument<float>
+        {
+            protected override bool DefaultParser(string argumentName, out float parsedResult) => TryParseFloatArgument(ArgumentName, out parsedResult, required: k_Required);
+
+            internal FloatArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal FloatArgument(string argumentName, TryParseDelegate<float> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal FloatArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<float> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
+        }
+
+        internal class IntArgument : BaseArgument<int>
+        {
+            protected override bool DefaultParser(string argumentName, out int result) => TryParseIntArgument(ArgumentName, out result, k_Required);
+
+            internal IntArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal IntArgument(string argumentName, TryParseDelegate<int> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal IntArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<int> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
+        }
+
+        internal class ByteArgument : BaseArgument<byte>
+        {
+            protected override bool DefaultParser(string argumentName, out byte result) => TryParseByteArgument(ArgumentName, out result, k_Required);
+
+            internal ByteArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal ByteArgument(string argumentName, TryParseDelegate<byte> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal ByteArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<byte> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
+        }
+
+        internal class Vector2IntArgument : BaseArgument<Vector2Int>
+        {
+            protected override bool DefaultParser(string argumentName, out Vector2Int result) => TryParseVector2Int(ArgumentName, out result, k_Required);
+
+            internal Vector2IntArgument(string argumentName, bool required = false) : base(argumentName, required) { }
+            internal Vector2IntArgument(string argumentName, TryParseDelegate<Vector2Int> tryParse, bool required = false) : base(argumentName, tryParse, required) { }
+            internal Vector2IntArgument(ArgumentNameResolver argumentNameResolver, TryParseDelegate<Vector2Int> tryParse, bool required = false) : base(argumentNameResolver, tryParse, required) {}
+        }
+
+        internal const string k_EmitterNodeTypeArgument = "-emitterNode";
+        internal const string k_RepeaterNodeTypeArgument = "-node";
+
+        internal static readonly BoolArgument debugFlag                     = new BoolArgument("-clusterNode");
+
+        internal static readonly BoolArgument emitterSpecified              = new BoolArgument("-emitterNode");
+        internal static readonly BoolArgument headlessEmitter               = new BoolArgument("-batchMode");
+        internal static readonly BoolArgument replaceHeadlessEmitter        = new BoolArgument("-replaceHeadlessEmitter");
+
+        internal static readonly BoolArgument repeaterSpecified             = new BoolArgument("-node");
+        internal static readonly BoolArgument delayRepeaters                = new BoolArgument("-delayRepeaters");
+
+        internal static readonly ByteArgument nodeID                        = new ByteArgument(GetNodeType, tryParse: ParseNodeID);
+        internal readonly static IntArgument repeaterCount                  = new IntArgument(GetNodeType, tryParse: ParseRepeaterCount);
+
+        internal static readonly Vector2IntArgument gridSize                = new Vector2IntArgument("-gridSize");
+        internal static readonly Vector2IntArgument bezel                   = new Vector2IntArgument("-bezel");
+        internal static readonly Vector2IntArgument physicalScreenSize      = new Vector2IntArgument("-physicalScreenSize");
+
+        internal readonly static IntArgument targetFps                      = new IntArgument("-targetFps", tryParse: ParseTargetFPS);
+        internal static readonly IntArgument overscan                       = new IntArgument("-overscan");
+		
+        internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
+        internal static readonly IntArgument quadroSyncInitDelay            = new IntArgument("-quadroSyncInitDelay");
+		
+        internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
+        internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);
+        internal static readonly IntArgument rxPort                         = new IntArgument(GetNodeType, ParseRXPort);
+        internal static readonly IntArgument txPort                         = new IntArgument(GetNodeType, ParseTXPort);
+
+        internal static readonly IntArgument handshakeTimeout               = new IntArgument("-handshakeTimeout");
+        internal static readonly IntArgument communicationTimeout           = new IntArgument("-communicationTimeout");
+
+        internal readonly static BaseArgument[] baseArguments = new BaseArgument[]
+        {
+            debugFlag,
+            emitterSpecified,
+            headlessEmitter,
+            replaceHeadlessEmitter,
+            repeaterSpecified,
+            delayRepeaters,
+            nodeID,
+            repeaterCount,
+            gridSize,
+            bezel,
+            physicalScreenSize,
+            targetFps,
+            overscan,
+            adapterName,
+            multicastAddress,
+            rxPort,
+            txPort,
+            handshakeTimeout,
+            communicationTimeout
+        };
+
+        // Since this property is referenced by some arguments when this class is initialized, this will be one of the very first things called.
+        private static string nodeType => Arguments.Contains(k_EmitterNodeTypeArgument) ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
+
+        /// <summary>
+        /// We are using this as the argument name resolver.
+        /// </summary>
+        /// <returns></returns>
+        private static string GetNodeType() => nodeType;
+
+        internal static bool clusterDisplayLogicSpecified => emitterSpecified.Value || repeaterSpecified.Value;
+        private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
+
+#if UNITY_EDITOR
+        private static FieldInfo GetField (Type type, Type attributeType, Type expectedTypeField)
+        {
+            var publicInstanceFields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            FieldInfo field = null;
+
+            foreach (var fields in publicInstanceFields)
+            {
+                if (fields.GetCustomAttribute(attributeType) == null)
+                {
+                    continue;
+                }
+
+                field = fields;
+                break;
+            }
+
+            if (field == null)
+            {
+                throw new Exception($"The type: \"{type.Name}\" must contain a field with the attribute: \"{attributeType.Name}\".");
+            }
+
+            if (field.FieldType != expectedTypeField)
+            {
+                throw new Exception($"The type: \"{type.Name}\" with the field: \"{field.Name}\" is not the expected type: \"{expectedTypeField.Name}\".");
+            }
+
+            return field;
+        }
+#endif
+
+        internal static void CacheArguments ()
+        {
+            Reset();
+
+            m_Arguments = new List<string>(20) { };
+
+            m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
+
+#if UNITY_EDITOR
+            // This section of code is kind of a hack, but it's purpose is to retrieve the editor only scriptable
+            // object: "ClusterSyncEditorConfig" and through reflection call a method to override the arguments
+            // with the arguments stored in the scriptable object.
+            var assets = AssetDatabase.FindAssets("t:ClusterSyncEditorConfig"); // Make sure that if you rename this class, you need to change that here as well.
+
+            if (assets.Length > 0)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(assets[0]);
+                var type = AssetDatabase.GetMainAssetTypeAtPath(path);
+
+                var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
+                var isEmitterFieldAttribute = typeof(IsEmitterFieldAttribute);
+
+                var isEmitterField = GetField(type, isEmitterFieldAttribute, typeof(bool));
+
+                bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
+
+                var cmdLineFieldAttribute =
+                    isEmitter ?
+                        typeof(EmitterCommandLineInjectionFieldAttribute) :
+                        typeof(RepeaterCommandLineInjectionFieldAttribute);
+
+                var cmdLineField = GetField(type, cmdLineFieldAttribute, typeof(string));
+                var value = cmdLineField.GetValue(clusterSyncEditorConfig) as string;
+
+                Debug.Assert(!string.IsNullOrEmpty(value), "Received a NULL arguments string while attempting to retrieve command line arguments from editor config");
+
+                var list = value.Split(' ').ToList();
+                if (list.Count > 0)
+                {
+                    m_Arguments.AddRange(list);
+                }
+            }
+#endif
+
+            PrintArguments(m_Arguments);
+        }
 
         private static List<string> m_Arguments;
         internal static List<string> Arguments
@@ -67,362 +385,154 @@ namespace Unity.ClusterDisplay
             {
                 if (m_Arguments == null)
                 {
-                    m_Arguments = new List<string>(20) {};
-                    m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
-
-                    #if UNITY_EDITOR
-                    onPollArguments?.Invoke(m_Arguments);
-                    #endif
-
-                    PrintArguments(m_Arguments);
+                    CacheArguments();
                 }
-                
+
                 return m_Arguments;
             }
         }
 
-        internal const string k_EmitterNodeTypeArgument = "-emitterNode";
-        internal const string k_HeadlessEmitterArgument = "-batchMode";
-        internal const string k_RepeaterReplacesHeadlessEmitterArgument = "-replaceHeadlessEmitter";
-        internal const string k_RepeaterNodeTypeArgument = "-node";
-        internal const string k_DelayRepeatersArgument = "-delayRepeaters";
-        internal const string k_DebugArgument = "-clusterNode";
-        internal const string k_GridSize = "-gridSize";
-        internal const string k_Bezel = "-bezel";
-        internal const string k_Overscan = "-overscan";
-        internal const string k_PhysicalScreenSize = "-physicalScreenSize";
-        internal const string k_AdapterNameArgument = "-adapterName";
-        internal const string k_HandShakeTimeoutArgument = "-handshakeTimeout";
-        internal const string k_CommunicationTimeoutArgument = "-communicationTimeout";
-        internal const string k_TargetFPS = "-targetFps";
+        private static void LogNoArgument (string argumentName) => ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
-        private static bool? m_HeadlessEmitter;
-        private static bool? m_RepeaterReplacesHeadlessEmitter;
-        private static bool? m_ClusterLogicSpecified;
-        private static string m_NodeTypeStr;
-        private static byte? m_NodeID;
-        private static string m_MulticastAddress;
-        private static int ? m_RXPort;
-        private static int ? m_TXPort;
-        private static string m_AdapterName;
-        private static int? m_RepeaterCount;
-        private static bool? m_DebugFlag;
-        private static bool? m_EmitterSpecified;
-        private static bool? m_RepeaterSpecified;
-        private static bool? m_DelayRepeaters;
-        private static int? m_TargetFPS;
-        private static Vector2Int? m_GridSize;
-        private static Vector2Int? m_Bezel;
-        private static int? m_Overscan;
-        private static Vector2Int? m_PhysicalScreenSize;
-        
-        private static string nodeTypeStr
+        internal static void Reset()
         {
-            get
+            if (m_Arguments == null)
             {
-                if (m_NodeTypeStr == null)
-                    m_NodeTypeStr = emitterSpecified ? k_EmitterNodeTypeArgument : k_RepeaterNodeTypeArgument;
-                return m_NodeTypeStr;
+                return;
             }
-        }
-        
-        internal static bool HeadlessEmitter
-        {
-            get
-            {
-                if (m_HeadlessEmitter == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_HeadlessEmitterArgument, out var startIndex))
-                        return false;
-                    
-                    m_HeadlessEmitter = startIndex > -1;
-                }
 
-                return m_HeadlessEmitter.Value;
-            }
-        }
-        
-        internal static bool RepeaterReplacesHeadlessEmitter
-        {
-            get
-            {
-                if (m_RepeaterReplacesHeadlessEmitter == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_RepeaterReplacesHeadlessEmitterArgument, out var startIndex))
-                        return false;
-                    
-                    m_RepeaterReplacesHeadlessEmitter = startIndex > -1;
-                }
+            ClusterDebug.Log("Resetting command line arguments.");
 
-                return m_RepeaterReplacesHeadlessEmitter.Value;
+            m_Arguments.Clear();
+            m_Arguments = null;
+
+            for (int i = 0; i < baseArguments.Length; i++)
+            {
+                baseArguments[i].Reset();
             }
         }
 
-        internal static bool ClusterLogicSpecified
+        internal static void Override (List<string> arguments)
         {
-            get
-            {
-                if (m_ClusterLogicSpecified == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_EmitterNodeTypeArgument, out var startIndex) &&
-                        !TryGetIndexOfNodeTypeArgument(k_RepeaterNodeTypeArgument, out startIndex))
-                        return false;
-                    
-                    m_ClusterLogicSpecified = startIndex > -1;
-                }
+            Reset();
 
-                return m_ClusterLogicSpecified.Value;
-            }
+            ClusterDebug.Log("Overriding command line arguments.");
+
+            m_Arguments = new List<string>();
+            m_Arguments.AddRange(arguments);
         }
 
-        private static int addressStartOffset => (emitterSpecified ? 3 : 2);
-        
-        private static bool TryCachePorts()
+        private static void PrintArguments(List<string> arguments)
         {
-            if (!TryGetIndexOfNodeTypeArgument(nodeTypeStr, out var startIndex))
+            string msg = "Arguments:";
+
+            for (int i = 0; i < arguments.Count; i++)
+                msg = $"{msg}\n\t{arguments[i]}";
+
+            ClusterDebug.Log(msg);
+        }
+
+        private static bool ParseNodeID (string argumentName, out byte nodeId)
+        {
+            nodeId = 0;
+
+            if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
+            {
+                LogNoArgument(argumentName);
                 return false;
-            
-            ParsePorts(startIndex + addressStartOffset, out var rx, out var tx);
-            m_RXPort = rx;
-            m_TXPort = tx;
-            
+            }
+
+            ParseId(startIndex + 1, out nodeId);
             return true;
         }
 
-        internal static int rxPort
+        private static bool ParseMulticastAddress(string argumentName, out string address)
         {
-            get
+            address = null;
+            if (!TryGetIndexOfNodeTypeArgument(argumentName, out var startIndex))
             {
-                if (m_RXPort == null)
-                {
-                    if (!TryCachePorts())
-                        return -1;
-                }
-
-                return m_RXPort.Value;
+                LogNoArgument(argumentName);
+                return false;
             }
-        }
-        
-        internal static int txPort
-        {
-            get
-            {
-                if (m_RXPort == null)
-                {
-                    if (!TryCachePorts())
-                        return -1;
-                }
 
-                return m_TXPort.Value;
-            }
+            ParseMulticastAddressAndPort(startIndex + addressStartOffset, out address, out var rx, out var tx);
+            rxPort.SetValue(rx);
+            txPort.SetValue(tx);
+
+            return true;
         }
 
-        internal static string multicastAddress
+        private static bool ParseRXPort(string argumentName, out int port)
         {
-            get
+            port = -1;
+            if (!TryParsePorts(out port, out var tx))
             {
-                if (m_MulticastAddress == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(nodeTypeStr, out var startIndex))
-                        return null;
-                    ParseMulticastAddressAndPort(startIndex + addressStartOffset, out m_MulticastAddress, out var rxPort, out var txPort);
-                    
-                    m_RXPort = rxPort;
-                    m_TXPort = txPort;
-                }
-
-                return m_MulticastAddress;
+                ClusterDebug.LogError($"Unable to parse RX port.");
+                return false;
             }
+
+            txPort.SetValue(tx);
+
+            return true;
         }
 
-        internal static byte nodeID
+        private static bool ParseTXPort(string argumentName, out int port)
         {
-            get
+            port = -1;
+            if (!TryParsePorts(out var rx, out port))
             {
-                if (m_NodeID == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(nodeTypeStr, out var startIndex))
-                        return 0;
-                    
-                    ParseId(startIndex + 1, out var id);
-                    m_NodeID = id;
-                }
-                
-                return m_NodeID.Value;
+                ClusterDebug.LogError($"Unable to parse TX port.");
+                return false;
             }
-        }
-        
-        internal static int repeaterCount
-        {
-            get
-            {
-                if (m_RepeaterCount == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(nodeTypeStr, out var startIndex))
-                        return 0;
-                    
-                    ParseRepeaterCount(startIndex + 2, out var rc);
-                    m_RepeaterCount = rc;
-                }
-                
-                return m_RepeaterCount.Value;
-            }
-        }
-        
-        internal static bool debugFlag
-        {
-            get
-            {
-                if (m_DebugFlag == null)
-                    m_DebugFlag = ParseDebug();
 
-                return m_DebugFlag.Value;
-            }
+            rxPort.SetValue(rx);
+
+            return true;
         }
-        
-        internal static bool TryGetIndexOfNodeTypeArgument (string nodeType, out int indexOfNodeTypeArgument)
+
+        private static bool ParseTargetFPS (string argumentName, out int targetFPS)
+        {
+            bool result = TryParseIntArgument(argumentName, out targetFPS, required: false);
+
+            // We may be setting this result to something like Application.targetFrameRate down stream, therefore set it to -1 so the
+            // FPS is unlimited if we get an invalid result:
+            // https://docs.unity3d.com/ScriptReference/Application-targetFrameRate.html
+            if (targetFPS <= 0)
+                targetFPS = -1;
+
+            return result;
+
+        }
+
+        private static bool ParseRepeaterCount (string argumentName, out int repeaterCount)
+        {
+            if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
+            {
+                repeaterCount = 0;
+                return false;
+            }
+
+            ParseRepeaterCount(startIndex + 2, out repeaterCount);
+
+            return true;
+        }
+
+        private static bool TryParsePorts(out int rxPort, out int txPort)
+        {
+            rxPort = -1;
+            txPort = -1;
+            if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
+                return false;
+
+            ParsePorts(startIndex + addressStartOffset, out rxPort, out txPort);
+
+            return true;
+        }
+
+        internal static bool TryGetIndexOfNodeTypeArgument(string nodeType, out int indexOfNodeTypeArgument)
         {
             indexOfNodeTypeArgument = Arguments.IndexOf(nodeType);
             return indexOfNodeTypeArgument > -1;
-        }
-
-        internal static bool emitterSpecified
-        {
-            get
-            {
-                if (m_EmitterSpecified == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_EmitterNodeTypeArgument, out var startIndex))
-                        return false;
-                    
-                    m_EmitterSpecified = startIndex != -1;
-                }
-
-                return m_EmitterSpecified.Value;
-            }
-        }
-
-        internal static bool delayRepeaters
-        {
-            get
-            {
-                if (m_DelayRepeaters == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_DelayRepeatersArgument, out var startIndex))
-                        return false;
-                    
-                    m_DelayRepeaters = startIndex != -1;
-                }
-
-                return m_DelayRepeaters.Value;
-            }
-        }
-
-
-        internal static bool repeaterSpecified
-        {
-            get
-            {
-                if (m_RepeaterSpecified == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_RepeaterNodeTypeArgument, out var startIndex))
-                        return false;
-                    
-                    m_RepeaterSpecified = startIndex != -1;
-                }
-
-                return m_RepeaterSpecified.Value;
-            }
-        }
-
-        internal static string adapterName
-        {
-            get
-            {
-                if (m_AdapterName == null)
-                {
-                    if (!TryGetIndexOfNodeTypeArgument(k_AdapterNameArgument, out var startIndex))
-                        return null;
-                    ParseAdapterName(out m_AdapterName);
-                }
-
-                return m_AdapterName;
-            }
-        }
-
-        internal static int targetFPS
-        {
-            get
-            {
-                if (m_TargetFPS == null)
-                {
-                    TryParseTargetFPS(out var targetFPS);
-                    m_TargetFPS = targetFPS;
-                }
-
-                return m_TargetFPS.Value;
-            }
-        }
-        
-        internal static Vector2Int ? gridSize
-        {
-            get
-            {
-                if (m_GridSize == null)
-                {
-                    if (!TryParseVector2Int(k_GridSize, out var value))
-                        return null;
-                    m_GridSize = value;
-                }
-
-                return m_GridSize.Value;
-            }
-        }
-        
-        
-        internal static Vector2Int ? bezel
-        {
-            get
-            {
-                if (m_Bezel == null)
-                {
-                    if (!TryParseVector2Int(k_Bezel, out var value))
-                        return null;
-                    m_Bezel = value;
-                }
-
-                return m_Bezel.Value;
-            }
-        }
-        
-        internal static int ? overscan
-        {
-            get
-            {
-                if (m_Overscan == null)
-                {
-                    if (!TryParseIntArgument(k_Overscan, out var value))
-                        return null;
-                    m_Overscan = value;
-                }
-
-                return m_Overscan.Value;
-            }
-        }
-        
-        internal static Vector2Int ? physicalScreenSize
-        {
-            get
-            {
-                if (m_PhysicalScreenSize == null)
-                {
-                    if (!TryParseVector2Int(k_PhysicalScreenSize, out var value))
-                        return null;
-                    m_PhysicalScreenSize = value;
-                }
-
-                return m_PhysicalScreenSize.Value;
-            }
         }
 
         private static bool ValidateStartIndex(int startIndex) =>
@@ -498,29 +608,16 @@ namespace Unity.ClusterDisplay
             ParsePorts(startIndex, out rxPort, out txPort);
         }
 
-        private static bool ParseDebug() =>
-            Arguments.IndexOf(k_DebugArgument) > -1;
-
-        private static void ParseAdapterName(out string adapterName) => TryParseStringArgument(k_AdapterNameArgument, out adapterName, optional: true);
-        internal static bool TryParseHandshakeTimeout(out TimeSpan handshakeTimeout) => TryParseTimeSpanArgument(k_HandShakeTimeoutArgument, out handshakeTimeout, optional: true);
-        internal static bool TryParseCommunicationTimeout(out TimeSpan communicationTimeout) => TryParseTimeSpanArgument(k_CommunicationTimeoutArgument, out communicationTimeout, optional: true);
-
-        internal static bool TryParseTargetFPS(out int targetFPS)
-        {
-            if (!TryParseIntArgument(k_TargetFPS, out targetFPS, optional: true))
-                return false;
-
-            if (targetFPS < -1)
-                targetFPS = -1;
-
-            return true;
-        }
-        
-        internal static bool TryParseVector2Int(string argumentName, out Vector2Int value)
+        internal static bool TryParseVector2Int(string argumentName, out Vector2Int value, bool required = false)
         {
             value = Vector2Int.zero;
-            if (!TryParseStringArgument(argumentName, out var str, optional: true))
+            if (!TryParseStringArgument(argumentName, out var str, required: required))
+            {
+                if (required)
+                    ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
+
                 return false;
+            }
 
             var split = str.ToLower().Split('x');
             if (split == null || split.Length != 2)
@@ -537,12 +634,12 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        internal static bool TryParseStringArgument (string argumentName, out string argumentValue, bool optional = false)
+        internal static bool TryParseStringArgument (string argumentName, out string argumentValue, bool required = false)
         {
             var startIndex = Arguments.FindIndex(x => x == argumentName);
             if (startIndex < 0 || startIndex + 1 >= Arguments.Count)
             {
-                if (!optional)
+                if (required)
                     ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
                 argumentValue = null;
@@ -553,40 +650,58 @@ namespace Unity.ClusterDisplay
             return argumentValue != null;
         }
 
-        internal static bool TryParseTimeSpanArgument (string argumentName, out TimeSpan argumentValue, bool optional = false)
+        internal static bool TryParseFloatArgument (string argumentName, out float argumentValue, bool required = false)
         {
             var startIndex = Arguments.FindIndex(x => x == argumentName);
             if (startIndex < 0 || startIndex + 1 >= Arguments.Count)
             {
-                if (!optional)
+                if (required)
                     ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
-                argumentValue = TimeSpan.Zero;
+                argumentValue = 0;
                 return false;
             }
 
-            if (!int.TryParse(Arguments[startIndex + 1], out var milliseconds))
+            string argumentValueStr = Arguments[startIndex + 1];
+            if (!float.TryParse(argumentValueStr, out argumentValue))
             {
-                argumentValue = TimeSpan.Zero;
+                ClusterDebug.LogError($"Unable to parse int argument with name: \"{argumentName}\", it's value: \"{argumentValue}\" cannot be parsed as an int!");
+                argumentValue = 0;
                 return false;
             }
 
-            if (milliseconds < 0)
-            {
-                argumentValue = TimeSpan.Zero;
-                return false;
-            }
-
-            argumentValue = TimeSpan.FromMilliseconds(milliseconds);
-            return argumentValue != null;
+            return true;
         }
 
-        internal static bool TryParseIntArgument (string argumentName, out int argumentValue, bool optional = false)
+        internal static bool TryParseByteArgument (string argumentName, out byte argumentValue, bool required = false)
         {
             var startIndex = Arguments.FindIndex(x => x == argumentName);
             if (startIndex < 0 || startIndex + 1 >= Arguments.Count)
             {
-                if (!optional)
+                if (required)
+                    ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
+
+                argumentValue = 0;
+                return false;
+            }
+
+            string argumentValueStr = Arguments[startIndex + 1];
+            if (!byte.TryParse(argumentValueStr, out argumentValue))
+            {
+                ClusterDebug.LogError($"Unable to parse int argument with name: \"{argumentName}\", it's value: \"{argumentValue}\" cannot be parsed as an int!");
+                argumentValue = 0;
+                return false;
+            }
+
+            return true;
+        }
+
+        internal static bool TryParseIntArgument (string argumentName, out int argumentValue, bool required = false)
+        {
+            var startIndex = Arguments.FindIndex(x => x == argumentName);
+            if (startIndex < 0 || startIndex + 1 >= Arguments.Count)
+            {
+                if (required)
                     ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
                 argumentValue = 0;
@@ -604,12 +719,12 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        internal static bool TryParseAddressAndPort (string argumentName, out string address, out int port, bool optional = false)
+        internal static bool TryParseAddressAndPort (string argumentName, out string address, out int port, bool required = false)
         {
             var startIndex = Arguments.FindIndex(x => x == argumentName);
             if (startIndex < 0 || startIndex + 1 >= Arguments.Count)
             {
-                if (!optional)
+                if (required)
                     ClusterDebug.LogError($"There is no argument with name: \"{argumentName}\" specified.");
 
                 address = null;

@@ -16,25 +16,27 @@ namespace Unity.ClusterDisplay
         protected Task m_Task;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
-        public TimeSpan MaxTimeOut = new TimeSpan(0,0,0,30,0);
+        public TimeSpan MaxTimeOut = new(0, 0, 0, 30, 0);
 
         protected internal IClusterSyncState clusterSync;
-        
+
         public NodeState(IClusterSyncState clusterSync) =>
             this.clusterSync = clusterSync;
 
-        public virtual bool ReadyToProceed => true;
+        public virtual bool ReadyToProceed => false;
+        public virtual bool ReadyForNextFrame => false;
 
         public NodeState EnterState(NodeState oldState)
         {
             if (oldState != this)
             {
-                oldState?.ExitState(this);
+                oldState?.ExitState();
                 m_Time = new Stopwatch();
                 m_Time.Start();
 
                 InitState();
             }
+
             return this;
         }
 
@@ -43,23 +45,28 @@ namespace Unity.ClusterDisplay
             m_Cancellation = new CancellationTokenSource();
         }
 
-        protected virtual NodeState DoFrame( bool newFrame)
+        protected virtual NodeState DoFrame(bool newFrame)
         {
             return this;
         }
 
-        public virtual void OnEndFrame() {}
+        protected virtual void DoLateFrame() { }
 
-        public NodeState ProcessFrame( bool newFrame)
+        public virtual void OnEndFrame() { }
+
+        public NodeState ProcessFrame(bool newFrame)
         {
             var res = DoFrame(newFrame);
             if (res != this)
+            {
+                res.EnterState(this);
                 return res;
+            }
 
             // RemoveMe
             if (Debugging)
             {
-                if(newFrame)
+                if (newFrame)
                     m_Time.Restart();
 
                 if (m_Time.ElapsedMilliseconds > MaxTimeOut.Milliseconds)
@@ -68,14 +75,16 @@ namespace Unity.ClusterDisplay
                     return shutdown.EnterState(this);
                 }
             }
-            
+
             if (PendingStateChange != null)
                 return PendingStateChange.EnterState(this);
 
             return this;
         }
 
-        protected void ProcessUnhandledMessage( MessageHeader msgHeader )
+        public void ProcessLateFrame() => DoLateFrame();
+
+        protected void ProcessUnhandledMessage(MessageHeader msgHeader)
         {
             switch (msgHeader.MessageType)
             {
@@ -98,7 +107,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        protected virtual void ExitState(NodeState newState)
+        protected virtual void ExitState()
         {
             ClusterDebug.Log("Exiting State:" + GetType().Name);
 
@@ -126,54 +135,55 @@ namespace Unity.ClusterDisplay
         }
     }
 
-    // RepeaterState state -------------------------------------------------------- 
+    // RepeaterState state --------------------------------------------------------
     internal abstract class RepeaterState : NodeState
     {
-        public RepeaterState(IClusterSyncState clusterSync) : base(clusterSync) {}
+        public RepeaterState(IClusterSyncState clusterSync)
+            : base(clusterSync) { }
 
         protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
 
-        protected RepeaterNode LocalNode => (RepeaterNode)clusterSync.LocalNode;
+        protected RepeaterNode LocalNode => (RepeaterNode) clusterSync.LocalNode;
     }
 
-    // EmitterState state -------------------------------------------------------- 
+    // EmitterState state --------------------------------------------------------
     internal abstract class EmitterState : NodeState
     {
-        public EmitterState(IClusterSyncState clusterSync) : base(clusterSync) {}
+        public EmitterState(IClusterSyncState clusterSync)
+            : base(clusterSync) { }
 
         // If the repeaters were delayed by one frame, then we need to send emitter's data from the
         // last frame. That last frame data is sent with this previous frame number for validation
         // by the repeater.
-        protected ulong PreviousFrameID => 
-            LocalNode.RepeatersDelayed ? 
-                CurrentFrameID - 1 : 
-                CurrentFrameID;
+        protected ulong PreviousFrameID =>
+            LocalNode.RepeatersDelayed ? CurrentFrameID - 1 : CurrentFrameID;
 
         protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
-        protected EmitterNode LocalNode => (EmitterNode)clusterSync.LocalNode;
+        protected EmitterNode LocalNode => (EmitterNode) clusterSync.LocalNode;
     }
 
-    // Shutdown state -------------------------------------------------------- 
+    // Shutdown state --------------------------------------------------------
     internal class Shutdown : NodeState
     {
-        public Shutdown(IClusterSyncState clusterSync) : base(clusterSync) {}
+        public Shutdown(IClusterSyncState clusterSync)
+            : base(clusterSync) { }
     }
 
-    // FatalError state -------------------------------------------------------- 
+    // FatalError state --------------------------------------------------------
     internal class FatalError : NodeState
     {
-        public FatalError(IClusterSyncState clusterSync, string msg) : base(clusterSync)
+        public FatalError(IClusterSyncState clusterSync, string msg)
+            : base(clusterSync)
         {
             Message = msg;
         }
 
-        protected override void ExitState(NodeState newState)
+        protected override void ExitState()
         {
-            base.ExitState(newState);
+            base.ExitState();
             ClusterDebug.LogError(Message);
         }
 
-        public string Message { get;  }
+        public string Message { get; }
     }
-
 }

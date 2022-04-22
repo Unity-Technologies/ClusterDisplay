@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            renderer.DelayPresentByOneFrame = CommandLineParser.emitterSpecified && CommandLineParser.delayRepeaters;
+            renderer.DelayPresentByOneFrame = CommandLineParser.emitterSpecified.Value && CommandLineParser.delayRepeaters.Value;
 
             if (Application.isPlaying && renderer.ProjectionPolicy is ProjectionPolicy projectionPolicy)
             {
@@ -59,9 +59,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void ParseSettings(ref TiledProjectionSettings baseSettings)
         {
-            TrySet(ref baseSettings.Bezel, CommandLineParser.bezel);
-            TrySet(ref baseSettings.GridSize, CommandLineParser.gridSize);
-            TrySet(ref baseSettings.PhysicalScreenSize, CommandLineParser.physicalScreenSize);
+            if (CommandLineParser.bezel.Defined)
+                TrySet(ref baseSettings.Bezel, CommandLineParser.bezel.Value);
+
+            if (CommandLineParser.gridSize.Defined)
+                TrySet(ref baseSettings.GridSize, CommandLineParser.gridSize.Value);
+
+            if (CommandLineParser.physicalScreenSize.Defined)
+                TrySet(ref baseSettings.PhysicalScreenSize, CommandLineParser.physicalScreenSize.Value);
         }
     }
 }

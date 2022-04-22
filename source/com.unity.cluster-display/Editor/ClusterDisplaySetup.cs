@@ -26,8 +26,7 @@ namespace Unity.ClusterDisplay
 
         private static readonly List<Type> expectedTypes = new List<Type>()
         {
-            typeof(ClusterDisplayBootstrap),
-            typeof(GfxPluginQuadroSyncCallbacks)
+            typeof(ClusterDisplayBootstrap)
         };
 
         [MenuItem("Cluster Display/Setup Cluster Display")]

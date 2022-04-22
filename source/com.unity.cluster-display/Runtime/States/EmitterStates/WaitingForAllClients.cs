@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
@@ -8,7 +9,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
     internal class WaitingForAllClients : EmitterState
     {
         public override bool ReadyToProceed => false;
-        
+
         public WaitingForAllClients(IClusterSyncState clusterSync)
             : base(clusterSync) { }
 
@@ -21,25 +22,25 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         protected override NodeState DoFrame(bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut )
+            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with { LocalNode.m_RemoteNodes.Count} nodes ");
+                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with {LocalNode.m_RemoteNodes.Count} nodes ");
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
                 }
 
-                if (!CommandLineParser.TryParseCommunicationTimeout(out var communicationTimeout))
-                    communicationTimeout = new TimeSpan(0, 0, 0, 5);
+                TimeSpan communicationTimeout = new TimeSpan(0, 0, 0, 5);
+                if (CommandLineParser.communicationTimeout.Defined)
+                    communicationTimeout = new TimeSpan(0, 0, 0, 0, (int)CommandLineParser.communicationTimeout.Value);
 
-                var newState = new EmitterSynchronization(clusterSync) {
-                    MaxTimeOut = communicationTimeout,
+                return new EmitterSynchronization(clusterSync)
+                {
+                    MaxTimeOut = communicationTimeout
                 };
-
-                return newState.EnterState(this);
             }
-            
+
             return this;
         }
 
@@ -50,54 +51,43 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 do
                 {
                     // Wait for a client to announce itself
-                    if (LocalNode.UdpAgent.RxWait.WaitOne(1000))
+                    // Consume messages
+                    while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
                     {
-                        // Consume messages
-                        while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                        if (header.MessageType == EMessageType.HelloEmitter)
                         {
-                            if (header.MessageType == EMessageType.HelloEmitter)
-                            {
-                                var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
+                            var roleInfo = payload.LoadStruct<RolePublication>(header.OffsetToPayload);
 
-                                RegisterRemoteNode(header, roleInfo);
-                                SendResponse(header);
-                            }
-                            else
-                            {
-                                ProcessUnhandledMessage(header);
-                            }
+                            RegisterRemoteNode(header, roleInfo);
+                            SendResponse(header);
+                        }
+                        else
+                        {
+                            ProcessUnhandledMessage(header);
                         }
                     }
-
-                } while ( (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount) && !ctk.IsCancellationRequested);
+                } while (LocalNode.m_RemoteNodes.Count < LocalNode.TotalExpectedRemoteNodesCount &&
+                    !ctk.IsCancellationRequested);
             }
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);
-                var err = new FatalError( clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
+                var err = new FatalError(clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
                 PendingStateChange = err;
             }
         }
 
-        private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo )
+        private void RegisterRemoteNode(MessageHeader header, RolePublication roleInfo)
         {
-            ClusterDebug.Log("Discovered remote node: " + header.OriginID );
+            ClusterDebug.Log("Discovered remote node: " + header.OriginID);
 
-            var commCtx = new RemoteNodeComContext
-            {
-                ID = header.OriginID,
-                Role = roleInfo.NodeRole,
-            };
+            var commCtx = new RemoteNodeComContext {ID = header.OriginID, Role = roleInfo.NodeRole,};
             LocalNode.RegisterNode(commCtx);
         }
 
         private void SendResponse(MessageHeader rxHeader)
         {
-            var header = new MessageHeader()
-            {
-                MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = (UInt64)1 << rxHeader.OriginID,
-            };
+            var header = new MessageHeader() {MessageType = EMessageType.WelcomeRepeater, DestinationIDs = BitVector.FromIndex(rxHeader.OriginID),};
 
             LocalNode.UdpAgent.PublishMessage(header);
         }
@@ -106,7 +96,5 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.m_RemoteNodes.Count}";
         }
-
     }
-
 }

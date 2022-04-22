@@ -6,12 +6,9 @@ namespace Unity.ClusterDisplay
 {
     public static class ClusterDebug
     {
-        public static void Log (string msg)
-        {
-            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
+        [System.Diagnostics.Conditional("CLUSTER_DISPLAY_VERBOSE_LOGGING")]
+        public static void Log (string msg) =>
             Debug.Log(msg);
-            #endif
-        }
 
         public static void LogWarning (string msg) =>
             Debug.LogWarning(msg);

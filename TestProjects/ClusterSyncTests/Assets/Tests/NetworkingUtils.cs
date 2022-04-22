@@ -8,8 +8,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using NUnit.Framework;
-using UnityEditor;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Tests
@@ -20,33 +19,30 @@ namespace Unity.ClusterDisplay.Tests
 
         public const int receiveTimeout = 5000;
         
-        public static ulong ToMask(this byte id) => 1UL << id;
-
-        public static ulong ToMask(this IEnumerable<byte> ids) => ids.Aggregate(0UL, (mask, id) => mask | ToMask((byte) id));
+        public static BitVector ToMask(this IEnumerable<byte> ids) => ids.Aggregate(new BitVector(), (mask, id) => mask.SetBit(id));
 
         public static (MessageHeader header, T contents) ReceiveMessage<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
-        {   
-            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
-            {
-                return (header, outBuffer.LoadStruct<T>(k_HeaderSize));
-            }
-
-            return default;
+        {
+            return agent.NextAvailableRxMsg(out var header,
+                out var outBuffer,
+                timeout)
+                ? (header, outBuffer.LoadStruct<T>(k_HeaderSize))
+                : default;
         }
-        
+
         public static (MessageHeader header, T contents, byte[] extraData) ReceiveMessageWithData<T>(this UDPAgent agent, int timeout = receiveTimeout) where T : unmanaged
-        {   
-            if (agent.RxWait.WaitOne(timeout) && agent.NextAvailableRxMsg(out var header, out var outBuffer))
+        {
+            if (agent.NextAvailableRxMsg(out var header, out var outBuffer, timeout))
             {
                 var msgLength = k_HeaderSize + Marshal.SizeOf<T>();
                 var extraData = new byte[outBuffer.Length - msgLength];
-                
+
                 Array.Copy(sourceArray: outBuffer,
                     sourceIndex: msgLength,
                     destinationArray: extraData,
                     destinationIndex: 0,
                     length: extraData.Length);
-                
+
                 return (header, outBuffer.LoadStruct<T>(k_HeaderSize), extraData);
             }
 
@@ -83,7 +79,7 @@ namespace Unity.ClusterDisplay.Tests
                 return (result.Buffer.LoadStruct<MessageHeader>(), result.Buffer.LoadStruct<T>(k_HeaderSize));
             }
         }
-        
+
         public static (MessageHeader header, byte[] rawMsg) GenerateMessage<T>(byte originId,
             IEnumerable<byte> destinations,
             EMessageType messageType,
@@ -94,6 +90,7 @@ namespace Unity.ClusterDisplay.Tests
             // Generate and send message
             var header = new MessageHeader
             {
+                SequenceID = 10,
                 MessageType = messageType,
                 DestinationIDs = destinations.ToMask(),
                 OriginID = originId,
@@ -105,7 +102,7 @@ namespace Unity.ClusterDisplay.Tests
             var contentSize = Marshal.SizeOf<T>();
             var bufferLen = k_HeaderSize + contentSize + (extraData?.Length ?? 0);
             var buffer = new byte[bufferLen];
-            
+
             header.StoreInBuffer(buffer);
             contents.StoreInBuffer(buffer, k_HeaderSize);
             extraData?.CopyTo(buffer, k_HeaderSize + contentSize);
@@ -120,7 +117,7 @@ namespace Unity.ClusterDisplay.Tests
                 EMessageType.EnterNextFrame,
                 new RepeaterEnteredNextFrame
                 {
-                    FrameNumber = 1
+                    FrameNumber = 5
                 });
         }
 
@@ -151,7 +148,7 @@ namespace Unity.ClusterDisplay.Tests
             var ackHeader = new MessageHeader
             {
                 MessageType = EMessageType.AckMsgRx,
-                DestinationIDs = 1UL << agentId,
+                DestinationIDs = BitVector.FromIndex(agentId),
                 OriginID = originId
             };
 
@@ -164,8 +161,9 @@ namespace Unity.ClusterDisplay.Tests
             // Assume that the first operational interface is capable of multicast.
             // This is similar to the logic that UDPAgent uses to select an interface when none is specified,
             // so it should pick the same interface as the UdpClients that we're using in this test
-            return NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up);
+            return NetworkInterface
+                .GetAllNetworkInterfaces()
+                .FirstOrDefault(nic => nic.OperationalStatus == OperationalStatus.Up && nic.SupportsMulticast);
         }
-
     }
 }

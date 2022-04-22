@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -35,9 +36,12 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         ProfilerMarker m_MarkerWaitingOnGoFromEmitter = new ProfilerMarker("WaitingOnGoFromEmitter");
         ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
-        
-        public ulong EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
-        
+        public override bool ReadyForNextFrame => ReadyToProceed;
+
+        public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
+
+        public bool HasHardwareSync { get; set; }
+
         public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
         {
         }
@@ -67,19 +71,19 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             using (m_MarkerDoFrame.Auto())
             {
                 // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Current repeater stage: {Stage}");
-                
+
                 switch (Stage)
                 {
                     case EStage.EnteredNextFrame:
                     {
                         OnEnteredNextFrame();
                     } break;
-                    
+
                     case EStage.WaitForEmitterACK:
                     {
                         OnWaitForEmitterACK();
                     } break;
-                        
+
                     case EStage.WaitingOnEmitterFrameData:
                     {
                         OnWaitingOnEmitterFrameData();
@@ -97,20 +101,25 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private void OnEnteredNextFrame()
         {
             using (m_MarkerReadyToProcessFrame.Auto())
-                m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+            {
+                if (!HasHardwareSync)
+                {
+                    m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+                }
 
-            Stage = EStage.WaitForEmitterACK;
-            m_TsOfStage = m_Time.Elapsed;
+                Stage = EStage.WaitForEmitterACK;
+                m_TsOfStage = m_Time.Elapsed;
+            }
         }
-        
+
         private void OnWaitForEmitterACK ()
         {
-            if (LocalNode.UdpAgent.AcksPending)
+            if (!HasHardwareSync && LocalNode.UdpAgent.HasPendingAcks)
             {
                 // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
                 return;
             }
-            
+
             Stage = EStage.WaitingOnEmitterFrameData;
             m_TsOfStage = m_Time.Elapsed;
         }
@@ -120,7 +129,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             using (m_MarkerWaitingOnGoFromEmitter.Auto())
             {
                 m_RepeaterReceiver.PumpMsg(CurrentFrameID);
-                
+
                 // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
                 // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
                 // We will have actually processed a frame and be ready to inform emitter and wait for next frame start.

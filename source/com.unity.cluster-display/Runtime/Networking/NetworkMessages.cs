@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
+using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 
@@ -122,7 +122,7 @@ namespace Unity.ClusterDisplay
         public byte m_Version;
         private byte m_MessageType; // see EMessageType
         public byte OriginID;
-        public UInt64 DestinationIDs; // bit field
+        public BitVector DestinationIDs; // bit field
         public UInt64 SequenceID;
         public UInt16 PayloadSize;
         private UInt16 m_Flags;

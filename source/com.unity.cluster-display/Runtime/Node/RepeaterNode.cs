@@ -1,13 +1,26 @@
 ﻿using System;
 using Unity.ClusterDisplay.RepeaterStateMachine;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
     internal class RepeaterNode : ClusterNode
     {
         public byte EmitterNodeId { get; set; }
-        public UInt64 EmitterNodeIdMask => (UInt64) 1 << EmitterNodeId;
+        public BitVector EmitterNodeIdMask => BitVector.FromIndex(EmitterNodeId);
         public bool DelayRepeater { get; set; }
+
+        public override bool HasHardwareSync
+        {
+            get => m_CurrentState is RepeaterSynchronization {HasHardwareSync: true};
+            set
+            {
+                if (m_CurrentState is RepeaterSynchronization emitter)
+                {
+                    emitter.HasHardwareSync = value;
+                }
+            }
+        }
 
         public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
             : base(clusterSync, config)
@@ -17,7 +30,7 @@ namespace Unity.ClusterDisplay
 
         public override void Start()
         {
-            m_CurrentState = new RegisterWithEmitter(clusterSync) {MaxTimeOut = ClusterParams.RegisterTimeout};
+            m_CurrentState = HardwareSyncInitState.Create(clusterSync);
             m_CurrentState.EnterState(null);
         }
     }

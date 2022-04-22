@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 
 namespace Unity.ClusterDisplay
 {
@@ -12,9 +10,9 @@ namespace Unity.ClusterDisplay
         public UDPAgent UdpAgent => m_UDPAgent;
 
         public byte NodeID => m_UDPAgent.LocalNodeID;
-        public UInt64 NodeIDMask => m_UDPAgent.LocalNodeIDMask;
 
         protected internal IClusterSyncState clusterSync;
+        public virtual bool HasHardwareSync { get; set; }
 
         protected ClusterNode(
             IClusterSyncState clusterSync,
@@ -36,13 +34,15 @@ namespace Unity.ClusterDisplay
         {
             m_CurrentState = m_CurrentState?.ProcessFrame(newFrame);
 
-            if (m_CurrentState.GetType() == typeof(Shutdown))
+            if (m_CurrentState is Shutdown)
             {
                 m_UDPAgent.Stop();
             }
 
-            return m_CurrentState.GetType() != typeof(FatalError);
+            return m_CurrentState is not FatalError;
         }
+
+        public void DoLateFrame() => m_CurrentState?.ProcessLateFrame();
 
         public void EndFrame() => m_CurrentState?.OnEndFrame();
 
@@ -54,6 +54,7 @@ namespace Unity.ClusterDisplay
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
+        public bool ReadyForNextFrame => m_CurrentState?.ReadyForNextFrame ?? true;
 
         public void BroadcastShutdownRequest()
         {

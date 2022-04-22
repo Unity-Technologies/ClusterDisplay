@@ -1,0 +1,16 @@
+{
+    "name": "Unity.ClusterDisplay.Tests",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0861eaad4777b824986b7d153336925a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

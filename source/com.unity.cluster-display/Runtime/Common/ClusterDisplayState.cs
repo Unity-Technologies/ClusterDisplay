@@ -82,6 +82,6 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public static ulong Frame => stateStore.m_Frame;
 
-        public static ushort NodeID => CommandLineParser.nodeID;
+        public static ushort NodeID => (ushort)CommandLineParser.nodeID.Value;
     }
 }
