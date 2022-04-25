@@ -2,7 +2,7 @@
 #include "D3D12GraphicsDevice.h"
 #include "QuadroSync.h"
 #include "GfxQuadroSync.h"
-#include "PluginUtils.h"
+#include "Logger.h"
 
 #include "../Unity/IUnityRenderingExtensions.h"
 #include "../Unity/IUnityGraphicsD3D11.h"
@@ -25,7 +25,7 @@ namespace GfxQuadroSync
 	{
 		if (unityInterfaces)
 		{
-			WriteFileDebug("* Success: UnityPluginLoad triggered\n", false);
+            CLUSTER_LOG << "UnityPluginLoad triggered";
 
 			s_UnityInterfaces = unityInterfaces;
 			s_UnityGraphics = unityInterfaces->Get<IUnityGraphics>();
@@ -40,7 +40,7 @@ namespace GfxQuadroSync
 		}
 		else
 		{
-			WriteFileDebug("* Error: UnityPluginLoad, unityInterfaces is null \n", true);
+            CLUSTER_LOG_ERROR << "UnityPluginLoad, unityInterfaces is null";
 		}
 	}
 
@@ -50,6 +50,12 @@ namespace GfxQuadroSync
 	{
 		return OnRenderEvent;
 	}
+
+    // Freely defined function to pass a callback to the function to call with log messages
+    extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetLogCallback(Logger::ManagedCallback callback)
+    {
+        Logger::Instance().SetManagedCallback(callback);
+    }
 
 	// Override the query method to use the `PresentFrame` callback
 	// It has been added specially for the Quadro Sync system
@@ -73,15 +79,15 @@ namespace GfxQuadroSync
 		switch (renderer)
 		{
 		case UnityGfxRenderer::kUnityGfxRendererD3D11:
-			WriteFileDebug("* Success: get s_UnityGraphicsD3D11\n", true);
+            CLUSTER_LOG << "get s_UnityGraphicsD3D11";
 			s_UnityGraphicsD3D11 = s_UnityInterfaces->Get<IUnityGraphicsD3D11>();
 			break;
 		case UnityGfxRenderer::kUnityGfxRendererD3D12:
-			WriteFileDebug("* Success: get kUnityGfxRendererD3D12\n", true);
+            CLUSTER_LOG << "get kUnityGfxRendererD3D12";
 			s_UnityGraphicsD3D12 = s_UnityInterfaces->Get<IUnityGraphicsD3D12v7>();
 			break;
 		default:
-			WriteFileDebug("* Error: Graphic API not supported\n");
+            CLUSTER_LOG_ERROR << "Graphic API not supported";
 			break;
 		}
 	}
@@ -91,7 +97,7 @@ namespace GfxQuadroSync
 	{
 		if (eventType == kUnityGfxDeviceEventInitialize && !s_Initialized)
 		{
-			WriteFileDebug("* Success: kUnityGfxDeviceEventInitialize called\n", true);
+            CLUSTER_LOG << "kUnityGfxDeviceEventInitialize called";
 			s_Initialized = true;
 		}
 		else if (eventType == kUnityGfxDeviceEventShutdown)
@@ -174,7 +180,7 @@ namespace GfxQuadroSync
 	{
 		if (s_UnityGraphics == nullptr)
 		{
-			WriteFileDebug("* Failed: IsContextValid, s_UnityGraphics == nullptr \n", true);
+            CLUSTER_LOG_ERROR << "IsContextValid, s_UnityGraphics == nullptr";
 			return false;
 		}
 
@@ -186,19 +192,19 @@ namespace GfxQuadroSync
 		if (s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11 &&
 			s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D12)
 		{
-			WriteFileDebug("* Error: s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11-12 \n", true);
+            CLUSTER_LOG_ERROR << "IsContextValid, s_UnityGraphics->GetRenderer() != UnityGfxRenderer::kUnityGfxRendererD3D11-12";
 			return false;
 		}
 
 		if (s_GraphicsDevice->GetDevice() == nullptr)
 		{
-			WriteFileDebug("* Warning: IsContextValid, GetDevice() == nullptr \n", true);
+            CLUSTER_LOG_WARNING << "IsContextValid, GetDevice() == nullptr";
 			SetDevice();
 		}
 
 		if (s_GraphicsDevice->GetSwapChain() == nullptr)
 		{
-			WriteFileDebug("* Warning: IsContextValid, GetSwapChain() == nullptr \n", true);
+            CLUSTER_LOG_WARNING << "IsContextValid, GetSwapChain() == nullptr";
 			SetSwapChain();
 		}
 
@@ -222,7 +228,7 @@ namespace GfxQuadroSync
 				auto presentFlags = s_UnityGraphicsD3D11->GetPresentFlags();
 
 				s_GraphicsDevice = std::make_unique<D3D11GraphicsDevice>(device, swapChain, syncInterval, presentFlags);
-				WriteFileDebug("* Success: D3D11GraphicsDevice succesfully created\n");
+                CLUSTER_LOG << "D3D11GraphicsDevice successfully created";
 			}
 			else if (s_UnityGraphicsD3D12 != nullptr)
 			{
@@ -232,11 +238,11 @@ namespace GfxQuadroSync
 				auto presentFlags = s_UnityGraphicsD3D12->GetPresentFlags();
 
 				s_GraphicsDevice = std::make_unique<D3D12GraphicsDevice>(device, swapChain, syncInterval, presentFlags);
-				WriteFileDebug("Success: D3D12GraphicsDevice succesfully created\n");
+                CLUSTER_LOG << "D3D12GraphicsDevice successfully created";
 			}
 			else
 			{
-				WriteFileDebug("* Error: Graphic API incompatible\n");
+                CLUSTER_LOG_ERROR << "Graphic API incompatible";
 				return false;
 			}
 		}
@@ -248,7 +254,7 @@ namespace GfxQuadroSync
 	{
 		if (!InitializeGraphicsDevice())
 		{
-			WriteFileDebug("* Error: failed during QuadroSyncInitialize\n");
+            CLUSTER_LOG_ERROR << "Failed during QuadroSyncInitialize";
 			return;
 		}
 

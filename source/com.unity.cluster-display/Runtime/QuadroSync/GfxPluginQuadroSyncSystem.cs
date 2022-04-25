@@ -73,13 +73,19 @@ namespace Unity.ClusterDisplay
             internal const string DLLPath = "";
 #error "System not implemented"
 #endif
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+            public delegate void NewLogMessageCallback(int logType, IntPtr message);
 
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFunc();
+
+            [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            public static extern void SetLogCallback(
+                [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
         }
 
         /// <summary>
-        /// Gets the unique instance of the class (Singleton). 
+        /// Gets the unique instance of the class (Singleton).
         /// </summary>
         public static GfxPluginQuadroSyncSystem Instance
         {
@@ -90,7 +96,15 @@ namespace Unity.ClusterDisplay
 
         static GfxPluginQuadroSyncSystem() { }
 
-        private GfxPluginQuadroSyncSystem() { }
+        private GfxPluginQuadroSyncSystem()
+        {
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
+            GfxPluginQuadroSyncUtilities.SetLogCallback((type, message) =>
+            {
+                Debug.unityLogger.Log((LogType)type, Marshal.PtrToStringAnsi(message));
+            });
+            #endif
+        }
 
         /// <summary>
         /// Executes a CommandBuffer related to the EQuadroSyncRenderEvent.

@@ -11,9 +11,18 @@ SET INSTALLDIR=%cd%\\source\\com.unity.cluster-display\\Runtime\\Plugins\\x86_64
 echo Install dir is:
 echo %INSTALLDIR%
 
-pushd GfxPluginQuadroSync
+REM Log Build configuration Release or Debug
+SET BUILD_CONFIG="Release"
+if /I "%1" == "Debug" (
+	SET BUILD_CONFIG="Debug"
+)
+echo Build configuration: %BUILD_CONFIG%
+
+REM Erase any previous pdb in the install directory (so that there is no old .pdb when building in release)
+del "%INSTALLDIR%\\GfxPluginQuadroSync*.pdb"
 
 REM build
+pushd GfxPluginQuadroSync
 if exist build_win (
     rmdir /s /q build_win
 )
@@ -28,19 +37,19 @@ echo ************************************
 cmake .. ^
 	-A x64 ^
     -DCMAKE_INSTALL_PREFIX=%INSTALLDIR%
-IF %ERRORLEVEL% NEQ 0 ( 
+IF %ERRORLEVEL% NEQ 0 (
 	echo Failed to prepare CMake project
-	exit 1 
+	exit 1
 )
 echo ************************************
 echo Build and install library
 echo ************************************
 cmake --build . ^
 	--target INSTALL ^
-	--config Release
-IF %ERRORLEVEL% NEQ 0 ( 
+	--config %BUILD_CONFIG%
+IF %ERRORLEVEL% NEQ 0 (
 	echo Failed to build and install ProRes wrapper library
-	exit 1 
+	exit 1
 )
 
 popd REM build_win
