@@ -56,9 +56,9 @@ namespace Unity.ClusterDisplay
             var length = m_Data.Length - dataStart;
             var dataSize = saveFunc(m_Data.GetSubArray(dataStart, length));
 
-            if (dataSize <= 0)
+            if (dataSize < 0)
             {
-                throw new ArgumentOutOfRangeException();
+                throw new IndexOutOfRangeException("Serialization callback failed (returned negative value).");
             }
 
             Length += dataSize.StoreInBuffer(m_Data, sizePos);

@@ -21,17 +21,27 @@ namespace Unity.ClusterDisplay.Tests
                 return 5;
             });
             Assert.That(buffer.Data, Is.EqualTo(new byte[] {13, 5, 0, 0, 0, 1, 2, 3, 4, 5}));
+
             buffer.Store(14, writeableBuffer =>
             {
                 new byte[] {6, 7, 8}.CopyTo(writeableBuffer.AsSpan());
                 return 3;
             });
-
             Assert.That(buffer.Data, Is.EqualTo(new byte[]
             {
                 13, 5, 0, 0, 0, 1, 2, 3, 4, 5,
                 14, 3, 0, 0, 0, 6, 7, 8
             }));
+
+            // Case where callback does not write anything (returns 0)
+            buffer.Store(15, _ => 0);
+            Assert.That(buffer.Data, Is.EqualTo(new byte[]
+            {
+                13, 5, 0, 0, 0, 1, 2, 3, 4, 5,
+                14, 3, 0, 0, 0, 6, 7, 8,
+                15, 0, 0, 0, 0
+            }));
+
             buffer.Store((byte) StateID.End);
 
             using var copy = new NativeArray<byte>(buffer.Length, Allocator.Temp);
@@ -103,6 +113,7 @@ namespace Unity.ClusterDisplay.Tests
                 new byte[] {6, 7, 8}.CopyTo(writeableBuffer.AsSpan());
                 return 3;
             });
+            buffer.Store(15, _ => 0);
 
             buffer.Store((byte) StateID.End);
 
@@ -115,11 +126,13 @@ namespace Unity.ClusterDisplay.Tests
                 readData.Add(item);
             }
 
-            Assert.That(readData, Has.Count.EqualTo(2));
+            Assert.That(readData, Has.Count.EqualTo(3));
             Assert.That(readData[0].id, Is.EqualTo(13));
             Assert.That(readData[0].data, Is.EqualTo(new byte[] {1, 2, 3, 4, 5}));
             Assert.That(readData[1].id, Is.EqualTo(14));
             Assert.That(readData[1].data, Is.EqualTo(new byte[] {6, 7, 8}));
+            Assert.That(readData[2].id, Is.EqualTo(15));
+            Assert.That(readData[2].data, Is.Empty);
         }
     }
 }
