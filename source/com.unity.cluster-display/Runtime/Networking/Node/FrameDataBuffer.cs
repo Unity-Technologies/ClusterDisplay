@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
 
         public delegate int StoreDataDelegate(NativeArray<byte> writeableBuffer);
 
-        public IEnumerable<byte> Data => m_Data.GetSubArray(0, Length);
+        public NativeArray<byte>.ReadOnly Data => m_Data.GetSubArray(0, Length).AsReadOnly();
 
         public FrameDataBuffer(int capacity = ushort.MaxValue)
         {
@@ -34,16 +34,12 @@ namespace Unity.ClusterDisplay
             m_Disposed = true;
         }
 
-        public void CopyTo(Span<byte> dest,
-            int offset = 0) =>
+        public void CopyTo(Span<byte> dest, int offset = 0) =>
             m_Data.GetSubArray(0, Length)
                 .AsSpan()
                 .CopyTo(dest.Slice(offset));
 
-        public void Clear()
-        {
-            Length = 0;
-        }
+        public void Clear() => Length = 0;
 
         public void Store(byte id, StoreDataDelegate saveFunc)
         {
@@ -58,7 +54,7 @@ namespace Unity.ClusterDisplay
 
             if (dataSize < 0)
             {
-                throw new IndexOutOfRangeException("Serialization callback failed (returned negative value).");
+                throw new ArgumentOutOfRangeException(nameof(saveFunc), "Serialization callback failed (returned negative value).");
             }
 
             Length += dataSize.StoreInBuffer(m_Data, sizePos);

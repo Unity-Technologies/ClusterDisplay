@@ -19,11 +19,10 @@ namespace Unity.ClusterDisplay
 
         FrameDataBuffer m_StagedFrameData = new(k_MaxFrameNetworkByteBufferSize);
         FrameDataBuffer m_CurrentFrameData = new(k_MaxFrameNetworkByteBufferSize);
-        bool m_CurrentStateResult;
+        bool m_CurrentFrameDataValid;
+        bool m_StagedFrameDataValid;
 
         private byte[] m_MsgBuffer = Array.Empty<byte>();
-
-        public bool ValidRawStateData => m_StagedFrameData.IsValid;
 
         public IEmitterNodeSyncState nodeState;
 
@@ -44,7 +43,7 @@ namespace Unity.ClusterDisplay
 
         private readonly bool k_RepeatersDelayed;
 
-        internal static void RegisterOnStoreCustomDataDelegate (byte id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
+        internal static void RegisterOnStoreCustomDataDelegate(byte id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
         {
             k_CustomDataDelegates[id] = storeDataDelegate;
         }
@@ -52,7 +51,7 @@ namespace Unity.ClusterDisplay
         internal static void UnregisterCustomDataDelegate(byte id) => k_CustomDataDelegates.Remove(id);
         internal static void ClearCustomDataDelegates() => k_CustomDataDelegates.Clear();
 
-        public EmitterStateWriter (IEmitterNodeSyncState nodeState, bool repeatersDelayed)
+        public EmitterStateWriter(IEmitterNodeSyncState nodeState, bool repeatersDelayed)
         {
             this.nodeState = nodeState;
             k_RepeatersDelayed = repeatersDelayed;
@@ -90,6 +89,11 @@ namespace Unity.ClusterDisplay
 
         public void PublishCurrentState(ulong currentFrameId)
         {
+            if (!m_StagedFrameDataValid)
+            {
+                return;
+            }
+
             var mainMessageSize = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>();
             var len = mainMessageSize + m_StagedFrameData.Length;
 
@@ -120,32 +124,43 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        internal void GatherPreFrameState ()
+        internal void GatherPreFrameState()
         {
             try
             {
                 m_CurrentFrameData.Clear();
                 StoreStateData(m_CurrentFrameData);
-                m_CurrentStateResult = true;
+                m_CurrentFrameDataValid = true;
             }
             catch (Exception e)
             {
+                m_CurrentFrameDataValid = false;
                 ClusterDebug.Log(e.Message);
-                m_CurrentStateResult = false;
             }
         }
 
-        private void StageCurrentStateBuffer ()
+        void StageCurrentStateBuffer()
         {
-            if (m_CurrentStateResult)
+            if (m_CurrentFrameDataValid)
             {
-                foreach (var (id, customDataDelegate) in k_CustomDataDelegates)
-                {
-                    m_CurrentFrameData.Store(id, customDataDelegate);
-                }
-
                 Swap(ref m_CurrentFrameData, ref m_StagedFrameData);
-                m_StagedFrameData.Store((byte)StateID.End);
+                m_CurrentFrameDataValid = false;
+
+                try
+                {
+                    foreach (var (id, customDataDelegate) in k_CustomDataDelegates)
+                    {
+                        m_StagedFrameData.Store(id, customDataDelegate);
+                    }
+
+                    m_StagedFrameData.Store((byte)StateID.End);
+                    m_StagedFrameDataValid = true;
+                }
+                catch (Exception e)
+                {
+                    ClusterDebug.Log(e.Message);
+                    m_StagedFrameDataValid = false;
+                }
             }
         }
 
@@ -161,7 +176,7 @@ namespace Unity.ClusterDisplay
             return state.StoreInBuffer(arr);
         }
 
-        public void GatherFrameState(ulong frame)
+        public void GatherFrameState()
         {
             if (!k_RepeatersDelayed)
             {

@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // If the repeaters were not delayed, we need to fill the frame data buffer for the repeater when
             // enter this state for the first time.
             if (Stage == EStage.WaitOnRepeatersNextFrame)
-                m_Emitter.GatherFrameState(CurrentFrameID);
+                m_Emitter.GatherFrameState();
             else m_Emitter.GatherPreFrameState();
 
             m_TsOfStage = m_Time.Elapsed;
@@ -177,9 +177,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private void OnEmitFrameData()
         {
-            m_Emitter.GatherFrameState(CurrentFrameID);
-
-            ClusterDebug.Assert(m_Emitter.ValidRawStateData, $"(Frame: {CurrentFrameID}): State buffer is empty!");
+            m_Emitter.GatherFrameState();
 
             using (m_MarkerPublishState.Auto())
                 m_Emitter.PublishCurrentState(PreviousFrameID);
