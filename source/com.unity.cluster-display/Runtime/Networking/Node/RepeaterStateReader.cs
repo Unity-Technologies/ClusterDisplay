@@ -50,9 +50,10 @@ namespace Unity.ClusterDisplay
         internal static void ClearOnLoadDataDelegates()
         {
             k_LoadDataDelegates.Clear();
-            foreach (var entry in k_BuiltInOnLoadDelegates)
+            // Built-in delegates are always registered
+            foreach (var (id, func) in k_BuiltInOnLoadDelegates)
             {
-                k_LoadDataDelegates.Add(entry.Key, entry.Value);
+                RegisterOnLoadDataDelegate(id, func);
             }
         }
 

@@ -41,15 +41,6 @@ namespace Unity.ClusterDisplay.Tests
                 14, 3, 0, 0, 0, 6, 7, 8,
                 15, 0, 0, 0, 0
             }));
-
-            buffer.Store((byte) StateID.End);
-
-            using var copy = new NativeArray<byte>(buffer.Length, Allocator.Temp);
-            buffer.CopyTo(copy.AsSpan());
-            foreach (var (id, data) in new FrameDataReader(copy))
-            {
-                Debug.Log($"{id}: {data.Length}");
-            }
         }
 
         [Test]
@@ -113,26 +104,43 @@ namespace Unity.ClusterDisplay.Tests
                 new byte[] {6, 7, 8}.CopyTo(writeableBuffer.AsSpan());
                 return 3;
             });
-            buffer.Store(15, _ => 0);
+
+            // Test that we don't overflow if we omit the StateID.End entry
+            using (var testCopy = new NativeArray<byte>(buffer.Length, Allocator.Temp))
+            {
+                buffer.CopyTo(testCopy.AsSpan());
+                Assert.DoesNotThrow(() =>
+                {
+                    foreach (var item in new FrameDataReader(testCopy))
+                    {
+                        Debug.Log(item);
+                    }
+                });
+            }
 
             buffer.Store((byte) StateID.End);
 
-            using var testCopy = new NativeArray<byte>(buffer.Length, Allocator.Temp);
-            buffer.CopyTo(testCopy.AsSpan());
+            // Data added after StateID.End will not get enumerated
+            buffer.Store(15, _ => 0);
 
-            var readData = new List<(byte id, NativeArray<byte> data)>();
-            foreach (var item in new FrameDataReader(testCopy))
+            using (var testCopy = new NativeArray<byte>(buffer.Length, Allocator.Temp))
             {
-                readData.Add(item);
-            }
+                buffer.CopyTo(testCopy.AsSpan());
 
-            Assert.That(readData, Has.Count.EqualTo(3));
-            Assert.That(readData[0].id, Is.EqualTo(13));
-            Assert.That(readData[0].data, Is.EqualTo(new byte[] {1, 2, 3, 4, 5}));
-            Assert.That(readData[1].id, Is.EqualTo(14));
-            Assert.That(readData[1].data, Is.EqualTo(new byte[] {6, 7, 8}));
-            Assert.That(readData[2].id, Is.EqualTo(15));
-            Assert.That(readData[2].data, Is.Empty);
+                // Although FrameDataReader supports foreach, it is not
+                // an Enumerable. Read out values into a list we can examine them.
+                var readData = new List<(byte id, NativeArray<byte> data)>();
+                foreach (var item in new FrameDataReader(testCopy))
+                {
+                    readData.Add(item);
+                }
+
+                Assert.That(readData, Has.Count.EqualTo(2));
+                Assert.That(readData[0].id, Is.EqualTo(13));
+                Assert.That(readData[0].data, Is.EqualTo(new byte[] {1, 2, 3, 4, 5}));
+                Assert.That(readData[1].id, Is.EqualTo(14));
+                Assert.That(readData[1].data, Is.EqualTo(new byte[] {6, 7, 8}));
+            }
         }
     }
 }
