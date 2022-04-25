@@ -1,4 +1,4 @@
-﻿#define CLUSTER_DISPLAY_ILPOSTPROCESSING
+#define CLUSTER_DISPLAY_ILPOSTPROCESSING
 
 using System;
 using System.Collections.Generic;
@@ -94,6 +94,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 {
                     var referencePath = compiledAssembly.References[i];
                     var referenceName = Path.GetFileNameWithoutExtension(referencePath);
+
+                    if (cachedAssemblyPath.ContainsKey(referenceName))
+                        continue;
+
                     cachedAssemblyPath.Add(referenceName, referencePath);
                     
                     referencesMsg = $"{referencesMsg}\n\t{referencePath}";
