@@ -28,6 +28,10 @@ TestProjects/GraphicsTestsURP/Assets/ActualImages.meta
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages
 TestProjects/GraphicsTestsHDRP/Assets/ActualImages.meta
 
+# Native PluginCompilation result and Visual Studio "cache / settings files"
+GfxPluginQuadroSync/.vs
+GfxPluginQuadroSync/out
+
 # Generated files
 CMakeCache.txt
 packages-lock.json

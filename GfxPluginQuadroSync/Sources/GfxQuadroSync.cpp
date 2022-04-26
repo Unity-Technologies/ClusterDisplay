@@ -186,6 +186,7 @@ namespace GfxQuadroSync
 
         if (s_GraphicsDevice == nullptr)
         {
+            CLUSTER_LOG_ERROR << "IsContextValid, s_GraphicsDevice == nullptr";
             return false;
         }
 
@@ -262,9 +263,14 @@ namespace GfxQuadroSync
             return;
 
         s_SwapGroupClient.SetupWorkStation();
-        s_SwapGroupClient.Initialize(
-            s_GraphicsDevice->GetDevice(),
-            s_GraphicsDevice->GetSwapChain());
+        if (s_SwapGroupClient.Initialize(s_GraphicsDevice->GetDevice(), s_GraphicsDevice->GetSwapChain()))
+        {
+            CLUSTER_LOG << "Quadro Sync initialized succeeded";
+        }
+        else
+        {
+            CLUSTER_LOG_ERROR << "Quadro Sync initialization failed";
+        }
     }
 
     // Query the actual frame count (master or custom one)

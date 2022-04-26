@@ -19,7 +19,7 @@ namespace GfxQuadroSync
      *
      * \remark Sending actual log messages is done using the CLUSTER_LOG, CLUSTER_LOG_WARNING and CLUSTER_LOG_ERROR macros.
      */
-    class Logger
+    class Logger final
     {
     public:
         /**
@@ -64,7 +64,7 @@ namespace GfxQuadroSync
      *
      * \remark Used by CLUSTER_LOG, CLUSTER_LOG_WARNING and CLUSTER_LOG_ERROR macros.
      */
-    class LoggingStream : public std::ostringstream
+    class LoggingStream final : public std::ostringstream
     {
     public:
         LoggingStream(LogType logType)

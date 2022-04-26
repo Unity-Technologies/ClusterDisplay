@@ -66,11 +66,11 @@ namespace Unity.ClusterDisplay
         internal static class GfxPluginQuadroSyncUtilities
         {
 #if UNITY_EDITOR_WIN
-            internal const string DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
+            const string DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
 #elif UNITY_STANDALONE
-            internal const string DLLPath = "GfxPluginQuadroSync";
+            const string DLLPath = "GfxPluginQuadroSync";
 #else
-            internal const string DLLPath = "";
+            const string DLLPath = "";
 #error "System not implemented"
 #endif
             [UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -92,11 +92,11 @@ namespace Unity.ClusterDisplay
             get { return instance; }
         }
 
-        private static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
+        static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
 
         static GfxPluginQuadroSyncSystem() { }
 
-        private GfxPluginQuadroSyncSystem()
+        GfxPluginQuadroSyncSystem()
         {
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             GfxPluginQuadroSyncUtilities.SetLogCallback((type, message) =>

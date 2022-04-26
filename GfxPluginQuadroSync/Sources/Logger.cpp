@@ -2,12 +2,12 @@
 
 namespace GfxQuadroSync
 {
-    void Logger::SetManagedCallback(ManagedCallback managedCallback)
+    void Logger::SetManagedCallback(const ManagedCallback managedCallback)
     {
         m_ManagedCallback = managedCallback;
     }
 
-    void Logger::LogMessage(LogType logType, const std::string& message)
+    void Logger::LogMessage(const LogType logType, const std::string& message)
     {
         if (m_ManagedCallback)
         {
