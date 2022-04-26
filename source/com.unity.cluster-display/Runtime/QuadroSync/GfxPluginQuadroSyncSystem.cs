@@ -66,31 +66,43 @@ namespace Unity.ClusterDisplay
         internal static class GfxPluginQuadroSyncUtilities
         {
 #if UNITY_EDITOR_WIN
-            internal const string DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
+            const string DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
 #elif UNITY_STANDALONE
-            internal const string DLLPath = "GfxPluginQuadroSync";
+            const string DLLPath = "GfxPluginQuadroSync";
 #else
-            internal const string DLLPath = "";
+            const string DLLPath = "";
 #error "System not implemented"
 #endif
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+            public delegate void NewLogMessageCallback(int logType, IntPtr message);
 
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFunc();
+
+            [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            public static extern void SetLogCallback(
+                [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
         }
 
         /// <summary>
-        /// Gets the unique instance of the class (Singleton). 
+        /// Gets the unique instance of the class (Singleton).
         /// </summary>
         public static GfxPluginQuadroSyncSystem Instance
         {
             get { return instance; }
         }
 
-        private static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
+        static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
 
         static GfxPluginQuadroSyncSystem() { }
 
-        private GfxPluginQuadroSyncSystem() { }
+        GfxPluginQuadroSyncSystem()
+        {
+            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
+            GfxPluginQuadroSyncUtilities.SetLogCallback((type, message) =>
+                Debug.unityLogger.Log((LogType)type, Marshal.PtrToStringAnsi(message)));
+            #endif
+        }
 
         /// <summary>
         /// Executes a CommandBuffer related to the EQuadroSyncRenderEvent.

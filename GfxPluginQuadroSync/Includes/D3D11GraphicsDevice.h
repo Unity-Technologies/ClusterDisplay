@@ -10,7 +10,7 @@ namespace GfxQuadroSync
     {
     public:
         D3D11GraphicsDevice(
-            ID3D11Device* device, 
+            ID3D11Device* device,
             IDXGISwapChain* swapChain,
             UINT32 interval,
             UINT presentFlags);
@@ -18,7 +18,7 @@ namespace GfxQuadroSync
         virtual ~D3D11GraphicsDevice() = default;
 
         GraphicsDeviceType GetDeviceType() const override { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D11; }
-        
+
         IUnknown*       GetDevice() const override { return m_D3D11Device; }
         IDXGISwapChain* GetSwapChain() const override { return m_SwapChain; }
         UINT32          GetSyncInterval() const override { return m_SyncInterval; }
@@ -29,7 +29,7 @@ namespace GfxQuadroSync
 
     private:
         ID3D11Device* m_D3D11Device;
-        IDXGISwapChain* m_SwapChain;        
+        IDXGISwapChain* m_SwapChain;
         UINT32 m_SyncInterval;
         UINT m_PresentFlags;
     };
