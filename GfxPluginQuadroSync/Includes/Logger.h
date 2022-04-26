@@ -40,7 +40,7 @@ namespace GfxQuadroSync
         void SetManagedCallback(ManagedCallback managedCallback);
 
         /// Returns if we need to spend time producing the message (because there is someone interested in them).
-        bool AreMessagesUseful() const { return m_ManagedCallback ? true : false; }
+        bool AreMessagesUseful() const { return m_ManagedCallback != nullptr; }
 
         /**
          * Method called by LoggingStream to send a logging message.

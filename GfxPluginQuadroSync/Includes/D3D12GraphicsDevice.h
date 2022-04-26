@@ -10,9 +10,9 @@ namespace GfxQuadroSync
     {
     public:
         D3D12GraphicsDevice(
-            ID3D12Device* device, 
-            IDXGISwapChain* swapChain, 
-            UINT32 interval, 
+            ID3D12Device* device,
+            IDXGISwapChain* swapChain,
+            UINT32 interval,
             UINT presentFlags);
 
         virtual ~D3D12GraphicsDevice() = default;

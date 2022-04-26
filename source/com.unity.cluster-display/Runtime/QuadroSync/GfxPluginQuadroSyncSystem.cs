@@ -100,9 +100,7 @@ namespace Unity.ClusterDisplay
         {
             #if CLUSTER_DISPLAY_VERBOSE_LOGGING
             GfxPluginQuadroSyncUtilities.SetLogCallback((type, message) =>
-            {
-                Debug.unityLogger.Log((LogType)type, Marshal.PtrToStringAnsi(message));
-            });
+                Debug.unityLogger.Log((LogType)type, Marshal.PtrToStringAnsi(message)));
             #endif
         }
 
