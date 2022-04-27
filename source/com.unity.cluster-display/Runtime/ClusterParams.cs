@@ -2,7 +2,7 @@ using System;
 
 namespace Unity.ClusterDisplay
 {
-    internal struct ClusterParams
+    struct ClusterParams
     {
         public bool         m_DebugFlag;
 

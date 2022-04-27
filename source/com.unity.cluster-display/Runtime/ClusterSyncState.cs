@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay
 {
     internal partial class ClusterSync : IClusterSyncState
     {
-        internal interface IState
+        public interface IState
         {
             public bool IsEmitter { get; }
             public bool EmitterIsHeadless { get; }

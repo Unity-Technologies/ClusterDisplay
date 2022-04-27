@@ -1,13 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
-using static Unity.ClusterDisplay.Utils.PlayerLoopExtensions;
-using System.Collections.Generic;
-using System.Linq;
-
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -32,13 +24,13 @@ namespace Unity.ClusterDisplay
 #endif
     internal partial class ClusterSync : IClusterSyncState
     {
-        internal static ClusterSync Instance => ClusterDisplayManager.ClusterSyncInstance;
+        public static ClusterSync Instance => ClusterDisplayManager.ClusterSyncInstance;
 
-        internal const string k_DefaultName = "DefaultClusterSync";
+        public const string k_DefaultName = "DefaultClusterSync";
         public string InstanceName => m_InstanceName;
         readonly string m_InstanceName;
 
-        internal ClusterSync (string instanceName = k_DefaultName)
+        public ClusterSync (string instanceName = k_DefaultName)
         {
             m_InstanceName = instanceName;
             RegisterDelegates();
@@ -52,11 +44,11 @@ namespace Unity.ClusterDisplay
         DebugPerf m_StartDelayMonitor = new();
         DebugPerf m_EndDelayMonitor = new();
 
-        internal delegate void OnClusterDisplayStateChange();
+        public delegate void OnClusterDisplayStateChange();
 
-        static internal OnClusterDisplayStateChange onPreEnableClusterDisplay;
-        static internal OnClusterDisplayStateChange onPostEnableClusterDisplay;
-        static internal OnClusterDisplayStateChange onDisableCLusterDisplay;
+        public static OnClusterDisplayStateChange onPreEnableClusterDisplay;
+        public static OnClusterDisplayStateChange onPostEnableClusterDisplay;
+        public static OnClusterDisplayStateChange onDisableCLusterDisplay;
 
         bool m_Debugging;
 
@@ -68,12 +60,12 @@ namespace Unity.ClusterDisplay
         private UInt64 m_CurrentFrameID;
         private bool m_NewFrame;
 
-        internal ClusterNode m_LocalNode;
+        public ClusterNode m_LocalNode;
         ClusterNode IClusterSyncState.LocalNode => m_LocalNode;
 
-        internal ClusterNode LocalNode => m_LocalNode;
+        public ClusterNode LocalNode => m_LocalNode;
 
-        internal NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
+        public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
         /// <summary>
         /// Gets or sets whether there is a layer of synchronization performed
@@ -151,7 +143,7 @@ namespace Unity.ClusterDisplay
             ClusterSyncLooper.onInstanceDoLateFrame -= DoLateFrame;
         }
 
-        internal void PrePopulateClusterParams ()
+        public void PrePopulateClusterParams ()
         {
             m_ClusterParams = new ClusterParams
             {
@@ -172,7 +164,7 @@ namespace Unity.ClusterDisplay
             };
         }
 
-        internal void EnableClusterDisplay ()
+        public void EnableClusterDisplay ()
         {
             if (syncState.IsActive)
                 return;
@@ -220,13 +212,12 @@ namespace Unity.ClusterDisplay
             onPostEnableClusterDisplay?.Invoke();
         }
 
-        internal void DisableClusterDisplay()
+        public void DisableClusterDisplay()
         {
             if (!state.IsClusterLogicEnabled)
                 return;
             CleanUp();
         }
-
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
@@ -327,7 +318,7 @@ namespace Unity.ClusterDisplay
         private void Quit() =>
             ShutdownAllClusterNodes();
 
-        internal void CleanUp()
+        public void CleanUp()
         {
             LocalNode?.Exit();
             m_LocalNode = null;
@@ -451,7 +442,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        internal void DoLateFrame (ref bool readyForLateFrame)
+        public void DoLateFrame (ref bool readyForLateFrame)
         {
             try
             {

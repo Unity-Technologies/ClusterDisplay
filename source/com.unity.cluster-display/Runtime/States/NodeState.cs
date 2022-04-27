@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay
         public static bool Debugging { get; set; }
         public TimeSpan MaxTimeOut = new(0, 0, 0, 30, 0);
 
-        protected internal IClusterSyncState clusterSync;
+        protected IClusterSyncState clusterSync;
 
         public NodeState(IClusterSyncState clusterSync) =>
             this.clusterSync = clusterSync;

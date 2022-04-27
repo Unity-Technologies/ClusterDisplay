@@ -7,9 +7,9 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay
 {
-    internal static class ClusterSyncLooper
+    static class ClusterSyncLooper
     {
-        internal enum TickType
+        public enum TickType
         {
             /// <summary>
             ///  Before we enter the while loop. 
@@ -29,52 +29,48 @@ namespace Unity.ClusterDisplay
             DoLateFrame
         }
 
-        internal delegate void OnInstanceTick(TickType tickType);
-
-        internal delegate void OnInstanceDoPreFrame();
-        internal delegate void OnInstanceDoFrame(ref bool readyToProceed, ref bool isTerminated);
-        internal delegate void OnInstancePostFrame();
-        internal delegate void OnInstanceDoLateFrame(ref bool readForLateFrame);
+        public delegate void OnInstanceDoFrame(ref bool readyToProceed, ref bool isTerminated);
+        public delegate void OnInstanceDoLateFrame(ref bool readForLateFrame);
 
         /// <summary>
         ///  Delegate to execute callbacks before we enter the while loop. 
         /// </summary>
-        internal static OnInstanceDoPreFrame onInstanceDoPreFrame;
+        public static event Action onInstanceDoPreFrame;
         /// <summary>
         ///  Delegate to execute callbacks while were waiting for the network fence. 
         /// </summary>
-        internal static OnInstanceDoFrame onInstanceDoFrame;
+        public static event OnInstanceDoFrame onInstanceDoFrame;
         /// <summary>
         ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame. 
         /// </summary>
-        internal static OnInstancePostFrame onInstancePostFrame;
+        public static event Action onInstancePostFrame;
         /// <summary>
         ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render. 
         /// </summary>
-        internal static OnInstanceDoLateFrame onInstanceDoLateFrame;
+        public static event OnInstanceDoLateFrame onInstanceDoLateFrame;
 
         /// <summary>
         ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed. 
         /// </summary>
-        internal static OnInstanceTick onInstanceTick;
+        public static event Action<TickType> onInstanceTick;
 
         struct ClusterDisplayStartFrame { }
         struct ClusterDisplayLateUpdate { }
 
-        internal static void InjectSynchPointInPlayerLoop()
+        public static void InjectSynchPointInPlayerLoop()
         {
             PlayerLoopExtensions.RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, ClusterDisplayStartFrame>(
                 SystemUpdate);
             PlayerLoopExtensions.RegisterUpdate<PostLateUpdate, ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        internal static void RemoveSynchPointFromPlayerLoop()
+        public static void RemoveSynchPointFromPlayerLoop()
         {
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayStartFrame>(SystemUpdate);
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
-        internal static void SystemUpdate()
+        public static void SystemUpdate()
         {
             bool allReadyToProceed, allIsTerminated;
 
@@ -99,7 +95,7 @@ namespace Unity.ClusterDisplay
             // After this were entering the frame.
         }
 
-        internal static void SystemLateUpdate()
+        public static void SystemLateUpdate()
         {
             bool allReadyForNextFrame = false;
 

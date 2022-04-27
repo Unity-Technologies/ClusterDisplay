@@ -1,15 +1,13 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
-using System.Diagnostics;
+using System;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -87,7 +85,7 @@ namespace Unity.ClusterDisplay.Tests
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
-            ClusterSyncLooper.OnInstanceTick onInstanceTick = null;
+            Action<ClusterSyncLooper.TickType> onInstanceTick = null;
             onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType == ClusterSyncLooper.TickType.DoFrame)
@@ -115,7 +113,7 @@ namespace Unity.ClusterDisplay.Tests
                 }
             };
 
-            ClusterSyncLooper.onInstanceTick = onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += onInstanceTick;
 
             var node = emitterClusterSync.LocalNode as EmitterNode;
             while (node.m_RemoteNodes.Count != numRepeaters)
@@ -159,7 +157,7 @@ namespace Unity.ClusterDisplay.Tests
             int currentStep = 0;
 
             // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
-            ClusterSyncLooper.OnInstanceTick onInstanceTick = null;
+            Action<ClusterSyncLooper.TickType> onInstanceTick = null;
             onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
@@ -212,55 +210,67 @@ namespace Unity.ClusterDisplay.Tests
                 currentStep++;
             };
 
-            ClusterSyncLooper.onInstanceTick = onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += onInstanceTick;
             while (currentStep < step.LastFrameData)
                 yield return null;
         }
 
+        private ClusterSync CreateEmitter ()
+        {
+            const int numRepeaters = 1;
+
+            var emitterArgsString =
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+
+            var emitterArgs = emitterArgsString.Split(" ").ToList();
+            emitterArgs.Add("-adapterName");
+            emitterArgs.Add(m_InterfaceName);
+
+            var emitterClusterSync = new ClusterSync("Emitter");
+            m_Instances.Add(emitterClusterSync);
+
+            CommandLineParser.Override(emitterArgs);
+            emitterClusterSync.PrePopulateClusterParams();
+            emitterClusterSync.EnableClusterDisplay();
+            return emitterClusterSync;
+        }
+
+        private ClusterSync CreateRepeater ()
+        {
+            var repeaterArgsString =
+                $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
+                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
+            
+            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
+            repeaterArgs.Add("-adapterName");
+            repeaterArgs.Add(m_InterfaceName);
+
+            var repeaterClusterSync = new ClusterSync("Repeater");
+
+            m_Instances.Add(repeaterClusterSync);
+
+            CommandLineParser.Override(repeaterArgs);
+            repeaterClusterSync.PrePopulateClusterParams();
+            repeaterClusterSync.EnableClusterDisplay();
+            return repeaterClusterSync;
+        }
+
         /// <summary>
         ///  This test FIRST initializes a EMITTER ClusterSync, then a REPEATER
-        ///  ClusterSync. Then lets the connection run for 10 frames. This
-        ///  demonstrates that the we can change the order with SystemUpdate and
-        ///  everything works.
+        ///  ClusterSync. Therefore, the emitter is the first delegate registered
+        ///  in ClusterSyncLooper. This demonstrates that the we can change the
+        ///  order with SystemUpdate and everything works. 
         /// </summary>
         /// <returns></returns>
         [UnityTest]
         public IEnumerator EmitterThenRepeaterLockstepFor10Frames()
         {
-            const int numRepeaters = 1;
-
-            var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
-                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-
-            var emitterArgs = emitterArgsString.Split(" ").ToList();
-            emitterArgs.Add("-adapterName");
-            emitterArgs.Add(m_InterfaceName);
-
-            var repeaterArgsString =
-                $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
-                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-            
-            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
-            repeaterArgs.Add("-adapterName");
-            repeaterArgs.Add(m_InterfaceName);
-
-            var emitterClusterSync = new ClusterSync("Emitter");
-            var repeaterClusterSync = new ClusterSync("Repeater");
-
-            m_Instances.Add(emitterClusterSync);
-            m_Instances.Add(repeaterClusterSync);
-
-            CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.PrePopulateClusterParams();
-            emitterClusterSync.EnableClusterDisplay();
-
-            CommandLineParser.Override(repeaterArgs);
-            repeaterClusterSync.PrePopulateClusterParams();
-            repeaterClusterSync.EnableClusterDisplay();
+            var emitterClusterSync = CreateEmitter();
+            var repeaterClusterSync = CreateRepeater();
 
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            Action<ClusterSyncLooper.TickType> onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -282,54 +292,29 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(repeaterClusterSync.state.NodeID, Is.EqualTo(k_RepeaterId));
             };
 
+            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
                 yield return null;
+
+            ClusterSyncLooper.onInstanceTick -= onInstanceTick;
         }
 
         /// <summary>
         ///  This test FIRST initializes a REPEATER ClusterSync, then a EMITTER
-        ///  ClusterSync. Then lets the connection run for 10 frames. This
-        ///  demonstrates that the we can change the order with SystemUpdate and
-        ///  everything works.
+        ///  ClusterSync. Therefore, the repeater is the first delegate registered
+        ///  in ClusterSyncLooper. This demonstrates that the we can change the
+        ///  order with SystemUpdate and everything works. 
         /// </summary>
         /// <returns></returns>
         [UnityTest]
         public IEnumerator RepeaterThenEmitterLockstepFor10Frames()
         {
-            const int numRepeaters = 1;
-
-            var repeaterArgsString =
-                $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
-                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-            
-            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
-            repeaterArgs.Add("-adapterName");
-            repeaterArgs.Add(m_InterfaceName);
-
-            var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {MockClusterSync.multicastAddress}:{MockClusterSync.rxPort},{MockClusterSync.txPort} " +
-                $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-
-            var emitterArgs = emitterArgsString.Split(" ").ToList();
-            emitterArgs.Add("-adapterName");
-            emitterArgs.Add(m_InterfaceName);
-
-            var repeaterClusterSync = new ClusterSync("Repeater");
-            var emitterClusterSync = new ClusterSync("Emitter");
-
-            m_Instances.Add(repeaterClusterSync);
-            m_Instances.Add(emitterClusterSync);
-
-            CommandLineParser.Override(repeaterArgs);
-            repeaterClusterSync.PrePopulateClusterParams();
-            repeaterClusterSync.EnableClusterDisplay();
-
-            CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.PrePopulateClusterParams();
-            emitterClusterSync.EnableClusterDisplay();
+            var repeaterClusterSync = CreateRepeater();
+            var emitterClusterSync = CreateEmitter();
 
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            ClusterSyncLooper.onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            Action<ClusterSyncLooper.TickType> onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -351,8 +336,12 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(emitterClusterSync.state.NodeID, Is.EqualTo(0));
             };
 
+            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
                 yield return null;
+
+            ClusterSyncLooper.onInstanceTick -= onInstanceTick;
         }
 
         [TearDown]
