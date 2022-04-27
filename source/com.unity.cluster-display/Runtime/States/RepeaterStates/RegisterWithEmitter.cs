@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -35,9 +35,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             if (m_EmitterFound)
             {
-                var nextState = new RepeaterSynchronization(clusterSync) { MaxTimeOut = this.MaxTimeOut };
-                nextState.EnterState(this);
-                return nextState;
+                return new RepeaterSynchronization(clusterSync) {MaxTimeOut = this.MaxTimeOut};
             }
 
             ProcessMessages(m_Cancellation.Token);
