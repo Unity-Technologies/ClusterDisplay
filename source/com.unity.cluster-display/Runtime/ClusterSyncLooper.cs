@@ -1,9 +1,9 @@
 using System;
-using System.Diagnostics;
-using System.Linq;
-using UnityEngine;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine.PlayerLoop;
+
+using DoFrameFunc = System.Func<(System.Boolean readyToProceed, System.Boolean isTerminated)>;
+using DoLateFrameFunc = System.Func<System.Boolean>;
 
 namespace Unity.ClusterDisplay
 {
@@ -29,9 +29,6 @@ namespace Unity.ClusterDisplay
             DoLateFrame
         }
 
-        public delegate void OnInstanceDoFrame(ref bool readyToProceed, ref bool isTerminated);
-        public delegate void OnInstanceDoLateFrame(ref bool readForLateFrame);
-
         /// <summary>
         ///  Delegate to execute callbacks before we enter the while loop. 
         /// </summary>
@@ -39,7 +36,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         ///  Delegate to execute callbacks while were waiting for the network fence. 
         /// </summary>
-        public static event OnInstanceDoFrame onInstanceDoFrame;
+        public static event DoFrameFunc onInstanceDoFrame;
         /// <summary>
         ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame. 
         /// </summary>
@@ -47,7 +44,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render. 
         /// </summary>
-        public static event OnInstanceDoLateFrame onInstanceDoLateFrame;
+        public static event DoLateFrameFunc onInstanceDoLateFrame;
 
         /// <summary>
         ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed. 
@@ -85,7 +82,16 @@ namespace Unity.ClusterDisplay
                 // By default, we are not terminating unless specified by methods registered with onInstanceDoFrame.
                 allIsTerminated = false;
 
-                onInstanceDoFrame?.Invoke(ref allReadyToProceed, ref allIsTerminated);
+                if (onInstanceDoFrame != null)
+                {
+                    foreach (DoFrameFunc doFrame in onInstanceDoFrame.GetInvocationList())
+                    {
+                        var instanceStatus = doFrame.Invoke();
+                        allReadyToProceed &= instanceStatus.readyToProceed;
+                        allIsTerminated |= instanceStatus.isTerminated;
+                    }
+                }
+
                 onInstanceTick?.Invoke(TickType.DoFrame);
 
             } while (!allReadyToProceed && !allIsTerminated);
@@ -102,7 +108,16 @@ namespace Unity.ClusterDisplay
             while (!allReadyForNextFrame)
             {
                 allReadyForNextFrame = true;
-                onInstanceDoLateFrame?.Invoke(ref allReadyForNextFrame);
+
+                if (onInstanceDoLateFrame != null)
+                {
+                    foreach (DoLateFrameFunc doLateFrame in onInstanceDoLateFrame.GetInvocationList())
+                    {
+                        bool instanceReadyForNextFrame = doLateFrame.Invoke();
+                        allReadyForNextFrame &= instanceReadyForNextFrame;
+                    }
+                }
+
                 onInstanceTick?.Invoke(TickType.DoLateFrame);
             }
         }
