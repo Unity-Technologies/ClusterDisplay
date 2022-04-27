@@ -147,20 +147,20 @@ namespace Unity.ClusterDisplay
         {
             m_ClusterParams = new ClusterParams
             {
-                m_DebugFlag                 = CommandLineParser.debugFlag.Value,
-                m_ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
-                m_EmitterSpecified          = CommandLineParser.emitterSpecified.Value,
-                m_NodeID                    = CommandLineParser.nodeID.Value,
-                m_RepeaterCount             = CommandLineParser.emitterSpecified.Value ? CommandLineParser.repeaterCount.Value : 0,
-                m_RXPort                    = CommandLineParser.rxPort.Value,
-                m_TXPort                    = CommandLineParser.txPort.Value,
-                m_MulticastAddress          = CommandLineParser.multicastAddress.Value,
-                m_AdapterName               = CommandLineParser.adapterName.Value,
-                m_TargetFps                 = CommandLineParser.targetFps.Value,
-                m_DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
-                m_HeadlessEmitter           = CommandLineParser.headlessEmitter.Value,
-                m_HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
-                m_CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000)
+                debugFlag                 = CommandLineParser.debugFlag.Value,
+                clusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
+                emitterSpecified          = CommandLineParser.emitterSpecified.Value,
+                nodeID                    = CommandLineParser.nodeID.Value,
+                repeaterCount             = CommandLineParser.emitterSpecified.Value ? CommandLineParser.repeaterCount.Value : 0,
+                rxPort                    = CommandLineParser.rxPort.Value,
+                txPort                    = CommandLineParser.txPort.Value,
+                multicastAddress          = CommandLineParser.multicastAddress.Value,
+                adapterName               = CommandLineParser.adapterName.Value,
+                targetFps                 = CommandLineParser.targetFps.Value,
+                delayRepeaters            = CommandLineParser.delayRepeaters.Value,
+                headlessEmitter           = CommandLineParser.headlessEmitter.Value,
+                handshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
+                communicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000)
             };
         }
 
@@ -186,12 +186,12 @@ namespace Unity.ClusterDisplay
 
             NodeState.Debugging = m_Debugging;
 
-            Application.targetFrameRate = clusterParams.m_TargetFps;
+            Application.targetFrameRate = clusterParams.targetFps;
 
             syncState.SetIsActive(true);
             syncState.SetIsTerminated(false);
-            syncState.SetClusterLogicEnabled(clusterParams.m_ClusterLogicSpecified);
-            syncState.SetNodeID(clusterParams.m_NodeID);
+            syncState.SetClusterLogicEnabled(clusterParams.clusterLogicSpecified);
+            syncState.SetNodeID(clusterParams.nodeID);
 
             onPreEnableClusterDisplay?.Invoke();
 
@@ -229,14 +229,14 @@ namespace Unity.ClusterDisplay
                     this,
                     new EmitterNode.Config
                     {
-                        headlessEmitter     = clusterParams.m_HeadlessEmitter,
-                        repeatersDelayed    = clusterParams.m_DelayRepeaters,
-                        repeaterCount       = clusterParams.m_RepeaterCount,
+                        headlessEmitter     = clusterParams.headlessEmitter,
+                        repeatersDelayed    = clusterParams.delayRepeaters,
+                        repeaterCount       = clusterParams.repeaterCount,
                         udpAgentConfig      = config
                     });
             
                 syncState.SetIsEmitter(true);
-                syncState.SetEmitterIsHeadless(clusterParams.m_HeadlessEmitter);
+                syncState.SetEmitterIsHeadless(clusterParams.headlessEmitter);
                 syncState.SetIsRepeater(false);
 
 
@@ -259,7 +259,7 @@ namespace Unity.ClusterDisplay
                 // Emitter command line format: -node nodeId ip:rxport,txport
                 m_LocalNode = new RepeaterNode(
                     this,
-                    clusterParams.m_DelayRepeaters,
+                    clusterParams.delayRepeaters,
                     config);
 
                 syncState.SetIsEmitter(false);
@@ -279,20 +279,20 @@ namespace Unity.ClusterDisplay
         {
             try
             {
-                m_Debugging = clusterParams.m_DebugFlag;
+                m_Debugging = clusterParams.debugFlag;
                 
 
                 var udpAgentConfig = new UDPAgent.Config
                 {
-                    nodeId          = clusterParams.m_NodeID,
-                    ip              = clusterParams.m_MulticastAddress,
-                    rxPort          = clusterParams.m_RXPort,
-                    txPort          = clusterParams.m_TXPort,
+                    nodeId          = clusterParams.nodeID,
+                    ip              = clusterParams.multicastAddress,
+                    rxPort          = clusterParams.rxPort,
+                    txPort          = clusterParams.txPort,
                     timeOut         = 30,
-                    adapterName     = clusterParams.m_AdapterName
+                    adapterName     = clusterParams.adapterName
                 };
 
-                if (clusterParams.m_EmitterSpecified)
+                if (clusterParams.emitterSpecified)
                 {
                     if (!TryInitializeEmitter(clusterParams, udpAgentConfig))
                         return false;

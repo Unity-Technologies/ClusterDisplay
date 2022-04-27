@@ -4,25 +4,25 @@ namespace Unity.ClusterDisplay
 {
     struct ClusterParams
     {
-        public bool         m_DebugFlag;
+        public bool         debugFlag;
 
-        public bool         m_ClusterLogicSpecified;
-        public bool         m_EmitterSpecified;
+        public bool         clusterLogicSpecified;
+        public bool         emitterSpecified;
 
-        public byte         m_NodeID;
-        public int          m_RepeaterCount;
+        public byte         nodeID;
+        public int          repeaterCount;
 
-        public int          m_RXPort; 
-        public int          m_TXPort;
+        public int          rxPort; 
+        public int          txPort;
 
-        public string       m_MulticastAddress;
-        public string       m_AdapterName;
+        public string       multicastAddress;
+        public string       adapterName;
 
-        public int          m_TargetFps;
-        public bool         m_DelayRepeaters;
-        public bool         m_HeadlessEmitter;
+        public int          targetFps;
+        public bool         delayRepeaters;
+        public bool         headlessEmitter;
 
-        public TimeSpan     m_HandshakeTimeout;
-        public TimeSpan     m_CommunicationTimeout;
+        public TimeSpan     handshakeTimeout;
+        public TimeSpan     communicationTimeout;
     }
 }
