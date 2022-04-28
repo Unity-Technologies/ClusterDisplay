@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
         public string GetDebugString() => $"Cluster Sync Instance: {m_InstanceName},\r\n" +
-			"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
+			$"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
             $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
             $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
 
@@ -226,7 +226,7 @@ namespace Unity.ClusterDisplay
                         repeaterCount       = clusterParams.RepeaterCount,
                         udpAgentConfig      = config
                     });
-            
+
                 syncState.SetIsEmitter(true);
                 syncState.SetEmitterIsHeadless(clusterParams.HeadlessEmitter);
                 syncState.SetIsRepeater(false);
@@ -272,7 +272,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 m_Debugging = clusterParams.DebugFlag;
-                
+
 
                 var udpAgentConfig = new UDPAgent.Config
                 {
