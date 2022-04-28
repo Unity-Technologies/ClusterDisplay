@@ -76,16 +76,6 @@ namespace Unity.ClusterDisplay
             [UnmanagedFunctionPointer(CallingConvention.StdCall)]
             public delegate void NewLogMessageCallback(int logType, IntPtr message);
 
-            [StructLayout(LayoutKind.Sequential)]
-            public struct QuadroSyncState
-            {
-                public uint initializationState;
-                public uint swapGroupId;
-                public uint swapBarrierId;
-                public ulong presentedFramesSuccess;
-                public ulong presentedFramesFailed;
-            }
-
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFunc();
 
@@ -94,7 +84,7 @@ namespace Unity.ClusterDisplay
                 [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
 
             [DllImport(DLLPath, CallingConvention = CallingConvention.StdCall)]
-            public static extern void GetState(ref QuadroSyncState state);
+            public static extern void GetState(ref GfxPluginQuadroSyncState state);
         }
 
         /// <summary>
@@ -143,13 +133,9 @@ namespace Unity.ClusterDisplay
         /// latest value is done every time the method is called.</remarks>
         public GfxPluginQuadroSyncState FetchState()
         {
-            var fetchedState = new GfxPluginQuadroSyncUtilities.QuadroSyncState();
-            GfxPluginQuadroSyncUtilities.GetState(ref fetchedState);
-
-            return new GfxPluginQuadroSyncState(
-                (GfxPluginQuadroSyncInitializationState)fetchedState.initializationState,
-                fetchedState.swapGroupId, fetchedState.swapBarrierId, fetchedState.presentedFramesSuccess,
-                fetchedState.presentedFramesFailed);
+            var toReturn = new GfxPluginQuadroSyncState();
+            GfxPluginQuadroSyncUtilities.GetState(ref toReturn);
+            return toReturn;
         }
     }
 }

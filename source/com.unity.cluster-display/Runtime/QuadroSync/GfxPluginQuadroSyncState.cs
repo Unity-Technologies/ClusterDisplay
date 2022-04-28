@@ -1,4 +1,6 @@
-﻿namespace Unity.ClusterDisplay
+﻿using System.Runtime.InteropServices;
+
+namespace Unity.ClusterDisplay
 {
     /// <summary>
     /// Initialization state of the GfxPluginQuadroSyncSystem plugin.
@@ -92,18 +94,9 @@
     /// <summary>
     /// Status of the QuadroSync plugin as returned by <see cref="GfxPluginQuadroSyncSystem.FetchState"/>.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public readonly struct GfxPluginQuadroSyncState
     {
-        internal GfxPluginQuadroSyncState(GfxPluginQuadroSyncInitializationState initializationState, uint swapGroupId,
-            uint swapBarrierId, ulong presentedFramesSuccess, ulong presentedFramesFailure)
-        {
-            InitializationState = initializationState;
-            SwapGroupId = swapGroupId;
-            SwapBarrierId = swapBarrierId;
-            PresentedFramesSuccess = presentedFramesSuccess;
-            PresentedFramesFailure = presentedFramesFailure;
-        }
-
         /// <summary>
         /// Initialization status of the QuadroSync system
         /// </summary>

@@ -163,7 +163,11 @@ namespace GfxQuadroSync
             CLUSTER_LOG << "BindSwapBarrier (" << m_BarrierId << ") / (" << m_GSyncBarriers << ")";
 #endif
 
-            status = NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &m_GroupId, &m_BarrierId);
+            NvU32 groupId;
+            NvU32 barrierId;
+            status = NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &groupId, &barrierId);
+            m_GroupId = groupId;
+            m_BarrierId = barrierId;
 
             if (status == NvAPI_Status::NVAPI_OK)
                 CLUSTER_LOG << "NvAPI_D3D1x_QuerySwapGroup successful";

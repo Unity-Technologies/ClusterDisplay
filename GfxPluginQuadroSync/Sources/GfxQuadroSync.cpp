@@ -39,7 +39,7 @@ namespace GfxQuadroSync
         FailedToBindSwapBarrier = 11,
         SwapBarrierIdMismatch = 12,
     };
-    static QuadroSyncInitializationStatus s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
+    static std::atomic<QuadroSyncInitializationStatus> s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
 
     // Override the function defining the load of the plugin
     extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
@@ -105,13 +105,13 @@ namespace GfxQuadroSync
     /**
      * Method to be called by managed code to get some information about the status of the QuadroSync plugin.
      */
-    extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetState(QuadroSyncState& state)
+    extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetState(QuadroSyncState* state)
     {
-        state.initializationState = (uint32_t)s_InitializationStatus;
-        state.swapGroupId = s_SwapGroupClient.GetSwapGroupId();
-        state.swapBarrierId = s_SwapGroupClient.GetSwapBarrierId();
-        state.presentedFramesSuccess = s_SwapGroupClient.GetPresentSuccessCount();
-        state.presentedFramesFailed = s_SwapGroupClient.GetPresentFailureCount();
+        state->initializationState = (uint32_t)s_InitializationStatus.load();
+        state->swapGroupId = s_SwapGroupClient.GetSwapGroupId();
+        state->swapBarrierId = s_SwapGroupClient.GetSwapBarrierId();
+        state->presentedFramesSuccess = s_SwapGroupClient.GetPresentSuccessCount();
+        state->presentedFramesFailed = s_SwapGroupClient.GetPresentFailureCount();
     }
 
     // Override the query method to use the `PresentFrame` callback
