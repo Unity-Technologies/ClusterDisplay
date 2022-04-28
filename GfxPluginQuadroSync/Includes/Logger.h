@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+typedef enum _NvAPI_Status NvAPI_Status;
+
 namespace GfxQuadroSync
 {
     /// Type of logging messages (matches managed UnityEngine.LogType)
@@ -84,25 +86,47 @@ namespace GfxQuadroSync
 }
 
 /**
+ * operator<< for NvAPI_Status that will write it to the stream as a number and a string (string returned by
+ * NvAPI_GetErrorMessage).  Ideal to conclude a message about a call to NvAPI that failed.
+ */
+std::ostream& operator<<(std::ostream& os, NvAPI_Status status);
+
+/**
  * \brief Macro to be used to log error messages.
  *
  * Use this macro to log error messages as you would use a std::ostringstream.  As a bonus, processing will be limited
  * to a simple if in the event where logging is not enabled.
+ *
+ * \remark Inverting the condition in the if and putting everything in the else might look strange but this is to avoid
+ *         problems in cases where someone would do something like:
+ *         if ( condition ) CLUSTER_LOG_ERROR << "Hello"; else somethingElse();
+ *         Without that somethingElse would be executed when !AreMessagesUseful() as opposed as when !condition.
  */
-#define CLUSTER_LOG_ERROR if ( GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) LoggingStream(GfxQuadroSync::LogType::Error)
+#define CLUSTER_LOG_ERROR if ( !GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) ; else LoggingStream(GfxQuadroSync::LogType::Error)
 
  /**
   * \brief Macro to be used to log warning messages.
   *
   * Use this macro to log error messages as you would use a std::ostringstream.  As a bonus, processing will be limited
   * to a simple if in the event where logging is not enabled.
+  *
+  * \remark Inverting the condition in the if and putting everything in the else might look strange but this is to avoid
+  *         problems in cases where someone would do something like:
+  *         if ( condition ) CLUSTER_LOG_ERROR << "Hello"; else somethingElse();
+  *         Without that somethingElse would be executed when !AreMessagesUseful() as opposed as when !condition.
   */
-#define CLUSTER_LOG_WARNING if ( GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) LoggingStream(GfxQuadroSync::LogType::Warning)
+#define CLUSTER_LOG_WARNING if ( !GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) ; else LoggingStream(GfxQuadroSync::LogType::Warning)
 
 /**
  * \brief Macro to be used to log messages.
  *
  * Use this macro to log error messages as you would use a std::ostringstream.  As a bonus, processing will be limited
  * to a simple if in the event where logging is not enabled.
+ *
+ * 
+ * \remark Inverting the condition in the if and putting everything in the else might look strange but this is to avoid
+ *         problems in cases where someone would do something like:
+ *         if ( condition ) CLUSTER_LOG_ERROR << "Hello"; else somethingElse();
+ *         Without that somethingElse would be executed when !AreMessagesUseful() as opposed as when !condition.
  */
-#define CLUSTER_LOG if ( GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) LoggingStream(GfxQuadroSync::LogType::Log)
+#define CLUSTER_LOG if ( !GfxQuadroSync::Logger::Instance().AreMessagesUseful() ) ; else LoggingStream(GfxQuadroSync::LogType::Log)

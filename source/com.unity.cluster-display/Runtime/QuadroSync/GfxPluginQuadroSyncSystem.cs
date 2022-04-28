@@ -76,12 +76,25 @@ namespace Unity.ClusterDisplay
             [UnmanagedFunctionPointer(CallingConvention.StdCall)]
             public delegate void NewLogMessageCallback(int logType, IntPtr message);
 
+            [StructLayout(LayoutKind.Sequential)]
+            public struct QuadroSyncState
+            {
+                public uint initializationState;
+                public uint swapGroupId;
+                public uint swapBarrierId;
+                public ulong presentedFramesSuccess;
+                public ulong presentedFramesFailed;
+            }
+
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFunc();
 
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern void SetLogCallback(
                 [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
+
+            [DllImport(DLLPath, CallingConvention = CallingConvention.StdCall)]
+            public static extern void GetState(ref QuadroSyncState state);
         }
 
         /// <summary>
@@ -120,6 +133,23 @@ namespace Unity.ClusterDisplay
             }
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);
+        }
+
+        /// <summary>
+        /// Fetch the state of GfxPluginQuadroSync.
+        /// </summary>
+        /// <returns>The state of GfxPluginQuadroSync</returns>
+        /// <remarks>This is not a simple readonly property as getting this state is not "free" and fetching of the
+        /// latest value is done every time the method is called.</remarks>
+        public GfxPluginQuadroSyncState FetchState()
+        {
+            var fetchedState = new GfxPluginQuadroSyncUtilities.QuadroSyncState();
+            GfxPluginQuadroSyncUtilities.GetState(ref fetchedState);
+
+            return new GfxPluginQuadroSyncState(
+                (GfxPluginQuadroSyncInitializationState)fetchedState.initializationState,
+                fetchedState.swapGroupId, fetchedState.swapBarrierId, fetchedState.presentedFramesSuccess,
+                fetchedState.presentedFramesFailed);
         }
     }
 }

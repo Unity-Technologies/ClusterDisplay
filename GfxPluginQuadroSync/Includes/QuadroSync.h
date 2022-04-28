@@ -2,6 +2,8 @@
 
 #include "../../External/NvAPI/nvapi.h"
 
+#include <cstdint>
+
 class ID3D11Device;
 class IDXGISwapChain;
 
@@ -13,8 +15,20 @@ namespace GfxQuadroSync
         PluginCSwapGroupClient();
         ~PluginCSwapGroupClient();
 
+        enum class InitializeStatus
+        {
+            Success,
+            Failed,
+            NoSwapGroupDetected,
+            QuerySwapGroupFailed,
+            FailedToJoinSwapGroup,
+            SwapGroupMismatch,
+            FailedToBindSwapBarrier,
+            SwapBarrierIdMismatch,
+        };
+
         void Prepare();
-        bool Initialize(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
+        InitializeStatus Initialize(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
         void Dispose(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
 
         void SetupWorkStation();
@@ -26,18 +40,25 @@ namespace GfxQuadroSync
 
         void EnableSystem(IUnknown* pDevice, IDXGISwapChain* pSwapChain, bool value);
         void EnableSwapGroup(IUnknown* pDevice, IDXGISwapChain* pSwapChain, bool value);
+        NvU32 GetSwapGroupId() const { return m_GroupId; }
         void EnableSwapBarrier(IUnknown* pDevice, bool value);
+        NvU32 GetSwapBarrierId() const { return m_BarrierId; }
         void EnableSyncCounter(const bool value);
 
+        uint64_t GetPresentSuccessCount() const { return m_presentSuccessCount; }
+        uint64_t GetPresentFailureCount() const { return m_presentFailureCount; }
+
     private:
-        NvU32 m_GroupId;
-        NvU32 m_BarrierId;
-        NvU32 m_FrameCount;
-        NvU32 m_GSyncSwapGroups;
-        NvU32 m_GSyncBarriers;
-        bool  m_GSyncMaster;
-        bool  m_GSyncCounter;
-        bool  m_IsActive;
+        NvU32 m_GroupId = 1;
+        NvU32 m_BarrierId = 1;
+        NvU32 m_FrameCount = 0;
+        NvU32 m_GSyncSwapGroups = 0;
+        NvU32 m_GSyncBarriers = 0;
+        bool  m_GSyncMaster = true;
+        bool  m_GSyncCounter = false;
+        bool  m_IsActive = false;
+        uint64_t m_presentSuccessCount = 0;
+        uint64_t m_presentFailureCount = 0;
     };
 
 }
