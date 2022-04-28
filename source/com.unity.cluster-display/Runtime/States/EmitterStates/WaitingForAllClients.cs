@@ -11,13 +11,13 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         // We should never proceed out of the while loop since we are immediately going to
         // enter the EmitterSynchronization state before exiting the loop.
         public override bool ReadyToProceed => false;
+        public override bool ReadyForNextFrame => false;
 
         public WaitingForAllClients(IClusterSyncState clusterSync)
             : base(clusterSync) {}
 
         public override void InitState()
         {
-            m_Cancellation = new CancellationTokenSource();
         }
 
         protected override NodeState DoFrame (bool frameAdvance)
@@ -42,17 +42,14 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 };
             }
 
-            ProcessMessages(m_Cancellation.Token);
+            ProcessMessages();
             return this;
         }
 
-        private void ProcessMessages(CancellationToken ctk)
+        private void ProcessMessages()
         {
             try
             {
-                if (ctk.IsCancellationRequested)
-                    return;
-
                 // Wait for a client to announce itself
                 // Consume messages
                 while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))

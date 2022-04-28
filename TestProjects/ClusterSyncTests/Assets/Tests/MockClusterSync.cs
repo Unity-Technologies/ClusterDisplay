@@ -62,6 +62,9 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     class NullState : NodeState
     {
+        public override bool ReadyToProceed => true;
+        public override bool ReadyForNextFrame => true;
+
         public NullState(IClusterSyncState clusterSync)
             : base(clusterSync) { }
     }

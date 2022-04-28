@@ -12,17 +12,6 @@ namespace Unity.ClusterDisplay
     #endif
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
-        #if !CLUSTER_DISPLAY_TESTS
-        static ClusterDisplayManager() => PreInitialize();
-
-        [RuntimeInitializeOnLoadMethod(loadType: RuntimeInitializeLoadType.BeforeSceneLoad)]
-        internal static void PreInitialize()
-        {
-            ClusterDebug.Log($"Preinitializing: \"{nameof(ClusterDisplayManager)}\".");
-            CreateClusterSyncInstance();
-        }
-        #endif
-
         [SerializeField][HideInInspector] private Camera m_ActiveCamera;
         public static Camera ActiveCamera
         {
@@ -62,6 +51,8 @@ namespace Unity.ClusterDisplay
             {
                 if (clusterSyncInstance == null)
                 {
+                    // Creating ClusterSync instance on demand.
+                    ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand before Awake.");
                     CreateClusterSyncInstance();
                 }
 
@@ -69,7 +60,8 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static void CreateClusterSyncInstance () => clusterSyncInstance = new ClusterSync();
+        /// Create ClusterSync instance on demand, or create it on Awake()
+        private static void CreateClusterSyncInstance() => clusterSyncInstance = new ClusterSync();
 
         public static ClusterDisplayBehaviourDelegate preInitialize;
         public static ClusterDisplayBehaviourDelegate awake;
@@ -113,6 +105,12 @@ namespace Unity.ClusterDisplay
         
         protected override void OnAwake()
         {
+            if (clusterSyncInstance == null)
+            {
+                ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on Awake.");
+                CreateClusterSyncInstance();
+            }
+
             ClusterDebug.Log("Cluster Display started bootstrap.");
             endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
 
@@ -138,6 +136,8 @@ namespace Unity.ClusterDisplay
         {
             UnregisterRenderPipelineDelegates();
             onDestroy?.Invoke();
+
+            clusterSyncInstance = null;
         }
 
         private void OnApplicationQuit() => onApplicationQuit?.Invoke();

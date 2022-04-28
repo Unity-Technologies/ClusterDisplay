@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Instances.Add(emitterClusterSync);
 
             CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.PrePopulateClusterParams();
+            emitterClusterSync.ReadParamsFromCommandLine();
             emitterClusterSync.EnableClusterDisplay();
 
             using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
@@ -137,7 +137,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Instances.Add(repeaterClusterSync);
 
             CommandLineParser.Override(args);
-            repeaterClusterSync.PrePopulateClusterParams();
+            repeaterClusterSync.ReadParamsFromCommandLine();
             repeaterClusterSync.EnableClusterDisplay();
 
             using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
@@ -231,7 +231,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Instances.Add(emitterClusterSync);
 
             CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.PrePopulateClusterParams();
+            emitterClusterSync.ReadParamsFromCommandLine();
             emitterClusterSync.EnableClusterDisplay();
             return emitterClusterSync;
         }
@@ -251,7 +251,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Instances.Add(repeaterClusterSync);
 
             CommandLineParser.Override(repeaterArgs);
-            repeaterClusterSync.PrePopulateClusterParams();
+            repeaterClusterSync.ReadParamsFromCommandLine();
             repeaterClusterSync.EnableClusterDisplay();
             return repeaterClusterSync;
         }

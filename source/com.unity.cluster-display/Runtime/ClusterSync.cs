@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
 
-        ClusterParams ? m_ClusterParams = null;
+        ClusterParams? m_ClusterParams;
 
         private DebugPerf m_FrameRatePerf = new();
         DebugPerf m_StartDelayMonitor = new();
@@ -143,7 +143,7 @@ namespace Unity.ClusterDisplay
             ClusterSyncLooper.onInstanceDoLateFrame -= DoLateFrame;
         }
 
-        public void PrePopulateClusterParams ()
+        public ClusterParams ReadParamsFromCommandLine ()
         {
             m_ClusterParams = new ClusterParams
             {
@@ -162,21 +162,18 @@ namespace Unity.ClusterDisplay
                 handshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
                 communicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000)
             };
+
+            return m_ClusterParams.Value;
         }
 
-        public void EnableClusterDisplay ()
+        public void EnableClusterDisplay()
         {
             if (syncState.IsActive)
                 return;
 
-            if (m_ClusterParams == null)
-                PrePopulateClusterParams();
+            m_ClusterParams ??= ReadParamsFromCommandLine();
+            ClusterParams clusterParams = m_ClusterParams.Value;
 
-            EnableClusterDisplay(m_ClusterParams.Value);
-        }
-
-        private void EnableClusterDisplay(ClusterParams clusterParams)
-        {
             InstanceLog($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
 
 #if UNITY_EDITOR
@@ -212,12 +209,7 @@ namespace Unity.ClusterDisplay
             onPostEnableClusterDisplay?.Invoke();
         }
 
-        public void DisableClusterDisplay()
-        {
-            if (!state.IsClusterLogicEnabled)
-                return;
-            CleanUp();
-        }
+        public void DisableClusterDisplay() => CleanUp();
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
@@ -320,6 +312,8 @@ namespace Unity.ClusterDisplay
 
         public void CleanUp()
         {
+            m_ClusterParams = null;
+
             LocalNode?.Exit();
             m_LocalNode = null;
 
