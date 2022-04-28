@@ -2,17 +2,27 @@ using System;
 
 namespace Unity.ClusterDisplay
 {
-    static class ClusterParams
+    struct ClusterParams
     {
-        /// <summary>
-        /// How long should the Master wait for clients to proceed before continuing
-        /// How long should Slaves wait for master to respond to registration before quitting 
-        /// </summary>
-        internal static TimeSpan RegisterTimeout = TimeSpan.FromSeconds(30);
-        /// <summary>
-        /// How long should the Master wait for clients before kicking them from the cluster and continuing
-        /// How Long should Clients wait for GoFromMaster before quitting.
-        /// </summary>
-        internal static TimeSpan CommunicationTimeout = TimeSpan.FromSeconds(5);
+        public bool         DebugFlag;
+
+        public bool         ClusterLogicSpecified;
+        public bool         EmitterSpecified;
+
+        public byte         NodeID;
+        public int          RepeaterCount;
+
+        public int          RXPort; 
+        public int          TXPort;
+
+        public string       MulticastAddress;
+        public string       AdapterName;
+
+        public int          TargetFps;
+        public bool         DelayRepeaters;
+        public bool         HeadlessEmitter;
+
+        public TimeSpan     HandshakeTimeout;
+        public TimeSpan     CommunicationTimeout;
     }
 }

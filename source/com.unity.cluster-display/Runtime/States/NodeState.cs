@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,19 +12,19 @@ namespace Unity.ClusterDisplay
     internal abstract class NodeState
     {
         protected Stopwatch m_Time;
-        protected CancellationTokenSource m_Cancellation;
-        protected Task m_Task;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
         public TimeSpan MaxTimeOut = new(0, 0, 0, 30, 0);
 
-        protected internal IClusterSyncState clusterSync;
+        protected IClusterSyncState clusterSync;
 
         public NodeState(IClusterSyncState clusterSync) =>
             this.clusterSync = clusterSync;
 
-        public virtual bool ReadyToProceed => false;
-        public virtual bool ReadyForNextFrame => false;
+        // We want each deriving class to implement these so we stay
+        // within or exit DoFrame or DoLateFrame safetly.
+        public abstract bool ReadyToProceed { get; } 
+        public abstract bool ReadyForNextFrame { get; }
 
         public NodeState EnterState(NodeState oldState)
         {
@@ -42,7 +42,6 @@ namespace Unity.ClusterDisplay
 
         public virtual void InitState()
         {
-            m_Cancellation = new CancellationTokenSource();
         }
 
         protected virtual NodeState DoFrame(bool newFrame)
@@ -102,7 +101,7 @@ namespace Unity.ClusterDisplay
 
                 default:
                 {
-                    throw new Exception("Unexpected network message received: ");
+                    throw new Exception($"Unexpected network message received: \"{msgHeader.MessageType}\".");
                 }
             }
         }
@@ -110,23 +109,6 @@ namespace Unity.ClusterDisplay
         protected virtual void ExitState()
         {
             ClusterDebug.Log("Exiting State:" + GetType().Name);
-
-            if (m_Task != null)
-            {
-                try
-                {
-                    m_Cancellation.Cancel(); // it's expected/assumed/required that a task is accompanied by a cancellation source
-                    m_Task.Wait(m_Cancellation.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine($"\n{nameof(OperationCanceledException)} thrown\n");
-                }
-                finally
-                {
-                    m_Cancellation.Dispose();
-                }
-            }
         }
 
         public virtual string GetDebugString()
@@ -165,6 +147,9 @@ namespace Unity.ClusterDisplay
     // Shutdown state --------------------------------------------------------
     internal class Shutdown : NodeState
     {
+        public override bool ReadyToProceed => true;
+        public override bool ReadyForNextFrame => true;
+
         public Shutdown(IClusterSyncState clusterSync)
             : base(clusterSync) { }
     }
@@ -172,6 +157,9 @@ namespace Unity.ClusterDisplay
     // FatalError state --------------------------------------------------------
     internal class FatalError : NodeState
     {
+        public override bool ReadyToProceed => true;
+        public override bool ReadyForNextFrame => true;
+
         public FatalError(IClusterSyncState clusterSync, string msg)
             : base(clusterSync)
         {
