@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
-using System;
+using static Unity.ClusterDisplay.Tests.NodeTestUtils;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -33,11 +33,12 @@ namespace Unity.ClusterDisplay.Tests
             CommandLineParser.Override(new List<string>());
 
             m_InterfaceName = SelectNic().Name;
+            ClusterSyncLooper.onInstanceTick = null;
         }
 
         UDPAgent GetTestAgent(byte nodeId, int rxPort, int txPort)
         {
-            var testConfig = ClusterTestSettings.udpConfig;
+            var testConfig = udpConfig;
             testConfig.nodeId = nodeId;
             testConfig.rxPort = rxPort;
             testConfig.txPort = txPort;
@@ -59,11 +60,9 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [Test]
-        [Ignore("ClusterDisplayState is buggy. See comment.")]
         public void TestClusterSyncState()
         {
-            // In theory, these properties should be false when there is no active node, but
-            // there is no logic to enforce this, so they start off in an indeterminate state.
+            // In theory, these properties should be false when there is no active node
             Assert.That(ClusterDisplayState.IsActive, Is.False);
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.False);
         }
@@ -73,8 +72,8 @@ namespace Unity.ClusterDisplay.Tests
         {
             const int numRepeaters = 1;
             var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {ClusterTestSettings.multicastAddress}:{ClusterTestSettings.rxPort},{ClusterTestSettings.txPort} " +
-                $"-handshakeTimeout {ClusterTestSettings.timeoutSeconds * 1000} ";
+                $"-emitterNode {k_EmitterId} {numRepeaters} {multicastAddress}:{rxPort},{txPort} " +
+                $"-handshakeTimeout {timeoutSeconds * 1000} ";
 
             var emitterArgs = emitterArgsString.Split(" ").ToList();
             emitterArgs.Add("-adapterName");
@@ -92,6 +91,8 @@ namespace Unity.ClusterDisplay.Tests
             {
                 if (tickType == ClusterSyncLooper.TickType.DoFrame)
                 {
+                    using var testAgent = GetTestAgent(k_RepeaterId, txPort, rxPort);
+
                     var node = emitterClusterSync.LocalNode as EmitterNode;
 
                     Assert.That(emitterClusterSync.StateAccessor.IsEmitter, Is.True);
@@ -127,8 +128,8 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator TestClusterSetupRepeater()
         {
             var argString =
-                $"-node {k_RepeaterId} {ClusterTestSettings.multicastAddress}:{ClusterTestSettings.rxPort},{ClusterTestSettings.txPort} " +
-                $"-handshakeTimeout {ClusterTestSettings.timeoutSeconds * 1000} ";
+                $"-node {k_RepeaterId} {multicastAddress}:{rxPort},{txPort} " +
+                $"-handshakeTimeout {timeoutSeconds * 1000} ";
 
             var args = argString.Split(" ").ToList();
             args.Add("-adapterName");

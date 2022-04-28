@@ -164,7 +164,8 @@ namespace Unity.ClusterDisplay
                 DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
                 HeadlessEmitter           = CommandLineParser.headlessEmitter.Value,
                 HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
-                CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000)
+                CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000),
+                EnableHardwareSync        = !CommandLineParser.disableQuadroSync.Value
             };
 
             return m_ClusterParams.Value;
@@ -251,8 +252,11 @@ namespace Unity.ClusterDisplay
 
             try
             {
-                // Emitter command line format: -node nodeId ip:rxport,txport
-                LocalNode = new RepeaterNode(config);
+                LocalNode = new RepeaterNode(new RepeaterNode.Config
+                {
+                    EnableHardwareSync = clusterParams.m_EnableHardwareSync,
+                    UdpAgentConfig = config
+                });
 
                 m_State.SetIsEmitter(false);
                 m_State.SetIsRepeater(true);

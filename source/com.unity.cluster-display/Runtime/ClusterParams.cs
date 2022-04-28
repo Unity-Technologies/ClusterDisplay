@@ -24,5 +24,6 @@ namespace Unity.ClusterDisplay
 
         public TimeSpan     HandshakeTimeout;
         public TimeSpan     CommunicationTimeout;
+        public bool         EnableHardwareSync;
     }
 }

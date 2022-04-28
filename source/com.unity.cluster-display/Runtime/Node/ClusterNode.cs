@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay
 
         public byte NodeID => m_UdpAgent.LocalNodeID;
 
-        public ulong CurrentFrameID { get; internal set; }
+        public ulong CurrentFrameID { get; private set; }
 
         public virtual bool HasHardwareSync { get; set; }
 

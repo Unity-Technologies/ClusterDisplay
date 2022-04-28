@@ -38,12 +38,15 @@ namespace Unity.ClusterDisplay
             public bool repeatersDelayed;
             public int repeaterCount;
             public UDPAgent.Config udpAgentConfig;
+            public bool enableHardwareSync;
         }
 
         public EmitterNode(Config config)
             : base(config.udpAgentConfig)
         {
-            m_CurrentState = HardwareSyncInitState.Create(this, true);
+            m_CurrentState = config.enableHardwareSync
+                ? HardwareSyncInitState.Create(this)
+                : new WaitingForAllClients(this);
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }

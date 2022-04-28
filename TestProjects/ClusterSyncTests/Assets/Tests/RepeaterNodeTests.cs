@@ -22,17 +22,20 @@ namespace Unity.ClusterDisplay.Tests
         [SetUp]
         public void SetUp()
         {
-            var testConfig = ClusterTestSettings.udpConfig;
-            testConfig.nodeId = k_EmitterId;
-            testConfig.rxPort = ClusterTestSettings.udpConfig.txPort;
-            testConfig.txPort = ClusterTestSettings.udpConfig.rxPort;
+            var testAgentConfig = udpConfig;
+            testAgentConfig.nodeId = k_EmitterId;
+            testAgentConfig.rxPort = udpConfig.txPort;
+            testAgentConfig.txPort = udpConfig.rxPort;
 
-            m_TestAgent = new UDPAgent(testConfig);
+            m_TestAgent = new UDPAgent(testAgentConfig);
 
             RepeaterStateReader.ClearOnLoadDataDelegates();
-            var repeaterConfig = ClusterTestSettings.udpConfig;
-            repeaterConfig.nodeId = k_RepeaterId;
-            m_Node = new RepeaterNode(repeaterConfig);
+            var repeaterUdpConfig = udpConfig;
+            repeaterUdpConfig.nodeId = k_RepeaterId;
+            m_Node = new RepeaterNode(new RepeaterNode.Config
+            {
+                UdpAgentConfig = repeaterUdpConfig
+            });
             Assert.IsTrue(m_Node.EmitterNodeIdMask[k_EmitterId]);
         }
 
@@ -42,7 +45,7 @@ namespace Unity.ClusterDisplay.Tests
             // Create the state under test
             var registerState = new RegisterWithEmitter(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(ClusterTestSettings.timeoutSeconds)
+                MaxTimeOut = TimeSpan.FromSeconds(timeoutSeconds)
             };
 
             var allNodesMask = m_Node.UdpAgent.AllNodesMask;
@@ -104,7 +107,7 @@ namespace Unity.ClusterDisplay.Tests
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
                 // ======= Start of Repeater frame ===========
-                m_Node.CurrentFrameID = frameNum;
+                Assert.AreEqual(m_Node.CurrentFrameID, frameNum);
 
                 // The state should waiting for the emitter data that marks the sync point
                 // at the beginning of the frame
@@ -136,6 +139,7 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
 
                 // ======= End of Frame ===========
+                m_Node.EndFrame();
                 yield return null;
 
                 // ======= Start of frame > 0 ===========
@@ -153,7 +157,7 @@ namespace Unity.ClusterDisplay.Tests
                     .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
                     .ToCoroutine();
 
-                yield return receiveMessage.WaitForCompletion(ClusterTestSettings.timeoutSeconds);
+                yield return receiveMessage.WaitForCompletion(timeoutSeconds);
 
                 Assert.True(receiveMessage.IsSuccessful);
                 var (rxHeader, _) = receiveMessage.Result;
@@ -177,7 +181,7 @@ namespace Unity.ClusterDisplay.Tests
             for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
             {
                 // ======= Start of Repeater frame ===========
-                m_Node.CurrentFrameID = frameNum;
+                Assert.AreEqual(m_Node.CurrentFrameID, frameNum);
 
                 // The state should waiting for the emitter data that marks the sync point
                 // at the beginning of the frame
@@ -204,6 +208,7 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
 
                 // ======= End of Frame ===========
+                m_Node.EndFrame();
                 yield return null;
             }
         }

@@ -19,15 +19,20 @@ namespace Unity.ClusterDisplay
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
         
-        public static NodeState Create(ClusterNode node, bool hasQuadroSync)
+        public static NodeState Create(ClusterNode node)
         {
-            return hasQuadroSync
-                ? new QuadroSyncInitState(node)
-                : new HardwareSyncInitState(node);
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            return new QuadroSyncInitState(node);
+#else
+            return new HardwareSyncInitState(node);
+#endif
         }
 
         protected HardwareSyncInitState(ClusterNode localNode)
-            : base(localNode) { }
+            : base(localNode)
+        {
+            ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
+        }
 
         protected override NodeState DoFrame(bool newFrame)
         {
@@ -35,6 +40,5 @@ namespace Unity.ClusterDisplay
                 ? new WaitingForAllClients(LocalNode)
                 : new RegisterWithEmitter(LocalNode);
         }
-
     }
 }
