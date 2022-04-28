@@ -4,11 +4,10 @@ using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
-    internal class RepeaterNode : ClusterNode
+    class RepeaterNode : ClusterNode
     {
         public byte EmitterNodeId { get; set; }
         public BitVector EmitterNodeIdMask => BitVector.FromIndex(EmitterNodeId);
-        public bool DelayRepeater { get; set; }
 
         public override bool HasHardwareSync
         {
@@ -22,15 +21,15 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public RepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
-            : base(clusterSync, config)
+        public RepeaterNode(UDPAgent.Config config)
+            : base(config)
         {
-            DelayRepeater = delayRepeater;
+            m_CurrentState = HardwareSyncInitState.Create(this, true);
         }
 
         public override void Start()
         {
-            m_CurrentState = HardwareSyncInitState.Create(clusterSync);
+            base.Start();
             m_CurrentState.EnterState(null);
         }
     }

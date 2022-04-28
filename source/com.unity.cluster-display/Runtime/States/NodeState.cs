@@ -3,23 +3,23 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections;
-using Debug = UnityEngine.Debug;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public delegate bool AccumulateFrameDataDelegate(NativeArray<byte> buffer, ref int endPos);
-
-    internal abstract class NodeState
+    abstract class NodeState
     {
         protected Stopwatch m_Time;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
         public TimeSpan MaxTimeOut = new(0, 0, 0, 30, 0);
 
-        protected IClusterSyncState clusterSync;
+        protected ClusterNode LocalNode { get; }
 
-        public NodeState(IClusterSyncState clusterSync) =>
-            this.clusterSync = clusterSync;
+        public NodeState(ClusterNode localNode)
+        {
+            LocalNode = localNode;
+        }
 
         // We want each deriving class to implement these so we stay
         // within or exit DoFrame or DoLateFrame safetly.
@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay
 
                 if (m_Time.ElapsedMilliseconds > MaxTimeOut.Milliseconds)
                 {
-                    var shutdown = new Shutdown(clusterSync);
+                    var shutdown = new Shutdown();
                     return shutdown.EnterState(this);
                 }
             }
@@ -89,7 +89,7 @@ namespace Unity.ClusterDisplay
             {
                 case EMessageType.GlobalShutdownRequest:
                 {
-                    PendingStateChange = new Shutdown(clusterSync);
+                    PendingStateChange = new Shutdown();
                     break;
                 }
 
@@ -118,50 +118,53 @@ namespace Unity.ClusterDisplay
     }
 
     // RepeaterState state --------------------------------------------------------
-    internal abstract class RepeaterState : NodeState
+    abstract class RepeaterState : NodeState
     {
-        public RepeaterState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        protected RepeaterState(ClusterNode node)
+            : base(node)
+        {
+            RepeaterNode = (RepeaterNode)node;
+        }
 
-        protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
-
-        protected RepeaterNode LocalNode => (RepeaterNode) clusterSync.LocalNode;
+        protected RepeaterNode RepeaterNode { get; }
     }
 
     // EmitterState state --------------------------------------------------------
-    internal abstract class EmitterState : NodeState
+    abstract class EmitterState : NodeState
     {
-        public EmitterState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        protected EmitterState(ClusterNode node)
+            : base(node)
+        {
+            EmitterNode = (EmitterNode)node;
+        }
 
         // If the repeaters were delayed by one frame, then we need to send emitter's data from the
         // last frame. That last frame data is sent with this previous frame number for validation
         // by the repeater.
         protected ulong PreviousFrameID =>
-            LocalNode.RepeatersDelayed ? CurrentFrameID - 1 : CurrentFrameID;
+            EmitterNode.RepeatersDelayed ? LocalNode.CurrentFrameID - 1 : LocalNode.CurrentFrameID;
 
-        protected ulong CurrentFrameID => clusterSync.CurrentFrameID;
-        protected EmitterNode LocalNode => (EmitterNode) clusterSync.LocalNode;
+        protected EmitterNode EmitterNode { get; }
     }
 
     // Shutdown state --------------------------------------------------------
-    internal class Shutdown : NodeState
+    class Shutdown : NodeState
     {
         public override bool ReadyToProceed => true;
         public override bool ReadyForNextFrame => true;
 
-        public Shutdown(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        public Shutdown()
+            : base(null) { }
     }
 
     // FatalError state --------------------------------------------------------
-    internal class FatalError : NodeState
+    class FatalError : NodeState
     {
         public override bool ReadyToProceed => true;
         public override bool ReadyForNextFrame => true;
-
-        public FatalError(IClusterSyncState clusterSync, string msg)
-            : base(clusterSync)
+        
+        public FatalError(string msg)
+            : base(null)
         {
             Message = msg;
         }

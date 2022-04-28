@@ -7,8 +7,8 @@ namespace Unity.ClusterDisplay
     {
         bool m_Initialized;
 
-        internal QuadroSyncInitState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        internal QuadroSyncInitState(ClusterNode node)
+            : base(node) { }
 
         protected override NodeState DoFrame(bool newFrame)
         {

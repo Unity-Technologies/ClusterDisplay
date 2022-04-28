@@ -3,32 +3,34 @@ using System.Diagnostics;
 
 namespace Unity.ClusterDisplay
 {
-    internal abstract class ClusterNode
+    abstract class ClusterNode
     {
-        protected NodeState m_CurrentState;
-        protected UDPAgent m_UDPAgent;
-        public UDPAgent UdpAgent => m_UDPAgent;
+        public UDPAgent UdpAgent => m_UdpAgent;
 
-        public byte NodeID => m_UDPAgent.LocalNodeID;
+        public byte NodeID => m_UdpAgent.LocalNodeID;
 
-        protected internal IClusterSyncState clusterSync;
+        public ulong CurrentFrameID { get; internal set; }
+
         public virtual bool HasHardwareSync { get; set; }
 
-        protected ClusterNode(
-            IClusterSyncState clusterSync,
-            UDPAgent.Config config)
+        protected NodeState m_CurrentState;
+        UDPAgent m_UdpAgent;
+
+        protected ClusterNode(UDPAgent.Config config)
         {
             if (config.nodeId >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
 
-            m_UDPAgent = new UDPAgent(config);
-            m_UDPAgent.OnError += OnNetworkingError;
+            m_UdpAgent = new UDPAgent(config);
+            m_UdpAgent.OnError += OnNetworkingError;
 
-            this.clusterSync = clusterSync;
             Stopwatch.StartNew();
         }
 
-        public abstract void Start();
+        public virtual void Start()
+        {
+            CurrentFrameID = 0;
+        }
 
         public bool DoFrame(bool newFrame)
         {
@@ -36,7 +38,7 @@ namespace Unity.ClusterDisplay
 
             if (m_CurrentState is Shutdown)
             {
-                m_UDPAgent.Stop();
+                m_UdpAgent.Stop();
             }
 
             return m_CurrentState is not FatalError;
@@ -44,13 +46,17 @@ namespace Unity.ClusterDisplay
 
         public void DoLateFrame() => m_CurrentState?.ProcessLateFrame();
 
-        public void EndFrame() => m_CurrentState?.OnEndFrame();
+        public void EndFrame()
+        {
+            m_CurrentState?.OnEndFrame();
+            ++CurrentFrameID;
+        }
 
         public void Exit()
         {
             if (m_CurrentState.GetType() != typeof(Shutdown))
-                m_CurrentState = (new Shutdown(clusterSync)).EnterState(m_CurrentState);
-            m_UDPAgent.Stop();
+                m_CurrentState = new Shutdown().EnterState(m_CurrentState);
+            m_UdpAgent.Stop();
         }
 
         public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
@@ -70,7 +76,7 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkingStats networkStats)
         {
-            return $"\tNode ID: {NodeID}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
+            return $"\tNode ID: {NodeID}\r\n\tFrame: {CurrentFrameID}\r\n" +
                 $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
                 $"\tNetwork stats: \r\n\t\tSend Queue Size: [{networkStats.txQueueSize}], " +
                 $"\r\n\t\tReceive Queue Size:[{networkStats.rxQueueSize}], " +
@@ -82,7 +88,7 @@ namespace Unity.ClusterDisplay
 
         protected void OnNetworkingError(string message)
         {
-            m_CurrentState.PendingStateChange = new FatalError(clusterSync, $"Networking error: {message}");
+            m_CurrentState.PendingStateChange = new FatalError($"Networking error: {message}");
         }
     }
 }

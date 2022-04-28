@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    internal partial class ClusterSync : IClusterSyncState
+    partial class ClusterSync
     {
-        public interface IState
+        public interface IStateAccessor
         {
             public bool IsEmitter { get; }
             public bool EmitterIsHeadless { get; }
@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay
             public ushort NodeID { get; }
         }
 
-        private class SyncState : IState
+        private class SyncState : IStateAccessor
         {
             private bool m_IsEmitter;
             private bool m_EmitterIsHeadless;
@@ -48,7 +48,8 @@ namespace Unity.ClusterDisplay
             public void SetNodeID(ushort nodeId) => m_NodeID = nodeId;
         }
 
-        readonly SyncState syncState = new SyncState();
-        public IState state => syncState;
+        SyncState m_State = new();
+
+        public IStateAccessor StateAccessor => m_State;
     }
 }

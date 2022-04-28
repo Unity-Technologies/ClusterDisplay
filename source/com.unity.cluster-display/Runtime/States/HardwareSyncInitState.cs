@@ -18,26 +18,23 @@ namespace Unity.ClusterDisplay
     {
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
-
-        public static NodeState Create(IClusterSyncState clusterSyncState)
+        
+        public static NodeState Create(ClusterNode node, bool hasQuadroSync)
         {
-#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
-            return CommandLineParser.disableQuadroSync.Value
-                ? new HardwareSyncInitState(clusterSyncState)
-                : new QuadroSyncInitState(clusterSyncState);
-#else
-            return new HardwareSyncInitState(clusterSyncState);
-#endif
+            return hasQuadroSync
+                ? new QuadroSyncInitState(node)
+                : new HardwareSyncInitState(node);
         }
 
-        protected HardwareSyncInitState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        protected HardwareSyncInitState(ClusterNode localNode)
+            : base(localNode) { }
 
         protected override NodeState DoFrame(bool newFrame)
         {
-            return clusterSync.LocalNode is EmitterNode
-                ? new WaitingForAllClients(clusterSync)
-                : new RegisterWithEmitter(clusterSync);
+            return LocalNode is EmitterNode
+                ? new WaitingForAllClients(LocalNode)
+                : new RegisterWithEmitter(LocalNode);
         }
+
     }
 }

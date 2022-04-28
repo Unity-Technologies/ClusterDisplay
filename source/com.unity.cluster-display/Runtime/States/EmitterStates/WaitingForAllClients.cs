@@ -13,8 +13,8 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
 
-        public WaitingForAllClients(IClusterSyncState clusterSync)
-            : base(clusterSync) {}
+        public WaitingForAllClients(ClusterNode node)
+            : base(node) {}
 
         public override void InitState()
         {
@@ -23,20 +23,20 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         protected override NodeState DoFrame (bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
+            if (EmitterNode.RemoteNodes.Count == EmitterNode.TotalExpectedRemoteNodesCount || timeOut)
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with {LocalNode.m_RemoteNodes.Count} nodes ");
-                    LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
+                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {EmitterNode.TotalExpectedRemoteNodesCount}, continuing with {EmitterNode.RemoteNodes.Count} nodes ");
+                    EmitterNode.TotalExpectedRemoteNodesCount = EmitterNode.RemoteNodes.Count;
                 }
 
                 TimeSpan communicationTimeout = new TimeSpan(0, 0, 0, 5);
                 if (CommandLineParser.communicationTimeout.Defined)
                     communicationTimeout = new TimeSpan(0, 0, 0, 0, (int)CommandLineParser.communicationTimeout.Value);
 
-                return new EmitterSynchronization(clusterSync)
+                return new EmitterSynchronization(LocalNode)
                 {
                     MaxTimeOut = communicationTimeout
                 };
@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);
-                var err = new FatalError(clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
+                var err = new FatalError($"Error occured while processing nodes discovery: {e.Message}");
                 PendingStateChange = err;
             }
         }
@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             ClusterDebug.Log("Discovered remote node: " + header.OriginID);
 
             var commCtx = new RemoteNodeComContext {ID = header.OriginID, Role = roleInfo.NodeRole,};
-            LocalNode.RegisterNode(commCtx);
+            EmitterNode.RegisterNode(commCtx);
         }
 
         private void SendResponse(MessageHeader rxHeader)
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.m_RemoteNodes.Count}";
+            return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {EmitterNode.RemoteNodes.Count}";
         }
     }
 }
