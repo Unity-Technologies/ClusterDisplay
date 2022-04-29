@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="localNodeID"></param>
         /// <param name="ip"></param>
@@ -384,7 +384,16 @@ namespace Unity.ClusterDisplay
         {
             if (m_Connection == null) return;
 
-            var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
+            byte[] receiveBytes;
+            try
+            {
+                receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Callback was fired after we've already shut down. Bail.
+                return;
+            }
 
             var header = receiveBytes.LoadStruct<MessageHeader>();
             if (header.OriginID != LocalNodeID && header.DestinationIDs[LocalNodeID])
