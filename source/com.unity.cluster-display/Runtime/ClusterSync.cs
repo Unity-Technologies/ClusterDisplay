@@ -237,7 +237,7 @@ namespace Unity.ClusterDisplay
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Cannot initialize emitter node: {e.Message}");
+                ClusterDebug.LogError($"Cannot initialize emitter node: {e.Message}");
                 return false;
             }
         }
@@ -262,7 +262,7 @@ namespace Unity.ClusterDisplay
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Cannot initialize repeater node: {e.Message}");
+                ClusterDebug.LogError($"Cannot initialize repeater node: {e.Message}");
                 return false;
             }
         }

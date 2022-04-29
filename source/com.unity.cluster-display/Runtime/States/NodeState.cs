@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay
 
         // We want each deriving class to implement these so we stay
         // within or exit DoFrame or DoLateFrame safetly.
-        public abstract bool ReadyToProceed { get; } 
+        public abstract bool ReadyToProceed { get; }
         public abstract bool ReadyForNextFrame { get; }
 
         public NodeState EnterState(NodeState oldState)

@@ -19,6 +19,8 @@ namespace Unity.ClusterDisplay.Tests
         string m_InterfaceName;
 
         readonly List<ClusterSync> m_Instances = new List<ClusterSync>();
+        UDPAgent m_TestAgent;
+        Action<ClusterSyncLooper.TickType> m_TickHandler;
 
         [SetUp]
         public void SetUp()
@@ -50,8 +52,10 @@ namespace Unity.ClusterDisplay.Tests
             // Bootstrap component creates a ClusterDisplayManager then deletes itself
             m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
             yield return null;
-            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out _), Is.True);
+            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out var manager), Is.True);
             Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayBootstrap>(out _), Is.False);
+
+            m_Instances.Add(ClusterDisplayManager.ClusterSyncInstance);
         }
 
         [Test]
@@ -82,11 +86,9 @@ namespace Unity.ClusterDisplay.Tests
             CommandLineParser.Override(emitterArgs);
             emitterClusterSync.ReadParamsFromCommandLine();
             emitterClusterSync.EnableClusterDisplay();
+            m_TestAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
-            using var testAgent = GetTestAgent(k_RepeaterId, MockClusterSync.txPort, MockClusterSync.rxPort);
-
-            Action<ClusterSyncLooper.TickType> onInstanceTick = null;
-            onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            m_TickHandler = tickType =>
             {
                 if (tickType == ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -103,19 +105,18 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(node.m_RemoteNodes.Count, Is.Zero);
                     Assert.That(node.TotalExpectedRemoteNodesCount, Is.EqualTo(numRepeaters));
 
-                    var (header, rawMsg) = GenerateMessage(k_RepeaterId,
-                        new byte[] {k_EmitterId},
-                        EMessageType.HelloEmitter,
-                        new RolePublication {NodeRole = ENodeRole.Repeater});
+                    var (header, rawMsg) = GenerateMessage(k_RepeaterId, new[] {k_EmitterId},
+                        EMessageType.HelloEmitter, new RolePublication {NodeRole = ENodeRole.Repeater});
 
-                    testAgent.PublishMessage(header, rawMsg);
-                    ClusterSyncLooper.onInstanceTick -= onInstanceTick;
+                    m_TestAgent.PublishMessage(header, rawMsg);
+                    ClusterSyncLooper.onInstanceTick -= m_TickHandler;
                 }
             };
 
-            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += m_TickHandler;
 
             var node = emitterClusterSync.LocalNode as EmitterNode;
+            Assert.That(node, Is.Not.Null);
             while (node.m_RemoteNodes.Count != numRepeaters)
             {
                 yield return null;
@@ -140,7 +141,7 @@ namespace Unity.ClusterDisplay.Tests
             repeaterClusterSync.ReadParamsFromCommandLine();
             repeaterClusterSync.EnableClusterDisplay();
 
-            using var testAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
+            m_TestAgent = GetTestAgent(k_EmitterId, MockClusterSync.txPort, MockClusterSync.rxPort);
 
             Assert.That(repeaterClusterSync.state.IsActive, Is.True);
             Assert.That(repeaterClusterSync.state.IsClusterLogicEnabled, Is.True);
@@ -157,8 +158,7 @@ namespace Unity.ClusterDisplay.Tests
             int currentStep = 0;
 
             // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
-            Action<ClusterSyncLooper.TickType> onInstanceTick = null;
-            onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            m_TickHandler = tickType =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -167,7 +167,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 if (currentStep == step.HelloEmitter)
                 {
-                    var (header, rolePublication) = testAgent.ReceiveMessage<RolePublication>();
+                    var (header, rolePublication) = m_TestAgent.ReceiveMessage<RolePublication>();
                     if (header.MessageType == EMessageType.AckMsgRx)
                     {
                         return;
@@ -181,11 +181,7 @@ namespace Unity.ClusterDisplay.Tests
                 else if (currentStep == step.WelcomeRepeater)
                 {
                     // Send an acceptance message
-                    testAgent.PublishMessage(new MessageHeader
-                    {
-                        MessageType = EMessageType.WelcomeRepeater,
-                        DestinationIDs = BitVector.FromIndex(k_RepeaterId),
-                    });
+                    m_TestAgent.PublishMessage(new MessageHeader {MessageType = EMessageType.WelcomeRepeater, DestinationIDs = BitVector.FromIndex(k_RepeaterId),});
                 }
 
                 else if (currentStep == step.LastFrameData)
@@ -193,24 +189,19 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
 
                     // Send a GO message
-                    var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId,
-                        new byte[] {k_RepeaterId},
-                        EMessageType.LastFrameData,
-                        new EmitterLastFrameData() { FrameNumber = 0 },
-                        MessageHeader.EFlag.Broadcast,
-                        Enumerable.Repeat((byte)0, 32).ToArray()); // trailing 0s to indicate empty state data
+                    var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId, new byte[] {k_RepeaterId}, EMessageType.LastFrameData, new EmitterLastFrameData() {FrameNumber = 0}, MessageHeader.EFlag.Broadcast, Enumerable.Repeat((byte)0, 32).ToArray()); // trailing 0s to indicate empty state data
 
-                    testAgent.PublishMessage(txHeader, lastFrameMsg);
-					Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
-					
-                    ClusterSyncLooper.onInstanceTick -= onInstanceTick;
+                    m_TestAgent.PublishMessage(txHeader, lastFrameMsg);
+                    Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
+
+                    ClusterSyncLooper.onInstanceTick -= m_TickHandler;
                 }
 
                 // Step to the next state.
                 currentStep++;
             };
 
-            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += m_TickHandler;
             while (currentStep < step.LastFrameData)
                 yield return null;
         }
@@ -241,7 +232,7 @@ namespace Unity.ClusterDisplay.Tests
             var repeaterArgsString =
                 $"-node {k_RepeaterId} {MockClusterSync.multicastAddress}:{MockClusterSync.txPort},{MockClusterSync.rxPort} " +
                 $"-handshakeTimeout {MockClusterSync.timeoutSeconds * 1000} ";
-            
+
             var repeaterArgs = repeaterArgsString.Split(" ").ToList();
             repeaterArgs.Add("-adapterName");
             repeaterArgs.Add(m_InterfaceName);
@@ -260,7 +251,7 @@ namespace Unity.ClusterDisplay.Tests
         ///  This test FIRST initializes a EMITTER ClusterSync, then a REPEATER
         ///  ClusterSync. Therefore, the emitter is the first delegate registered
         ///  in ClusterSyncLooper. This demonstrates that the we can change the
-        ///  order with SystemUpdate and everything works. 
+        ///  order with SystemUpdate and everything works.
         /// </summary>
         /// <returns></returns>
         [UnityTest]
@@ -270,7 +261,7 @@ namespace Unity.ClusterDisplay.Tests
             var repeaterClusterSync = CreateRepeater();
 
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            Action<ClusterSyncLooper.TickType> onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            m_TickHandler = tickType =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -292,19 +283,19 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(repeaterClusterSync.state.NodeID, Is.EqualTo(k_RepeaterId));
             };
 
-            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += m_TickHandler;
 
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
                 yield return null;
 
-            ClusterSyncLooper.onInstanceTick -= onInstanceTick;
+            ClusterSyncLooper.onInstanceTick -= m_TickHandler;
         }
 
         /// <summary>
         ///  This test FIRST initializes a REPEATER ClusterSync, then a EMITTER
         ///  ClusterSync. Therefore, the repeater is the first delegate registered
         ///  in ClusterSyncLooper. This demonstrates that the we can change the
-        ///  order with SystemUpdate and everything works. 
+        ///  order with SystemUpdate and everything works.
         /// </summary>
         /// <returns></returns>
         [UnityTest]
@@ -314,7 +305,7 @@ namespace Unity.ClusterDisplay.Tests
             var emitterClusterSync = CreateEmitter();
 
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            Action<ClusterSyncLooper.TickType> onInstanceTick = (ClusterSyncLooper.TickType tickType) =>
+            m_TickHandler = tickType =>
             {
                 if (tickType != ClusterSyncLooper.TickType.DoFrame)
                 {
@@ -336,17 +327,22 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(emitterClusterSync.state.NodeID, Is.EqualTo(0));
             };
 
-            ClusterSyncLooper.onInstanceTick += onInstanceTick;
+            ClusterSyncLooper.onInstanceTick += m_TickHandler;
 
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
                 yield return null;
 
-            ClusterSyncLooper.onInstanceTick -= onInstanceTick;
+            ClusterSyncLooper.onInstanceTick -= m_TickHandler;
         }
 
         [TearDown]
         public void TearDown()
         {
+            if (m_TickHandler != null)
+            {
+                ClusterSyncLooper.onInstanceTick -= m_TickHandler;
+            }
+
             if (m_TestGameObject != null)
             {
                 Object.Destroy(m_TestGameObject);
@@ -354,9 +350,10 @@ namespace Unity.ClusterDisplay.Tests
 
             foreach (var instance in m_Instances)
             {
-                instance.ShutdownAllClusterNodes();
-                instance.CleanUp();
+                instance.DisableClusterDisplay();
             }
+
+            m_TestAgent?.Dispose();
 
             m_Instances.Clear();
         }

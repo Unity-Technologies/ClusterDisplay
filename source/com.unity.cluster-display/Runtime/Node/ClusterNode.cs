@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkingStats networkStats)
         {
-            return $"\tNode ID: {ClusterDisplayState.NodeID}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
+            return $"\tNode ID: {NodeID}\r\n\tFrame: {clusterSync.CurrentFrameID}\r\n" +
                 $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
                 $"\tNetwork stats: \r\n\t\tSend Queue Size: [{networkStats.txQueueSize}], " +
                 $"\r\n\t\tReceive Queue Size:[{networkStats.rxQueueSize}], " +
