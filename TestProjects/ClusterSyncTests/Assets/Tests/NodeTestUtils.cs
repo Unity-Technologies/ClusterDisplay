@@ -7,6 +7,8 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     sealed class NullState : NodeState
     {
+        public override bool ReadyToProceed => false;
+        public override bool ReadyForNextFrame => false;
         public NullState() : base(null) { }
     }
 

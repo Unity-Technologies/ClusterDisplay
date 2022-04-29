@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay
             {
                 LocalNode = new RepeaterNode(new RepeaterNode.Config
                 {
-                    EnableHardwareSync = clusterParams.m_EnableHardwareSync,
+                    EnableHardwareSync = clusterParams.EnableHardwareSync,
                     UdpAgentConfig = config
                 });
 
