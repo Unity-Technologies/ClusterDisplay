@@ -8,6 +8,8 @@
 #include "../Unity/IUnityGraphicsD3D11.h"
 #include "../Unity/IUnityGraphicsD3D12.h"
 
+#include <assert.h>
+
 namespace GfxQuadroSync
 {
     static IUnityInterfaces* s_UnityInterfaces = nullptr;
@@ -21,7 +23,7 @@ namespace GfxQuadroSync
 
     // Any change made to this enum's constants must be reflected in
     // Unity.ClusterDisplay.GfxPluginQuadroSyncInitializationState in GfxPluginQuadroSyncState.cs.
-    enum class QuadroSyncInitializationStatus
+    enum class QuadroSyncInitializationStatus : uint32_t
     {
         NotInitialized = 0,
         Initialized = 1,
@@ -107,7 +109,7 @@ namespace GfxQuadroSync
      */
     extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetState(QuadroSyncState* state)
     {
-        state->initializationState = (uint32_t)s_InitializationStatus.load();
+        state->initializationState = (uint32_t)s_InitializationStatus.load(std::memory_order_relaxed);
         state->swapGroupId = s_SwapGroupClient.GetSwapGroupId();
         state->swapBarrierId = s_SwapGroupClient.GetSwapBarrierId();
         state->presentedFramesSuccess = s_SwapGroupClient.GetPresentSuccessCount();
@@ -318,6 +320,31 @@ namespace GfxQuadroSync
         return true;
     }
 
+    // Small helper function to convert a PluginCSwapGroupClient::InitializeStatus to QuadroSyncInitializationStatus
+    QuadroSyncInitializationStatus ConvertToQuadroSyncInitializationStatus(
+        const PluginCSwapGroupClient::InitializeStatus toConvert)
+    {
+        switch (toConvert)
+        {
+            default:
+                assert(!"Mapping missing PluginCSwapGroupClient::InitializeStatus -> QuadroSyncInitializationStatus");
+            case PluginCSwapGroupClient::InitializeStatus::Failed:
+                return QuadroSyncInitializationStatus::SwapChainOrBarrierGenericFailure;
+            case PluginCSwapGroupClient::InitializeStatus::NoSwapGroupDetected:
+                return QuadroSyncInitializationStatus::NoSwapGroupDetected;
+            case PluginCSwapGroupClient::InitializeStatus::QuerySwapGroupFailed:
+                return QuadroSyncInitializationStatus::QuerySwapGroupFailed;
+            case PluginCSwapGroupClient::InitializeStatus::FailedToJoinSwapGroup:
+                return QuadroSyncInitializationStatus::FailedToJoinSwapGroup;
+            case PluginCSwapGroupClient::InitializeStatus::SwapGroupMismatch:
+                return QuadroSyncInitializationStatus::SwapGroupMismatch;
+            case PluginCSwapGroupClient::InitializeStatus::FailedToBindSwapBarrier:
+                return QuadroSyncInitializationStatus::FailedToBindSwapBarrier;
+            case PluginCSwapGroupClient::InitializeStatus::SwapBarrierIdMismatch:
+                return QuadroSyncInitializationStatus::SwapBarrierIdMismatch;
+        }
+    }
+
     // Enable Workstation SwapGroup & potentially join the SwapGroup / Barrier
     void QuadroSyncInitialize()
     {
@@ -339,31 +366,7 @@ namespace GfxQuadroSync
         }
         else
         {
-            switch (swapGroupClientInitializeStatus)
-            {
-                default:
-                case PluginCSwapGroupClient::InitializeStatus::Failed:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::SwapChainOrBarrierGenericFailure;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::NoSwapGroupDetected:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::NoSwapGroupDetected;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::QuerySwapGroupFailed:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::QuerySwapGroupFailed;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::FailedToJoinSwapGroup:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::FailedToJoinSwapGroup;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::SwapGroupMismatch:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::SwapGroupMismatch;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::FailedToBindSwapBarrier:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::FailedToBindSwapBarrier;
-                    break;
-                case PluginCSwapGroupClient::InitializeStatus::SwapBarrierIdMismatch:
-                    s_InitializationStatus = QuadroSyncInitializationStatus::SwapBarrierIdMismatch;
-                    break;
-            }
+            s_InitializationStatus = ConvertToQuadroSyncInitializationStatus(swapGroupClientInitializeStatus);
             CLUSTER_LOG_ERROR << "Quadro Sync initialization failed";
         }
     }

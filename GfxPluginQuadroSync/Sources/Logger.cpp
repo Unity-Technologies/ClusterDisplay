@@ -16,11 +16,11 @@ namespace GfxQuadroSync
             m_ManagedCallback((int)logType, message.c_str());
         }
     }
-}
 
-std::ostream& operator<<(std::ostream& os, const NvAPI_Status status)
-{
-    NvAPI_ShortString statusString;
-    NvAPI_GetErrorMessage(status, statusString);
-    return os << statusString << " (" << (int)status << ')';
+    std::ostream& operator<<(std::ostream& os, const NvAPI_Status status)
+    {
+        NvAPI_ShortString statusString;
+        NvAPI_GetErrorMessage(status, statusString);
+        return os << statusString << " (" << (int)status << ')';
+    }
 }

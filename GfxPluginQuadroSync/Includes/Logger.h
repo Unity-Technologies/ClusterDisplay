@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-typedef enum _NvAPI_Status NvAPI_Status;
+#include "../../External/NvAPI/nvapi_lite_common.h"
 
 namespace GfxQuadroSync
 {
@@ -83,13 +83,13 @@ namespace GfxQuadroSync
     private:
         const LogType m_LogType;
     };
-}
 
-/**
- * operator<< for NvAPI_Status that will write it to the stream as a number and a string (string returned by
- * NvAPI_GetErrorMessage).  Ideal to conclude a message about a call to NvAPI that failed.
- */
-std::ostream& operator<<(std::ostream& os, NvAPI_Status status);
+    /**
+     * operator<< for NvAPI_Status that will write it to the stream as a number and a string (string returned by
+     * NvAPI_GetErrorMessage).  Ideal to conclude a message about a call to NvAPI that failed.
+     */
+    std::ostream& operator<<(std::ostream& os, NvAPI_Status status);
+}
 
 /**
  * \brief Macro to be used to log error messages.

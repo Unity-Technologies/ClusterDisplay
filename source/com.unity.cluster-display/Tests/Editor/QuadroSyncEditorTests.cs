@@ -7,6 +7,7 @@ using UnityEngine;
 using Unity.ClusterDisplay;
 using System;
 using System.Linq;
+using Random = UnityEngine.Random;
 
 namespace Unity.ClusterDisplay.EditorTest
 {
@@ -37,13 +38,21 @@ namespace Unity.ClusterDisplay.EditorTest
         }
 
         [Test]
-        public void CanFetchState()
+        public void ExerciseFetchState()
         {
+            // The goal of this test is to exercise the FetchState method and be sure it does not crash, hang or produce
+            // completely bogus output.
             var state = GfxPluginQuadroSyncSystem.Instance.FetchState();
 
             // Initialization state might be different things (depending on the state of the engine, hardware present on
             // the computer, ... but in any case it should be a valid enum value.
             Assert.IsTrue(Enum.IsDefined(state.InitializationState.GetType(), state.InitializationState));
+            // For now (current GfxPluginQuadro implementation & Nvidia API) swap group identifier is always be 0 or 1
+            Assert.IsTrue((state.SwapGroupId == 0) || (state.SwapGroupId == 1));
+            // For now (current GfxPluginQuadro implementation & Nvidia API) swap barrier identifier is always be 0 or 1
+            Assert.IsTrue((state.SwapGroupId == 0) || (state.SwapGroupId == 1));
+
+            Assert.IsTrue( false ); // To be removed before merge, only to be 100% sure the test is ran by Yamato as part of the build
         }
 
         const string k_UnknownDescriptiveText = "Unknown initialization state";

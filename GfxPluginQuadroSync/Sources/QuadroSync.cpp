@@ -259,11 +259,11 @@ namespace GfxQuadroSync
 
         if (result == NVAPI_OK)
         {
-            ++m_presentSuccessCount;
+            m_presentSuccessCount.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
 
-        ++m_presentFailureCount;
+        m_presentFailureCount.fetch_add(1, std::memory_order_relaxed);
         CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed: " << result;
         return false;
     }
@@ -300,7 +300,12 @@ namespace GfxQuadroSync
 #ifdef _DEBUG
                 CLUSTER_LOG << "Values before Query: m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")";
 
-                NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &m_GroupId, &m_BarrierId);
+                NvU32 groupId;
+                NvU32 barrierId;
+                NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &groupId, &barrierId);
+                m_GroupId = groupId;
+                m_BarrierId = barrierId;
+
                 CLUSTER_LOG << "Values after Query m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")";
 #endif
             }
