@@ -51,8 +51,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.IsTrue((state.SwapGroupId == 0) || (state.SwapGroupId == 1));
             // For now (current GfxPluginQuadro implementation & Nvidia API) swap barrier identifier is always be 0 or 1
             Assert.IsTrue((state.SwapGroupId == 0) || (state.SwapGroupId == 1));
-
-            Assert.IsTrue( false ); // To be removed before merge, only to be 100% sure the test is ran by Yamato as part of the build
         }
 
         const string k_UnknownDescriptiveText = "Unknown initialization state";
