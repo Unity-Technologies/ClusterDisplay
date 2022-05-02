@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="localNodeID"></param>
         /// <param name="ip"></param>
@@ -111,6 +111,8 @@ namespace Unity.ClusterDisplay
         /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
         public UDPAgent(Config config)
         {
+            ClusterDebug.Log($"Constructed new {nameof(UDPAgent)}.");
+
             LocalNodeID = config.nodeId;
             m_RxPort = config.rxPort;
             m_TxPort = config.txPort;
@@ -382,7 +384,16 @@ namespace Unity.ClusterDisplay
         {
             if (m_Connection == null) return;
 
-            var receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
+            byte[] receiveBytes;
+            try
+            {
+                receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Callback was fired after we've already shut down. Bail.
+                return;
+            }
 
             var header = receiveBytes.LoadStruct<MessageHeader>();
             if (header.OriginID != LocalNodeID && header.DestinationIDs[LocalNodeID])

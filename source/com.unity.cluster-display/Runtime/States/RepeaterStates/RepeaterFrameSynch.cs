@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
     internal class RepeaterSynchronization : RepeaterState, IRepeaterNodeSyncState
     {
-        internal enum EStage
+        public enum EStage
         {
             WaitingOnEmitterFrameData,
             ReadyToProceed,
@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         }
 
         private EStage m_Stage;
-        internal EStage Stage
+        public EStage Stage
         {
             get => m_Stage;
             set
@@ -59,10 +59,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public override void InitState()
         {
             Stage = EStage.WaitingOnEmitterFrameData;
-
             m_TsOfStage = m_Time.Elapsed;
-            m_Cancellation = new CancellationTokenSource();
-
             m_RepeaterReceiver = new RepeaterStateReader(this);
         }
 

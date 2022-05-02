@@ -65,8 +65,8 @@ namespace Unity.ClusterDisplay.RPC
             AssemblyReloadEvents.beforeAssemblyReload += Dispose;
             #endif
 
-            RepeaterStateReader.RegisterOnRestoreCustomDataDelegate(k_RPCStateID, Unlatch);
-            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(StoreRPCs);
+            RepeaterStateReader.RegisterOnLoadDataDelegate(k_RPCStateID, Unlatch);
+            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(k_RPCStateID, Latch);
         }
 
         static void SetupBuffer ()

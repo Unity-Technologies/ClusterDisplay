@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Tests
             NativeArray<byte> buffer = new NativeArray<byte>(1024, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
             uint endPos = 0;
-            RPCBufferIO.Latch(buffer, ref endPos);
+            RPCBufferIO.Latch(buffer);
             RPCBufferIO.Unlatch(buffer.GetSubArray(0, (int)endPos));
 
             buffer.Dispose();

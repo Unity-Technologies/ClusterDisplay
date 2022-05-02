@@ -7,7 +7,10 @@ namespace Unity.ClusterDisplay
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    internal class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
+    #if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoad]
+    #endif
+    public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
         [SerializeField][HideInInspector] private Camera m_ActiveCamera;
         public static Camera ActiveCamera
@@ -34,9 +37,31 @@ namespace Unity.ClusterDisplay
         }
 
         public delegate void OnChangeActiveCamera (Camera previousCamera, Camera newCamera);
+
         public delegate void ClusterDisplayBehaviourDelegate();
+
         public delegate void ClusterDisplayOnFrameRenderDelegate(ScriptableRenderContext context, Camera[] cameras);
+
         public delegate void ClusterDisplayOnCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
+
+        private static ClusterSync clusterSyncInstance;
+        internal static ClusterSync ClusterSyncInstance
+        {
+            get
+            {
+                if (clusterSyncInstance == null)
+                {
+                    // Creating ClusterSync instance on demand.
+                    ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand before Awake.");
+                    CreateClusterSyncInstance();
+                }
+
+                return clusterSyncInstance;
+            }
+        }
+
+        /// Create ClusterSync instance on demand, or create it on Awake()
+        private static void CreateClusterSyncInstance() => clusterSyncInstance = new ClusterSync();
 
         public static ClusterDisplayBehaviourDelegate preInitialize;
         public static ClusterDisplayBehaviourDelegate awake;
@@ -48,12 +73,15 @@ namespace Unity.ClusterDisplay
         public static ClusterDisplayBehaviourDelegate update;
         public static ClusterDisplayBehaviourDelegate lateUpdate;
         public static ClusterDisplayBehaviourDelegate onDrawGizmos;
+
         public static ClusterDisplayBehaviourDelegate onBeforePresent;
+        private Coroutine endOfFrameCoroutine;
+
+        public static OnChangeActiveCamera onChangeActiveCamera;
         public static ClusterDisplayOnFrameRenderDelegate onBeginFrameRender;
         public static ClusterDisplayOnCameraRenderDelegate onBeginCameraRender;
         public static ClusterDisplayOnCameraRenderDelegate onEndCameraRender;
         public static ClusterDisplayOnFrameRenderDelegate onEndFrameRender;
-        public static OnChangeActiveCamera onChangeActiveCamera;
 
         private void RegisterRenderPipelineDelegates ()
         {
@@ -77,9 +105,14 @@ namespace Unity.ClusterDisplay
         
         protected override void OnAwake()
         {
-            ClusterDebug.Log("Cluster Display started bootstrap.");
+            if (clusterSyncInstance == null)
+            {
+                ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on Awake.");
+                CreateClusterSyncInstance();
+            }
 
-            StartCoroutine(BeforePresentCoroutine());
+            ClusterDebug.Log("Cluster Display started bootstrap.");
+            endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
 
             preInitialize?.Invoke();
 
@@ -103,6 +136,8 @@ namespace Unity.ClusterDisplay
         {
             UnregisterRenderPipelineDelegates();
             onDestroy?.Invoke();
+
+            clusterSyncInstance = null;
         }
 
         private void OnApplicationQuit() => onApplicationQuit?.Invoke();

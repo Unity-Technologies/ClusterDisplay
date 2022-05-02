@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -40,9 +40,11 @@ namespace Unity.ClusterDisplay.Tests
             {
                 headlessEmitter = headlessEmitter,
                 repeatersDelayed = delayRepeaters,
+                repeaterCount = numRepeaters,
                 udpAgentConfig = udpConfig,
-                repeaterCount = numRepeaters
+                
             };
+
             LocalNode = nodeType switch
             {
                 NodeType.Emitter => new MockEmitterNode(this, emitterConfig),
@@ -60,6 +62,9 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     class NullState : NodeState
     {
+        public override bool ReadyToProceed => true;
+        public override bool ReadyForNextFrame => true;
+
         public NullState(IClusterSyncState clusterSync)
             : base(clusterSync) { }
     }
@@ -69,8 +74,8 @@ namespace Unity.ClusterDisplay.Tests
     /// </summary>
     class MockRepeaterNode : RepeaterNode
     {
-        public MockRepeaterNode(IClusterSyncState clusterSync, bool delayRepeater, UDPAgent.Config config)
-            : base(clusterSync, delayRepeater, config)
+        public MockRepeaterNode(IClusterSyncState clusterSync, bool delayRepeaters, UDPAgent.Config config)
+            : base(clusterSync, delayRepeaters, config)
         {
             // Exit the starting state immediately
             var oldState = m_CurrentState;

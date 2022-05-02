@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Unity.ClusterDisplay.Utils;
 using Unity.Profiling;
@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 {
     internal class EmitterSynchronization : EmitterState, IEmitterNodeSyncState
     {
-        internal enum EStage
+        public enum EStage
         {
             WaitOnRepeatersNextFrame,
             EmitLastFrameData,
@@ -26,7 +26,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private EStage m_Stage;
 
-        internal EStage Stage
+        public EStage Stage
         {
             get => m_Stage;
             set
@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // If the repeaters were not delayed, we need to fill the frame data buffer for the repeater when
             // enter this state for the first time.
             if (Stage == EStage.WaitOnRepeatersNextFrame)
-                m_Emitter.GatherFrameState(CurrentFrameID);
+                m_Emitter.GatherFrameState();
             else m_Emitter.GatherPreFrameState();
 
             m_TsOfStage = m_Time.Elapsed;
@@ -114,8 +114,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                     case EStage.ReadyToProceed:
                         ProceededToNextFrame(newFrame);
                         break;
+                    // It is possible that we will land on here if there are multiple ClusterSyncs registered with ClusterSyncLooper.
                     case EStage.WaitForRepeatersToACK:
-                        throw new InvalidOperationException("Should not be waiting for ack at the beginning of the frame");
+                        break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -175,9 +177,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private void OnEmitFrameData()
         {
-            m_Emitter.GatherFrameState(CurrentFrameID);
-
-            ClusterDebug.Assert(m_Emitter.ValidRawStateData, $"(Frame: {CurrentFrameID}): State buffer is empty!");
+            m_Emitter.GatherFrameState();
 
             using (m_MarkerPublishState.Auto())
                 m_Emitter.PublishCurrentState(PreviousFrameID);

@@ -59,24 +59,11 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="buffer">The network frame buffer that contains more then just RPC data.</param>
         /// <param name="endPos">Where we want to start writing into the network frame buffer.</param>
         /// <returns></returns>
-        internal static unsafe bool Latch (NativeArray<byte> buffer, ref buint endPos)
+        internal static unsafe int Latch (NativeArray<byte> buffer)
         {
-            UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr() + endPos, rpcBuffer.GetUnsafePtr(), rpcBufferSize);
-            endPos += rpcBufferSize;
-            rpcBufferSize = 0;
-            return true;
-        }
-
-        internal static unsafe bool StoreRPCs (NativeArray<byte> buffer, ref buint endPos)
-        {
-            if (RPCBufferSize == 0)
-                return true;
-
-            EmitterStateWriter.StoreStateID(buffer, ref endPos, k_RPCStateID);
-            *((buint*)((byte*)buffer.GetUnsafePtr() + endPos)) = RPCBufferSize;
-            endPos += (buint)Marshal.SizeOf<int>();
-
-            return Latch(buffer, ref endPos);
+            UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr(), rpcBuffer.GetUnsafePtr(), rpcBufferSize);
+            int bufferLength = (int)rpcBufferSize;
+            return bufferLength;
         }
 
 

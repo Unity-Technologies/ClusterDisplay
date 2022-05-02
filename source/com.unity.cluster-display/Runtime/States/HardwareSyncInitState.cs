@@ -16,6 +16,9 @@ namespace Unity.ClusterDisplay
     /// </remarks>
     class HardwareSyncInitState : NodeState
     {
+        public override bool ReadyToProceed => false;
+        public override bool ReadyForNextFrame => false;
+
         public static NodeState Create(IClusterSyncState clusterSyncState)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
