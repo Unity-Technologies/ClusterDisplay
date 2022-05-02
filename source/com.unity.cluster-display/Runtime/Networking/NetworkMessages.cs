@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
@@ -44,13 +45,12 @@ namespace Unity.ClusterDisplay
         public int msgsSent;
     }
 
-    internal enum StateID : byte
+    enum StateID : byte
     {
         End = 0,
         Time = 1,
         Input = 2,
-        Random = 3,
-        ClusterInput = 4
+        Random = 3
     }
 
     internal static class NetworkingHelpers
@@ -60,46 +60,38 @@ namespace Unity.ClusterDisplay
             return new byte[Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<T>()];
         }
 
-        public unsafe static T BytesToStruct<T>(byte[] arr, int offset) where T : unmanaged
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T LoadStruct<T>(this ReadOnlySpan<byte> arr, int offset = 0) where T : unmanaged =>
+            MemoryMarshal.Read<T>(arr.Slice(offset));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset = 0)
+            where T : unmanaged
         {
-            fixed (byte * ptr = arr)
-                return Marshal.PtrToStructure<T>((IntPtr)(ptr + offset));
+            dest.ReinterpretStore(offset, blittable);
+            return Marshal.SizeOf<T>();
         }
 
-        public unsafe static void StructToBytes<T>(byte[] dest, int offset, ref T s) where T : unmanaged
-        {
-            fixed (byte* ptr = dest)
-                UnsafeUtility.MemCpy(
-                    ptr + offset, 
-                    UnsafeUtility.AddressOf(ref s), 
-                    Marshal.SizeOf<T>());
-        }
-        
-        public unsafe static T BytesToStruct<T>(NativeArray<byte> arr, int offset) where T : unmanaged
-        {
-            var ptr = (byte*)arr.GetUnsafePtr() + offset;
-            return Marshal.PtrToStructure<T>((IntPtr)ptr);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int StoreInBuffer<T>(ref this T blittable,
+            Span<byte> dest,
+            int offset = 0) where T : unmanaged =>
+            MemoryMarshal.TryWrite(dest.Slice(offset),
+                ref blittable)
+                ? Marshal.SizeOf<T>()
+                : throw new ArgumentOutOfRangeException();
 
-        public unsafe static void StructToBytes<T>(NativeArray<byte> dest, int offset, ref T s) where T : unmanaged
-        {
-                UnsafeUtility.MemCpy(
-                    (byte*)dest.GetUnsafePtr() + offset, 
-                    UnsafeUtility.AddressOf(ref s), 
-                    Marshal.SizeOf<T>());
-        }
-        
-        public static void StoreInBuffer<T>(ref this T blittable, NativeArray<byte> dest, int offset)
-            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
-      
-        public static void StoreInBuffer<T>(ref this T blittable, byte[] dest, int offset = 0)
-            where T : unmanaged => StructToBytes(dest, offset, ref blittable);
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this NativeArray<byte> arr, int offset = 0) where T : unmanaged =>
-            BytesToStruct<T>(arr, offset);
-        
+            arr.ReinterpretLoad<T>(offset);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T LoadStruct<T>(this byte[] arr, int offset = 0) where T : unmanaged =>
-            BytesToStruct<T>(arr, offset);
+            LoadStruct<T>((ReadOnlySpan<byte>) arr, offset);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+            new(arr.GetUnsafePtr(), arr.Length);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -161,7 +153,7 @@ namespace Unity.ClusterDisplay
     {
         public UInt64 FrameNumber;
     }
-    
+
     [StructLayout(LayoutKind.Sequential)]
     internal struct RolePublication
     {

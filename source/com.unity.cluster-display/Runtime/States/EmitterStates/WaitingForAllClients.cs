@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             {
                 // Wait for a client to announce itself
                 // Consume messages
-                while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload))
+                while (LocalNode.UdpAgent.NextAvailableRxMsg(out var header, out var payload, 1000))
                 {
                     if (header.MessageType == EMessageType.HelloEmitter)
                     {
