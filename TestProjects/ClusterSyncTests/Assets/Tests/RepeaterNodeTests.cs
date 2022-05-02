@@ -34,7 +34,10 @@ namespace Unity.ClusterDisplay.Tests
             repeaterUdpConfig.nodeId = k_RepeaterId;
             m_Node = new RepeaterNode(new RepeaterNode.Config
             {
-                UdpAgentConfig = repeaterUdpConfig
+                MainConfig =
+                {
+                    UdpAgentConfig = repeaterUdpConfig
+                }
             });
             Assert.IsTrue(m_Node.EmitterNodeIdMask[k_EmitterId]);
         }
@@ -43,10 +46,7 @@ namespace Unity.ClusterDisplay.Tests
         public void TestRegisterWithEmitter()
         {
             // Create the state under test
-            var registerState = new RegisterWithEmitter(m_Node)
-            {
-                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
-            };
+            var registerState = new RegisterWithEmitter(m_Node);
 
             var allNodesMask = m_Node.UdpAgent.AllNodesMask;
             Assert.IsFalse(allNodesMask[k_EmitterId]);

@@ -26,14 +26,7 @@ namespace Unity.ClusterDisplay.Tests
         [SetUp]
         public void SetUp()
         {
-            // Global state madness!
-            // Sneaky scripts can change the command line parser arguments
-            // from underneath us. The following lines of code are
-            // workarounds to ensure we start the test with a "clean" slate.
-            ClusterSync.onPreEnableClusterDisplay = null;
-            CommandLineParser.Override(new List<string>());
             ServiceLocator.Provide<IClusterSyncState>(null);
-
             m_InterfaceName = SelectNic().Name;
         }
 
@@ -77,20 +70,23 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator TestClusterSetupEmitter()
         {
             const int numRepeaters = 1;
-            var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {MulticastAddress}:{RxPort},{TxPort} " +
-                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
-
-            var emitterArgs = emitterArgsString.Split(" ").ToList();
-            emitterArgs.Add("-adapterName");
-            emitterArgs.Add(m_InterfaceName);
 
             var emitterClusterSync = new ClusterSync("Emitter");
             m_Instances.Add(emitterClusterSync);
 
-            CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.ReadParamsFromCommandLine();
-            emitterClusterSync.EnableClusterDisplay();
+            emitterClusterSync.EnableClusterDisplay(new ClusterParams
+            {
+                ClusterLogicSpecified = true,
+                EmitterSpecified = true,
+                NodeID = k_EmitterId,
+                RepeaterCount = numRepeaters,
+                MulticastAddress = multicastAddress,
+                AdapterName = m_InterfaceName,
+                RXPort = rxPort,
+                TXPort = txPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+            });
             m_TestAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
 
             m_TickHandler = tickType =>
@@ -131,20 +127,21 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestClusterSetupRepeater()
         {
-            var argString =
-                $"-node {k_RepeaterId} {MulticastAddress}:{RxPort},{TxPort} " +
-                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
-
-            var args = argString.Split(" ").ToList();
-            args.Add("-adapterName");
-            args.Add(m_InterfaceName);
-
             var repeaterClusterSync = new ClusterSync("Repeater");
             m_Instances.Add(repeaterClusterSync);
 
-            CommandLineParser.Override(args);
-            repeaterClusterSync.ReadParamsFromCommandLine();
-            repeaterClusterSync.EnableClusterDisplay();
+            repeaterClusterSync.EnableClusterDisplay(new ClusterParams
+            {
+                ClusterLogicSpecified = true,
+                EmitterSpecified = false,
+                NodeID = k_RepeaterId,
+                MulticastAddress = multicastAddress,
+                AdapterName = m_InterfaceName,
+                RXPort = rxPort,
+                TXPort = txPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+            });
 
             m_TestAgent = GetTestAgent(k_EmitterId, TxPort, RxPort);
 
@@ -212,40 +209,53 @@ namespace Unity.ClusterDisplay.Tests
         {
             const int numRepeaters = 1;
 
-            var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {MulticastAddress}:{RxPort},{TxPort} " +
-                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
-
-            var emitterArgs = emitterArgsString.Split(" ").ToList();
-            emitterArgs.Add("-adapterName");
-            emitterArgs.Add(m_InterfaceName);
+            // var emitterArgsString =
+            //     $"-emitterNode {k_EmitterId} {numRepeaters} {NodeTestUtils.multicastAddress}:{NodeTestUtils.rxPort},{NodeTestUtils.txPort} " +
+            //     $"-handshakeTimeout {NodeTestUtils.timeoutSeconds * 1000} ";
+            //
+            // var emitterArgs = emitterArgsString.Split(" ").ToList();
+            // emitterArgs.Add("-adapterName");
+            // emitterArgs.Add(m_InterfaceName);
 
             var emitterClusterSync = new ClusterSync("Emitter");
             m_Instances.Add(emitterClusterSync);
 
-            CommandLineParser.Override(emitterArgs);
-            emitterClusterSync.ReadParamsFromCommandLine();
-            emitterClusterSync.EnableClusterDisplay();
+            // CommandLineParser.Override(emitterArgs);
+            // emitterClusterSync.ReadParamsFromCommandLine();
+            emitterClusterSync.EnableClusterDisplay(new ClusterParams
+            {
+                ClusterLogicSpecified = true,
+                EmitterSpecified = true,
+                NodeID = k_EmitterId,
+                RepeaterCount = numRepeaters,
+                MulticastAddress = multicastAddress,
+                AdapterName = m_InterfaceName,
+                RXPort = rxPort,
+                TXPort = txPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+            });
             return emitterClusterSync;
         }
 
         private ClusterSync CreateRepeater ()
         {
-            var repeaterArgsString =
-                $"-node {k_RepeaterId} {MulticastAddress}:{TxPort},{RxPort} " +
-                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
-
-            var repeaterArgs = repeaterArgsString.Split(" ").ToList();
-            repeaterArgs.Add("-adapterName");
-            repeaterArgs.Add(m_InterfaceName);
-
             var repeaterClusterSync = new ClusterSync("Repeater");
 
             m_Instances.Add(repeaterClusterSync);
 
-            CommandLineParser.Override(repeaterArgs);
-            repeaterClusterSync.ReadParamsFromCommandLine();
-            repeaterClusterSync.EnableClusterDisplay();
+            repeaterClusterSync.EnableClusterDisplay(new ClusterParams
+            {
+                ClusterLogicSpecified = true,
+                EmitterSpecified = false,
+                NodeID = k_RepeaterId,
+                MulticastAddress = multicastAddress,
+                AdapterName = m_InterfaceName,
+                RXPort = txPort,
+                TXPort = rxPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+            });
             return repeaterClusterSync;
         }
 

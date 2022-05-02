@@ -26,7 +26,7 @@ namespace Unity.ClusterDisplay.Tests
                 "-linesAngle 1.2345 " +
                 "-linesRotationSpeed 1.2345 " +
                 "-adapterName Ethernet " +
-                "-handshakeTimeout 5000 " +
+                "-handshakeTimeout 6000 " +
                 "-communicationTimeout 5000 " +
                 "-adapterName Ethernet ";
 
@@ -61,17 +61,16 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(CommandLineParser.overscan.Defined);
             Assert.That(CommandLineParser.overscan.Value == 128);
 
-            // Assert.That(CommandLineParser.quadroSyncInitDelay.Defined);
-            // Assert.That(CommandLineParser.quadroSyncInitDelay.Value == 66);
-
             Assert.That(CommandLineParser.adapterName.Defined);
             Assert.That(CommandLineParser.adapterName.Value == "Ethernet");
 
             Assert.That(CommandLineParser.handshakeTimeout.Defined);
-            Assert.That(CommandLineParser.handshakeTimeout.Value == 5000);
+            Assert.That(CommandLineParser.handshakeTimeout.Value == 6000);
 
             Assert.That(CommandLineParser.communicationTimeout.Defined);
             Assert.That(CommandLineParser.communicationTimeout.Value == 5000);
+
+            Assert.IsFalse(CommandLineParser.disableQuadroSync.Defined);
         }
 
         // A Test behaves as an ordinary method

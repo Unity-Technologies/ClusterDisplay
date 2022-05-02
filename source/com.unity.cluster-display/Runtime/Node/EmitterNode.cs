@@ -32,17 +32,17 @@ namespace Unity.ClusterDisplay
 
         public IReadOnlyList<RemoteNodeComContext> RemoteNodes => m_RemoteNodes;
 
-        public struct Config
+        public new struct Config
         {
+            public ClusterNode.Config MainConfig;
             public bool headlessEmitter;
             public bool repeatersDelayed;
             public int repeaterCount;
-            public UDPAgent.Config udpAgentConfig;
             public bool enableHardwareSync;
         }
 
         public EmitterNode(Config config)
-            : base(config.udpAgentConfig)
+            : base(config.MainConfig)
         {
             m_CurrentState = config.enableHardwareSync
                 ? HardwareSyncInitState.Create(this)
