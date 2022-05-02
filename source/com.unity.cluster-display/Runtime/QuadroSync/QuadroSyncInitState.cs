@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay
 
                 ClusterDebug.Log("Initializing Quadro Sync.");
                 GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-                ClusterSync.Instance.HasHardwareSync = true;
+                LocalNode.HasHardwareSync = true;
                 m_Initialized = true;
             }
 

@@ -53,18 +53,20 @@ namespace Unity.ClusterDisplay.Tests
             // Bootstrap component creates a ClusterDisplayManager then deletes itself
             m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
             yield return null;
-            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out var manager), Is.True);
+            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out _), Is.True);
             Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayBootstrap>(out _), Is.False);
 
+            Assert.That(ClusterDisplayManager.ClusterSyncInstance, Is.EqualTo(ServiceLocator.Get<ClusterSync>()));
             m_Instances.Add(ClusterDisplayManager.ClusterSyncInstance);
         }
 
         [Test]
         public void TestClusterSyncState()
         {
-            // In theory, these properties should be false when there is no active node
+            ServiceLocator.Provide(new ClusterSync());
             Assert.That(ClusterDisplayState.IsActive, Is.False);
             Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.False);
+            m_Instances.Add(ServiceLocator.Get<ClusterSync>());
         }
 
         [UnityTest]

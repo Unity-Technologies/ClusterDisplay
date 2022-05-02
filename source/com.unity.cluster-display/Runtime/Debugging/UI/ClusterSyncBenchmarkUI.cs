@@ -1,4 +1,5 @@
 ﻿using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,7 +9,7 @@ namespace Unity.ClusterDisplay
     public class ClusterSyncBenchmarkUI : MonoBehaviour
     {
         private int m_Frames;
-        private Text m_DebugText; 
+        private Text m_DebugText;
 
         private Text debugText
         {
@@ -28,16 +29,24 @@ namespace Unity.ClusterDisplay
         void Start()
         {
             m_Frames = 0;
-            debugText.text = ClusterDisplayState.IsActive ? $"Node {ClusterDisplayState.NodeID}" : "Cluster Rendering inactive";
+            if (ServiceLocator.TryGet(out ClusterSync clusterSync))
+            {
+                debugText.text = clusterSync.StateAccessor.IsActive
+                    ? $"Node {clusterSync.StateAccessor.NodeID}"
+                    : "Cluster Rendering inactive";
+            }
+            else
+            {
+                debugText.text = "Cluster Rendering not initialized";
+            }
         }
 
         void Update()
         {
             m_Frames++;
-
-            if (ClusterDisplayState.IsActive)
+            if (ServiceLocator.TryGet(out ClusterSync clusterSync) && clusterSync.StateAccessor.IsActive)
             {
-                debugText.text = ClusterSyncDebug.GetDebugString();
+                debugText.text = clusterSync.GetDebugString();
             }
         }
     }

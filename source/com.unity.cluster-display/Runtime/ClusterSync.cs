@@ -7,11 +7,6 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    public static class ClusterSyncDebug
-    {
-        public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
-    }
-
     /// <summary>
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
@@ -22,17 +17,14 @@ namespace Unity.ClusterDisplay
 #if UNITY_EDITOR
     [InitializeOnLoad]
 #endif
-    internal partial class ClusterSync
+    partial class ClusterSync
     {
-        public static ClusterSync Instance => ClusterDisplayManager.ClusterSyncInstance;
-
         const string k_DefaultName = "DefaultClusterSync";
-        public string InstanceName => m_InstanceName;
-        readonly string m_InstanceName;
+        public string InstanceName { get; }
 
         public ClusterSync (string instanceName = k_DefaultName)
         {
-            m_InstanceName = instanceName;
+            InstanceName = instanceName;
             RegisterDelegates();
 
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
@@ -64,23 +56,6 @@ namespace Unity.ClusterDisplay
         public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
 
         /// <summary>
-        /// Gets or sets whether there is a layer of synchronization performed
-        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
-        /// </summary>
-        /// <remarks>
-        /// When set to <c>false</c>, all nodes signal when they are ready
-        /// to begin a new frame, and the emitter will wait until it receives
-        /// the signal from all nodes before allowing the cluster to proceed.
-        /// Set this to <c>true</c> if your hardware enforces this at a low level
-        /// and it is safe to bypass the wait.
-        /// </remarks>
-        public bool HasHardwareSync
-        {
-            get => LocalNode.HasHardwareSync;
-            set => LocalNode.HasHardwareSync = value;
-        }
-
-        /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
         /// </summary>
         public void ShutdownAllClusterNodes() => LocalNode?.BroadcastShutdownRequest(); // matters not who triggers it
@@ -108,7 +83,7 @@ namespace Unity.ClusterDisplay
         public string GetDebugString()
         {
             var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
-            return $"Cluster Sync Instance: {m_InstanceName},\r\n" +
+            return $"Cluster Sync Instance: {InstanceName},\r\n" +
 				   $"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
                    $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
                    $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms" +
@@ -118,15 +93,11 @@ namespace Unity.ClusterDisplay
                    $"\r\n\tPresent success / failure: {quadroSyncState.PresentedFramesSuccess} / {quadroSyncState.PresentedFramesFailure}";
         }
 
-        private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{m_InstanceName}\"]: {msg}");
+        private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{InstanceName}\"]: {msg}");
 
         private void RegisterDelegates()
         {
             UnRegisterDelegates();
-
-            ClusterDisplayManager.onEnable += EnableClusterDisplay;
-            ClusterDisplayManager.onDisable += DisableClusterDisplay;
-            ClusterDisplayManager.onApplicationQuit += Quit;
 
             // Register Do(X) methods with ClusterSyncLooper network fences.
             ClusterSyncLooper.onInstanceDoPreFrame += PreFrame;
@@ -137,10 +108,6 @@ namespace Unity.ClusterDisplay
 
         private void UnRegisterDelegates()
         {
-            ClusterDisplayManager.onEnable -= EnableClusterDisplay;
-            ClusterDisplayManager.onDisable -= DisableClusterDisplay;
-            ClusterDisplayManager.onApplicationQuit -= Quit;
-
             ClusterSyncLooper.onInstanceDoPreFrame -= PreFrame;
             ClusterSyncLooper.onInstanceDoFrame -= DoFrame;
             ClusterSyncLooper.onInstancePostFrame -= PostFrame;
@@ -179,7 +146,7 @@ namespace Unity.ClusterDisplay
             m_ClusterParams ??= ReadParamsFromCommandLine();
             ClusterParams clusterParams = m_ClusterParams.Value;
 
-            InstanceLog($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
+            InstanceLog($"Enabling {nameof(ClusterSync)}.");
 
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
@@ -218,7 +185,7 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for emitter.");
+            InstanceLog($"Initializing {nameof(ClusterSync)} for emitter.");
             try
             {
                 // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
@@ -248,7 +215,7 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for repeater.");
+            InstanceLog($"Initializing {nameof(ClusterSync)} for repeater.");
 
             try
             {
@@ -311,9 +278,6 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private void Quit() =>
-            ShutdownAllClusterNodes();
-
         public void CleanUp()
         {
             m_ClusterParams = null;
@@ -339,10 +303,10 @@ namespace Unity.ClusterDisplay
             {
 #if ENABLE_INPUT_SYSTEM
                 if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
-                    Quit();
+                    ShutdownAllClusterNodes();
 #elif ENABLE_LEGACY_INPUT_MANAGER
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                    Quit();
+                    ShutdownAllClusterNodes();
 #endif
 
                 if (m_Debugging)

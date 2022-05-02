@@ -11,6 +11,17 @@ namespace Unity.ClusterDisplay
 
         public ulong CurrentFrameID { get; private set; }
 
+        /// <summary>
+        /// Gets or sets whether there is a layer of synchronization performed
+        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
+        /// </summary>
+        /// <remarks>
+        /// When set to <c>false</c>, all nodes signal when they are ready
+        /// to begin a new frame, and the emitter will wait until it receives
+        /// the signal from all nodes before allowing the cluster to proceed.
+        /// Set this to <c>true</c> if your hardware enforces this at a low level
+        /// and it is safe to bypass the wait.
+        /// </remarks>
         public virtual bool HasHardwareSync { get; set; }
 
         protected NodeState m_CurrentState;

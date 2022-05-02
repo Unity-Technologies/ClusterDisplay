@@ -1,10 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
+using System;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -68,13 +65,53 @@ namespace Unity.ClusterDisplay.Tests
             var bv = new BitVector(bits).UnsetBit(index);
             Assert.That(bv[index], Is.False);
         }
-        
+
         [Test]
         public void TestBitVectorMask(
             [Random(0, ulong.MaxValue, 8)] ulong bits,
             [Random(0, ulong.MaxValue, 8)] ulong mask)
         {
             Assert.That(new BitVector(bits).MaskBits(new BitVector(mask)).Bits, Is.EqualTo(bits & mask));
+        }
+
+        interface IFoo
+        {
+            int Value { get; }
+        }
+
+        class Alpha : IFoo
+        {
+            public int Value => 5;
+        }
+
+        class Bravo : IFoo
+        {
+            public int Value => 10;
+        }
+
+        [Test]
+        public void TestServiceLocator()
+        {
+            Assert.Throws<InvalidOperationException>(() => ServiceLocator.Get<IFoo>());
+            Assert.IsFalse(ServiceLocator.TryGet<IFoo>(out _));
+
+            var alpha = new Alpha();
+            ServiceLocator.Provide<IFoo>(alpha);
+
+            Assert.DoesNotThrow(()=> ServiceLocator.Get<IFoo>());
+            Assert.IsTrue(ServiceLocator.TryGet(out IFoo service));
+            Assert.That(service, Is.EqualTo(ServiceLocator.Get<IFoo>()));
+            Assert.That(service, Is.EqualTo(alpha));
+            Assert.That(service.Value, Is.EqualTo(5));
+
+            var bravo = new Bravo();
+            Assert.That(alpha, Is.Not.EqualTo(bravo));
+            ServiceLocator.Provide<IFoo>(bravo);
+
+            Assert.IsTrue(ServiceLocator.TryGet(out service));
+            Assert.That(service, Is.EqualTo(bravo));
+            Assert.That(ServiceLocator.Get<IFoo>(), Is.EqualTo(bravo));
+            Assert.That(service.Value, Is.EqualTo(10));
         }
     }
 }
