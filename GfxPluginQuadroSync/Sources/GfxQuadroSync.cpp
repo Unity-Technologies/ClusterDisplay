@@ -8,6 +8,8 @@
 #include "../Unity/IUnityGraphicsD3D11.h"
 #include "../Unity/IUnityGraphicsD3D12.h"
 
+#include <assert.h>
+
 namespace GfxQuadroSync
 {
     static IUnityInterfaces* s_UnityInterfaces = nullptr;
@@ -18,6 +20,28 @@ namespace GfxQuadroSync
     static std::unique_ptr<IGraphicsDevice> s_GraphicsDevice = nullptr;
     static PluginCSwapGroupClient s_SwapGroupClient;
     static bool s_Initialized = false;
+
+    // Any change made to this enum's constants must be reflected in
+    // Unity.ClusterDisplay.GfxPluginQuadroSyncInitializationState in GfxPluginQuadroSyncState.cs.
+    enum class QuadroSyncInitializationStatus : uint32_t
+    {
+        NotInitialized = 0,
+        Initialized = 1,
+        FailedUnityInterfacesNull = 2,
+        UnsupportedGraphicApi = 3,
+        MissingDevice = 4,
+        MissingSwapChain = 5,
+
+        // The following mirror PluginCSwapGroupClient::InitializeStatus
+        SwapChainOrBarrierGenericFailure = 6,
+        NoSwapGroupDetected = 7,
+        QuerySwapGroupFailed = 8,
+        FailedToJoinSwapGroup = 9,
+        SwapGroupMismatch = 10,
+        FailedToBindSwapBarrier = 11,
+        SwapBarrierIdMismatch = 12,
+    };
+    static std::atomic<QuadroSyncInitializationStatus> s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
 
     // Override the function defining the load of the plugin
     extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
@@ -40,6 +64,7 @@ namespace GfxQuadroSync
         }
         else
         {
+            s_InitializationStatus = QuadroSyncInitializationStatus::FailedUnityInterfacesNull;
             CLUSTER_LOG_ERROR << "UnityPluginLoad, unityInterfaces is null";
         }
     }
@@ -55,6 +80,40 @@ namespace GfxQuadroSync
     extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetLogCallback(Logger::ManagedCallback callback)
     {
         Logger::Instance().SetManagedCallback(callback);
+    }
+
+    /**
+     * Status of the QuadroSync as returned by GetStatus.
+     *
+     * \remark Any change to this struct must be matched in
+     *         Unity.ClusterDisplay.GfxPluginQuadroSyncSystem.GfxPluginQuadroSyncUtilities.QuadroSyncState in
+     *         GfxPluginQuadroSyncSystem.cs.
+     */
+    struct QuadroSyncState
+    {
+        /// Initialization status of the QuadroSync system (not using QuadroSyncInitializationStatus for safer interop
+        /// with managed code)
+        uint32_t initializationState = 0;
+        /// Swap Group ID
+        uint32_t swapGroupId = 0;
+        /// Swap Barrier ID
+        uint32_t swapBarrierId = 0;
+        /// Number of frames successfully presented using QuadroSync's present call
+        uint64_t presentedFramesSuccess = 0;
+        /// Number of frames that failed to be presented using QuadroSync's present call
+        uint64_t presentedFramesFailed = 0;
+    };
+
+    /**
+     * Method to be called by managed code to get some information about the status of the QuadroSync plugin.
+     */
+    extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetState(QuadroSyncState* state)
+    {
+        state->initializationState = (uint32_t)s_InitializationStatus.load(std::memory_order_relaxed);
+        state->swapGroupId = s_SwapGroupClient.GetSwapGroupId();
+        state->swapBarrierId = s_SwapGroupClient.GetSwapBarrierId();
+        state->presentedFramesSuccess = s_SwapGroupClient.GetPresentSuccessCount();
+        state->presentedFramesFailed = s_SwapGroupClient.GetPresentFailureCount();
     }
 
     // Override the query method to use the `PresentFrame` callback
@@ -209,7 +268,17 @@ namespace GfxQuadroSync
             SetSwapChain();
         }
 
-        return (s_GraphicsDevice->GetDevice() != nullptr && s_GraphicsDevice->GetSwapChain() != nullptr);
+        if (s_GraphicsDevice->GetDevice() == nullptr)
+        {
+            s_InitializationStatus = QuadroSyncInitializationStatus::MissingDevice;
+            return false;
+        }
+        if (s_GraphicsDevice->GetSwapChain() == nullptr)
+        {
+            s_InitializationStatus = QuadroSyncInitializationStatus::MissingSwapChain;
+            return false;
+        }
+        return true;
     }
 
     bool InitializeGraphicsDevice()
@@ -243,11 +312,37 @@ namespace GfxQuadroSync
             }
             else
             {
+                s_InitializationStatus = QuadroSyncInitializationStatus::UnsupportedGraphicApi;
                 CLUSTER_LOG_ERROR << "Graphic API incompatible";
                 return false;
             }
         }
         return true;
+    }
+
+    // Small helper function to convert a PluginCSwapGroupClient::InitializeStatus to QuadroSyncInitializationStatus
+    QuadroSyncInitializationStatus ConvertToQuadroSyncInitializationStatus(
+        const PluginCSwapGroupClient::InitializeStatus toConvert)
+    {
+        switch (toConvert)
+        {
+            default:
+                assert(!"Mapping missing PluginCSwapGroupClient::InitializeStatus -> QuadroSyncInitializationStatus");
+            case PluginCSwapGroupClient::InitializeStatus::Failed:
+                return QuadroSyncInitializationStatus::SwapChainOrBarrierGenericFailure;
+            case PluginCSwapGroupClient::InitializeStatus::NoSwapGroupDetected:
+                return QuadroSyncInitializationStatus::NoSwapGroupDetected;
+            case PluginCSwapGroupClient::InitializeStatus::QuerySwapGroupFailed:
+                return QuadroSyncInitializationStatus::QuerySwapGroupFailed;
+            case PluginCSwapGroupClient::InitializeStatus::FailedToJoinSwapGroup:
+                return QuadroSyncInitializationStatus::FailedToJoinSwapGroup;
+            case PluginCSwapGroupClient::InitializeStatus::SwapGroupMismatch:
+                return QuadroSyncInitializationStatus::SwapGroupMismatch;
+            case PluginCSwapGroupClient::InitializeStatus::FailedToBindSwapBarrier:
+                return QuadroSyncInitializationStatus::FailedToBindSwapBarrier;
+            case PluginCSwapGroupClient::InitializeStatus::SwapBarrierIdMismatch:
+                return QuadroSyncInitializationStatus::SwapBarrierIdMismatch;
+        }
     }
 
     // Enable Workstation SwapGroup & potentially join the SwapGroup / Barrier
@@ -263,12 +358,15 @@ namespace GfxQuadroSync
             return;
 
         s_SwapGroupClient.SetupWorkStation();
-        if (s_SwapGroupClient.Initialize(s_GraphicsDevice->GetDevice(), s_GraphicsDevice->GetSwapChain()))
+        auto swapGroupClientInitializeStatus = s_SwapGroupClient.Initialize(s_GraphicsDevice->GetDevice(), s_GraphicsDevice->GetSwapChain());
+        if (swapGroupClientInitializeStatus == PluginCSwapGroupClient::InitializeStatus::Success)
         {
+            s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
             CLUSTER_LOG << "Quadro Sync initialized succeeded";
         }
         else
         {
+            s_InitializationStatus = ConvertToQuadroSyncInitializationStatus(swapGroupClientInitializeStatus);
             CLUSTER_LOG_ERROR << "Quadro Sync initialization failed";
         }
     }
@@ -303,6 +401,8 @@ namespace GfxQuadroSync
             s_GraphicsDevice->GetSwapChain());
 
         s_SwapGroupClient.DisposeWorkStation();
+
+        s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
     }
 
     // Directly join or leave the Swap Group and Barrier

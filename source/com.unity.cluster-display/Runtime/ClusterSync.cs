@@ -109,10 +109,18 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => $"Cluster Sync Instance: {m_InstanceName},\r\n" +
-			$"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
-            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
-            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
+        public string GetDebugString()
+        {
+            var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
+            return $"Cluster Sync Instance: {m_InstanceName},\r\n" +
+				   $"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
+                   $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
+                   $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms" +
+                   $"\r\n\r\n Quadro Sync State:" +
+                   $"\r\n\tInitialization: " + quadroSyncState.InitializationState.ToDescriptiveText() +
+                   $"\r\n\tSwap group / barrier identifier: {quadroSyncState.SwapGroupId} / {quadroSyncState.SwapBarrierId}" +
+                   $"\r\n\tPresent success / failure: {quadroSyncState.PresentedFramesSuccess} / {quadroSyncState.PresentedFramesFailure}";
+        }
 
         private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{m_InstanceName}\"]: {msg}");
 
