@@ -213,8 +213,8 @@ namespace GfxQuadroSync
             }
         }
 
-        m_presentSuccessCount = 0;
-        m_presentFailureCount = 0;
+        m_PresentSuccessCount = 0;
+        m_PresentFailureCount = 0;
     }
 
     NvU32 PluginCSwapGroupClient::QueryFrameCount(IUnknown* const pDevice)
@@ -259,11 +259,11 @@ namespace GfxQuadroSync
 
         if (result == NVAPI_OK)
         {
-            m_presentSuccessCount.fetch_add(1, std::memory_order_relaxed);
+            m_PresentSuccessCount.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
 
-        m_presentFailureCount.fetch_add(1, std::memory_order_relaxed);
+        m_PresentFailureCount.fetch_add(1, std::memory_order_relaxed);
         CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed: " << result;
         return false;
     }

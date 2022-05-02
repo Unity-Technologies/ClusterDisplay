@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using Random = UnityEngine.Random;
 
-namespace Unity.ClusterDisplay.EditorTest
+namespace Unity.ClusterDisplay.Tests
 {
     class QuadroSyncEditorTests
     {

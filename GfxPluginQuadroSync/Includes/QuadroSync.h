@@ -46,8 +46,8 @@ namespace GfxQuadroSync
         NvU32 GetSwapBarrierId() const { return m_BarrierId.load(std::memory_order_relaxed); }
         void EnableSyncCounter(const bool value);
 
-        uint64_t GetPresentSuccessCount() const { return m_presentSuccessCount.load(std::memory_order_relaxed); }
-        uint64_t GetPresentFailureCount() const { return m_presentFailureCount.load(std::memory_order_relaxed); }
+        uint64_t GetPresentSuccessCount() const { return m_PresentSuccessCount.load(std::memory_order_relaxed); }
+        uint64_t GetPresentFailureCount() const { return m_PresentFailureCount.load(std::memory_order_relaxed); }
 
     private:
         // Remarks: Some variables are atomic because they can be accessed from the rendering thread or the game loop
@@ -62,8 +62,8 @@ namespace GfxQuadroSync
         bool m_GSyncMaster = true;
         bool m_GSyncCounter = false;
         bool m_IsActive = false;
-        std::atomic<uint64_t> m_presentSuccessCount = 0;
-        std::atomic<uint64_t> m_presentFailureCount = 0;
+        std::atomic<uint64_t> m_PresentSuccessCount = 0;
+        std::atomic<uint64_t> m_PresentFailureCount = 0;
     };
 
 }
