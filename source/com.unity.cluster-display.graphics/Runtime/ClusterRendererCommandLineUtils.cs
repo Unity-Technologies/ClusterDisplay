@@ -10,10 +10,8 @@ namespace Unity.ClusterDisplay.Graphics
     /// Introduced to avoid a having direct references to command line parameters in the Cluster Renderer,
     /// since it would hamper testability.
     /// </summary>
-    [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ClusterRenderer))]
-
     // TODO Rename component?
     class ClusterRendererCommandLineUtils : MonoBehaviour
     {

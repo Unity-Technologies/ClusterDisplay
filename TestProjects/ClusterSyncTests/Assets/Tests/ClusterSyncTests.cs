@@ -50,6 +50,10 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestBootstrap()
         {
+            // To make this test not freeze, we need to initialize the params so that
+            // cluster logic is disabled
+            CommandLineParser.Override(new List<string>());
+
             // Bootstrap component creates a ClusterDisplayManager then deletes itself
             m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
             yield return null;

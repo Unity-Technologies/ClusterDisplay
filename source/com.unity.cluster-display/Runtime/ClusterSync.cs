@@ -14,9 +14,6 @@ namespace Unity.ClusterDisplay
     ///
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-#if UNITY_EDITOR
-    [InitializeOnLoad]
-#endif
     partial class ClusterSync
     {
         const string k_DefaultName = "DefaultClusterSync";
@@ -195,7 +192,8 @@ namespace Unity.ClusterDisplay
                         headlessEmitter     = clusterParams.HeadlessEmitter,
                         repeatersDelayed    = clusterParams.DelayRepeaters,
                         repeaterCount       = clusterParams.RepeaterCount,
-                        udpAgentConfig      = config
+                        udpAgentConfig      = config,
+                        enableHardwareSync  = clusterParams.EnableHardwareSync
                     });
 
                 m_State.SetIsEmitter(true);
