@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,7 +80,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             var header = new MultiColumnHeader(m_MultiColumnHeaderState);
 
             m_NodeListView = new NodeListView(m_TreeViewState, header);
-            
+
             m_GeneralCancellationTokenSource = new CancellationTokenSource();
 
             CreatePLayerList();
@@ -106,13 +107,14 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         {
             var settings = MissionControlSettings.instance;
             m_Server?.Dispose();
+            m_NodeListView.RemoveAllItems();
             if (string.IsNullOrEmpty(settings.BroadcastProxyAddress))
             {
-                m_Server = new Server();
+                m_Server = new Server(settings.NetworkAdapterName);
             }
             else
             {
-                m_Server = new Server(0,
+                m_Server = new Server(settings.NetworkAdapterName, 0,
                     new IPEndPoint(IPAddress.Parse(settings.BroadcastProxyAddress),
                         Constants.BroadcastProxyPort));
             }
@@ -175,6 +177,21 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         void OnGUI()
         {
             var settings = MissionControlSettings.instance;
+
+            var localAdapters = LocalNetworkAdapter.BuildList(true, settings.NetworkAdapterName);
+            int previousChoiceIndx = LocalNetworkAdapter.IndexOfInList(localAdapters, settings.NetworkAdapterName);
+            System.Diagnostics.Debug.Assert(previousChoiceIndx >= 0);
+            using (var check = new EditorGUI.ChangeCheckScope())
+            {
+                int selectedIndex = EditorGUILayout.Popup(new GUIContent("Adapter name"), previousChoiceIndx,
+                    localAdapters.Select(a => a.DisplayName).ToArray());
+                if (check.changed)
+                {
+                    settings.NetworkAdapterName = localAdapters[selectedIndex].Name;
+                    InitializeServer();
+                }
+            }
+
             EditorGUIUtility.wideMode = true;
             using (var check = new EditorGUI.ChangeCheckScope())
             {

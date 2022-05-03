@@ -22,9 +22,9 @@ namespace Unity.ClusterDisplay.MissionControl
                 NodeInfo = extendedNodeInfo;
                 MutableSettings = settings;
             }
-            
+
             public ExtendedNodeInfo NodeInfo { get; set; }
-            
+
             public MutableNodeSettings MutableSettings;
         }
 
@@ -69,31 +69,31 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 new MultiColumnHeaderState.Column
                 {
-                    width = 50, 
+                    width = 50,
                     minWidth = 50,
                     headerContent = new GUIContent("Use?")
                 },
                 new MultiColumnHeaderState.Column
                 {
-                    width = 50, 
+                    width = 50,
                     minWidth = 50,
                     headerContent = new GUIContent("ID")
                 },
                 new MultiColumnHeaderState.Column
                 {
-                    width = 150, 
+                    width = 150,
                     minWidth = 60,
                     headerContent = new GUIContent("Host name")
                 },
                 new MultiColumnHeaderState.Column
                 {
-                    width = 150, 
+                    width = 150,
                     minWidth = 60,
                     headerContent = new GUIContent("Address")
                 },
                 new MultiColumnHeaderState.Column
                 {
-                    width = 150, 
+                    width = 150,
                     minWidth = 60,
                     headerContent = new GUIContent("Status")
                 }
@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.MissionControl
         protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
         {
             var rows = m_AvailableNodes.Values.Select(item => item as TreeViewItem).ToList();
-            
+
             SetupParentsAndChildrenFromDepths(root, rows);
 
             return rows;
@@ -155,7 +155,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 cachedSettings = new MutableNodeSettings(node.Id);
             }
-            
+
             m_AvailableNodes.Add(node.Id, new NodeViewItem(node, cachedSettings));
             m_Dirty = true;
         }
@@ -173,13 +173,22 @@ namespace Unity.ClusterDisplay.MissionControl
             m_Dirty = true;
         }
 
+        public void RemoveAllItems()
+        {
+            if (m_AvailableNodes.Count > 0)
+            {
+                m_AvailableNodes.Clear();
+                m_Dirty = true;
+            }
+        }
+
         protected override void RowGUI(RowGUIArgs args)
         {
             for (int i = 0; i < args.GetNumVisibleColumns(); i++)
             {
                 var item = args.item as NodeViewItem;
                 if (item == null) continue;
-                
+
                 var rect = args.GetCellRect(i);
                 var column = (Column)args.GetColumn(i);
                 switch (column)

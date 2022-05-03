@@ -74,7 +74,7 @@ namespace Unity.ClusterDisplay.MissionControl
         static readonly string k_MachineName = Environment.MachineName;
 
         UdpClient m_UdpClient;
-        IPEndPoint m_LocalEndPoint;
+        string m_LocalAdapterName = "";
         Dictionary<int, ExtendedNodeInfo> m_ActiveNodes = new();
         IPEndPoint m_DiscoveryEndPoint;
 
@@ -84,13 +84,15 @@ namespace Unity.ClusterDisplay.MissionControl
 
         bool m_Disposed;
 
-        public Server(int listenPort = 0)
+        public Server(string networkAdapterName = "", int listenPort = 0)
         {
+            m_LocalAdapterName = networkAdapterName;
             m_UdpClient = new UdpClient(listenPort);
             m_DiscoveryEndPoint = new IPEndPoint(IPAddress.Broadcast, Constants.DiscoveryPort);
         }
 
-        public Server(int listenPort, IPEndPoint discoveryEndPoint) : this(listenPort)
+        public Server(string networkAdapterName, int listenPort, IPEndPoint discoveryEndPoint)
+            : this(networkAdapterName, listenPort)
         {
             m_DiscoveryEndPoint = discoveryEndPoint;
         }
@@ -101,10 +103,6 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 throw new ObjectDisposedException("The Server has been disposed");
             }
-            
-            var localPort = ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port;
-            var localAddress = NetworkUtils.GetLocalIPAddress();
-            m_LocalEndPoint = new IPEndPoint(localAddress, localPort);
 
             m_CancellationTokenSource?.Dispose();
             m_CancellationTokenSource = new CancellationTokenSource();
@@ -118,7 +116,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public void Dispose()
         {
             if (m_Disposed) return;
-            
+
             if (m_CancellationTokenSource != null)
             {
                 m_CancellationTokenSource.Cancel();
@@ -128,6 +126,13 @@ namespace Unity.ClusterDisplay.MissionControl
             m_UdpClient.Dispose();
 
             m_Disposed = true;
+        }
+
+        IPEndPoint FindLocalEndPointForRemote(IPEndPoint remoteEndPoint)
+        {
+            var localAdapter = LocalNetworkAdapter.CreateForName(m_LocalAdapterName);
+            var localAddress = localAdapter.FindLocalAddressFor(remoteEndPoint);
+            return new IPEndPoint(localAddress, ((IPEndPoint)m_UdpClient.Client.LocalEndPoint).Port);
         }
 
         async Task PruneInactiveNodes(CancellationToken token)
@@ -148,7 +153,7 @@ namespace Unity.ClusterDisplay.MissionControl
         async Task DoDiscovery(CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new ServerInfo());
+            var size = dgram.WriteMessage(k_MachineName, FindLocalEndPointForRemote(m_DiscoveryEndPoint), new ServerInfo());
 
             while (!token.IsCancellationRequested)
             {
@@ -232,14 +237,14 @@ namespace Unity.ClusterDisplay.MissionControl
         async Task<NodeStatus> SyncPlayerFiles(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            var size = dgram.WriteMessage(k_MachineName,
-                m_LocalEndPoint,
-                new DirectorySyncInfo(launchInfo.PlayerDir));
             var remoteEndPoint = new IPEndPoint(nodeInfo.Address, nodeInfo.Port);
-            
+            var size = dgram.WriteMessage(k_MachineName,
+                FindLocalEndPointForRemote(remoteEndPoint),
+                new DirectorySyncInfo(launchInfo.PlayerDir));
+
             // Instruct node to perform sync
             await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
-            
+
             // Wait for sync operation to start before continuing
             if (await WaitForStatusChange(nodeInfo.Id, token) != NodeStatus.SyncFiles)
             {
@@ -269,11 +274,11 @@ namespace Unity.ClusterDisplay.MissionControl
         public async Task LaunchPlayer(ExtendedNodeInfo nodeInfo, LaunchInfo launchInfo, CancellationToken token)
         {
             var dgram = new byte[Constants.BufferSize];
-            var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, launchInfo);
             var remoteEndPoint = new IPEndPoint(nodeInfo.Address, nodeInfo.Port);
+            var size = dgram.WriteMessage(k_MachineName, FindLocalEndPointForRemote(remoteEndPoint), launchInfo);
             await m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
         }
-        
+
         public async Task<bool> SyncAndLaunch(IEnumerable<(ExtendedNodeInfo, LaunchInfo)> launchData, CancellationToken token)
         {
 
@@ -300,8 +305,8 @@ namespace Unity.ClusterDisplay.MissionControl
             // The reason for that is the Nodes collection could change from under us while we're awaiting.
             var tasks = Nodes.Select(node =>
             {
-                var size = dgram.WriteMessage(k_MachineName, m_LocalEndPoint, new KillInfo());
                 var remoteEndPoint = new IPEndPoint(node.Address, node.Port);
+                var size = dgram.WriteMessage(k_MachineName, FindLocalEndPointForRemote(remoteEndPoint), new KillInfo());
                 return m_UdpClient.SendAsync(dgram, size, remoteEndPoint);
             }).ToList();
 
