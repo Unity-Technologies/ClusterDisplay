@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.ClusterDisplay.Utils;
 using UnityEditor;
 using UnityEngine;
 
@@ -126,11 +127,18 @@ namespace Unity.ClusterDisplay.Graphics
 
         private int GetTileIndex()
         {
-            if (m_IsDebug || !ClusterDisplayState.IsActive)
-                return m_DebugSettings.TileIndexOverride;
-            if (CommandLineParser.replaceHeadlessEmitter.Value && ClusterDisplayState.IsRepeater && ClusterDisplayState.EmitterIsHeadless)
-                return ClusterDisplayState.NodeID - 1;
-            return ClusterDisplayState.NodeID;
+            // TODO: Cluster settings do not change, so we should only need to initialize the tile index once.
+            if (!m_IsDebug && ServiceLocator.TryGet(out ClusterSync clusterSync) &&
+                clusterSync.StateAccessor is {IsActive: true} clusterState)
+            {
+                return CommandLineParser.replaceHeadlessEmitter.Value &&
+                    clusterState.IsRepeater &&
+                    clusterState.EmitterIsHeadless
+                    ? clusterState.NodeID - 1
+                    : clusterState.NodeID;
+            }
+
+            return m_DebugSettings.TileIndexOverride;
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Unity.ClusterDisplay.Utils
 {
@@ -8,7 +9,7 @@ namespace Unity.ClusterDisplay.Utils
     /// <remarks>
     /// Allows you to register an object as a globally-accessible service provider.
     /// Avoids some of the issues with static and Singleton classes by giving you more fine-grained control.
-    /// Tip: use an interface as the type argument to maximally decouple the service provider
+    /// Tip: use an interface as the type argument to maximally decouple the service implementation
     /// from the service consumers.
     /// </remarks>
     static class ServiceLocator
@@ -23,7 +24,7 @@ namespace Unity.ClusterDisplay.Utils
         /// the <see cref="Provide{T}"/> method).
         /// </exception>
         public static T Get<T>() where T : class => ServiceProvider<T>.Service ??
-            throw new InvalidOperationException($"A service of type {nameof(T)} has not been provided");
+            throw new InvalidOperationException($"A service of type {typeof(T)} has not been provided");
 
         /// <summary>
         /// Tries to get the service provider for type <typeparamref name="T"/>.
@@ -31,18 +32,15 @@ namespace Unity.ClusterDisplay.Utils
         /// <param name="service"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static bool TryGet<T>(out T service) where T : class
-        {
-            service = ServiceProvider<T>.Service;
-            return service != null;
-        }
+        public static bool TryGet<T>([NotNullWhen(true)] out T service) where T : class =>
+            (service = ServiceProvider<T>.Service) != null;
 
         /// <summary>
         /// Specify the service provider for type <typeparamref name="T"/>.
         /// </summary>
         /// <param name="provider">Object providing the service.</param>
         /// <typeparam name="T">The service type.</typeparam>
-        public static void Provide<T>(T provider) where T : class => ServiceProvider<T>.Service = provider;
+        public static void Provide<T>([NotNull] T provider) where T : class => ServiceProvider<T>.Service = provider;
 
         static class ServiceProvider<T> where T : class
         {

@@ -8,6 +8,10 @@ namespace Unity.ClusterDisplay
     /// Convenience class for accessing <see cref="ClusterSync"/> properties. Values are obtained
     /// from the currently active <see cref="ClusterSync"/> from the <see cref="ServiceLocator"/>.
     /// </summary>
+    /// <remarks>
+    /// Properties will throw exceptions if there is no instance registered with <see cref="ServiceLocator"/>.
+    /// Do not use if you are unsure. Use <see cref="ServiceLocator.TryGet{T}"/> instead.
+    /// </remarks>
     public static class ClusterDisplayState
     {
         public class IsEmitterMarker : Attribute {}
