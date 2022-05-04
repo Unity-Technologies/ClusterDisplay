@@ -12,21 +12,19 @@ namespace Unity.ClusterDisplay.MissionControl
     /// Class used to list and select a network adapter on the local computer that can be used for communication with
     /// nodes.
     /// </summary>
-    public class LocalNetworkAdapter
+    class LocalNetworkAdapter
     {
-        string m_name;
-        string m_displayName;
-        List<UnicastIPAddressInformation> m_ipAddresses;
+        List<UnicastIPAddressInformation> m_IpAddresses;
 
         /// <summary>
         /// Name of the LocalNetworkAdapter matching OS adapter name
         /// </summary>
-        public string Name => m_name;
+        public string Name { get; }
 
         /// <summary>
         /// Name of the LocalNetworkAdapter used to display this adapter in list of choices, messages, ...
         /// </summary>
-        public string DisplayName => m_displayName;
+        public string DisplayName { get; }
 
         /// <summary>
         /// Find the preferred local address to use to reach given remote address.
@@ -37,14 +35,14 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             // Search among the addresses associated to this local network adapter for one of the same family as the
             // remote address we are trying to reach.
-            if (m_ipAddresses != null && m_ipAddresses.Any())
+            if (m_IpAddresses != null && m_IpAddresses.Any())
             {
-                var foundAddress = m_ipAddresses.First(
+                var foundAddress = m_IpAddresses.FirstOrDefault(
                     a => a.Address.AddressFamily == remoteEndPoint.Address.AddressFamily);
 
                 // If no address of the same family can be found, let's use the first one in the list and hope for some
                 // network magic to translate them from one family to the other.
-                foundAddress ??= m_ipAddresses.First();
+                foundAddress ??= m_IpAddresses.First();
 
                 return foundAddress.Address;
             }
@@ -178,9 +176,9 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <param name="addresses">List of ip addresses of the network adapter.</param>
         LocalNetworkAdapter(NetworkInterface networkInterface, List<UnicastIPAddressInformation> addresses)
         {
-            m_name = networkInterface.Name;
-
             System.Diagnostics.Debug.Assert(addresses.Any());
+
+            Name = networkInterface.Name;
 
             var displayNameBuilder = new StringBuilder();
             displayNameBuilder.Append(networkInterface.Name);
@@ -192,9 +190,9 @@ namespace Unity.ClusterDisplay.MissionControl
                 displayNameBuilder.Append(address.Address);
             }
             displayNameBuilder.Append(')');
-            m_displayName = displayNameBuilder.ToString();
+            DisplayName = displayNameBuilder.ToString();
 
-            m_ipAddresses = addresses;
+            m_IpAddresses = addresses;
         }
 
         /// <summary>
@@ -205,8 +203,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <param name="displayName"><see cref="DisplayName"/></param>
         LocalNetworkAdapter(string name, string displayName)
         {
-            m_name = name;
-            m_displayName = displayName;
+            Name = name;
+            DisplayName = displayName;
         }
 
         /// <summary>
@@ -220,8 +218,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var filtered = new List<UnicastIPAddressInformation>();
             foreach (var currentAddress in collection)
             {
-                if (currentAddress.Address.AddressFamily == AddressFamily.InterNetwork ||
-                    currentAddress.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                if (currentAddress.Address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
                 {
                     filtered.Add(currentAddress);
                 }

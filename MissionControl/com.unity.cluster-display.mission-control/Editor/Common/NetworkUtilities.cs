@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -12,19 +11,15 @@ namespace Unity.ClusterDisplay.MissionControl
     /// <summary>
     /// A class containing methods for common networking related operations.
     /// </summary>
-    public static class NetworkUtilities
+    static class NetworkUtilities
     {
-        static readonly ConcurrentDictionary<IPAddress, uint> s_AddressBits = new ConcurrentDictionary<IPAddress, uint>();
-
         /// <summary>
         /// Get the online IPv4 addresses from all network interfaces in the system.
         /// </summary>
         /// <param name="includeLoopback">Include any addresses on the loopback interface.</param>
         /// <returns>A new array containing the available IP addresses.</returns>
-        public static IPAddress[] GetIPAddresses(bool includeLoopback)
+        public static IEnumerable<IPAddress> GetIPAddresses(bool includeLoopback)
         {
-            var addresses = new List<IPAddress>();
-
             foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
             {
                 if (!includeLoopback && networkInterface.NetworkInterfaceType == NetworkInterfaceType.Loopback)
@@ -49,12 +44,10 @@ namespace Unity.ClusterDisplay.MissionControl
 
                     if (address.AddressFamily == AddressFamily.InterNetwork)
                     {
-                        addresses.Add(address);
+                        yield return address;
                     }
                 }
             }
-
-            return addresses.ToArray();
         }
 
         /// <summary>
@@ -163,22 +156,14 @@ namespace Unity.ClusterDisplay.MissionControl
             if (address.AddressFamily != AddressFamily.InterNetwork)
                 throw new ArgumentException($"{address.AddressFamily} addresses are not supported!", nameof(address));
 
-            if (s_AddressBits.TryGetValue(address, out var bits))
-                return bits;
-
             var bytes = address.GetAddressBytes();
 
-            // the address is given in big-endian, so we need to convert back to the platform endianness
-            if (BitConverter.IsLittleEndian)
-            {
-                bits = unchecked((uint)((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]));
-            }
-            else
-            {
-                bits = unchecked((uint)((bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0]));
-            }
+            System.Diagnostics.Debug.Assert(bytes.Length == 4); // Since address.AddressFamily == AddressFamily.InterNetwork
+            uint bits = BitConverter.ToUInt32(bytes);
 
-            s_AddressBits.TryAdd(address, bits);
+            // the address is given in big-endian (network order), so need to convert back to the platform endianness
+            bits = (uint)IPAddress.NetworkToHostOrder((int)bits);
+
             return bits;
         }
 

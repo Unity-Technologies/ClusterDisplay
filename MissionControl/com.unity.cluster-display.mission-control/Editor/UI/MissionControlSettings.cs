@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         bool m_DeleteRegistryKey;
 
         [SerializeField]
-        private string m_NetworkAdapterName;
+        string m_NetworkAdapterName;
 
         [SerializeField]
         string m_BroadcastProxyAddress;

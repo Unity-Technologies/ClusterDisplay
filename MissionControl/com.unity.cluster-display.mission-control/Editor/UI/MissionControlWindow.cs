@@ -180,7 +180,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
 
             var localAdapters = LocalNetworkAdapter.BuildList(true, settings.NetworkAdapterName);
             int previousChoiceIndx = LocalNetworkAdapter.IndexOfInList(localAdapters, settings.NetworkAdapterName);
-            System.Diagnostics.Debug.Assert(previousChoiceIndx >= 0);
+            Debug.Assert(previousChoiceIndx >= 0);
             using (var check = new EditorGUI.ChangeCheckScope())
             {
                 int selectedIndex = EditorGUILayout.Popup(new GUIContent("Adapter name"), previousChoiceIndx,
