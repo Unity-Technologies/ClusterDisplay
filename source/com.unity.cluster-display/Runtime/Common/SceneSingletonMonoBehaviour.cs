@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay
             }
 
             GameObject go = new GameObject("SceneObjectRegistry");
-            SceneManager.SetActiveScene(scene);
+            // SceneManager.SetActiveScene(scene);
             go.hideFlags = HideFlags.DontSave | HideFlags.NotEditable;
 
             instance = go.AddComponent<SceneInstanceType>();

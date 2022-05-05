@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -42,11 +42,7 @@ namespace Unity.ClusterDisplay.RPC
             #endif
         }
 
-        /// <summary>
-        /// Register an instance that contains an RPC so it can emit and receive cluster display events.
-        /// </summary>
-        public bool TryRegister<InstanceType>(InstanceType sceneObject)
-            where InstanceType : Component
+        public bool TryRegister (Component sceneObject, System.Type type)
         {
             if (sceneObject == null)
             {
@@ -54,7 +50,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
             
-            if (!RPCRegistry.TryGetRPCsForType(typeof(InstanceType), out var rpcs, logError: false))
+            if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs, logError: false))
                 return false;
 
             for (int ri = 0; ri < rpcs.Length; ri++)
@@ -65,7 +61,16 @@ namespace Unity.ClusterDisplay.RPC
 
             return true;
         }
+
+        /// <summary>
+        /// Register an instance that contains an RPC so it can emit and receive cluster display events.
+        /// </summary>
+        public bool TryRegister<InstanceType>(InstanceType sceneObject)
+            where InstanceType : Component => TryRegister(sceneObject, typeof(InstanceType));
         
+        /// <summary>
+        /// Register an instance that contains an RPC so it can emit and receive cluster display events.
+        /// </summary>
         public bool TryUnregister<InstanceType> (InstanceType sceneObject)
             where InstanceType : Component
         {
