@@ -8,11 +8,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
+public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
 {
-    // Contains the properties that we want to apply to the cluster render
-    Camera m_ReferenceCamera;
-
     [OneTimeSetUp]
     public void LoadScene()
     {
@@ -34,57 +31,16 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         }
     }
 
-    [SetUp]
-    public void SetUp()
-    {
-        InitializeTest();
-        m_ReferenceCamera = GameObject.Find("ReferenceCamera").GetComponent<Camera>();
-
-        Assert.NotNull(m_ReferenceCamera);
-        m_ReferenceCamera.gameObject.SetActive(false);
-
-        Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
-        Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
-
-        var width = m_ImageComparisonSettings.TargetWidth;
-        var height = m_ImageComparisonSettings.TargetHeight;
-
-        GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
-        GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
-
-        m_VanillaCaptureTex2D = new Texture2D(width, height);
-        m_ClusterCaptureTex2D = new Texture2D(width, height);
-    }
-
-    void AssertClusterAndVanillaAreSimilar(Action exceptionHandler)
-    {
-        GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
-        GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-
-        if (exceptionHandler == null)
-        {
-            ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
-        }
-        else
-        {
-            try
-            {
-                ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
-            }
-            catch (Exception)
-            {
-                exceptionHandler.Invoke();
-                throw;
-            }
-        }
-    }
-
     [UnityTest]
     public IEnumerator CompareVanillaAndOverrideProjection([ValueSource("VolumeProfileNames")] string profileName)
     {
+        InitializeTest();
+
         var exceptionHandler = profileName == "FilmGrain" ? () => Debug.LogError("Film grain test requires the LWRP_DEBUG_STATIC_POSTFX scripting symbol to be defined in the Player Settings.") : (Action)null;
 
         yield return GraphicsTestUtil.PreWarm();
+
+        PostWarmupInit();
 
         // Set up the projection with the override properties
         var cameraTransform = m_ReferenceCamera.transform;
@@ -105,7 +61,6 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
 
         // Then we activate Cluster Display.
-        m_ReferenceCamera.gameObject.SetActive(false);
         m_ClusterRenderer.gameObject.SetActive(true);
         m_Camera.gameObject.SetActive(true);
 
@@ -118,12 +73,17 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         // make the cluster camera render as if it has the same properties
         // as the override camera
         AssertClusterAndVanillaAreSimilar(exceptionHandler);
+        DisposeTest();
     }
 
     [UnityTest]
     public IEnumerator CompareVanillaAndOverrideProjectionWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")] string profileName)
     {
+        InitializeTest();
+
         yield return GraphicsTestUtil.PreWarm();
+
+        PostWarmupInit();
 
         // Set up the projection with the override properties
         var cameraTransform = m_ReferenceCamera.transform;
@@ -146,7 +106,6 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
 
         // Then we activate Cluster Display.
-        m_ReferenceCamera.gameObject.SetActive(false);
         m_ClusterRenderer.gameObject.SetActive(true);
         m_Camera.gameObject.SetActive(true);
 
@@ -159,12 +118,13 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
         // make the cluster camera render as if it has the same properties
         // as the override camera
         AssertClusterAndVanillaAreSimilar(null);
+
+        DisposeTest();
     }
 
     [TearDown]
     public void TearDown()
     {
-        m_ReferenceCamera.gameObject.SetActive(true);
         DisposeTest();
     }
 }
