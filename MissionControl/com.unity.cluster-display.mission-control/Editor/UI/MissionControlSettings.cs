@@ -62,13 +62,16 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         bool m_DeleteRegistryKey;
 
         [SerializeField]
+        string m_NetworkAdapterName;
+
+        [SerializeField]
         string m_BroadcastProxyAddress;
 
         [SerializeField]
         List<MutableNodeSettings> m_NodeSettings = new();
 
         [SerializeField]
-        bool m_UseDeprecatedArgs = true;
+        bool m_UseDeprecatedArgs = false;
 
         [SerializeField]
         string m_ExtraArgs;
@@ -95,6 +98,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         {
             get => m_DeleteRegistryKey;
             set => m_DeleteRegistryKey = value;
+        }
+
+        public string NetworkAdapterName
+        {
+            get => m_NetworkAdapterName;
+            set => m_NetworkAdapterName = value;
         }
 
         public string BroadcastProxyAddress
