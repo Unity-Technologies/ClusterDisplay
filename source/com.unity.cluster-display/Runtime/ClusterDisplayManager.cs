@@ -1,4 +1,5 @@
 using System.Collections;
+using JetBrains.Annotations;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -50,19 +51,20 @@ namespace Unity.ClusterDisplay
 
         static ClusterSync GetOrCreateClusterSyncInstance()
         {
-            if (!ServiceLocator.TryGet(out ClusterSync instance))
+            if (ClusterSyncInstance is not {} instance)
             {
                 // Creating ClusterSync instance on demand.
                 ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
                 instance = new ClusterSync();
-                ServiceLocator.Provide(instance);
+                ServiceLocator.Provide<IClusterSyncState>(instance);
             }
 
+            Debug.Assert(instance != null);
             return instance;
         }
 
         internal static ClusterSync ClusterSyncInstance =>
-            ServiceLocator.TryGet(out ClusterSync instance) ? instance : null;
+            ServiceLocator.TryGet(out IClusterSyncState instance) ? instance as ClusterSync : null;
 
         public static ClusterDisplayBehaviourDelegate preInitialize;
         public static ClusterDisplayBehaviourDelegate awake;

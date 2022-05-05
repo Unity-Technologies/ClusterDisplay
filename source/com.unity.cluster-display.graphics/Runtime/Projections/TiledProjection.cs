@@ -128,14 +128,14 @@ namespace Unity.ClusterDisplay.Graphics
         private int GetTileIndex()
         {
             // TODO: Cluster settings do not change, so we should only need to initialize the tile index once.
-            if (!m_IsDebug && ServiceLocator.TryGet(out ClusterSync clusterSync) &&
-                clusterSync.StateAccessor is {IsActive: true} clusterState)
+            if (!m_IsDebug && ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                clusterSync.IsClusterLogicEnabled)
             {
                 return CommandLineParser.replaceHeadlessEmitter.Value &&
-                    clusterState.IsRepeater &&
-                    clusterState.EmitterIsHeadless
-                    ? clusterState.NodeID - 1
-                    : clusterState.NodeID;
+                    clusterSync.IsRepeater &&
+                    clusterSync.EmitterIsHeadless
+                    ? clusterSync.NodeID - 1
+                    : clusterSync.NodeID;
             }
 
             return m_DebugSettings.TileIndexOverride;

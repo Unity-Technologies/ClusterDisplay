@@ -71,9 +71,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             // TODO: nodeID does not change, so we should only need to initialize it once.
             var nodeIndex =
-                !m_IsDebug && ServiceLocator.TryGet<ClusterSync>(out var clusterSync) &&
-                clusterSync.StateAccessor is {IsActive: true} clusterState
-                    ? clusterState.NodeID
+                !m_IsDebug && ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync)
+
+                    ? clusterSync.NodeID
                     : m_NodeIndexOverride;
 
             if (nodeIndex >= m_ProjectionSurfaces.Count)

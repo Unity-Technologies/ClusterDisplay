@@ -29,10 +29,10 @@ namespace Unity.ClusterDisplay
         void Start()
         {
             m_Frames = 0;
-            if (ServiceLocator.TryGet(out ClusterSync clusterSync))
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync))
             {
-                debugText.text = clusterSync.StateAccessor.IsActive
-                    ? $"Node {clusterSync.StateAccessor.NodeID}"
+                debugText.text = clusterSync.IsClusterLogicEnabled
+                    ? $"Node {clusterSync.NodeID}"
                     : "Cluster Rendering inactive";
             }
             else
@@ -44,9 +44,9 @@ namespace Unity.ClusterDisplay
         void Update()
         {
             m_Frames++;
-            if (ServiceLocator.TryGet(out ClusterSync clusterSync) && clusterSync.StateAccessor.IsActive)
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) && clusterSync.IsClusterLogicEnabled)
             {
-                debugText.text = clusterSync.GetDebugString();
+                debugText.text = clusterSync.GetDiagnostics();
             }
         }
     }

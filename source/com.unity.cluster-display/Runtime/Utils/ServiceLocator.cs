@@ -38,9 +38,9 @@ namespace Unity.ClusterDisplay.Utils
         /// <summary>
         /// Specify the service provider for type <typeparamref name="T"/>.
         /// </summary>
-        /// <param name="provider">Object providing the service.</param>
+        /// <param name="provider">Object providing the service. Can be <see langword="null"/> to clear the provider.</param>
         /// <typeparam name="T">The service type.</typeparam>
-        public static void Provide<T>([NotNull] T provider) where T : class => ServiceProvider<T>.Service = provider;
+        public static void Provide<T>(T provider) where T : class => ServiceProvider<T>.Service = provider;
 
         static class ServiceProvider<T> where T : class
         {

@@ -12,19 +12,20 @@ namespace ClusterDisplay.Utils
     {
         private void Update()
         {
-            if (!ServiceLocator.TryGet(out ClusterSync clusterSync))
+            if (!ServiceLocator.TryGet(out IClusterSyncState clusterSync) ||
+                clusterSync is not ClusterSync instance)
             {
                 return;
             }
 
-            if (clusterSync.StateAccessor.IsActive)
+            if (instance.IsClusterLogicEnabled)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
                 {
-                    clusterSync.ShutdownAllClusterNodes();
+                    instance.ShutdownAllClusterNodes();
                 }
             }
-            else if (clusterSync.StateAccessor.IsTerminated)
+            else if (clusterSync.IsTerminated)
                 Application.Quit(0);
         }
     }
