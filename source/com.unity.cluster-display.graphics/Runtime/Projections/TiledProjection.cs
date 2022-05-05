@@ -253,7 +253,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        static void RenderStitcher(
+        void RenderStitcher(
             IReadOnlyList<RenderTexture> targets,
             Camera camera,
             ref TileProjectionContext tileProjectionContext,
@@ -277,11 +277,11 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection)));
+                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection), GetOverridingBlitMaterial(), GetOverridingBlitPropertyBlock(tileIndex)));
             }
         }
 
-        static void RenderTile(
+        void RenderTile(
             RenderTexture target,
             Camera camera,
             ref TileProjectionContext tileProjectionContext,
@@ -301,7 +301,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cameraScope.Render(target, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
 
-            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias));
+            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias, GetOverridingBlitMaterial(), GetOverridingBlitPropertyBlock(tileProjectionContext.CurrentTileIndex)));
         }
     }
 }

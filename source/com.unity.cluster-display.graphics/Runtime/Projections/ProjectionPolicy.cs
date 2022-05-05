@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -13,6 +14,45 @@ namespace Unity.ClusterDisplay.Graphics
     {
         [SerializeField]
         protected bool m_IsDebug;
+
+        private Material m_OverridingBlitMaterial;
+        private Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks = new Dictionary<int, MaterialPropertyBlock>();
+        private MaterialPropertyBlock m_OverridingBlitPropertyBlock;
+
+        protected Material GetOverridingBlitMaterial() => m_OverridingBlitMaterial;
+        protected MaterialPropertyBlock GetOverridingBlitPropertyBlock() => m_OverridingBlitPropertyBlock;
+
+        protected MaterialPropertyBlock GetOverridingBlitPropertyBlock(int index)
+        {
+            if (m_OverridingBlitPropertyBlocks == null)
+            {
+                return null;
+            }
+
+            if (!m_OverridingBlitPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
+            {
+                throw new System.Exception($"There is no: {nameof(MaterialPropertyBlock)} for index: {index}");
+            }
+
+            if (materialPropertyBlock == null)
+            {
+                throw new System.Exception($"NULL: {nameof(MaterialPropertyBlock)} for index: {index}");
+            }
+
+            return materialPropertyBlock;
+        }
+
+        public void SetOverridingBlitMaterial(Material material, MaterialPropertyBlock materialPropertyBlock = null)
+        {
+            m_OverridingBlitMaterial = material;
+            m_OverridingBlitPropertyBlock = materialPropertyBlock;
+        }
+
+        public void SetOverridingBlitMaterial(Material material, Dictionary<int, MaterialPropertyBlock> materialPropertyBlocks = null)
+        {
+            m_OverridingBlitMaterial = material;
+            m_OverridingBlitPropertyBlocks = materialPropertyBlocks;
+        }
         
         /// <summary>
         /// Called just before the frame is rendered.
