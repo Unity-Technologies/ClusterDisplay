@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.ClusterDisplay.Graphics;
 using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -32,99 +31,40 @@ public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
     }
 
     [UnityTest]
-    public IEnumerator CompareVanillaAndOverrideProjection([ValueSource("VolumeProfileNames")] string profileName)
+    public IEnumerator CompareReferenceAndCameraOverride([ValueSource("VolumeProfileNames")] string profileName)
     {
-        InitializeTest();
-
-        var exceptionHandler = profileName == "FilmGrain" ? () => Debug.LogError("Film grain test requires the LWRP_DEBUG_STATIC_POSTFX scripting symbol to be defined in the Player Settings.") : (Action)null;
-
-        yield return GraphicsTestUtil.PreWarm();
-
-        PostWarmupInit();
-
-        // Set up the projection with the override properties
-        var cameraTransform = m_ReferenceCamera.transform;
-        var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
-        Assert.That(projection, Is.Not.Null);
-        projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
-        projection.Position = cameraTransform.position;
-        projection.Rotation = cameraTransform.rotation;
-        projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
-        m_Volume.profile = LoadVolumeProfile(profileName);
-
-        // First we render "vanilla". Use the Reference Camera
-        // to render.
-        m_Camera.gameObject.SetActive(false);
-        m_ClusterRenderer.gameObject.SetActive(false);
-        m_ReferenceCamera.gameObject.SetActive(true);
-
-        yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
-
-        // Then we activate Cluster Display.
-        m_ClusterRenderer.gameObject.SetActive(true);
-        m_Camera.gameObject.SetActive(true);
-
-        Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
-
-        yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCapture);
-
-        // Even though the cluster camera and the reference camera have
-        // different properties, the OverrideProjection should
-        // make the cluster camera render as if it has the same properties
-        // as the override camera
-        AssertClusterAndVanillaAreSimilar(exceptionHandler);
-        DisposeTest();
+        yield return CompareReferenceAndCluster(profileName, () =>
+            {
+                // Set up the projection with the override properties
+                var cameraTransform = m_ReferenceCamera.transform;
+                var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
+                Assert.That(projection, Is.Not.Null);
+                projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
+                projection.Position = cameraTransform.position;
+                projection.Rotation = cameraTransform.rotation;
+                projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
+            },
+            profileName == "FilmGrain"
+                ? () => Debug.LogError(
+                    "Film grain test requires the LWRP_DEBUG_STATIC_POSTFX scripting symbol to be defined in the Player Settings.")
+                : null);
     }
 
     [UnityTest]
-    public IEnumerator CompareVanillaAndOverrideProjectionWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")] string profileName)
+    public IEnumerator CompareReferenceAndCameraOverrideWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")] string profileName)
     {
-        InitializeTest();
+        yield return CompareReferenceAndCluster(profileName, () =>
+        {
+            m_ClusterRenderer.Settings.OverScanInPixels = 64;
 
-        yield return GraphicsTestUtil.PreWarm();
-
-        PostWarmupInit();
-
-        // Set up the projection with the override properties
-        var cameraTransform = m_ReferenceCamera.transform;
-        var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
-        Assert.That(projection, Is.Not.Null);
-        projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
-        projection.Position = cameraTransform.position;
-        projection.Rotation = cameraTransform.rotation;
-        projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
-        m_Volume.profile = LoadVolumeProfile(profileName);
-
-        m_ClusterRenderer.Settings.OverScanInPixels = 64;
-
-        // First we render "vanilla". Use the Reference Camera
-        // to render.
-        m_Camera.gameObject.SetActive(false);
-        m_ClusterRenderer.gameObject.SetActive(false);
-        m_ReferenceCamera.gameObject.SetActive(true);
-
-        yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
-
-        // Then we activate Cluster Display.
-        m_ClusterRenderer.gameObject.SetActive(true);
-        m_Camera.gameObject.SetActive(true);
-
-        Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
-
-        yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCapture);
-
-        // Even though the cluster camera and the reference camera have
-        // different properties, the OverrideProjection should
-        // make the cluster camera render as if it has the same properties
-        // as the override camera
-        AssertClusterAndVanillaAreSimilar(null);
-
-        DisposeTest();
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        DisposeTest();
+            // Set up the projection with the override properties
+            var cameraTransform = m_ReferenceCamera.transform;
+            var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
+            Assert.That(projection, Is.Not.Null);
+            projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
+            projection.Position = cameraTransform.position;
+            projection.Rotation = cameraTransform.rotation;
+            projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
+        });
     }
 }

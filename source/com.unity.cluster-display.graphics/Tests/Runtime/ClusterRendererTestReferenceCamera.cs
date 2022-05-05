@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -8,8 +9,26 @@ namespace Unity.ClusterDisplay.Graphics.Tests
     {
         protected Camera m_ReferenceCamera;
 
+        [TearDown]
+        public void TearDown()
+        {
+            DisposeTest();
+        }
+
+        protected IEnumerator CompareReferenceAndCluster(string profileName, Action setUpProjection, Action exceptionHandler = null)
+        {
+            InitializeTest();
+
+            yield return GraphicsTestUtil.PreWarm();
+
+            PostWarmupInit();
+            setUpProjection();
+
+            yield return RenderAndCompare(profileName, exceptionHandler);
+        }
+
         // Call this after GraphicsUtil.PreWarm
-        protected void PostWarmupInit()
+        void PostWarmupInit()
         {
             m_ReferenceCamera = GameObject.Find("ReferenceCamera").GetComponent<Camera>();
 
@@ -29,7 +48,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_ClusterCaptureTex2D = new Texture2D(width, height);
         }
 
-        protected void AssertClusterAndVanillaAreSimilar(Action exceptionHandler)
+        void AssertClusterAndVanillaAreSimilar(Action exceptionHandler)
         {
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
@@ -50,6 +69,32 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                     throw;
                 }
             }
+        }
+
+        IEnumerator RenderAndCompare(string profileName, Action exceptionHandler = null)
+        {
+            m_Volume.profile = LoadVolumeProfile(profileName);
+
+            // First we render "vanilla". Use the Reference Camera
+            // to render.
+            m_Camera.gameObject.SetActive(false);
+            m_ClusterRenderer.gameObject.SetActive(false);
+            m_ReferenceCamera.gameObject.SetActive(true);
+
+            yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
+
+            // Then we activate Cluster Display.
+            m_ClusterRenderer.gameObject.SetActive(true);
+            m_Camera.gameObject.SetActive(true);
+
+            Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
+
+            yield return GraphicsTestUtil.DoScreenCapture(m_ClusterCapture);
+
+            // Even though the cluster camera and the reference camera have
+            // different properties, the projection logic should
+            // make the cluster camera render the same image as the reference.
+            AssertClusterAndVanillaAreSimilar(exceptionHandler);
         }
     }
 }
