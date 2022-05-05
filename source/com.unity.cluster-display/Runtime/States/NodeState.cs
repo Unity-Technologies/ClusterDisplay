@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay
 
         protected ClusterNode LocalNode { get; }
 
-        public NodeState(ClusterNode localNode)
+        protected NodeState(ClusterNode localNode)
         {
             LocalNode = localNode;
         }
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay
             return this;
         }
 
-        public virtual void InitState()
+        protected virtual void InitState()
         {
         }
 
@@ -117,38 +117,20 @@ namespace Unity.ClusterDisplay
         }
     }
 
-    // RepeaterState state --------------------------------------------------------
-    abstract class RepeaterState : NodeState
+    /// <summary>
+    /// Type-safe variant of <see cref="NodeState"/>
+    /// </summary>
+    /// <typeparam name="T">The local node type</typeparam>
+    abstract class NodeState<T> : NodeState where T : ClusterNode
     {
-        protected RepeaterState(ClusterNode node)
-            : base(node)
+        protected new T LocalNode => base.LocalNode as T;
+        protected NodeState(T node) : base(node)
         {
-            RepeaterNode = (RepeaterNode)node;
         }
-
-        protected RepeaterNode RepeaterNode { get; }
-    }
-
-    // EmitterState state --------------------------------------------------------
-    abstract class EmitterState : NodeState
-    {
-        protected EmitterState(ClusterNode node)
-            : base(node)
-        {
-            EmitterNode = (EmitterNode)node;
-        }
-
-        // If the repeaters were delayed by one frame, then we need to send emitter's data from the
-        // last frame. That last frame data is sent with this previous frame number for validation
-        // by the repeater.
-        protected ulong PreviousFrameID =>
-            EmitterNode.RepeatersDelayed ? LocalNode.CurrentFrameID - 1 : LocalNode.CurrentFrameID;
-
-        protected EmitterNode EmitterNode { get; }
     }
 
     // Shutdown state --------------------------------------------------------
-    class Shutdown : NodeState
+    sealed class Shutdown : NodeState
     {
         public override bool ReadyToProceed => true;
         public override bool ReadyForNextFrame => true;
@@ -158,11 +140,11 @@ namespace Unity.ClusterDisplay
     }
 
     // FatalError state --------------------------------------------------------
-    class FatalError : NodeState
+    sealed class FatalError : NodeState
     {
         public override bool ReadyToProceed => true;
         public override bool ReadyForNextFrame => true;
-        
+
         public FatalError(string msg)
             : base(null)
         {

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
 {
-    internal class EmitterSynchronization : EmitterState
+    class EmitterSynchronization : NodeState<EmitterNode>
     {
         public enum EStage
         {
@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         ProfilerMarker m_MarkerProcessFrame = new ProfilerMarker("ProcessFrame");
         ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
 
-        public EmitterSynchronization(ClusterNode node)
+        public EmitterSynchronization(EmitterNode node)
             : base(node) { }
 
         protected override void ExitState()
@@ -65,15 +65,15 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public override string GetDebugString() =>
             $"{base.GetDebugString()} / {(EStage) Stage}:\r\n\t\tWaiting on Nodes: {m_WaitingOnNodes}";
 
-        public override void InitState()
+        protected override void InitState()
         {
             base.InitState();
 
-            m_Emitter = new EmitterStateWriter(EmitterNode.RepeatersDelayed);
+            m_Emitter = new EmitterStateWriter(LocalNode.RepeatersDelayed);
 
             // If the repeaters are delayed, then we can have the emitter step one frame by setting our initial
             // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.
-            Stage = EmitterNode.RepeatersDelayed ? EStage.ReadyToProceed : EStage.WaitOnRepeatersNextFrame;
+            Stage = LocalNode.RepeatersDelayed ? EStage.ReadyToProceed : EStage.WaitOnRepeatersNextFrame;
 
             // If the repeaters were not delayed, we need to fill the frame data buffer for the repeater when
             // enter this state for the first time.
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         protected override NodeState DoFrame(bool newFrame)
         {
-            if (EmitterNode.TotalExpectedRemoteNodesCount == 0)
+            if (LocalNode.TotalExpectedRemoteNodesCount == 0)
             {
                 PendingStateChange = new FatalError("No Clients found. Exiting Cluster.");
                 return this;
@@ -179,8 +179,13 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
             m_Emitter.GatherFrameState();
 
+            // If the repeaters were delayed by one frame, then we need to send emitter's data from the
+            // last frame. That last frame data is sent with this previous frame number for validation
+            // by the repeater.
+            var previousFrameID = LocalNode.RepeatersDelayed ? LocalNode.CurrentFrameID - 1 : LocalNode.CurrentFrameID;
+
             using (m_MarkerPublishState.Auto())
-                m_Emitter.PublishCurrentState(LocalNode.UdpAgent, PreviousFrameID);
+                m_Emitter.PublishCurrentState(LocalNode.UdpAgent, previousFrameID);
 
             Stage = EStage.WaitForRepeatersToACK;
             m_TsOfStage = m_Time.Elapsed;
@@ -231,7 +236,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // will always be rendering 1 frame ahead. Therefore we just need to subtract the emitter's current frame by one to verify that we are
             // still in sync with the repeaters.
             ulong currentFrame =
-                EmitterNode.RepeatersDelayed
+                LocalNode.RepeatersDelayed
                     ? LocalNode.CurrentFrameID - 1
                     : LocalNode.CurrentFrameID;
 
@@ -255,7 +260,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                 if (m_WaitingOnNodes[id])
                 {
                     ClusterDebug.LogError($"(Frame: {LocalNode.CurrentFrameID}): Unregistering node {id}");
-                    EmitterNode.UnRegisterNode(id);
+                    LocalNode.UnRegisterNode(id);
                 }
             }
         }
@@ -268,7 +273,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             foreach (var pendingAck in NetworkAgent.PendingAcks)
             {
                 ClusterDebug.LogError($"(Frame: {LocalNode.CurrentFrameID}): node {pendingAck.nodeId} has not reported back after {MaxTimeOut.TotalMilliseconds}ms. Continuing without it.");
-                EmitterNode.UnRegisterNode(pendingAck.nodeId);
+                LocalNode.UnRegisterNode(pendingAck.nodeId);
             }
         }
     }

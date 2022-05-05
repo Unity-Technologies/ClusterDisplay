@@ -7,7 +7,7 @@ using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    internal class RegisterWithEmitter : RepeaterState
+    internal class RegisterWithEmitter : NodeState<RepeaterNode>
     {
         // We should never proceed out of the while loop since we are immediately going to
         // enter the RepeaterSynchronization state before exiting the loop.
@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        public RegisterWithEmitter(ClusterNode node)
+        public RegisterWithEmitter(RepeaterNode node)
             : base(node)
         {
             m_Timer = new Stopwatch();
@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_LastSend = m_Timer.Elapsed - new TimeSpan(0, 0, 0, 1);
         }
 
-        public override void InitState()
+        protected override void InitState()
         {
         }
 
@@ -74,8 +74,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         {
                             ClusterDebug.Log("Accepted by emitter: " + header.OriginID);
                             m_EmitterFound = true;
-                            RepeaterNode.EmitterNodeId = header.OriginID;
-                            LocalNode.UdpAgent.NewNodeNotification(RepeaterNode.EmitterNodeId);
+                            LocalNode.EmitterNodeId = header.OriginID;
+                            LocalNode.UdpAgent.NewNodeNotification(LocalNode.EmitterNodeId);
 
                             return;
                         }

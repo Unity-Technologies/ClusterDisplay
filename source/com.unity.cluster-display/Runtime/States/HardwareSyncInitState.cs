@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay
     {
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
-        
+
         public static NodeState Create(ClusterNode node)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
@@ -34,11 +34,11 @@ namespace Unity.ClusterDisplay
             ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
         }
 
-        protected override NodeState DoFrame(bool newFrame)
-        {
-            return LocalNode is EmitterNode
-                ? new WaitingForAllClients(LocalNode)
-                : new RegisterWithEmitter(LocalNode);
-        }
+        protected override NodeState DoFrame(bool newFrame) =>
+            LocalNode switch {
+                EmitterNode emitterNode => new WaitingForAllClients(emitterNode),
+                RepeaterNode repeaterNode => new RegisterWithEmitter(repeaterNode),
+                _ => throw new ArgumentOutOfRangeException(nameof(LocalNode))
+            };
     }
 }

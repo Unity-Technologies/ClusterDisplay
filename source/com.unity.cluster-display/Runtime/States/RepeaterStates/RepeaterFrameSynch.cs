@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    class RepeaterSynchronization : RepeaterState, IRepeaterNodeSyncState
+    class RepeaterSynchronization : NodeState<RepeaterNode>, IRepeaterNodeSyncState
     {
         public enum EStage
         {
@@ -37,12 +37,12 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
         public override bool ReadyForNextFrame => ReadyToProceed;
 
-        public BitVector EmitterNodeIdMask => RepeaterNode.EmitterNodeIdMask;
+        public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
 
         public bool HasHardwareSync { get; set; }
 
 
-        public RepeaterSynchronization(ClusterNode node)
+        public RepeaterSynchronization(RepeaterNode node)
             : base(node) { }
 
         public override string GetDebugString()
@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         }
         //-------------------------------------------------
 
-        public override void InitState()
+        protected override void InitState()
         {
             Stage = EStage.WaitingOnEmitterFrameData;
             m_TsOfStage = m_Time.Elapsed;
