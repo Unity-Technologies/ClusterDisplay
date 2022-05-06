@@ -126,6 +126,8 @@ namespace Unity.ClusterDisplay
 
             IsTerminated = false;
             IsClusterLogicEnabled = clusterParams.ClusterLogicSpecified;
+            EmitterIsHeadless = clusterParams.HeadlessEmitter;
+            ReplaceHeadlessEmitter = clusterParams.ReplaceHeadlessEmitter && EmitterIsHeadless;
 
             onPreEnableClusterDisplay?.Invoke();
 
@@ -171,7 +173,7 @@ namespace Unity.ClusterDisplay
                     });
 
                 NodeRole = NodeRole.Emitter;
-                EmitterIsHeadless = clusterParams.HeadlessEmitter;
+                RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
 
                 LocalNode.Start();
                 return true;

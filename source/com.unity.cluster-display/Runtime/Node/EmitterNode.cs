@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay
     class EmitterNode : ClusterNode
     {
         public int TotalExpectedRemoteNodesCount { get; set; }
-        public bool RepeatersDelayed { get; set; }
+        public bool RepeatersDelayed { get; internal set; }
 
         List<RemoteNodeComContext> m_RemoteNodes = new();
         public override bool HasHardwareSync

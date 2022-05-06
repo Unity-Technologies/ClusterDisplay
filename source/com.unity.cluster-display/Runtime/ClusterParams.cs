@@ -21,6 +21,7 @@ namespace Unity.ClusterDisplay
         public int          TargetFps;
         public bool         DelayRepeaters;
         public bool         HeadlessEmitter;
+        public bool         ReplaceHeadlessEmitter;
 
         public TimeSpan     HandshakeTimeout;
         public TimeSpan     CommunicationTimeout;
