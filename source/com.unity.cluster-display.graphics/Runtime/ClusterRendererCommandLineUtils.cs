@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
             Assert.IsNotNull(renderer);
 
             if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
-                clusterSync.IsEmitter &&
+                clusterSync.NodeRole is NodeRole.Emitter &&
                 clusterSync.EmitterIsHeadless)
             {
                 renderer.enabled = false;

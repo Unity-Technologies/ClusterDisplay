@@ -132,7 +132,7 @@ namespace Unity.ClusterDisplay.Graphics
                 clusterSync.IsClusterLogicEnabled)
             {
                 return CommandLineParser.replaceHeadlessEmitter.Value &&
-                    clusterSync.IsRepeater &&
+                    clusterSync.NodeRole is NodeRole.Repeater &&
                     clusterSync.EmitterIsHeadless
                     ? clusterSync.NodeID - 1
                     : clusterSync.NodeID;
