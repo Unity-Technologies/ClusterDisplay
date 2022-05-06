@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay
         public static ClusterParams FromCommandLine() =>
             new()
             {
-                DebugFlag                 = CommandLineParser.debugFlag.Value,
+                DebugFlag                 = CommandLineParser.debugFlag.Defined,
                 ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
                 EmitterSpecified          = CommandLineParser.emitterSpecified.Value,
                 NodeID                    = CommandLineParser.nodeID.Value,
@@ -40,10 +40,11 @@ namespace Unity.ClusterDisplay
                 MulticastAddress          = CommandLineParser.multicastAddress.Value,
                 AdapterName               = CommandLineParser.adapterName.Value,
                 TargetFps                 = CommandLineParser.targetFps.Value,
-                DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
-                HeadlessEmitter           = CommandLineParser.headlessEmitter.Value,
-                HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
-                CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000),
+                DelayRepeaters            = CommandLineParser.delayRepeaters.Defined,
+                HeadlessEmitter           = CommandLineParser.headlessEmitter.Defined,
+                ReplaceHeadlessEmitter    = CommandLineParser.replaceHeadlessEmitter.Defined,
+                HandshakeTimeout          = TimeSpan.FromMilliseconds(CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
+                CommunicationTimeout      = TimeSpan.FromMilliseconds(CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000),
                 EnableHardwareSync        = !CommandLineParser.disableQuadroSync.Defined
             };
     }

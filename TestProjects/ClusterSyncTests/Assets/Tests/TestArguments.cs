@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
@@ -11,7 +12,7 @@ namespace Unity.ClusterDisplay.Tests
     public class TestArguments
     {
         private const string commonArguments =
-                "-clusterNode " +
+                "-clusterDebug " +
                 "-batchMode " +
                 "-replaceHeadlessEmitter " +
                 "-delayRepeaters " +
@@ -119,6 +120,58 @@ namespace Unity.ClusterDisplay.Tests
 
             Assert.That(CommandLineParser.txPort.Defined);
             Assert.That(CommandLineParser.txPort.Value == 25691);
+        }
+
+        [Test]
+        public void TestClusterParamsFromArguments()
+        {
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
+
+            var clusterParams = ClusterParams.FromCommandLine();
+            var expected = new ClusterParams
+            {
+                DebugFlag = true,
+                ClusterLogicSpecified = true,
+                EmitterSpecified = true,
+                RepeaterCount = 4,
+                RXPort = 25691,
+                TXPort = 25692,
+                MulticastAddress = "224.0.1.0",
+                AdapterName = "Ethernet",
+                TargetFps = 60,
+                DelayRepeaters = true,
+                HeadlessEmitter = true,
+                ReplaceHeadlessEmitter = true,
+                HandshakeTimeout = TimeSpan.FromMilliseconds(6000),
+                CommunicationTimeout = TimeSpan.FromMilliseconds(5000),
+                EnableHardwareSync = true
+            };
+            Assert.That(clusterParams, Is.EqualTo(expected));
+
+            cmd = "-node 4 224.0.1.2:25692,25691 -disableQuadroSync";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
+            clusterParams = ClusterParams.FromCommandLine();
+
+            expected = new ClusterParams
+            {
+                DebugFlag = false,
+                ClusterLogicSpecified = true,
+                EmitterSpecified = false,
+                NodeID = 4,
+                RepeaterCount = 0,
+                RXPort = 25692,
+                TXPort = 25691,
+                MulticastAddress = "224.0.1.2",
+                TargetFps = -1,
+                DelayRepeaters = false,
+                HeadlessEmitter = false,
+                HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
+                CommunicationTimeout = TimeSpan.FromMilliseconds(10000),
+                EnableHardwareSync = false
+            };
+
+            Assert.That(clusterParams, Is.EqualTo(expected));
         }
     }
 }

@@ -45,6 +45,10 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator TestBootstrap()
         {
             // Bootstrap component creates a ClusterDisplayManager then deletes itself
+            // ClusterDisplayManager uses commandline params.
+            // This is a hack to make the ClusterDisplayManager initialize with
+            // cluster logic disabled.
+            CommandLineParser.Override(new List<string>());
             m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
             yield return null;
             Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out _), Is.True);
@@ -80,12 +84,12 @@ namespace Unity.ClusterDisplay.Tests
                 EmitterSpecified = true,
                 NodeID = k_EmitterId,
                 RepeaterCount = numRepeaters,
-                MulticastAddress = multicastAddress,
+                MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = rxPort,
-                TXPort = txPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+                RXPort = RxPort,
+                TXPort = TxPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
             });
             m_TestAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
 
@@ -135,12 +139,12 @@ namespace Unity.ClusterDisplay.Tests
                 ClusterLogicSpecified = true,
                 EmitterSpecified = false,
                 NodeID = k_RepeaterId,
-                MulticastAddress = multicastAddress,
+                MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = rxPort,
-                TXPort = txPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+                RXPort = RxPort,
+                TXPort = TxPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
             });
 
             m_TestAgent = GetTestAgent(k_EmitterId, TxPort, RxPort);
@@ -228,12 +232,12 @@ namespace Unity.ClusterDisplay.Tests
                 EmitterSpecified = true,
                 NodeID = k_EmitterId,
                 RepeaterCount = numRepeaters,
-                MulticastAddress = multicastAddress,
+                MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = rxPort,
-                TXPort = txPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+                RXPort = RxPort,
+                TXPort = TxPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
             });
             return emitterClusterSync;
         }
@@ -249,12 +253,12 @@ namespace Unity.ClusterDisplay.Tests
                 ClusterLogicSpecified = true,
                 EmitterSpecified = false,
                 NodeID = k_RepeaterId,
-                MulticastAddress = multicastAddress,
+                MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = txPort,
-                TXPort = rxPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, timeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, timeoutSeconds)
+                RXPort = TxPort,
+                TXPort = RxPort,
+                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
+                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
             });
             return repeaterClusterSync;
         }
