@@ -1,4 +1,5 @@
 using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace ClusterDisplay.Utils
@@ -11,19 +12,21 @@ namespace ClusterDisplay.Utils
     {
         private void Update()
         {
-            if (ClusterDisplayState.IsActive)
+            if (!ServiceLocator.TryGet(out IClusterSyncState clusterSync) ||
+                clusterSync is not ClusterSync instance)
+            {
+                return;
+            }
+
+            if (instance.IsClusterLogicEnabled)
             {
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
                 {
-                    ClusterSync.Instance.ShutdownAllClusterNodes();
+                    instance.ShutdownAllClusterNodes();
                 }
-
             }
-            else
-            {
-                if (ClusterDisplayState.IsTerminated)
-                    Application.Quit(0);
-            }
+            else if (clusterSync.IsTerminated)
+                Application.Quit(0);
         }
     }
 }

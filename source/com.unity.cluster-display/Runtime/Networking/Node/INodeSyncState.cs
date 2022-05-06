@@ -6,20 +6,11 @@ using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
-    internal interface IRepeaterNodeSyncState : INodeSyncState
+    internal interface IRepeaterNodeSyncState
     {
         BitVector EmitterNodeIdMask { get; }
         void OnUnhandledNetworkMessage(MessageHeader msgHeader);
         void OnNonMatchingFrame(byte originID, ulong frameNumber);
         void OnReceivedEmitterFrameData();
-    }
-
-    internal interface INodeSyncState
-    {
-        UDPAgent NetworkAgent { get; }
-    }
-
-    internal interface IEmitterNodeSyncState : INodeSyncState
-    {
     }
 }

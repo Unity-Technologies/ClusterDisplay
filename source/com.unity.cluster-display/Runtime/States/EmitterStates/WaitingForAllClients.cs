@@ -6,37 +6,37 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
 {
-    internal class WaitingForAllClients : EmitterState
+    class WaitingForAllClients : NodeState<EmitterNode>
     {
         // We should never proceed out of the while loop since we are immediately going to
         // enter the EmitterSynchronization state before exiting the loop.
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
 
-        public WaitingForAllClients(IClusterSyncState clusterSync)
-            : base(clusterSync) {}
+        public WaitingForAllClients(EmitterNode node)
+            : base(node) {}
 
-        public override void InitState()
+        protected override void InitState()
         {
         }
 
         protected override NodeState DoFrame (bool frameAdvance)
         {
             bool timeOut = m_Time.Elapsed > MaxTimeOut;
-            if (LocalNode.m_RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
+            if (LocalNode.RemoteNodes.Count == LocalNode.TotalExpectedRemoteNodesCount || timeOut)
             {
                 // OnTimeout continue with the current set of nodes
                 if (timeOut)
                 {
-                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with {LocalNode.m_RemoteNodes.Count} nodes ");
-                    LocalNode.TotalExpectedRemoteNodesCount = LocalNode.m_RemoteNodes.Count;
+                    ClusterDebug.LogError($"WaitingForAllClients timed out after {MaxTimeOut.TotalMilliseconds}ms: Expected {LocalNode.TotalExpectedRemoteNodesCount}, continuing with {LocalNode.RemoteNodes.Count} nodes ");
+                    LocalNode.TotalExpectedRemoteNodesCount = LocalNode.RemoteNodes.Count;
                 }
 
                 TimeSpan communicationTimeout = new TimeSpan(0, 0, 0, 5);
                 if (CommandLineParser.communicationTimeout.Defined)
                     communicationTimeout = new TimeSpan(0, 0, 0, 0, (int)CommandLineParser.communicationTimeout.Value);
 
-                return new EmitterSynchronization(clusterSync)
+                return new EmitterSynchronization(LocalNode)
                 {
                     MaxTimeOut = communicationTimeout
                 };
@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             catch (Exception e)
             {
                 ClusterDebug.LogException(e);
-                var err = new FatalError(clusterSync, $"Error occured while processing nodes discovery: {e.Message}");
+                var err = new FatalError($"Error occured while processing nodes discovery: {e.Message}");
                 PendingStateChange = err;
             }
         }
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         public override string GetDebugString()
         {
-            return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.m_RemoteNodes.Count}";
+            return $"{base.GetDebugString()}:\r\n\t\tExpected Node Count: {LocalNode.RemoteNodes.Count}";
         }
     }
 }

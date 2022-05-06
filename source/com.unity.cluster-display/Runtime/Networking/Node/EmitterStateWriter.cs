@@ -24,8 +24,6 @@ namespace Unity.ClusterDisplay
 
         private byte[] m_MsgBuffer = Array.Empty<byte>();
 
-        public IEmitterNodeSyncState nodeState;
-
         /// <summary>
         /// Engine state data gets collected on each frame but may be published on a delay.
         /// </summary>
@@ -51,9 +49,8 @@ namespace Unity.ClusterDisplay
         internal static void UnregisterCustomDataDelegate(byte id) => k_CustomDataDelegates.Remove(id);
         internal static void ClearCustomDataDelegates() => k_CustomDataDelegates.Clear();
 
-        public EmitterStateWriter(IEmitterNodeSyncState nodeState, bool repeatersDelayed)
+        public EmitterStateWriter(bool repeatersDelayed)
         {
-            this.nodeState = nodeState;
             k_RepeatersDelayed = repeatersDelayed;
         }
 
@@ -87,7 +84,7 @@ namespace Unity.ClusterDisplay
             Dispose(false);
         }
 
-        public void PublishCurrentState(ulong currentFrameId)
+        public void PublishCurrentState(UDPAgent agent, ulong currentFrameId)
         {
             if (!m_StagedFrameDataValid)
             {
@@ -113,7 +110,7 @@ namespace Unity.ClusterDisplay
                 PayloadSize = (UInt16)m_StagedFrameData.Length
             };
 
-            nodeState.NetworkAgent.PublishMessage(msgHdr, m_MsgBuffer);
+            agent.PublishMessage(msgHdr, m_MsgBuffer);
         }
 
         internal static void StoreStateData(FrameDataBuffer frameDataBuffer)

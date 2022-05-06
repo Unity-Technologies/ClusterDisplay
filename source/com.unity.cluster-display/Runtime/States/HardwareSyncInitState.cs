@@ -19,25 +19,26 @@ namespace Unity.ClusterDisplay
         public override bool ReadyToProceed => false;
         public override bool ReadyForNextFrame => false;
 
-        public static NodeState Create(IClusterSyncState clusterSyncState)
+        public static NodeState Create(ClusterNode node)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
-            return CommandLineParser.disableQuadroSync.Value
-                ? new HardwareSyncInitState(clusterSyncState)
-                : new QuadroSyncInitState(clusterSyncState);
+            return new QuadroSyncInitState(node);
 #else
-            return new HardwareSyncInitState(clusterSyncState);
+            return new HardwareSyncInitState(node);
 #endif
         }
 
-        protected HardwareSyncInitState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
-
-        protected override NodeState DoFrame(bool newFrame)
+        protected HardwareSyncInitState(ClusterNode localNode)
+            : base(localNode)
         {
-            return clusterSync.LocalNode is EmitterNode
-                ? new WaitingForAllClients(clusterSync)
-                : new RegisterWithEmitter(clusterSync);
+            ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
         }
+
+        protected override NodeState DoFrame(bool newFrame) =>
+            LocalNode switch {
+                EmitterNode emitterNode => new WaitingForAllClients(emitterNode),
+                RepeaterNode repeaterNode => new RegisterWithEmitter(repeaterNode),
+                _ => throw new ArgumentOutOfRangeException(nameof(LocalNode))
+            };
     }
 }
