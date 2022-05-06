@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         private EmitterStateWriter m_Emitter;
 
-        public bool HasHardwareSync { get; set; }
+        bool HasHardwareSync => LocalNode.HasHardwareSync;
 
         public override bool ReadyToProceed => Stage is EStage.WaitForRepeatersToACK or EStage.ReadyToProceed;
         public override bool ReadyForNextFrame => Stage == EStage.ReadyToProceed;

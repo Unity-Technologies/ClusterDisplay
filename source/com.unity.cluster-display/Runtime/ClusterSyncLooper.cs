@@ -2,17 +2,82 @@ using System;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine.PlayerLoop;
 
-using DoFrameFunc = System.Func<(System.Boolean readyToProceed, System.Boolean isTerminated)>;
-using DoLateFrameFunc = System.Func<System.Boolean>;
+using DoFrameFunc = System.Action<Unity.ClusterDisplay.DoFrameState>;
+using DoLateFrameFunc = System.Action<Unity.ClusterDisplay.DoLateFrameState>;
 
 namespace Unity.ClusterDisplay
 {
+    /// <summary>
+    /// State to be updated by onInstanceDoFrame callbacks.
+    /// </summary>
+    class DoFrameState
+    {
+        /// <summary>
+        /// Are all callbacks ready to proceed into the frame?
+        /// </summary>
+        public bool AllReadyToProceed { get; private set; } = true;
+        /// <summary>
+        /// Has at least one callback requested termination of the system?
+        /// </summary>
+        public bool OneAsksForTermination { get; private set; } = true;
+
+        /// <summary>
+        /// Method to be called between invocations of onInstanceDoFrame to clear the state to a brand new one.
+        /// </summary>
+        public void Reset()
+        {
+            AllReadyToProceed = true;
+            OneAsksForTermination = false;
+        }
+
+        /// <summary>
+        /// Method to be called at least once by every onInstanceDoFrame callback to provide their input on the state
+        /// of things.
+        /// </summary>
+        /// <param name="readyToProceed">Is the callback ready to proceed into the frame?</param>
+        /// <param name="asksForTermination">Does the callback requests termination of the system?</param>
+        public void Update(bool readyToProceed, bool asksForTermination)
+        {
+            AllReadyToProceed &= readyToProceed;
+            OneAsksForTermination |= asksForTermination;
+        }
+    }
+
+    /// <summary>
+    /// State to be updated by onInstanceDoLateFrame callbacks.
+    /// </summary>
+    class DoLateFrameState
+    {
+        /// <summary>
+        /// Are all callbacks ready to proceed to the next frame?
+        /// </summary>
+        public bool AllReadyForNextFrame { get; private set;  }= true;
+
+        /// <summary>
+        /// Method to be called between invocations of onInstanceDoLateFrame to clear the state to a brand new one.
+        /// </summary>
+        public void Reset()
+        {
+            AllReadyForNextFrame = true;
+        }
+
+        /// <summary>
+        /// Method to be called at least once by every onInstanceDoLateFrame callback to provide input on the state of
+        /// things.
+        /// </summary>
+        /// <param name="readyForNextFrame">Is the callback ready to proceed to the next frame?</param>
+        public void Update(bool readyForNextFrame)
+        {
+            AllReadyForNextFrame &= readyForNextFrame;
+        }
+    }
+
     static class ClusterSyncLooper
     {
         public enum TickType
         {
             /// <summary>
-            ///  Before we enter the while loop. 
+            ///  Before we enter the while loop.
             /// </summary>
             DoPreFrame,
             /// <summary>
@@ -30,24 +95,24 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        ///  Delegate to execute callbacks before we enter the while loop. 
+        ///  Delegate to execute callbacks before we enter the while loop.
         /// </summary>
         public static event Action onInstanceDoPreFrame;
         /// <summary>
-        ///  Delegate to execute callbacks while were waiting for the network fence. 
+        ///  Delegate to execute callbacks while were waiting for the network fence.
         /// </summary>
         public static event DoFrameFunc onInstanceDoFrame;
         /// <summary>
-        ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame. 
+        ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame.
         /// </summary>
         public static event Action onInstancePostFrame;
         /// <summary>
-        ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render. 
+        ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render.
         /// </summary>
         public static event DoLateFrameFunc onInstanceDoLateFrame;
 
         /// <summary>
-        ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed. 
+        ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed.
         /// </summary>
         public static event Action<TickType> onInstanceTick;
 
@@ -67,6 +132,7 @@ namespace Unity.ClusterDisplay
             PlayerLoopExtensions.DeregisterUpdate<ClusterDisplayLateUpdate>(SystemLateUpdate);
         }
 
+        private static readonly DoFrameState m_DoFrameState = new();
         public static void SystemUpdate()
         {
             bool allReadyToProceed, allIsTerminated;
@@ -76,50 +142,28 @@ namespace Unity.ClusterDisplay
 
             do
             {
-                // By default, we are ready to proceed into the frame unless specified otherwise
-                // by the methods registered with onInstanceDoFrame.
-                allReadyToProceed = true;
-                // By default, we are not terminating unless specified by methods registered with onInstanceDoFrame.
-                allIsTerminated = false;
-
-                if (onInstanceDoFrame != null)
-                {
-                    foreach (DoFrameFunc doFrame in onInstanceDoFrame.GetInvocationList())
-                    {
-                        var instanceStatus = doFrame.Invoke();
-                        allReadyToProceed &= instanceStatus.readyToProceed;
-                        allIsTerminated |= instanceStatus.isTerminated;
-                    }
-                }
+                m_DoFrameState.Reset();
+                onInstanceDoFrame?.Invoke(m_DoFrameState);
 
                 onInstanceTick?.Invoke(TickType.DoFrame);
 
-            } while (!allReadyToProceed && !allIsTerminated);
+            } while (!m_DoFrameState.AllReadyToProceed && !m_DoFrameState.OneAsksForTermination);
 
             onInstancePostFrame?.Invoke();
             onInstanceTick?.Invoke(TickType.PostFrame);
             // After this were entering the frame.
         }
 
+        private static readonly DoLateFrameState m_DoLateFrameState = new();
         public static void SystemLateUpdate()
         {
-            bool allReadyForNextFrame = false;
-
-            while (!allReadyForNextFrame)
+            do
             {
-                allReadyForNextFrame = true;
-
-                if (onInstanceDoLateFrame != null)
-                {
-                    foreach (DoLateFrameFunc doLateFrame in onInstanceDoLateFrame.GetInvocationList())
-                    {
-                        bool instanceReadyForNextFrame = doLateFrame.Invoke();
-                        allReadyForNextFrame &= instanceReadyForNextFrame;
-                    }
-                }
+                m_DoLateFrameState.Reset();
+                onInstanceDoLateFrame?.Invoke(m_DoLateFrameState);
 
                 onInstanceTick?.Invoke(TickType.DoLateFrame);
-            }
+            } while (!m_DoLateFrameState.AllReadyForNextFrame);
         }
     }
 }

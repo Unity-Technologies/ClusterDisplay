@@ -76,6 +76,11 @@ namespace Unity.ClusterDisplay
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
         public string GetDiagnostics()
         {
+            if (LocalNode == null)
+            {
+                return string.Empty;
+            }
+
             var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
             return $"Cluster Sync Instance: {InstanceName},\r\n" +
 				   $"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
@@ -326,7 +331,7 @@ namespace Unity.ClusterDisplay
         }
 
         private bool newFrame = false;
-        private (bool readyToProceed, bool isTerminated) DoFrame ()
+        private void DoFrame(DoFrameState doFrameState)
         {
             try
             {
@@ -337,20 +342,19 @@ namespace Unity.ClusterDisplay
                 }
 
                 newFrame = false;
-                return (LocalNode.ReadyToProceed, IsTerminated);
+                doFrameState.Update(LocalNode.ReadyToProceed, IsTerminated);
             }
 
             catch (Exception e)
             {
                 OnException(e);
+                doFrameState.Update(true, true);
             }
 
             finally
             {
                 OnFinally();
             }
-
-            return (true, true);
         }
 
         private void PostFrame ()
@@ -375,27 +379,26 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public bool DoLateFrame ()
+        public void DoLateFrame(DoLateFrameState doLateFrameState)
         {
             try
             {
                 m_EndDelayMonitor.RefPoint();
                 LocalNode.DoLateFrame();
                 m_EndDelayMonitor.SampleNow();
-                return LocalNode.ReadyForNextFrame;
+                doLateFrameState.Update(LocalNode.ReadyForNextFrame);
             }
 
             catch (Exception e)
             {
                 OnException(e);
+                doLateFrameState.Update(true);
             }
 
             finally
             {
                 OnFinally();
             }
-
-            return true;
         }
 
         private void OnException (Exception e)

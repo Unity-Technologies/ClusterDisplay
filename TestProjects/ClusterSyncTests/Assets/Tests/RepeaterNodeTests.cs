@@ -170,10 +170,8 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestRepeaterSynchronizationHardwareSync()
         {
-            var repeaterSynchronization = new RepeaterSynchronization(m_Node)
-            {
-                HasHardwareSync = true
-            };
+            m_Node.HasHardwareSync = true;
+            var repeaterSynchronization = new RepeaterSynchronization(m_Node);
             repeaterSynchronization.EnterState(null);
 
             // Simulate several frames

@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
+
+using CarriedPreDoFrameWorkFunc = System.Func<bool>;
 
 namespace Unity.ClusterDisplay
 {
@@ -28,7 +31,20 @@ namespace Unity.ClusterDisplay
         {
             if (oldState != this)
             {
-                oldState?.ExitState();
+                if (oldState != null)
+                {
+                    if (CarriedPreDoFrameWork == null)
+                    {
+                        CarriedPreDoFrameWork = oldState.CarriedPreDoFrameWork;
+                    }
+                    else if (oldState.CarriedPreDoFrameWork != null)
+                    {
+                        CarriedPreDoFrameWork.AddRange(oldState.CarriedPreDoFrameWork);
+                    }
+
+                    oldState.CarriedPreDoFrameWork = null;
+                    oldState.ExitState();
+                }
                 m_Time = new Stopwatch();
                 m_Time.Start();
 
@@ -53,6 +69,8 @@ namespace Unity.ClusterDisplay
 
         public NodeState ProcessFrame(bool newFrame)
         {
+            ExecuteCarriedPreDoFrameWork();
+
             var res = DoFrame(newFrame);
             if (res != this)
             {
@@ -112,6 +130,45 @@ namespace Unity.ClusterDisplay
         public virtual string GetDebugString()
         {
             return GetType().Name;
+        }
+
+        /// <summary>
+        /// List of small task carried from previous states to be executed before starting the PreDoWork of this state.
+        /// </summary>
+        /// <remarks>Useful when a state has some asynchronous work to finish but can otherwise switch to the next
+        /// state.  Every <see cref="CarriedPreDoFrameWorkFunc"/> in the list is executed before the next DoFrame and
+        /// will keep on being executed for as long as it returns true.  In an effort to minimize dynamic allocation
+        /// list will be null unless something is needed in it, so always check for null before using it.</remarks>
+        protected List<CarriedPreDoFrameWorkFunc> CarriedPreDoFrameWork { get; set; }
+
+        private void ExecuteCarriedPreDoFrameWork()
+        {
+            if (CarriedPreDoFrameWork == null)
+            {
+                return;
+            }
+
+            int executePosition = 0;
+            int moveToPosition = 0;
+            for (; executePosition < CarriedPreDoFrameWork.Count; ++executePosition)
+            {
+                var preDoFrameWork = CarriedPreDoFrameWork[executePosition];
+                bool stillHasWorkToDo = preDoFrameWork();
+                if (stillHasWorkToDo)
+                {
+                    CarriedPreDoFrameWork[moveToPosition] = preDoFrameWork;
+                    ++moveToPosition;
+                }
+            }
+
+            if (moveToPosition == 0)
+            {
+                CarriedPreDoFrameWork = null;
+            }
+            else if (moveToPosition < CarriedPreDoFrameWork.Count)
+            {
+                CarriedPreDoFrameWork.RemoveRange(moveToPosition, executePosition - moveToPosition);
+            }
         }
     }
 

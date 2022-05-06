@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay
         /// Set this to <c>true</c> if your hardware enforces this at a low level
         /// and it is safe to bypass the wait.
         /// </remarks>
-        public virtual bool HasHardwareSync { get; set; }
+        public bool HasHardwareSync { get; set; }
 
         protected NodeState m_CurrentState;
         UDPAgent m_UdpAgent;

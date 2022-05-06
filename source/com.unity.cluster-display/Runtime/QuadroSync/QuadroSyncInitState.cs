@@ -20,7 +20,28 @@ namespace Unity.ClusterDisplay
 
                 ClusterDebug.Log("Initializing Quadro Sync.");
                 GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-                LocalNode.HasHardwareSync = true;
+
+                // We won't know immediately if everything worked (and if we are really using hardware acceleration), so
+                // continue to peek at the state to know when initialization of QuadroSync is done.
+                CarriedPreDoFrameWork ??= new();
+                CarriedPreDoFrameWork.Add(() =>
+                {
+                    var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
+                    if (initializationState == GfxPluginQuadroSyncInitializationState.NotInitialized)
+                    {
+                        // Still not fully initialized, we need to continue checking...
+                        return true;
+                    }
+                    else
+                    {
+                        // Initialization finished, we do not need to be called again
+                        LocalNode.HasHardwareSync =
+                            (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
+                        return false;
+                    }
+                });
+
+                // The initialization is "done" (or at least, triggered and will conclude shortly)
                 m_Initialized = true;
             }
 
