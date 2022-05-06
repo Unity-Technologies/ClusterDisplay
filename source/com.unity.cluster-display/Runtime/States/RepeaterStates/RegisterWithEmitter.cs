@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                     };
 
-                    var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
+                    var roleInfo = new RolePublication { NodeRole = NodeRole.Repeater };
                     var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
                     roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
 

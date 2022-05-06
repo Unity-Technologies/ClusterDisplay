@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay.Tests
             var (header, rolePublication) = m_TestAgent.ReceiveMessage<RolePublication>();
 
             Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-            Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
+            Assert.That(rolePublication.NodeRole, Is.EqualTo(NodeRole.Repeater));
 
             // ReadyToProceed should be false. This state does not allow advancement of frames
             Assert.IsFalse(registerState.ReadyToProceed);

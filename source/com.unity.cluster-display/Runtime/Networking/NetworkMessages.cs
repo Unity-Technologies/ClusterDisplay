@@ -17,24 +17,6 @@ namespace Unity.ClusterDisplay
         GlobalShutdownRequest
     }
 
-    /// <summary>
-    /// Enum containing the Cluster node roles.
-    /// </summary>
-    internal enum ENodeRole
-    {
-        //Unassigned,
-        /// <summary>
-        /// The source node that broadcasts synchronization data.
-        /// </summary>
-        Emitter,
-        /// <summary>
-        /// The client nodes that receive synchronization data.
-        /// </summary>
-        Repeater,
-        //HotStandby,
-        //Dead
-    }
-
     internal struct NetworkingStats
     {
         public int rxQueueSize;
@@ -157,10 +139,13 @@ namespace Unity.ClusterDisplay
     [StructLayout(LayoutKind.Sequential)]
     internal struct RolePublication
     {
-        private byte m_NodeRole; // see ENodeRole
-        public ENodeRole NodeRole
+        /// <summary>
+        /// See <see cref="NodeRole"/>
+        /// </summary>
+        byte m_NodeRole;
+        public NodeRole NodeRole
         {
-            get => (ENodeRole)m_NodeRole;
+            get => (NodeRole)m_NodeRole;
             set => m_NodeRole = (byte)value;
         }
     }

@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.Tests
             var helloMsgs = k_RepeaterIds.Select(id => GenerateMessage(id,
                 new byte[] {k_EmitterId},
                 EMessageType.HelloEmitter,
-                new RolePublication {NodeRole = ENodeRole.Repeater}));
+                new RolePublication {NodeRole = NodeRole.Repeater}));
 
             foreach (var (msgTuple, udpAgent) in helloMsgs.Zip(m_TestAgents, Tuple.Create))
             {
@@ -82,8 +82,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestNodeRegistration()
         {
-            m_Node.RegisterNode(new RemoteNodeComContext() {ID = 3, Role = ENodeRole.Repeater});
-            m_Node.RegisterNode(new RemoteNodeComContext() {ID = 5, Role = ENodeRole.Repeater});
+            m_Node.RegisterNode(new RemoteNodeComContext() {ID = 3, Role = NodeRole.Repeater});
+            m_Node.RegisterNode(new RemoteNodeComContext() {ID = 5, Role = NodeRole.Repeater});
             Assert.IsTrue(m_Node.UdpAgent.AllNodesMask[3]);
             Assert.IsTrue(m_Node.UdpAgent.AllNodesMask[5]);
             Assert.IsFalse(m_Node.UdpAgent.AllNodesMask[2]);
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.Tests
             var roles = m_Node.RemoteNodes.Select(x => x.Role).ToArray();
             Assert.That(nodeIds, Has.Some.EqualTo(3));
             Assert.That(nodeIds, Has.Some.EqualTo(5));
-            Assert.That(roles, Is.All.EqualTo(ENodeRole.Repeater));
+            Assert.That(roles, Is.All.EqualTo(NodeRole.Repeater));
         }
 
         [UnityTest]
@@ -109,7 +109,7 @@ namespace Unity.ClusterDisplay.Tests
 
             foreach (var repeaterId in k_RepeaterIds)
             {
-                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
+                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = NodeRole.Repeater});
             }
 
             using var frameDataBuffer = new FrameDataBuffer(ushort.MaxValue);
@@ -202,7 +202,7 @@ namespace Unity.ClusterDisplay.Tests
 
             foreach (var repeaterId in k_RepeaterIds)
             {
-                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
+                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = NodeRole.Repeater});
             }
 
             // Simulate several frames
@@ -270,7 +270,7 @@ namespace Unity.ClusterDisplay.Tests
 
             foreach (var repeaterId in k_RepeaterIds)
             {
-                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = ENodeRole.Repeater});
+                m_Node.RegisterNode(new RemoteNodeComContext {ID = repeaterId, Role = NodeRole.Repeater});
             }
 
             // Simulate several frames

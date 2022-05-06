@@ -161,7 +161,7 @@ namespace Unity.ClusterDisplay
             if (!IsClusterLogicEnabled)
             {
                 InstanceLog("ClusterRendering is missing command line configuration. Will be dormant.");
-                IsEmitter = true;
+                NodeRole = NodeRole.Unassigned;
                 return;
             }
 
@@ -194,9 +194,8 @@ namespace Unity.ClusterDisplay
                         enableHardwareSync  = clusterParams.EnableHardwareSync
                     });
 
-                IsEmitter = true;
+                NodeRole = NodeRole.Emitter;
                 EmitterIsHeadless = clusterParams.HeadlessEmitter;
-                IsRepeater = false;
 
                 LocalNode.Start();
                 return true;
@@ -220,8 +219,7 @@ namespace Unity.ClusterDisplay
                     UdpAgentConfig = config
                 });
 
-                IsEmitter = false;
-                IsRepeater = true;
+                NodeRole = NodeRole.Repeater;
 
                 LocalNode.Start();
                 return true;

@@ -51,10 +51,6 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestBootstrap()
         {
-            // To make this test not freeze, we need to initialize the params so that
-            // cluster logic is disabled
-            CommandLineParser.Override(new List<string>());
-
             // Bootstrap component creates a ClusterDisplayManager then deletes itself
             m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
             yield return null;
@@ -105,8 +101,7 @@ namespace Unity.ClusterDisplay.Tests
 
                     var node = emitterClusterSync.LocalNode as EmitterNode;
 
-                    Assert.That(emitterClusterSync.IsEmitter, Is.True);
-                    Assert.That(emitterClusterSync.IsRepeater, Is.False);
+                    Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
 
                     Assert.That(emitterClusterSync.NodeID, Is.EqualTo(k_EmitterId));
                     Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
@@ -116,7 +111,7 @@ namespace Unity.ClusterDisplay.Tests
                     Assert.That(node.TotalExpectedRemoteNodesCount, Is.EqualTo(numRepeaters));
 
                     var (header, rawMsg) = GenerateMessage(k_RepeaterId, new[] {k_EmitterId},
-                        EMessageType.HelloEmitter, new RolePublication {NodeRole = ENodeRole.Repeater});
+                        EMessageType.HelloEmitter, new RolePublication {NodeRole = NodeRole.Repeater});
 
                     m_TestAgent.PublishMessage(header, rawMsg);
                     ClusterSyncLooper.onInstanceTick -= m_TickHandler;
@@ -155,8 +150,7 @@ namespace Unity.ClusterDisplay.Tests
 
             Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
 
-            Assert.That(repeaterClusterSync.IsEmitter, Is.False);
-            Assert.That(repeaterClusterSync.IsRepeater, Is.True);
+            Assert.That(repeaterClusterSync.NodeRole, Is.EqualTo(NodeRole.Repeater));
             Assert.That(repeaterClusterSync.NodeID, Is.EqualTo(k_RepeaterId));
 
             var node = repeaterClusterSync.LocalNode as RepeaterNode;
@@ -182,7 +176,7 @@ namespace Unity.ClusterDisplay.Tests
                     }
 
                     Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-                    Assert.That(rolePublication.NodeRole, Is.EqualTo(ENodeRole.Repeater));
+                    Assert.That(rolePublication.NodeRole, Is.EqualTo(NodeRole.Repeater));
                     Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
                 }
 
@@ -277,13 +271,11 @@ namespace Unity.ClusterDisplay.Tests
                 }
 
                 Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(emitterClusterSync.IsEmitter, Is.True);
-                Assert.That(emitterClusterSync.IsRepeater, Is.False);
+                Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
                 Assert.That(emitterClusterSync.NodeID, Is.EqualTo(0));
 
                 Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(repeaterClusterSync.IsEmitter, Is.False);
-                Assert.That(repeaterClusterSync.IsRepeater, Is.True);
+                Assert.That(repeaterClusterSync.NodeRole, Is.EqualTo(NodeRole.Repeater));
                 Assert.That(repeaterClusterSync.NodeID, Is.EqualTo(k_RepeaterId));
             };
 
@@ -317,13 +309,11 @@ namespace Unity.ClusterDisplay.Tests
                 }
 
                 Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(repeaterClusterSync.IsEmitter, Is.False);
-                Assert.That(repeaterClusterSync.IsRepeater, Is.True);
+                Assert.That(repeaterClusterSync.NodeRole, Is.EqualTo(NodeRole.Repeater));
                 Assert.That(repeaterClusterSync.NodeID, Is.EqualTo(k_RepeaterId));
 
                 Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(emitterClusterSync.IsEmitter, Is.True);
-                Assert.That(emitterClusterSync.IsRepeater, Is.False);
+                Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
                 Assert.That(emitterClusterSync.NodeID, Is.EqualTo(0));
             };
 

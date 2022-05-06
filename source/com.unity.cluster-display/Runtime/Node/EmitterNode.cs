@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay
     internal class RemoteNodeComContext
     {
         public byte ID { get; set; }
-        public ENodeRole Role { get; set; }
+        public NodeRole Role { get; set; }
     }
 
     class EmitterNode : ClusterNode

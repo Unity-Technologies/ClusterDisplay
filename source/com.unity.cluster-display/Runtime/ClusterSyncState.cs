@@ -4,11 +4,29 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    /// <summary>
+    /// Enum containing the Cluster node roles.
+    /// </summary>
+    public enum NodeRole
+    {
+        /// <summary>
+        /// The node does not have an assigned role (not operating as part of a cluster).
+        /// </summary>
+        Unassigned,
+        /// <summary>
+        /// The source node that broadcasts synchronization data.
+        /// </summary>
+        Emitter,
+        /// <summary>
+        /// The client nodes that receive synchronization data.
+        /// </summary>
+        Repeater
+    }
+
     public interface IClusterSyncState
     {
-        bool IsEmitter { get; }
+        NodeRole NodeRole { get; }
         bool EmitterIsHeadless { get; }
-        bool IsRepeater { get; }
         bool IsClusterLogicEnabled { get; }
         bool IsTerminated { get; }
         ulong Frame { get; }
@@ -19,11 +37,8 @@ namespace Unity.ClusterDisplay
 
     partial class ClusterSync : IClusterSyncState
     {
-        public bool IsEmitter { get; private set; }
-
+        public NodeRole NodeRole { get; private set; }
         public bool EmitterIsHeadless { get; private set; }
-
-        public bool IsRepeater { get; private set; }
 
         public bool IsClusterLogicEnabled { get; private set; }
 
