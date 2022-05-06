@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.Tests
             // Create the state under test
             var registerState = new RegisterWithEmitter(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(timeoutSeconds)
+                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
             };
 
             var allNodesMask = m_Node.UdpAgent.AllNodesMask;
@@ -157,7 +157,7 @@ namespace Unity.ClusterDisplay.Tests
                     .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
                     .ToCoroutine();
 
-                yield return receiveMessage.WaitForCompletion(timeoutSeconds);
+                yield return receiveMessage.WaitForCompletion(TimeoutSeconds);
 
                 Assert.True(receiveMessage.IsSuccessful);
                 var (rxHeader, _) = receiveMessage.Result;

@@ -8,10 +8,10 @@ namespace Unity.ClusterDisplay
     [RequireComponent(typeof(Text))]
     public class ClusterSyncBenchmarkUI : MonoBehaviour
     {
-        private int m_Frames;
-        private Text m_DebugText;
+        int m_Frames;
+        Text m_DebugText;
 
-        private Text debugText
+        Text debugText
         {
             get
             {

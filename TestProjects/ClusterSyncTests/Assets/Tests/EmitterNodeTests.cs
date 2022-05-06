@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             var emitterSync = new EmitterSynchronization(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(timeoutSeconds)
+                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
             };
             emitterSync.EnterState(null);
 
@@ -193,7 +193,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             var emitterSync = new EmitterSynchronization(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(timeoutSeconds),
+                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds),
                 HasHardwareSync = true
             };
             emitterSync.EnterState(null);
@@ -262,7 +262,7 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterSync = new EmitterSynchronization(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(timeoutSeconds)
+                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
             };
             emitterSync.EnterState(null);
 

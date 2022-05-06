@@ -78,8 +78,8 @@ namespace Unity.ClusterDisplay.Tests
         {
             const int numRepeaters = 1;
             var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {multicastAddress}:{rxPort},{txPort} " +
-                $"-handshakeTimeout {timeoutSeconds * 1000} ";
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MulticastAddress}:{RxPort},{TxPort} " +
+                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
 
             var emitterArgs = emitterArgsString.Split(" ").ToList();
             emitterArgs.Add("-adapterName");
@@ -91,13 +91,13 @@ namespace Unity.ClusterDisplay.Tests
             CommandLineParser.Override(emitterArgs);
             emitterClusterSync.ReadParamsFromCommandLine();
             emitterClusterSync.EnableClusterDisplay();
-            m_TestAgent = GetTestAgent(k_RepeaterId, NodeTestUtils.txPort, NodeTestUtils.rxPort);
+            m_TestAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
 
             m_TickHandler = tickType =>
             {
                 if (tickType == ClusterSyncLooper.TickType.DoFrame)
                 {
-                    using var testAgent = GetTestAgent(k_RepeaterId, txPort, rxPort);
+                    using var testAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
 
                     var node = emitterClusterSync.LocalNode as EmitterNode;
 
@@ -132,8 +132,8 @@ namespace Unity.ClusterDisplay.Tests
         public IEnumerator TestClusterSetupRepeater()
         {
             var argString =
-                $"-node {k_RepeaterId} {multicastAddress}:{rxPort},{txPort} " +
-                $"-handshakeTimeout {timeoutSeconds * 1000} ";
+                $"-node {k_RepeaterId} {MulticastAddress}:{RxPort},{TxPort} " +
+                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
 
             var args = argString.Split(" ").ToList();
             args.Add("-adapterName");
@@ -146,7 +146,7 @@ namespace Unity.ClusterDisplay.Tests
             repeaterClusterSync.ReadParamsFromCommandLine();
             repeaterClusterSync.EnableClusterDisplay();
 
-            m_TestAgent = GetTestAgent(k_EmitterId, NodeTestUtils.txPort, NodeTestUtils.rxPort);
+            m_TestAgent = GetTestAgent(k_EmitterId, TxPort, RxPort);
 
             Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
 
@@ -213,8 +213,8 @@ namespace Unity.ClusterDisplay.Tests
             const int numRepeaters = 1;
 
             var emitterArgsString =
-                $"-emitterNode {k_EmitterId} {numRepeaters} {NodeTestUtils.multicastAddress}:{NodeTestUtils.rxPort},{NodeTestUtils.txPort} " +
-                $"-handshakeTimeout {NodeTestUtils.timeoutSeconds * 1000} ";
+                $"-emitterNode {k_EmitterId} {numRepeaters} {MulticastAddress}:{RxPort},{TxPort} " +
+                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
 
             var emitterArgs = emitterArgsString.Split(" ").ToList();
             emitterArgs.Add("-adapterName");
@@ -232,8 +232,8 @@ namespace Unity.ClusterDisplay.Tests
         private ClusterSync CreateRepeater ()
         {
             var repeaterArgsString =
-                $"-node {k_RepeaterId} {NodeTestUtils.multicastAddress}:{NodeTestUtils.txPort},{NodeTestUtils.rxPort} " +
-                $"-handshakeTimeout {NodeTestUtils.timeoutSeconds * 1000} ";
+                $"-node {k_RepeaterId} {MulticastAddress}:{TxPort},{RxPort} " +
+                $"-handshakeTimeout {TimeoutSeconds * 1000} ";
 
             var repeaterArgs = repeaterArgsString.Split(" ").ToList();
             repeaterArgs.Add("-adapterName");

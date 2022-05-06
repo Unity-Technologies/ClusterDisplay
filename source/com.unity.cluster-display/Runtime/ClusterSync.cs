@@ -57,12 +57,12 @@ namespace Unity.ClusterDisplay
         public void ShutdownAllClusterNodes() => LocalNode?.BroadcastShutdownRequest(); // matters not who triggers it
 
         /// <summary>
-        /// The Local Cluster Node Id.
+        /// Get the Node ID if cluster logic is enabled.
         /// </summary>
-        /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
+        /// <returns><see langword="true"/> if the cluster logic is enabled.</returns>
         public bool TryGetDynamicLocalNodeId(out byte dynamicLocalNodeId)
         {
-            if (!IsClusterLogicEnabled || LocalNode == null)
+            if (!IsClusterLogicEnabled)
             {
                 dynamicLocalNodeId = 0;
                 return false;
