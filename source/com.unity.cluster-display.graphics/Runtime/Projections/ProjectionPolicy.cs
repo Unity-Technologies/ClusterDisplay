@@ -30,12 +30,12 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!m_OverridingBlitPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
             {
-                throw new System.Exception($"There is no: {nameof(MaterialPropertyBlock)} for index: {index}");
+                throw new System.ArgumentException($"There is no: {nameof(MaterialPropertyBlock)} for index: {index}");
             }
 
             if (materialPropertyBlock == null)
             {
-                throw new System.Exception($"NULL: {nameof(MaterialPropertyBlock)} for index: {index}");
+                throw new System.ArgumentException($"NULL: {nameof(MaterialPropertyBlock)} for index: {index}");
             }
 
             return materialPropertyBlock;
