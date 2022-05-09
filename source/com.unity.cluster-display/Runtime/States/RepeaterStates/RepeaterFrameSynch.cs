@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    internal class RepeaterSynchronization : RepeaterState, IRepeaterNodeSyncState
+    class RepeaterSynchronization : NodeState<RepeaterNode>, IRepeaterNodeSyncState
     {
         public enum EStage
         {
@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             get => m_Stage;
             set
             {
-                ClusterDebug.Log($"(Frame: {CurrentFrameID}): Repeater entering stage: {value}");
+                ClusterDebug.Log($"(Frame: {LocalNode.CurrentFrameID}): Repeater entering stage: {value}");
                 m_Stage = value;
             }
         }
@@ -30,7 +30,6 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         TimeSpan m_TsOfStage;
 
         public RepeaterStateReader m_RepeaterReceiver;
-        public UDPAgent NetworkAgent => LocalNode.UdpAgent;
 
         ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
         ProfilerMarker m_MarkerWaitingOnGoFromEmitter = new ProfilerMarker("WaitingOnGoFromEmitter");
@@ -42,9 +41,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public bool HasHardwareSync { get; set; }
 
-        public RepeaterSynchronization(IClusterSyncState clusterSync) : base(clusterSync)
-        {
-        }
+
+        public RepeaterSynchronization(RepeaterNode node)
+            : base(node) { }
 
         public override string GetDebugString()
         {
@@ -56,7 +55,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         }
         //-------------------------------------------------
 
-        public override void InitState()
+        protected override void InitState()
         {
             Stage = EStage.WaitingOnEmitterFrameData;
             m_TsOfStage = m_Time.Elapsed;
@@ -101,7 +100,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             {
                 if (!HasHardwareSync)
                 {
-                    m_RepeaterReceiver.SignalEnteringNextFrame(CurrentFrameID);
+                    m_RepeaterReceiver.SignalEnteringNextFrame(LocalNode.UdpAgent, LocalNode.CurrentFrameID);
                 }
 
                 Stage = EStage.WaitForEmitterACK;
@@ -125,7 +124,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             using (m_MarkerWaitingOnGoFromEmitter.Auto())
             {
-                m_RepeaterReceiver.PumpMsg(CurrentFrameID);
+                m_RepeaterReceiver.PumpMsg(LocalNode.UdpAgent, LocalNode.CurrentFrameID);
 
                 // If we just processed the StartFrame message, then the Stage is now set to ReadyToProcessFrame.
                 // This will un-block the player loop to process the frame and next time this method is called (DoFrame)
@@ -134,7 +133,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     return;
 
                 PendingStateChange =
-                    new FatalError(clusterSync,
+                    new FatalError(
                         $"Have not received GO from Emitter after {MaxTimeOut.TotalMilliseconds}ms.");
             }
         }
@@ -147,7 +146,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         public override void OnEndFrame()
         {
-            ClusterDebug.Log($"(Frame: {CurrentFrameID}): Repeater ended the frame.");
+            ClusterDebug.Log($"(Frame: {LocalNode.CurrentFrameID}): Repeater ended the frame.");
             base.OnEndFrame();
         }
 
@@ -156,8 +155,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public void OnNonMatchingFrame(byte originID, ulong frameNumber)
         {
             PendingStateChange =
-                new FatalError(clusterSync,
-                    $"Received a message from node {originID} about a starting frame {frameNumber}, when we are at {CurrentFrameID} (stage: {Stage})");
+                new FatalError(
+                    $"Received a message from node {originID} about a starting frame {frameNumber}, when we are at {LocalNode.CurrentFrameID} (stage: {Stage})");
         }
 
         public void OnReceivedEmitterFrameData()

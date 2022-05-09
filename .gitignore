@@ -38,3 +38,6 @@ packages-lock.json
 
 # CI artifacts
 upm-ci~/
+.bin/
+.download/
+.Editor/

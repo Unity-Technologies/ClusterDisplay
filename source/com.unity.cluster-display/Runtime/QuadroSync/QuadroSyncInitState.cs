@@ -7,8 +7,8 @@ namespace Unity.ClusterDisplay
     {
         bool m_Initialized;
 
-        internal QuadroSyncInitState(IClusterSyncState clusterSync)
-            : base(clusterSync) { }
+        internal QuadroSyncInitState(ClusterNode node)
+            : base(node) { }
 
         protected override NodeState DoFrame(bool newFrame)
         {
@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay
 
                 ClusterDebug.Log("Initializing Quadro Sync.");
                 GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
-                ClusterSync.Instance.HasHardwareSync = true;
+                LocalNode.HasHardwareSync = true;
                 m_Initialized = true;
             }
 

@@ -7,7 +7,7 @@ using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
-    internal class RegisterWithEmitter : RepeaterState
+    internal class RegisterWithEmitter : NodeState<RepeaterNode>
     {
         // We should never proceed out of the while loop since we are immediately going to
         // enter the RepeaterSynchronization state before exiting the loop.
@@ -18,8 +18,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         private Stopwatch m_Timer;
         private TimeSpan m_LastSend;
 
-        public RegisterWithEmitter(IClusterSyncState clusterSync)
-            : base(clusterSync)
+        public RegisterWithEmitter(RepeaterNode node)
+            : base(node)
         {
             m_Timer = new Stopwatch();
             m_Timer.Start();
@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_LastSend = m_Timer.Elapsed - new TimeSpan(0, 0, 0, 1);
         }
 
-        public override void InitState()
+        protected override void InitState()
         {
         }
 
@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             if (m_EmitterFound)
             {
-                return new RepeaterSynchronization(clusterSync) {MaxTimeOut = this.MaxTimeOut};
+                return new RepeaterSynchronization(LocalNode) { MaxTimeOut = this.MaxTimeOut };
             }
 
             ProcessMessages();
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         Flags = MessageHeader.EFlag.Broadcast | MessageHeader.EFlag.DoesNotRequireAck
                     };
 
-                    var roleInfo = new RolePublication { NodeRole = ENodeRole.Repeater };
+                    var roleInfo = new RolePublication { NodeRole = NodeRole.Repeater };
                     var payload = NetworkingHelpers.AllocateMessageWithPayload<RolePublication>();
                     roleInfo.StoreInBuffer(payload, Marshal.SizeOf<MessageHeader>());
 
@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
             catch (Exception e)
             {
-                var err = new FatalError(clusterSync, $"Error occured while registering with emitter node: {e.Message}");
+                var err = new FatalError($"Error occured while registering with emitter node: {e.Message}");
                 PendingStateChange = err;
             }
         }

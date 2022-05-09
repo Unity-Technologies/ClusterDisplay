@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.Rendering;
@@ -14,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         // TODO: Create a custom icon for this.
         const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";
-        
+
         [SerializeField]
         List<ProjectionSurface> m_ProjectionSurfaces = new();
 
@@ -52,7 +53,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             return false;
         }
-        
+
         void OnDisable()
         {
             ClearPreviews();
@@ -68,7 +69,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
-            var nodeIndex = m_IsDebug || !ClusterDisplayState.IsActive ? m_NodeIndexOverride : ClusterDisplayState.NodeID;
+            // TODO: nodeID does not change, so we should only need to initialize it once.
+            var nodeIndex =
+                !m_IsDebug && ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync)
+
+                    ? clusterSync.NodeID
+                    : m_NodeIndexOverride;
 
             if (nodeIndex >= m_ProjectionSurfaces.Count)
             {
@@ -153,7 +159,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 #endif
         }
-        
+
         public void AddSurface()
         {
             m_ProjectionSurfaces.Add(ProjectionSurface.Create($"Screen {m_ProjectionSurfaces.Count}"));
@@ -220,8 +226,8 @@ namespace Unity.ClusterDisplay.Graphics
                 clusterSettings.OverScanInPixels);
 
             using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
-            
-            cameraScope.Render(GetRenderTexture(index, overscannedSize), 
+
+            cameraScope.Render(GetRenderTexture(index, overscannedSize),
                 projectionMatrix,
                 position: cameraTransform.position,
                 rotation: alignedRotation);

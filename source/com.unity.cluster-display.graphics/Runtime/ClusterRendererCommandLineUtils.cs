@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
 
@@ -10,10 +11,8 @@ namespace Unity.ClusterDisplay.Graphics
     /// Introduced to avoid a having direct references to command line parameters in the Cluster Renderer,
     /// since it would hamper testability.
     /// </summary>
-    [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ClusterRenderer))]
-
     // TODO Rename component?
     class ClusterRendererCommandLineUtils : MonoBehaviour
     {
@@ -25,7 +24,9 @@ namespace Unity.ClusterDisplay.Graphics
             var renderer = GetComponent<ClusterRenderer>();
             Assert.IsNotNull(renderer);
 
-            if (ClusterDisplayState.IsEmitter && ClusterDisplayState.EmitterIsHeadless)
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                clusterSync.NodeRole is NodeRole.Emitter &&
+                clusterSync.EmitterIsHeadless)
             {
                 renderer.enabled = false;
                 return;
@@ -33,7 +34,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             renderer.DelayPresentByOneFrame = CommandLineParser.emitterSpecified.Value && CommandLineParser.delayRepeaters.Value;
 
-            if (Application.isPlaying && renderer.ProjectionPolicy is ProjectionPolicy projectionPolicy)
+            if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {
                 ApplyCmdLineSettings(projectionPolicy);
             }
