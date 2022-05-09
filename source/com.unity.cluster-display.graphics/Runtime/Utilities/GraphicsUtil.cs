@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
             return s_PropertyBlock;
         }
 
-        internal static Material GetBlitMaterial()
+        static Material GetBlitMaterial()
         {
             if (s_BlitMaterial == null)
             {
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)
         {
-            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY, blitCommand.overridingMaterial, blitCommand.overridingPropertyBlock);
+            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY, blitCommand.material, blitCommand.materialPropertyBlock);
         }
 
         public static void Blit(CommandBuffer cmd, RenderTexture source, bool flipY)
@@ -81,19 +81,19 @@ namespace Unity.ClusterDisplay.Graphics
             Blit(cmd, source, k_IdentityScaleBias, k_IdentityScaleBias, flipY);
         }
 
-        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY, Material overridingMaterial = null, MaterialPropertyBlock overridingPropertyBlock = null)
+        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY, Material material = null, MaterialPropertyBlock materialPropertyBlock = null)
         {
             var shaderPass = flipY ? 1 : 0;
 
-            var propertyBlock = overridingPropertyBlock == null ? GetPropertyBlock() : overridingPropertyBlock;
-            var material = overridingMaterial == null ? GetBlitMaterial() : overridingMaterial;
+            var propertyBlock = materialPropertyBlock == null ? GetPropertyBlock() : materialPropertyBlock;
+            var blitMaterial = material == null ? GetBlitMaterial() : material;
 
             propertyBlock.SetTexture(ShaderIDs._BlitTexture, source);
             propertyBlock.SetVector(ShaderIDs._BlitScaleBias, texBias);
             propertyBlock.SetVector(ShaderIDs._BlitScaleBiasRt, rtBias);
             propertyBlock.SetFloat(ShaderIDs._BlitMipLevel, 0);
 
-            cmd.DrawProcedural(Matrix4x4.identity, material, shaderPass, MeshTopology.Quads, 4, 1, propertyBlock);
+            cmd.DrawProcedural(Matrix4x4.identity, blitMaterial, shaderPass, MeshTopology.Quads, 4, 1, propertyBlock);
         }
 
         public static void AllocateIfNeeded(ref RenderTexture[] rts, int count, int width, int height, string name)

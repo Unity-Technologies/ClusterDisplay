@@ -12,8 +12,8 @@ namespace Unity.ClusterDisplay.Graphics
         public readonly Vector4 scaleBiasTex;
         public readonly Vector4 scaleBiasRT;
 
-        public readonly Material overridingMaterial;
-        public readonly MaterialPropertyBlock overridingPropertyBlock;
+        public readonly Material material;
+        public readonly MaterialPropertyBlock materialPropertyBlock;
 
         public BlitCommand(RenderTexture texture, Vector4 scaleBiasTex, Vector4 scaleBiasRT, Material overridingMaterial = null, MaterialPropertyBlock overridingPropertyBlock = null)
         {
@@ -21,8 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
             this.scaleBiasTex = scaleBiasTex;
             this.scaleBiasRT = scaleBiasRT;
 
-            this.overridingMaterial = overridingMaterial;
-            this.overridingPropertyBlock = overridingPropertyBlock;
+            this.material = overridingMaterial;
+            this.materialPropertyBlock = overridingPropertyBlock;
         }
     }
 }

@@ -22,17 +22,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         }
 
         [UnityTest]
-        public IEnumerator UseDefaultBlitMaterial()
-        {
-            yield return RenderAndCompare(() =>
-            {
-                var cameraTransform = m_Camera.transform;
-                var projection = m_ClusterRenderer.ProjectionPolicy;
-                projection.SetOverridingBlitMaterial(GraphicsUtil.GetBlitMaterial(), materialPropertyBlock: null);
-            });
-        }
-
-        [UnityTest]
         public IEnumerator UseCustomBlitMaterial()
         {
             yield return RenderAndCompare(() =>
