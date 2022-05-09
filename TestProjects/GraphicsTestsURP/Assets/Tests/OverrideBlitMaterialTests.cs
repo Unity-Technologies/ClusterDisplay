@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             {
                 var cameraTransform = m_Camera.transform;
                 var projection = m_ClusterRenderer.ProjectionPolicy;
-                projection.SetOverridingBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock: null);
+                projection.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock: null);
             });
         }
 
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 var materialPropertyBlock = new MaterialPropertyBlock();
                 materialPropertyBlock.SetInt(_DisplayRed, 1);
 
-                projection.SetOverridingBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock);
+                projection.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock);
             }, () =>
             {
                 m_Camera.cullingMask = cullingMask;

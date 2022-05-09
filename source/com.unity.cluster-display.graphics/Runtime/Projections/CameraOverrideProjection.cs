@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
                         clusterSettings.OverScanInPixels, Vector2.zero)
                     .ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias,
-                GetOverridingBlitMaterial(),
+                GetCustomBlitMaterial(),
                 GetOverridingBlitPropertyBlock(m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : ClusterDisplayState.NodeID));
         }
 

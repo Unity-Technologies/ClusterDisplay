@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)
         {
-            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY, blitCommand.material, blitCommand.materialPropertyBlock);
+            Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY, blitCommand.customMaterial, blitCommand.customMaterialPropertyBlock);
         }
 
         public static void Blit(CommandBuffer cmd, RenderTexture source, bool flipY)

@@ -285,7 +285,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection), GetOverridingBlitMaterial(), GetOverridingBlitPropertyBlock(tileIndex)));
+                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection), GetCustomBlitMaterial(), GetOverridingBlitPropertyBlock(tileIndex)));
             }
         }
 
@@ -309,7 +309,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             cameraScope.Render(target, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
 
-            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias, GetOverridingBlitMaterial(), GetOverridingBlitPropertyBlock(tileProjectionContext.CurrentTileIndex)));
+            commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias, GetCustomBlitMaterial(), GetOverridingBlitPropertyBlock(tileProjectionContext.CurrentTileIndex)));
         }
     }
 }

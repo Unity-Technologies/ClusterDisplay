@@ -14,21 +14,21 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         protected bool m_IsDebug;
 
-        Material m_OverridingBlitMaterial;
-        Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks;
-        MaterialPropertyBlock m_OverridingBlitPropertyBlock;
+        Material m_CustomBlitMaterial;
+        Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
+        MaterialPropertyBlock m_CustomBlitMaterialPropertyBlock;
 
-        protected Material GetOverridingBlitMaterial() => m_OverridingBlitMaterial;
-        protected MaterialPropertyBlock GetOverridingBlitPropertyBlock() => m_OverridingBlitPropertyBlock;
+        protected Material GetCustomBlitMaterial() => m_CustomBlitMaterial;
+        protected MaterialPropertyBlock GetCustomBlitMaterialPropertyBlock() => m_CustomBlitMaterialPropertyBlock;
 
         protected MaterialPropertyBlock GetOverridingBlitPropertyBlock(int index)
         {
-            if (m_OverridingBlitPropertyBlocks == null)
+            if (m_CustomBlitMaterialPropertyBlocks == null)
             {
                 return null;
             }
 
-            if (!m_OverridingBlitPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
+            if (!m_CustomBlitMaterialPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
             {
                 throw new System.ArgumentException($"There is no: {nameof(MaterialPropertyBlock)} for index: {index}");
             }
@@ -41,16 +41,16 @@ namespace Unity.ClusterDisplay.Graphics
             return materialPropertyBlock;
         }
 
-        public void SetOverridingBlitMaterial(Material material, MaterialPropertyBlock materialPropertyBlock = null)
+        public void SetCustomBlitMaterial(Material material, MaterialPropertyBlock materialPropertyBlock = null)
         {
-            m_OverridingBlitMaterial = material;
-            m_OverridingBlitPropertyBlock = materialPropertyBlock;
+            m_CustomBlitMaterial = material;
+            m_CustomBlitMaterialPropertyBlock = materialPropertyBlock;
         }
 
         public void SetOverridingBlitMaterial(Material material, Dictionary<int, MaterialPropertyBlock> materialPropertyBlocks = null)
         {
-            m_OverridingBlitMaterial = material;
-            m_OverridingBlitPropertyBlocks = materialPropertyBlocks;
+            m_CustomBlitMaterial = material;
+            m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
         }
         
         /// <summary>
