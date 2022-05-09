@@ -121,16 +121,18 @@ namespace GfxQuadroSync
     extern "C" bool UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
         UnityRenderingExtQuery(UnityRenderingExtQueryType query)
     {
-        if (!IsContextValid())
-            return false;
+        if (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
+        {
+            if (!IsContextValid())
+                return false;
 
-        return (query == UnityRenderingExtQueryType::kUnityRenderingExtQueryOverridePresentFrame)
-            ? s_SwapGroupClient.Render(
+            return s_SwapGroupClient.Render(
                 s_GraphicsDevice->GetDevice(),
                 s_GraphicsDevice->GetSwapChain(),
                 s_GraphicsDevice->GetSyncInterval(),
-                s_GraphicsDevice->GetPresentFlags())
-            : false;
+                s_GraphicsDevice->GetPresentFlags());
+        }
+        return false;
     }
 
     static void GetRenderDeviceInterface(UnityGfxRenderer renderer)
