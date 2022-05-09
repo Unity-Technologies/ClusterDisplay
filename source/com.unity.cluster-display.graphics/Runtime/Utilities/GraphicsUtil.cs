@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
             return s_PropertyBlock;
         }
 
-        static Material GetBlitMaterial()
+        internal static Material GetBlitMaterial()
         {
             if (s_BlitMaterial == null)
             {

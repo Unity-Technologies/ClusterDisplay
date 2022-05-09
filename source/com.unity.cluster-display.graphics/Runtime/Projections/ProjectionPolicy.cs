@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -16,7 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
         protected bool m_IsDebug;
 
         private Material m_OverridingBlitMaterial;
-        private Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks = new Dictionary<int, MaterialPropertyBlock>();
+        private Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks;
         private MaterialPropertyBlock m_OverridingBlitPropertyBlock;
 
         protected Material GetOverridingBlitMaterial() => m_OverridingBlitMaterial;
