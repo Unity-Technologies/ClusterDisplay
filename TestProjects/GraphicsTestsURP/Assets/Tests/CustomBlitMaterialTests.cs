@@ -10,7 +10,7 @@ using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {
-    public class OverrideBlitMaterialTests : ClusterRendererPostProcessTest
+    public class CustomBlitMaterialTests : ClusterRendererPostProcessTest
     {
         const string k_ModifiedBlitShaderName = "Hidden/Test/Modified Blit";
         const string _DisplayRed = "_DisplayRed";
@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         [OneTimeSetUp]
         public void LoadScene()
         {
-            SceneManager.LoadScene("OverrideBlitMaterial");
+            SceneManager.LoadScene("CustomBlitMaterial");
         }
 
         [UnityTest]
