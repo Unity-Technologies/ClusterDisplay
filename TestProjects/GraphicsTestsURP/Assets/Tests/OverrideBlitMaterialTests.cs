@@ -10,7 +10,7 @@ using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.Graphics.Tests
 {
-    public class OverridingBlitMaterialTests : ClusterRendererPostProcessTest
+    public class OverrideBlitMaterialTests : ClusterRendererPostProcessTest
     {
         const string k_ModifiedBlitShaderName = "Hidden/Test/Modified Blit";
         const string _DisplayRed = "_DisplayRed";
