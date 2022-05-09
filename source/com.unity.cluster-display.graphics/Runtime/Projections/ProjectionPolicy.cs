@@ -14,9 +14,9 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         protected bool m_IsDebug;
 
-        private Material m_OverridingBlitMaterial;
-        private Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks;
-        private MaterialPropertyBlock m_OverridingBlitPropertyBlock;
+        Material m_OverridingBlitMaterial;
+        Dictionary<int, MaterialPropertyBlock> m_OverridingBlitPropertyBlocks;
+        MaterialPropertyBlock m_OverridingBlitPropertyBlock;
 
         protected Material GetOverridingBlitMaterial() => m_OverridingBlitMaterial;
         protected MaterialPropertyBlock GetOverridingBlitPropertyBlock() => m_OverridingBlitPropertyBlock;
