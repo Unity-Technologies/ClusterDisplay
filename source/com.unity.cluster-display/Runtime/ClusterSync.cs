@@ -7,11 +7,6 @@ using UnityEditor;
 
 namespace Unity.ClusterDisplay
 {
-    public static class ClusterSyncDebug
-    {
-        public static string GetDebugString () => ClusterSync.Instance.GetDebugString();
-    }
-
     /// <summary>
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
@@ -19,21 +14,14 @@ namespace Unity.ClusterDisplay
     ///
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-#if UNITY_EDITOR
-    [InitializeOnLoad]
-#endif
-    internal partial class ClusterSync : IClusterSyncState
+    partial class ClusterSync
     {
-        public static ClusterSync Instance => ClusterDisplayManager.ClusterSyncInstance;
-
-        public const string k_DefaultName = "DefaultClusterSync";
-        public string InstanceName => m_InstanceName;
-        readonly string m_InstanceName;
+        const string k_DefaultName = "DefaultClusterSync";
+        public string InstanceName { get; }
 
         public ClusterSync (string instanceName = k_DefaultName)
         {
-            m_InstanceName = instanceName;
-            RegisterDelegates();
+            InstanceName = instanceName;
 
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
@@ -55,34 +43,13 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Returns the number of frames rendered by the Cluster Display.
         /// </summary>
-        public UInt64 CurrentFrameID => m_CurrentFrameID;
+        public UInt64 CurrentFrameID => LocalNode.CurrentFrameID;
 
-        private UInt64 m_CurrentFrameID;
         private bool m_NewFrame;
 
-        public ClusterNode m_LocalNode;
-        ClusterNode IClusterSyncState.LocalNode => m_LocalNode;
-
-        public ClusterNode LocalNode => m_LocalNode;
+        internal ClusterNode LocalNode { get; private set; }
 
         public NetworkingStats CurrentNetworkStats => LocalNode.UdpAgent.CurrentNetworkStats;
-
-        /// <summary>
-        /// Gets or sets whether there is a layer of synchronization performed
-        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
-        /// </summary>
-        /// <remarks>
-        /// When set to <c>false</c>, all nodes signal when they are ready
-        /// to begin a new frame, and the emitter will wait until it receives
-        /// the signal from all nodes before allowing the cluster to proceed.
-        /// Set this to <c>true</c> if your hardware enforces this at a low level
-        /// and it is safe to bypass the wait.
-        /// </remarks>
-        public bool HasHardwareSync
-        {
-            get => LocalNode.HasHardwareSync;
-            set => LocalNode.HasHardwareSync = value;
-        }
 
         /// <summary>
         /// Sends a shutdown request (Useful together with Terminated, to quit the cluster gracefully.)
@@ -90,12 +57,12 @@ namespace Unity.ClusterDisplay
         public void ShutdownAllClusterNodes() => LocalNode?.BroadcastShutdownRequest(); // matters not who triggers it
 
         /// <summary>
-        /// The Local Cluster Node Id.
+        /// Get the Node ID if cluster logic is enabled.
         /// </summary>
-        /// <exception cref="Exception">Throws if the cluster logic is not enabled.</exception>
+        /// <returns><see langword="true"/> if the cluster logic is enabled.</returns>
         public bool TryGetDynamicLocalNodeId(out byte dynamicLocalNodeId)
         {
-            if (!state.IsClusterLogicEnabled || LocalNode == null)
+            if (!IsClusterLogicEnabled)
             {
                 dynamicLocalNodeId = 0;
                 return false;
@@ -109,20 +76,24 @@ namespace Unity.ClusterDisplay
         /// Debug info.
         /// </summary>
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
-        public string GetDebugString() => $"Cluster Sync Instance: {m_InstanceName},\r\n" +
-			$"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
-            $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
-            $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms\r\n";
+        public string GetDiagnostics()
+        {
+            var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
+            return $"Cluster Sync Instance: {InstanceName},\r\n" +
+				   $"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
+                   $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +
+                   $"\r\n\tAverage Sync Overhead Time: {(m_StartDelayMonitor.Average + m_EndDelayMonitor.Average) * 1000} ms" +
+                   $"\r\n\r\n Quadro Sync State:" +
+                   $"\r\n\tInitialization: " + quadroSyncState.InitializationState.ToDescriptiveText() +
+                   $"\r\n\tSwap group / barrier identifier: {quadroSyncState.SwapGroupId} / {quadroSyncState.SwapBarrierId}" +
+                   $"\r\n\tPresent success / failure: {quadroSyncState.PresentedFramesSuccess} / {quadroSyncState.PresentedFramesFailure}";
+        }
 
-        private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{m_InstanceName}\"]: {msg}");
+        private void InstanceLog(string msg) => ClusterDebug.Log($"[{nameof(ClusterSync)} instance \"{InstanceName}\"]: {msg}");
 
         private void RegisterDelegates()
         {
             UnRegisterDelegates();
-
-            ClusterDisplayManager.onEnable += EnableClusterDisplay;
-            ClusterDisplayManager.onDisable += DisableClusterDisplay;
-            ClusterDisplayManager.onApplicationQuit += Quit;
 
             // Register Do(X) methods with ClusterSyncLooper network fences.
             ClusterSyncLooper.onInstanceDoPreFrame += PreFrame;
@@ -133,10 +104,6 @@ namespace Unity.ClusterDisplay
 
         private void UnRegisterDelegates()
         {
-            ClusterDisplayManager.onEnable -= EnableClusterDisplay;
-            ClusterDisplayManager.onDisable -= DisableClusterDisplay;
-            ClusterDisplayManager.onApplicationQuit -= Quit;
-
             ClusterSyncLooper.onInstanceDoPreFrame -= PreFrame;
             ClusterSyncLooper.onInstanceDoFrame -= DoFrame;
             ClusterSyncLooper.onInstancePostFrame -= PostFrame;
@@ -160,7 +127,8 @@ namespace Unity.ClusterDisplay
                 DelayRepeaters            = CommandLineParser.delayRepeaters.Value,
                 HeadlessEmitter           = CommandLineParser.headlessEmitter.Value,
                 HandshakeTimeout          = new TimeSpan(0, 0, 0, 0, CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
-                CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000)
+                CommunicationTimeout      = new TimeSpan(0, 0, 0, 0, CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000),
+                EnableHardwareSync        = !CommandLineParser.disableQuadroSync.Value
             };
 
             return m_ClusterParams.Value;
@@ -168,13 +136,13 @@ namespace Unity.ClusterDisplay
 
         public void EnableClusterDisplay()
         {
-            if (syncState.IsActive)
+            if (IsClusterLogicEnabled)
                 return;
 
             m_ClusterParams ??= ReadParamsFromCommandLine();
             ClusterParams clusterParams = m_ClusterParams.Value;
 
-            InstanceLog($"Enabling {nameof(ClusterSync)} instance: \"{m_InstanceName}\".");
+            InstanceLog($"Enabling {nameof(ClusterSync)}.");
 
 #if UNITY_EDITOR
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
@@ -185,26 +153,25 @@ namespace Unity.ClusterDisplay
 
             Application.targetFrameRate = clusterParams.TargetFps;
 
-            syncState.SetIsActive(true);
-            syncState.SetIsTerminated(false);
-            syncState.SetClusterLogicEnabled(clusterParams.ClusterLogicSpecified);
-            syncState.SetNodeID(clusterParams.NodeID);
+            IsTerminated = false;
+            IsClusterLogicEnabled = clusterParams.ClusterLogicSpecified;
 
             onPreEnableClusterDisplay?.Invoke();
 
-            if (!state.IsClusterLogicEnabled)
+            if (!IsClusterLogicEnabled)
             {
                 InstanceLog("ClusterRendering is missing command line configuration. Will be dormant.");
-                syncState.SetIsEmitter(true);
+                NodeRole = NodeRole.Unassigned;
                 return;
             }
 
             if (!TryInitialize(clusterParams))
             {
-                syncState.SetClusterLogicEnabled(false);
+                IsClusterLogicEnabled = false;
                 return;
             }
 
+            RegisterDelegates();
             ClusterSyncLooper.InjectSynchPointInPlayerLoop();
             onPostEnableClusterDisplay?.Invoke();
         }
@@ -213,24 +180,22 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for emitter.");
+            InstanceLog($"Initializing {nameof(ClusterSync)} for emitter.");
             try
             {
                 // Emitter command line format: -emitterNode nodeId nodeCount ip:rxport,txport
-                m_LocalNode = new EmitterNode(
-                    this,
+                LocalNode = new EmitterNode(
                     new EmitterNode.Config
                     {
                         headlessEmitter     = clusterParams.HeadlessEmitter,
                         repeatersDelayed    = clusterParams.DelayRepeaters,
                         repeaterCount       = clusterParams.RepeaterCount,
-                        udpAgentConfig      = config
+                        udpAgentConfig      = config,
+                        enableHardwareSync  = clusterParams.EnableHardwareSync
                     });
 
-                syncState.SetIsEmitter(true);
-                syncState.SetEmitterIsHeadless(clusterParams.HeadlessEmitter);
-                syncState.SetIsRepeater(false);
-
+                NodeRole = NodeRole.Emitter;
+                EmitterIsHeadless = clusterParams.HeadlessEmitter;
 
                 LocalNode.Start();
                 return true;
@@ -244,18 +209,17 @@ namespace Unity.ClusterDisplay
 
         private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
         {
-            InstanceLog($"Initializing {nameof(ClusterSync)}: instance \"{m_InstanceName}\" for repeater.");
+            InstanceLog($"Initializing {nameof(ClusterSync)} for repeater.");
 
             try
             {
-                // Emitter command line format: -node nodeId ip:rxport,txport
-                m_LocalNode = new RepeaterNode(
-                    this,
-                    clusterParams.DelayRepeaters,
-                    config);
+                LocalNode = new RepeaterNode(new RepeaterNode.Config
+                {
+                    EnableHardwareSync = clusterParams.EnableHardwareSync,
+                    UdpAgentConfig = config
+                });
 
-                syncState.SetIsEmitter(false);
-                syncState.SetIsRepeater(true);
+                NodeRole = NodeRole.Repeater;
 
                 LocalNode.Start();
                 return true;
@@ -307,21 +271,16 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private void Quit() =>
-            ShutdownAllClusterNodes();
-
         public void CleanUp()
         {
             m_ClusterParams = null;
 
             LocalNode?.Exit();
-            m_LocalNode = null;
+            LocalNode = null;
 
             ClusterSyncLooper.RemoveSynchPointFromPlayerLoop();
 
-            m_CurrentFrameID = 0;
-            syncState.SetIsActive(false);
-            syncState.SetClusterLogicEnabled(false);
+            IsClusterLogicEnabled = false;
 
             UnRegisterDelegates();
 
@@ -336,10 +295,10 @@ namespace Unity.ClusterDisplay
             {
 #if ENABLE_INPUT_SYSTEM
                 if (Keyboard.current.kKey.isPressed || Keyboard.current.qKey.isPressed)
-                    Quit();
+                    ShutdownAllClusterNodes();
 #elif ENABLE_LEGACY_INPUT_MANAGER
                 if (Input.GetKeyUp(KeyCode.K) || Input.GetKeyUp(KeyCode.Q))
-                    Quit();
+                    ShutdownAllClusterNodes();
 #endif
 
                 if (m_Debugging)
@@ -350,7 +309,7 @@ namespace Unity.ClusterDisplay
                     if (!LocalNode.DoFrame(m_NewFrame))
                     {
                         // Game Over!
-                        syncState.SetIsTerminated(true);
+                        IsTerminated = true;
                     }
 
                     m_NewFrame = LocalNode.ReadyToProceed;
@@ -366,7 +325,7 @@ namespace Unity.ClusterDisplay
                     m_FrameRatePerf.SampleNow();
                     m_FrameRatePerf.RefPoint();
 
-                    InstanceLog($"(Frame: {m_CurrentFrameID}): Node is starting frame.");
+                    InstanceLog($"(Frame: {CurrentFrameID}): Node is starting frame.");
 
                     m_StartDelayMonitor.RefPoint();
                 }
@@ -393,11 +352,11 @@ namespace Unity.ClusterDisplay
                 if (!LocalNode.DoFrame(newFrame))
                 {
                     // Game Over!
-                    syncState.SetIsTerminated(true);
+                    IsTerminated = true;
                 }
 
                 newFrame = false;
-                return (LocalNode.ReadyToProceed, state.IsTerminated);
+                return (LocalNode.ReadyToProceed, IsTerminated);
             }
 
             catch (Exception e)
@@ -420,10 +379,8 @@ namespace Unity.ClusterDisplay
                 LocalNode.EndFrame();
 
                 m_StartDelayMonitor.SampleNow();
-                InstanceLog(GetDebugString());
-                InstanceLog($"(Frame: {m_CurrentFrameID}): Stepping to next frame.");
-
-                syncState.SetFrame(++m_CurrentFrameID);
+                InstanceLog(GetDiagnostics());
+                InstanceLog($"(Frame: {CurrentFrameID}): Stepping to next frame.");
             }
 
             catch (Exception e)
@@ -462,7 +419,7 @@ namespace Unity.ClusterDisplay
 
         private void OnException (Exception e)
         {
-            syncState.SetIsTerminated(true);
+            IsTerminated = true;
 
             InstanceLog($"Encountered exception.");
             ClusterDebug.LogException(e);
@@ -470,7 +427,7 @@ namespace Unity.ClusterDisplay
 
         private void OnFinally ()
         {
-            if (state.IsTerminated)
+            if (IsTerminated)
             {
                 CleanUp();
             }

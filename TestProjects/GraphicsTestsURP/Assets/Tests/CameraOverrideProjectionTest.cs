@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
+public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
 {
     [OneTimeSetUp]
     public void LoadScene()
@@ -31,40 +31,40 @@ public class CameraOverrideProjectionTest : ClusterRendererPostProcessTest
     }
 
     [UnityTest]
-    public IEnumerator CompareVanillaAndStitchedCluster([ValueSource("VolumeProfileNames")] string profileName)
+    public IEnumerator CompareReferenceAndCameraOverride([ValueSource("VolumeProfileNames")] string profileName)
     {
-        var exceptionHandler = profileName == "FilmGrain" ? () => Debug.LogError("Film grain test requires the LWRP_DEBUG_STATIC_POSTFX scripting symbol to be defined in the Player Settings.") : (Action)null;
-
-        yield return RenderAndCompare(() =>
-        {
-            var cameraTransform = m_Camera.transform;
-            var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
-            Assert.That(projection, Is.Not.Null);
-            projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
-            projection.Position = cameraTransform.position;
-            projection.Rotation = cameraTransform.rotation;
-            projection.ProjectionMatrix = m_Camera.projectionMatrix;
-            m_Volume.profile = LoadVolumeProfile(profileName);
-        }, null, exceptionHandler);
+        yield return CompareReferenceAndCluster(profileName, () =>
+            {
+                // Set up the projection with the override properties
+                var cameraTransform = m_ReferenceCamera.transform;
+                var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
+                Assert.That(projection, Is.Not.Null);
+                projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
+                projection.Position = cameraTransform.position;
+                projection.Rotation = cameraTransform.rotation;
+                projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
+            },
+            profileName == "FilmGrain"
+                ? () => Debug.LogError(
+                    "Film grain test requires the LWRP_DEBUG_STATIC_POSTFX scripting symbol to be defined in the Player Settings.")
+                : null);
     }
 
-    
     [UnityTest]
-    public IEnumerator CompareVanillaAndStitchedClusterWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")]
-        string profileName)
+    public IEnumerator CompareReferenceAndCameraOverrideWithOverscan([ValueSource("VolumeProfileOverscanSupportNames")] string profileName)
     {
-        yield return RenderAndCompare(() =>
+        yield return CompareReferenceAndCluster(profileName, () =>
         {
             m_ClusterRenderer.Settings.OverScanInPixels = 64;
-            
-            var cameraTransform = m_Camera.transform;
+
+            // Set up the projection with the override properties
+            var cameraTransform = m_ReferenceCamera.transform;
             var projection = m_ClusterRenderer.ProjectionPolicy as CameraOverrideProjection;
             Assert.That(projection, Is.Not.Null);
             projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
-            projection.ProjectionMatrix = m_Camera.projectionMatrix;
-            m_Volume.profile = LoadVolumeProfile(profileName);
+            projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
         });
     }
 }

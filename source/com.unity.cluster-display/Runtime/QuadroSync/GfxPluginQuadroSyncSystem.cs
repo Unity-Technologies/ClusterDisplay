@@ -82,6 +82,9 @@ namespace Unity.ClusterDisplay
             [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern void SetLogCallback(
                 [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
+
+            [DllImport(DLLPath, CallingConvention = CallingConvention.StdCall)]
+            public static extern void GetState(ref GfxPluginQuadroSyncState state);
         }
 
         /// <summary>
@@ -120,6 +123,19 @@ namespace Unity.ClusterDisplay
             }
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);
+        }
+
+        /// <summary>
+        /// Fetch the state of GfxPluginQuadroSync.
+        /// </summary>
+        /// <returns>The state of GfxPluginQuadroSync</returns>
+        /// <remarks>This is not a simple readonly property as getting this state is not "free" and fetching of the
+        /// latest value is done every time the method is called.</remarks>
+        public GfxPluginQuadroSyncState FetchState()
+        {
+            var toReturn = new GfxPluginQuadroSyncState();
+            GfxPluginQuadroSyncUtilities.GetState(ref toReturn);
+            return toReturn;
         }
     }
 }

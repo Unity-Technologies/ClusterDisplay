@@ -171,7 +171,7 @@ namespace Unity.ClusterDisplay.Graphics
                 Vector3? position,
                 Quaternion? rotation)
             {
-                m_BaseCameraScope.PreRender(target, projection);
+                m_BaseCameraScope.PreRender(target, projection, position, rotation);
 
                 Debug.Assert(m_UseScreenCoordOverride == screenSizeOverride.HasValue);
                 

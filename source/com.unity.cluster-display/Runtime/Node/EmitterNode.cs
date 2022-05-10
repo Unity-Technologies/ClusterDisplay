@@ -9,15 +9,15 @@ namespace Unity.ClusterDisplay
     internal class RemoteNodeComContext
     {
         public byte ID { get; set; }
-        public ENodeRole Role { get; set; }
+        public NodeRole Role { get; set; }
     }
 
-    internal class EmitterNode : ClusterNode
+    class EmitterNode : ClusterNode
     {
-        public List<RemoteNodeComContext> m_RemoteNodes = new List<RemoteNodeComContext>();
         public int TotalExpectedRemoteNodesCount { get; set; }
         public bool RepeatersDelayed { get; set; }
 
+        List<RemoteNodeComContext> m_RemoteNodes = new();
         public override bool HasHardwareSync
         {
             get => m_CurrentState is EmitterSynchronization {HasHardwareSync: true};
@@ -30,34 +30,38 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        public IReadOnlyList<RemoteNodeComContext> RemoteNodes => m_RemoteNodes;
+
         public struct Config
         {
             public bool headlessEmitter;
             public bool repeatersDelayed;
             public int repeaterCount;
             public UDPAgent.Config udpAgentConfig;
+            public bool enableHardwareSync;
         }
 
-        public EmitterNode(
-            IClusterSyncState clusterSync,
-            Config config)
-            : base(clusterSync, config.udpAgentConfig)
+        public EmitterNode(Config config)
+            : base(config.udpAgentConfig)
         {
-            m_CurrentState = HardwareSyncInitState.Create(clusterSync);
+            m_CurrentState = config.enableHardwareSync
+                ? HardwareSyncInitState.Create(this)
+                : new WaitingForAllClients(this);
             RepeatersDelayed = config.repeatersDelayed;
             TotalExpectedRemoteNodesCount = config.repeaterCount;
         }
 
         public override void Start()
         {
+            base.Start();
             m_CurrentState.EnterState(null);
         }
 
         public int FindNodeByID(byte nodeId)
         {
-            for (var i = 0; i < m_RemoteNodes.Count; i++)
+            for (var i = 0; i < RemoteNodes.Count; i++)
             {
-                if (m_RemoteNodes[i].ID == nodeId)
+                if (RemoteNodes[i].ID == nodeId)
                     return i;
             }
 
@@ -69,7 +73,7 @@ namespace Unity.ClusterDisplay
             var nodeIndex = FindNodeByID(nodeCtx.ID);
             if (nodeIndex == -1)
             {
-                if (m_UDPAgent.AllNodesMask != m_UDPAgent.NewNodeNotification(nodeCtx.ID))
+                if (UdpAgent.AllNodesMask != UdpAgent.NewNodeNotification(nodeCtx.ID))
                 {
                     m_RemoteNodes.Add(nodeCtx);
                     return;
@@ -79,7 +83,7 @@ namespace Unity.ClusterDisplay
             // Since we are using UDP, it' possible that a node might attempt to register twice.
             // but it's also possible that a node crashed and is rebooting.
             // in both cases we just ignore it.
-            ClusterDebug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {m_RemoteNodes[nodeIndex].Role}.");
+            ClusterDebug.LogWarning($"Node {nodeCtx.ID} is attempting to re-register. Request is ignored and role remains set to {RemoteNodes[nodeIndex].Role}.");
         }
 
         public void UnRegisterNode(byte NodeId)

@@ -59,9 +59,8 @@ namespace Unity.ClusterDisplay
 
         public RepeaterStateReader(IRepeaterNodeSyncState nodeSyncState) => this.nodeSyncState = nodeSyncState;
 
-        public void PumpMsg(ulong currentFrameID)
+        public void PumpMsg(UDPAgent agent, ulong currentFrameID)
         {
-            var agent = nodeSyncState.NetworkAgent;
             while (agent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
             {
                 m_RxCount++;
@@ -114,7 +113,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void SignalEnteringNextFrame(ulong currentFrameID)
+        public void SignalEnteringNextFrame(UDPAgent agent, ulong currentFrameID)
         {
             ClusterDebug.Log($"(Frame: {currentFrameID}): Signaling Frame Done.");
 
@@ -131,7 +130,7 @@ namespace Unity.ClusterDisplay
             msg.StoreInBuffer(m_OutBuffer, Marshal.SizeOf<MessageHeader>());
 
             m_NetworkingOverhead.RefPoint();
-            nodeSyncState.NetworkAgent.PublishMessage(msgHdr, m_OutBuffer);
+            agent.PublishMessage(msgHdr, m_OutBuffer);
             m_TxCount++;
         }
 

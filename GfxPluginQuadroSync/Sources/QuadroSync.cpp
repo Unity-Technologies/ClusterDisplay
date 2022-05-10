@@ -11,14 +11,6 @@
 namespace GfxQuadroSync
 {
     PluginCSwapGroupClient::PluginCSwapGroupClient()
-        : m_GroupId(1)
-        , m_BarrierId(1)
-        , m_FrameCount(0)
-        , m_GSyncSwapGroups(0)
-        , m_GSyncBarriers(0)
-        , m_GSyncMaster(true)
-        , m_GSyncCounter(false)
-        , m_IsActive(false)
     {
         CLUSTER_LOG << "Initialize PluginCSwapGroupClient";
         Prepare();
@@ -36,9 +28,7 @@ namespace GfxQuadroSync
 
         if (status != NVAPI_OK)
         {
-            NvAPI_ShortString errorMessage;
-            NvAPI_GetErrorMessage(status, errorMessage);
-            CLUSTER_LOG_ERROR << "NvAPI_Initialize: " << errorMessage;
+            CLUSTER_LOG_ERROR << "NvAPI_Initialize: " << status;
         }
         else
             CLUSTER_LOG << "NvAPI_Initialize successful";
@@ -52,15 +42,15 @@ namespace GfxQuadroSync
         NvAPI_Status status = NvAPI_EnumPhysicalGPUs(nvGPUHandle, &gpuCount);
         if (NVAPI_OK == status)
         {
-            for (unsigned int iGpu = 0; iGpu < gpuCount; iGpu++)
+            for (unsigned int gpuIndex = 0; gpuIndex < gpuCount; gpuIndex++)
             {
                 // send request to enable NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP
-                status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[iGpu], NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP, 0);
+                status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[gpuIndex], NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP, 0);
 
                 if (status == NvAPI_Status::NVAPI_OK)
-                    CLUSTER_LOG << "NvAPI_GPU_WorkstationFeatureSetup successful";
+                    CLUSTER_LOG << "GPU " << gpuIndex << ": NvAPI_GPU_WorkstationFeatureSetup successful";
                 else
-                    CLUSTER_LOG_ERROR << "NvAPI_GPU_WorkstationFeatureSetup failed";
+                    CLUSTER_LOG_ERROR << "GPU " << gpuIndex << ": NvAPI_GPU_WorkstationFeatureSetup failed: " << status;
             }
         }
     }
@@ -74,21 +64,21 @@ namespace GfxQuadroSync
         status = NvAPI_EnumPhysicalGPUs(nvGPUHandle, &gpuCount);
         if (NVAPI_OK == status)
         {
-            for (unsigned int iGpu = 0; iGpu < gpuCount; iGpu++)
+            for (unsigned int gpuIndex = 0; gpuIndex < gpuCount; gpuIndex++)
             {
                 // send request to disable NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP
-                status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[iGpu], 0, NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP);
+                status = NvAPI_GPU_WorkstationFeatureSetup(nvGPUHandle[gpuIndex], 0, NVAPI_GPU_WORKSTATION_FEATURE_MASK_SWAPGROUP);
 
                 if (status == NvAPI_Status::NVAPI_OK)
-                    CLUSTER_LOG << "NvAPI_GPU_WorkstationFeatureSetup successful";
+                    CLUSTER_LOG << "GPU " << gpuIndex << ": NvAPI_GPU_WorkstationFeatureSetup successful";
                 else
-                    CLUSTER_LOG_ERROR << "NvAPI_GPU_WorkstationFeatureSetup failed";
+                    CLUSTER_LOG_ERROR << "GPU " << gpuIndex << ": NvAPI_GPU_WorkstationFeatureSetup failed: " << status;
             }
         }
     }
 
-    bool PluginCSwapGroupClient::Initialize(IUnknown* const pDevice,
-                                            IDXGISwapChain* const pSwapChain)
+    PluginCSwapGroupClient::InitializeStatus PluginCSwapGroupClient::Initialize(IUnknown* const pDevice,
+                                                                                IDXGISwapChain* const pSwapChain)
     {
         auto status = NVAPI_OK;
 
@@ -97,7 +87,10 @@ namespace GfxQuadroSync
         if (status == NvAPI_Status::NVAPI_OK)
             CLUSTER_LOG << "NvAPI_D3D1x_QueryMaxSwapGroup successful";
         else
-            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup failed";
+        {
+            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup failed: " << status;
+            return InitializeStatus::QuerySwapGroupFailed;
+        }
 
         if (m_GSyncSwapGroups > 0)
         {
@@ -109,17 +102,9 @@ namespace GfxQuadroSync
                 {
                     CLUSTER_LOG << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_OK";
                 }
-                else if (status == NVAPI_ERROR)
+                else
                 {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_ERROR";
-                }
-                else if (NVAPI_INVALID_ARGUMENT)
-                {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_INVALID_ARGUMENT";
-                }
-                else if (NVAPI_API_NOT_INITIALIZED)
-                {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_API_NOT_INITIALIZED";
+                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup failed: " << status;
                 }
 
 #ifdef _DEBUG
@@ -128,7 +113,7 @@ namespace GfxQuadroSync
 
                 if (status != NVAPI_OK)
                 {
-                    return false;
+                    return InitializeStatus::FailedToJoinSwapGroup;
                 }
             }
 
@@ -156,22 +141,14 @@ namespace GfxQuadroSync
                     {
                         CLUSTER_LOG << "NvAPI_D3D1x_BindSwapBarrier successful";
                     }
-                    else if (status == NVAPI_ERROR)
+                    else
                     {
-                        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_ERROR";
-                    }
-                    else if (NVAPI_INVALID_ARGUMENT)
-                    {
-                        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_INVALID_ARGUMENT";
-                    }
-                    else if (NVAPI_API_NOT_INITIALIZED)
-                    {
-                        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_API_NOT_INITIALIZED";
+                        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier failed: " << status;
                     }
 
                     if (status != NVAPI_OK)
                     {
-                        return false;
+                        return InitializeStatus::FailedToBindSwapBarrier;
                     }
                 }
             }
@@ -179,32 +156,41 @@ namespace GfxQuadroSync
             {
                 CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup returned 0 barriers";
                 m_BarrierId = 0;
-                return false;
+                return InitializeStatus::SwapBarrierIdMismatch;
             }
 
 #ifdef _DEBUG
             CLUSTER_LOG << "BindSwapBarrier (" << m_BarrierId << ") / (" << m_GSyncBarriers << ")";
 #endif
 
-            status = NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &m_GroupId, &m_BarrierId);
+            NvU32 groupId;
+            NvU32 barrierId;
+            status = NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &groupId, &barrierId);
+            m_GroupId = groupId;
+            m_BarrierId = barrierId;
 
             if (status == NvAPI_Status::NVAPI_OK)
                 CLUSTER_LOG << "NvAPI_D3D1x_QuerySwapGroup successful";
             else
-                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QuerySwapGroup failed";
+            {
+                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QuerySwapGroup failed: " << status;
+                return InitializeStatus::QuerySwapGroupFailed;
+            }
         }
-        else if (m_GroupId > 0)
+        else if (m_GSyncSwapGroups == 0)
         {
-            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup returned 0";
-            m_GroupId = 0;
-            return false;
+            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup returned 0 groups";
+            return InitializeStatus::NoSwapGroupDetected;
         }
         else
         {
-            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup returned 0";
+            CLUSTER_LOG_ERROR << "NvAPI_D3D1x_QueryMaxSwapGroup returned " << m_GSyncSwapGroups
+                              << " groups and m_GroupId is " << m_GroupId;
+            m_GroupId = 0;
+            return InitializeStatus::SwapGroupMismatch;
         }
 
-        return (status == NVAPI_OK);
+        return (status == NVAPI_OK) ? InitializeStatus::Success : InitializeStatus::Failed;
     }
 
     void PluginCSwapGroupClient::Dispose(IUnknown* const pDevice,
@@ -226,6 +212,9 @@ namespace GfxQuadroSync
                 m_GroupId = 0;
             }
         }
+
+        m_PresentSuccessCount = 0;
+        m_PresentFailureCount = 0;
     }
 
     NvU32 PluginCSwapGroupClient::QueryFrameCount(IUnknown* const pDevice)
@@ -270,10 +259,12 @@ namespace GfxQuadroSync
 
         if (result == NVAPI_OK)
         {
+            m_PresentSuccessCount.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
 
-        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed";
+        m_PresentFailureCount.fetch_add(1, std::memory_order_relaxed);
+        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed: " << result;
         return false;
     }
 
@@ -300,30 +291,23 @@ namespace GfxQuadroSync
             if (status == NvAPI_Status::NVAPI_OK)
             {
                 CLUSTER_LOG << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_OK";
+                m_GroupId = newSwapGroup;
             }
-            else if (status == NVAPI_ERROR)
+            else
             {
-                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_ERROR";
+                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup failed: " << status;
 
 #ifdef _DEBUG
                 CLUSTER_LOG << "Values before Query: m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")";
 
-                NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &m_GroupId, &m_BarrierId);
+                NvU32 groupId;
+                NvU32 barrierId;
+                NvAPI_D3D1x_QuerySwapGroup(pDevice, pSwapChain, &groupId, &barrierId);
+                m_GroupId = groupId;
+                m_BarrierId = barrierId;
+
                 CLUSTER_LOG << "Values after Query m_GroupeId(" << m_GroupId << "), m_BarrierId (" << m_BarrierId << ")";
 #endif
-            }
-            else if (NVAPI_INVALID_ARGUMENT)
-            {
-                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_INVALID_ARGUMENT";
-            }
-            else if (NVAPI_API_NOT_INITIALIZED)
-            {
-                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_JoinSwapGroup returned NVAPI_API_NOT_INITIALIZED";
-            }
-
-            if (status == NVAPI_OK)
-            {
-                m_GroupId = newSwapGroup;
             }
         }
     }
@@ -342,23 +326,11 @@ namespace GfxQuadroSync
                 if (status == NvAPI_Status::NVAPI_OK)
                 {
                     CLUSTER_LOG << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_OK";
-                }
-                else if (status == NVAPI_ERROR)
-                {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_ERROR";
-                }
-                else if (NVAPI_INVALID_ARGUMENT)
-                {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_INVALID_ARGUMENT";
-                }
-                else if (NVAPI_API_NOT_INITIALIZED)
-                {
-                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier returned NVAPI_API_NOT_INITIALIZED";
-                }
-
-                if (status == NVAPI_OK)
-                {
                     m_BarrierId = newSwapBarrier;
+                }
+                else
+                {
+                    CLUSTER_LOG_ERROR << "NvAPI_D3D1x_BindSwapBarrier failed: " << status;
                 }
             }
             CLUSTER_LOG << "EnableSwapBarrier: already set, nothing has been called";

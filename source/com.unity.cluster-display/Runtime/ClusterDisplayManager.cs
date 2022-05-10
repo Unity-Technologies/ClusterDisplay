@@ -1,4 +1,6 @@
 ﻿using System.Collections;
+using JetBrains.Annotations;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -7,12 +9,15 @@ namespace Unity.ClusterDisplay
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [UnityEditor.InitializeOnLoad]
-    #endif
+#endif
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
-        [SerializeField][HideInInspector] private Camera m_ActiveCamera;
+        [SerializeField]
+        [HideInInspector]
+        private Camera m_ActiveCamera;
+
         public static Camera ActiveCamera
         {
             get
@@ -36,7 +41,7 @@ namespace Unity.ClusterDisplay
             instance.m_ActiveCamera = camera;
         }
 
-        public delegate void OnChangeActiveCamera (Camera previousCamera, Camera newCamera);
+        public delegate void OnChangeActiveCamera(Camera previousCamera, Camera newCamera);
 
         public delegate void ClusterDisplayBehaviourDelegate();
 
@@ -44,24 +49,22 @@ namespace Unity.ClusterDisplay
 
         public delegate void ClusterDisplayOnCameraRenderDelegate(ScriptableRenderContext context, Camera camera);
 
-        private static ClusterSync clusterSyncInstance;
-        internal static ClusterSync ClusterSyncInstance
+        static ClusterSync GetOrCreateClusterSyncInstance()
         {
-            get
+            if (ClusterSyncInstance is not {} instance)
             {
-                if (clusterSyncInstance == null)
-                {
-                    // Creating ClusterSync instance on demand.
-                    ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand before Awake.");
-                    CreateClusterSyncInstance();
-                }
-
-                return clusterSyncInstance;
+                // Creating ClusterSync instance on demand.
+                ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
+                instance = new ClusterSync();
+                ServiceLocator.Provide<IClusterSyncState>(instance);
             }
+
+            Debug.Assert(instance != null);
+            return instance;
         }
 
-        /// Create ClusterSync instance on demand, or create it on Awake()
-        private static void CreateClusterSyncInstance() => clusterSyncInstance = new ClusterSync();
+        internal static ClusterSync ClusterSyncInstance =>
+            ServiceLocator.TryGet(out IClusterSyncState instance) ? instance as ClusterSync : null;
 
         public static ClusterDisplayBehaviourDelegate preInitialize;
         public static ClusterDisplayBehaviourDelegate awake;
@@ -83,7 +86,7 @@ namespace Unity.ClusterDisplay
         public static ClusterDisplayOnCameraRenderDelegate onEndCameraRender;
         public static ClusterDisplayOnFrameRenderDelegate onEndFrameRender;
 
-        private void RegisterRenderPipelineDelegates ()
+        private void RegisterRenderPipelineDelegates()
         {
             UnregisterRenderPipelineDelegates();
 
@@ -95,21 +98,17 @@ namespace Unity.ClusterDisplay
             RenderPipelineManager.endFrameRendering += OnEndFrameRender;
         }
 
-        private void UnregisterRenderPipelineDelegates ()
+        private void UnregisterRenderPipelineDelegates()
         {
             RenderPipelineManager.beginFrameRendering -= OnBeginFrameRender;
             RenderPipelineManager.beginCameraRendering -= OnBeginCameraRender;
             RenderPipelineManager.endCameraRendering -= OnEndCameraRender;
             RenderPipelineManager.endFrameRendering -= OnEndFrameRender;
         }
-        
+
         protected override void OnAwake()
         {
-            if (clusterSyncInstance == null)
-            {
-                ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on Awake.");
-                CreateClusterSyncInstance();
-            }
+            GetOrCreateClusterSyncInstance();
 
             ClusterDebug.Log("Cluster Display started bootstrap.");
             endOfFrameCoroutine = StartCoroutine(BeforePresentCoroutine());
@@ -118,29 +117,37 @@ namespace Unity.ClusterDisplay
 
             if (Application.isPlaying)
                 DontDestroyOnLoad(gameObject);
-            
-            awake?.Invoke();   
+
+            awake?.Invoke();
         }
 
         private void OnEnable()
         {
             SetInstance(this);
             RegisterRenderPipelineDelegates();
+            GetOrCreateClusterSyncInstance().EnableClusterDisplay();
             onEnable?.Invoke();
         }
 
         private void Start() => start?.Invoke();
-        private void OnDisable() => onDisable?.Invoke();
+
+        private void OnDisable()
+        {
+            ClusterSyncInstance?.DisableClusterDisplay();
+            onDisable?.Invoke();
+        }
 
         private void OnDestroy()
         {
             UnregisterRenderPipelineDelegates();
             onDestroy?.Invoke();
-
-            clusterSyncInstance = null;
         }
 
-        private void OnApplicationQuit() => onApplicationQuit?.Invoke();
+        private void OnApplicationQuit()
+        {
+            ClusterSyncInstance?.ShutdownAllClusterNodes();
+            onApplicationQuit?.Invoke();
+        }
 
         private void OnBeginFrameRender(ScriptableRenderContext context, Camera[] cameras) =>
             onBeginFrameRender?.Invoke(context, cameras);
@@ -158,7 +165,7 @@ namespace Unity.ClusterDisplay
         private void LateUpdate() => lateUpdate?.Invoke();
         private void OnDrawGizmos() => onDrawGizmos?.Invoke();
 
-        private IEnumerator BeforePresentCoroutine ()
+        private IEnumerator BeforePresentCoroutine()
         {
             var waitForEndOfFrame = new WaitForEndOfFrame();
             while (true)
