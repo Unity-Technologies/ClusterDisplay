@@ -213,19 +213,9 @@ namespace Unity.ClusterDisplay.Tests
         {
             const int numRepeaters = 1;
 
-            // var emitterArgsString =
-            //     $"-emitterNode {k_EmitterId} {numRepeaters} {NodeTestUtils.multicastAddress}:{NodeTestUtils.rxPort},{NodeTestUtils.txPort} " +
-            //     $"-handshakeTimeout {NodeTestUtils.timeoutSeconds * 1000} ";
-            //
-            // var emitterArgs = emitterArgsString.Split(" ").ToList();
-            // emitterArgs.Add("-adapterName");
-            // emitterArgs.Add(m_InterfaceName);
-
             var emitterClusterSync = new ClusterSync("Emitter");
             m_Instances.Add(emitterClusterSync);
 
-            // CommandLineParser.Override(emitterArgs);
-            // emitterClusterSync.ReadParamsFromCommandLine();
             emitterClusterSync.EnableClusterDisplay(new ClusterParams
             {
                 ClusterLogicSpecified = true,
