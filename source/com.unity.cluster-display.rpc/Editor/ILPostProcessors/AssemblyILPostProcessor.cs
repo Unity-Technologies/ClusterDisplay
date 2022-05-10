@@ -19,6 +19,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     internal class AssemblyILPostProcessor : ILPostProcessor
     {
         private static readonly Dictionary<string, string> cachedAssemblyPath = new Dictionary<string, string>();
+        private static readonly object cachedAssemblyPathLock = new object();
         
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
@@ -41,8 +42,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 try
                 {
-                    if (!cachedAssemblyPath.TryGetValue(name.Name, out var assemblyLocation))
-                        throw new Exception($"There is no known path for assembly: \"{name.Name}");
+                    string assemblyLocation = null;
+                    lock(cachedAssemblyPathLock)
+                    {
+                        if (!cachedAssemblyPath.TryGetValue(name.Name, out assemblyLocation))
+                            throw new Exception($"There is no known path for assembly: \"{name.Name}");
+                    }
                     
                     parameters.AssemblyResolver = this;
                     parameters.SymbolStream = CreatePdbStreamFor(assemblyLocation);
@@ -95,10 +100,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     var referencePath = compiledAssembly.References[i];
                     var referenceName = Path.GetFileNameWithoutExtension(referencePath);
 
-                    if (cachedAssemblyPath.ContainsKey(referenceName))
-                        continue;
+                    lock(cachedAssemblyPathLock)
+                    {
+                        if (cachedAssemblyPath.ContainsKey(referenceName))
+                            continue;
 
-                    cachedAssemblyPath.Add(referenceName, referencePath);
+                        cachedAssemblyPath.Add(referenceName, referencePath);
+                    }
                     
                     referencesMsg = $"{referencesMsg}\n\t{referencePath}";
                 }
