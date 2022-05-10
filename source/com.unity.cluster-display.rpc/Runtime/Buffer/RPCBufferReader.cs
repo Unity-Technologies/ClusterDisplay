@@ -270,6 +270,8 @@ namespace Unity.ClusterDisplay.RPC
                     case RPCExecutionStage.BeforeLateUpdate:
                     case RPCExecutionStage.AfterLateUpdate:
                     {
+                        // if (rpcRequest.rpcId == 14)
+                        //     Debug.Log("TEST");
                         QueueRPC(
                             ref rpcRequest,
                             ref bufferPos);

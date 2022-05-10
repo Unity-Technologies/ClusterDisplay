@@ -37,75 +37,79 @@ namespace Unity.ClusterDisplay.RPC
         void Dirty ()
         {
             #if UNITY_EDITOR
-            if (!IsSerializing)
+            if (!EditorApplication.isPlaying && !IsSerializing)
                 EditorUtility.SetDirty(this);
             #endif
         }
 
-        public bool TryRegister (Component sceneObject, System.Type type)
+        public void Register (Component sceneObject, System.Type type)
         {
             if (sceneObject == null)
             {
-                ClusterDebug.LogError($"Refusing to register NULL instance with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
-                return false;
+                throw new System.ArgumentNullException($"Refusing to register NULL instance with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
             }
             
             if (!RPCRegistry.TryGetRPCsForType(type, out var rpcs, logError: false))
-                return false;
+            {
+                throw new System.ArgumentNullException($"Cannot register instance of: \"{type.Name}\" in scene: \"{gameObject.scene.name}\", there is no RPC associated with that type.");
+            }
 
             for (int ri = 0; ri < rpcs.Length; ri++)
             {
                 var rpcConfig = new RPCConfig();
                 RegisterWithRPCIdAndConfig(sceneObject, rpcs[ri].rpcId, ref rpcConfig);
             }
-
-            return true;
         }
 
         /// <summary>
         /// Register an instance that contains an RPC so it can emit and receive cluster display events.
         /// </summary>
-        public bool TryRegister<InstanceType>(InstanceType sceneObject)
-            where InstanceType : Component => TryRegister(sceneObject, typeof(InstanceType));
+        public void Register<InstanceType>(InstanceType sceneObject)
+            where InstanceType : Component => Register(sceneObject, typeof(InstanceType));
         
         /// <summary>
         /// Register an instance that contains an RPC so it can emit and receive cluster display events.
         /// </summary>
-        public bool TryUnregister<InstanceType> (InstanceType sceneObject)
+        public void Unregister<InstanceType> (InstanceType sceneObject)
             where InstanceType : Component
         {
             if (sceneObject == null)
             {
-                ClusterDebug.LogError($"Refusing to unregister NULL instance with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
-                return false;
+                throw new System.ArgumentNullException($"Refusing to unregister NULL instance with: \"{nameof(SceneObjectsRegistry)}\" in scene: \"{gameObject.scene.name}\".");
             }
 
             m_SceneInstances.Remove(sceneObject);
-            if (!TryUnregisterInstanceAccessor(sceneObject))
-                return false;
+            UnregisterInstanceAccessor(sceneObject);
 
             if (m_SceneInstances.Count == 0)
             {
                 if (Application.isPlaying)
-                    Destroy(this.gameObject);
-                else DestroyImmediate(this.gameObject);
+                {
+                    if (this != null)
+                        Destroy(this.gameObject);
+                }
+
+                else
+                {
+                    if (this != null)
+                        DestroyImmediate(this.gameObject);
+                }
             }
 
             Dirty();
-            return true;
         }
 
-        bool RegisterWithRPCId<InstanceType> (InstanceType sceneObject, ushort rpcId)
+        void RegisterWithRPCId<InstanceType> (InstanceType sceneObject, ushort rpcId)
             where InstanceType : Component
         {
             if (!m_SceneInstances.Contains(sceneObject))
+            {
                 m_SceneInstances.Add(sceneObject);
+            }
 
-            if (!TryRegisterInstanceAccessor(sceneObject, rpcId))
-                return false;
+            RegisterInstanceAccessor(sceneObject, rpcId);
             
             Dirty();
-            return true;
         }
 
         bool RegisterWithRPCIdAndConfig<InstanceType> (InstanceType sceneObject, ushort rpcId, ref RPCConfig instanceRPCConfig)
@@ -114,8 +118,7 @@ namespace Unity.ClusterDisplay.RPC
             if (!m_SceneInstances.Contains(sceneObject))
                 m_SceneInstances.Add(sceneObject);
 
-            if (!TryRegisterInstanceAccessor(sceneObject, rpcId, ref instanceRPCConfig))
-                return false;
+            RegisterInstanceAccessor(sceneObject, rpcId, ref instanceRPCConfig);
             
             Dirty();
             return true;
@@ -206,7 +209,7 @@ namespace Unity.ClusterDisplay.RPC
                 return;
 
             for (int i = 0; i < m_SerializedInstances.Length; i++)
-                TryUnregister(m_SerializedInstances[i].instance);
+                Unregister(m_SerializedInstances[i].instance);
         }
     }
 }

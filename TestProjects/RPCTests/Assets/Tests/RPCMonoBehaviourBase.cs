@@ -7,80 +7,76 @@ using UnityEngine.TestTools;
 
 using Unity.ClusterDisplay.RPC;
 using System;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    public abstract partial class RPCMonoBehaviourBase : MonoBehaviour
+    public abstract partial class RPCMonoBehaviourBase : MonoBehaviour, IMonoBehaviourTest, IRPCTestRecorder
     {
-        enum TestStage : int
+        RPCTestRecorder m_RPCTestRecorder;
+        public void RecordPropagation() => m_RPCTestRecorder.RecordPropagation();
+        public void RecordExecution() => m_RPCTestRecorder.RecordExecution();
+
+        public bool IsTestFinished => m_RPCTestRecorder != null && m_RPCTestRecorder.IsTestFinished || m_Exception;
+
+        bool m_Exception = false;
+        void OnException (Exception exception)
         {
-            Automatic,
-            Before,
-            After
+            m_Exception = true;
+            throw exception;
         }
 
-        protected bool m_ExecutedAllTests = false, m_IsTestFinished = false;
-
-        public bool IsTestFinished => m_IsTestFinished;
-        protected bool ExecutedAllTests => m_ExecutedAllTests;
+        protected bool FininishedFirstFrame => m_FinishedFirstFrame;
+        bool m_FinishedFirstFrame = false;
 
         protected abstract RPCExecutionStage BeforeStage { get; }
         protected abstract RPCExecutionStage AfterStage { get; }
 
-        TestStage stage = TestStage.Automatic;
-        void EndTest() => m_IsTestFinished = true;
+        SceneObjectsRegistry m_SceneObjectsRegistry;
 
-        protected void Test(Action callback, RPCExecutionStage expectedExecutionStage)
+        protected void PollTestState()
         {
-            if (!ExecutedAllTests)
+            if (IsTestFinished)
             {
-                return;
-            }
-
-            try
-            {
-                Assert.That(expectedExecutionStage, Is.EqualTo(RPCExecutor.CurrentExecutionStage));
-
-                switch (stage)
-                {
-                    case TestStage.Automatic:
-                        callback();
-                        break;
-
-                    case TestStage.Before:
-                        callback();
-                        break;
-
-                    case TestStage.After:
-                        callback();
-                        EndTest();
-                        break;
-                }
-
-                stage++;
-            }
-
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
-                EndTest();
+                m_SceneObjectsRegistry.Unregister(this);
+                Destroy(m_SceneObjectsRegistry);
             }
         }
 
         void Setup()
         {
-            if (!SceneObjectsRegistry.TryCreateNewInstance(gameObject.scene, out var sceneObjectsRegistry))
+            m_RPCTestRecorder = new RPCTestRecorder(this);
+            RPCs.PushRPCTestRecorder(this);
+
+            if (!SceneObjectsRegistry.TryGetSceneInstance(gameObject.scene.path, out m_SceneObjectsRegistry) && !SceneObjectsRegistry.TryCreateNewInstance(gameObject.scene, out m_SceneObjectsRegistry))
             {
-                throw new System.Exception($"Unable to create new instance of: \"{nameof(SceneObjectsRegistry)}\".");
+                throw new System.NullReferenceException($"Unable to get or create new instance of: \"{nameof(SceneObjectsRegistry)}\".");
             }
 
-            if (!sceneObjectsRegistry.TryRegister(this, this.GetType()))
+            m_SceneObjectsRegistry.Register(this, this.GetType());
+        }
+
+        protected void Propagate ()
+        {
+            try
             {
-                throw new System.Exception($"Unable to register instance of: \"{this.GetType().Name}\".");
+                Setup();
+
+                RPCs.FlagSending();
+                PropagateRPCs();
+                RPCs.FlagReceiving();
+
+                RPCs.EmulateFlight();
+            }
+
+            catch (System.Exception exception)
+            {
+                OnException(exception);
             }
         }
 
-        void ExecuteRPCs()
+        void PropagateRPCs()
         {
             var floatValue = 1.4f;
             FloatTestAutomatic(floatValue);
@@ -192,17 +188,31 @@ namespace Unity.ClusterDisplay.Tests
             StructANativeArrayTestBefore(structANativeArray);
             StructANativeArrayTestAfter(structANativeArray);
             structANativeArray.Dispose();
+
+            if (!m_RPCTestRecorder.PropagatedAllRPCs)
+            {
+                throw new System.InvalidOperationException($"Not all registered RPCs were propagated.");
+            }
+
+            m_FinishedFirstFrame = true;
         }
-        protected void Execute ()
+
+        protected void Test(Action callback, RPCExecutionStage expectedExecutionStage)
         {
-            Setup();
+            try
+            {
+                if (RPCs.Receiving)
+                {
+                    Assert.That(expectedExecutionStage, Is.EqualTo(RPCExecutor.CurrentExecutionStage));
+                }
 
-            RPCs.FlagSending();
-            ExecuteRPCs();
-            RPCs.FlagReceiving();
+                callback();
+            }
 
-            m_ExecutedAllTests = true;
-            RPCs.EmulateFlight();
+            catch (Exception exception)
+            {
+                OnException(exception);
+            }
         }
 
         [ClusterRPC] public void FloatTestAutomatic(float floatValue) => Test(() => RPCs.FloatTest(floatValue), BeforeStage);

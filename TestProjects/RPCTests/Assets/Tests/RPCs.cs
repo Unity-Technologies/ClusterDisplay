@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using System.Runtime.InteropServices;
+using System.Reflection;
+using System.Diagnostics;
 
 using UnityEngine;
 using Unity.Collections;
@@ -63,19 +65,22 @@ namespace Unity.ClusterDisplay.Tests
             buffer.Dispose();
         }
 
+        static IRPCTestRecorder m_RPCTestRecorder;
+        public static void PushRPCTestRecorder (IRPCTestRecorder rpcTestRecorder) => m_RPCTestRecorder = rpcTestRecorder;
+
         #region FloatTest
         public static void FloatTest (float floatValue)
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(floatValue, Is.AtLeast(1.4f));
         }
 
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void FloatTestImmediatelyOnArrival(float floatValue) => FloatTest(floatValue);
         #endregion
 
         #region StringTest
@@ -83,14 +88,13 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
             Assert.That(stringValue, Is.EqualTo("Hello, World!"));
+            m_RPCTestRecorder.RecordExecution();
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void StringTestImmediatelyOnArrival(string stringValue) => StringTest(stringValue);
         #endregion
 
         #region MultiStringTest
@@ -98,15 +102,14 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(stringAValue, Is.EqualTo("Hello"));
             Assert.That(stringBValue, Is.EqualTo("World"));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void MultiStringTestImmediatelyOnArrival(string stringAValue, string stringBValue) => MultiStringTest(stringAValue, stringBValue);
         #endregion
 
         #region PrimitivesTest
@@ -127,9 +130,11 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(byteValue, Is.EqualTo(128));
             Assert.That(sbyteValue, Is.EqualTo(-128));
             Assert.That(booleanValue, Is.EqualTo(true));
@@ -145,34 +150,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(doubleValue, Is.AtLeast(-123456.78912));
         }
 
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void PrimitivesTestImmediatelyOnArrival(
-            byte byteValue,
-            sbyte sbyteValue,
-            bool booleanValue,
-            char charValue,
-            string stringValue,
-            ushort ushortValue,
-            short shortValue,
-            uint uintValue,
-            int intValue,
-            ulong ulongValue,
-            long longValue,
-            float floatValue,
-            double doubleValue) => PrimitivesTest(
-                byteValue,
-                sbyteValue,
-                booleanValue,
-                charValue,
-                stringValue,
-                ushortValue,
-                shortValue,
-                uintValue,
-                intValue,
-                ulongValue,
-                longValue,
-                floatValue,
-                doubleValue);
         #endregion
 
         #region Vector3Test
@@ -180,16 +157,15 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(vector3Value.x, Is.AtLeast(vector3Value.x));
             Assert.That(vector3Value.y, Is.AtLeast(vector3Value.y));
             Assert.That(vector3Value.z, Is.AtLeast(vector3Value.z));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void Vector3TestImmediatelyOnArrival(Vector3 vector3Value) => Vector3Test(vector3Value);
         #endregion
 
         #region DoubleArrayTest
@@ -197,16 +173,15 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(doubleArray[0], Is.AtLeast(3.14159265358979323846));
             Assert.That(doubleArray[1], Is.AtLeast(6.28318530717958647692));
             Assert.That(doubleArray[2], Is.AtLeast(2.71828182845904523536));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void DoubleArrayTestImmediatelyOnArrival(double[] doubleArray) => DoubleArrayTest(doubleArray);
         #endregion
 
         #region Vector3ArrayTest
@@ -214,9 +189,11 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(vectorArray[0].x, Is.AtLeast(Vector3.right.x));
             Assert.That(vectorArray[0].y, Is.AtLeast(Vector3.right.y));
             Assert.That(vectorArray[0].z, Is.AtLeast(Vector3.right.z));
@@ -229,9 +206,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(vectorArray[2].y, Is.AtLeast(Vector3.forward.y));
             Assert.That(vectorArray[2].z, Is.AtLeast(Vector3.forward.z));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void Vector3ArrayTestImmediatelyOnArrival(Vector3[] vectorArray)  => Vector3ArrayTest(vectorArray);
         #endregion
 
         #region StructATest
@@ -239,17 +213,16 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(structA.floatValue, Is.AtLeast(3.1415926f));
             Assert.That(structA.intValue, Is.AtLeast(42));
             Assert.That(structA.structB.booleanValue, Is.AtLeast(true));
             Assert.That(structA.structB.longValue, Is.AtLeast(3141592653589793238));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void StructATestImmediatelyOnArrival(StructA structA) => StructATest(structA);
         #endregion
 
         #region StructBTest
@@ -257,15 +230,14 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(structB.booleanValue, Is.AtLeast(true));
             Assert.That(structB.longValue, Is.AtLeast(3141592653589793238));
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void StructBTestImmediatelyOnArrival(StructB structB) => StructBTest(structB);
         #endregion
 
         public static StructA[] GenerateStructArray () =>
@@ -310,9 +282,11 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(structAArray[0].floatValue, Is.AtLeast(1.1f));
             Assert.That(structAArray[0].intValue, Is.AtLeast(42));
             Assert.That(structAArray[0].structB.booleanValue, Is.AtLeast(true));
@@ -329,8 +303,6 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(structAArray[2].structB.longValue, Is.AtLeast(1));
         }
 
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void StructAArrayTestImmediatelyOnArrival(StructA[] structAArray) => StructAArrayTest(structAArray);
         #endregion
 
         #region StructANativeArrayTest
@@ -338,10 +310,11 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
-                structANativeArray.Dispose();
+                m_RPCTestRecorder.RecordPropagation();
                 return;
             }
 
+            m_RPCTestRecorder.RecordExecution();
             Assert.That(structANativeArray[0].floatValue, Is.AtLeast(1.1f));
             Assert.That(structANativeArray[0].intValue, Is.AtLeast(42));
             Assert.That(structANativeArray[0].structB.booleanValue, Is.AtLeast(true));
@@ -359,9 +332,6 @@ namespace Unity.ClusterDisplay.Tests
 
             structANativeArray.Dispose();
         }
-
-        [ClusterRPC(RPCExecutionStage.ImmediatelyOnArrival)]
-        public static void StructANativeArrayTestImmediatelyOnArrival(NativeArray<StructA> structANativeArray) => StructANativeArrayTest(structANativeArray);
         #endregion
     }
 }

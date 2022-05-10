@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
@@ -42,12 +42,12 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.AfterInitialization;
 
-        public class BeforeFixedUpdateType {}
-        public class AfterFixedUpdateType {}
-        public class BeforeUpdateType {}
-        public class AfterUpdateType {}
-        public class BeforeLateUpdateType {}
-        public class AfterLateUpdateType {}
+        public class BeforeFixedUpdateRPCQueue {}
+        public class AfterFixedUpdateRPCQueue {}
+        public class BeforeUpdateRPCQueue {}
+        public class AfterUpdateRPCQueue {}
+        public class BeforeLateUpdateRPCQueue {}
+        public class AfterLateUpdateRPCQueue {}
 
         static bool TryFindIndexOfPlayerLoopSystem (
             PlayerLoopSystem inPlayerSystemLoop, 
@@ -96,15 +96,15 @@ namespace Unity.ClusterDisplay.RPC
         static bool TryInsertAfter (
             ref PlayerLoopSystem playerLoopSystemToInsertInto, 
             System.Type playerLoopToInsert, 
-            System.Type beforePlayerLoopSystem, 
+            System.Type afterPlayerLoopSystem, 
             PlayerLoopSystem.UpdateFunction updateDelegate)
         {
             if (!TryFindIndexOfPlayerLoopSystem(
                 playerLoopSystemToInsertInto,
-                beforePlayerLoopSystem,
+                afterPlayerLoopSystem,
                 out var indexOfPlayerLoop))
             {
-                ClusterDebug.LogError($"Cannot insert RPC executor of type: \"{playerLoopSystemToInsertInto.type.FullName}, unable to find insertion point AFTER player loop system of type: {beforePlayerLoopSystem.FullName}");
+                ClusterDebug.LogError($"Cannot insert RPC executor of type: \"{playerLoopSystemToInsertInto.type.FullName}, unable to find insertion point AFTER player loop system of type: {afterPlayerLoopSystem.FullName}");
                 return false;
             }
 
@@ -128,10 +128,21 @@ namespace Unity.ClusterDisplay.RPC
             var list = playerLoopSystemToInsertInto.subSystemList.ToList();
             if (list.Any(playerLoop => playerLoop.type == playerLoopToInsert.type))
                 return true;
-            
+
+            var after = list[indexToInsertPlayerLoop - 1];
+            if (indexToInsertPlayerLoop + 1 < list.Count)
+            {
+                var before = list[indexToInsertPlayerLoop];
+                ClusterDebug.Log($"Inserting: \"{playerLoopToInsert.type.FullName} into current player loop after: \"{after.type.FullName}\" and before: \"{before.type.FullName}\".");
+            }
+
+            else
+            {
+                ClusterDebug.Log($"Inserting: \"{playerLoopToInsert.type.FullName} into current player loop after: \"{after.type.FullName}\" and as the very last method.");
+            }
+
             list.Insert(indexToInsertPlayerLoop, playerLoopToInsert);
             playerLoopSystemToInsertInto.subSystemList = list.ToArray();
-            ClusterDebug.Log($"Inserted: \"{playerLoopToInsert.type.FullName} into current player loop.");
             return true;
         }
 
@@ -145,47 +156,47 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!TryInsertBefore(
                 ref defaultPlayerSystemLoop,
-                typeof(BeforeFixedUpdateType),
+                typeof(BeforeFixedUpdateRPCQueue),
                 typeof(FixedUpdate),
                 BeforeFixedUpdate))
             {
-                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(BeforeFixedUpdateType)} before: \"{nameof(FixedUpdate)}");
+                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(BeforeFixedUpdateRPCQueue)} before: \"{nameof(FixedUpdate)}");
                 return;
             }
 
             if (!TryInsertAfter(
                 ref defaultPlayerSystemLoop,
-                typeof(AfterFixedUpdateType),
+                typeof(AfterFixedUpdateRPCQueue),
                 typeof(FixedUpdate),
                 AfterFixedUpdate))
             {
-                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterFixedUpdateType)} before: \"{nameof(FixedUpdate)}");
+                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterFixedUpdateRPCQueue)} before: \"{nameof(FixedUpdate)}");
                 return;
             }
 
             if (!TryInsertBefore(
                 ref defaultPlayerSystemLoop,
-                typeof(BeforeUpdateType),
+                typeof(BeforeUpdateRPCQueue),
                 typeof(Update),
                 BeforeUpdate))
             {
-                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(BeforeUpdateType)} before: \"{nameof(Update)}");
+                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(BeforeUpdateRPCQueue)} before: \"{nameof(Update)}");
                 return;
             }
 
             if (!TryInsertAfter(
                 ref defaultPlayerSystemLoop,
-                typeof(AfterUpdateType),
+                typeof(AfterUpdateRPCQueue),
                 typeof(Update),
                 AfterUpdate))
             {
-                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterUpdateType)} before: \"{nameof(Update)}");
+                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterUpdateRPCQueue)} before: \"{nameof(Update)}");
                 return;
             }
 
             if (!TryInsertBefore(
                 ref defaultPlayerSystemLoop,
-                typeof(BeforeLateUpdateType),
+                typeof(BeforeLateUpdateRPCQueue),
                 typeof(PreLateUpdate),
                 BeforeLateUpdate))
             {
@@ -195,11 +206,11 @@ namespace Unity.ClusterDisplay.RPC
 
             if (!TryInsertAfter(
                 ref defaultPlayerSystemLoop,
-                typeof(AfterLateUpdateType),
+                typeof(AfterLateUpdateRPCQueue),
                 typeof(PostLateUpdate),
                 AfterLateUpdate))
             {
-                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterLateUpdateType)} before: \"{nameof(PostLateUpdate)}");
+                ClusterDebug.Log($"Unable to player loop of type: \"{nameof(AfterLateUpdateRPCQueue)} before: \"{nameof(PostLateUpdate)}");
                 return;
             }
 
@@ -211,7 +222,7 @@ namespace Unity.ClusterDisplay.RPC
             var defaultPlayerSystemLoop = PlayerLoop.GetCurrentPlayerLoop();
 
             var list = defaultPlayerSystemLoop.subSystemList.ToList();
-            var indexOf = list.FindIndex(playerLoopSystem => playerLoopSystem.type == typeof(BeforeFixedUpdateType));
+            var indexOf = list.FindIndex(playerLoopSystem => playerLoopSystem.type == typeof(BeforeFixedUpdateRPCQueue));
             if (indexOf != -1)
                 list.RemoveAt(indexOf);
             defaultPlayerSystemLoop.subSystemList = list.ToArray();

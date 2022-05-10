@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -133,55 +133,50 @@ namespace Unity.ClusterDisplay.RPC
             m_PipeIdToInstanceConfig[pipeId] = pipeConfig;
         }
 
-        static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
+        static void Validate<InstanceType> (InstanceType instance, out ushort pipeId)
             where InstanceType : Component
         {
             if (TryGetPipeId(instance, out pipeId))
-                return true;
+                return;
 
             if (!m_PipeIdManager.TryPopId(out pipeId))
             {
-                ClusterDebug.LogError("Cannot register any more objects, no more ids available.");
-                return false;
+                throw new System.InvalidOperationException("Cannot register any more objects, no more ids available.");
             }
-
-            return true;
         }
 
-        static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
+        static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
             where InstanceType : Component
         {
-            if (!Validate(instance, out var pipeId))
-                return false;
+            Validate(instance, out var pipeId);
 
             m_Instances[pipeId] = instance;
             var newInstanceRPCConfig = new RPCConfig();
             newInstanceRPCConfig.enabled = true;
 
             SetRPCConfig(pipeId, rpcId, ref newInstanceRPCConfig);
-            return true;
         }
 
-        static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
+        static void RegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
             where InstanceType : Component
         {
-            if (!Validate(instance, out var pipeId))
-                return false;
+            Validate(instance, out var pipeId);
 
             m_Instances[pipeId] = instance;
             SetRPCConfig(pipeId, rpcId, ref instanceRPCConfig);
-            return true;
         }
 
-        static bool TryUnregisterInstanceAccessor<InstanceType> (InstanceType instance)
+        static void UnregisterInstanceAccessor<InstanceType> (InstanceType instance)
             where InstanceType : Component
         {
             if (!TryGetPipeId(instance, out var pipeId))
-                return false;
+            {
+                ClusterDebug.LogWarning($"Cannot unregister instance of: \"{typeof(InstanceType).Name}\" in scene: \"{instance.gameObject.scene.name}\", it is not currently registered.");
+                return;
+            }
             
             m_Instances[pipeId] = null;
             m_PipeIdManager.PushUnutilizedId(pipeId);
-            return true;
         }
 
         internal static void ClearAccessors ()
@@ -272,7 +267,7 @@ namespace Unity.ClusterDisplay.RPC
                     if (!sceneObjectsRegistry.TryGetValue(component.gameObject.scene.path, out var sceneRegistry))
                     {
                         var path = component.gameObject.scene.path;
-                        if (!TryGetSceneInstance(path, out sceneRegistry, throwException: false))
+                        if (!TryGetSceneInstance(path, out sceneRegistry))
                         {
                             if (!TryCreateNewInstance(component.gameObject.scene, out sceneRegistry))
                                 continue;

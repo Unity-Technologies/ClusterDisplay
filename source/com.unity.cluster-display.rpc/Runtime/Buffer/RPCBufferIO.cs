@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.RPC
         const byte k_RPCStateID = 128;
 
         [IsEmitterMarker]
-        public static bool CaptureExecution => ClusterDisplayState.NodeRole is NodeRole.Emitter && ClusterDisplayState.IsActive || m_OverrideCaptureExecution;
+        public static bool CaptureExecution => ClusterDisplayState.IsActive && ClusterDisplayState.NodeRole is NodeRole.Emitter || m_OverrideCaptureExecution;
         static bool m_OverrideCaptureExecution = false;
 
         static void OverrideCaptureExecution (bool capture)
