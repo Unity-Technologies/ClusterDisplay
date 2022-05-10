@@ -151,7 +151,7 @@ namespace Unity.ClusterDisplay
 
         public void DisableClusterDisplay() => CleanUp();
 
-        private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config config)
+        private bool TryInitializeEmitter(ClusterParams clusterParams, UDPAgent.Config udpAgentConfig)
         {
             InstanceLog($"Initializing {nameof(ClusterSync)} for emitter.");
             try
@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay
                         {
                             HandshakeTimeout = clusterParams.HandshakeTimeout,
                             CommunicationTimeout = clusterParams.CommunicationTimeout,
-                            UdpAgentConfig = config
+                            UdpAgentConfig = udpAgentConfig
                         }
                     });
 
@@ -185,7 +185,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config config)
+        private bool TryInitializeRepeater(ClusterParams clusterParams, UDPAgent.Config udpAgentConfig)
         {
             InstanceLog($"Initializing {nameof(ClusterSync)} for repeater.");
 
@@ -196,7 +196,7 @@ namespace Unity.ClusterDisplay
                     EnableHardwareSync = clusterParams.EnableHardwareSync,
                     MainConfig =
                     {
-                        UdpAgentConfig = config,
+                        UdpAgentConfig = udpAgentConfig,
                         HandshakeTimeout = clusterParams.HandshakeTimeout,
                         CommunicationTimeout = clusterParams.CommunicationTimeout
                     }
