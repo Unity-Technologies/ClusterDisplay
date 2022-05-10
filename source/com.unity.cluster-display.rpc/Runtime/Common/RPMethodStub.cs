@@ -20,10 +20,10 @@ namespace Unity.ClusterDisplay.RPC
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string      returnTypeNamespace;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string      returnTypeName;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string      methodName;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] private string     declaringParameterTypeAssemblyNamesStr;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] private string     parameterTypeNamespacesStr;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] private string     parameterTypeNameStr;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] private string     parameterNamesStr;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] string     declaringParameterTypeAssemblyNamesStr;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] string     parameterTypeNamespacesStr;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] string     parameterTypeNameStr;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 1024)] string     parameterNamesStr;
 
         public string[] declaringParameterTypeAssemblyNames => GetArray(ref declaringParameterTypeAssemblyNamesStr);
         public string[] parameterTypeNamespaces => GetArray(ref parameterTypeNamespacesStr);
@@ -39,9 +39,9 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        private readonly static Dictionary<int, string[]> cache = new Dictionary<int, string[]>();
+        readonly static Dictionary<int, string[]> cache = new Dictionary<int, string[]>();
 
-        private string[] GetArray(ref string str)
+        string[] GetArray(ref string str)
         {
             int hashCode = str.GetHashCode();
             if (!cache.TryGetValue(hashCode, out var cacheArray) || cacheArray == null || cacheArray.Length == 0)
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.RPC
                     CacheAndGet(ref parameterNamesStr, parameterIndex))
                     : (null, null, null, null);
 
-        private static string BuildTypeNamespace (System.Type type)
+        static string BuildTypeNamespace (System.Type type)
         {
             if (!type.IsNested)
                 return type.Namespace;

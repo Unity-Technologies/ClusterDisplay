@@ -18,8 +18,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     /// </summary>
     internal class AssemblyILPostProcessor : ILPostProcessor
     {
-        private static readonly Dictionary<string, string> cachedAssemblyPath = new Dictionary<string, string>();
-        private static readonly object cachedAssemblyPathLock = new object();
+        static readonly Dictionary<string, string> cachedAssemblyPath = new Dictionary<string, string>();
+        static readonly object cachedAssemblyPathLock = new object();
         
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
@@ -27,13 +27,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// </summary>
         internal sealed class AssemblyResolver : BaseAssemblyResolver
         {
-            private DefaultAssemblyResolver _defaultResolver;
+            DefaultAssemblyResolver _defaultResolver;
             public AssemblyResolver()
             {
                 _defaultResolver = new DefaultAssemblyResolver();
             }
 
-            private readonly Dictionary<string, AssemblyDefinition> cachedAssemblyDefinitions = new Dictionary<string, AssemblyDefinition>();
+            readonly Dictionary<string, AssemblyDefinition> cachedAssemblyDefinitions = new Dictionary<string, AssemblyDefinition>();
 
             public override AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
             {
@@ -71,8 +71,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             public IReflectionImporter GetReflectionImporter(ModuleDefinition module) => new PostProcessorReflectionImporter(module);
             internal class PostProcessorReflectionImporter : DefaultReflectionImporter
             {
-                private const string SystemPrivateCoreLib = "System.Private.CoreLib";
-                private AssemblyNameReference _correctCorlib;
+                const string SystemPrivateCoreLib = "System.Private.CoreLib";
+                AssemblyNameReference _correctCorlib;
                 
                 public PostProcessorReflectionImporter(ModuleDefinition module) : base(module) =>
                     _correctCorlib = module.AssemblyReferences.FirstOrDefault(a => a.Name == "mscorlib" || a.Name == "netstandard" || a.Name == SystemPrivateCoreLib);
@@ -143,7 +143,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// </summary>
         /// <param name="assemblyLocation"></param>
         /// <returns></returns>
-        private static MemoryStream CreatePdbStreamFor(string assemblyLocation)
+        static MemoryStream CreatePdbStreamFor(string assemblyLocation)
         {
             string pdbFilePath = Path.ChangeExtension(assemblyLocation, ".pdb");
             return !File.Exists(pdbFilePath) ? null : new MemoryStream(File.ReadAllBytes(pdbFilePath));

@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.RPC
             return ReflectionUtils.TryFindTypeByName(typeStr, out type);
         }
 
-        private static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
+        static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
         public static bool TryDeserializeMethodInfo (RPMethodStub methodStub, out MethodInfo outMethodInfo)
         {
             outMethodInfo = null;
@@ -195,7 +195,7 @@ namespace Unity.ClusterDisplay.RPC
             return TryDeserializeMethodInfo(rpcStub.methodStub, out outMethodInfo);
         }
 
-        private static void MakeFileWriteable(string path)
+        static void MakeFileWriteable(string path)
         {
             if (!File.Exists(path))
                 return;
@@ -208,7 +208,7 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        private static void Serialize<T> (T[] rpcs, out byte[] bytes) where T : struct
+        static void Serialize<T> (T[] rpcs, out byte[] bytes) where T : struct
         {
             if (rpcs == null || rpcs.Length == 0)
             {
@@ -262,7 +262,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static void Read<T> (string path, out T[] data, bool logMissingFile) where T : struct
+        static void Read<T> (string path, out T[] data, bool logMissingFile) where T : struct
         {
             data = new T[0];
             if (string.IsNullOrEmpty(path))
@@ -343,7 +343,7 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        private static bool Write(string path, byte[] bytes)
+        static bool Write(string path, byte[] bytes)
         {
             if (bytes == null || bytes.Length == 0)
                 return true;

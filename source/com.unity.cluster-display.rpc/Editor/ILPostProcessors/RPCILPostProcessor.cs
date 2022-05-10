@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     internal partial class RPCILPostProcessor
     {
-        private IEnumerable<MethodReference> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
+        IEnumerable<MethodReference> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
         {
             var rpcMethodCustomAttributeType = typeof(ClusterRPC);
             var attributeFullName = rpcMethodAttributeFullName = rpcMethodCustomAttributeType.FullName;
@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return queuedMethodDefs.ToArray();
         }
 
-        private bool TryGetRPCILGenerators (
+        bool TryGetRPCILGenerators (
             AssemblyDefinition compiledAssemblyDef, 
             MethodDefinition targetMethodDef,
             out RPCILGenerator rpcILGenerator, 
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private void InjectDefaultSwitchCases (AssemblyDefinition compiledAssemblyDef)
+        void InjectDefaultSwitchCases (AssemblyDefinition compiledAssemblyDef)
         {
             if (TryGetCachedRPCILGenerator(compiledAssemblyDef, out var cachedOnTryCallProcessor))
                 cachedOnTryCallProcessor.InjectDefaultSwitchCase();
@@ -111,12 +111,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 cachedQueuedRPCILGenerator.InjectDefaultSwitchCase();
         }
 
-        private Dictionary<uint, HashSet<uint>> processedMethods = new Dictionary<uint, HashSet<uint>>();
-        private bool MethodAlreadyProcessed (MethodReference methodRef) => 
+        Dictionary<uint, HashSet<uint>> processedMethods = new Dictionary<uint, HashSet<uint>>();
+        bool MethodAlreadyProcessed (MethodReference methodRef) => 
             processedMethods.TryGetValue(methodRef.DeclaringType.MetadataToken.RID, out var hash) &&
             hash.Contains(methodRef.MetadataToken.RID);
 
-        private void AddProcessedMethod (MethodReference methodRef)
+        void AddProcessedMethod (MethodReference methodRef)
         {
             if (!processedMethods.TryGetValue(methodRef.DeclaringType.MetadataToken.RID, out var hash))
             {
@@ -126,7 +126,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             hash.Add(methodRef.MetadataToken.RID);
         }
-        private bool TryInjectRPCInterceptIL (
+        bool TryInjectRPCInterceptIL (
             string rpcHash, 
             ushort rpcExecutionStage,
             MethodReference targetMethodRef,
@@ -191,7 +191,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         totalSizeOfStaticallySizedRPCParameters);
         }
 
-        private bool ProcessMethodDef (
+        bool ProcessMethodDef (
             AssemblyDefinition compiledAssemblyDef,
             MethodReference targetMethodRef,
             RPCExecutionStage rpcExecutionStage,
@@ -240,13 +240,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             throw new Exception($"Failure occurred while attempting to post process method: \"{targetMethodRef.Name}\" in class: \"{targetMethodRef.DeclaringType.FullName}\".");
         }
 
-        private void ApplyRPCExecutionStage(CustomAttribute customAttribute, RPCExecutionStage rpcExecutionStage) =>
+        void ApplyRPCExecutionStage(CustomAttribute customAttribute, RPCExecutionStage rpcExecutionStage) =>
             customAttribute.ConstructorArguments[0] = new CustomAttributeArgument(customAttribute.ConstructorArguments[0].Type, rpcExecutionStage);
         
-        private void ApplyRPCHash(CustomAttribute customAttribute, string rpcHash) =>
+        void ApplyRPCHash(CustomAttribute customAttribute, string rpcHash) =>
             customAttribute.ConstructorArguments[1] = new CustomAttributeArgument(customAttribute.ConstructorArguments[1].Type, rpcHash);
 
-        private bool PostProcessDeserializedRPCs (
+        bool PostProcessDeserializedRPCs (
             AssemblyDefinition compiledAssemblyDef, 
             RPCStub[] serializedRPCs)
         {
@@ -307,7 +307,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return modified;
         }
 
-        private bool PostProcessSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
+        bool PostProcessSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
             CodeGenDebug.Log($"Polling serialized RPCs for assembly.");
             if (cachedSerializedRPCS == null)
@@ -325,16 +325,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return PostProcessDeserializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray());
         }
 
-        private CustomAttribute GetClusterRPCAttribute(MethodReference methodRef) =>
+        CustomAttribute GetClusterRPCAttribute(MethodReference methodRef) =>
             methodRef.Resolve().CustomAttributes.First(ca => ca.AttributeType.FullName == GetCustomAttributeTypeFullName());
 
-        private string GetCustomAttributeTypeFullName()
+        string GetCustomAttributeTypeFullName()
         {
             var rpcMethodCustomAttributeType = typeof(ClusterRPC);
             return rpcMethodCustomAttributeType.FullName;
         }
 
-        private bool TryGetOrCreateClusterRPCAttribute(MethodReference methodRef, out CustomAttribute customAttribute)
+        bool TryGetOrCreateClusterRPCAttribute(MethodReference methodRef, out CustomAttribute customAttribute)
         {
             customAttribute = GetClusterRPCAttribute(methodRef);
             if (customAttribute != null)
@@ -342,13 +342,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return (customAttribute = CecilUtils.AddCustomAttributeToMethod<ClusterRPC>(methodRef.Module, methodRef.Resolve())) == null;
         }
 
-        private bool TryGetRPCHashFromClusterRPCAttribute(CustomAttribute customAttribute, out string rpcHash)
+        bool TryGetRPCHashFromClusterRPCAttribute(CustomAttribute customAttribute, out string rpcHash)
         {
             rpcHash = (string)customAttribute.ConstructorArguments[1].Value;
             return true;
         }
         
-        private bool PostProcessMethodsWithRPCAttributes (AssemblyDefinition compiledAssemblyDef)
+        bool PostProcessMethodsWithRPCAttributes (AssemblyDefinition compiledAssemblyDef)
         {
             var methodRefs = GetMethodsWithRPCAttribute(compiledAssemblyDef, out var rpcMethodAttributeFullName);
             

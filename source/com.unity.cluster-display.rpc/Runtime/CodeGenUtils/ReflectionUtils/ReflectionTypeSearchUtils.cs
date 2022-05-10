@@ -8,10 +8,10 @@ namespace Unity.ClusterDisplay
 {
     internal static partial class ReflectionUtils
     {
-        private static Type[] cachedAllTypes;
+        static Type[] cachedAllTypes;
 
         public static Type[] GetAllTypes() => CachedTypes;
-        private static Type[] CachedTypes
+        static Type[] CachedTypes
         {
             get
             {
@@ -172,7 +172,7 @@ namespace Unity.ClusterDisplay
         public static bool TryFindFirstDerrivedTypeFromBaseType(Type baseType, out Type derrivedType) =>
             (derrivedType = CachedTypes.FirstOrDefault(type => type.IsSubclassOf(baseType))) != null;
 
-        private static bool RecursivelyForeachNestedType (Type containerType, Func<System.Type, bool> callback)
+        static bool RecursivelyForeachNestedType (Type containerType, Func<System.Type, bool> callback)
         {
             var nestedTypes = containerType.GetNestedTypes();
             if (nestedTypes == null || nestedTypes.Length == 0)

@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay
     {
         public const string DefaultUserAssemblyName = "Assembly-CSharp";
 
-        private readonly static Dictionary<Assembly, Type[]> cachedAssemblyTypes = new Dictionary<Assembly, Type[]>();
+        readonly static Dictionary<Assembly, Type[]> cachedAssemblyTypes = new Dictionary<Assembly, Type[]>();
         public static bool TryGetAssemblyLocation (string name, out string location)
         {
             var assembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == name);
@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static string scriptAssembliesPath;
+        static string scriptAssembliesPath;
         public static bool IsAssemblyPostProcessable (string rootFolder, Assembly assembly)
         {
             if (string.IsNullOrEmpty(scriptAssembliesPath))

@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.RPC
         #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-        private static void SetupDelegates ()
+        static void SetupDelegates ()
         {
             ClusterDebug.Log("Setting up initialization delegates for RPC executor.");
 
@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <summary>
         /// Throughout the frame, this is modified depending on the stage we are in: FixedUpdate, Update or LateUpdate.
         /// </summary>
-        private static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.AfterInitialization;
+        static RPCExecutionStage m_CurrentExecutionStage = RPCExecutionStage.AfterInitialization;
 
         public class BeforeFixedUpdateType {}
         public class AfterFixedUpdateType {}
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.RPC
         public class BeforeLateUpdateType {}
         public class AfterLateUpdateType {}
 
-        private static bool TryFindIndexOfPlayerLoopSystem (
+        static bool TryFindIndexOfPlayerLoopSystem (
             PlayerLoopSystem inPlayerSystemLoop, 
             System.Type targetPlayerSystemLoop,
             out int index)
@@ -67,7 +67,7 @@ namespace Unity.ClusterDisplay.RPC
             return index != -1;
         }
 
-        private static bool TryInsertBefore (
+        static bool TryInsertBefore (
             ref PlayerLoopSystem playerLoopSystemToInsertInto, 
             System.Type playerLoopToInsert, 
             System.Type beforePlayerLoopSystem, 
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.RPC
                 updateDelegate);
         }
 
-        private static bool TryInsertAfter (
+        static bool TryInsertAfter (
             ref PlayerLoopSystem playerLoopSystemToInsertInto, 
             System.Type playerLoopToInsert, 
             System.Type beforePlayerLoopSystem, 
@@ -119,7 +119,7 @@ namespace Unity.ClusterDisplay.RPC
                 updateDelegate);
         }
 
-        private static bool TryInsertAt (
+        static bool TryInsertAt (
             ref PlayerLoopSystem playerLoopSystemToInsertInto,
             PlayerLoopSystem playerLoopToInsert, 
             int indexToInsertPlayerLoop, 

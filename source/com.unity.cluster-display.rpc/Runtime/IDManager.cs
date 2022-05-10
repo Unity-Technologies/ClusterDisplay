@@ -8,13 +8,13 @@ namespace Unity.ClusterDisplay
     {
         public const ulong MaxIDCount = ushort.MaxValue;
 
-        private ushort[] m_QueuedReturnedIDs = new ushort[MaxIDCount];
-        private bool[] m_ReturnedIDs = new bool[MaxIDCount];
-        private ushort m_ReturnedIDsIndex = 0;
+        ushort[] m_QueuedReturnedIDs = new ushort[MaxIDCount];
+        bool[] m_ReturnedIDs = new bool[MaxIDCount];
+        ushort m_ReturnedIDsIndex = 0;
 
-        private bool[] m_IDStates = new bool[MaxIDCount];
+        bool[] m_IDStates = new bool[MaxIDCount];
 
-        private ushort m_NewIDIndex = 0;
+        ushort m_NewIDIndex = 0;
 
         public bool TryPopId(out ushort id)
         {

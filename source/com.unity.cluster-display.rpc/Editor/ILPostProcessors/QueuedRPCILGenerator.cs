@@ -6,11 +6,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     internal partial class RPCILPostProcessor
     {
-        private sealed class QueuedRPCILGenerator
+        sealed class QueuedRPCILGenerator
         {
-            private ILProcessor ilProcessor;
-            private Instruction lastSwitchCaseInstruction;
-            private TypeReference generatedRPCILTypeRef;
+            ILProcessor ilProcessor;
+            Instruction lastSwitchCaseInstruction;
+            TypeReference generatedRPCILTypeRef;
 
             public QueuedRPCILGenerator (TypeReference generatedRPCILTypeRef)
             {
@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private Dictionary<string, Instruction> firstExecutionInstruction = new Dictionary<string, Instruction>();
+            Dictionary<string, Instruction> firstExecutionInstruction = new Dictionary<string, Instruction>();
             public bool TryInjectILToExecuteQueuedRPC(
                 MethodReference targetMethod,
                 RPCExecutionStage rpcExecutionStage,
@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool TryGetCachedExecuteQueuedRPCMethodILProcessor (
+            bool TryGetCachedExecuteQueuedRPCMethodILProcessor (
                 out ILProcessor ilProcessor)
             {
                 if (this.ilProcessor != null)

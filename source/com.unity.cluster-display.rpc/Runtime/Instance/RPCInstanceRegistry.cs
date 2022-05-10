@@ -105,18 +105,18 @@ namespace Unity.ClusterDisplay
             buint rpcBufferParameterPosition);
 
         /// Queue for invoking RPCs BEFORE any MonoBehaviour.FixedUpdate occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> beforeFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> beforeFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
         /// Queue for invoking RPCs BEFORE any MonoBehaviour.Update occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> beforeUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> beforeUpdateRPCQueue = new Queue<QueuedRPCCall>();
         /// Queue for invoking RPCs BEFORE any MonoBehaviour.LateUpdate occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> beforeLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> beforeLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
         /// Queue for invoking RPCs AFTER any MonoBehaviour.FixedUpdate occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> afterFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> afterFixedUpdateRPCQueue = new Queue<QueuedRPCCall>();
         /// Queue for invoking RPCs AFTER any MonoBehaviour.Update occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> afterUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> afterUpdateRPCQueue = new Queue<QueuedRPCCall>();
         /// Queue for invoking RPCs AFTER any MonoBehaviour.LateUpdate occurs in a frame.
-        private static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
+        static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
         /// This delegates represents the implementation to immediately execute instance RPC 
         /// invocations delcared in an instance of the generated RPCIL type, one per assembly.
@@ -132,7 +132,7 @@ namespace Unity.ClusterDisplay
 
         /// There is one instance of a the generated RPC invocation type that implements RPCInterfaceRegistry per 
         /// assembly, and we store those instances in this list. See the diagram above at the top of this source file.
-        private readonly static List<RPCInterfaceRegistry> m_ImplementationInstances = new List<RPCInterfaceRegistry>();
+        readonly static List<RPCInterfaceRegistry> m_ImplementationInstances = new List<RPCInterfaceRegistry>();
 
         /// <summary>
         /// Determine whether an assembly has a generated RPC invocation type.
@@ -207,7 +207,7 @@ namespace Unity.ClusterDisplay
             m_ExecuteQueuedRPCDelegate.Add(executeQueuedRPC);
         }
 
-        private static void DelegateNotRegisteredError () =>
+        static void DelegateNotRegisteredError () =>
             ClusterDebug.LogError($"Unable to call instance method, the delegate has not been registered!");
 
         /// <summary>
@@ -291,10 +291,10 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static void LogPreExceptionMessageForQueuedRPC (QueuedRPCCall queuedRPCCall) =>
+        static void LogPreExceptionMessageForQueuedRPC (QueuedRPCCall queuedRPCCall) =>
             ClusterDebug.LogError($"The following exception occurred while attempting to execute instance RPC: (Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Pipe ID: {queuedRPCCall.rpcRequest.pipeId}, RPC ExecutionStage: {queuedRPCCall.rpcRequest.rpcExecutionStage}, RPC Buffer Starting Position: {queuedRPCCall.rpcsBufferParametersStartPosition}, Parameter Payload Size: {queuedRPCCall.rpcRequest.parametersPayloadSize})");
 
-        private static void LogCall(QueuedRPCCall queuedRPCCall)
+        static void LogCall(QueuedRPCCall queuedRPCCall)
         {
             var assembly = RPCRegistry.GetAssembly(queuedRPCCall.rpcRequest.rpcId);
             ClusterDebug.Log($"Calling method: (RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, Assembly: \"{assembly.GetName().Name}\").");
@@ -440,7 +440,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        private static void LogQueuedRPC (
+        static void LogQueuedRPC (
            ushort  pipeId,
             ushort rpcId,
             buint parametersPayloadSize,

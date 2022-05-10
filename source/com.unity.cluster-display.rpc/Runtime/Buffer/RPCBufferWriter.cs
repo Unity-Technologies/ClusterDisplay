@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="value"></param>
         /// <param name="structSize"></param>
         /// <returns></returns>
-        private static bool CanWriteValueTypeToRPCBuffer<T> (T value, out buint structSize)
+        static bool CanWriteValueTypeToRPCBuffer<T> (T value, out buint structSize)
         {
             structSize = (buint)Marshal.SizeOf<T>(value);
             if (rpcBufferSize + structSize >= rpcBuffer.Length)
@@ -117,7 +117,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="count">Length of the array.</param>
         /// <param name="arrayByteCount">The output total byte count of the value type array.</param>
         /// <returns></returns>
-        private static bool CanWriteBufferToRPCBuffer<T> (int count, out buint arrayByteCount) where T : unmanaged
+        static bool CanWriteBufferToRPCBuffer<T> (int count, out buint arrayByteCount) where T : unmanaged
         {
             arrayByteCount = (buint)(Marshal.SizeOf<T>() * count);
 
@@ -140,7 +140,7 @@ namespace Unity.ClusterDisplay.RPC
         /// Store some buffer length to the RPC Buffer.
         /// </summary>
         /// <param name="count">The length of the array of what we are gonna store next in the RPC buffer.</param>
-        private static unsafe void CopyCountToRPCBuffer (buint count)
+        static unsafe void CopyCountToRPCBuffer (buint count)
         {
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
@@ -156,7 +156,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <typeparam name="T">Buffer element value type.</typeparam>
         /// <param name="ptr">The fixed pointer to the first item in the buffer.</param>
         /// <param name="arrayByteCount">The total byte count of the buffer that were copying.</param>
-        private static unsafe void CopyBufferToRPCBuffer<T>(T* ptr, buint arrayByteCount) where T : unmanaged
+        static unsafe void CopyBufferToRPCBuffer<T>(T* ptr, buint arrayByteCount) where T : unmanaged
         {
             UnsafeUtility.MemCpy(
                 (byte*)rpcBuffer.GetUnsafePtr() + rpcBufferSize, 
@@ -248,7 +248,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="rpcExecutionStage"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ushort ShiftRPCExecutionStage (ushort rpcExecutionStage)
+        static ushort ShiftRPCExecutionStage (ushort rpcExecutionStage)
         {
             rpcExecutionStage = (ushort)(rpcExecutionStage > 0 ? rpcExecutionStage : (ushort)RPCExecutor.CurrentExecutionStage);
 

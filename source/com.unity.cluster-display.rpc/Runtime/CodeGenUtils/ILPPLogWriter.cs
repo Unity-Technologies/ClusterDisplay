@@ -10,21 +10,21 @@ namespace Unity.ClusterDisplay
     internal class CodeGenDebug
     {
         #if UNITY_EDITOR
-        private static bool IsILPostProcessRunner = false;
+        static bool IsILPostProcessRunner = false;
 
-        private static string ilPostProcessorContextAssemblyName;
+        static string ilPostProcessorContextAssemblyName;
         public static void BeginILPostProcessing(string assemblyName)
         {
             IsILPostProcessRunner = true;
             ilPostProcessorContextAssemblyName = assemblyName;
         }
 
-        private const string ILPostProcessLogFolderPath = "./Temp/ClusterDisplay/Logs/";
-        private const string ILPostProcessLogFileName = "ClusterDisplay-ILPostProcessingLog.txt";
+        const string ILPostProcessLogFolderPath = "./Temp/ClusterDisplay/Logs/";
+        const string ILPostProcessLogFileName = "ClusterDisplay-ILPostProcessingLog.txt";
         
-        private static SharedMutex mutex = new SharedMutex("LogWriterMutex");
+        static SharedMutex mutex = new SharedMutex("LogWriterMutex");
 
-        private static void ILPPWrite(string msg)
+        static void ILPPWrite(string msg)
         {
             mutex.Lock();
 
@@ -53,27 +53,27 @@ namespace Unity.ClusterDisplay
             mutex.Release();
         }
 
-        private static void ILPPLog(string msg) =>
+        static void ILPPLog(string msg) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Log: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Log: {msg}");
 
-        private static void ILPPLogWarning(string msg) =>
+        static void ILPPLogWarning(string msg) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Warning: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Warning: {msg}");
 
-        private static void ILPPLogError(string msg) =>
+        static void ILPPLogError(string msg) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Error: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Error: {msg}");
 
-        private static void ILPPLogException(Exception exception, StackFrame stackFrame) =>
+        static void ILPPLogException(Exception exception, StackFrame stackFrame) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackFrame.ToString()}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackFrame.ToString()}");
         
-        private static void ILPPLogException(Exception exception, string stackTrace) =>
+        static void ILPPLogException(Exception exception, string stackTrace) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackTrace}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackTrace}");
 
-        private static void ILPPLogException(Exception exception) =>
+        static void ILPPLogException(Exception exception) =>
             ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}");
         #endif

@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     internal partial class RPCILPostProcessor
     {
-        private static bool TryInjectAppendStaticSizedRPCCall (
+        static bool TryInjectAppendStaticSizedRPCCall (
             ILProcessor il, 
             Instruction afterInstruction, 
             bool isStatic, 
@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private bool TryFindMethodWithMatchingFormalySerializedAs (
+        bool TryFindMethodWithMatchingFormalySerializedAs (
             ModuleDefinition moduleDef, 
             TypeDefinition typeDefinition, 
             RPCStub rpcStub,
@@ -80,14 +80,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 MetadataToken = methodReference.MetadataToken,
             };
         
-        private static bool TryGetArrayLengtyhPropertyGetMethod (ModuleDefinition moduleDef, TypeReference elementType, out MethodReference lengthPropertyGetMethodReference)
+        static bool TryGetArrayLengtyhPropertyGetMethod (ModuleDefinition moduleDef, TypeReference elementType, out MethodReference lengthPropertyGetMethodReference)
         {
             var getLengthMethodInfo = typeof(System.Array).GetMethod("get_Length");
             CecilUtils.TryImport(moduleDef, getLengthMethodInfo, out lengthPropertyGetMethodReference);
             return true;
         }
 
-        private static bool TryGetNativeArrayLengtyhPropertyGetMethod (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
+        static bool TryGetNativeArrayLengtyhPropertyGetMethod (ModuleDefinition moduleDef, ParameterDefinition param, out MethodReference lengthPropertyGetMethodReference)
         {
             lengthPropertyGetMethodReference = null;
             var parameterTypeRef = CecilUtils.Import(moduleDef, param.ParameterType);
@@ -105,7 +105,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryInjectBridgeToDynamicallySizedRPCPropagation (
+        static bool TryInjectBridgeToDynamicallySizedRPCPropagation (
             Type rpcEmitterType,
             string rpcHash,
             int rpcExecutionStage,
@@ -299,7 +299,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryInjectBridgeToStaticallySizedRPCPropagation (
+        static bool TryInjectBridgeToStaticallySizedRPCPropagation (
             Type rpcEmitterType,
             string rpcHash,
             ushort rpcExecutionStage,
@@ -343,7 +343,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool ParameterIsNativeArray (
+        static bool ParameterIsNativeArray (
             ParameterDefinition parameterDefinition)
         {
             var nativeArrayType = typeof(NativeArray<>);
@@ -353,7 +353,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 parameterDefinition.ParameterType.Name == nativeArrayType.Name;
         }
 
-        private static bool TryPollParameterInformation (
+        static bool TryPollParameterInformation (
             ModuleDefinition moduleDef, 
             MethodDefinition targetMethodDef, 
             out buint totalSizeOfStaticallySizedRPCParameters, 
@@ -397,7 +397,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryImportTryGetSingletonObject<T> (
+        static bool TryImportTryGetSingletonObject<T> (
             ModuleDefinition moduleDefinition,
             out TypeReference typeRef,
             out MethodReference tryGetInstanceMethodRef)
@@ -440,7 +440,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return CecilUtils.TryImport(moduleDefinition, tryGetInstanceMethod, out tryGetInstanceMethodRef);
         }
 
-        private static bool TryGetDerrivedType (
+        static bool TryGetDerrivedType (
             AssemblyDefinition assemblyDef,
             TypeDefinition targetTypeDef,
             out TypeReference derrivedTypeRef)
@@ -461,7 +461,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryFindMethodReferenceWithAttributeInModule (
+        static bool TryFindMethodReferenceWithAttributeInModule (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
             TypeReference attributeTypeRef, 
@@ -487,7 +487,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryCreateRPCILClassConstructor (
+        static bool TryCreateRPCILClassConstructor (
             AssemblyDefinition compiledAssemblyDef, 
             MethodReference onTryCallInstanceMethodDef,
             MethodReference onTryStaticCallInstanceMethodDef,
@@ -519,7 +519,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool InjectPushOfRPCParamters (
+        static bool InjectPushOfRPCParamters (
             ModuleDefinition moduleDef,
             ILProcessor ilProcessor,
             MethodReference executionTarget,
@@ -612,7 +612,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryInjectInstanceRPCExecution (
+        static bool TryInjectInstanceRPCExecution (
             ModuleDefinition moduleDef,
             ILProcessor ilProcessor,
             Instruction beforeInstruction,
@@ -667,7 +667,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryInjectStaticRPCExecution (
+        static bool TryInjectStaticRPCExecution (
             ModuleDefinition moduleDef,
             ILProcessor ilProcessor,
             Instruction beforeInstruction,
@@ -723,7 +723,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryInjectSwitchCaseForRPC (
+        static bool TryInjectSwitchCaseForRPC (
             ILProcessor ilProcessor,
             string valueToPushForBeq,
             Instruction jmpToInstruction,
@@ -762,7 +762,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryGetTypeSystemPrimitiveFromAlias (AssemblyDefinition compiledAssemblyDef, out TypeReference primitiveTypeReference)
+        static bool TryGetTypeSystemPrimitiveFromAlias (AssemblyDefinition compiledAssemblyDef, out TypeReference primitiveTypeReference)
         {
             var buintType = typeof(buint);
             if (buintType.Name == compiledAssemblyDef.MainModule.TypeSystem.UInt16.Name)
@@ -781,42 +781,42 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return false;
         }
 
-        private static ParameterDefinition NewRPCHashParameter (AssemblyDefinition compiledAssemblyDef)
+        static ParameterDefinition NewRPCHashParameter (AssemblyDefinition compiledAssemblyDef)
         {
             var paramDef = new ParameterDefinition("rpcHash", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.String);
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCHashMarker>(compiledAssemblyDef, paramDef);
             return paramDef;
         }
 
-        private static ParameterDefinition NewPipeIdParameter (AssemblyDefinition compiledAssemblyDef)
+        static ParameterDefinition NewPipeIdParameter (AssemblyDefinition compiledAssemblyDef)
         {
             var paramDef = new ParameterDefinition("pipeId", Mono.Cecil.ParameterAttributes.None, compiledAssemblyDef.MainModule.TypeSystem.UInt16);
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.PipeIdMarker>(compiledAssemblyDef, paramDef);
             return paramDef;
         }
 
-        private static ParameterDefinition NewParameterPayloadSizeParameter (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        static ParameterDefinition NewParameterPayloadSizeParameter (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
         {
             var paramDef = new ParameterDefinition("parametersPayloadSize", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.ParametersPayloadSizeMarker>(compiledAssemblyDef, paramDef);
             return paramDef;
         }
 
-        private static ParameterDefinition NewPCBufferParameterPosition (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        static ParameterDefinition NewPCBufferParameterPosition (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
         {
             var paramDef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, bufferIndexTypeRef);
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, paramDef);
             return paramDef;
         }
 
-        private static ParameterDefinition NewRPCBufferParameterPositionRef (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
+        static ParameterDefinition NewRPCBufferParameterPositionRef (AssemblyDefinition compiledAssemblyDef, TypeReference bufferIndexTypeRef)
         {
             var paramDef = new ParameterDefinition("rpcBufferParameterPosition", Mono.Cecil.ParameterAttributes.None, new ByReferenceType(bufferIndexTypeRef));
             CecilUtils.AddCustomAttributeToParameter<RPCInterfaceRegistry.RPCBufferPositionMarker>(compiledAssemblyDef, paramDef);
             return paramDef;
         }
 
-        private static bool TryGenerateRPCILTypeInCompiledAssembly (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
+        static bool TryGenerateRPCILTypeInCompiledAssembly (AssemblyDefinition compiledAssemblyDef, out TypeReference rpcInterfaceRegistryDerrivedTypeRef)
         {
             var newTypeDef = new TypeDefinition(RPCILGenerator.GeneratedRPCILNamespace, RPCILGenerator.GeneratedRPCILTypeName, Mono.Cecil.TypeAttributes.NestedPrivate);
 

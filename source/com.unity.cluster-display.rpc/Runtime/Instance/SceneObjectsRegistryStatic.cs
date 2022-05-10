@@ -36,15 +36,15 @@ namespace Unity.ClusterDisplay.RPC
             return obj;
         }
 
-        private readonly static IDManager m_PipeIdManager = new IDManager();
+        readonly static IDManager m_PipeIdManager = new IDManager();
 
-        private readonly static Component[] m_Instances = new Component[IDManager.MaxIDCount];
-        private readonly static PipeConfig[] m_PipeIdToInstanceConfig = new PipeConfig[IDManager.MaxIDCount];
-        private readonly static Dictionary<int, ushort> m_InstanceIdToPipeId = new Dictionary<int, ushort>();
+        readonly static Component[] m_Instances = new Component[IDManager.MaxIDCount];
+        readonly static PipeConfig[] m_PipeIdToInstanceConfig = new PipeConfig[IDManager.MaxIDCount];
+        readonly static Dictionary<int, ushort> m_InstanceIdToPipeId = new Dictionary<int, ushort>();
 
         internal static bool IsSerializing { set; get; }
 
-        private static bool UseDictionary 
+        static bool UseDictionary 
         {
             get
             {
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        private static void RegisterPipeIdWithInstanceId (Component instance, ushort pipeId)
+        static void RegisterPipeIdWithInstanceId (Component instance, ushort pipeId)
         {
             if (!UseDictionary)
                 return;
@@ -133,7 +133,7 @@ namespace Unity.ClusterDisplay.RPC
             m_PipeIdToInstanceConfig[pipeId] = pipeConfig;
         }
 
-        private static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
+        static bool Validate<InstanceType> (InstanceType instance, out ushort pipeId)
             where InstanceType : Component
         {
             if (TryGetPipeId(instance, out pipeId))
@@ -148,7 +148,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
+        static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId)
             where InstanceType : Component
         {
             if (!Validate(instance, out var pipeId))
@@ -162,7 +162,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
+        static bool TryRegisterInstanceAccessor<InstanceType> (InstanceType instance, ushort rpcId, ref RPCConfig instanceRPCConfig)
             where InstanceType : Component
         {
             if (!Validate(instance, out var pipeId))
@@ -173,7 +173,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private static bool TryUnregisterInstanceAccessor<InstanceType> (InstanceType instance)
+        static bool TryUnregisterInstanceAccessor<InstanceType> (InstanceType instance)
             where InstanceType : Component
         {
             if (!TryGetPipeId(instance, out var pipeId))
@@ -192,8 +192,8 @@ namespace Unity.ClusterDisplay.RPC
 
         #if UNITY_EDITOR
         static SceneObjectsRegistry() => Prepare();
-        private static void OnSceneOpened(Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
-        private static void Prepare ()
+        static void OnSceneOpened(Scene scene, OpenSceneMode mode) => PollUnregisteredInstanceRPCs();
+        static void Prepare ()
         {
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneOpened += OnSceneOpened;
@@ -205,7 +205,7 @@ namespace Unity.ClusterDisplay.RPC
         /// scene instance of SceneObjectsRegistry. If a SceneObjectsRegistry does not exist, it will automatically be created.
         /// </summary>
         [UnityEditor.Callbacks.DidReloadScripts]
-        private static void PollUnregisteredInstanceRPCs()
+        static void PollUnregisteredInstanceRPCs()
         {
             if (Application.isPlaying)
                 return;

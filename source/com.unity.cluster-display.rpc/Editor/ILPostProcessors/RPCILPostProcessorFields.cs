@@ -7,13 +7,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     internal partial class RPCILPostProcessor
     {
-        private RPCStub[] cachedSerializedRPCS = null;
+        RPCStub[] cachedSerializedRPCS = null;
 
-        private readonly static Dictionary<string, RPCILGenerator> cachedOnTryCallProcessors = new Dictionary<string, RPCILGenerator>();
-        private readonly static Dictionary<string, RPCILGenerator> cachedOnTryStaticCallProcessors = new Dictionary<string, RPCILGenerator>();
-        private readonly static Dictionary<string, QueuedRPCILGenerator> cachedQueuedRPCILGenerators = new Dictionary<string, QueuedRPCILGenerator>();
+        readonly static Dictionary<string, RPCILGenerator> cachedOnTryCallProcessors = new Dictionary<string, RPCILGenerator>();
+        readonly static Dictionary<string, RPCILGenerator> cachedOnTryStaticCallProcessors = new Dictionary<string, RPCILGenerator>();
+        readonly static Dictionary<string, QueuedRPCILGenerator> cachedQueuedRPCILGenerators = new Dictionary<string, QueuedRPCILGenerator>();
 
-        private static bool TryGetCachedGetIsEmitterMarkerMethod (out MethodInfo getIsEmitterMethod)
+        static bool TryGetCachedGetIsEmitterMarkerMethod (out MethodInfo getIsEmitterMethod)
         {
             if (!CecilUtils.TryFindPropertyGetMethodWithAttribute<RPCBufferIO.IsEmitterMarker>(typeof(RPCBufferIO), out getIsEmitterMethod))
             {
@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryGetGetInstanceMethodRef (ModuleDefinition moduleDef, out MethodReference getInstanceMethodRef)
+        static bool TryGetGetInstanceMethodRef (ModuleDefinition moduleDef, out MethodReference getInstanceMethodRef)
         {
             if (!CecilUtils.TryFindMethodWithAttribute<SceneObjectsRegistry.GetInstanceMarker>(typeof(SceneObjectsRegistry), out var methodInfo))
             {
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryGetCachedQueuedRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out QueuedRPCILGenerator queuedRPCILGenerator)
+        static bool TryGetCachedQueuedRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out QueuedRPCILGenerator queuedRPCILGenerator)
         {
             if (cachedQueuedRPCILGenerators.TryGetValue(compiledAssemblyDef.FullName, out queuedRPCILGenerator))
                 return true;
@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryGetCachedRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out RPCILGenerator rpcILGenerator)
+        static bool TryGetCachedRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out RPCILGenerator rpcILGenerator)
         {
             if (cachedOnTryCallProcessors.TryGetValue(compiledAssemblyDef.FullName, out rpcILGenerator))
                 return true;
@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool TryGetCachedStaticRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out RPCILGenerator rpcILGenerator)
+        static bool TryGetCachedStaticRPCILGenerator (AssemblyDefinition compiledAssemblyDef, out RPCILGenerator rpcILGenerator)
         {
             if (cachedOnTryStaticCallProcessors.TryGetValue(compiledAssemblyDef.FullName, out rpcILGenerator))
                 return true;
@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static void FlushCache ()
+        static void FlushCache ()
         {
             cachedOnTryCallProcessors.Clear();
             cachedOnTryStaticCallProcessors.Clear();

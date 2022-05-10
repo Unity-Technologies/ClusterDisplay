@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay
 
     internal static partial class ReflectionUtils
     {
-        private readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
+        readonly static Dictionary<Type, MethodInfo> cachedMethodsWithDedicatedAttributes = new Dictionary<Type, MethodInfo>();
 
         public static bool DetermineIfMethodIsRPCCompatible (MethodInfo methodInfo)
         {
@@ -153,7 +153,7 @@ namespace Unity.ClusterDisplay
             where AttributeType : Attribute =>
             TryGetAllMethodsWithAttribute(typeof(AttributeType), out methodInfos);
 
-        private static void WriteMethods (MethodInfo[] methodInfos, string fileName)
+        static void WriteMethods (MethodInfo[] methodInfos, string fileName)
         {
             var output = $"{methodInfos[0].DeclaringType.Assembly.GetName().Name}.{methodInfos[0].DeclaringType.FullName}.{methodInfos[0].Name}";
             for (int i = 1; i < methodInfos.Length; i++)
@@ -161,7 +161,7 @@ namespace Unity.ClusterDisplay
             System.IO.File.WriteAllText(fileName, output);
         }
 
-        private static MethodInfo[] SortMethods (IEnumerable<MethodInfo> list) =>
+        static MethodInfo[] SortMethods (IEnumerable<MethodInfo> list) =>
             list
                 .OrderBy(methodInfo => $"{methodInfo.DeclaringType.Assembly.GetName().Name}.{methodInfo.DeclaringType.Name}.{methodInfo.DeclaringType.Name}.{methodInfo.Name}")
                 .ToArray();

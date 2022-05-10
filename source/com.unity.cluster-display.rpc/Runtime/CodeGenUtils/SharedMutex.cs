@@ -5,8 +5,8 @@ namespace Unity.ClusterDisplay
 {
     internal class SharedMutex : IDisposable
     {
-        private readonly string mutexName;
-        private Mutex mutex = null;
+        readonly string mutexName;
+        Mutex mutex = null;
         
         public SharedMutex(string mutexName) =>
             this.mutexName = mutexName;

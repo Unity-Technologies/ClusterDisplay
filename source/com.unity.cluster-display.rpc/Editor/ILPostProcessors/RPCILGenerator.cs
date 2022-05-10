@@ -12,12 +12,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             public const string GeneratedRPCILNamespace = "Unity.ClusterDisplay.Generated";
             public const string GeneratedRPCILTypeName = "RPCIL";
 
-            private AssemblyDefinition compiledAssemblyDef;
-            private ModuleDefinition moduleDef;
-            private ILProcessor ilProcessor;
+            AssemblyDefinition compiledAssemblyDef;
+            ModuleDefinition moduleDef;
+            ILProcessor ilProcessor;
 
-            private Instruction firstInstruction, lastInstruction, lastSwitchJmpInstruction;
-            private TypeReference generatedRPCILTypeRef;
+            Instruction firstInstruction, lastInstruction, lastSwitchJmpInstruction;
+            TypeReference generatedRPCILTypeRef;
 
             public RPCILGenerator (TypeReference generatedRPCILTypeRef)
             {
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool GetRPCInstanceRegistryMethodImplementation (
+            bool GetRPCInstanceRegistryMethodImplementation (
                 AssemblyDefinition assemblyDef, 
                 Type markerAttribute, 
                 out ILProcessor il)
@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            private bool TryGetQueueMethodReference (
+            bool TryGetQueueMethodReference (
                 RPCExecutionStage rpcExecutionStage,
                 out MethodReference methodRef)
             {

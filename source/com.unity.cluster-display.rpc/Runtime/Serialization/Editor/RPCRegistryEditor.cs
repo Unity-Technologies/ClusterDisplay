@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.RPC
 {
     internal partial class RPCRegistry : SingletonScriptableObject<RPCRegistry>
     {
-        private class RPCRegistrySettingsProvider : SettingsProvider
+        class RPCRegistrySettingsProvider : SettingsProvider
         {
             public RPCRegistrySettingsProvider(string path, SettingsScope scope = SettingsScope.User) : base(path, scope) {}
 
@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.RPC
                 return provider;
             }
 
-            private RPCRegistryEditor cachedRPCRegistryEditor;
+            RPCRegistryEditor cachedRPCRegistryEditor;
             public override void OnGUI(string searchContext)
             {
                 if (!TryGetInstance(out var rpcRegistryInstance))
@@ -35,21 +35,21 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         [CustomEditor(typeof(RPCRegistry))]
-        private class RPCRegistryEditor : UnityEditor.Editor
+        class RPCRegistryEditor : UnityEditor.Editor
         {
-            private Assembly[] cachedAllAssemblies;
-            private Vector2 registeredAssemblyListScrollPosition;
-            private Vector2 registeredMethodListPosition;
+            Assembly[] cachedAllAssemblies;
+            Vector2 registeredAssemblyListScrollPosition;
+            Vector2 registeredMethodListPosition;
 
             // [MenuItem("Unity/Cluster Display/RPC Registry")]
-            private static void SelectRegistry ()
+            static void SelectRegistry ()
             {
                 if (!RPCRegistry.TryGetInstance(out var instance))
                     return;
                 Selection.objects = new[] { instance };
             }
 
-            private void ListRegisteredAssemblies ()
+            void ListRegisteredAssemblies ()
             {
                 var rpcRegistery = target as RPCRegistry;
                 if (RPCRegistry.m_TargetAssemblies != null && RPCRegistry.m_TargetAssemblies.Count > 0)
@@ -68,7 +68,7 @@ namespace Unity.ClusterDisplay.RPC
                 }
             }
 
-            private void ListRegisteredMethods ()
+            void ListRegisteredMethods ()
             {
                 var rpcRegistry = target as RPCRegistry;
 

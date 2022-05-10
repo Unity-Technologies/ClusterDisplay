@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay
             return System.IO.File.Exists($"{scriptAssembliesPath}/{type.Assembly.GetName().Name}.dll");
         }
 
-        private static readonly Type NativeArrayType = typeof(NativeArray<>);
+        static readonly Type NativeArrayType = typeof(NativeArray<>);
         public static bool RecursivelyDetermineIfTypeIsCompatibleRPCParameter (
             MethodInfo methodInfo, 
             ParameterInfo parameterInfo, 

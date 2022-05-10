@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
@@ -17,35 +17,35 @@ namespace Unity.ClusterDisplay
     /// </remarks>
     public static class ClusterDisplayState
     {
-        public class IsEmitterMarker : Attribute {}
+        public class IsEmitterMarker : Attribute { }
 
         /// <summary>
         /// Get the role of the current node (whether it is the emitter or the repeater).
         /// </summary>
-        public static NodeRole NodeRole => ServiceLocator.Get<IClusterSyncState>().NodeRole;
+        public static NodeRole NodeRole => ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.NodeRole : NodeRole.Unassigned;
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync.
         /// </summary>
         [IsEmitterMarker]
         [Obsolete("The property is deprecated. Use NodeRole instead")]
-        public static bool IsEmitter => ServiceLocator.Get<IClusterSyncState>().NodeRole is NodeRole.Emitter;
+        public static bool IsEmitter => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Emitter;
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node AND is headless.
         /// </summary>
-        public static bool EmitterIsHeadless => ServiceLocator.Get<IClusterSyncState>().EmitterIsHeadless;
+        public static bool EmitterIsHeadless => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.EmitterIsHeadless;
 
         /// <summary>
         /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.
         /// </summary>
         [Obsolete("The property is deprecated. Use NodeRole instead")]
-        public static bool IsRepeater => ServiceLocator.Get<IClusterSyncState>().NodeRole is NodeRole.Repeater;
+        public static bool IsRepeater => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Repeater;
 
         /// <summary>
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
         /// </summary>
-        public static bool IsClusterLogicEnabled => ServiceLocator.Get<IClusterSyncState>().IsClusterLogicEnabled;
+        public static bool IsClusterLogicEnabled => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.IsClusterLogicEnabled;
 
         /// <summary>
         /// Getter that returns if there exists a ClusterSync instance and the synchronization has been enabled.
@@ -55,13 +55,13 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
         /// </summary>
-        public static bool IsTerminated => ServiceLocator.Get<IClusterSyncState>().IsTerminated;
+        public static bool IsTerminated => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.IsTerminated;
 
         /// <summary>
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
         /// </summary>
-        public static ulong Frame => ServiceLocator.Get<IClusterSyncState>().Frame;
+        public static ulong Frame => ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.Frame : 0;
 
-        public static ushort NodeID => ServiceLocator.Get<IClusterSyncState>().NodeID;
+        public static ushort NodeID => (ushort)(ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.NodeID : 0);
     }
 }

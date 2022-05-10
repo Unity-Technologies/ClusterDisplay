@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay
 {
     internal static partial class ReflectionUtils
     {
-        private static Assembly cachedDefaultAssembly = null;
+        static Assembly cachedDefaultAssembly = null;
         public static bool TryGetDefaultAssembly(out Assembly defaultAssembly, bool logError = true)
         {
             if (cachedDefaultAssembly != null)
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private readonly static Dictionary<string, Assembly> cachedAssemblies = new Dictionary<string, Assembly>();
+        readonly static Dictionary<string, Assembly> cachedAssemblies = new Dictionary<string, Assembly>();
         public static bool TryGetAssemblyByName (string assemblyName, out Assembly outAssembly, bool logError = true)
         {
             bool somethingIsCached = cachedAssemblies.TryGetValue(assemblyName, out outAssembly);

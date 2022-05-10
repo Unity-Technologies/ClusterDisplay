@@ -338,6 +338,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             if (Sending)
             {
+                structANativeArray.Dispose();
                 return;
             }
 

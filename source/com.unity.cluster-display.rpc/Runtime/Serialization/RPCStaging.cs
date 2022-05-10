@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.RPC
 {
     internal partial class RPCRegistry
     {
-        private Dictionary<string, RPMethodStub> stagedMethods = new Dictionary<string, RPMethodStub>();
+        Dictionary<string, RPMethodStub> stagedMethods = new Dictionary<string, RPMethodStub>();
 
         public static void StageRPCToRegister (MethodInfo methodInfo)
         {

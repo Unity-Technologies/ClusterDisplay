@@ -5,7 +5,7 @@ namespace Unity.ClusterDisplay.RPC
     public abstract class ComponentWrapper<InstanceType> : MonoBehaviour
         where InstanceType : UnityEngine.Component
     {
-        [SerializeField] private InstanceType instance;
+        [SerializeField] InstanceType instance;
 
         /// <summary>
         /// This will return either the cached instance (If it exists), it will attempt to automatically

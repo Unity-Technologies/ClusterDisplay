@@ -17,12 +17,12 @@ namespace Unity.ClusterDisplay.RPC
 
     public partial class SceneObjectsRegistry : SceneSingletonMonoBehaviour<SceneObjectsRegistry>, ISerializationCallbackReceiver
     {
-        [SerializeField] private SerializedInstanceRPCData[] m_SerializedInstances;
-        private readonly List<Component> m_SceneInstances = new List<Component>();
+        [SerializeField] SerializedInstanceRPCData[] m_SerializedInstances;
+        readonly List<Component> m_SceneInstances = new List<Component>();
 
         public bool Registered(Component instance) => m_SceneInstances.Contains(instance);
 
-        private void Awake ()
+        void Awake ()
         {
             ClusterDebug.Log($"Initializing {nameof(SceneObjectsRegistry)} for path: \"{gameObject.scene.path}\".");
             RPCRegistry.InitializeWhenReady(GatherSceneInstances);
@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.RPC
             SerializeRPCSceneInstances();
         }
 
-        private void Dirty ()
+        void Dirty ()
         {
             #if UNITY_EDITOR
             if (!IsSerializing)
@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private bool RegisterWithRPCId<InstanceType> (InstanceType sceneObject, ushort rpcId)
+        bool RegisterWithRPCId<InstanceType> (InstanceType sceneObject, ushort rpcId)
             where InstanceType : Component
         {
             if (!m_SceneInstances.Contains(sceneObject))
@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private bool RegisterWithRPCIdAndConfig<InstanceType> (InstanceType sceneObject, ushort rpcId, ref RPCConfig instanceRPCConfig)
+        bool RegisterWithRPCIdAndConfig<InstanceType> (InstanceType sceneObject, ushort rpcId, ref RPCConfig instanceRPCConfig)
             where InstanceType : Component
         {
             if (!m_SceneInstances.Contains(sceneObject))
@@ -121,7 +121,7 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        private void SerializeRPCSceneInstances ()
+        void SerializeRPCSceneInstances ()
         {
             if (m_SceneInstances.Count == 0)
                 return;
@@ -157,7 +157,7 @@ namespace Unity.ClusterDisplay.RPC
             IsSerializing = false;
         }
 
-        private void GatherSceneInstances ()
+        void GatherSceneInstances ()
         {
             if (m_SerializedInstances == null)
                 return;
@@ -200,7 +200,7 @@ namespace Unity.ClusterDisplay.RPC
             Dirty();
         }
 
-        private void UnregisterObjects ()
+        void UnregisterObjects ()
         {
             if (m_SerializedInstances == null)
                 return;

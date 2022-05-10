@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="rpcRequest">The RPC the repeater is supposed to invoke.</param>
         /// <param name="rpcBufferRPCArgumentsStartPosition">The starting position of the RPC's arguments in the RPC buffer.</param>
-        private static void QueueRPC (
+        static void QueueRPC (
             ref RPCRequest rpcRequest,
             ref buint rpcBufferRPCArgumentsStartPosition)
         {
@@ -92,7 +92,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="rpcBufferStartPosition">The starting position in the RPC buffer where the RPC's bytes begin.</param>
         /// <param name="bufferPos">After we've finished converting the RPC's arguments and invoking the RPC, we shift the buffer read head to the next RPC in the RPC buffer.</param>
         /// <returns></returns>
-        private static bool TryProcessImmediateRPC (
+        static bool TryProcessImmediateRPC (
             ref RPCRequest rpcRequest,
             buint rpcBufferStartPosition,
             ref buint bufferPos)
@@ -158,7 +158,7 @@ namespace Unity.ClusterDisplay.RPC
         /// <param name="startingBufferPos">The starting position which this RPC begins in the RPC buffer.</param>
         /// <param name="bufferPos">We modify our buffer read head to the start of the RPC's arguments position in the RPC buffer after we've read the RPC header.</param>
         /// <returns></returns>
-        private static bool TryParseRPC (
+        static bool TryParseRPC (
             out RPCRequest rpcRequest,
             buint startingBufferPos,
             ref buint bufferPos)
@@ -426,7 +426,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="startPos">The position at which we expect the bytes for the RPC pipe ID to start in the RPC buffer.</param>
         /// <param name="pipeId">The resulting pipe ID</param>
-        private static unsafe void ParsePipeID (ref buint startPos, out ushort pipeId)
+        static unsafe void ParsePipeID (ref buint startPos, out ushort pipeId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             var pipeIDSize = (buint)Marshal.SizeOf<ushort>(); // Move the read head.
@@ -444,7 +444,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="startPos">The position at which we expect the bytes for the RPC ID to start in the RPC buffer.</param>
         /// <param name="rpcId">The resulting RPC ID.</param>
-        private static unsafe void ParseRPCId (ref buint startPos, out ushort rpcId)
+        static unsafe void ParseRPCId (ref buint startPos, out ushort rpcId)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             var rpcIdSize = (buint)Marshal.SizeOf<ushort>(); // Move the read head.
@@ -462,7 +462,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="startPos">The position at which we expect the bytes for the RPC execution stage to start in the RPC buffer.</param>
         /// <param name="rpcExecutionStage">The resulting RPC Execution Stage</param>
-        private static unsafe void ParseRPCExecutionStage (ref buint startPos, out RPCExecutionStage rpcExecutionStage)
+        static unsafe void ParseRPCExecutionStage (ref buint startPos, out RPCExecutionStage rpcExecutionStage)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             var rpcExecutionStageSize = (buint)Marshal.SizeOf<ushort>(); // Move the read head.
@@ -480,7 +480,7 @@ namespace Unity.ClusterDisplay.RPC
         /// </summary>
         /// <param name="startPos">The position at which we expect the bytes for the parameter payload size to start in the RPC buffer.</param>
         /// <param name="parametersPayloadSize">The resulting parameter payload size.</param>
-        private static unsafe void ParseParametersPayloadSize (ref buint startPos, out buint parametersPayloadSize)
+        static unsafe void ParseParametersPayloadSize (ref buint startPos, out buint parametersPayloadSize)
         {
             var ptr = new IntPtr((byte*)rpcBuffer.GetUnsafePtr() + startPos); // Get a pointer to our read head position in the RPC buffer.
             var parametersPayloadSizeSize = (buint)Marshal.SizeOf<uint>(); // Move the read head.;

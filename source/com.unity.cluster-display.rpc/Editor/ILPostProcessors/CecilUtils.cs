@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -164,7 +164,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        private static bool RecursivelyTryFindNestedType (TypeDefinition typeDef, Type type, out TypeDefinition nestedTypeDef)
+        static bool RecursivelyTryFindNestedType (TypeDefinition typeDef, Type type, out TypeDefinition nestedTypeDef)
         {
             for (int nti = 0; nti < typeDef.NestedTypes.Count; nti++)
             {
@@ -186,7 +186,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return false;
         }
 
-        private static bool FindNestedType (ModuleDefinition moduleToSearch, Type type, out TypeDefinition nestedTypeDef)
+        static bool FindNestedType (ModuleDefinition moduleToSearch, Type type, out TypeDefinition nestedTypeDef)
         {
             for (int ti = 0; ti < moduleToSearch.Types.Count; ti++)
             {
