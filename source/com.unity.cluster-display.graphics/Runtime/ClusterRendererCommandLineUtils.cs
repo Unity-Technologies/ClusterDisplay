@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            renderer.DelayPresentByOneFrame = CommandLineParser.emitterSpecified.Value && CommandLineParser.delayRepeaters.Value;
+            renderer.DelayPresentByOneFrame = clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame;
 
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {

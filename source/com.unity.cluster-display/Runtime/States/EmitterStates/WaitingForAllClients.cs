@@ -14,7 +14,11 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public override bool ReadyForNextFrame => false;
 
         public WaitingForAllClients(EmitterNode node)
-            : base(node) {}
+            : base(node)
+        {
+            if (node.HandshakeTimeout != default)
+                MaxTimeOut = node.HandshakeTimeout;
+        }
 
         protected override void InitState()
         {
@@ -32,14 +36,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                     LocalNode.TotalExpectedRemoteNodesCount = LocalNode.RemoteNodes.Count;
                 }
 
-                TimeSpan communicationTimeout = new TimeSpan(0, 0, 0, 5);
-                if (CommandLineParser.communicationTimeout.Defined)
-                    communicationTimeout = new TimeSpan(0, 0, 0, 0, (int)CommandLineParser.communicationTimeout.Value);
-
-                return new EmitterSynchronization(LocalNode)
-                {
-                    MaxTimeOut = communicationTimeout
-                };
+                return new EmitterSynchronization(LocalNode);
             }
 
             ProcessMessages();

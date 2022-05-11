@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             if (m_EmitterFound)
             {
-                return new RepeaterSynchronization(LocalNode) { MaxTimeOut = this.MaxTimeOut };
+                return new RepeaterSynchronization(LocalNode);
             }
 
             ProcessMessages();
