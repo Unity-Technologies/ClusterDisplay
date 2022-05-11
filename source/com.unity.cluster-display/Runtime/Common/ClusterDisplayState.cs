@@ -27,11 +27,11 @@ namespace Unity.ClusterDisplay
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync
-        /// This will return FALSE if the cluster is not running.
+        /// This will return TRUE if the cluster is not running.
         /// </summary>
         [IsEmitterMarker]
         // [Obsolete("The property is deprecated. Use NodeRole instead")]
-        public static bool IsEmitter => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Emitter;
+        public static bool IsEmitter => ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.NodeRole is NodeRole.Emitter : true;
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node AND is headless.
@@ -44,7 +44,7 @@ namespace Unity.ClusterDisplay
         /// This will return FALSE if the cluster is not running.
         /// </summary>
         // [Obsolete("The property is deprecated. Use NodeRole instead")]
-        public static bool IsRepeater => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Repeater;
+        public static bool IsRepeater => ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.NodeRole is NodeRole.Repeater : false;
 
         /// <summary>
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
