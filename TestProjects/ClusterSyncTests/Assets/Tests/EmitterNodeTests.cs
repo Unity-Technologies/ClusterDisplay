@@ -39,7 +39,10 @@ namespace Unity.ClusterDisplay.Tests
                 headlessEmitter = false,
                 repeatersDelayed = false,
                 repeaterCount = k_RepeaterIds.Length,
-                udpAgentConfig = emitterUdpConfig
+                MainConfig =
+                {
+                    UdpAgentConfig = emitterUdpConfig
+                }
             };
 
             m_Node = new EmitterNode(emitterConfig);
@@ -99,10 +102,7 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestEmitterSynchronization()
         {
-            var emitterSync = new EmitterSynchronization(m_Node)
-            {
-                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
-            };
+            var emitterSync = new EmitterSynchronization(m_Node);
             emitterSync.EnterState(null);
 
             m_State = emitterSync;
@@ -193,7 +193,6 @@ namespace Unity.ClusterDisplay.Tests
         {
             var emitterSync = new EmitterSynchronization(m_Node)
             {
-                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds),
                 HasHardwareSync = true
             };
             emitterSync.EnterState(null);
@@ -260,10 +259,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             m_Node.RepeatersDelayed = true;
 
-            var emitterSync = new EmitterSynchronization(m_Node)
-            {
-                MaxTimeOut = TimeSpan.FromSeconds(TimeoutSeconds)
-            };
+            var emitterSync = new EmitterSynchronization(m_Node);
             emitterSync.EnterState(null);
 
             m_State = emitterSync;

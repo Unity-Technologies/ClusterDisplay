@@ -12,14 +12,12 @@ namespace Unity.ClusterDisplay
         protected Stopwatch m_Time;
         public NodeState PendingStateChange { get; set; }
         public static bool Debugging { get; set; }
-        public TimeSpan MaxTimeOut = new(0, 0, 0, 30, 0);
+
+        protected TimeSpan MaxTimeOut { get; set; } = new(0, 0, 0, 30, 0);
 
         protected ClusterNode LocalNode { get; }
 
-        protected NodeState(ClusterNode localNode)
-        {
-            LocalNode = localNode;
-        }
+        protected NodeState(ClusterNode localNode) => LocalNode = localNode;
 
         // We want each deriving class to implement these so we stay
         // within or exit DoFrame or DoLateFrame safetly.

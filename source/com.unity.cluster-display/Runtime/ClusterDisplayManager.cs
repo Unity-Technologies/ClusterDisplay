@@ -125,7 +125,7 @@ namespace Unity.ClusterDisplay
         {
             SetInstance(this);
             RegisterRenderPipelineDelegates();
-            GetOrCreateClusterSyncInstance().EnableClusterDisplay();
+            GetOrCreateClusterSyncInstance().EnableClusterDisplay(ClusterParams.FromCommandLine());
             onEnable?.Invoke();
         }
 

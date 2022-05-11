@@ -54,7 +54,11 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         ProfilerMarker m_MarkerPublishState = new ProfilerMarker("PublishState");
 
         public EmitterSynchronization(EmitterNode node)
-            : base(node) { }
+            : base(node)
+        {
+            if (node.CommunicationTimeout != default)
+                MaxTimeOut = node.CommunicationTimeout;
+        }
 
         protected override void ExitState()
         {

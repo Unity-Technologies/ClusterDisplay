@@ -27,13 +27,25 @@ namespace Unity.ClusterDisplay
         protected NodeState m_CurrentState;
         UDPAgent m_UdpAgent;
 
-        protected ClusterNode(UDPAgent.Config config)
+        public struct Config
         {
-            if (config.nodeId >= UDPAgent.MaxSupportedNodeCount)
+            public UDPAgent.Config UdpAgentConfig;
+            public TimeSpan CommunicationTimeout;
+            public TimeSpan HandshakeTimeout;
+        }
+
+        public TimeSpan CommunicationTimeout { get; }
+        public TimeSpan HandshakeTimeout { get; }
+
+        protected ClusterNode(Config config)
+        {
+            if (config.UdpAgentConfig.nodeId >= UDPAgent.MaxSupportedNodeCount)
                 throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
 
-            m_UdpAgent = new UDPAgent(config);
+            m_UdpAgent = new UDPAgent(config.UdpAgentConfig);
             m_UdpAgent.OnError += OnNetworkingError;
+            CommunicationTimeout = config.CommunicationTimeout;
+            HandshakeTimeout = config.HandshakeTimeout;
 
             Stopwatch.StartNew();
         }

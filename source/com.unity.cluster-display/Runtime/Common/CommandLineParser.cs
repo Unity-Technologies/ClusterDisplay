@@ -229,7 +229,7 @@ namespace Unity.ClusterDisplay
         internal const string k_EmitterNodeTypeArgument = "-emitterNode";
         internal const string k_RepeaterNodeTypeArgument = "-node";
 
-        internal static readonly BoolArgument debugFlag                     = new BoolArgument("-clusterNode");
+        internal static readonly BoolArgument debugFlag                     = new BoolArgument("-clusterDebug");
 
         internal static readonly BoolArgument emitterSpecified              = new BoolArgument("-emitterNode");
         internal static readonly BoolArgument headlessEmitter               = new BoolArgument("-batchMode");
@@ -247,10 +247,10 @@ namespace Unity.ClusterDisplay
 
         internal readonly static IntArgument targetFps                      = new IntArgument("-targetFps", tryParse: ParseTargetFPS);
         internal static readonly IntArgument overscan                       = new IntArgument("-overscan");
-		
+
         internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
         internal static readonly IntArgument quadroSyncInitDelay            = new IntArgument("-quadroSyncInitDelay");
-		
+
         internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
         internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);
         internal static readonly IntArgument rxPort                         = new IntArgument(GetNodeType, ParseRXPort);
@@ -279,7 +279,8 @@ namespace Unity.ClusterDisplay
             rxPort,
             txPort,
             handshakeTimeout,
-            communicationTimeout
+            communicationTimeout,
+            disableQuadroSync
         };
 
         // Since this property is referenced by some arguments when this class is initialized, this will be one of the very first things called.
