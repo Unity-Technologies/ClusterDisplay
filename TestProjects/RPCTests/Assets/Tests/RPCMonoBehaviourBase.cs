@@ -8,7 +8,9 @@ using UnityEngine.TestTools;
 using Unity.ClusterDisplay.RPC;
 using System;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.LowLevel;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -35,6 +37,8 @@ namespace Unity.ClusterDisplay.Tests
 
         SceneObjectsRegistry m_SceneObjectsRegistry;
 
+        class TestLoop {}
+
         protected void PollTestState()
         {
             if (IsTestFinished)
@@ -44,7 +48,7 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
-        void Setup()
+        void Awake ()
         {
             m_RPCTestRecorder = new RPCTestRecorder(this);
             RPCs.PushRPCTestRecorder(this);
@@ -55,28 +59,40 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             m_SceneObjectsRegistry.Register(this, this.GetType());
+            PlayerLoopExtensions.InsertBefore<TestLoop, UnityEngine.PlayerLoop.PreUpdate>(Propagate);
         }
 
-        protected void Propagate ()
+        void OnDestroy ()
         {
+            PlayerLoopExtensions.RemovePlayerLoops<TestLoop>();
+        }
+
+        void Propagate () => RPCs.EmulateFlight();
+
+        protected void Tick ()
+        {
+            if (FininishedFirstFrame)
+            {
+                PollTestState();
+                return;
+            }
+
             try
             {
-                Setup();
-
                 RPCs.FlagSending();
-                PropagateRPCs();
+                EmulateEmitterRPCExecution();
                 RPCs.FlagReceiving();
-
-                RPCs.EmulateFlight();
             }
 
             catch (System.Exception exception)
             {
                 OnException(exception);
             }
+
+            PollTestState();
         }
 
-        void PropagateRPCs()
+        void EmulateEmitterRPCExecution()
         {
             var floatValue = 1.4f;
             FloatTestAutomatic(floatValue);

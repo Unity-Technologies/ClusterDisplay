@@ -18,17 +18,7 @@ namespace Unity.ClusterDisplay.Tests
         protected override RPCExecutionStage BeforeStage => k_BeforeStage;
         protected override RPCExecutionStage AfterStage => k_AfterStage;
 
-        void LateUpdate ()
-        {
-            if (FininishedFirstFrame)
-            {
-                PollTestState();
-                return;
-            }
-
-            Propagate();
-            PollTestState();
-        }
+        void LateUpdate() => Tick();
 
         [ClusterRPC(k_BeforeStage)] public override void FloatTestBefore (float floatValue) => Test(() => RPCs.FloatTest(floatValue), BeforeStage);
         [ClusterRPC(k_BeforeStage)] public override void StringTestBefore(string stringValue) => Test(() => RPCs.StringTest(stringValue), BeforeStage);
