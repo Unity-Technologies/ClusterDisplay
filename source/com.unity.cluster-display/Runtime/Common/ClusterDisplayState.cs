@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay
         /// This will return FALSE if the cluster is not running.
         /// </summary>
         [IsEmitterMarker]
-        [Obsolete("The property is deprecated. Use NodeRole instead")]
+        // [Obsolete("The property is deprecated. Use NodeRole instead")]
         public static bool IsEmitter => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Emitter;
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay
         /// This property returns true if this running instance is a repeater node, this is set to true or false in ClusterSync.
         /// This will return FALSE if the cluster is not running.
         /// </summary>
-        [Obsolete("The property is deprecated. Use NodeRole instead")]
+        // [Obsolete("The property is deprecated. Use NodeRole instead")]
         public static bool IsRepeater => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.NodeRole is NodeRole.Repeater;
 
         /// <summary>
