@@ -23,4 +23,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/DelayPresentation.unity
     guid: fd8dca5eb15bb464ba7113924cfab977
+  - enabled: 1
+    path: Assets/Scenes/CustomBlitMaterial.unity
+    guid: 16f2ca81b5e604743adf81d1a6920b51
   m_configObjects: {}
