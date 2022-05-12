@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// <summary>
     /// A render pass whose purpose is to invoke an event at the desired stage of rendering.
     /// </summary>
-    class InjectionPointRenderPass : ScriptableRenderPass
+    internal class InjectionPointRenderPass : ScriptableRenderPass
     {
         public static event Action<ScriptableRenderContext, RenderingData> ExecuteRender = delegate {};
 

@@ -100,8 +100,8 @@ namespace Unity.ClusterDisplay.Graphics
                         clusterSettings.OverScanInPixels, Vector2.zero)
                     .ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias,
-                GetCustomBlitMaterial(),
-                GetOverridingBlitPropertyBlock(nodeIndex));
+                customBlitMaterial,
+                GetCustomBlitMaterialPropertyBlocks(nodeIndex));
             
             ClearPreviews();
             if (m_IsDebug)

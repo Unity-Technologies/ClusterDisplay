@@ -2029,7 +2029,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400713408593692140, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
       propertyPath: m_ClearFlags
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 400713408593692140, guid: 10542919bdbc9774aaf7a48f1bc98837, type: 3}
       propertyPath: m_TargetTexture

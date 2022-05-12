@@ -18,13 +18,17 @@ namespace Unity.ClusterDisplay.Graphics
         Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
         MaterialPropertyBlock m_CustomBlitMaterialPropertyBlock;
 
-        protected Material GetCustomBlitMaterial() => m_CustomBlitMaterial;
-        protected MaterialPropertyBlock GetCustomBlitMaterialPropertyBlock() => m_CustomBlitMaterialPropertyBlock;
+        protected Material customBlitMaterial => m_CustomBlitMaterial;
 
-        protected MaterialPropertyBlock GetOverridingBlitPropertyBlock(int index)
+        protected MaterialPropertyBlock GetCustomBlitMaterialPropertyBlocks(int index)
         {
             if (m_CustomBlitMaterialPropertyBlocks == null)
             {
+                if (m_CustomBlitMaterialPropertyBlock != null)
+                {
+                    return m_CustomBlitMaterialPropertyBlock;
+                }
+
                 return null;
             }
 
@@ -47,7 +51,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_CustomBlitMaterialPropertyBlock = materialPropertyBlock;
         }
 
-        public void SetOverridingBlitMaterial(Material material, Dictionary<int, MaterialPropertyBlock> materialPropertyBlocks = null)
+        public void SetCustomBlitMaterial(Material material, Dictionary<int, MaterialPropertyBlock> materialPropertyBlocks = null)
         {
             m_CustomBlitMaterial = material;
             m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
