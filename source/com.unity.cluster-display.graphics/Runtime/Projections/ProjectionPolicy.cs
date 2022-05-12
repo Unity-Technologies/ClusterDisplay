@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -12,7 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
     public abstract class ProjectionPolicy : ScriptableObject
     {
         [SerializeField]
-        protected bool m_IsDebug;
+        bool m_IsDebug;
 
         Material m_CustomBlitMaterial;
         Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
@@ -56,7 +55,10 @@ namespace Unity.ClusterDisplay.Graphics
             m_CustomBlitMaterial = material;
             m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
         }
-        
+
+        [SerializeField]
+        int m_NodeIndexOverride;
+
         /// <summary>
         /// Called just before the frame is rendered.
         /// </summary>
@@ -99,5 +101,17 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_IsDebug = value;
             get => m_IsDebug;
         }
+
+        public int NodeIndexOverride
+        {
+            get => m_NodeIndexOverride;
+            set => m_NodeIndexOverride = value;
+        }
+
+        protected int GetEffectiveNodeIndex() =>
+            !IsDebug && ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+            clusterSync.IsClusterLogicEnabled
+                ? clusterSync.RenderNodeID
+                : NodeIndexOverride;
     }
 }

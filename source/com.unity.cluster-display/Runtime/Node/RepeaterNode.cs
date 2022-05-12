@@ -6,10 +6,10 @@ namespace Unity.ClusterDisplay
 {
     class RepeaterNode : ClusterNode
     {
-        public struct Config
+        public new struct Config
         {
+            public ClusterNode.Config MainConfig;
             public bool EnableHardwareSync;
-            public UDPAgent.Config UdpAgentConfig;
         }
 
         public byte EmitterNodeId { get; set; }
@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay
         }
 
         public RepeaterNode(Config config)
-            : base(config.UdpAgentConfig)
+            : base(config.MainConfig)
         {
             m_CurrentState = config.EnableHardwareSync
                 ? HardwareSyncInitState.Create(this)

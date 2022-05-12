@@ -90,25 +90,52 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        /// <summary>
+        /// Configuration parameters for <see cref="UDPAgent"/>.
+        /// </summary>
         public struct Config
         {
+            /// <summary>
+            /// Unique ID identifying this node on the cluster network.
+            /// </summary>
             public byte nodeId;
+
+            /// <summary>
+            /// The IP address of the remote endpoint messages to which messages are sent.
+            /// Should be a valid multicast address.
+            /// </summary>
             public string ip;
+
+            /// <summary>
+            /// The port on which to receive messages.
+            /// </summary>
             public int rxPort;
+
+            /// <summary>
+            /// The port of the remote endpoint to which messages are sent.
+            /// </summary>
             public int txPort;
+
+            /// <summary>
+            /// Timeout in milliseconds.
+            /// </summary>
             public int timeOut;
+
+            /// <summary>
+            /// The name of the network adapter to send/receive messages.
+            /// </summary>
+            /// <remarks>
+            /// Can be empty or <see langword="null"/> to automatically select an adapter.
+            /// The name cannot be "lo0" on macOS due to some obscure bug:
+            /// https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573
+            /// </remarks>
             public string adapterName;
         }
 
         /// <summary>
-        ///
+        /// Creates a UDPAgent.
         /// </summary>
-        /// <param name="localNodeID"></param>
-        /// <param name="ip"></param>
-        /// <param name="rxPort"></param>
-        /// <param name="txPort"></param>
-        /// <param name="timeOut"></param>
-        /// <param name="adapterName">Adapter name cannot be lo0 on OSX due to some obscure bug: https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573 </param>
+        /// <param name="config">Configuration parameters.</param>
         public UDPAgent(Config config)
         {
             ClusterDebug.Log($"Constructed new {nameof(UDPAgent)}.");

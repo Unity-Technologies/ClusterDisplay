@@ -125,22 +125,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_RuntimeSettings = m_Settings;
         }
 
-        private int GetTileIndex()
-        {
-            // TODO: Cluster settings do not change, so we should only need to initialize the tile index once.
-            if (!m_IsDebug && ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
-                clusterSync.IsClusterLogicEnabled)
-            {
-                return CommandLineParser.replaceHeadlessEmitter.Value &&
-                    clusterSync.NodeRole is NodeRole.Repeater &&
-                    clusterSync.EmitterIsHeadless
-                    ? clusterSync.NodeID - 1
-                    : clusterSync.NodeID;
-            }
-
-            return m_DebugSettings.TileIndexOverride;
-        }
-
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             // Move early return at the Update's top.
@@ -151,7 +135,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var displaySize = new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
-            var currentTileIndex = GetTileIndex();
+            var currentTileIndex = GetEffectiveNodeIndex();
             var numTiles = Settings.GridSize.x * Settings.GridSize.y;
             m_DisplayMatrixSize = new Vector2Int(Settings.GridSize.x * displaySize.x, Settings.GridSize.y * displaySize.y);
 
@@ -168,7 +152,7 @@ namespace Unity.ClusterDisplay.Graphics
             // Prepare context properties.
             var viewport = new Viewport(Settings.GridSize, Settings.PhysicalScreenSize, Settings.Bezel, clusterSettings.OverScanInPixels);
             var blitParams = new BlitParams(displaySize, clusterSettings.OverScanInPixels,
-                m_IsDebug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero);
+                IsDebug ? m_DebugSettings.ScaleBiasTextOffset : Vector2.zero);
             var postEffectsParams = new PostEffectsParams(m_DisplayMatrixSize);
 
             var renderContext = new TileProjectionContext
@@ -181,11 +165,11 @@ namespace Unity.ClusterDisplay.Graphics
                 BlitParams = blitParams,
                 PostEffectsParams = postEffectsParams,
                 DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
-                UseDebugViewportSubsection = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardTile && m_DebugSettings.UseDebugViewportSubsection
+                UseDebugViewportSubsection = IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardTile && m_DebugSettings.UseDebugViewportSubsection
             };
 
             // Allocate tiles targets.
-            var isStitcher = m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
+            var isStitcher = IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
             var numTargets = isStitcher ? renderContext.NumTiles : 1;
 
             GraphicsUtil.AllocateIfNeeded(ref m_TileRenderTargets, numTargets,
@@ -224,7 +208,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Present(PresentArgs args)
         {
-            if (m_IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
+            if (IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher)
             {
                 var presentRatio = args.CameraPixelRect.width / args.CameraPixelRect.height;
                 var stitchedRatio = m_DisplayMatrixSize.x / (float)m_DisplayMatrixSize.y;

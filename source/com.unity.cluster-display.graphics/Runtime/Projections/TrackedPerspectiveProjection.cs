@@ -19,9 +19,6 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         List<ProjectionSurface> m_ProjectionSurfaces = new();
 
-        [SerializeField]
-        int m_NodeIndexOverride;
-
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
         BlitCommand m_BlitCommand;
 
@@ -69,19 +66,14 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
-            // TODO: nodeID does not change, so we should only need to initialize it once.
-            var nodeIndex =
-                !m_IsDebug && ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync)
-
-                    ? clusterSync.NodeID
-                    : m_NodeIndexOverride;
+            var nodeIndex = GetEffectiveNodeIndex();
 
             if (nodeIndex >= m_ProjectionSurfaces.Count)
             {
                 return;
             }
 
-            if (m_IsDebug)
+            if (IsDebug)
             {
                 for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
                 {
@@ -104,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
                 GetCustomBlitMaterialPropertyBlocks(nodeIndex));
             
             ClearPreviews();
-            if (m_IsDebug)
+            if (IsDebug)
             {
                 DrawPreview(clusterSettings);
             }
@@ -209,7 +201,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var lookAtPoint = ProjectPointToPlane(position, surfacePlane);
 
-            if (m_IsDebug)
+            if (IsDebug)
             {
                 Debug.DrawLine(position, lookAtPoint);
             }
