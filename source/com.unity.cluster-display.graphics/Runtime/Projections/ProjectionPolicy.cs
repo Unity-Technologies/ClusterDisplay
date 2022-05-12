@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
