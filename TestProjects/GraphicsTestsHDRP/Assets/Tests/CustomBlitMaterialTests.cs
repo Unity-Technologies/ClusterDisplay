@@ -34,86 +34,77 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
         });
     }
 
-    static void OnCustomRender(ScriptableRenderContext context, HDCamera hdCamera)
+    Texture2D ResizeCheckerTexture ()
     {
-        if (hdCamera.camera != Camera.main)
-        {
-            return;
-        }
+        var resizeRT = new RenderTexture(m_ClusterCapture);
 
-        var colorBuffer = hdCamera.camera
-            .GetComponent<HDAdditionalCameraData>()
-            .GetGraphicsBuffer(HDAdditionalCameraData.BufferAccessType.Color);
+        Graphics.Blit(CheckerTexture, resizeRT, new Vector2(2f, -2f), Vector2.zero);
+        var resizedCheckerTexture = new Texture2D(m_ClusterCaptureTex2D.width, m_ClusterCaptureTex2D.height, m_ClusterCaptureTex2D.format, false);
+        GraphicsTestUtil.CopyToTexture2D(resizeRT, resizedCheckerTexture);
 
-        var cmd = CommandBufferPool.Get("PresentCheckerBoard");
-        // Blit the texture with a flip since were in HDRP.
-        cmd.Blit(CheckerTexture, colorBuffer, new Vector2(2f, -2f), Vector2.zero);
-        context.ExecuteCommandBuffer(cmd);
-        CommandBufferPool.Release(cmd);
+        resizeRT.Release();
+
+        return resizedCheckerTexture;
     }
 
     [UnityTest]
     public IEnumerator UseBlitMaterialWithMaterialPropertyBlock()
     {
-        yield return RenderAndCompare(() =>
-        {
-            var additionalCameraData = m_Camera.GetComponent<HDAdditionalCameraData>();
-            additionalCameraData.customRender -= OnCustomRender;
-            additionalCameraData.customRender += OnCustomRender;
+        InitializeTest();
 
-            var cameraTransform = m_Camera.transform;
-            var projection = m_ClusterRenderer.ProjectionPolicy;
+        var projection = m_ClusterRenderer.ProjectionPolicy;
 
-            var materialPropertyBlock = new MaterialPropertyBlock();
-            materialPropertyBlock.SetInt(_DisplayChecker, 1);
-            materialPropertyBlock.SetTexture(_CheckerTexture, CheckerTexture);
+        var materialPropertyBlock = new MaterialPropertyBlock();
+        materialPropertyBlock.SetInt(_DisplayChecker, 1);
+        materialPropertyBlock.SetTexture(_CheckerTexture, CheckerTexture);
 
-            projection.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock);
-        }, () =>
-        {
-            m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock: null);
-            var additionalCameraData = m_Camera.GetComponent<HDAdditionalCameraData>();
-            additionalCameraData.customRender -= OnCustomRender;
-        });
+        projection.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock);
+
+        yield return GraphicsTestUtil.PreWarm();
+        yield return RenderOverscan();
+
+        GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
+        var resizedCheckerTexture = ResizeCheckerTexture();
+
+        ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlock: null);
     }
 
     [UnityTest]
     public IEnumerator UseBlitMaterialWithMaterialPropertyBlocks()
     {
-        yield return RenderAndCompare(() =>
+        InitializeTest();
+
+        var materialPropertyBlocks = new Dictionary<int, MaterialPropertyBlock>()
         {
-            var additionalCameraData = m_Camera.GetComponent<HDAdditionalCameraData>();
-            additionalCameraData.customRender -= OnCustomRender;
-            additionalCameraData.customRender += OnCustomRender;
+            {0, new MaterialPropertyBlock() },
+            {1, new MaterialPropertyBlock() },
+            {2, new MaterialPropertyBlock() },
+            {3, new MaterialPropertyBlock() }
+        };
 
-            var cameraTransform = m_Camera.transform;
+        materialPropertyBlocks[0].SetInt(_DisplayChecker, 1);
+        materialPropertyBlocks[0].SetTexture(_CheckerTexture, CheckerTexture);
 
-            var materialPropertyBlocks = new Dictionary<int, MaterialPropertyBlock>()
-            {
-                {0, new MaterialPropertyBlock() },
-                {1, new MaterialPropertyBlock() },
-                {2, new MaterialPropertyBlock() },
-                {3, new MaterialPropertyBlock() }
-            };
+        materialPropertyBlocks[1].SetInt(_DisplayChecker, 1);
+        materialPropertyBlocks[1].SetTexture(_CheckerTexture, CheckerTexture);
 
-            materialPropertyBlocks[0].SetInt(_DisplayChecker, 1);
-            materialPropertyBlocks[0].SetTexture(_CheckerTexture, CheckerTexture);
+        materialPropertyBlocks[2].SetInt(_DisplayChecker, 1);
+        materialPropertyBlocks[2].SetTexture(_CheckerTexture, CheckerTexture);
 
-            materialPropertyBlocks[1].SetInt(_DisplayChecker, 1);
-            materialPropertyBlocks[1].SetTexture(_CheckerTexture, CheckerTexture);
+        materialPropertyBlocks[3].SetInt(_DisplayChecker, 1);
+        materialPropertyBlocks[3].SetTexture(_CheckerTexture, CheckerTexture);
 
-            materialPropertyBlocks[2].SetInt(_DisplayChecker, 1);
-            materialPropertyBlocks[2].SetTexture(_CheckerTexture, CheckerTexture);
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlocks);
 
-            materialPropertyBlocks[3].SetInt(_DisplayChecker, 1);
-            materialPropertyBlocks[3].SetTexture(_CheckerTexture, CheckerTexture);
+        yield return GraphicsTestUtil.PreWarm();
+        yield return RenderOverscan();
 
-            m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlocks);
-        }, () =>
-        {
-            m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlocks: null);
-            var additionalCameraData = m_Camera.GetComponent<HDAdditionalCameraData>();
-            additionalCameraData.customRender -= OnCustomRender;
-        });
+        GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
+        var resizedCheckerTexture = ResizeCheckerTexture();
+        ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_ModifiedBlitShaderName)), materialPropertyBlocks: null);
     }
 }

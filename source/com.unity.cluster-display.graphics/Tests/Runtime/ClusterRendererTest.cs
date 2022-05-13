@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
@@ -43,19 +43,15 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsUtil.DeallocateIfNeeded(ref m_ClusterCapture);
         }
 
-        protected IEnumerator RenderVanillaAndOverscan()
+        protected IEnumerator RenderVanilla ()
         {
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
-            Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
             var width = m_ImageComparisonSettings.TargetWidth;
             var height = m_ImageComparisonSettings.TargetHeight;
                 
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
-            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
-
             m_VanillaCaptureTex2D = new Texture2D(width, height);
-            m_ClusterCaptureTex2D = new Texture2D(width, height);
 
             // First we render "vanilla", that is, without Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(false);
@@ -64,6 +60,17 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             m_Camera.enabled = true;
 
             yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
+        }
+        protected IEnumerator RenderOverscan()
+        {
+            Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
+            Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
+
+            var width = m_ImageComparisonSettings.TargetWidth;
+            var height = m_ImageComparisonSettings.TargetHeight;
+
+            GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
+            m_ClusterCaptureTex2D = new Texture2D(width, height);
             
             // Then we activate Cluster Display.
             m_ClusterRenderer.gameObject.SetActive(true);
@@ -154,7 +161,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
                 preRender.Invoke();
             }
 
-            yield return RenderVanillaAndOverscan();
+            yield return RenderVanilla();
+            yield return RenderOverscan();
 
             if (postRender != null)
             {
