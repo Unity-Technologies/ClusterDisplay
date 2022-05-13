@@ -1,4 +1,4 @@
-Shader "Hidden/Test/Modified Blit"
+Shader "Hidden/Test/Custom Blit"
 {
     SubShader
     {
@@ -9,7 +9,7 @@ Shader "Hidden/Test/Modified Blit"
             HLSLPROGRAM
                 #pragma vertex Vertex
                 #pragma fragment Fragment
-                #include "ModifiedBlit.hlsl"
+                #include "CustomBlit.hlsl"
             ENDHLSL
         }
     }

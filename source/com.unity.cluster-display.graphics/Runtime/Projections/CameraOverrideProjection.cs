@@ -1,7 +1,5 @@
 using System;
-using Unity.ClusterDisplay.Graphics;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace Unity.ClusterDisplay.Graphics
 {

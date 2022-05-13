@@ -25,12 +25,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (m_CustomBlitMaterialPropertyBlocks == null)
             {
-                if (m_CustomBlitMaterialPropertyBlock != null)
-                {
-                    return m_CustomBlitMaterialPropertyBlock;
-                }
-
-                return null;
+                return m_CustomBlitMaterialPropertyBlock;
             }
 
             if (!m_CustomBlitMaterialPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
