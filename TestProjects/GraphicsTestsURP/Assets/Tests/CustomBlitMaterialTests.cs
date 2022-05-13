@@ -85,17 +85,12 @@ public class CustomBlitMaterialTests : ClusterRendererPostProcessTest
             {3, new MaterialPropertyBlock() }
         };
 
-        materialPropertyBlocks[0].SetInt(_DisplayChecker, 1);
-        materialPropertyBlocks[0].SetTexture(_CheckerTexture, CheckerTexture);
 
-        materialPropertyBlocks[1].SetInt(_DisplayChecker, 1);
-        materialPropertyBlocks[1].SetTexture(_CheckerTexture, CheckerTexture);
-
-        materialPropertyBlocks[2].SetInt(_DisplayChecker, 1);
-        materialPropertyBlocks[2].SetTexture(_CheckerTexture, CheckerTexture);
-
-        materialPropertyBlocks[3].SetInt(_DisplayChecker, 1);
-        materialPropertyBlocks[3].SetTexture(_CheckerTexture, CheckerTexture);
+        for (int i = 0; i < 4; i++)
+        {
+            materialPropertyBlocks[i].SetInt(_DisplayChecker, 1);
+            materialPropertyBlocks[i].SetTexture(_CheckerTexture, CheckerTexture);
+        }
 
         m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(CoreUtils.CreateEngineMaterial(k_CustomBlitShaderName), materialPropertyBlocks);
 
