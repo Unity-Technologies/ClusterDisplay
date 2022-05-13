@@ -30,7 +30,7 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
         {
             var cameraTransform = m_Camera.transform;
             var projection = m_ClusterRenderer.ProjectionPolicy;
-            projection.SetCustomBlitMaterial(new Material(Shader.Find(k_CustomBlitShaderName)), materialPropertyBlock: null);
+            projection.SetCustomBlitMaterial(CoreUtils.CreateEngineMaterial(k_CustomBlitShaderName), materialPropertyBlock: null);
         });
     }
 
@@ -58,7 +58,7 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
         materialPropertyBlock.SetInt(_DisplayChecker, 1);
         materialPropertyBlock.SetTexture(_CheckerTexture, CheckerTexture);
 
-        projection.SetCustomBlitMaterial(new Material(Shader.Find(k_CustomBlitShaderName)), materialPropertyBlock);
+        projection.SetCustomBlitMaterial(CoreUtils.CreateEngineMaterial(k_CustomBlitShaderName), materialPropertyBlock);
 
         yield return GraphicsTestUtil.PreWarm();
         yield return RenderOverscan();
@@ -68,7 +68,7 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
 
         ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
 
-        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_CustomBlitShaderName)), materialPropertyBlock: null);
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(null, materialPropertyBlock: null);
     }
 
     [UnityTest]
@@ -96,7 +96,7 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
         materialPropertyBlocks[3].SetInt(_DisplayChecker, 1);
         materialPropertyBlocks[3].SetTexture(_CheckerTexture, CheckerTexture);
 
-        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_CustomBlitShaderName)), materialPropertyBlocks);
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(CoreUtils.CreateEngineMaterial(k_CustomBlitShaderName), materialPropertyBlocks);
 
         yield return GraphicsTestUtil.PreWarm();
         yield return RenderOverscan();
@@ -105,6 +105,6 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
         var resizedCheckerTexture = ResizeCheckerTexture();
         ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
 
-        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(new Material(Shader.Find(k_CustomBlitShaderName)), materialPropertyBlocks: null);
+        m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(null, materialPropertyBlocks: null);
     }
 }
