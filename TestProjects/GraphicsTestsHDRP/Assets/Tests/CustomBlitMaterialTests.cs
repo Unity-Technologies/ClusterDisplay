@@ -28,9 +28,12 @@ public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
     {
         yield return RenderAndCompare(() =>
         {
-            var cameraTransform = m_Camera.transform;
             var projection = m_ClusterRenderer.ProjectionPolicy;
             projection.SetCustomBlitMaterial(CoreUtils.CreateEngineMaterial(k_CustomBlitShaderName), materialPropertyBlock: null);
+        }, () =>
+        {
+            var projection = m_ClusterRenderer.ProjectionPolicy;
+            projection.SetCustomBlitMaterial(null, materialPropertyBlock: null);
         });
     }
 
