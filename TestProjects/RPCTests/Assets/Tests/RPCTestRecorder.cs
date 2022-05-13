@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Tests
             var method = FindClusterRPCMethod();
             if (!propagatedRPCs.ContainsKey(method.Name))
             {
-                throw new System.ArgumentOutOfRangeException($"Cannot record propagation of RPC: \"{method.Name}\", it was not registered.");
+                throw new System.NullReferenceException($"Cannot record propagation of RPC: \"{method.Name}\", it was not registered.");
             }
 
             UnityEngine.Debug.Log($"RPC: \"{method.Name}\" was propagated.");
@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.Tests
             var method = FindClusterRPCMethod();
             if (!executedRPCs.ContainsKey(method.Name))
             {
-                throw new System.ArgumentOutOfRangeException($"Cannot record execution of RPC: \"{method.Name}\", it was not registered.");
+                throw new System.NullReferenceException($"Cannot record execution of RPC: \"{method.Name}\", it was not registered.");
             }
 
             UnityEngine.Debug.Log($"RPC: \"{method.Name}\" was executed.");

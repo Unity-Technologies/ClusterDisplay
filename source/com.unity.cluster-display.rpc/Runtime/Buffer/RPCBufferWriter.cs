@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC
@@ -61,9 +60,14 @@ namespace Unity.ClusterDisplay.RPC
         /// <returns></returns>
         internal static unsafe int Latch (NativeArray<byte> buffer)
         {
-            UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr(), rpcBuffer.GetUnsafePtr(), rpcBufferSize);
-            int bufferLength = (int)rpcBufferSize;
-            return bufferLength;
+            if (buffer.IsCreated & rpcBuffer.IsCreated)
+            {
+                UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr(), rpcBuffer.GetUnsafePtr(), rpcBufferSize);
+                int bufferLength = (int)rpcBufferSize;
+                return bufferLength;
+            }
+
+            return 0;
         }
 
 
@@ -76,17 +80,21 @@ namespace Unity.ClusterDisplay.RPC
         {
             int strSize = value.Length;
             if (rpcBufferSize + Marshal.SizeOf<buint>() + strSize >= rpcBuffer.Length)
+            {
                 throw new System.Exception("RPC Buffer is full.");
+            }
 
             CopyCountToRPCBuffer((buint)strSize);
             var byteCount = (buint)strSize * 2 /* UTF-16 2 Bytes */;
             ClusterDebug.Log($"Byte Count:\"{Encoding.Unicode.GetBytes(value).Length}\".");
             fixed (char* ptr = value)
+            {
                 Encoding.Unicode.GetBytes(
                     ptr,
                     strSize,
                     (byte *)rpcBuffer.GetUnsafePtr() + rpcBufferSize,
                     (int)byteCount);
+            }
 
             rpcBufferSize += byteCount;
         }
@@ -175,7 +183,9 @@ namespace Unity.ClusterDisplay.RPC
         public static unsafe void AppendRPCNativeArrayParameterValues<T> (NativeArray<T> buffer) where T : unmanaged
         {
             if (!CanWriteBufferToRPCBuffer<T>(buffer.Length, out var arrayByteCount))
+            {
                 return;
+            }
 
             CopyCountToRPCBuffer((buint)buffer.Length);
             CopyBufferToRPCBuffer<T>((T*)buffer.GetUnsafePtr(), arrayByteCount);
@@ -190,13 +200,17 @@ namespace Unity.ClusterDisplay.RPC
         public static unsafe void AppendRPCArrayParameterValues<T>(T[] value) where T : unmanaged
         {
             if (value == null || !CanWriteBufferToRPCBuffer<T>(value.Length, out var arrayByteCount))
+            {
                 return;
+            }
 
             CopyCountToRPCBuffer((buint)value.Length);
 
             // Get a fixed pointer to the first element in the array.
             fixed (T* ptr = &value[0])
+            {
                 CopyBufferToRPCBuffer<T>(ptr, arrayByteCount);
+            }
         }
         
         /// <summary>
@@ -210,7 +224,9 @@ namespace Unity.ClusterDisplay.RPC
             // in interop unmanaged code which it'll interpret as 1 byte. We need 2 bytes for unicode.
             buint charSize = sizeof(char);
             if (rpcBufferSize + charSize >= rpcBuffer.Length)
+            {
                 return;
+            }
 
             // Perform the copy.
             UnsafeUtility.MemCpy(
@@ -230,7 +246,9 @@ namespace Unity.ClusterDisplay.RPC
         public static unsafe void AppendRPCValueTypeParameterValue<T>(T value) where T : struct
         {
             if (!CanWriteValueTypeToRPCBuffer(value, out var structSize))
+            {
                 return;
+            }
 
             // Perform the copy.
             UnsafeUtility.MemCpy(
@@ -282,7 +300,9 @@ namespace Unity.ClusterDisplay.RPC
             buint parametersPayloadSize)
         {
             if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
+            {
                 return;
+            }
 
             // Get the pipe ID, which is the ID of the instance, and this ID should match the equivalant instance on a repeater node.
             if (!SceneObjectsRegistry.TryGetPipeId(instance, out var pipeId))
@@ -331,7 +351,9 @@ namespace Unity.ClusterDisplay.RPC
             buint parametersPayloadSize)
         {
             if (!RPCRegistry.RPCHashToRPCId(rpcHash, out var rpcId))
+            {
                 return;
+            }
 
             // This is the total size of the RPC call which is the header + the byte count of the method arguments.
             buint totalRPCCallSize = MinimumRPCPayloadSize + (buint)parametersPayloadSize;

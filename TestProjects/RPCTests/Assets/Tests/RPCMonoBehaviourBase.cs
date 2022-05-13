@@ -1,16 +1,9 @@
 using NUnit.Framework;
-using System.Runtime.InteropServices;
-
-using UnityEngine;
-using Unity.Collections;
-using UnityEngine.TestTools;
-
-using Unity.ClusterDisplay.RPC;
 using System;
-using System.Linq;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.LowLevel;
+using Unity.ClusterDisplay.RPC;
+using Unity.Collections;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -26,6 +19,7 @@ namespace Unity.ClusterDisplay.Tests
         void OnException (Exception exception)
         {
             m_Exception = true;
+            ExitTest();
             throw exception;
         }
 
@@ -39,13 +33,17 @@ namespace Unity.ClusterDisplay.Tests
 
         class TestLoop {}
 
-        protected void PollTestState()
+        void ExitTest ()
         {
-            if (IsTestFinished)
+            Debug.Log("Completed test, cleaning up...");
+
+            if (m_SceneObjectsRegistry != null)
             {
                 m_SceneObjectsRegistry.Unregister(this);
-                Destroy(m_SceneObjectsRegistry);
+                m_SceneObjectsRegistry = null;
             }
+
+            PlayerLoopExtensions.RemovePlayerLoops<TestLoop>();
         }
 
         void Awake ()
@@ -62,18 +60,21 @@ namespace Unity.ClusterDisplay.Tests
             PlayerLoopExtensions.InsertBefore<TestLoop, UnityEngine.PlayerLoop.PreUpdate>(Propagate);
         }
 
-        void OnDestroy ()
+        void Propagate()
         {
-            PlayerLoopExtensions.RemovePlayerLoops<TestLoop>();
-        }
+            if (IsTestFinished)
+            {
+                ExitTest();
+                return;
+            }
 
-        void Propagate () => RPCs.EmulateFlight();
+            RPCs.EmulateFlight();
+        }
 
         protected void Tick ()
         {
-            if (FininishedFirstFrame)
+            if (IsTestFinished)
             {
-                PollTestState();
                 return;
             }
 
@@ -88,8 +89,6 @@ namespace Unity.ClusterDisplay.Tests
             {
                 OnException(exception);
             }
-
-            PollTestState();
         }
 
         void EmulateEmitterRPCExecution()

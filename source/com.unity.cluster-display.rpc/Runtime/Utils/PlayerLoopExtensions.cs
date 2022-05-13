@@ -95,11 +95,22 @@ namespace Unity.ClusterDisplay.RPC
         {
             var defaultPlayerSystemLoop = PlayerLoop.GetCurrentPlayerLoop();
 
+            string msg = $"Removed the following {nameof(PlayerLoopSystem)}s from the current player loop:";
             defaultPlayerSystemLoop.subSystemList = defaultPlayerSystemLoop.subSystemList
-                .Where(loop => !loop.type.IsSubclassOf(typeof(T)))
+                .Where(loop =>
+                {
+                    if (loop.type == typeof(T) || loop.type.IsSubclassOf(typeof(T)))
+                    {
+                        msg += $"\n\t\"{loop.type.FullName}\"";
+                        return false;
+                    }
+
+                    return true;
+                })
                 .ToArray();
 
             PlayerLoop.SetPlayerLoop(defaultPlayerSystemLoop);
+            ClusterDebug.Log(msg);
         }
     }
 }

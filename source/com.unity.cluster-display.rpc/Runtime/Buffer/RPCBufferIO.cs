@@ -25,7 +25,12 @@ namespace Unity.ClusterDisplay.RPC
         const byte k_RPCStateID = 128;
 
         [IsEmitterMarker]
-        public static bool CaptureExecution => ClusterDisplayState.IsActive && ClusterDisplayState.NodeRole is NodeRole.Emitter || m_OverrideCaptureExecution;
+        public static bool CaptureExecution =>
+            rpcBuffer.IsCreated &&
+                (ClusterDisplayState.IsActive &&
+                ClusterDisplayState.NodeRole is NodeRole.Emitter ||
+                m_OverrideCaptureExecution);
+
         static bool m_OverrideCaptureExecution = false;
 
         static void OverrideCaptureExecution (bool capture)
@@ -69,21 +74,20 @@ namespace Unity.ClusterDisplay.RPC
             EmitterStateWriter.RegisterOnStoreCustomDataDelegate(k_RPCStateID, Latch);
         }
 
-        static void SetupBuffer ()
+        static void FlushRPCBuffer ()
         {
             if (rpcBuffer.IsCreated)
                 rpcBuffer.Dispose();
-
-            rpcBuffer = new NativeArray<byte>(k_MaxRPCByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             rpcBufferSize = 0;
         }
 
-        static RPCBufferIO() => Initialize();
-
-        internal static void Dispose()
+        static void SetupBuffer ()
         {
-            if (rpcBuffer.IsCreated)
-                rpcBuffer.Dispose();
+            FlushRPCBuffer();
+            rpcBuffer = new NativeArray<byte>(k_MaxRPCByteBufferSize, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
         }
+
+        static RPCBufferIO() => Initialize();
+        internal static void Dispose() => FlushRPCBuffer();
     }
 }

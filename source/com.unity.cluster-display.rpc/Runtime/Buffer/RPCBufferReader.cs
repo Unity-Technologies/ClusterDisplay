@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
 using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC
@@ -223,7 +222,9 @@ namespace Unity.ClusterDisplay.RPC
             buint bufferPos = 0;
             // If this is true, then there are no RPCs to invoke in the buffer.
             if (buffer.Length < MinimumRPCPayloadSize)
+            {
                 goto success;
+            }
 
             // Copy our buffer into our pre-initialized RPC buffer class member.
             // TODO: This should probably be refactored so we don't have to do this again.
@@ -246,7 +247,9 @@ namespace Unity.ClusterDisplay.RPC
                     out var rpcRequest,
                     startingBufferPos,
                     ref bufferPos))
+                {
                     goto failure;
+                }
 
                 switch (rpcRequest.rpcExecutionStage)
                 {
@@ -257,7 +260,9 @@ namespace Unity.ClusterDisplay.RPC
                             ref rpcRequest,
                             startingBufferPos,
                             ref bufferPos))
+                        {
                             goto failure;
+                        }
 
                     } break;
 
@@ -270,8 +275,6 @@ namespace Unity.ClusterDisplay.RPC
                     case RPCExecutionStage.BeforeLateUpdate:
                     case RPCExecutionStage.AfterLateUpdate:
                     {
-                        if (rpcRequest.rpcId == 21 || rpcRequest.rpcId == 52 || rpcRequest.rpcId == 57)
-                            Debug.Log("TEST");
                         QueueRPC(
                             ref rpcRequest,
                             ref bufferPos);
@@ -312,7 +315,9 @@ namespace Unity.ClusterDisplay.RPC
             var byteCount = (buint)strLen * 2 /* UTF-16 2 Bytes */;
 
             if (startPos + strLen > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to {nameof(System.String)}, the embedded string length is {strLen} elements. However, the length describes a unicode string of: {byteCount} bytes which is beyond the size of the RPC buffer containing {rpcBuffer.Length} bytes.");
+            }
 
             // Extract the string using the length we've retrieved.
             var str = Encoding.Unicode.GetString((byte*)ptr.ToPointer(), (int)byteCount);
@@ -339,7 +344,9 @@ namespace Unity.ClusterDisplay.RPC
             ptr += Marshal.SizeOf<buint>();
 
             if (startPos + arrayByteCount > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to {typeof(T).Name}[], the embedded array length is {arrayLength} elements. However, the length describes an array of: {arrayByteCount} bytes which is beyond the size of the RPC buffer containing {rpcBuffer.Length} bytes.");
+            }
 
             // Create a new array of our expected type.
             T[] array = new T[arrayLength];
@@ -373,7 +380,9 @@ namespace Unity.ClusterDisplay.RPC
             ptr += Marshal.SizeOf<buint>();
 
             if (startPos + arrayByteCount > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to NativeArray<{typeof(T).Name}>, the embedded collection length is {arrayLength} elements. However, the length describes a collection of: {arrayByteCount} bytes which is beyond the size of the RPC buffer containing {rpcBuffer.Length} bytes.");
+            }
 
             NativeArray<T> nativeArray = new NativeArray<T>((int)arrayLength, Allocator.Persistent);
             UnsafeUtility.MemCpy(nativeArray.GetUnsafePtr(), ptr.ToPointer(), arrayByteCount);
@@ -396,7 +405,9 @@ namespace Unity.ClusterDisplay.RPC
             var charSize = (buint)sizeof(char); // Move our read head.
 
             if (startPos + charSize > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to char. The char is {charSize} bytes. However, the expected byte count is beyond the RPC buffer size of {rpcBuffer.Length} bytes.");
+            }
 
             startPos += charSize;
             char c = (char)((*ptr) | (*(ptr + 1) << 8));
@@ -416,7 +427,9 @@ namespace Unity.ClusterDisplay.RPC
             var structSize = (buint)Marshal.SizeOf<T>(); // Move our read head.
 
             if (startPos + structSize > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to instance of value type: {typeof(T).Name}. The struct is {structSize} bytes. However, the expected byte count is beyond the RPC buffer size of {rpcBuffer.Length} bytes.");
+            }
 
             startPos += structSize;
             // Convert the bytes to our struct.
@@ -434,7 +447,9 @@ namespace Unity.ClusterDisplay.RPC
             var pipeIDSize = (buint)Marshal.SizeOf<ushort>(); // Move the read head.
 
             if (startPos + pipeIDSize > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to Pipe ID of type: {typeof(ushort).Name}. The type is {pipeIDSize} bytes. However, the expected byte count is beyond the RPC buffer size of {rpcBuffer.Length} bytes.");
+            }
 
             // Convert the bytes to the expected Pipe ID of the RPC.
             pipeId = Marshal.PtrToStructure<ushort>(ptr);
@@ -470,7 +485,9 @@ namespace Unity.ClusterDisplay.RPC
             var rpcExecutionStageSize = (buint)Marshal.SizeOf<ushort>(); // Move the read head.
 
             if (startPos + rpcExecutionStageSize > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes to: {typeof(RPCExecutionStage).Name}. The type is {rpcExecutionStageSize} bytes. However, the expected byte count is beyond the RPC buffer size of {rpcBuffer.Length} bytes.");
+            }
 
             // Convert the bytes to the expected RPCExecutionStage of the RPC.
             rpcExecutionStage = (RPCExecutionStage)Marshal.PtrToStructure<ushort>(ptr);
@@ -488,7 +505,9 @@ namespace Unity.ClusterDisplay.RPC
             var parametersPayloadSizeSize = (buint)Marshal.SizeOf<uint>(); // Move the read head.;
 
             if (startPos + parametersPayloadSizeSize > rpcBuffer.Length)
+            {
                 throw new Exception($"Unable to convert bytes at position: {startPos} to: parameters payload size. The type is {parametersPayloadSizeSize} bytes. However, the expected byte count is beyond the RPC buffer size of {rpcBuffer.Length} bytes.");
+            }
 
             // Convert the bytes to our expected RPC total arguments byte count.
             parametersPayloadSize = Marshal.PtrToStructure<uint>(ptr);

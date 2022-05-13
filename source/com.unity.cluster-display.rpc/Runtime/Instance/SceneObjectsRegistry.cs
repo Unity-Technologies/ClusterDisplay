@@ -38,7 +38,9 @@ namespace Unity.ClusterDisplay.RPC
         {
             #if UNITY_EDITOR
             if (!EditorApplication.isPlaying && !IsSerializing)
+            {
                 EditorUtility.SetDirty(this);
+            }
             #endif
         }
 
@@ -53,6 +55,8 @@ namespace Unity.ClusterDisplay.RPC
             {
                 throw new System.ArgumentNullException($"Cannot register instance of: \"{type.Name}\" in scene: \"{gameObject.scene.name}\", there is no RPC associated with that type.");
             }
+
+            ClusterDebug.Log($"Registering instance of: \"{type.FullName}\" with {rpcs.Length} RPCs in scene: \"{gameObject.scene.name}\".");
 
             for (int ri = 0; ri < rpcs.Length; ri++)
             {
@@ -81,19 +85,21 @@ namespace Unity.ClusterDisplay.RPC
             m_SceneInstances.Remove(sceneObject);
             UnregisterInstanceAccessor(sceneObject);
 
+            ClusterDebug.Log($"Unregistered instance of: \"{typeof(InstanceType).FullName}\" from {nameof(SceneObjectsRegistry)} in scene: \"{gameObject.scene.name}\".");
+
             if (m_SceneInstances.Count == 0)
             {
                 if (Application.isPlaying)
                 {
-                    if (this != null)
-                        Destroy(this.gameObject);
+                    Destroy(this.gameObject);
                 }
 
                 else
                 {
-                    if (this != null)
-                        DestroyImmediate(this.gameObject);
+                    DestroyImmediate(this.gameObject);
                 }
+
+                ClusterDebug.Log($"Last instance was unregistered from: {nameof(SceneObjectsRegistry)}, destroying self.");
             }
 
             Dirty();
@@ -116,7 +122,9 @@ namespace Unity.ClusterDisplay.RPC
             where InstanceType : Component
         {
             if (!m_SceneInstances.Contains(sceneObject))
+            {
                 m_SceneInstances.Add(sceneObject);
+            }
 
             RegisterInstanceAccessor(sceneObject, rpcId, ref instanceRPCConfig);
             
@@ -127,17 +135,23 @@ namespace Unity.ClusterDisplay.RPC
         void SerializeRPCSceneInstances ()
         {
             if (m_SceneInstances.Count == 0)
+            {
                 return;
+            }
 
             List<SerializedInstanceRPCData> serializedInstances = new List<SerializedInstanceRPCData>();
 
             for (int i = 0; i < m_SceneInstances.Count; i++)
             {
                 if (m_SceneInstances[i] == null)
+                {
                     continue;
+                }
 
                 if (!TryGetPipeId(m_SceneInstances[i], out var pipeId))
+                {
                     continue;
+                }
 
                 var pipeConfig = GetPipeConfig(pipeId);
                 serializedInstances.Add(new SerializedInstanceRPCData
@@ -163,7 +177,9 @@ namespace Unity.ClusterDisplay.RPC
         void GatherSceneInstances ()
         {
             if (m_SerializedInstances == null)
+            {
                 return;
+            }
 
             ClusterDebug.Log($"Gathering scene instances in scene: \"{gameObject.scene.path}\".");
             m_SceneInstances.Clear();
@@ -171,7 +187,9 @@ namespace Unity.ClusterDisplay.RPC
             for (int i = 0; i < m_SerializedInstances.Length; i++)
             {
                 if (m_SerializedInstances[i].instance == null)
+                {
                     continue;
+                }
                             
                 var rpcConfigs = m_SerializedInstances[i].pipeConfig.configs;
                 var type = m_SerializedInstances[i].instance.GetType();
@@ -181,7 +199,9 @@ namespace Unity.ClusterDisplay.RPC
                 while (baseType != null)
                 {
                     if (!RPCRegistry.TryGetRPCsForType(baseType, out var rpcs, logError: false))
+                    {
                         goto next;
+                    }
 
                     for (int ri = 0; ri < rpcs.Length; ri++)
                     {
@@ -206,10 +226,14 @@ namespace Unity.ClusterDisplay.RPC
         void UnregisterObjects ()
         {
             if (m_SerializedInstances == null)
+            {
                 return;
+            }
 
             for (int i = 0; i < m_SerializedInstances.Length; i++)
+            {
                 Unregister(m_SerializedInstances[i].instance);
+            }
         }
     }
 }
