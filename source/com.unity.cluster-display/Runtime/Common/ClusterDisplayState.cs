@@ -17,8 +17,6 @@ namespace Unity.ClusterDisplay
     /// </remarks>
     public static class ClusterDisplayState
     {
-        public class IsEmitterMarker : Attribute { }
-
         /// <summary>
         /// Get the role of the current node (whether it is the emitter or the repeater).
         /// This will return NodeRole.Unassigned if the cluster is not running.
@@ -39,7 +37,6 @@ namespace Unity.ClusterDisplay
         /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync
         /// This will return FALSE if the cluster is not running.
         /// </summary>
-        [IsEmitterMarker]
         [Obsolete("The property is deprecated. Use NodeRole instead")]
         public static bool IsEmitter => ServiceLocator.Get<IClusterSyncState>().NodeRole is NodeRole.Emitter;
 
