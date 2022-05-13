@@ -17,13 +17,13 @@ namespace Unity.ClusterDisplay.Graphics
             NodeID = 8,
             All = ~0
         }
-        
+
         public OverrideProperty Overrides
         {
             get => m_Overrides;
             set => m_Overrides = value;
         }
-        
+
         public Vector3 Position
         {
             get => m_Position;
@@ -50,19 +50,19 @@ namespace Unity.ClusterDisplay.Graphics
 
         [SerializeField]
         OverrideProperty m_Overrides;
-        
+
         [SerializeField]
         Vector3 m_Position;
-        
+
         [SerializeField]
         Quaternion m_Rotation;
-        
+
         [SerializeField]
         Matrix4x4 m_ProjectionMatrix;
 
         [SerializeField]
         int m_NodeID;
-        
+
         RenderTexture m_RenderTarget;
         BlitCommand m_BlitCommand;
         
