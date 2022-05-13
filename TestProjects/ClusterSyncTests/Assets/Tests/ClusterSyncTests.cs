@@ -62,11 +62,13 @@ namespace Unity.ClusterDisplay.Tests
         public void TestClusterDisplayState()
         {
             Assert.That(ClusterDisplayState.IsActive, Is.False);
-            Assert.Throws<InvalidOperationException>(() => _ = ClusterDisplayState.NodeID);
 
             var clusterSync = new ClusterSync();
             ServiceLocator.Provide<IClusterSyncState>(clusterSync);
-            Assert.That(ClusterDisplayState.IsClusterLogicEnabled, Is.False);
+
+            Assert.That(ClusterDisplayState.TryGetIsClusterLogicEnabled(out var isClusterLogicEnabled), Is.True);
+            Assert.That(isClusterLogicEnabled, Is.False);
+
             m_Instances.Add(clusterSync);
         }
 

@@ -105,7 +105,7 @@ namespace Unity.ClusterDisplay.RPC
                     rpcRequest.parametersPayloadSize, 
                     ref bufferPos))
                 {
-                    ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): RPC execution failed for static RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
+                    ClusterDebug.LogError($"(Frame: {Frame}): RPC execution failed for static RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
                     return false;
                 }
 
@@ -117,7 +117,7 @@ namespace Unity.ClusterDisplay.RPC
             // will happily attempt to invoke this RPC on a null instance.
             if (SceneObjectsRegistry.GetInstance(rpcRequest.pipeId) == null)
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): Received potentially invalid RPC data: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: ({rpcRequest.pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
+                ClusterDebug.LogError($"(Frame: {Frame}): Received potentially invalid RPC data: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: ({rpcRequest.pipeId} <--- No Object is registered with this ID), Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
                 return false;
             }
             #endif
@@ -130,7 +130,7 @@ namespace Unity.ClusterDisplay.RPC
                 rpcRequest.parametersPayloadSize, 
                 ref bufferPos))
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): RPC execution failed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
+                ClusterDebug.LogError($"(Frame: {Frame}): RPC execution failed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
                 return false;
             }
 
@@ -142,7 +142,7 @@ namespace Unity.ClusterDisplay.RPC
             // is less then the paramter payload size, then we probably failed to consume some of the bytes and we should fail.
             if (rpcRequest.parametersPayloadSize > 0 && rpcRequest.parametersPayloadSize > consumedParameterByteCount)
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
+                ClusterDebug.LogError($"(Frame: {Frame}): RPC execution failed, parameter payload was not consumed for RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize}, Consumed Parameter Payload Byte Count: {consumedParameterByteCount}, Starting Buffer Position: {rpcBufferStartPosition}, Bytes Processed: {bufferPos})");
                 return false;
             }
 
@@ -165,7 +165,7 @@ namespace Unity.ClusterDisplay.RPC
             ParseRPCId(ref bufferPos, out rpcRequest.rpcId);
             if (rpcRequest.rpcId == 0)
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): RPC buffer is invalid or the read head is out of line.");
+                ClusterDebug.LogError($"(Frame: {Frame}): RPC buffer is invalid or the read head is out of line.");
                 rpcRequest = default(RPCRequest);
                 return false;
             }
@@ -179,7 +179,7 @@ namespace Unity.ClusterDisplay.RPC
             // where the read head is in the RPC buffer, this may result in some bizzare RPC ids since it's reading aross random bytes.
             if (!RPCRegistry.MethodRegistered(rpcRequest.rpcId))
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): Received potentially invalid RPC data: (ID: ({rpcRequest.rpcId} <--- No registered RPC with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos})");
+                ClusterDebug.LogError($"(Frame: {Frame}): Received potentially invalid RPC data: (ID: ({rpcRequest.rpcId} <--- No registered RPC with this ID), Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos})");
                 rpcRequest = default(RPCRequest);
                 return false;
             }
@@ -197,12 +197,12 @@ namespace Unity.ClusterDisplay.RPC
 
             ParseParametersPayloadSize(ref bufferPos, out rpcRequest.parametersPayloadSize);
 
-            ClusterDebug.Log($"(Frame: {ClusterDisplayState.Frame}): Processing RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Size: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos})");
+            ClusterDebug.Log($"(Frame: {Frame}): Processing RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Size: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos})");
 
             // Determine whether we've associated an assembly with an RPC id and store the assembly index to later use when we invoke the RPC.
             if (!RPCRegistry.TryGetAssemblyIndex(rpcRequest.rpcId, out rpcRequest.assemblyIndex))
             {
-                ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): There is no assembly registered for RPC with ID: {rpcRequest.rpcId}");
+                ClusterDebug.LogError($"(Frame: {Frame}): There is no assembly registered for RPC with ID: {rpcRequest.rpcId}");
                 return false;
             }
 
@@ -284,18 +284,18 @@ namespace Unity.ClusterDisplay.RPC
                     // emitter is supposed to determine when the repeater node should indeed execute the RPC.
                     case RPCExecutionStage.Automatic:
                     default:
-                        ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): RPC execution failed for static (Assembly Index: {rpcRequest.assemblyIndex}, RPC ID: {rpcRequest.rpcId}, Pipe ID: {rpcRequest.pipeId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}), unable to determine it's execution stage automatically.");
+                        ClusterDebug.LogError($"(Frame: {Frame}): RPC execution failed for static (Assembly Index: {rpcRequest.assemblyIndex}, RPC ID: {rpcRequest.rpcId}, Pipe ID: {rpcRequest.pipeId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Parameters Payload Byte Count: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos}), unable to determine it's execution stage automatically.");
                         goto failure;
                 }
 
             } while (true);
 
             success:
-            ClusterDebug.Log($"(Frame: {ClusterDisplayState.Frame}): Finished processing RPCs: (Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
+            ClusterDebug.Log($"(Frame: {Frame}): Finished processing RPCs: (Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
             return true;
 
             failure:
-            ClusterDebug.LogError($"(Frame: {ClusterDisplayState.Frame}): Failure occurred while processing RPCs: (Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
+            ClusterDebug.LogError($"(Frame: {Frame}): Failure occurred while processing RPCs: (Bytes Processed: {bufferPos}, Buffer Size: {buffer.Length})");
             return false;
         }
 
