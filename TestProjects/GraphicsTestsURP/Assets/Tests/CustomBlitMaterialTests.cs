@@ -12,10 +12,11 @@ using UnityEngine.TestTools;
 public class CustomBlitMaterialTests : ClusterRendererPostProcessTest
 {
     const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit";
+
     int _DisplayChecker = Shader.PropertyToID("_DisplayChecker");
     int _CheckerTexture = Shader.PropertyToID("_CheckerTexture");
 
-    static Texture2D CheckerTexture => Resources.Load<Texture2D>("checker-with-crosshair");
+    static Texture2D CheckerTexture => Resources.Load<Texture2D>("checker-with-crosshair-noalpha");
 
     [OneTimeSetUp]
     public void LoadScene()
@@ -42,6 +43,7 @@ public class CustomBlitMaterialTests : ClusterRendererPostProcessTest
         var resizeRT = new RenderTexture(m_ClusterCapture);
 
         Graphics.Blit(CheckerTexture, resizeRT, new Vector2(2f, -2f), Vector2.zero);
+
         var resizedCheckerTexture = new Texture2D(m_ClusterCaptureTex2D.width, m_ClusterCaptureTex2D.height, m_ClusterCaptureTex2D.format, false);
         GraphicsTestUtil.CopyToTexture2D(resizeRT, resizedCheckerTexture);
 

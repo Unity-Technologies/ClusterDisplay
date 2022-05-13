@@ -42,6 +42,5 @@ float4 Fragment(Varyings input) : SV_Target
 {
     if (_DisplayChecker == 1)
         return SAMPLE_TEXTURE2D(_CheckerTexture, sampler_LinearRepeat, input.texCoord.xy);
-;
     return SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.blitScaleTexCoord.xy);
 }
