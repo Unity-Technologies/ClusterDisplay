@@ -55,9 +55,9 @@ namespace Unity.ClusterDisplay
         public bool IsClusterLogicEnabled { get; private set; }
 
         public bool IsTerminated { get; private set; }
-        public ulong Frame => LocalNode.CurrentFrameID;
+                public ulong Frame => LocalNode != null ? LocalNode.CurrentFrameID : 0;
 
-        public ushort NodeID => LocalNode.NodeID;
+        public ushort NodeID => (ushort)(LocalNode != null ? LocalNode.NodeID : 0);
         public ushort RenderNodeID =>
             ReplaceHeadlessEmitter && NodeRole is NodeRole.Repeater
                 ? (ushort)(NodeID - 1)
