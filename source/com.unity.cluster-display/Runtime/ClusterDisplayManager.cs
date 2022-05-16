@@ -1,16 +1,10 @@
-using System.Collections;
-using JetBrains.Annotations;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay
 {
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-#if UNITY_EDITOR
-    [UnityEditor.InitializeOnLoad]
-#endif
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
         static ClusterSync GetOrCreateClusterSyncInstance()
