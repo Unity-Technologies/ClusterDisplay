@@ -79,11 +79,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // stage to "ReadyToProceed". Otherwise, we need to wait for the repeaters to enter their first frame.
             Stage = LocalNode.RepeatersDelayed ? EStage.ReadyToProceed : EStage.WaitOnRepeatersNextFrame;
 
-            // If the repeaters were not delayed, we need to fill the frame data buffer for the repeater when
-            // enter this state for the first time.
-            if (Stage == EStage.WaitOnRepeatersNextFrame)
-                m_Emitter.GatherFrameState();
-            else m_Emitter.GatherPreFrameState();
+            // If the repeaters are delayed, we need to save the state for frame 0, but we're not emitting it
+            // until frame 1.
+            if (Stage == EStage.ReadyToProceed)
+                m_Emitter.GatherPreFrameState();
 
             m_TsOfStage = m_Time.Elapsed;
             m_WaitingOnNodes = new BitVector();

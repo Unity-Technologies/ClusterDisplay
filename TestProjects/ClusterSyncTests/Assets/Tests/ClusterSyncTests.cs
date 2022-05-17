@@ -266,6 +266,22 @@ namespace Unity.ClusterDisplay.Tests
             var emitterClusterSync = CreateEmitter();
             var repeaterClusterSync = CreateRepeater();
 
+            // Use eventbus to check that custom data is passed correctly
+            var subCalls = 0f;
+            using var eventBus = new EventBus<TestData>();
+            using var subscriber = eventBus.Subscribe(data =>
+            {
+                var expectedId = data.EnumVal switch
+                {
+                    StateID.Input => k_EmitterId,
+                    StateID.Random => k_RepeaterId,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                Debug.Log($"Eventbus received {data.FloatVal}");
+                Assert.That(data.LongVal, Is.EqualTo(expectedId));
+                subCalls++;
+            });
+
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
             m_TickHandler = tickType =>
             {
@@ -286,7 +302,26 @@ namespace Unity.ClusterDisplay.Tests
             ClusterSyncLooper.onInstanceTick += m_TickHandler;
 
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
+            {
+                eventBus.Publish(new TestData
+                {
+                    EnumVal = StateID.Random,
+                    LongVal = repeaterClusterSync.NodeID,
+                    FloatVal = repeaterClusterSync.CurrentFrameID,
+                });
+
+                eventBus.Publish(new TestData
+                {
+                    EnumVal = StateID.Input,
+                    LongVal = emitterClusterSync.NodeID,
+                    FloatVal = emitterClusterSync.CurrentFrameID,
+                });
+
+                Debug.Log($"Eventbus publishing {repeaterClusterSync.CurrentFrameID}");
                 yield return null;
+            }
+
+            Assert.That(subCalls, Is.EqualTo(20));
 
             ClusterSyncLooper.onInstanceTick -= m_TickHandler;
         }
