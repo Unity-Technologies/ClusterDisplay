@@ -37,16 +37,16 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Custom data gets published on the same frame that delegates are invoked.
         /// </summary>
-        static readonly Dictionary<byte, FrameDataBuffer.StoreDataDelegate> k_CustomDataDelegates = new();
+        static readonly Dictionary<int, FrameDataBuffer.StoreDataDelegate> k_CustomDataDelegates = new();
 
         private readonly bool k_RepeatersDelayed;
 
-        internal static void RegisterOnStoreCustomDataDelegate(byte id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
+        internal static void RegisterOnStoreCustomDataDelegate(int id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
         {
             k_CustomDataDelegates[id] = storeDataDelegate;
         }
 
-        internal static void UnregisterCustomDataDelegate(byte id) => k_CustomDataDelegates.Remove(id);
+        internal static void UnregisterCustomDataDelegate(int id) => k_CustomDataDelegates.Remove(id);
         internal static void ClearCustomDataDelegates() => k_CustomDataDelegates.Clear();
 
         public EmitterStateWriter(bool repeatersDelayed)

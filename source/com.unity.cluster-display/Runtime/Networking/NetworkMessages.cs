@@ -27,12 +27,13 @@ namespace Unity.ClusterDisplay
         public int msgsSent;
     }
 
-    enum StateID : byte
+    enum StateID : int
     {
         End = 0,
         Time = 1,
         Input = 2,
-        Random = 3
+        Random = 3,
+        CustomData = 4
     }
 
     internal static class NetworkingHelpers

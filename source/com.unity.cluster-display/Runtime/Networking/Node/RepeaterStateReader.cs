@@ -36,16 +36,21 @@ namespace Unity.ClusterDisplay
 
         internal delegate bool OnLoadCustomData(NativeArray<byte> stateData);
 
-        static readonly Dictionary<byte, OnLoadCustomData> k_BuiltInOnLoadDelegates = new() {{(byte)StateID.Time, ClusterSerialization.RestoreTimeManagerState}, {(byte)StateID.Input, ClusterSerialization.RestoreInputManagerState}, {(byte)StateID.Random, RestoreRndGeneratorState}};
+        static readonly Dictionary<int, OnLoadCustomData> k_BuiltInOnLoadDelegates = new()
+        {
+            {(int)StateID.Time, ClusterSerialization.RestoreTimeManagerState},
+            {(int)StateID.Input, ClusterSerialization.RestoreInputManagerState},
+            {(int)StateID.Random, RestoreRndGeneratorState}
+        };
 
-        static readonly Dictionary<byte, OnLoadCustomData> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
+        static readonly Dictionary<int, OnLoadCustomData> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
             entry => entry.Key,
             entry => entry.Value);
 
-        internal static void RegisterOnLoadDataDelegate(byte id, OnLoadCustomData onLoadData) =>
+        internal static void RegisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData) =>
             k_LoadDataDelegates[id] = onLoadData;
 
-        internal static void UnregisterOnLoadDataDelegate(byte id) => k_LoadDataDelegates.Remove(id);
+        internal static void UnregisterOnLoadDataDelegate(int id) => k_LoadDataDelegates.Remove(id);
 
         internal static void ClearOnLoadDataDelegates()
         {
