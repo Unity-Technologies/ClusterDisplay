@@ -75,6 +75,11 @@ namespace Unity.ClusterDisplay
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+            new(arr.GetUnsafePtr(), arr.Length);
     }
 
     [StructLayout(LayoutKind.Sequential)]
