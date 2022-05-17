@@ -88,8 +88,8 @@ namespace Unity.ClusterDisplay.Tests
                 AdapterName = m_InterfaceName,
                 RXPort = RxPort,
                 TXPort = TxPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
+                CommunicationTimeout = Timeout,
+                HandshakeTimeout = Timeout
             });
             m_TestAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
 
@@ -143,8 +143,8 @@ namespace Unity.ClusterDisplay.Tests
                 AdapterName = m_InterfaceName,
                 RXPort = RxPort,
                 TXPort = TxPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
+                CommunicationTimeout = Timeout,
+                HandshakeTimeout = Timeout
             });
 
             m_TestAgent = GetTestAgent(k_EmitterId, TxPort, RxPort);
@@ -226,8 +226,8 @@ namespace Unity.ClusterDisplay.Tests
                 AdapterName = m_InterfaceName,
                 RXPort = RxPort,
                 TXPort = TxPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
+                CommunicationTimeout = Timeout,
+                HandshakeTimeout = Timeout
             });
             return emitterClusterSync;
         }
@@ -247,8 +247,8 @@ namespace Unity.ClusterDisplay.Tests
                 AdapterName = m_InterfaceName,
                 RXPort = TxPort,
                 TXPort = RxPort,
-                CommunicationTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds),
-                HandshakeTimeout = new TimeSpan(0, 0, 0, TimeoutSeconds)
+                CommunicationTimeout = Timeout,
+                HandshakeTimeout = Timeout
             });
             return repeaterClusterSync;
         }

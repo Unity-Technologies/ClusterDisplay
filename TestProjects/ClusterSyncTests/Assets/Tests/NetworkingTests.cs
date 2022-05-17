@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Tests
                 ip = k_MulticastAddress,
                 rxPort = k_RxPort,
                 txPort = k_TxPort,
-                timeOut = k_TimeoutSeconds,
+                timeOut = TimeSpan.FromSeconds(k_TimeoutSeconds),
                 adapterName = nic.Name
             };
 
