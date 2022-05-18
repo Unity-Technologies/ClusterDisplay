@@ -1,5 +1,7 @@
 using System;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay
 {
@@ -9,6 +11,8 @@ namespace Unity.ClusterDisplay
 
         internal QuadroSyncInitState(ClusterNode node)
             : base(node) { }
+
+        struct CheckQuadroInitState { }
 
         protected override NodeState DoFrame(bool newFrame)
         {
@@ -23,29 +27,30 @@ namespace Unity.ClusterDisplay
 
                 // We won't know immediately if everything worked (and if we are really using hardware acceleration), so
                 // continue to peek at the state to know when initialization of QuadroSync is done.
-                CarriedPreDoFrame ??= new();
-                CarriedPreDoFrame.Add(() =>
-                {
-                    var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
-                    if (initializationState == GfxPluginQuadroSyncInitializationState.NotInitialized)
-                    {
-                        // Still not fully initialized, we need to continue checking...
-                        return true;
-                    }
-                    else
-                    {
-                        // Initialization finished, we do not need to be called again
-                        LocalNode.HasHardwareSync =
-                            (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
-                        return false;
-                    }
-                });
+                // Remark: We can't use ClusterSyncLooper.onInstanceDoFrame as this method is being called from it and
+                // we would be modifying a collection we are currently enumerating.  So let's instead register directly
+                // in the PlayerLoopExtensions.
+                PlayerLoopExtensions.RegisterUpdate<TimeUpdate.WaitForLastPresentationAndUpdateTime, CheckQuadroInitState>(
+                    ProcessQuadroSyncInitResult);
 
                 // The initialization is "done" (or at least, triggered and will conclude shortly)
                 m_Initialized = true;
             }
 
             return base.DoFrame(newFrame);
+        }
+
+        static void ProcessQuadroSyncInitResult()
+        {
+            var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
+            if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
+            {
+                var localNode = ClusterDisplayManager.ClusterSyncInstance.LocalNode;
+                localNode.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
+
+                // Initialization finished, we do not need to be called again
+                PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);
+            }
         }
     }
 }
