@@ -9,7 +9,7 @@ using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class CustomBlitMaterialTests : ClusterRendererTestReferenceCamera
+public class CustomBlitMaterialTests : ClusterRendererTest
 {
     const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit";
 

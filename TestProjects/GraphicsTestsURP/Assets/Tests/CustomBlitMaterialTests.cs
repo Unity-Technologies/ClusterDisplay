@@ -9,7 +9,7 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class CustomBlitMaterialTests : ClusterRendererPostProcessTest
+public class CustomBlitMaterialTests : ClusterRendererTest
 {
     const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit";
 
