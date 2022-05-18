@@ -40,13 +40,12 @@ namespace Unity.ClusterDisplay
             return base.DoFrame(newFrame);
         }
 
-        static void ProcessQuadroSyncInitResult()
+        void ProcessQuadroSyncInitResult()
         {
             var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
             if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
             {
-                var localNode = ClusterDisplayManager.ClusterSyncInstance.LocalNode;
-                localNode.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
+                LocalNode.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
 
                 // Initialization finished, we do not need to be called again
                 PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);
