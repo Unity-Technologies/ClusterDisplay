@@ -23,8 +23,8 @@ namespace Unity.ClusterDisplay
 
                 // We won't know immediately if everything worked (and if we are really using hardware acceleration), so
                 // continue to peek at the state to know when initialization of QuadroSync is done.
-                CarriedPreDoFrameWork ??= new();
-                CarriedPreDoFrameWork.Add(() =>
+                CarriedPreDoFrame ??= new();
+                CarriedPreDoFrame.Add(() =>
                 {
                     var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
                     if (initializationState == GfxPluginQuadroSyncInitializationState.NotInitialized)

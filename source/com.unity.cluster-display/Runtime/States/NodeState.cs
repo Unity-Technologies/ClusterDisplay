@@ -1,12 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using Unity.Collections;
-using UnityEngine;
-
-using CarriedPreDoFrameWorkFunc = System.Func<bool>;
+using CarriedPreDoFrameFunc = System.Func<bool>;
 
 namespace Unity.ClusterDisplay
 {
@@ -33,16 +28,16 @@ namespace Unity.ClusterDisplay
             {
                 if (oldState != null)
                 {
-                    if (CarriedPreDoFrameWork == null)
+                    if (CarriedPreDoFrame == null)
                     {
-                        CarriedPreDoFrameWork = oldState.CarriedPreDoFrameWork;
+                        CarriedPreDoFrame = oldState.CarriedPreDoFrame;
                     }
-                    else if (oldState.CarriedPreDoFrameWork != null)
+                    else if (oldState.CarriedPreDoFrame != null)
                     {
-                        CarriedPreDoFrameWork.AddRange(oldState.CarriedPreDoFrameWork);
+                        CarriedPreDoFrame.AddRange(oldState.CarriedPreDoFrame);
                     }
 
-                    oldState.CarriedPreDoFrameWork = null;
+                    oldState.CarriedPreDoFrame = null;
                     oldState.ExitState();
                 }
                 m_Time = new Stopwatch();
@@ -69,7 +64,7 @@ namespace Unity.ClusterDisplay
 
         public NodeState ProcessFrame(bool newFrame)
         {
-            ExecuteCarriedPreDoFrameWork();
+            ExecuteCarriedPreDoFrame();
 
             var res = DoFrame(newFrame);
             if (res != this)
@@ -133,41 +128,41 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// List of small task carried from previous states to be executed before starting the PreDoWork of this state.
+        /// List of small task carried from previous states to be executed before starting the DoFrame of this state.
         /// </summary>
         /// <remarks>Useful when a state has some asynchronous work to finish but can otherwise switch to the next
-        /// state.  Every <see cref="CarriedPreDoFrameWorkFunc"/> in the list is executed before the next DoFrame and
+        /// state.  Every <see cref="CarriedPreDoFrameFunc"/> in the list is executed before the next DoFrame and
         /// will keep on being executed for as long as it returns true.  In an effort to minimize dynamic allocation
         /// list will be null unless something is needed in it, so always check for null before using it.</remarks>
-        protected List<CarriedPreDoFrameWorkFunc> CarriedPreDoFrameWork { get; set; }
+        protected List<CarriedPreDoFrameFunc> CarriedPreDoFrame { get; set; }
 
-        private void ExecuteCarriedPreDoFrameWork()
+        private void ExecuteCarriedPreDoFrame()
         {
-            if (CarriedPreDoFrameWork == null)
+            if (CarriedPreDoFrame == null)
             {
                 return;
             }
 
             int executePosition = 0;
             int moveToPosition = 0;
-            for (; executePosition < CarriedPreDoFrameWork.Count; ++executePosition)
+            for (; executePosition < CarriedPreDoFrame.Count; ++executePosition)
             {
-                var preDoFrameWork = CarriedPreDoFrameWork[executePosition];
+                var preDoFrameWork = CarriedPreDoFrame[executePosition];
                 bool stillHasWorkToDo = preDoFrameWork();
                 if (stillHasWorkToDo)
                 {
-                    CarriedPreDoFrameWork[moveToPosition] = preDoFrameWork;
+                    CarriedPreDoFrame[moveToPosition] = preDoFrameWork;
                     ++moveToPosition;
                 }
             }
 
             if (moveToPosition == 0)
             {
-                CarriedPreDoFrameWork = null;
+                CarriedPreDoFrame = null;
             }
-            else if (moveToPosition < CarriedPreDoFrameWork.Count)
+            else if (moveToPosition < CarriedPreDoFrame.Count)
             {
-                CarriedPreDoFrameWork.RemoveRange(moveToPosition, executePosition - moveToPosition);
+                CarriedPreDoFrame.RemoveRange(moveToPosition, executePosition - moveToPosition);
             }
         }
     }

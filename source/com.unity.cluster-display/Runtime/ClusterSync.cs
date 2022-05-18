@@ -331,7 +331,7 @@ namespace Unity.ClusterDisplay
         }
 
         private bool newFrame = false;
-        private void DoFrame(DoFrameState doFrameState)
+        private (bool readyToProceed, bool isTerminated) DoFrame ()
         {
             try
             {
@@ -342,19 +342,20 @@ namespace Unity.ClusterDisplay
                 }
 
                 newFrame = false;
-                doFrameState.Update(LocalNode.ReadyToProceed, IsTerminated);
+                return (LocalNode.ReadyToProceed, IsTerminated);
             }
 
             catch (Exception e)
             {
                 OnException(e);
-                doFrameState.Update(true, true);
             }
 
             finally
             {
                 OnFinally();
             }
+
+            return (true, true);
         }
 
         private void PostFrame ()
@@ -379,26 +380,27 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public void DoLateFrame(DoLateFrameState doLateFrameState)
+        public bool DoLateFrame ()
         {
             try
             {
                 m_EndDelayMonitor.RefPoint();
                 LocalNode.DoLateFrame();
                 m_EndDelayMonitor.SampleNow();
-                doLateFrameState.Update(LocalNode.ReadyForNextFrame);
+                return LocalNode.ReadyForNextFrame;
             }
 
             catch (Exception e)
             {
                 OnException(e);
-                doLateFrameState.Update(true);
             }
 
             finally
             {
                 OnFinally();
             }
+
+            return true;
         }
 
         private void OnException (Exception e)

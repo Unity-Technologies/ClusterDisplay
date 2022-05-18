@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Tests
         public NodeStateWithCarriedPreDoFrame(ClusterNode localNode)
             : base(localNode)
         {
-            Assert.IsNull(CarriedPreDoFrameWork);
+            Assert.IsNull(CarriedPreDoFrame);
         }
 
         public override bool ReadyToProceed { get; }
@@ -19,14 +19,14 @@ namespace Unity.ClusterDisplay.Tests
 
         public void AddCarriedPreDoFrame(Func<bool> work)
         {
-            if (CarriedPreDoFrameWork == null)
+            if (CarriedPreDoFrame == null)
             {
-                CarriedPreDoFrameWork = new();
+                CarriedPreDoFrame = new();
             }
-            CarriedPreDoFrameWork.Add(work);
+            CarriedPreDoFrame.Add(work);
         }
-        public int CarriedPreDoFrameCount { get => ((CarriedPreDoFrameWork != null) ? CarriedPreDoFrameWork.Count : 0); }
-        public bool CarriedPreDoFrameListAllocated { get => CarriedPreDoFrameWork != null;  }
+        public int CarriedPreDoFrameCount { get => ((CarriedPreDoFrame != null) ? CarriedPreDoFrame.Count : 0); }
+        public bool CarriedPreDoFrameListAllocated { get => CarriedPreDoFrame != null;  }
     }
 
     public class NoteStateTests
