@@ -46,6 +46,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         protected IEnumerator RenderVanilla ()
         {
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
+            Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
 
             var width = m_ImageComparisonSettings.TargetWidth;
             var height = m_ImageComparisonSettings.TargetHeight;
@@ -53,7 +54,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
             m_VanillaCaptureTex2D = new Texture2D(width, height);
 
-            // First we render "vanilla", that is, without Cluster Display.
+            // Disable ClusterRenderer to render the vanilla camera.
             m_ClusterRenderer.gameObject.SetActive(false);
 
             m_Camera.gameObject.SetActive(true);
@@ -72,7 +73,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
             m_ClusterCaptureTex2D = new Texture2D(width, height);
             
-            // Then we activate Cluster Display.
+            // Enable ClusterRenderer to render the camera through cluster display pipeline.
             m_ClusterRenderer.gameObject.SetActive(true);
 
             Assert.IsNotNull(m_ClusterRenderer.PresentCamera);
