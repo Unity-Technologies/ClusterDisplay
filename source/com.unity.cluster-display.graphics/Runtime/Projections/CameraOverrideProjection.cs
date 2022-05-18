@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         RenderTexture m_RenderTarget;
         BlitCommand m_BlitCommand;
-        
+
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var displaySize = new Vector2Int(Screen.width, Screen.height);
@@ -76,7 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
             var postEffectsParams = new PostEffectsParams(displaySize);
             var viewport = new Viewport(new Vector2Int(1, 1), displaySize, Vector2.zero, clusterSettings.OverScanInPixels);
             var subsection = viewport.GetSubsectionWithOverscan(0);
-            
+
             using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride))
             {
                 cameraScope.Render(m_RenderTarget,
@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay.Graphics
                     position: m_Overrides.HasFlag(OverrideProperty.Position) ? m_Position : null,
                     rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
             }
-            
+
             m_BlitCommand = new BlitCommand(
                 m_RenderTarget,
                 new BlitParams(
