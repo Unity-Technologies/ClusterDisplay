@@ -47,10 +47,25 @@ namespace Unity.ClusterDisplay
             entry => entry.Key,
             entry => entry.Value);
 
-        internal static void RegisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData) =>
-            k_LoadDataDelegates[id] = onLoadData;
+        internal static void RegisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
+        {
+            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            {
+                del += onLoadData;
+            }
+            else
+            {
+                k_LoadDataDelegates.Add(id, onLoadData);
+            }
+        }
 
-        internal static void UnregisterOnLoadDataDelegate(int id) => k_LoadDataDelegates.Remove(id);
+        internal static void UnregisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
+        {
+            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            {
+                del -= onLoadData;
+            }
+        }
 
         internal static void ClearOnLoadDataDelegates()
         {

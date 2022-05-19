@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Tests
@@ -17,9 +18,12 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestPublishAndSubscribe()
         {
+            // simulates raw data being passed over the network
+            NativeArray<byte> networkData = new(1024, Allocator.Temp);
+
             m_EventBus.Publish(new TestData
             {
-                EnumVal = StateID.CustomData,
+                EnumVal = StateID.CustomEvents,
                 LongVal = 0,
                 FloatVal = 0.42f,
                 Message = "Hello"
@@ -48,14 +52,15 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(data.Length, Is.EqualTo(2));
                 Assert.That(data[0].Message, Is.EqualTo("Hello"));
                 Assert.That(data[1].Message, Is.EqualTo("Hello"));
-                Assert.That(data[0].EnumVal, Is.EqualTo(StateID.CustomData));
+                Assert.That(data[0].EnumVal, Is.EqualTo(StateID.CustomEvents));
                 Assert.That(data[1].EnumVal, Is.EqualTo(StateID.Time));
                 Assert.That(data[0].LongVal, Is.EqualTo(0));
                 Assert.That(data[1].LongVal, Is.EqualTo(1));
                 bulkCallCount++;
             });
 
-            m_EventBus.DeserializeAndPublish(m_EventBus.OutBuffer);
+            int dataSize = m_EventBus.SerializeAndFlush(networkData);
+            m_EventBus.DeserializeAndPublish(networkData.GetSubArray(0, dataSize));
 
             Assert.That(callCount, Is.EqualTo(2));
             Assert.That(bulkCallCount, Is.EqualTo(1));

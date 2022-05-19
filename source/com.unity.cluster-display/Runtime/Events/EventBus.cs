@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
+using IdType = Unity.Collections.FixedString64Bytes;
 
 namespace Unity.ClusterDisplay
 {
@@ -31,15 +31,18 @@ namespace Unity.ClusterDisplay
         readonly List<Action<TEvent>> m_Listeners = new();
         readonly List<BulkEventListener> m_BulkListeners = new();
 
-        static readonly int k_FrameDataId = (int)StateID.CustomData ^ typeof(TEvent).DeterministicTypeID();
+        // Note: we don't need an assembly-qualified name to get a unique identifier, since all
+        // nodes are running the same executable, and we're not using the id to do run-time
+        // instantiation.
+        static IdType s_EventTypeId = typeof(TEvent).FullName;
 
         internal ReadOnlySpan<byte> OutBuffer =>
             MemoryMarshal.AsBytes(m_OutBuffer.GetSubArray(0, m_OutBufferLength).AsReadOnlySpan());
 
         public EventBus()
         {
-            EmitterStateWriter.RegisterOnStoreCustomDataDelegate(k_FrameDataId, SerializeAndFlush);
-            RepeaterStateReader.RegisterOnLoadDataDelegate(k_FrameDataId, DeserializeAndPublish);
+            EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.CustomEvents, SerializeAndFlush);
+            RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.CustomEvents, DeserializeAndPublish);
         }
 
         class Unsubscriber<TListener> : IDisposable
@@ -110,7 +113,15 @@ namespace Unity.ClusterDisplay
         {
             try
             {
-                var data = MemoryMarshal.Cast<byte, TEvent>(rawData);
+                // Check the type id before deserializing
+                if (rawData.LoadStruct<IdType>() != s_EventTypeId)
+                {
+                    return false;
+                }
+
+                int dataStart = 64;
+                var dataSegment = rawData.Slice(dataStart);
+                var data = MemoryMarshal.Cast<byte, TEvent>(dataSegment);
                 foreach (var item in data)
                 {
                     foreach (var listener in m_Listeners)
@@ -143,12 +154,22 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Serialize enqueued events into a byte buffer and clears the queue.
         /// </summary>
-        /// <param name="outBuffer">The buffer to hold the serialized events.</param>
+        /// <remarks>
+        /// You will not typically call this directly. This method is registered with the low-level
+        /// cluster data API and will be invoked automatically when running in a cluster.
+        /// </remarks>
+        /// <param name="outBuffer">The buffer to hold the serialized events for transport.</param>
         /// <returns>The number of bytes copied to <paramref name="outBuffer"/>></returns>
-        int SerializeAndFlush(NativeArray<byte> outBuffer)
+        public int SerializeAndFlush(NativeArray<byte> outBuffer)
         {
-            var bytes = MemoryMarshal.AsBytes(m_OutBuffer.GetSubArray(0, m_OutBufferLength).AsSpan());
-            var bytesWritten = bytes.TryCopyTo(outBuffer.AsSpan()) ? bytes.Length : 0;
+            // Store the type identifier
+            var bytesWritten = s_EventTypeId.StoreInBuffer(outBuffer);
+
+            // Blit the data into the output buffer.
+            var srcBytes = MemoryMarshal.AsBytes(m_OutBuffer.GetSubArray(0, m_OutBufferLength).AsSpan());
+            var destBytes = outBuffer.GetSubArray(bytesWritten, outBuffer.Length - bytesWritten);
+
+            bytesWritten += srcBytes.TryCopyTo(destBytes.AsSpan()) ? srcBytes.Length : 0;
             m_OutBufferLength = 0;
             return bytesWritten;
         }
@@ -158,29 +179,8 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public void Dispose()
         {
-            EmitterStateWriter.UnregisterCustomDataDelegate(k_FrameDataId);
-            RepeaterStateReader.UnregisterOnLoadDataDelegate(k_FrameDataId);
-        }
-    }
-
-    static class EventHelperExtensions
-    {
-        /// <summary>
-        /// An implementation of the djb2 algorithm
-        /// http://www.cse.yorku.ca/~oz/hash.html
-        /// </summary>
-        public static int DeterministicTypeID(this Type type)
-        {
-            var name = type.AssemblyQualifiedName;
-            Debug.Assert(name != null, nameof(name) + " != null");
-
-            var hash = 5381UL;
-            foreach (var c in name)
-            {
-                hash = ((hash << 5) + hash) + c;
-            }
-
-            return (int)hash;
+            EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.CustomEvents, SerializeAndFlush);
+            RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.CustomEvents, DeserializeAndPublish);
         }
     }
 }
