@@ -15,18 +15,6 @@ namespace Unity.ClusterDisplay
         public byte EmitterNodeId { get; set; }
         public BitVector EmitterNodeIdMask => BitVector.FromIndex(EmitterNodeId);
 
-        public override bool HasHardwareSync
-        {
-            get => m_CurrentState is RepeaterSynchronization {HasHardwareSync: true};
-            set
-            {
-                if (m_CurrentState is RepeaterSynchronization emitter)
-                {
-                    emitter.HasHardwareSync = value;
-                }
-            }
-        }
-
         public RepeaterNode(Config config)
             : base(config.MainConfig)
         {

@@ -76,6 +76,11 @@ namespace Unity.ClusterDisplay
         /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
         public string GetDiagnostics()
         {
+            if (LocalNode == null)
+            {
+                return string.Empty;
+            }
+
             var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
             return $"Cluster Sync Instance: {InstanceName},\r\n" +
 				   $"Frame Stats:\r\n{LocalNode.GetDebugString(CurrentNetworkStats)}" +
