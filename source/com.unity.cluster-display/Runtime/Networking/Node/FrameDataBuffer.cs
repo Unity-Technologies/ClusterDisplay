@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay
         /// which represents the memory that it may write too. The callback shall return the
         /// number of bytes that it wrote (consumed).
         /// </remarks>
-        public void Store(byte id, StoreDataDelegate saveFunc)
+        public void Store(int id, StoreDataDelegate saveFunc)
         {
             Length += id.StoreInBuffer(m_Data, Length);
 
@@ -88,7 +88,7 @@ namespace Unity.ClusterDisplay
         /// Write a data block consisting of an ID and no other data.
         /// </summary>
         /// <param name="id">The ID of the block type.</param>
-        public void Store(byte id)
+        public void Store(int id)
         {
             Length += id.StoreInBuffer(m_Data, Length);
 
@@ -102,7 +102,7 @@ namespace Unity.ClusterDisplay
         /// <param name="id">The ID of the block type.</param>
         /// <param name="data">A value type instance.</param>
         /// <typeparam name="T"></typeparam>
-        public void Store<T>(byte id, ref T data) where T : unmanaged
+        public void Store<T>(int id, ref T data) where T : unmanaged
         {
             Length += id.StoreInBuffer(m_Data, Length);
 
@@ -131,10 +131,10 @@ namespace Unity.ClusterDisplay
     {
         NativeArray<byte> m_Data;
         int m_ReadHead;
-        byte m_CurrentId;
+        int m_CurrentId;
         int m_CurrentBlockSize;
-        static readonly int k_IdSize = Marshal.SizeOf<byte>();
-        static readonly int k_MetadataSize = Marshal.SizeOf<byte>() + Marshal.SizeOf<int>();
+        static readonly int k_IdSize = Marshal.SizeOf<int>();
+        static readonly int k_MetadataSize = k_IdSize + Marshal.SizeOf<int>();
 
         public FrameDataEnumerator(NativeArray<byte> bufferData)
         {
@@ -144,7 +144,7 @@ namespace Unity.ClusterDisplay
             m_CurrentId = 0;
         }
 
-        public (byte id, NativeArray<byte> data) Current =>
+        public (int id, NativeArray<byte> data) Current =>
             (m_CurrentId, m_Data.GetSubArray(m_ReadHead + k_MetadataSize, m_CurrentBlockSize));
 
         public bool MoveNext()
@@ -154,9 +154,9 @@ namespace Unity.ClusterDisplay
             {
                 return false;
             }
-            m_CurrentId = m_Data.LoadStruct<byte>(m_ReadHead);
+            m_CurrentId = m_Data.LoadStruct<int>(m_ReadHead);
             m_CurrentBlockSize = m_Data.LoadStruct<int>(m_ReadHead + k_IdSize);
-            return m_CurrentId != (byte) StateID.End;
+            return m_CurrentId != (int) StateID.End;
         }
     }
 }

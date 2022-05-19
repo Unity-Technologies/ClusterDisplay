@@ -157,7 +157,7 @@ namespace Unity.ClusterDisplay.Tests
                     .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
                     .ToCoroutine();
 
-                yield return receiveMessage.WaitForCompletion(TimeoutSeconds);
+                yield return receiveMessage.WaitForCompletion((float) Timeout.TotalSeconds);
 
                 Assert.True(receiveMessage.IsSuccessful);
                 var (rxHeader, _) = receiveMessage.Result;

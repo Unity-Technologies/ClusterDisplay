@@ -27,12 +27,13 @@ namespace Unity.ClusterDisplay
         public int msgsSent;
     }
 
-    enum StateID : byte
+    enum StateID : int
     {
         End = 0,
         Time = 1,
         Input = 2,
-        Random = 3
+        Random = 3,
+        CustomEvents = 4
     }
 
     internal static class NetworkingHelpers
@@ -73,6 +74,11 @@ namespace Unity.ClusterDisplay
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe Span<T> AsSpan<T>(this NativeArray<T> arr) where T : unmanaged =>
+            new(arr.GetUnsafePtr(), arr.Length);
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
     }
 

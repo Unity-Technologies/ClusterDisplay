@@ -232,7 +232,7 @@ namespace Unity.ClusterDisplay
                     ip              = clusterParams.MulticastAddress,
                     rxPort          = clusterParams.RXPort,
                     txPort          = clusterParams.TXPort,
-                    timeOut         = 30,
+                    timeOut         = TimeSpan.FromSeconds(30),
                     adapterName     = clusterParams.AdapterName
                 };
 
