@@ -1,4 +1,4 @@
-Shader "Hidden/Test/Custom Blit"
+Shader "Hidden/Test/Custom Blit Test"
 {
     SubShader
     {
@@ -9,7 +9,7 @@ Shader "Hidden/Test/Custom Blit"
             HLSLPROGRAM
                 #pragma vertex Vertex
                 #pragma fragment Fragment
-                #include "CustomBlit.hlsl"
+                #include "CustomBlitTest.hlsl"
             ENDHLSL
         }
 
@@ -21,7 +21,7 @@ Shader "Hidden/Test/Custom Blit"
                 #pragma vertex Vertex
                 #pragma fragment Fragment
                 #define FLIP_GEOMETRY_VERTICAL
-                #include "CustomBlit.hlsl"
+                #include "CustomBlitTest.hlsl"
             ENDHLSL
         }
     }

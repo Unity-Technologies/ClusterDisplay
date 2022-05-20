@@ -4,7 +4,7 @@ using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-public class URPCustomBlitMaterialTests : CustomBlitMaterialTest
+public class CustomBlitMaterialTestsHDRP : CustomBlitMaterialTest
 {
     [OneTimeSetUp]
     public void LoadScene()
@@ -13,24 +13,25 @@ public class URPCustomBlitMaterialTests : CustomBlitMaterialTest
     }
 
     [TearDown]
-    public void URPTearDown() => TearDown();
+    public void HDRPTearDown() => TearDown();
 
     [UnityTest]
-    public IEnumerator URPCustomBlitMaterial()
+    public IEnumerator HDRPCustomBlitMaterial()
     {
         yield return TestCustomBlitMaterial();
     }
 
     [UnityTest]
-    public IEnumerator URPCustomBlitMaterialWithMaterialPropertyBlock()
+    public IEnumerator HDRPCustomBlitMaterialWithMaterialPropertyBlock()
     {
         InitializeTest();
         yield return TestCustomBlitMaterialWithMaterialPropertyBlock();
     }
 
     [UnityTest]
-    public IEnumerator URPUseBlitMaterialWithMaterialPropertyBlocks()
+    public IEnumerator HDRPCustomBlitMaterialWithMaterialPropertyBlocks()
     {
-        yield return TestCustomBlitMaterialWithMaterialPropertyBlocks();
+        InitializeTest();
+        yield return TestCustomBlitMaterialWithMaterialPropertyBlock();
     }
 }

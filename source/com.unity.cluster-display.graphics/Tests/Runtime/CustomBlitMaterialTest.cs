@@ -8,11 +8,12 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 {
     public class CustomBlitMaterialTest : ClusterRendererTest
     {
-        const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit";
-        const string k_checkerTextureName = "checker-with-crosshair-noalpha";
+        const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit Test";
+        const string k_checkerTextureName = "checker-with-crosshair";
 
         int _DisplayChecker = Shader.PropertyToID("_DisplayChecker");
         int _CheckerTexture = Shader.PropertyToID("_CheckerTexture");
+        int _IsHDRP = Shader.PropertyToID("_IsHDRP");
 
         static Texture2D m_CheckerTexture;
         static Texture2D CheckerTexture
@@ -30,18 +31,6 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
                 return m_CheckerTexture;
             }
-        }
-
-        protected Texture2D ReformatCheckerTexture ()
-        {
-            var reformatRT = new RenderTexture(m_ClusterCapture);
-            UnityEngine.Graphics.Blit(CheckerTexture, reformatRT, new Vector2(2f, -2f), Vector2.zero);
-            var reformattedTCheckerTexture = new Texture2D(CheckerTexture.width, CheckerTexture.height, m_ClusterCaptureTex2D.format, false);
-            GraphicsTestUtil.CopyToTexture2D(reformatRT, reformattedTCheckerTexture);
-
-            reformatRT.Release();
-
-            return reformattedTCheckerTexture;
         }
 
         protected void TearDown ()
@@ -75,9 +64,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             yield return RenderOverscan();
 
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-            var reformattedCheckerTexture = ReformatCheckerTexture();
-
-            ImageAssert.AreEqual(reformattedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+            ImageAssert.AreEqual(CheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
         }
 
         protected IEnumerator TestCustomBlitMaterialWithMaterialPropertyBlocks()
@@ -104,9 +91,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             yield return RenderOverscan();
 
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-            var reformattedCheckerTexture = ReformatCheckerTexture();
-
-            ImageAssert.AreEqual(reformattedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+            ImageAssert.AreEqual(CheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
         }
     }
 }

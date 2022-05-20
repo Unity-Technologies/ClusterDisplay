@@ -4,7 +4,6 @@
 
 Texture2D _BlitTexture;
 SamplerState sampler_LinearClamp;
-SamplerState sampler_LinearRepeat;
 
 uniform Texture2D _CheckerTexture;
 uniform int _DisplayChecker;
@@ -30,9 +29,14 @@ Varyings Vertex(Attributes input)
     Varyings output;
     output.positionCS = GetQuadVertexPosition(input.vertexID) * float4(_BlitScaleBiasRt.x, _BlitScaleBiasRt.y, 1, 1) + float4(_BlitScaleBiasRt.z, _BlitScaleBiasRt.w, 0, 0);
     output.positionCS.xy = output.positionCS.xy * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f); //convert to -1..1
-#if defined(FLIP_GEOMETRY_VERTICAL)
-    output.positionCS.y *= -1;
-#endif
+
+    #if defined(FLIP_GEOMETRY_VERTICAL)
+    if (_DisplayChecker == 0)
+    {
+        output.positionCS.y *= -1;
+    }
+    #endif
+
     output.texCoord = GetQuadTexCoord(input.vertexID);
     output.blitScaleTexCoord = GetQuadTexCoord(input.vertexID) * _BlitScaleBias.xy + _BlitScaleBias.zw;
     return output;
@@ -41,6 +45,17 @@ Varyings Vertex(Attributes input)
 float4 Fragment(Varyings input) : SV_Target
 {
     if (_DisplayChecker == 1)
-        return SAMPLE_TEXTURE2D(_CheckerTexture, sampler_LinearRepeat, input.texCoord.xy);
+    {
+        float2 texCoord = input.texCoord.xy;
+
+        #if !defined(FLIP_GEOMETRY_VERTICAL)
+        texCoord.y = 1 - texCoord.y;
+        #endif
+
+        texCoord *= 0.5;
+
+        return SAMPLE_TEXTURE2D(_CheckerTexture, sampler_LinearClamp, texCoord);
+    }
+
     return SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, input.blitScaleTexCoord.xy);
 }
