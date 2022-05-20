@@ -2,9 +2,26 @@ using System;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
+using Unity.Collections;
 
 namespace Unity.ClusterDisplay.Tests
 {
+    /// <summary>
+    /// A blittable struct for testing data transfer functions.
+    /// </summary>
+    struct TestData
+    {
+        public StateID EnumVal;
+        public long LongVal;
+        public float FloatVal;
+        public FixedString32Bytes Message;
+
+        public override string ToString()
+        {
+            return $"[{EnumVal}, {LongVal}, {FloatVal}, {Message}]";
+        }
+    }
+
     public class TestUtilities
     {
         [Test]

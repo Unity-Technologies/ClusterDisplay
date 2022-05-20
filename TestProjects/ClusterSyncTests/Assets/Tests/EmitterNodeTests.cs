@@ -191,10 +191,8 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestEmitterSynchronizationHardwareSync()
         {
-            var emitterSync = new EmitterSynchronization(m_Node)
-            {
-                HasHardwareSync = true
-            };
+            m_Node.HasHardwareSync = true;
+            var emitterSync = new EmitterSynchronization(m_Node);
             emitterSync.EnterState(null);
 
             m_State = emitterSync;

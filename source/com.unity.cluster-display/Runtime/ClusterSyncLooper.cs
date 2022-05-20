@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine.PlayerLoop;
 
@@ -12,7 +13,7 @@ namespace Unity.ClusterDisplay
         public enum TickType
         {
             /// <summary>
-            ///  Before we enter the while loop. 
+            ///  Before we enter the while loop.
             /// </summary>
             DoPreFrame,
             /// <summary>
@@ -30,24 +31,34 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        ///  Delegate to execute callbacks before we enter the while loop. 
+        ///  Delegate to execute callbacks before we enter the while loop.
         /// </summary>
         public static event Action onInstanceDoPreFrame;
         /// <summary>
-        ///  Delegate to execute callbacks while were waiting for the network fence. 
+        ///  Delegate to execute callbacks while were waiting for the network fence.
         /// </summary>
-        public static event DoFrameFunc onInstanceDoFrame;
+        public static event DoFrameFunc onInstanceDoFrame
+        {
+            add => s_DoFrameListeners.Add(value);
+            remove => s_DoFrameListeners.Remove(value);
+        }
+        static List<DoFrameFunc> s_DoFrameListeners = new();
         /// <summary>
-        ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame. 
+        ///  Delegate to execute callbacks after the network fence has been raised and were about to enter the frame.
         /// </summary>
         public static event Action onInstancePostFrame;
         /// <summary>
-        ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render. 
+        ///  Delegate to execute callbacks to poll ACKs after we've finished the frame, and were about to render.
         /// </summary>
-        public static event DoLateFrameFunc onInstanceDoLateFrame;
+        public static event DoLateFrameFunc onInstanceDoLateFrame
+        {
+            add => s_DoLateFrameListeners.Add(value);
+            remove => s_DoLateFrameListeners.Remove(value);
+        }
+        static List<DoLateFrameFunc> s_DoLateFrameListeners = new();
 
         /// <summary>
-        ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed. 
+        ///  Each time we tick on DoPreFrame, DoFrame, PostFrame, and DoLateFrame, this delegate is executed.
         /// </summary>
         public static event Action<TickType> onInstanceTick;
 
@@ -82,14 +93,11 @@ namespace Unity.ClusterDisplay
                 // By default, we are not terminating unless specified by methods registered with onInstanceDoFrame.
                 allIsTerminated = false;
 
-                if (onInstanceDoFrame != null)
+                foreach (var doFrame in s_DoFrameListeners)
                 {
-                    foreach (DoFrameFunc doFrame in onInstanceDoFrame.GetInvocationList())
-                    {
-                        var instanceStatus = doFrame.Invoke();
-                        allReadyToProceed &= instanceStatus.readyToProceed;
-                        allIsTerminated |= instanceStatus.isTerminated;
-                    }
+                    var instanceStatus = doFrame.Invoke();
+                    allReadyToProceed &= instanceStatus.readyToProceed;
+                    allIsTerminated |= instanceStatus.isTerminated;
                 }
 
                 onInstanceTick?.Invoke(TickType.DoFrame);
@@ -109,13 +117,10 @@ namespace Unity.ClusterDisplay
             {
                 allReadyForNextFrame = true;
 
-                if (onInstanceDoLateFrame != null)
+                foreach (var doLateFrame in s_DoLateFrameListeners)
                 {
-                    foreach (DoLateFrameFunc doLateFrame in onInstanceDoLateFrame.GetInvocationList())
-                    {
-                        bool instanceReadyForNextFrame = doLateFrame.Invoke();
-                        allReadyForNextFrame &= instanceReadyForNextFrame;
-                    }
+                    bool instanceReadyForNextFrame = doLateFrame.Invoke();
+                    allReadyForNextFrame &= instanceReadyForNextFrame;
                 }
 
                 onInstanceTick?.Invoke(TickType.DoLateFrame);
