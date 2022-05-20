@@ -1,3 +1,4 @@
+using NUnit.Framework;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,30 +9,46 @@ namespace Unity.ClusterDisplay.Graphics.Tests
     public class CustomBlitMaterialTest : ClusterRendererTest
     {
         const string k_CustomBlitShaderName = "Hidden/Test/Custom Blit";
+        const string k_checkerTextureName = "checker-with-crosshair-noalpha";
 
         int _DisplayChecker = Shader.PropertyToID("_DisplayChecker");
         int _CheckerTexture = Shader.PropertyToID("_CheckerTexture");
 
-        static Texture2D CheckerTexture => Resources.Load<Texture2D>("checker-with-crosshair-noalpha");
+        static Texture2D m_CheckerTexture;
+        static Texture2D CheckerTexture
+        {
+            get
+            {
+                if (m_CheckerTexture == null)
+                {
+                    m_CheckerTexture = Resources.Load<Texture2D>(k_checkerTextureName);
+                    if (m_CheckerTexture == null)
+                    {
+                        throw new System.NullReferenceException($"Unable to find checker texture in resources with name: \"{k_checkerTextureName}\".");
+                    }
+                }
+
+                return m_CheckerTexture;
+            }
+        }
+
+        protected Texture2D ReformatCheckerTexture ()
+        {
+            var reformatRT = new RenderTexture(m_ClusterCapture);
+
+            UnityEngine.Graphics.Blit(CheckerTexture, reformatRT, new Vector2(2f, -2f), Vector2.zero);
+            var resizedCheckerTexture = new Texture2D(CheckerTexture.width, CheckerTexture.height, m_ClusterCaptureTex2D.format, false);
+            GraphicsTestUtil.CopyToTexture2D(reformatRT, resizedCheckerTexture);
+
+            reformatRT.Release();
+
+            return resizedCheckerTexture;
+        }
 
         protected void TearDown ()
         {
             m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(null, materialPropertyBlock: null);
             m_ClusterRenderer.ProjectionPolicy.SetCustomBlitMaterial(null, materialPropertyBlocks: null);
-        }
-
-        protected Texture2D ResizeCheckerTexture ()
-        {
-            var resizeRT = new RenderTexture(m_ClusterCapture);
-            
-            UnityEngine.Graphics.Blit(CheckerTexture, resizeRT, new Vector2(2f, -2f), Vector2.zero);
-
-            var resizedCheckerTexture = new Texture2D(m_ClusterCaptureTex2D.width, m_ClusterCaptureTex2D.height, m_ClusterCaptureTex2D.format, false);
-            GraphicsTestUtil.CopyToTexture2D(resizeRT, resizedCheckerTexture);
-
-            resizeRT.Release();
-
-            return resizedCheckerTexture;
         }
 
         protected IEnumerator TestCustomBlitMaterial ()
@@ -59,9 +76,9 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             yield return RenderOverscan();
 
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-            var resizedCheckerTexture = ResizeCheckerTexture();
+            var reformattedCheckerTexture = ReformatCheckerTexture();
 
-            ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+            ImageAssert.AreEqual(reformattedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
         }
 
         protected IEnumerator TestCustomBlitMaterialWithMaterialPropertyBlocks()
@@ -88,8 +105,9 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             yield return RenderOverscan();
 
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-            var resizedCheckerTexture = ResizeCheckerTexture();
-            ImageAssert.AreEqual(resizedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
+            var reformattedCheckerTexture = ReformatCheckerTexture();
+
+            ImageAssert.AreEqual(reformattedCheckerTexture, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
         }
     }
 }
