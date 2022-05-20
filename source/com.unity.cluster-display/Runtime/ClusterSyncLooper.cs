@@ -55,6 +55,13 @@ namespace Unity.ClusterDisplay
             add => s_DoLateFrameListeners.Add(value);
             remove => s_DoLateFrameListeners.Remove(value);
         }
+
+
+        /// <summary>
+        ///  Delegate to execute callbacks after ACKs are received, and we are about to render.
+        /// </summary>
+        public static event Action onPostLateFrame;
+
         static List<DoLateFrameFunc> s_DoLateFrameListeners = new();
 
         /// <summary>
@@ -125,6 +132,8 @@ namespace Unity.ClusterDisplay
 
                 onInstanceTick?.Invoke(TickType.DoLateFrame);
             }
+
+            onPostLateFrame?.Invoke();
         }
     }
 }

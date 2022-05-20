@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
-using IdType = Unity.Collections.FixedString64Bytes;
+using IdType = Unity.Collections.FixedString128Bytes;
 
 namespace Unity.ClusterDisplay
 {
@@ -19,6 +20,15 @@ namespace Unity.ClusterDisplay
     /// <typeparam name="TEvent">Type of the events managed by this bus.</typeparam>
     class EventBus<TEvent> : IDisposable where TEvent : unmanaged
     {
+        [Flags]
+        public enum ReadWriteFlags
+        {
+            None = 0,
+            ReadFromCluster = 1,
+            WriteToCluster = 2,
+            Loopback = 4
+        }
+
         /// <summary>
         /// Delegate for receiving a contiguous array of event objects.
         /// </summary>
@@ -26,23 +36,54 @@ namespace Unity.ClusterDisplay
 
         const int k_MaxBuffer = 128;
         int m_OutBufferLength;
+        int m_InBufferLength;
 
         NativeArray<TEvent> m_OutBuffer = new(k_MaxBuffer, Allocator.Persistent);
+        NativeArray<TEvent> m_LoopbackBuffer = new(k_MaxBuffer, Allocator.Persistent);
+
         readonly List<Action<TEvent>> m_Listeners = new();
         readonly List<BulkEventListener> m_BulkListeners = new();
+        readonly bool m_IsReadOnly;
 
         // Note: we don't need an assembly-qualified name to get a unique identifier, since all
         // nodes are running the same executable, and we're not using the id to do run-time
         // instantiation.
-        static IdType s_EventTypeId = typeof(TEvent).FullName;
+        static IdType s_EventTypeId = typeof(TEvent).GetFriendlyTypeName();
+
+        readonly int k_DataId;
 
         internal ReadOnlySpan<byte> OutBuffer =>
             MemoryMarshal.AsBytes(m_OutBuffer.GetSubArray(0, m_OutBufferLength).AsReadOnlySpan());
 
-        public EventBus()
+        public EventBus(int id = (int)StateID.CustomEvents)
+            : this(ReadWriteFlags.None, id) { }
+
+        public EventBus([NotNull] IClusterSyncState clusterSyncState, int id = (int)StateID.CustomEvents)
+            : this(clusterSyncState.NodeRole switch
+            {
+                NodeRole.Emitter => ReadWriteFlags.Loopback | ReadWriteFlags.WriteToCluster,
+                NodeRole.Repeater => ReadWriteFlags.ReadFromCluster,
+                NodeRole.Unassigned => ReadWriteFlags.None,
+                _ => throw new ArgumentOutOfRangeException()
+            }, id) { }
+
+        public EventBus(ReadWriteFlags flags, int id = (int)StateID.CustomEvents)
         {
-            EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.CustomEvents, SerializeAndFlush);
-            RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.CustomEvents, DeserializeAndPublish);
+            k_DataId = id;
+            if (flags.HasFlag(ReadWriteFlags.ReadFromCluster))
+            {
+                RepeaterStateReader.RegisterOnLoadDataDelegate(k_DataId, DeserializeAndPublish);
+            }
+
+            if (flags.HasFlag(ReadWriteFlags.WriteToCluster))
+            {
+                EmitterStateWriter.RegisterOnStoreCustomDataDelegate(k_DataId, SerializeAndFlush);
+            }
+
+            if (flags.HasFlag(ReadWriteFlags.Loopback))
+            {
+                ClusterSyncLooper.onInstancePostFrame += PublishLoopbackEvents;
+            }
         }
 
         class Unsubscriber<TListener> : IDisposable
@@ -100,6 +141,22 @@ namespace Unity.ClusterDisplay
             return new Unsubscriber<BulkEventListener>(m_BulkListeners, bulkListener);
         }
 
+        void InvokeListeners(ReadOnlySpan<TEvent> events)
+        {
+            foreach (var item in events)
+            {
+                foreach (var listener in m_Listeners)
+                {
+                    listener.Invoke(item);
+                }
+            }
+
+            foreach (var bulkListener in m_BulkListeners)
+            {
+                bulkListener.Invoke(events);
+            }
+        }
+
         /// <summary>
         /// Convert a byte buffer to events and invoke the listeners.
         /// </summary>
@@ -114,26 +171,16 @@ namespace Unity.ClusterDisplay
             try
             {
                 // Check the type id before deserializing
-                if (rawData.LoadStruct<IdType>() != s_EventTypeId)
+                var id = rawData.LoadStruct<IdType>();
+                if (id != s_EventTypeId)
                 {
                     return false;
                 }
 
-                int dataStart = 64;
+                var dataStart = Marshal.SizeOf<IdType>();
                 var dataSegment = rawData.Slice(dataStart);
                 var data = MemoryMarshal.Cast<byte, TEvent>(dataSegment);
-                foreach (var item in data)
-                {
-                    foreach (var listener in m_Listeners)
-                    {
-                        listener.Invoke(item);
-                    }
-                }
-
-                foreach (var bulkListener in m_BulkListeners)
-                {
-                    bulkListener.Invoke(data);
-                }
+                InvokeListeners(data);
 
                 return true;
             }
@@ -170,8 +217,16 @@ namespace Unity.ClusterDisplay
             var destBytes = outBuffer.GetSubArray(bytesWritten, outBuffer.Length - bytesWritten);
 
             bytesWritten += srcBytes.TryCopyTo(destBytes.AsSpan()) ? srcBytes.Length : 0;
+
+            m_InBufferLength = m_OutBufferLength;
             m_OutBufferLength = 0;
+            (m_OutBuffer, m_LoopbackBuffer) = (m_LoopbackBuffer, m_OutBuffer);
             return bytesWritten;
+        }
+
+        internal void PublishLoopbackEvents()
+        {
+            InvokeListeners(m_LoopbackBuffer.GetSubArray(0, m_InBufferLength).AsSpan());
         }
 
         /// <summary>
@@ -179,8 +234,9 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public void Dispose()
         {
-            EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.CustomEvents, SerializeAndFlush);
-            RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.CustomEvents, DeserializeAndPublish);
+            EmitterStateWriter.UnregisterCustomDataDelegate(k_DataId, SerializeAndFlush);
+            RepeaterStateReader.UnregisterOnLoadDataDelegate(k_DataId, DeserializeAndPublish);
+            ClusterSyncLooper.onInstancePostFrame -= PublishLoopbackEvents;
             m_OutBuffer.Dispose();
         }
     }

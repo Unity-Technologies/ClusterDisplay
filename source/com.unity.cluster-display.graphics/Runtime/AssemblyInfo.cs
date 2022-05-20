@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("Unity.ClusterDisplay.Editor")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics.Tests")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics.Tests.Universal")]
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.Graphics.Tests.HighDefinition")]

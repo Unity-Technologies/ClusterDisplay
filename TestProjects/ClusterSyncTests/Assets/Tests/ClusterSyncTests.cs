@@ -267,10 +267,11 @@ namespace Unity.ClusterDisplay.Tests
             var emitterClusterSync = CreateEmitter();
             var repeaterClusterSync = CreateRepeater();
 
-            // Use eventbus to check that custom data is passed correctly
-            var subCalls = 0f;
-            using var eventBus = new EventBus<TestData>();
-            using var subscriber = eventBus.Subscribe(data =>
+            // Test the event bus mechanic.
+            // The event bus created on the repeater side should receive events.
+            var repeaterEventCount = 0f;
+            using var repeaterEventBus = new EventBus<TestData>(repeaterClusterSync);
+            using var repeaterEventSubscriber = repeaterEventBus.Subscribe(data =>
             {
                 var expectedId = data.EnumVal switch
                 {
@@ -280,7 +281,24 @@ namespace Unity.ClusterDisplay.Tests
                 };
                 Debug.Log($"Eventbus received {data.FloatVal}");
                 Assert.That(data.LongVal, Is.EqualTo(expectedId));
-                subCalls++;
+                repeaterEventCount++;
+            });
+
+            // The eventbus on the emitter side should send events (and also receive its own events via
+            // a loopback).
+            var emitterEventCount = 0f;
+            using var emitterEventBus = new EventBus<TestData>(emitterClusterSync);
+            using var emitterEventSubscriber = emitterEventBus.Subscribe(data =>
+            {
+                var expectedId = data.EnumVal switch
+                {
+                    StateID.Input => k_EmitterId,
+                    StateID.Random => k_RepeaterId,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                Debug.Log($"Eventbus received {data.FloatVal}");
+                Assert.That(data.LongVal, Is.EqualTo(expectedId));
+                emitterEventCount++;
             });
 
             // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
@@ -304,14 +322,14 @@ namespace Unity.ClusterDisplay.Tests
 
             while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
             {
-                eventBus.Publish(new TestData
+                emitterEventBus.Publish(new TestData
                 {
                     EnumVal = StateID.Random,
                     LongVal = repeaterClusterSync.NodeID,
                     FloatVal = repeaterClusterSync.CurrentFrameID,
                 });
 
-                eventBus.Publish(new TestData
+                emitterEventBus.Publish(new TestData
                 {
                     EnumVal = StateID.Input,
                     LongVal = emitterClusterSync.NodeID,
@@ -322,7 +340,8 @@ namespace Unity.ClusterDisplay.Tests
                 yield return null;
             }
 
-            Assert.That(subCalls, Is.EqualTo(20));
+            Assert.That(repeaterEventCount, Is.EqualTo(20));
+            Assert.That(emitterEventCount, Is.EqualTo(20));
 
             ClusterSyncLooper.onInstanceTick -= m_TickHandler;
         }
