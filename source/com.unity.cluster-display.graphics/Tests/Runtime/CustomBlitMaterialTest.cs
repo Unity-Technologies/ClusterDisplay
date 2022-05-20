@@ -35,14 +35,13 @@ namespace Unity.ClusterDisplay.Graphics.Tests
         protected Texture2D ReformatCheckerTexture ()
         {
             var reformatRT = new RenderTexture(m_ClusterCapture);
-
             UnityEngine.Graphics.Blit(CheckerTexture, reformatRT, new Vector2(2f, -2f), Vector2.zero);
-            var resizedCheckerTexture = new Texture2D(CheckerTexture.width, CheckerTexture.height, m_ClusterCaptureTex2D.format, false);
-            GraphicsTestUtil.CopyToTexture2D(reformatRT, resizedCheckerTexture);
+            var reformattedTCheckerTexture = new Texture2D(CheckerTexture.width, CheckerTexture.height, m_ClusterCaptureTex2D.format, false);
+            GraphicsTestUtil.CopyToTexture2D(reformatRT, reformattedTCheckerTexture);
 
             reformatRT.Release();
 
-            return resizedCheckerTexture;
+            return reformattedTCheckerTexture;
         }
 
         protected void TearDown ()
