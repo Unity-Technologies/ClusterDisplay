@@ -18,17 +18,6 @@ namespace Unity.ClusterDisplay
         public bool RepeatersDelayed { get; internal set; }
 
         List<RemoteNodeComContext> m_RemoteNodes = new();
-        public override bool HasHardwareSync
-        {
-            get => m_CurrentState is EmitterSynchronization {HasHardwareSync: true};
-            set
-            {
-                if (m_CurrentState is EmitterSynchronization emitter)
-                {
-                    emitter.HasHardwareSync = value;
-                }
-            }
-        }
 
         public IReadOnlyList<RemoteNodeComContext> RemoteNodes => m_RemoteNodes;
 

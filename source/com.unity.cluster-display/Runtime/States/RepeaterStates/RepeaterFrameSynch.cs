@@ -32,15 +32,16 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public RepeaterStateReader m_RepeaterReceiver;
 
         ProfilerMarker m_MarkerDoFrame = new ProfilerMarker("SynchronizeFrame::DoFrame");
-        ProfilerMarker m_MarkerWaitingOnGoFromEmitter = new ProfilerMarker("WaitingOnGoFromEmitter");
+        ProfilerMarker m_MarkerWaitForEmitterAck = new ProfilerMarker("WaitForEmitterACK");
+        ProfilerMarker m_MarkerWaitingOnEmitterFrameData = new ProfilerMarker("WaitingOnEmitterFrameData");
         ProfilerMarker m_MarkerReadyToProcessFrame = new ProfilerMarker("ReadyToProcessFrame");
+        ProfilerMarker m_MarkerProceedToNextFrame = new ProfilerMarker("ProceedToNextFrame");
         public override bool ReadyToProceed => Stage == EStage.ReadyToProceed;
         public override bool ReadyForNextFrame => ReadyToProceed;
 
         public BitVector EmitterNodeIdMask => LocalNode.EmitterNodeIdMask;
 
-        public bool HasHardwareSync { get; set; }
-
+        bool HasHardwareSync => LocalNode.HasHardwareSync;
 
         public RepeaterSynchronization(RepeaterNode node)
             : base(node) { }
@@ -110,19 +111,22 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         private void OnWaitForEmitterACK ()
         {
-            if (!HasHardwareSync && LocalNode.UdpAgent.HasPendingAcks)
+            using (m_MarkerWaitForEmitterAck.Auto())
             {
-                // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
-                return;
-            }
+                if (!HasHardwareSync && LocalNode.UdpAgent.HasPendingAcks)
+                {
+                    // ClusterDebug.Log($"(Frame: {CurrentFrameID}): Waiting for ACK from emitter.");
+                    return;
+                }
 
-            Stage = EStage.WaitingOnEmitterFrameData;
-            m_TsOfStage = m_Time.Elapsed;
+                Stage = EStage.WaitingOnEmitterFrameData;
+                m_TsOfStage = m_Time.Elapsed;
+            }
         }
 
         private void OnWaitingOnEmitterFrameData()
         {
-            using (m_MarkerWaitingOnGoFromEmitter.Auto())
+            using (m_MarkerWaitingOnEmitterFrameData.Auto())
             {
                 m_RepeaterReceiver.PumpMsg(LocalNode.UdpAgent, LocalNode.CurrentFrameID);
 
@@ -140,8 +144,11 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         private void ProceededToNextFrame(bool newFrame)
         {
-            Stage = EStage.EnteredNextFrame;
-            m_TsOfStage = m_Time.Elapsed;
+            using (m_MarkerProceedToNextFrame.Auto())
+            {
+                Stage = EStage.EnteredNextFrame;
+                m_TsOfStage = m_Time.Elapsed;
+            }
         }
 
         public override void OnEndFrame()

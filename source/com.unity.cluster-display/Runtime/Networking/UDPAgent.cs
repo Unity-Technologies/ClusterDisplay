@@ -115,14 +115,12 @@ namespace Unity.ClusterDisplay
             /// The port of the remote endpoint to which messages are sent.
             /// </summary>
             public int txPort;
-
             /// <summary>
-            /// Timeout in milliseconds.
+            /// Network communications timeout.
             /// </summary>
-            public int timeOut;
-
+            public TimeSpan timeOut;
             /// <summary>
-            /// The name of the network adapter to send/receive messages.
+            /// Network adapter name. If null or empty, the adapter will be selected automatically.
             /// </summary>
             /// <remarks>
             /// Can be empty or <see langword="null"/> to automatically select an adapter.
@@ -132,10 +130,6 @@ namespace Unity.ClusterDisplay
             public string adapterName;
         }
 
-        /// <summary>
-        /// Creates a UDPAgent.
-        /// </summary>
-        /// <param name="config">Configuration parameters.</param>
         public UDPAgent(Config config)
         {
             ClusterDebug.Log($"Constructed new {nameof(UDPAgent)}.");
@@ -144,7 +138,7 @@ namespace Unity.ClusterDisplay
             m_RxPort = config.rxPort;
             m_TxPort = config.txPort;
             m_MulticastAddress = IPAddress.Parse(config.ip);
-            m_MessageAckTimeout = new TimeSpan(0, 0, 0, config.timeOut);
+            m_MessageAckTimeout = config.timeOut;
             m_AdapterName = config.adapterName;
 
             m_RxQueue = new BlockingCollection<Message>(k_RxQueueCapacity);

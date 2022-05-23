@@ -1,9 +1,6 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using Unity.Collections;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
@@ -28,7 +25,10 @@ namespace Unity.ClusterDisplay
         {
             if (oldState != this)
             {
-                oldState?.ExitState();
+                if (oldState != null)
+                {
+                    oldState.ExitState();
+                }
                 m_Time = new Stopwatch();
                 m_Time.Start();
 

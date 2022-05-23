@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using buint = System.UInt32;
 
@@ -37,16 +36,30 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Custom data gets published on the same frame that delegates are invoked.
         /// </summary>
-        static readonly Dictionary<byte, FrameDataBuffer.StoreDataDelegate> k_CustomDataDelegates = new();
+        static readonly Dictionary<int, List<FrameDataBuffer.StoreDataDelegate>> k_CustomDataDelegates = new();
 
         private readonly bool k_RepeatersDelayed;
 
-        internal static void RegisterOnStoreCustomDataDelegate(byte id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
+        internal static void RegisterOnStoreCustomDataDelegate(int id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
         {
-            k_CustomDataDelegates[id] = storeDataDelegate;
+            if (k_CustomDataDelegates.TryGetValue(id, out var list))
+            {
+                list.Add(storeDataDelegate);
+            }
+            else
+            {
+                k_CustomDataDelegates.Add(id, new List<FrameDataBuffer.StoreDataDelegate>{storeDataDelegate});
+            }
         }
 
-        internal static void UnregisterCustomDataDelegate(byte id) => k_CustomDataDelegates.Remove(id);
+        internal static void UnregisterCustomDataDelegate(int id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
+        {
+            if (k_CustomDataDelegates.TryGetValue(id, out var list))
+            {
+                list.Remove(storeDataDelegate);
+            }
+        }
+
         internal static void ClearCustomDataDelegates() => k_CustomDataDelegates.Clear();
 
         public EmitterStateWriter(bool repeatersDelayed)
@@ -145,9 +158,12 @@ namespace Unity.ClusterDisplay
 
                 try
                 {
-                    foreach (var (id, customDataDelegate) in k_CustomDataDelegates)
+                    foreach (var (id, customDataDelegateList) in k_CustomDataDelegates)
                     {
-                        m_StagedFrameData.Store(id, customDataDelegate);
+                        foreach (var storeDataDelegate in customDataDelegateList)
+                        {
+                            m_StagedFrameData.Store(id, storeDataDelegate);
+                        }
                     }
 
                     m_StagedFrameData.Store((byte)StateID.End);
