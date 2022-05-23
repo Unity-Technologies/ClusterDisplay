@@ -20,16 +20,14 @@ namespace Unity.ClusterDisplay
         /// Get the role of the current node (whether it is the emitter or the repeater).
         /// This will return NodeRole.Unassigned if the cluster is not running.
         /// </summary>
-        public static bool TryGetNodeRole(out NodeRole nodeRole)
+        public static NodeRole GetNodeRole()
         {
             if (!ServiceLocator.TryGet<IClusterSyncState>(out var state))
             {
-                nodeRole = NodeRole.Unassigned;
-                return false;
+                return NodeRole.Unassigned;
             }
 
-            nodeRole = state.NodeRole;
-            return true;
+            return state.NodeRole;
         }
 
         /// <summary>
