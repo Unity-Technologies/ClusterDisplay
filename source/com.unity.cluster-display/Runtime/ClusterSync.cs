@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Unity.ClusterDisplay.Utils;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -22,7 +23,7 @@ namespace Unity.ClusterDisplay
         public ClusterSync (string instanceName = k_DefaultName)
         {
             InstanceName = instanceName;
-
+            ServiceLocator.Provide<IClusterSyncState>(this);
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
 
@@ -261,12 +262,14 @@ namespace Unity.ClusterDisplay
 
         public void CleanUp()
         {
+            NodeRole = NodeRole.Unassigned;
+            IsClusterLogicEnabled = false;
+            ServiceLocator.Withdraw(this);
+
             LocalNode?.Exit();
             LocalNode = null;
 
             ClusterSyncLooper.RemoveSynchPointFromPlayerLoop();
-
-            IsClusterLogicEnabled = false;
 
             UnRegisterDelegates();
 

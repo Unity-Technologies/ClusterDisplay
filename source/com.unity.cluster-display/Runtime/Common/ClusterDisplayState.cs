@@ -64,17 +64,7 @@ namespace Unity.ClusterDisplay
         /// Enables or disables the Cluster Display Synchronization. Beware that once the logic is disabled, it cannot be reenabled without restarting the application.
         /// This will return FALSE by default if the cluster is not running.
         /// </summary>
-        public static bool TryGetIsClusterLogicEnabled(out bool isClusterLogicEnabled)
-        {
-            if (!ServiceLocator.TryGet<IClusterSyncState>(out var state))
-            {
-                isClusterLogicEnabled = false;
-                return false;
-            }
-
-            isClusterLogicEnabled = state.IsClusterLogicEnabled;
-            return true;
-        }
+        public static bool IsClusterLogicEnabled => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.IsClusterLogicEnabled;
 
         /// <summary>
         /// Getter that returns if there exists a ClusterSync instance and the synchronization has been enabled.
@@ -100,7 +90,7 @@ namespace Unity.ClusterDisplay
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
         /// This will return 0 if the cluster is not running.
         /// </summary>
-        public static bool TryGetFrame(out ulong frame)
+        public static bool TryGetFrameId(out ulong frame)
         {
             if (!ServiceLocator.TryGet<IClusterSyncState>(out var state))
             {
