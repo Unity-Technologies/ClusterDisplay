@@ -157,7 +157,7 @@ namespace Unity.ClusterDisplay.Tests
                     .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
                     .ToCoroutine();
 
-                yield return receiveMessage.WaitForCompletion(TimeoutSeconds);
+                yield return receiveMessage.WaitForCompletion((float) Timeout.TotalSeconds);
 
                 Assert.True(receiveMessage.IsSuccessful);
                 var (rxHeader, _) = receiveMessage.Result;
@@ -170,10 +170,8 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestRepeaterSynchronizationHardwareSync()
         {
-            var repeaterSynchronization = new RepeaterSynchronization(m_Node)
-            {
-                HasHardwareSync = true
-            };
+            m_Node.HasHardwareSync = true;
+            var repeaterSynchronization = new RepeaterSynchronization(m_Node);
             repeaterSynchronization.EnterState(null);
 
             // Simulate several frames

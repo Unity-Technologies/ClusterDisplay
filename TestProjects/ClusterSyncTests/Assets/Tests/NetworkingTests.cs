@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Tests
                 ip = k_MulticastAddress,
                 rxPort = k_RxPort,
                 txPort = k_TxPort,
-                timeOut = k_TimeoutSeconds,
+                timeOut = TimeSpan.FromSeconds(k_TimeoutSeconds),
                 adapterName = nic.Name
             };
 
@@ -90,7 +90,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             yield return TestResend().ToCoroutine(k_TimeoutSeconds);
         }
-        
+
         [UnityTest]
         public IEnumerator TestNoAckAsync()
         {
@@ -173,7 +173,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Agent should now be waiting for ACK messages
             Assert.True(m_Agent.HasPendingAcks);
-            
+
             // Ack with node 1
             await m_TestClients[1].SendAck(k_AgentEndPoint, k_AgentNodeId, k_TestNodes[1]);
 
@@ -197,7 +197,7 @@ namespace Unity.ClusterDisplay.Tests
             // Send a message to multiple nodes
             var (header, rawMsg) = GenerateTestMessage(k_AgentNodeId, k_TestNodes.Take(1));
             header.Flags |= MessageHeader.EFlag.DoesNotRequireAck;
-            
+
             Assert.True(m_Agent.PublishMessage(header, rawMsg));
             var client = m_TestClients[0];
 
