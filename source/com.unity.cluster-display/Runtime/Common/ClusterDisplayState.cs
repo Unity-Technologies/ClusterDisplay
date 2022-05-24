@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay
     /// from the currently active <see cref="ClusterSync"/> from the <see cref="ServiceLocator"/>.
     /// </summary>
     /// <remarks>
-    /// With the exception of <see cref="IsActive"/>, properties will throw exceptions if there
+    /// With the exception of <see cref="GetIsActive"/>, properties will throw exceptions if there
     /// is no instance registered with <see cref="ServiceLocator"/>. This class is intended to
     /// be used in conjunction with <see cref="ClusterDisplayManager"/> which automatically
     /// initializes and registers a <see cref="ClusterSync"/> instance.
@@ -22,15 +22,7 @@ namespace Unity.ClusterDisplay
         /// <returns>
         /// Either NodeRole.Emitter or NodeRole.Repeater if cluster synchronization is available. Otherwise this will return NodeRole.Unassigned if the cluster is not running.
         /// </returns>
-        public static NodeRole GetNodeRole()
-        {
-            if (!ServiceLocator.TryGet<IClusterSyncState>(out var state))
-            {
-                return NodeRole.Unassigned;
-            }
-
-            return state.NodeRole;
-        }
+        public static NodeRole GetNodeRole() => ServiceLocator.TryGet<IClusterSyncState>(out var state) ? state.NodeRole : NodeRole.Unassigned;
 
         /// <summary>
         /// This property returns true if this running instance is a emitter node, this is set to true or false in ClusterSync
@@ -69,14 +61,14 @@ namespace Unity.ClusterDisplay
         public static bool IsRepeater => ServiceLocator.Get<IClusterSyncState>().NodeRole is NodeRole.Repeater;
 
         /// <summary>
-        /// Getter that indicates whether cluster display logic is enabled and ready to connect, in contrast to <see cref="IsActive"/> which indicates that the cluster is connected and operating.
+        /// Getter that indicates whether cluster display logic is enabled and ready to connect, in contrast to <see cref="GetIsActive"/> which indicates that the cluster is connected and operating.
         /// </summary>
-        public static bool IsClusterLogicEnabled => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.IsClusterLogicEnabled;
+        public static bool GetIsClusterLogicEnabled () => ServiceLocator.TryGet<IClusterSyncState>(out var state) && state.IsClusterLogicEnabled;
 
         /// <summary>
         /// Getter that returns true if there exists a ClusterSync instance and the synchronization has been enabled.
         /// </summary>
-        public static bool IsActive => ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync) && clusterSync.IsClusterLogicEnabled;
+        public static bool GetIsActive () => ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync) && clusterSync.IsClusterLogicEnabled;
 
         /// <summary>
         /// Returns true if the Cluster Synchronization has been terminated (a shutdown request was sent or received.)
@@ -105,7 +97,7 @@ namespace Unity.ClusterDisplay
         /// True if the cluster synchronization is available, otherwise it will return false.
         /// </returns>
         /// <param name="frame">
-        /// Outputs the current frame Id, which will be 0 if cluster synchornization is not available.
+        /// Outputs the current frame Id.
         /// </param>
         public static bool TryGetFrameId(out ulong frameId)
         {

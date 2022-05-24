@@ -13,7 +13,9 @@ namespace Unity.ClusterDisplay
             {
                 // Creating ClusterSync instance on demand.
                 ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
+
                 instance = new ClusterSync();
+                ServiceLocator.Provide<IClusterSyncState>(instance);
             }
 
             Debug.Assert(instance != null);
@@ -25,7 +27,6 @@ namespace Unity.ClusterDisplay
 
         protected override void OnAwake()
         {
-            SetInstance(this);
             GetOrCreateClusterSyncInstance();
 
             ClusterDebug.Log("Cluster Display started bootstrap.");

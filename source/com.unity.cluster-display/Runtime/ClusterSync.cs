@@ -23,7 +23,6 @@ namespace Unity.ClusterDisplay
         public ClusterSync (string instanceName = k_DefaultName)
         {
             InstanceName = instanceName;
-            ServiceLocator.Provide<IClusterSyncState>(this);
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
 
@@ -264,7 +263,7 @@ namespace Unity.ClusterDisplay
         {
             NodeRole = NodeRole.Unassigned;
             IsClusterLogicEnabled = false;
-            ServiceLocator.Withdraw(this);
+            ServiceLocator.Withdraw<ClusterSync>();
 
             LocalNode?.Exit();
             LocalNode = null;
