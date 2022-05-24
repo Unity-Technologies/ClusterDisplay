@@ -35,12 +35,16 @@ namespace Unity.ClusterDisplay
                 DontDestroyOnLoad(gameObject);
         }
 
-        private void OnEnable()
+        private void OnEnable() => GetOrCreateClusterSyncInstance().EnableClusterDisplay(ClusterParams.FromCommandLine());
+
+        void CleanUp ()
         {
-            GetOrCreateClusterSyncInstance().EnableClusterDisplay(ClusterParams.FromCommandLine());
+            ClusterSyncInstance?.ShutdownAllClusterNodes();
+            ClusterSyncInstance?.DisableClusterDisplay();
+            ServiceLocator.Withdraw<ClusterSync>();
         }
 
-        private void OnDisable() => ClusterSyncInstance?.DisableClusterDisplay();
-        private void OnApplicationQuit() => ClusterSyncInstance?.ShutdownAllClusterNodes();
+        private void OnDisable() => CleanUp();
+        private void OnApplicationQuit() => CleanUp();
     }
 }

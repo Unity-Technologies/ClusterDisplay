@@ -263,7 +263,6 @@ namespace Unity.ClusterDisplay
         {
             NodeRole = NodeRole.Unassigned;
             IsClusterLogicEnabled = false;
-            ServiceLocator.Withdraw<ClusterSync>();
 
             LocalNode?.Exit();
             LocalNode = null;
