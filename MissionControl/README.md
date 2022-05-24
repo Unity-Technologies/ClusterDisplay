@@ -25,9 +25,9 @@ Setup
 
 #### Prerequisites:
 
-- .NET Core 5.0+
-- ability to receive UDP broadcasts
-- shared network directory or network drive accessible by all nodes 
+* .NET Core 5.0+
+* ability to receive UDP broadcasts
+* shared network directory or network drive accessible by all nodes 
 
 #### Building
 
@@ -36,7 +36,9 @@ Build `MissionControl.sln` using Visual Studio, Rider, or MSBuild, etc.
 #### Running
 
 1. Copy the Listener's binary folder to the node's local filesystem.
-2. Run `ClusterListener.exe` in a command prompt.
+2. Copy `ListenerService\InstallListener.ps1` and `ListenerService\UninstallListener.ps1` to the same location as the Listener's binary.
+3. Execute `ListenerService\InstallListener.ps1` as an administrator.
+4. Reboot as instructed (`ClusterListener.exe` should be automatically started upon restart).
 
 ### Server and UI
 

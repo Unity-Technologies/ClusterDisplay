@@ -84,12 +84,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             m_GeneralCancellationTokenSource = new CancellationTokenSource();
 
             CreatePLayerList();
-            RefreshPlayers(m_GeneralCancellationTokenSource.Token)
+            _ = RefreshPlayers(m_GeneralCancellationTokenSource.Token)
                 .WithErrorHandling(LogException);
 
             InitializeServer();
 
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 while (true)
                 {
@@ -122,7 +122,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             m_Server.NodeUpdated += m_NodeListView.UpdateItem;
             m_Server.NodeAdded += m_NodeListView.AddItem;
             m_Server.NodeRemoved += m_NodeListView.RemoveItem;
-            m_Server.Run().WithErrorHandling(LogException);
+            _ = m_Server.Run().WithErrorHandling(LogException);
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                     settings.RootPath = rootPath;
                     if (!string.IsNullOrWhiteSpace(rootPath))
                     {
-                        RefreshPlayers(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
+                        _ = RefreshPlayers(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
                     }
                 }
             }
@@ -257,13 +257,13 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                         settings.UseDeprecatedArgs)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
 
-                m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);
+                _ = m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);
             }
 
             if (GUILayout.Button("Stop All"))
             {
                 m_LaunchCancellationTokenSource?.Cancel();
-                m_Server.StopAll(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
+                _ = m_Server.StopAll(m_GeneralCancellationTokenSource.Token).WithErrorHandling(LogException);
             }
 
             if (GUI.changed)
