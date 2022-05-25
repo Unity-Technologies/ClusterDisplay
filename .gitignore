@@ -41,3 +41,7 @@ upm-ci~/
 .bin/
 .download/
 .Editor/
+
+SourceGenerators/bin
+SourceGenerators/obj
+SourceGenerators/.vs

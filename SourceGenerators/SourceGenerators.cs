@@ -11,11 +11,12 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
         public void Execute(GeneratorExecutionContext context)
         {
             Console.WriteLine($"CompilationAssembly: \"{context.Compilation.AssemblyName}\".");
-            // context.AddSource("hellosource", SourceText.From("class HelloWorld {}"));
+            context.AddSource("hellosource", SourceText.From("class HelloWorld {}"));
         }
 
         public void Initialize(GeneratorInitializationContext context)
         {
+            Console.WriteLine("Initializing...");
             context.RegisterForSyntaxNotifications(() => new SynctaxReceiver());
         }
     }

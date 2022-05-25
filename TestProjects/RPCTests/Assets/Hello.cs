@@ -8,5 +8,6 @@ public class Hello : MonoBehaviour
     [ClusterRPC]
     public void World (float plz)
     {
+        System.Console.WriteLine(plz);
     }
 }
