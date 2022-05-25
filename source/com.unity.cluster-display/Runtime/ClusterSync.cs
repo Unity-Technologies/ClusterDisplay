@@ -149,6 +149,13 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
+#if UNITY_STANDALONE_WIN
+            if (NodeRole != NodeRole.Unassigned)
+            {
+                ClusterSyncWindowsHelpers.CheckNodeSetup();
+            }
+#endif
+
             RegisterDelegates();
             ClusterSyncLooper.InjectSynchPointInPlayerLoop();
             onPostEnableClusterDisplay?.Invoke();
