@@ -64,11 +64,22 @@ namespace Unity.ClusterDisplay.MissionControl
             m_HeartbeatTask = DoHeartbeat(15000, cancellationToken);
             m_ListenTask = Listen(cancellationToken);
             m_PumpMessagesTask = PumpMessages(cancellationToken);
-            m_ProxyTask = NetworkUtils.RunBroadcastProxy(Constants.BroadcastProxyPort,
+            m_ProxyTask = RunBroadcastProxy(Constants.BroadcastProxyPort,
                 Constants.DiscoveryPort,
                 cancellationToken);
 
             await Task.WhenAll(m_HeartbeatTask, m_ListenTask, m_PumpMessagesTask, m_ProxyTask);
+        }
+
+        static async Task RunBroadcastProxy(int listenPort, int broadcastPort, CancellationToken token)
+        {
+            var client = new UdpClient(listenPort);
+            var remoteEndPoint = new IPEndPoint(IPAddress.Broadcast, broadcastPort);
+            while (!token.IsCancellationRequested)
+            {
+                var result = await client.ReceiveAsync().WithCancellation(token);
+                await client.SendAsync(result.Buffer, result.Buffer.Length, remoteEndPoint).WithCancellation(token);
+            }
         }
 
         void HandleServerBroadcast(in MessageHeader header, in ServerInfo _)
@@ -77,7 +88,7 @@ namespace Unity.ClusterDisplay.MissionControl
             Debug.Assert(m_UdpClient.Client.LocalEndPoint != null);
 
             m_LocalEndPoint ??= new IPEndPoint(
-                NetworkUtils.QueryRoutingInterface(header.EndPoint),
+                NetworkUtilities.GetRoutingInterface(header.EndPoint),
                 ((IPEndPoint) m_UdpClient.Client.LocalEndPoint).Port);
 
             m_ServerEndPoint = header.EndPoint;
@@ -90,7 +101,7 @@ namespace Unity.ClusterDisplay.MissionControl
             while (!token.IsCancellationRequested)
             {
                 var receiveResult = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                
+
                 if (!receiveResult.Buffer.MatchMessage<ServerInfo, LaunchInfo, DirectorySyncInfo, KillInfo>(
                     HandleServerBroadcast,
                     (in MessageHeader _, in LaunchInfo launchInfo) =>
@@ -158,7 +169,7 @@ namespace Unity.ClusterDisplay.MissionControl
             Trace.WriteLine("Project sync requested");
             KillRunningProcess();
             m_SubProcessCancellation = new CancellationTokenSource();
-            
+
             ReportNodeStatus(NodeStatus.SyncFiles);
             if (await Launcher.SyncProjectDir(syncInfo.RemoteDirectory, m_SubProcessCancellation.Token)
                 .WithErrorHandling(ex => ReportNodeStatus(NodeStatus.Error, ex.Message)))
@@ -171,10 +182,10 @@ namespace Unity.ClusterDisplay.MissionControl
         async Task RunPlayer(LaunchInfo launchInfo)
         {
             Trace.WriteLine("Launch requested");
-            
+
             KillRunningProcess();
             m_SubProcessCancellation = new CancellationTokenSource();
-            
+
             ReportNodeStatus(NodeStatus.Running);
             await Launcher.Launch(launchInfo, m_SubProcessCancellation.Token)
                 .WithErrorHandling(ex => ReportNodeStatus(NodeStatus.Error, ex.Message));

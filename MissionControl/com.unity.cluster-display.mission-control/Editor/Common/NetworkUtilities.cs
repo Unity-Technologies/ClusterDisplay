@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
