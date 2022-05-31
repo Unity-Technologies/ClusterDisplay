@@ -68,6 +68,9 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         string m_BroadcastProxyAddress;
 
         [SerializeField]
+        string m_LiveLinkReceiverAddress;
+
+        [SerializeField]
         List<MutableNodeSettings> m_NodeSettings = new();
 
         [SerializeField]
@@ -128,6 +131,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         {
             get => m_ExtraArgs;
             set => m_ExtraArgs = value;
+        }
+
+        public string LiveLinkReceiverAddress
+        {
+            get => m_LiveLinkReceiverAddress;
+            set => m_LiveLinkReceiverAddress = value;
         }
 
         public void Save()

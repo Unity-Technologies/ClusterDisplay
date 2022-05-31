@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.Scripting
     /// <summary>
     /// Message containing transform data (plus unique identifier)
     /// </summary>
-    public readonly struct TransformMessage
+    public readonly struct TransformMessage : IEquatable<TransformMessage>
     {
         public readonly Vector3 Position;
         public readonly Quaternion Rotation;
@@ -21,6 +21,36 @@ namespace Unity.ClusterDisplay.Scripting
 
         public TransformMessage(Transform t)
             : this(t.localPosition, t.localRotation, t.localScale) { }
+
+        public override string ToString()
+        {
+            return $"[{Position}, {Rotation}, {Scale}]";
+        }
+
+        public bool Equals(TransformMessage other)
+        {
+            return Position.Equals(other.Position) && Rotation.Equals(other.Rotation) && Scale.Equals(other.Scale);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is TransformMessage other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Position, Rotation, Scale);
+        }
+
+        public static bool operator ==(TransformMessage left, TransformMessage right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(TransformMessage left, TransformMessage right)
+        {
+            return !left.Equals(right);
+        }
     }
 
     class TransformReplicator : ReplicatorBase<TransformMessage>
@@ -30,9 +60,11 @@ namespace Unity.ClusterDisplay.Scripting
         public TransformReplicator(Guid guid, Transform target)
             : base(guid)
         {
-            ClusterDebug.Log("TransformReplicator created!");
+            ClusterDebug.Log("TransformReplicator created");
             m_Target = target;
         }
+
+        public override bool IsValid => m_Target != null;
 
         protected override TransformMessage GetCurrentState() => new(m_Target);
 
@@ -41,7 +73,6 @@ namespace Unity.ClusterDisplay.Scripting
 #if UNITY_EDITOR
             return;
 #endif
-            Debug.Log("Transform Replicator ApplyMessage");
             m_Target.localPosition = message.Position;
             m_Target.localRotation = message.Rotation;
             m_Target.localScale = message.Scale;

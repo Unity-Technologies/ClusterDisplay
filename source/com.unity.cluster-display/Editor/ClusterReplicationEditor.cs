@@ -1,19 +1,25 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using Unity.ClusterDisplay.Scripting;
 using Unity.ClusterDisplay.Utils;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using UnityEngine.Assertions;
+using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Editor
 {
     [CustomEditor(typeof(ClusterReplication))]
     public class ClusterReplicationEditor : UnityEditor.Editor
     {
+        static class Contents
+        {
+            public static readonly GUIContent TargetListHeader =
+                EditorGUIUtility.TrTextContent("Replicated component properties");
+            public static readonly GUIContent InvalidPropertyIcon =
+                EditorGUIUtility.TrIconContent("console.warnicon.sml", "This property cannot be replicated");
+        }
+
         ClusterReplication m_ClusterReplication;
         ReorderableList m_TargetsList;
         SerializedProperty m_ReplicationTargets;
@@ -39,55 +45,73 @@ namespace Unity.ClusterDisplay.Editor
                     displayAddButton: true,
                     displayRemoveButton: true)
             {
-                drawHeaderCallback = rect => EditorGUI.LabelField(rect, "Replication Targets"),
-                drawElementCallback = (rect, index, active, focused) =>
-                {
-                    var element = m_ReplicationTargets.GetArrayElementAtIndex(index);
-                    var componentProp = element.FindPropertyRelative("m_Component");
-                    var componentTarget = componentProp.objectReferenceValue as Component;
-                    var leftRect = rect;
-                    leftRect.width = rect.width / 2 - 5;
-                    var rightRect = rect;
-                    rightRect.x = leftRect.xMax + 5;
-                    rightRect.xMax = rect.xMax;
-                    if (componentTarget)
-                    {
-                        var allComponents = GetComponents();
-                        var selected = EditorGUI.Popup(leftRect, Array.IndexOf(allComponents, componentTarget),
-                            allComponents.Select(comp => comp.GetType().Name).ToArray());
-
-                        var selectedComponent = allComponents[selected];
-                        componentProp.objectReferenceValue = selectedComponent;
-
-                        if (!ClusterReplication.HasSpecializedReplicator(selectedComponent.GetType()))
-                        {
-                            var propertyNames = GetPropertyNames(selectedComponent);
-                            var propertyProp = element.FindPropertyRelative("m_Property");
-
-                            var selectedPropertyIndex = EditorGUI.Popup(rightRect,
-                                Array.IndexOf(propertyNames, propertyProp.stringValue), propertyNames);
-
-                            if (selectedPropertyIndex >= 0)
-                            {
-                                propertyProp.stringValue = propertyNames[selectedPropertyIndex];
-                            }
-                        }
-                    }
-                },
-                onAddDropdownCallback = (rect, list) => ShowAddTargetMenu()
-
+                drawHeaderCallback = rect => EditorGUI.LabelField(rect, Contents.TargetListHeader),
+                drawElementCallback = DrawElement,
+                onAddDropdownCallback = (_, _) => ShowAddTargetMenu(),
+                onRemoveCallback = RemoveTarget,
+                elementHeightCallback = _ => EditorGUIUtility.singleLineHeight + 2
             };
         }
 
-        Component[] GetComponents() => m_ClusterReplication.gameObject.GetComponents(typeof(Component));
+        void DrawElement(Rect rect, int index, bool active, bool focused)
+        {
+            var element = m_ReplicationTargets.GetArrayElementAtIndex(index);
+            var componentProp = element.FindPropertyRelative("m_Component");
+            var componentTarget = componentProp.objectReferenceValue as Component;
+
+            rect.y += 2;
+            var leftRect = rect;
+            leftRect.width = rect.width / 2 - 5;
+
+            var rightRect = rect;
+            rightRect.x = leftRect.xMax + 5;
+            rightRect.xMax = rect.xMax - 21;
+
+            var iconRect = rect;
+            iconRect.width = 16;
+            iconRect.x = rightRect.xMax + 5;
+            iconRect.y -= 2;
+            iconRect.height += 2;
+            if (componentTarget)
+            {
+                using var changeScope = new EditorGUI.ChangeCheckScope();
+                var allComponents = GetComponents();
+                var selected = EditorGUI.Popup(leftRect, Array.IndexOf(allComponents, componentTarget), allComponents.Select(comp => comp.GetType().Name).ToArray());
+
+                var selectedComponent = allComponents[selected];
+                componentProp.objectReferenceValue = selectedComponent;
+
+                if (!ClusterReplication.HasSpecializedReplicator(selectedComponent.GetType()))
+                {
+                    var propertyNames = GetPropertyNames(selectedComponent);
+                    var propertyProp = element.FindPropertyRelative("m_Property");
+
+                    var selectedPropertyIndex = EditorGUI.Popup(rightRect, Array.IndexOf(propertyNames, propertyProp.stringValue), propertyNames);
+
+                    if (selectedPropertyIndex >= 0)
+                    {
+                        propertyProp.stringValue = propertyNames[selectedPropertyIndex];
+                    }
+                }
+
+                if (changeScope.changed)
+                {
+                    serializedObject.ApplyModifiedProperties();
+                }
+
+                if (!element.FindPropertyRelative("m_IsValid").boolValue)
+                    EditorGUI.LabelField(iconRect, Contents.InvalidPropertyIcon);
+            }
+        }
+
+        Component[] GetComponents() => m_ClusterReplication.gameObject.GetComponents(typeof(Component))
+            .Where(component => component != m_ClusterReplication).ToArray();
 
         void ShowAddTargetMenu()
         {
             var menu = new GenericMenu();
-            var allComponents = GetComponents();
-            foreach (var component in allComponents)
+            foreach (var component in GetComponents())
             {
-                if (component == m_ClusterReplication) continue;
                 menu.AddItem(new GUIContent(component.GetType().Name), on: false, () =>
                 {
                     AddTarget(component);
@@ -99,9 +123,16 @@ namespace Unity.ClusterDisplay.Editor
 
         void AddTarget(Component component)
         {
-            Undo.RegisterCompleteObjectUndo(m_ClusterReplication, "Add replication target");
-            m_ClusterReplication.AddTarget(component, null);
+            Undo.RegisterCompleteObjectUndo(m_ClusterReplication, "Add Replication Target");
+            m_ClusterReplication.AddTarget(component);
             EditorUtility.SetDirty(m_ClusterReplication);
+        }
+
+        void RemoveTarget(ReorderableList list)
+        {
+            var removeIndex = list.index;
+            m_ReplicationTargets.DeleteArrayElementAtIndex(removeIndex);
+            serializedObject.ApplyModifiedProperties();
         }
 
         static string[] GetPropertyNames(object obj) =>

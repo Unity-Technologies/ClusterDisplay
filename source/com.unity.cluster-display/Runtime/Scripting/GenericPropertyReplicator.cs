@@ -10,10 +10,15 @@ namespace Unity.ClusterDisplay.Scripting
 
         public GenericPropertyReplicator(ReplicationTarget target)
         {
-            var propertyInfo = target.Target.GetType().GetProperty(target.Property);
+            if (string.IsNullOrEmpty(target.Property))
+            {
+                return;
+            }
+
+            var propertyInfo = target.Component.GetType().GetProperty(target.Property);
             if (propertyInfo == null)
             {
-                Debug.LogError($"{target.Target} does not contain property {target.Property}");
+                Debug.LogError($"{target.Component} does not contain property {target.Property}");
                 return;
             }
 
@@ -26,7 +31,6 @@ namespace Unity.ClusterDisplay.Scripting
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                throw;
             }
         }
 
@@ -35,28 +39,36 @@ namespace Unity.ClusterDisplay.Scripting
         public void OnDisable() => m_Impl?.OnDisable();
 
         public void Update() => m_Impl?.Update();
+        public bool IsValid => m_Impl?.IsValid ?? false;
+
+        public void Dispose()
+        {
+            m_Impl?.Dispose();
+        }
     }
 
-    class GenericPropertyReplicatorImpl<T> : ReplicatorBase<T> where T : unmanaged
+    class GenericPropertyReplicatorImpl<T> : ReplicatorBase<T> where T : unmanaged, IEquatable<T>
     {
-        PropertyInfo m_PropertyInfo;
-        object m_Target;
+        readonly PropertyInfo m_PropertyInfo;
+        readonly object m_Component;
 
         public GenericPropertyReplicatorImpl(ReplicationTarget target)
             : base(target.Guid)
         {
-            m_Target = target.Target;
-            m_PropertyInfo = m_Target.GetType().GetProperty(target.Property);
+            m_Component = target.Component;
+            m_PropertyInfo = m_Component.GetType().GetProperty(target.Property);
+            ClusterDebug.Log($"Replicator created for property {m_PropertyInfo}");
         }
 
-        protected override T GetCurrentState() => (T)m_PropertyInfo.GetValue(m_Target);
+        public override bool IsValid => true;
+        protected override T GetCurrentState() => (T)m_PropertyInfo.GetValue(m_Component);
 
         protected override void ApplyMessage(in T message)
         {
 #if UNITY_EDITOR
             return;
 #endif
-            m_PropertyInfo.SetValue(m_Target, message);
+            m_PropertyInfo.SetValue(m_Component, message);
         }
     }
 }

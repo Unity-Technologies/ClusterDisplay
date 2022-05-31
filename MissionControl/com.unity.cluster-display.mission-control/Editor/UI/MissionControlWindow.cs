@@ -90,16 +90,16 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             InitializeServer();
 
             _ = Task.Run(async () =>
-            {
-                while (true)
                 {
-                    await Task.Delay(10000);
-                    if (m_Server != null)
+                    while (true)
                     {
-                        m_NodeListView.RefreshNodes(m_Server.Nodes);
+                        await Task.Delay(10000);
+                        if (m_Server != null)
+                        {
+                            m_NodeListView.RefreshNodes(m_Server.Nodes);
+                        }
                     }
-                }
-            }, m_GeneralCancellationTokenSource.Token)
+                }, m_GeneralCancellationTokenSource.Token)
                 .WithErrorHandling(LogException);
         }
 
@@ -206,6 +206,15 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 }
             }
 
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                settings.LiveLinkReceiverAddress = EditorGUILayout.DelayedTextField(new GUIContent("Live Link Receiver"), settings.LiveLinkReceiverAddress);
+                if (GUILayout.Button(new GUIContent("Choose active emitter")))
+                {
+                    settings.LiveLinkReceiverAddress = FindFirstActiveEmitter() ?? settings.LiveLinkReceiverAddress;
+                }
+            }
+
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height / 4);
             m_NodeListView?.OnGUI(rect);
 
@@ -271,5 +280,15 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 SaveSettings();
             }
         }
+
+        string FindFirstActiveEmitter() =>
+            m_Server.Nodes
+                .Join(MissionControlSettings.instance.NodeSettings,
+                    info => info.Id,
+                    settings => settings.Id,
+                    (info, settings) => (info, settings))
+                .Where(item => item.settings.IsActive && item.settings.ClusterId == 0)
+                .Select(item => item.info.Address.ToString())
+                .FirstOrDefault();
     }
 }
