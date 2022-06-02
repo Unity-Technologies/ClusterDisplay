@@ -7,8 +7,7 @@ namespace Unity.ClusterDisplay.MissionControl
     [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Unicode)]
     public readonly struct LaunchInfo
     {
-        const int k_DefaultTxPort = 25690;
-        const int k_DefaultRxPort = 25689;
+        const int k_DefaultPort = 25690;
         static readonly byte[] k_DefaultAddress = {224, 0, 1, 0};
         public readonly int NodeID;
         public readonly int NumRepeaters;
@@ -18,15 +17,7 @@ namespace Unity.ClusterDisplay.MissionControl
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
         public readonly byte[] MulticastAddress;
 
-        /// <summary>
-        /// Port to which ACK messages are sent
-        /// </summary>
-        public readonly int TxPort;
-
-        /// <summary>
-        /// Port for receiving sync messages
-        /// </summary>
-        public readonly int RxPort;
+        public readonly int Port;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.PathMaxLength)]
         public readonly string PlayerDir;
@@ -36,8 +27,6 @@ namespace Unity.ClusterDisplay.MissionControl
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.MaxArgLength)]
         public readonly string ExtraArgs;
 
-        public readonly bool UseDeprecatedArgNames;
-
         public LaunchInfo(string playerDir,
             int id,
             int numRepeaters,
@@ -45,10 +34,8 @@ namespace Unity.ClusterDisplay.MissionControl
             int handshakeTimeout = 10000,
             int commTimeout = 5000,
             string extraArgs = null,
-            bool useDeprecatedArgNames = false,
             byte[] multicastAddress = null,
-            int txPort = k_DefaultTxPort,
-            int rxPort = k_DefaultRxPort)
+            int port = k_DefaultPort)
         {
             PlayerDir = playerDir;
             NodeID = id;
@@ -57,11 +44,9 @@ namespace Unity.ClusterDisplay.MissionControl
             TimeoutMilliseconds = commTimeout;
 
             MulticastAddress = multicastAddress ?? k_DefaultAddress;
-            TxPort = txPort;
-            RxPort = rxPort;
+            Port = port;
             ClearRegistry = clearRegistry;
             ExtraArgs = extraArgs;
-            UseDeprecatedArgNames = useDeprecatedArgNames;
         }
     }
 }

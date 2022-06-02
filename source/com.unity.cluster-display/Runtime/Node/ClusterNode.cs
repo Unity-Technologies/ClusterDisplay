@@ -1,117 +1,214 @@
 using System;
-using System.Diagnostics;
+using System.Text;
 
 namespace Unity.ClusterDisplay
 {
-    abstract class ClusterNode
+    /// <summary>
+    /// Configuration for a cluster node.
+    /// </summary>
+    struct ClusterNodeConfig
     {
-        public UDPAgent UdpAgent => m_UdpAgent;
+        /// <summary>
+        /// Identifier uniquely identifying the node throughout the cluster.
+        /// </summary>
+        public byte NodeId { get; set; }
+        /// <summary>
+        /// Time to establish communication between emitter and repeaters.
+        /// </summary>
+        public TimeSpan HandshakeTimeout { get; set; }
+        /// <summary>
+        /// Timeout for any other communication than initial handshake.  An emitter waiting for repeaters longer than
+        /// this is allowed to kick him out.  A repeater not getting news from the emitter for longer than this is
+        /// allowed to abort.
+        /// </summary>
+        public TimeSpan CommunicationTimeout { get; set; }
+        /// <summary>
+        /// Are the repeaters delayed by one frame.
+        /// </summary>
+        public bool RepeatersDelayed { get; set; }
+        /// <summary>
+        /// Do we enable hardware sync (if present)?
+        /// </summary>
+        public bool EnableHardwareSync { get; set; }
+    }
 
-        public byte NodeID => m_UdpAgent.LocalNodeID;
-
-        public ulong CurrentFrameID { get; private set; }
+    /// <summary>
+    /// Base class for the classes of objects representing the cluster node.
+    /// </summary>
+    class ClusterNode: IDisposable
+    {
+        /// <summary>
+        /// Configuration of the node.
+        /// </summary>
+        /// <remarks>Constant throughout the lifetime of the node.</remarks>
+        public ClusterNodeConfig Config { get; }
 
         /// <summary>
-        /// Gets or sets whether there is a layer of synchronization performed
-        /// by hardware (e.g. Nvidia Quadro Sync). Default is <c>false</c>.
+        /// Object to use to perform network access (sending or receiving).
+        /// </summary>
+        public IUDPAgent UdpAgent { get; private set;  }
+
+        /// <summary>
+        /// Index of the frame we are currently dealing with.
+        /// </summary>
+        /// <remarks>Every "physical node" start with a FrameIndex of 0 and it increase in lock step between all the
+        /// nodes as the time pass.  However, the <see cref="ClusterNode"/> might start at a different FrameIndex
+        /// when the role of a node changes during the process lifetime (eg. when a <see cref="EmitterNode"/> replaces
+        /// a <see cref="BackupNode"/>).</remarks>
+        public ulong FrameIndex { get; private set; }
+
+        /// <summary>
+        /// Gets or sets whether there is a layer of synchronization performed by hardware (e.g. Nvidia Quadro Sync).
+        /// Default is <c>false</c>.
         /// </summary>
         /// <remarks>
-        /// When set to <c>false</c>, all nodes signal when they are ready
-        /// to begin a new frame, and the emitter will wait until it receives
-        /// the signal from all nodes before allowing the cluster to proceed.
-        /// Set this to <c>true</c> if your hardware enforces this at a low level
-        /// and it is safe to bypass the wait.
+        /// Emitter node: Will always use network sync (<see cref="RepeaterWaitingToStartFrame"/> and
+        /// <see cref="EmitterWaitingToStartFrame"/>) for as long as some of the repeaters indicate they are using
+        /// network sync.  This property is more for an informative purpose.<br/><br/>
+        /// Repeater node: If true they can set <see cref="RepeaterWaitingToStartFrame.WillUseNetworkSyncOnNextFrame"/>
+        /// to false and start relying exclusively on hardware synchronization.
         /// </remarks>
         public bool HasHardwareSync { get; set; }
 
-        protected NodeState m_CurrentState;
-        UDPAgent m_UdpAgent;
-
-        public struct Config
+        /// <summary>
+        /// Method called to perform the work the node has to do for the current frame
+        /// </summary>
+        public void DoFrame()
         {
-            public UDPAgent.Config UdpAgentConfig;
-            public TimeSpan CommunicationTimeout;
-            public TimeSpan HandshakeTimeout;
-        }
-
-        public TimeSpan CommunicationTimeout { get; }
-        public TimeSpan HandshakeTimeout { get; }
-
-        protected ClusterNode(Config config)
-        {
-            if (config.UdpAgentConfig.nodeId >= UDPAgent.MaxSupportedNodeCount)
-                throw new ArgumentOutOfRangeException($"Node id must be in the range of [0,{UDPAgent.MaxSupportedNodeCount - 1}]");
-
-            m_UdpAgent = new UDPAgent(config.UdpAgentConfig);
-            m_UdpAgent.OnError += OnNetworkingError;
-            CommunicationTimeout = config.CommunicationTimeout;
-            HandshakeTimeout = config.HandshakeTimeout;
-
-            Stopwatch.StartNew();
-        }
-
-        public virtual void Start()
-        {
-            CurrentFrameID = 0;
-        }
-
-        public bool DoFrame(bool newFrame)
-        {
-            m_CurrentState = m_CurrentState?.ProcessFrame(newFrame);
-
-            if (m_CurrentState is Shutdown)
+            NodeState newState;
+            do
             {
-                m_UdpAgent.Stop();
+                newState = m_CurrentState.DoFrame();
+                if (newState != null)
+                {
+                    var disposableState = m_CurrentState as IDisposable;
+                    disposableState?.Dispose();
+                    m_CurrentState = newState;
+                }
+            } while (newState != null);
+        }
+
+        /// <summary>
+        /// Method called at the end of each frame preparing for next frame
+        /// </summary>
+        public void ConcludeFrame()
+        {
+            ++FrameIndex;
+        }
+
+        public virtual string GetDebugString(NetworkStatistics networkStatistics)
+        {
+            var builder = new StringBuilder();
+            builder.AppendFormat("\tNode ID: {0}", Config.NodeId);
+            builder.AppendLine();
+            builder.AppendFormat("\tFrame: {0}", FrameIndex);
+            builder.AppendLine();
+
+            var snapshot = networkStatistics.ComputeSnapshot();
+            builder.AppendFormat("\tNetwork stats (over the last {0:0.00} seconds, received / sent / sent repeat): ",
+                snapshot.Interval.TotalSeconds);
+            builder.AppendLine();
+
+            foreach (var (type, typeStats) in snapshot.TypeStatistics)
+            {
+                builder.AppendFormat("\t\t{0}: {1} / {2}", type, typeStats.Received, typeStats.Sent);
+                // Any sent RetransmitFrameData is obviously to get a repeat, so skip it (and repeat of
+                // RetransmitFrameData are also not tracked).
+                if (type != MessageType.RetransmitFrameData)
+                {
+                    builder.AppendFormat(" / {0}", typeStats.SentRepeat);
+                }
+                builder.AppendLine();
             }
 
-            return m_CurrentState is not FatalError;
-        }
-
-        public void DoLateFrame() => m_CurrentState?.ProcessLateFrame();
-
-        public void EndFrame()
-        {
-            m_CurrentState?.OnEndFrame();
-            ++CurrentFrameID;
-        }
-
-        public void Exit()
-        {
-            if (m_CurrentState.GetType() != typeof(Shutdown))
-                m_CurrentState = new Shutdown().EnterState(m_CurrentState);
-            m_UdpAgent.Stop();
-        }
-
-        public bool ReadyToProceed => m_CurrentState?.ReadyToProceed ?? true;
-        public bool ReadyForNextFrame => m_CurrentState?.ReadyForNextFrame ?? true;
-
-        public void BroadcastShutdownRequest()
-        {
-            var msgHdr = new MessageHeader()
+            if (snapshot.RetransmitFrameDataSequence + snapshot.RetransmitFrameDataIdle > 0)
             {
-                MessageType = EMessageType.GlobalShutdownRequest,
-                Flags = MessageHeader.EFlag.LoopBackToSender | MessageHeader.EFlag.Broadcast,
-                OffsetToPayload = 0
-            };
+                builder.AppendLine("\t\tRetransmitFrameData reasons:");
+                builder.AppendFormat("\t\t\tSequence: {0}", snapshot.RetransmitFrameDataSequence);
+                builder.AppendLine();
+                builder.AppendFormat("\t\t\tIdle: {0}", snapshot.RetransmitFrameDataIdle);
+                builder.AppendLine();
+            }
 
-            UdpAgent.PublishMessage(msgHdr);
+            return builder.ToString();
         }
 
-        public virtual string GetDebugString(NetworkingStats networkStats)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="config">Node's configuration.</param>
+        /// <param name="udpAgent">Object through which we will perform communication with other nodes in the cluster.
+        /// </param>
+        protected ClusterNode(ClusterNodeConfig config, IUDPAgent udpAgent)
         {
-            return $"\tNode ID: {NodeID}\r\n\tFrame: {CurrentFrameID}\r\n" +
-                $"\tState: {m_CurrentState.GetDebugString()}\r\n" +
-                $"\tNetwork stats: \r\n\t\tSend Queue Size: [{networkStats.txQueueSize}], " +
-                $"\r\n\t\tReceive Queue Size:[{networkStats.rxQueueSize}], " +
-                $"\r\n\t\tACK Queue Size: [{networkStats.pendingAckQueueSize}], " +
-                $"\r\n\t\tTotal Resends: [{networkStats.totalResends}], " +
-                $"\r\n\t\tMessages Sent: [{networkStats.msgsSent}], " +
-                $"\r\n\t\tFailed Messages: [{networkStats.failedMsgs}]";
+            Config = config;
+            UdpAgent = udpAgent;
         }
 
-        protected void OnNetworkingError(string message)
+        /// <summary>
+        /// Set the initial state of the node.
+        /// </summary>
+        /// <param name="initialState">Node's initial <see cref="NodeState"/>.</param>
+        protected void SetInitialState(NodeState initialState)
         {
-            m_CurrentState.PendingStateChange = new FatalError($"Networking error: {message}");
+            m_CurrentState = initialState;
+        }
+
+        /// <summary>
+        /// Finalizer
+        /// </summary>
+        ~ClusterNode() => Dispose(false);
+
+        /// <summary>
+        /// IDisposable implementation
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Method unifying finalizer / IDisposable implementation.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
+        /// called from the finalizer.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!m_DisposedOf)
+            {
+                if (disposing)
+                {
+                    // Dispose managed state (managed objects)
+                    var disposableUdpAgent = UdpAgent as IDisposable;
+                    disposableUdpAgent?.Dispose();
+                    var disposableState = m_CurrentState as IDisposable;
+                    disposableState?.Dispose();
+                }
+
+                // Free unmanaged resources (unmanaged objects) and override finalizer
+
+                // Done
+                m_DisposedOf = true;
+            }
+        }
+        bool m_DisposedOf;
+
+        /// <summary>
+        /// Current state of the node.
+        /// </summary>
+        NodeState m_CurrentState;
+    }
+
+    /// <summary>
+    /// Not yet implemented, TODO as we start working on redundancy.  Mostly kept so that comments can reference it :)
+    /// </summary>
+    class BackupNode : ClusterNode
+    {
+        BackupNode()
+            : base(new ClusterNodeConfig(), null)
+        {
+            throw new NotImplementedException();
         }
     }
 }

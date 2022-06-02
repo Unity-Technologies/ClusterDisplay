@@ -11,8 +11,7 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class TestArguments
     {
-        private const string commonArguments =
-                "-clusterDebug " +
+        const string commonArguments =
                 "-batchMode " +
                 "-replaceHeadlessEmitter " +
                 "-delayRepeaters " +
@@ -34,12 +33,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestCommonArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691";
 
             CommandLineParser.Override(cmd.Split(' ').ToList());
-
-            Assert.That(CommandLineParser.debugFlag.Defined);
-            Assert.That(CommandLineParser.debugFlag.Value);
 
             Assert.That(CommandLineParser.replaceHeadlessEmitter.Defined);
             Assert.That(CommandLineParser.replaceHeadlessEmitter.Value);
@@ -78,7 +74,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestEmitterArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.emitterSpecified.Defined);
@@ -93,17 +89,14 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(CommandLineParser.multicastAddress.Defined);
             Assert.That(CommandLineParser.multicastAddress.Value == "224.0.1.0");
 
-            Assert.That(CommandLineParser.rxPort.Defined);
-            Assert.That(CommandLineParser.rxPort.Value == 25691);
-
-            Assert.That(CommandLineParser.txPort.Defined);
-            Assert.That(CommandLineParser.txPort.Value == 25692);
+            Assert.That(CommandLineParser.port.Defined);
+            Assert.That(CommandLineParser.port.Value == 25691);
         }
 
         [Test]
         public void TestRepeaterArguments()
         {
-            var cmd = commonArguments + "-node 1 224.0.1.0:25692,25691";
+            var cmd = commonArguments + "-node 1 224.0.1.0:25692";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.repeaterSpecified.Defined);
@@ -115,28 +108,23 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(CommandLineParser.multicastAddress.Defined);
             Assert.That(CommandLineParser.multicastAddress.Value == "224.0.1.0");
 
-            Assert.That(CommandLineParser.rxPort.Defined);
-            Assert.That(CommandLineParser.rxPort.Value == 25692);
-
-            Assert.That(CommandLineParser.txPort.Defined);
-            Assert.That(CommandLineParser.txPort.Value == 25691);
+            Assert.That(CommandLineParser.port.Defined);
+            Assert.That(CommandLineParser.port.Value == 25692);
         }
 
         [Test]
         public void TestClusterParamsFromArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691,25692";
+            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25690";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             var clusterParams = ClusterParams.FromCommandLine();
             var expected = new ClusterParams
             {
-                DebugFlag = true,
                 ClusterLogicSpecified = true,
                 EmitterSpecified = true,
                 RepeaterCount = 4,
-                RXPort = 25691,
-                TXPort = 25692,
+                Port = 25690,
                 MulticastAddress = "224.0.1.0",
                 AdapterName = "Ethernet",
                 TargetFps = 60,
@@ -149,19 +137,17 @@ namespace Unity.ClusterDisplay.Tests
             };
             Assert.That(clusterParams, Is.EqualTo(expected));
 
-            cmd = "-node 4 224.0.1.2:25692,25691 -disableQuadroSync";
+            cmd = "-node 4 224.0.1.2:25690 -disableQuadroSync";
             CommandLineParser.Override(cmd.Split(' ').ToList());
             clusterParams = ClusterParams.FromCommandLine();
 
             expected = new ClusterParams
             {
-                DebugFlag = false,
                 ClusterLogicSpecified = true,
                 EmitterSpecified = false,
                 NodeID = 4,
                 RepeaterCount = 0,
-                RXPort = 25692,
-                TXPort = 25691,
+                Port = 25690,
                 MulticastAddress = "224.0.1.2",
                 TargetFps = -1,
                 DelayRepeaters = false,

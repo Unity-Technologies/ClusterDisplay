@@ -75,10 +75,10 @@ namespace Unity.ClusterDisplay.Tests
 
             // ============= Initialization ===========
             var guid = Guid.NewGuid();
-            var replicatorEmitter = new TransformReplicator(guid, sourceTransform);
+            using var replicatorEmitter = new TransformReplicator(guid, sourceTransform);
             replicatorEmitter.Initialize(ReplicatorMode.Emitter);
 
-            var replicatorRepeater = new TransformReplicator(guid, destTransform);
+            using var replicatorRepeater = new TransformReplicator(guid, destTransform);
             replicatorRepeater.Initialize(ReplicatorMode.Repeater);
 
             // Also test with an editor link
@@ -179,11 +179,11 @@ namespace Unity.ClusterDisplay.Tests
             var guid = Guid.NewGuid();
 
             var propertyInfo = typeof(SomeComponent).GetProperty("MyProperty");
-            var replicatorEmitter =
+            using var replicatorEmitter =
                 new GenericPropertyReplicatorImpl<float>(guid, new PropertyMember(sourceComponent, propertyInfo));
             replicatorEmitter.Initialize(ReplicatorMode.Emitter);
 
-            var replicatorRepeater =
+            using var replicatorRepeater =
                 new GenericPropertyReplicatorImpl<float>(guid, new PropertyMember(destComponent, propertyInfo));
             replicatorRepeater.Initialize(ReplicatorMode.Repeater);
 

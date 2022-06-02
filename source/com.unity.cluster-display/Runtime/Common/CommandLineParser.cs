@@ -229,8 +229,6 @@ namespace Unity.ClusterDisplay
         internal const string k_EmitterNodeTypeArgument = "-emitterNode";
         internal const string k_RepeaterNodeTypeArgument = "-node";
 
-        internal static readonly BoolArgument debugFlag                     = new BoolArgument("-clusterDebug");
-
         internal static readonly BoolArgument emitterSpecified              = new BoolArgument("-emitterNode");
         internal static readonly BoolArgument headlessEmitter               = new BoolArgument("-batchMode");
         internal static readonly BoolArgument replaceHeadlessEmitter        = new BoolArgument("-replaceHeadlessEmitter");
@@ -253,15 +251,13 @@ namespace Unity.ClusterDisplay
 
         internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
         internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);
-        internal static readonly IntArgument rxPort                         = new IntArgument(GetNodeType, ParseRXPort);
-        internal static readonly IntArgument txPort                         = new IntArgument(GetNodeType, ParseTXPort);
+        internal static readonly IntArgument port                           = new IntArgument(GetNodeType, ParsePort);
 
         internal static readonly IntArgument handshakeTimeout               = new IntArgument("-handshakeTimeout");
         internal static readonly IntArgument communicationTimeout           = new IntArgument("-communicationTimeout");
 
         internal readonly static BaseArgument[] baseArguments = new BaseArgument[]
         {
-            debugFlag,
             emitterSpecified,
             headlessEmitter,
             replaceHeadlessEmitter,
@@ -276,8 +272,7 @@ namespace Unity.ClusterDisplay
             overscan,
             adapterName,
             multicastAddress,
-            rxPort,
-            txPort,
+            port,
             handshakeTimeout,
             communicationTimeout,
             disableQuadroSync
@@ -448,35 +443,21 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            ParseMulticastAddressAndPort(startIndex + addressStartOffset, out address, out var rx, out var tx);
-            rxPort.SetValue(rx);
-            txPort.SetValue(tx);
+            ParseMulticastAddressAndPort(startIndex + addressStartOffset, out address, out var portValue);
+            port.SetValue(portValue);
 
             return true;
         }
 
-        private static bool ParseRXPort(string argumentName, out int port)
+        private static bool ParsePort(string argumentName, out int portValue)
         {
-            port = -1;
-            if (!TryParsePorts(out port, out var tx))
+            portValue = -1;
+            if (!TryParsePort(out portValue))
             {
                 return false;
             }
 
-            txPort.SetValue(tx);
-
-            return true;
-        }
-
-        private static bool ParseTXPort(string argumentName, out int port)
-        {
-            port = -1;
-            if (!TryParsePorts(out var rx, out port))
-            {
-                return false;
-            }
-
-            rxPort.SetValue(rx);
+            port.SetValue(portValue);
 
             return true;
         }
@@ -508,14 +489,13 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static bool TryParsePorts(out int rxPort, out int txPort)
+        private static bool TryParsePort(out int portValue)
         {
-            rxPort = -1;
-            txPort = -1;
+            portValue = -1;
             if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
                 return false;
 
-            ParsePorts(startIndex + addressStartOffset, out rxPort, out txPort);
+            ParsePortFromAddress(startIndex + addressStartOffset, out portValue);
 
             return true;
         }
@@ -558,45 +538,28 @@ namespace Unity.ClusterDisplay
                     $"Unable to parse multicast address: \"{multicastAddress}\", format should be: (multicast address):(rx port),(tx port)");
         }
 
-        private static void ParsePorts(int startIndex, out int rxPort, out int txPort)
+        private static void ParsePortFromAddress(int startIndex, out int portValue)
         {
-            rxPort = -1;
-            txPort = -1;
+            portValue = -1;
 
             if (!ValidateStartIndex(startIndex))
                 throw new Exception(
-                    "Unable to parse RX and TX ports, format should be: (multicast address):(rx port),(tx port)");
+                    "Unable to parse port, format should be: (multicast address):port");
 
             int colonIndex = Arguments[startIndex].IndexOf(':');
             if (colonIndex == -1)
                 throw new Exception(
-                    "Unable to parse RX and TX ports, the port separator: \":\" is missing. Format should be: (multicast address):(rx port),(tx port)");
+                    "Unable to parse port, the port separator: \":\" is missing. Format should be: (multicast address):port");
 
-            string ports = Arguments[startIndex].Substring(colonIndex + 1);
-
-            int indexOfSeparator = ports.IndexOf(',');
-            if (indexOfSeparator == -1)
-                throw new Exception(
-                    "RX and TX port separator: \",\" is missing, format should be: (ip address):(rx port),(tx port)");
-
-            if (indexOfSeparator + 1 >= ports.Length)
-                throw new Exception(
-                    "Unable to parse RX and TX port argument, format should be: (ip address):(rx port),(tx port)");
-
-            string rxPortStr = ports.Substring(0, indexOfSeparator);
-            if (!int.TryParse(rxPortStr, out rxPort))
-                throw new Exception($"RX port argument: \"{rxPortStr}\" is invalid.");
-
-            string txPortStr = ports.Substring(indexOfSeparator + 1);
-            if (!int.TryParse(txPortStr, out txPort))
-                throw new Exception($"TX port argument: \"{rxPortStr}\" is invalid.");
+            string portStr = Arguments[startIndex].Substring(colonIndex + 1);
+            if (!int.TryParse(portStr, out portValue))
+                throw new Exception($"Port argument: \"{portStr}\" is invalid.");
         }
 
-        private static void ParseMulticastAddressAndPort(int startIndex, out string multicastAddress, out int rxPort,
-            out int txPort)
+        private static void ParseMulticastAddressAndPort(int startIndex, out string multicastAddress, out int portValue)
         {
             ParseMulticastAddress(startIndex, out multicastAddress);
-            ParsePorts(startIndex, out rxPort, out txPort);
+            ParsePortFromAddress(startIndex, out portValue);
         }
 
         internal static bool TryParseVector2Int(string argumentName, out Vector2Int value, bool required = false)

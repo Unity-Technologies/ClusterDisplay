@@ -39,7 +39,6 @@ namespace Unity.ClusterDisplay
 
         void CleanUp ()
         {
-            ClusterSyncInstance?.ShutdownAllClusterNodes();
             ClusterSyncInstance?.DisableClusterDisplay();
             ServiceLocator.Withdraw<ClusterSync>();
         }

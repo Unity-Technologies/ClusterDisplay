@@ -1,11 +1,8 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -238,7 +235,6 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             settings.DeleteRegistryKey = EditorGUILayout.Toggle(new GUIContent("Delete registry key",
                     "Enable if you are having trouble running in Exclusive Fullscreen"),
                 settings.DeleteRegistryKey);
-            settings.UseDeprecatedArgs = EditorGUILayout.Toggle("Use deprecated command line", settings.UseDeprecatedArgs);
             settings.ExtraArgs = EditorGUILayout.TextField("Extra command line arguments", settings.ExtraArgs);
 
             if (GUILayout.Button("Run Selected Player") && m_ProjectListView.index >= 0 && m_PlayerList.Count > m_ProjectListView.index)
@@ -254,8 +250,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                         settings.DeleteRegistryKey,
                         settings.HandshakeTimeout,
                         settings.Timeout,
-                        settings.ExtraArgs,
-                        settings.UseDeprecatedArgs)));
+                        settings.ExtraArgs)));
                 m_LaunchCancellationTokenSource = new CancellationTokenSource();
 
                 _ = m_Server.SyncAndLaunch(launchData, m_LaunchCancellationTokenSource.Token).WithErrorHandling(LogException);
