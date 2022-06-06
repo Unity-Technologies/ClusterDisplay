@@ -53,6 +53,7 @@ namespace Unity.ClusterDisplay.Scripting
         }
     }
 
+    [SpecializedReplicator(typeof(Transform))]
     class TransformReplicator : ReplicatorBase<TransformMessage>
     {
         Transform m_Target;

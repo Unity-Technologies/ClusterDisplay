@@ -8,6 +8,20 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay.Scripting
 {
+    /// <summary>
+    /// Apply this attribute to a class that handles replication
+    /// logic for a specific component type.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    class SpecializedReplicatorAttribute : Attribute
+    {
+        public SpecializedReplicatorAttribute(Type componentType)
+        {
+            ComponentType = componentType;
+        }
+
+        public Type ComponentType { get; }
+    }
 
 #if UNITY_EDITOR
     [InitializeOnLoad]
@@ -16,12 +30,13 @@ namespace Unity.ClusterDisplay.Scripting
     [DisallowMultipleComponent]
     public class ClusterReplication : MonoBehaviour, ISerializationCallbackReceiver
     {
+
         static Dictionary<Type, Func<ReplicationTarget,IReplicator>> s_SpecializedReplicators = new();
 
         struct ReplicationUpdate { }
 
         /// <summary>
-        /// For editor and serialization only. Do not use for business logic. Use
+        /// For inspector and serialization only. Do not use for business logic. Use
         /// <see cref="m_Replicators"/> instead.
         /// </summary>
         [SerializeField]
@@ -31,12 +46,28 @@ namespace Unity.ClusterDisplay.Scripting
 
         static ClusterReplication()
         {
-            RegisterSpecializedReplicator<Transform>(target =>
-                new TransformReplicator(target.Guid, target.Component as Transform));
+            foreach (var(replicatorType, attribute) in AttributeUtility.GetAllTypes<SpecializedReplicatorAttribute>())
+            {
+                var ctor = replicatorType.GetConstructor(new []{
+                    typeof(Guid), attribute.ComponentType
+                });
+
+                if (ctor != null)
+                {
+                    Debug.Log($"Found specialized replicator {replicatorType.Name} for {attribute.ComponentType}");
+                    RegisterSpecializedReplicator(attribute.ComponentType,
+                        target => ctor.Invoke(new object[] {target.Guid, target.Component}) as IReplicator);
+                }
+                else
+                {
+                    Debug.LogError("Specialized replicator must have a publicly accessible constructor with" +
+                        " signature (Guid, Component)");
+                }
+            }
         }
 
-        internal static void RegisterSpecializedReplicator<T>(Func<ReplicationTarget, IReplicator> createFunc) =>
-            s_SpecializedReplicators.Add(typeof(T), createFunc);
+        internal static void RegisterSpecializedReplicator(Type type, Func<ReplicationTarget, IReplicator> createFunc) =>
+            s_SpecializedReplicators.Add(type, createFunc);
 
         internal static bool HasSpecializedReplicator(Type t) => s_SpecializedReplicators.TryGetValue(t, out _);
 
