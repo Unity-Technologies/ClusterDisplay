@@ -6,6 +6,7 @@ using Unity.ClusterDisplay.Graphics.Tests;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using Unity.ClusterDisplay.Graphics;
 
 public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
 {
@@ -42,6 +43,7 @@ public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
                 projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
                 projection.Position = cameraTransform.position;
                 projection.Rotation = cameraTransform.rotation;
+                projection.NodeID = 0;
                 projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
             },
             profileName == "FilmGrain"
@@ -64,6 +66,7 @@ public class CameraOverrideProjectionTest : ClusterRendererTestReferenceCamera
             projection.Overrides = CameraOverrideProjection.OverrideProperty.All;
             projection.Position = cameraTransform.position;
             projection.Rotation = cameraTransform.rotation;
+            projection.NodeID = 0;
             projection.ProjectionMatrix = m_ReferenceCamera.projectionMatrix;
         });
     }

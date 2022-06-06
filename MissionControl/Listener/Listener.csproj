@@ -26,14 +26,17 @@
       <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\LaunchInfo.cs">
         <Link>Common\LaunchInfo.cs</Link>
       </Compile>
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\LocalNetworkAdapter.cs">
+        <Link>Common\LocalNetworkAdapter.cs</Link>
+      </Compile>
       <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\MessageBufferExtensions.cs">
         <Link>Common\MessageBufferExtensions.cs</Link>
       </Compile>
       <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\MessageHeader.cs">
         <Link>Common\MessageHeader.cs</Link>
       </Compile>
-      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\NetworkUtils.cs">
-        <Link>Common\NetworkUtils.cs</Link>
+      <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\NetworkUtilities.cs">
+        <Link>Common\NetworkUtilities.cs</Link>
       </Compile>
       <Compile Include="..\com.unity.cluster-display.mission-control\Editor\Common\NodeInfo.cs">
         <Link>Common\NodeInfo.cs</Link>
