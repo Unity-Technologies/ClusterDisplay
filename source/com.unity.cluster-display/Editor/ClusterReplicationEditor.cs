@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using Unity.ClusterDisplay.Scripting;
 using Unity.ClusterDisplay.Utils;
 using UnityEditor;
@@ -135,10 +136,16 @@ namespace Unity.ClusterDisplay.Editor
             serializedObject.ApplyModifiedProperties();
         }
 
-        static string[] GetPropertyNames(object obj) =>
-            obj.GetType().GetProperties()
+        static string[] GetPropertyNames(object obj)
+        {
+            var type = obj.GetType();
+            var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
                 .Where(info => info.GetSetMethod(nonPublic: false) != null && info.PropertyType.IsUnManaged())
-                .Select(info => info.Name).ToArray();
+                .Select(info => info.Name);
+            var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Select(info => info.Name);
+            return properties.Concat(fields).ToArray();
+        }
 
         public override void OnInspectorGUI()
         {

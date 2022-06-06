@@ -77,9 +77,9 @@ namespace Unity.ClusterDisplay.Scripting
                 OperatingMode = Mode.Emitter;
             }
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
             OperatingMode = Mode.Editor;
-    #endif
+#endif
 
             m_StateCapture = GetCurrentState();
             m_EventSubscriber = EventBus.Subscribe(msg =>
@@ -203,7 +203,6 @@ namespace Unity.ClusterDisplay.Scripting
         [SerializeField]
         string m_Property;
 
-
         [SerializeField]
         bool m_IsValid;
 
@@ -224,7 +223,7 @@ namespace Unity.ClusterDisplay.Scripting
         public bool IsValid
         {
             get => m_IsValid;
-            set => m_IsValid = value;
+            internal set => m_IsValid = value;
         }
     }
 }
