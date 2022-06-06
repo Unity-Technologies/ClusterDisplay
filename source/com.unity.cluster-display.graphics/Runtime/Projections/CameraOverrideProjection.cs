@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.Graphics
                     rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
             }
 
-            ClusterDisplayState.TryGetRuntimeNodeId(out var nodeId); // I don't want to throw here since this is rendering code.
+            ClusterDisplayState.TryGetRuntimeNodeId(out var nodeId); // I don't check if cluster sync is active since this is rendering code.
 
             m_BlitCommand = new BlitCommand(
                 m_RenderTarget,
