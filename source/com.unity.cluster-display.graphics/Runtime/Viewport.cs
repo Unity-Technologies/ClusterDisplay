@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -29,10 +29,10 @@ namespace Unity.ClusterDisplay.Graphics
             return viewportSubsection;
         }
         
-        public Rect GetSubsectionWithOverscan(int tileIndex)
+        public Rect GetSubsectionWithOverscan(int tileIndex, Vector2Int resolution)
         {
             var viewportSubsection = GetSubsectionWithoutOverscan(tileIndex);
-            return ApplyOverscan(viewportSubsection, m_OverscanInPixels);
+            return ApplyOverscan(viewportSubsection, m_OverscanInPixels, resolution);
         }
 
         // there's no *right* way to do it, it simply is a convention
@@ -56,9 +56,9 @@ namespace Unity.ClusterDisplay.Graphics
                 r.max.y + delta.y);
         }
 
-        public static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels)
+        public static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels, Vector2Int resolution)
         {
-            return ApplyOverscan(normalizedViewportSubsection, overscanInPixels, Screen.width, Screen.height);
+            return ApplyOverscan(normalizedViewportSubsection, overscanInPixels, resolution.x, resolution.y);
         }
 
         public static Rect ApplyOverscan(Rect normalizedViewportSubsection, int overscanInPixels, int viewportWidth, int viewportHeight)

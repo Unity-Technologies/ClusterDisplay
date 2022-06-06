@@ -116,7 +116,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 
-    class ClusterCameraManager
+    public class ClusterCameraManager
     {
         readonly List<Camera> m_ActiveCameras = new();
 

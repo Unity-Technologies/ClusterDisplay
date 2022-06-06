@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";
 
-        internal ProjectionPolicy ProjectionPolicy
+        public ProjectionPolicy ProjectionPolicy
         {
             get => m_ProjectionPolicy;
             set => m_ProjectionPolicy = value;
@@ -129,6 +129,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            if (CommandLineParser.overscan.Defined)
+                m_Settings.OverScanInPixels = CommandLineParser.overscan.Value;
+
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;

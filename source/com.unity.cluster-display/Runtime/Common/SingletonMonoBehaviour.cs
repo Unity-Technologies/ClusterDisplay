@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -8,7 +8,6 @@ namespace Unity.ClusterDisplay
     public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : SingletonMonoBehaviour<T>
     {
         private static T m_Instance;
-        protected static void SetInstance(T instance) => m_Instance = instance;
         
         protected abstract void OnAwake();
         private void Awake()

@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay.Graphics
             Rotation = 2,
             ProjectionMatrix = 4,
             NodeID = 8,
+            Resolution = 16,
             All = ~0
         }
 
@@ -48,6 +49,12 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_NodeID = value;
         }
 
+        public Vector2Int Resolution
+        {
+            get => m_Resolution;
+            set => m_Resolution = value;
+        }
+
         [SerializeField]
         OverrideProperty m_Overrides;
 
@@ -63,19 +70,26 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         int m_NodeID;
 
+        [SerializeField]
+        Vector2Int m_Resolution;
+
         RenderTexture m_RenderTarget;
         BlitCommand m_BlitCommand;
-
+    
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
-            var displaySize = new Vector2Int(Screen.width, Screen.height);
+            var displaySize = m_Overrides.HasFlag(OverrideProperty.Resolution) ? m_Resolution : new Vector2Int(Screen.width, Screen.height);
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
             GraphicsUtil.AllocateIfNeeded(ref m_RenderTarget, overscannedSize.x, overscannedSize.y);
+            // var previousRT = UnityEngine.RenderTexture.active;
+            // UnityEngine.RenderTexture.active = m_RenderTarget;
+            // GL.Clear(true, true, Color.black);
+            // UnityEngine.RenderTexture.active = previousRT;
 
             var postEffectsParams = new PostEffectsParams(displaySize);
             var viewport = new Viewport(new Vector2Int(1, 1), displaySize, Vector2.zero, clusterSettings.OverScanInPixels);
-            var subsection = viewport.GetSubsectionWithOverscan(0);
+            var subsection = viewport.GetSubsectionWithOverscan(0, displaySize);
 
             using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjectionAndScreenCoordOverride))
             {
@@ -87,15 +101,19 @@ namespace Unity.ClusterDisplay.Graphics
                     rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
             }
 
+            ClusterDisplayState.TryGetRuntimeNodeId(out var runtimeNodeId);
+            int nodeId = m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : runtimeNodeId;
+
+            var blitParams = new BlitParams(
+                displaySize,
+                clusterSettings.OverScanInPixels, Vector2.zero);
+
             m_BlitCommand = new BlitCommand(
                 m_RenderTarget,
-                new BlitParams(
-                        displaySize,
-                        clusterSettings.OverScanInPixels, Vector2.zero)
-                    .ScaleBias,
+                blitParams.ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias,
                 customBlitMaterial,
-                GetCustomBlitMaterialPropertyBlocks(m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : ClusterDisplayState.NodeID));
+                GetCustomBlitMaterialPropertyBlocks(nodeId));
         }
 
         public override void Present(PresentArgs args)

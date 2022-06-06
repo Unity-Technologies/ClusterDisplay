@@ -257,7 +257,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {
-                var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex);
+                var overscannedViewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileIndex, new Vector2Int(Screen.width, Screen.height));
 
                 var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
@@ -283,7 +283,7 @@ namespace Unity.ClusterDisplay.Graphics
                 camera,
                 RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
 
-            var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex);
+            var overscannedViewportSubsection = tileProjectionContext.UseDebugViewportSubsection ? tileProjectionContext.DebugViewportSubsection : tileProjectionContext.Viewport.GetSubsectionWithOverscan(tileProjectionContext.CurrentTileIndex, new Vector2Int(Screen.width, Screen.height));
 
             var asymmetricProjectionMatrix = tileProjectionContext.OriginalProjection.GetFrustumSlice(overscannedViewportSubsection);
 
