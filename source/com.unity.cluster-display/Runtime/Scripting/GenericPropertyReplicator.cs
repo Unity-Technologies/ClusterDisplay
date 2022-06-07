@@ -41,7 +41,9 @@ namespace Unity.ClusterDisplay.Scripting
             }
         }
 
-        public void OnEnable() => m_Impl?.OnEnable();
+        public void OnPreFrame() => m_Impl?.OnPreFrame();
+
+        public void OnEnable(ReplicatorMode mode, EditorLink link = null) => m_Impl?.OnEnable(mode, link);
 
         public void OnDisable() => m_Impl?.OnDisable();
 

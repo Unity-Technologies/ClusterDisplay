@@ -9,11 +9,11 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
+using Unity.ClusterDisplay.Utils;
 
 #if !UNITY_EDITOR
-using UnityEngine.PlayerLoop;
 using Unity.ClusterDisplay.Scripting;
-using Unity.ClusterDisplay.Utils;
 #endif
 
 #if CLUSTER_DISPLAY_HAS_MISSION_CONTROL && UNITY_EDITOR
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Scripting
         }
     }
 
-    class EditorLiveLink : IDisposable
+    class EditorLink : IDisposable
     {
         const int k_Port = 40000;
         UdpClient m_UdpClient;
@@ -53,31 +53,31 @@ namespace Unity.ClusterDisplay.Scripting
         readonly ConcurrentQueue<byte[]> m_ReceivedBytes = new();
         Task m_ReceiveTask;
 
-        struct EditorLiveLinkUpdate { }
+        struct EditorLinkUpdate { }
 
         public bool IsTransmitter { get; }
 
-        public EditorLiveLink(IClusterSyncState clusterSyncState)
+        public EditorLink(bool isTransmitter)
         {
-#if UNITY_EDITOR
-            IsTransmitter = true;
-            ClusterDebug.Log("[Editor Live Link] Initializing transmitter (this is an Editor instance)");
-            m_UdpClient = new UdpClient();
-
-#else
-            if (clusterSyncState is {NodeRole: NodeRole.Emitter})
+            IsTransmitter = isTransmitter;
+            if (IsTransmitter)
             {
-                ClusterDebug.Log("[Editor Live Link] Initializing sink (this is an Emitter)");
+                ClusterDebug.Log("[Editor Link] Initializing transmitter (this is an Editor instance)");
+                m_UdpClient = new UdpClient();
+            }
+            else
+            {
+                ClusterDebug.Log("[Editor Link] Initializing sink (this is an Emitter)");
                 m_UdpClient = new UdpClient(k_Port);
             }
 
-            PlayerLoopExtensions.RegisterUpdate<PreLateUpdate, EditorLiveLinkUpdate>(ProcessIncomingMessages);
-            m_ReceiveTask = ReceiveRawData(m_CancellationTokenSource.Token);
-#endif
-            if (m_UdpClient != null)
+            m_UdpClient.Client.ReceiveTimeout = 200;
+            m_UdpClient.Client.SendTimeout = 200;
+
+            PlayerLoopExtensions.RegisterUpdate<PreLateUpdate, EditorLinkUpdate>(ProcessIncomingMessages);
+            if (!IsTransmitter)
             {
-                m_UdpClient.Client.ReceiveTimeout = 200;
-                m_UdpClient.Client.SendTimeout = 200;
+                m_ReceiveTask = ReceiveRawData(m_CancellationTokenSource.Token);
             }
         }
 
@@ -90,7 +90,7 @@ namespace Unity.ClusterDisplay.Scripting
             var dgram = new byte[Marshal.SizeOf(message)];
             var bytes = message.StoreInBuffer(dgram);
 
-            ClusterDebug.Log($"[Editor Live Link] sending message to {endPoint} : {message.Guid}, {message.Contents}");
+            ClusterDebug.Log($"[Editor Link] sending message to {endPoint} : {message.Guid}, {message.Contents}");
 
             m_UdpClient.Send(dgram, bytes, endPoint);
 #else
@@ -113,12 +113,13 @@ namespace Unity.ClusterDisplay.Scripting
         {
             while (!token.IsCancellationRequested)
             {
-                ClusterDebug.Log("[Editor Live Link] Start receiving");
+                ClusterDebug.Log("[Editor Link] Start receiving");
                 var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                ClusterDebug.Log("[Editor Live Link] received message");
+                ClusterDebug.Log("[Editor Link] received message");
                 m_ReceivedBytes.Enqueue(result.Buffer);
             }
-            ClusterDebug.Log("[Editor Live Link] Stopped receiving");
+
+            ClusterDebug.Log("[Editor Link] Stopped receiving");
         }
 
 #if CLUSTER_DISPLAY_HAS_MISSION_CONTROL && UNITY_EDITOR
@@ -145,12 +146,11 @@ namespace Unity.ClusterDisplay.Scripting
 
         public void Dispose()
         {
+            ClusterDebug.Log("[Editor Link] Closing connections");
             m_CancellationTokenSource?.Dispose();
             m_UdpClient?.Dispose();
             m_ReceiveTask?.Dispose();
-#if !UNITY_EDITOR
-            PlayerLoopExtensions.DeregisterUpdate<EditorLiveLinkUpdate>(ProcessIncomingMessages);
-#endif
+            PlayerLoopExtensions.DeregisterUpdate<EditorLinkUpdate>(ProcessIncomingMessages);
         }
     }
 

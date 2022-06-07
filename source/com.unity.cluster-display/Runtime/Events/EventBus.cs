@@ -9,6 +9,15 @@ using IdType = Unity.Collections.FixedString128Bytes;
 
 namespace Unity.ClusterDisplay
 {
+    [Flags]
+    public enum EventBusFlags
+    {
+        None = 0,
+        ReadFromCluster = 1,
+        WriteToCluster = 2,
+        Loopback = 4
+    }
+
     /// <summary>
     /// This class provides a strongly-typed API for propagating events across the cluster
     /// (from Emitter to Repeaters).
@@ -20,15 +29,6 @@ namespace Unity.ClusterDisplay
     /// <typeparam name="TEvent">Type of the events managed by this bus.</typeparam>
     class EventBus<TEvent> : IDisposable where TEvent : unmanaged
     {
-        [Flags]
-        public enum ReadWriteFlags
-        {
-            None = 0,
-            ReadFromCluster = 1,
-            WriteToCluster = 2,
-            Loopback = 4
-        }
-
         /// <summary>
         /// Delegate for receiving a contiguous array of event objects.
         /// </summary>
@@ -56,31 +56,31 @@ namespace Unity.ClusterDisplay
             MemoryMarshal.AsBytes(m_OutBuffer.GetSubArray(0, m_OutBufferLength).AsReadOnlySpan());
 
         public EventBus(int id = (int)StateID.CustomEvents)
-            : this(ReadWriteFlags.None, id) { }
+            : this(EventBusFlags.None, id) { }
 
         public EventBus([NotNull] IClusterSyncState clusterSyncState, int id = (int)StateID.CustomEvents)
             : this(clusterSyncState.NodeRole switch
             {
-                NodeRole.Emitter => ReadWriteFlags.Loopback | ReadWriteFlags.WriteToCluster,
-                NodeRole.Repeater => ReadWriteFlags.ReadFromCluster,
-                NodeRole.Unassigned => ReadWriteFlags.None,
+                NodeRole.Emitter => EventBusFlags.Loopback | EventBusFlags.WriteToCluster,
+                NodeRole.Repeater => EventBusFlags.ReadFromCluster,
+                NodeRole.Unassigned => EventBusFlags.None,
                 _ => throw new ArgumentOutOfRangeException()
             }, id) { }
 
-        public EventBus(ReadWriteFlags flags, int id = (int)StateID.CustomEvents)
+        public EventBus(EventBusFlags flags, int id = (int)StateID.CustomEvents)
         {
             k_DataId = id;
-            if (flags.HasFlag(ReadWriteFlags.ReadFromCluster))
+            if (flags.HasFlag(EventBusFlags.ReadFromCluster))
             {
                 RepeaterStateReader.RegisterOnLoadDataDelegate(k_DataId, DeserializeAndPublish);
             }
 
-            if (flags.HasFlag(ReadWriteFlags.WriteToCluster))
+            if (flags.HasFlag(EventBusFlags.WriteToCluster))
             {
                 EmitterStateWriter.RegisterOnStoreCustomDataDelegate(k_DataId, SerializeAndFlush);
             }
 
-            if (flags.HasFlag(ReadWriteFlags.Loopback))
+            if (flags.HasFlag(EventBusFlags.Loopback))
             {
                 ClusterSyncLooper.onInstancePostFrame += PublishLoopbackEvents;
             }
