@@ -82,10 +82,6 @@ namespace Unity.ClusterDisplay.Graphics
             var overscannedSize = displaySize + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
 
             GraphicsUtil.AllocateIfNeeded(ref m_RenderTarget, overscannedSize.x, overscannedSize.y);
-            // var previousRT = UnityEngine.RenderTexture.active;
-            // UnityEngine.RenderTexture.active = m_RenderTarget;
-            // GL.Clear(true, true, Color.black);
-            // UnityEngine.RenderTexture.active = previousRT;
 
             var postEffectsParams = new PostEffectsParams(displaySize);
             var viewport = new Viewport(new Vector2Int(1, 1), displaySize, Vector2.zero, clusterSettings.OverScanInPixels);
@@ -101,7 +97,7 @@ namespace Unity.ClusterDisplay.Graphics
                     rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
             }
 
-            ClusterDisplayState.TryGetRuntimeNodeId(out var runtimeNodeId);
+            ClusterDisplayState.TryGetRuntimeNodeId(out var runtimeNodeId); // I don't check if cluster sync is active since this is rendering code.
             int nodeId = m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : runtimeNodeId;
 
             var blitParams = new BlitParams(
