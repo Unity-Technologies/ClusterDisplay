@@ -87,6 +87,8 @@ namespace Unity.ClusterDisplay.Graphics
                     rotation: m_Overrides.HasFlag(OverrideProperty.Rotation) ? m_Rotation : null);
             }
 
+            ClusterDisplayState.TryGetRuntimeNodeId(out var nodeId); // I don't check if cluster sync is active since this is rendering code.
+
             m_BlitCommand = new BlitCommand(
                 m_RenderTarget,
                 new BlitParams(
@@ -95,7 +97,7 @@ namespace Unity.ClusterDisplay.Graphics
                     .ScaleBias,
                 GraphicsUtil.k_IdentityScaleBias,
                 customBlitMaterial,
-                GetCustomBlitMaterialPropertyBlocks(m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : ClusterDisplayState.NodeID));
+                GetCustomBlitMaterialPropertyBlocks(m_Overrides.HasFlag(OverrideProperty.NodeID) ? m_NodeID : nodeId));
         }
 
         public override void Present(PresentArgs args)
