@@ -1,63 +1,88 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Utils
 {
-    public class AutoReleaseReference<T> where T : class, IDisposable
+    public class AutoReleaseReference<TKey, TClass>
+        where TKey : IEquatable<TKey>
+        where TClass : class, IDisposable
     {
-        T m_Disposable;
         int m_RefCount;
-        Func<T> m_CreateFunc;
+        Func<TKey, TClass> m_CreateFunc;
+
+        struct CountedReference
+        {
+            public TClass Value;
+            public int Count;
+        }
+
+        readonly Dictionary<TKey, CountedReference> m_References = new();
 
         public class SharedRef : IDisposable
         {
-            AutoReleaseReference<T> m_Ref;
+            TKey m_Key;
+            AutoReleaseReference<TKey, TClass> m_Ref;
+            TClass m_Value;
 
-            public SharedRef(AutoReleaseReference<T> autoReleaseRef)
+            public SharedRef(TKey key, AutoReleaseReference<TKey, TClass> autoReleaseRef)
             {
+                m_Key = key;
                 m_Ref = autoReleaseRef;
-                m_Ref.Reserve();
+                m_Value = m_Ref.Reserve(key);
             }
-
-            T Value => m_Ref.m_Disposable;
 
             public void Dispose()
             {
-                m_Ref.Release();
+                m_Ref.Release(m_Key);
             }
 
-            public static implicit operator T(SharedRef @ref) => @ref?.Value;
+            public static implicit operator TClass(SharedRef @ref) => @ref?.m_Value;
         }
 
-        public AutoReleaseReference(Func<T> createFunc)
+        public AutoReleaseReference(Func<TKey, TClass> createFunc)
         {
             m_CreateFunc = createFunc;
         }
 
-        public SharedRef GetReference()
+        public SharedRef GetReference(TKey arg)
         {
-            return new SharedRef(this);
+            return new SharedRef(arg, this);
         }
 
-        void Reserve()
+        TClass Reserve(TKey key)
         {
-            if (m_Disposable == null)
+            if (m_References.TryGetValue(key, out var reference))
             {
-                m_Disposable = m_CreateFunc();
+                reference.Count++;
+                m_References[key] = reference;
+                return reference.Value;
             }
 
-            m_RefCount++;
+            var instance = m_CreateFunc(key);
+            m_References.Add(key, new CountedReference
+            {
+                Value = instance,
+                Count = 1
+            });
+
+            return instance;
         }
 
-        void Release()
+        void Release(TKey key)
         {
-            if (m_Disposable == null) return;
+            if (!m_References.TryGetValue(key, out var reference)) return;
 
-            m_RefCount--;
-            if (m_RefCount == 0)
+            reference.Count--;
+
+            if (reference.Count == 0)
             {
-                m_Disposable.Dispose();
-                m_Disposable = null;
+                reference.Value.Dispose();
+                m_References.Remove(key);
+            }
+            else
+            {
+                m_References[key] = reference;
             }
         }
     }

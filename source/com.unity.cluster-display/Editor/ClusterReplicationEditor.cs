@@ -6,7 +6,6 @@ using Unity.ClusterDisplay.Utils;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Editor
 {
@@ -15,8 +14,11 @@ namespace Unity.ClusterDisplay.Editor
     {
         static class Contents
         {
+            public static readonly GUIContent EditorLinkLabel = EditorGUIUtility.TrTextContent("Editor Link");
             public static readonly GUIContent TargetListHeader =
                 EditorGUIUtility.TrTextContent("Replicated component properties");
+            public static readonly GUIContent CreateLinkAssetButton =
+                EditorGUIUtility.TrTextContent("Create new Link Config");
             public static readonly GUIContent InvalidPropertyIcon =
                 EditorGUIUtility.TrIconContent("console.warnicon.sml", "This property cannot be replicated");
         }
@@ -24,11 +26,13 @@ namespace Unity.ClusterDisplay.Editor
         ClusterReplication m_ClusterReplication;
         ReorderableList m_TargetsList;
         SerializedProperty m_ReplicationTargets;
+        SerializedProperty m_LinkConfigProperty;
 
         void OnEnable()
         {
             m_ClusterReplication = target as ClusterReplication;
             m_ReplicationTargets = serializedObject.FindProperty("m_ReplicationTargets");
+            m_LinkConfigProperty = serializedObject.FindProperty("m_EditorLinkConfig");
             CreateTargetsList();
         }
 
@@ -40,11 +44,11 @@ namespace Unity.ClusterDisplay.Editor
             }
 
             m_TargetsList = new ReorderableList(serializedObject,
-                    m_ReplicationTargets,
-                    draggable: true,
-                    displayHeader: true,
-                    displayAddButton: true,
-                    displayRemoveButton: true)
+                m_ReplicationTargets,
+                draggable: true,
+                displayHeader: true,
+                displayAddButton: true,
+                displayRemoveButton: true)
             {
                 drawHeaderCallback = rect => EditorGUI.LabelField(rect, Contents.TargetListHeader),
                 drawElementCallback = DrawElement,
@@ -150,8 +154,26 @@ namespace Unity.ClusterDisplay.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
+
+            using (var linkChanged = new EditorGUI.ChangeCheckScope())
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.PropertyField(m_LinkConfigProperty, Contents.EditorLinkLabel);
+                    if (GUILayout.Button(Contents.CreateLinkAssetButton))
+                    {
+                        m_LinkConfigProperty.objectReferenceValue = EditorLinkConfigEditor.CreateLinkConfig();
+                    }
+                }
+
+                if (linkChanged.changed)
+                {
+                    serializedObject.ApplyModifiedProperties();
+                    m_ClusterReplication.OnEditorLinkChanged();
+                }
+            }
+
             m_TargetsList.DoLayoutList();
-            serializedObject.ApplyModifiedProperties();
         }
     }
 }

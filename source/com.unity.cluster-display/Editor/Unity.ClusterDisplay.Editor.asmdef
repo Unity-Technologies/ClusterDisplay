@@ -2,7 +2,8 @@
     "name": "Unity.ClusterDisplay.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:0861eaad4777b824986b7d153336925a"
+        "GUID:0861eaad4777b824986b7d153336925a",
+        "GUID:1aca65411c9f6674b9a3fa0045bd8bc4"
     ],
     "includePlatforms": [
         "Editor"
@@ -13,6 +14,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.cluster-display.mission-control",
+            "expression": "0",
+            "define": "CLUSTER_DISPLAY_HAS_MISSION_CONTROL"
+        }
+    ],
     "noEngineReferences": false
 }

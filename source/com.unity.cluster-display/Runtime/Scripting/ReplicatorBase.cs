@@ -15,10 +15,11 @@ namespace Unity.ClusterDisplay.Scripting
     interface IReplicator : IDisposable
     {
         void OnPreFrame();
-        void OnEnable(ReplicatorMode mode, EditorLink link = null);
+        void OnEnable(ReplicatorMode mode);
         void OnDisable();
         void Update();
         bool IsValid { get; }
+        EditorLink EditorLink { get; set; }
     }
 
     readonly struct ReplicationMessage<T> where T : unmanaged
@@ -35,8 +36,6 @@ namespace Unity.ClusterDisplay.Scripting
 
     abstract class ReplicatorBase<TContents> : IReplicator where TContents : unmanaged, IEquatable<TContents>
     {
-        ReplicatorMode OperatingMode { get; set; } = ReplicatorMode.Disabled;
-
         Guid Guid { get; }
 
         IDisposable m_EventSubscriber;
@@ -50,6 +49,7 @@ namespace Unity.ClusterDisplay.Scripting
 
         EditorLink m_EditorLink;
         TContents m_StateCapture;
+        ReplicatorMode m_Mode;
 
         EventBus<ReplicationMessage<TContents>> EventBus { get; set; }
 
@@ -67,10 +67,9 @@ namespace Unity.ClusterDisplay.Scripting
             m_HasLinkMessage = true;
         }
 
-        public void OnEnable(ReplicatorMode mode, EditorLink link = null)
+        void InitEventBus()
         {
-            OperatingMode = mode;
-            var eventBusFlags = mode switch
+            var eventBusFlags = m_Mode switch
             {
                 ReplicatorMode.Emitter => EventBusFlags.Loopback | EventBusFlags.WriteToCluster,
                 ReplicatorMode.Repeater => EventBusFlags.ReadFromCluster,
@@ -88,12 +87,15 @@ namespace Unity.ClusterDisplay.Scripting
                     ClusterDebug.Log($"[Replicator] received eventbus message: {msg.Contents}");
                 }
             });
+        }
 
+        public void OnEnable(ReplicatorMode mode)
+        {
+            m_Mode = mode;
+            InitEventBus();
             m_StateCapture = GetCurrentState();
 
-            ClusterDebug.Log($"[Replicator] Enabled - {OperatingMode}, link? {(link == null ? "no" : "yes")}");
-
-            Link = link;
+            ClusterDebug.Log($"[Replicator] Enabled in {m_Mode} mode");
         }
 
         public void OnPreFrame()
@@ -104,7 +106,7 @@ namespace Unity.ClusterDisplay.Scripting
             // is actually a frame behind. After performing the restore,
             // the state of the property would appear "normal" (not delayed) to
             // other scripts on Update and LateUpdate of the current frame.
-            if (OperatingMode is ReplicatorMode.Emitter && m_PropertyChanged)
+            if (m_Mode is ReplicatorMode.Emitter && m_PropertyChanged)
             {
                 ApplyMessage(m_StateCapture);
                 m_PropertyChanged = false;
@@ -122,7 +124,7 @@ namespace Unity.ClusterDisplay.Scripting
 
             // Editor: just transmit the current state to the live link.
             // No replication logic.
-            if (OperatingMode is ReplicatorMode.Editor && Link is {} liveLink)
+            if (m_Mode is ReplicatorMode.Editor && EditorLink is {} liveLink)
             {
                 if (!newState.Equals(m_StateCapture))
                 {
@@ -136,7 +138,7 @@ namespace Unity.ClusterDisplay.Scripting
             }
 
             // Emitter is responsible for coordinating the replication
-            if (OperatingMode is ReplicatorMode.Emitter)
+            if (m_Mode is ReplicatorMode.Emitter)
             {
                 // Emitter should retransmit the live link messages as replication messages
                 if (m_HasLinkMessage)
@@ -168,7 +170,7 @@ namespace Unity.ClusterDisplay.Scripting
 
         public abstract bool IsValid { get; }
 
-        EditorLink Link
+        public EditorLink EditorLink
         {
             get => m_EditorLink;
             set
@@ -180,7 +182,7 @@ namespace Unity.ClusterDisplay.Scripting
 
                 m_EditorLink = value;
 
-                if (OperatingMode is ReplicatorMode.Emitter)
+                if (m_Mode is ReplicatorMode.Emitter)
                 {
                     m_EditorLink?.ConnectReceiver<TContents>(Guid, ReceiveLiveLinkMessage);
                 }
@@ -195,7 +197,7 @@ namespace Unity.ClusterDisplay.Scripting
         {
             m_EventSubscriber?.Dispose();
             EventBus?.Dispose();
-            Link = null;
+            EditorLink = null;
         }
     }
 

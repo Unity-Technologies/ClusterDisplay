@@ -37,6 +37,10 @@ namespace Unity.ClusterDisplay.Scripting
 
         struct ReplicationUpdate { }
 
+        [SerializeField]
+        EditorLinkConfig m_EditorLinkConfig;
+        bool m_EditorLinkConfigChanged;
+
         /// <summary>
         /// For inspector and serialization only. Do not use for business logic. Use
         /// <see cref="m_Replicators"/> instead.
@@ -46,19 +50,20 @@ namespace Unity.ClusterDisplay.Scripting
 
         Dictionary<ReplicationTarget, IReplicator> m_Replicators = new();
 
+
         // For efficiency, all instances of ClusterReplication should share a single
         // EditorLink.
-        static AutoReleaseReference<EditorLink> s_SharedEditorLink = new(CreateEditorLink);
-        AutoReleaseReference<EditorLink>.SharedRef m_EditorLinkReference;
+        static AutoReleaseReference<EditorLinkConfig, EditorLink> s_SharedEditorLink = new(CreateEditorLink);
+        AutoReleaseReference<EditorLinkConfig, EditorLink>.SharedRef m_EditorLinkReference;
 
         ReplicatorMode m_Mode = ReplicatorMode.Disabled;
 
-        static EditorLink CreateEditorLink()
+        static EditorLink CreateEditorLink(EditorLinkConfig config)
         {
 #if UNITY_EDITOR
-            return new EditorLink(true);
+            return new EditorLink(config, true);
 #else
-            return new EditorLink(false);
+            return new EditorLink(config, false);
 #endif
         }
 
@@ -102,43 +107,93 @@ namespace Unity.ClusterDisplay.Scripting
                 }
                 : ReplicatorMode.Editor;
 
+            ClusterDebug.Log($"[Cluster Replication] Enable - {m_Mode}");
+
             EnableReplicators();
+
+            if (m_EditorLinkConfig != null)
+                EnableEditorLink();
+
+            ClusterSyncLooper.onInstanceDoPreFrame += OnPreFrame;
+            PlayerLoopExtensions.RegisterUpdate<PostLateUpdate.DirectorLateUpdate, ReplicationUpdate>(UpdateReplicators);
+        }
+
+        void EnableEditorLink()
+        {
+            if (m_Mode is not (ReplicatorMode.Editor or ReplicatorMode.Emitter)) return;
+
+            Debug.Assert(m_EditorLinkConfig != null);
+            Debug.Assert(m_EditorLinkReference == null);
+            m_EditorLinkReference = s_SharedEditorLink.GetReference(m_EditorLinkConfig);
+
+            ClusterDebug.Log("[Cluster Replication] Enabling editor link");
+
+            foreach (var (_, replicator) in m_Replicators)
+            {
+                replicator.EditorLink = m_EditorLinkReference;
+            }
+        }
+
+        void DisableEditorLink()
+        {
+            ClusterDebug.Log("[Cluster Replication] Disabling editor link");
+            m_EditorLinkReference?.Dispose();
+            m_EditorLinkReference = null;
+
+            foreach (var (_, replicator) in m_Replicators)
+            {
+                replicator.EditorLink = null;
+            }
+        }
+
+        public void OnEditorLinkChanged()
+        {
+            ClusterDebug.Log("[Cluster Replication] Link config changed");
+            if (m_EditorLinkConfig != null)
+            {
+                if (isActiveAndEnabled)
+                {
+                    EnableEditorLink();
+                }
+            }
+            else
+            {
+                DisableEditorLink();
+            }
         }
 
         void EnableReplicators()
         {
-            if (m_Mode is ReplicatorMode.Editor or ReplicatorMode.Emitter)
-            {
-                m_EditorLinkReference = s_SharedEditorLink.GetReference();
-            }
-
             foreach (var (_, replicator) in m_Replicators)
             {
-                replicator.OnEnable(m_Mode, m_EditorLinkReference);
-                ClusterSyncLooper.onInstanceDoPreFrame += replicator.OnPreFrame;
+                replicator.OnEnable(m_Mode);
             }
-
-            PlayerLoopExtensions.RegisterUpdate<PostLateUpdate.DirectorLateUpdate, ReplicationUpdate>(UpdateReplicators);
         }
 
         void OnDisable()
         {
-            m_EditorLinkReference?.Dispose();
-            if (m_Mode is ReplicatorMode.Editor)
+            DisableEditorLink();
+
+            ClusterSyncLooper.onInstanceDoPreFrame -= OnPreFrame;
+            PlayerLoopExtensions.DeregisterUpdate<ReplicationUpdate>(UpdateReplicators);
+            DisableReplicators();
+        }
+
+        void OnPreFrame()
+        {
+            foreach (var (_, replicator) in m_Replicators)
             {
-                DisableReplicators();
+                replicator.OnPreFrame();
             }
         }
 
         void DisableReplicators()
         {
+            m_EditorLinkReference?.Dispose();
             foreach (var (_, replicator) in m_Replicators)
             {
                 replicator.OnDisable();
-                ClusterSyncLooper.onInstanceDoPreFrame -= replicator.OnPreFrame;
             }
-
-            PlayerLoopExtensions.DeregisterUpdate<ReplicationUpdate>(UpdateReplicators);
         }
 
         void UpdateReplicators()

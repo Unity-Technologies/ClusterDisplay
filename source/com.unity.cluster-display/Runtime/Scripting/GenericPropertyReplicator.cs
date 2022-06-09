@@ -43,17 +43,19 @@ namespace Unity.ClusterDisplay.Scripting
 
         public void OnPreFrame() => m_Impl?.OnPreFrame();
 
-        public void OnEnable(ReplicatorMode mode, EditorLink link = null) => m_Impl?.OnEnable(mode, link);
+        public void OnEnable(ReplicatorMode mode) => m_Impl?.OnEnable(mode);
 
         public void OnDisable() => m_Impl?.OnDisable();
 
         public void Update() => m_Impl?.Update();
         public bool IsValid => m_Impl?.IsValid ?? false;
-
-        public void Dispose()
+        public EditorLink EditorLink
         {
-            m_Impl?.Dispose();
+            get => m_Impl.EditorLink;
+            set => m_Impl.EditorLink = value;
         }
+
+        public void Dispose() => m_Impl?.Dispose();
 
         static IMemberAccessor CreateMemberAccessor(object obj, string memberName)
         {

@@ -12,15 +12,6 @@ using UnityEngine;
 using UnityEngine.PlayerLoop;
 using Unity.ClusterDisplay.Utils;
 
-#if !UNITY_EDITOR
-using Unity.ClusterDisplay.Scripting;
-#endif
-
-#if CLUSTER_DISPLAY_HAS_MISSION_CONTROL && UNITY_EDITOR
-using Unity.ClusterDisplay.MissionControl.Editor;
-using UnityEditor;
-#endif
-
 namespace Unity.ClusterDisplay.Scripting
 {
     interface IMessageProcessor
@@ -45,7 +36,7 @@ namespace Unity.ClusterDisplay.Scripting
 
     class EditorLink : IDisposable
     {
-        const int k_Port = 40000;
+        EditorLinkConfig m_Config;
         UdpClient m_UdpClient;
         CancellationTokenSource m_CancellationTokenSource = new();
         Dictionary<Guid, IMessageProcessor> m_EventHandlers = new();
@@ -57,8 +48,9 @@ namespace Unity.ClusterDisplay.Scripting
 
         public bool IsTransmitter { get; }
 
-        public EditorLink(bool isTransmitter)
+        public EditorLink(EditorLinkConfig config, bool isTransmitter)
         {
+            m_Config = config;
             IsTransmitter = isTransmitter;
             if (IsTransmitter)
             {
@@ -67,8 +59,8 @@ namespace Unity.ClusterDisplay.Scripting
             }
             else
             {
-                ClusterDebug.Log("[Editor Link] Initializing sink (this is an Emitter)");
-                m_UdpClient = new UdpClient(k_Port);
+                ClusterDebug.Log($"[Editor Link] Initializing sink (this is an Emitter) - listening on port {m_Config.Port}");
+                m_UdpClient = new UdpClient(m_Config.Port);
             }
 
             m_UdpClient.Client.ReceiveTimeout = 200;
@@ -83,9 +75,8 @@ namespace Unity.ClusterDisplay.Scripting
 
         public void Publish<T>(ReplicationMessage<T> message) where T : unmanaged
         {
-#if CLUSTER_DISPLAY_HAS_MISSION_CONTROL && UNITY_EDITOR
-            var endPoint = GetReceiverEndPoint();
-            if (endPoint == null) return;
+#if UNITY_EDITOR
+            var endPoint = m_Config.EndPoint;
 
             var dgram = new byte[Marshal.SizeOf(message)];
             var bytes = message.StoreInBuffer(dgram);
@@ -121,16 +112,6 @@ namespace Unity.ClusterDisplay.Scripting
 
             ClusterDebug.Log("[Editor Link] Stopped receiving");
         }
-
-#if CLUSTER_DISPLAY_HAS_MISSION_CONTROL && UNITY_EDITOR
-        static IPEndPoint GetReceiverEndPoint()
-        {
-            var settings = MissionControlSettings.instance;
-            return !string.IsNullOrEmpty(settings.LiveLinkReceiverAddress)
-                ? new IPEndPoint(IPAddress.Parse(settings.LiveLinkReceiverAddress), k_Port)
-                : null;
-        }
-#endif
 
         void ProcessIncomingMessages()
         {

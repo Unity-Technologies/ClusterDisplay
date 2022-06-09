@@ -15,7 +15,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl.Editor
 {
-    class MissionControlWindow : EditorWindow
+    public class MissionControlWindow : EditorWindow
     {
         Server m_Server;
         NodeListView m_NodeListView;
@@ -40,11 +40,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         CancellationTokenSource m_GeneralCancellationTokenSource;
 
         [MenuItem("Cluster Display/Mission Control")]
-        public static void ShowWindow()
+        public static MissionControlWindow ShowWindow()
         {
             var window = GetWindow<MissionControlWindow>();
             window.titleContent = new GUIContent("Cluster Display Mission Control");
             window.Show();
+            return window;
         }
 
         void Update()
@@ -206,15 +207,6 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 }
             }
 
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                settings.LiveLinkReceiverAddress = EditorGUILayout.DelayedTextField(new GUIContent("Live Link Receiver"), settings.LiveLinkReceiverAddress);
-                if (GUILayout.Button(new GUIContent("Choose active emitter")))
-                {
-                    settings.LiveLinkReceiverAddress = FindFirstActiveEmitter() ?? settings.LiveLinkReceiverAddress;
-                }
-            }
-
             var rect = GUILayoutUtility.GetRect(0, position.width, 0, position.height / 4);
             m_NodeListView?.OnGUI(rect);
 
@@ -281,7 +273,7 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             }
         }
 
-        string FindFirstActiveEmitter() =>
+        public string FindFirstActiveEmitter() =>
             m_Server.Nodes
                 .Join(MissionControlSettings.instance.NodeSettings,
                     info => info.Id,
