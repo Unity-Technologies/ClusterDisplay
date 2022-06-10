@@ -112,27 +112,34 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
     public class SyntaxReceiver : ISyntaxReceiver
     {
-        public MethodDeclarationSyntax[] methods => k_MethodList.ToArray();
-        readonly List<MethodDeclarationSyntax> k_MethodList = new List<MethodDeclarationSyntax>();
+        public (AttributeData clusterRPCAttrribute, MethodDeclarationSyntax method)[] rpcs => k_RPCsList.ToArray();
+        readonly List<(AttributeData clusterRPCAttrribute, MethodDeclarationSyntax method)> k_RPCsList = new List<(AttributeData clusterRPCAttrribute, MethodDeclarationSyntax method)>();
+
+        GeneratorExecutionContext m_Context;
+        public SyntaxReceiver (GeneratorExecutionContext context) => m_Context = context;
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
-            var methodNode = syntaxNode as MethodDeclarationSyntax;
-            if (methodNode == null)
+            var methodDeclarationSyntax = syntaxNode as MethodDeclarationSyntax;
+            if (methodDeclarationSyntax == null)
             {
                 return;
             }
 
             // Debug.Log($"Inspecting method: \"{methodNode.Identifier.ToFullString()}\" at path: \"{methodNode.SyntaxTree.FilePath}\".");
 
-            foreach (var attributeNodeLists in methodNode.AttributeLists)
+            foreach (var attributeNodeLists in methodDeclarationSyntax.AttributeLists)
             {
                 foreach (var attribute in attributeNodeLists.Attributes)
                 {
                     if (attribute.Name.ToString() != "ClusterRPC")
                         continue;
 
-                    k_MethodList.Add(methodNode);
+                    var semanticModel = m_Context.Compilation.GetSemanticModel(methodDeclarationSyntax.SyntaxTree);
+                    var methodSymbolInfo = semanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
+                    var attributeData = methodSymbolInfo.GetAttributes().First();
+
+                    k_RPCsList.Add((attributeData, methodDeclarationSyntax));
                     return;
                 }
             }
@@ -142,89 +149,55 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
     [Generator]
     public class RPCGenerator : ISourceGenerator
     {
-        int DetermineSizeOfPredefinedValueType (TypeInfo typeInfo)
-        {
-            switch (typeInfo.Type.SpecialType)
-            {
-                case SpecialType.System_Boolean:
-                    return Marshal.SizeOf<bool>();
-                case SpecialType.System_Char:
-                    return Marshal.SizeOf<char>();
-                case SpecialType.System_SByte:
-                    return Marshal.SizeOf<sbyte>();
-                case SpecialType.System_Byte:
-                    return Marshal.SizeOf<byte>();
-                case SpecialType.System_Int16:
-                    return Marshal.SizeOf<short>();
-                case SpecialType.System_UInt16:
-                    return Marshal.SizeOf<ushort>();
-                case SpecialType.System_Int32:
-                    return Marshal.SizeOf<int>();
-                case SpecialType.System_UInt32:
-                    return Marshal.SizeOf<uint>();
-                case SpecialType.System_Int64:
-                    return Marshal.SizeOf<long>();
-                case SpecialType.System_UInt64:
-                    return Marshal.SizeOf<ulong>();
-                case SpecialType.System_Decimal:
-                    return Marshal.SizeOf<decimal>();
-                case SpecialType.System_Single:
-                    return Marshal.SizeOf<float>();
-                case SpecialType.System_Double:
-                    return Marshal.SizeOf<double>();
-                default:
-                    throw new System.NotImplementedException($"The following type: \"{typeInfo.Type.SpecialType}\"");
-            }
-        }
+        ExpressionSyntax GenerateMarshalSizeOfValueType(string typeName) =>
+                SyntaxFactory.InvocationExpression(
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    SyntaxFactory.IdentifierName(nameof(Marshal)),
+                    SyntaxFactory.IdentifierName($"{nameof(Marshal.SizeOf)}<{typeName}>")));
 
-        int DetermineValueTypeByteSize (TypeSyntax typeSyntax, TypeInfo typeInfo)
+        ExpressionSyntax GenerateMarshalSizeOfValueType(TypeInfo typeInfo) =>
+            GenerateMarshalSizeOfValueType(typeInfo.Type.Name);
+
+        ExpressionSyntax GenerateMarshalSizeOfValueType(ITypeSymbol typeSymbol) =>
+            GenerateMarshalSizeOfValueType(typeSymbol.Name);
+
+        ExpressionSyntax GenerateMarshalSizeOfValueType(TypeSyntax typeSyntax, TypeInfo typeInfo)
         {
             if (!typeInfo.Type.IsValueType)
             {
                 throw new System.NullReferenceException($"Cannot determine size of non-value type: \"{typeInfo.Type.Name}\".");
             }
 
-            if (typeSyntax.IsKind(SyntaxKind.PredefinedType))
-            {
-                return DetermineSizeOfPredefinedValueType(typeInfo);
-            }
-
-            return 0;
+            return GenerateMarshalSizeOfValueType(typeInfo);
         }
 
-        int DetermineByteSizeOfArrayElementValueType (GeneratorExecutionContext context, ParameterSyntax parameterSyntax)
+        ExpressionSyntax GenerateSizeOfArrayElementType(GeneratorExecutionContext context, ParameterSyntax parameterSyntax)
         {
-            var typeInfo = context.Compilation.GetSemanticModel(parameterSyntax.Type.SyntaxTree).GetTypeInfo(parameterSyntax.Type);
+            var semanticModel = context.Compilation.GetSemanticModel(parameterSyntax.Type.SyntaxTree);
+            var typeInfo = semanticModel.GetSpeculativeTypeInfo(0, parameterSyntax.Type, SpeculativeBindingOption.BindAsTypeOrNamespace);
             var arrayTypeSymbol = typeInfo.Type as IArrayTypeSymbol;
 
-            if (!arrayTypeSymbol.ElementType.IsValueType)
-            {
-                throw new System.NotImplementedException($"Cannot determine byte size of non-value array element types.");
-            }
-
-            return DetermineValueTypeByteSize(
-                SyntaxFactory.ParseName(arrayTypeSymbol.ElementType.Name),
-                context.Compilation.GetSemanticModel(parameterSyntax.Type.SyntaxTree)
-                    .GetTypeInfo(SyntaxFactory.ParseName(arrayTypeSymbol.ElementType.Name)));
+            return GenerateMarshalSizeOfValueType(arrayTypeSymbol.ElementType);
         }
 
         ExpressionSyntax GenerateGetArrayLength(ParameterSyntax parameterSyntax) =>
             SyntaxFactory.MemberAccessExpression(
-                SyntaxKind.SimpleAssignmentExpression,
+                SyntaxKind.SimpleMemberAccessExpression,
                 SyntaxFactory.IdentifierName(parameterSyntax.Identifier.Text),
                 SyntaxFactory.IdentifierName("Length"));
 
-        (ParameterSyntax parameter, int elementByteSize, bool dynamicSize) DetermineParameterInfo (GeneratorExecutionContext context, ParameterSyntax parameter)
+        (ParameterSyntax parameter, ExpressionSyntax marshalSizeOf, bool dynamicSize) DetermineParameterInfo(GeneratorExecutionContext context, ParameterSyntax parameter)
         {
             var typeInfo = context.Compilation.GetSemanticModel(parameter.Type.SyntaxTree).GetTypeInfo(parameter.Type);
             if (typeInfo.Type.IsValueType)
             {
-                return (parameter, DetermineValueTypeByteSize(parameter.Type, typeInfo), false);
+                return (parameter, GenerateMarshalSizeOfValueType(parameter.Type, typeInfo), false);
             }
 
             else if (parameter.Type.IsKind(SyntaxKind.ArrayType))
             {
-                return (parameter, DetermineByteSizeOfArrayElementValueType(context, parameter), true);
+                return (parameter, GenerateSizeOfArrayElementType(context, parameter), true);
             }
 
             /*
@@ -243,25 +216,32 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
             throw new System.NotImplementedException($"The following parameter: \"{parameter.Type} {parameter.Identifier}\" is unsupported");
         }
 
-        (ParameterSyntax parameter, int elementByteSize, bool dynamicSize)[] DetermineAllParameterInfo(GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
+        (ParameterSyntax parameter, ExpressionSyntax marshalSizeOf, bool dynamicSize)[] DetermineAllParameterInfo(GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
             methodDeclarationSyntax.ParameterList.Parameters.Select(parameter => DetermineParameterInfo(context, parameter)).ToArray();
 
-        ExpressionSyntax GenerateTotalParametersSizeArgument (GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax)
+        ExpressionSyntax GenerateTotalParametersSizeArgument(GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
+            SyntaxFactory.ParseExpression("0" +
+                DetermineAllParameterInfo(context, methodDeclarationSyntax)
+                    .Aggregate(
+                        "",
+                        (aggregate, next) => next.dynamicSize ?
+                            $" + /*Dynamic Block Size Header*/ Marshal.SizeOf<int>() + {next.marshalSizeOf} * {GenerateGetArrayLength(next.parameter)}" :
+                            $" + {next.marshalSizeOf}")).NormalizeWhitespace();
+
+        ArgumentSyntax GenerateRPCExecutionStageForRPCCall(GeneratorExecutionContext context, AttributeData clusterRPCAttribute, MethodDeclarationSyntax methodDeclarationSyntax)
         {
-            var parameterInfos = DetermineAllParameterInfo(context, methodDeclarationSyntax);
-            int totalNonDynamicParameterByteSize = parameterInfos.Sum(parameterInfo => parameterInfo.dynamicSize ? parameterInfo.elementByteSize : 0);
-
-            if (parameterInfos.Any(parameter => parameter.dynamicSize))
-            {
-                return SyntaxFactory.ParseExpression(parameterInfos.Aggregate(
-                    $"{totalNonDynamicParameterByteSize + 4}",
-                    (aggregate, next) => $" + {next.elementByteSize} * {GenerateGetArrayLength(next.parameter)}"));
-            }
-
-            return SyntaxFactory.ParseExpression($"{totalNonDynamicParameterByteSize + 4}");
+            var semanticModel = context.Compilation.GetSemanticModel(methodDeclarationSyntax.SyntaxTree);
+            var methodSymbolInfo = semanticModel.GetDeclaredSymbol(methodDeclarationSyntax);
+            var attributeData = methodSymbolInfo.GetAttributes().First();
+            // var rpcExecutionStageArgument = clusterRPCAttribute.ArgumentList.Arguments.FirstOrDefault(argument => argument);
+            return SyntaxFactory.Argument(SyntaxFactory.ParseName("0"));
+                // SyntaxFactory.MemberAccessExpression(
+                //     SyntaxKind.SimpleMemberAccessExpression,
+                //     SyntaxFactory.IdentifierName("RPCExecutionStage"),
+                //     SyntaxFactory.IdentifierName("Automatic")));
         }
 
-        StatementSyntax GenerateAppendRPCCall(GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
+        StatementSyntax GenerateAppendRPCCall(GeneratorExecutionContext context, AttributeData clusterRPCAttribute, MethodDeclarationSyntax methodDeclarationSyntax) =>
             SyntaxFactory.ExpressionStatement(
                 methodDeclarationSyntax.Modifiers.Contains(SyntaxFactory.Token(SyntaxKind.StaticKeyword)) ?
                     SyntaxFactory.InvocationExpression(
@@ -272,13 +252,8 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                             SyntaxFactory.ArgumentList(
                                 SyntaxFactory.SeparatedList(new[]
                                 {
-                                    SyntaxFactory.Argument(
-                                        SyntaxFactory.ParseExpression("0") // RPCExecutionStage.Automatic
-                                        /*SyntaxFactory.MemberAccessExpression(
-                                            SyntaxKind.SimpleMemberAccessExpression,
-                                            SyntaxFactory.IdentifierName("RPCExecutionStage"),
-                                            SyntaxFactory.IdentifierName("Automatic"))*/),
-                                        SyntaxFactory.Argument(GenerateTotalParametersSizeArgument(context, methodDeclarationSyntax)),
+                                    GenerateRPCExecutionStageForRPCCall(context, clusterRPCAttribute, methodDeclarationSyntax),
+                                    SyntaxFactory.Argument(GenerateTotalParametersSizeArgument(context, methodDeclarationSyntax)),
                                 }))) :
                     SyntaxFactory.InvocationExpression(
                         SyntaxFactory.MemberAccessExpression(
@@ -289,20 +264,15 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                                 SyntaxFactory.SeparatedList(new[]
                                 {
                                     SyntaxFactory.Argument(SyntaxFactory.IdentifierName("instance")),
-                                    SyntaxFactory.Argument(
-                                        SyntaxFactory.ParseExpression("0") // RPCExecutionStage.Automatic
-                                        /*SyntaxFactory.MemberAccessExpression(
-                                            SyntaxKind.SimpleMemberAccessExpression,
-                                            SyntaxFactory.IdentifierName("RPCExecutionStage"),
-                                            SyntaxFactory.IdentifierName("Automatic"))*/),
-                                            SyntaxFactory.Argument(GenerateTotalParametersSizeArgument(context, methodDeclarationSyntax)),
+                                    GenerateRPCExecutionStageForRPCCall(context, clusterRPCAttribute, methodDeclarationSyntax),
+                                    SyntaxFactory.Argument(GenerateTotalParametersSizeArgument(context, methodDeclarationSyntax)),
                                 }))));
 
 
-        BlockSyntax GenerateCaptureExecutionIfStatementBlock(GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
+        BlockSyntax GenerateCaptureExecutionIfStatementBlock(GeneratorExecutionContext context, AttributeData clusterRPCAttribute, MethodDeclarationSyntax methodDeclarationSyntax) =>
             SyntaxFactory.Block(SyntaxFactory.List(new StatementSyntax[]
             {
-                GenerateAppendRPCCall(context, methodDeclarationSyntax),
+                GenerateAppendRPCCall(context, clusterRPCAttribute, methodDeclarationSyntax),
                 /*
                 methodDeclarationSyntax.ParameterList.Parameters.Select<ParameterSyntax, StatementSyntax>(parameter =>
                 {
@@ -348,10 +318,10 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                 }) as StatementSyntax*/
             }));
 
-        IfStatementSyntax GenerateCaptureExecutionIfStatement (GeneratorExecutionContext context, MethodDeclarationSyntax methodDeclarationSyntax) =>
+        IfStatementSyntax GenerateCaptureExecutionIfStatement (GeneratorExecutionContext context, AttributeData clusterRPCAttribute, MethodDeclarationSyntax methodDeclarationSyntax) =>
             SyntaxFactory.IfStatement(
                         SyntaxFactory.QualifiedName(SyntaxFactory.IdentifierName("RPCBufferIO"), SyntaxFactory.IdentifierName("CaptureExecution")),
-                        GenerateCaptureExecutionIfStatementBlock(context, methodDeclarationSyntax));
+                        GenerateCaptureExecutionIfStatementBlock(context, clusterRPCAttribute, methodDeclarationSyntax));
 
         InvocationExpressionSyntax GenerateInstanceMethodInvocation(GeneratorExecutionContext context, MethodDeclarationSyntax method) =>
             SyntaxFactory.InvocationExpression(
@@ -367,19 +337,19 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
         {
             var syntaxReceiver = context.SyntaxReceiver as SyntaxReceiver;
 
-            var methods = syntaxReceiver.methods;
+            var rpcs = syntaxReceiver.rpcs;
 
-            if (methods.Length == 0)
+            if (rpcs.Length == 0)
             {
                 return;
             }
             MethodRewriter methodRewriter = new MethodRewriter();
 
-            for (int mi = 0; mi < methods.Length; mi++)
+            for (int mi = 0; mi < rpcs.Length; mi++)
             {
                 try
                 {
-                    var type = methods[mi].Parent as TypeDeclarationSyntax;
+                    var type = rpcs[mi].method.Parent as TypeDeclarationSyntax;
 
                     var extensionClass = SyntaxFactory.ClassDeclaration(
                         attributeLists: SyntaxFactory.List<AttributeListSyntax>(),
@@ -396,10 +366,10 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                                 SyntaxFactory.TokenList(
                                     SyntaxFactory.Token(SyntaxKind.PublicKeyword),
                                     SyntaxFactory.Token(SyntaxKind.StaticKeyword)),
-                                methods[mi].ReturnType,
+                                rpcs[mi].method.ReturnType,
                                 explicitInterfaceSpecifier: null,
-                                identifier: SyntaxFactory.ParseToken($"Emit{methods[mi].Identifier}"),
-                                typeParameterList: methods[mi].TypeParameterList != null ? methods[mi].TypeParameterList : null,
+                                identifier: SyntaxFactory.ParseToken($"Emit{rpcs[mi].method.Identifier}"),
+                                typeParameterList: rpcs[mi].method.TypeParameterList != null ? rpcs[mi].method.TypeParameterList : null,
                                 parameterList: SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList<ParameterSyntax>(nodes: new[] {
                                     SyntaxFactory.Parameter(
                                         attributeLists: SyntaxFactory.List<AttributeListSyntax>(),
@@ -407,15 +377,15 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                                         type: SyntaxFactory.ParseTypeName(type.Identifier.ToString()),
                                         identifier: SyntaxFactory.ParseToken("instance"),
                                         @default: null)
-                                })).AddParameters(methods[mi].ParameterList.Parameters.ToArray()),
-                                constraintClauses: methods[mi].ConstraintClauses,
+                                })).AddParameters(rpcs[mi].method.ParameterList.Parameters.ToArray()),
+                                constraintClauses: rpcs[mi].method.ConstraintClauses,
                                 body: SyntaxFactory.Block(SyntaxFactory.List<StatementSyntax>(new StatementSyntax[]
                                 {
-                                    GenerateCaptureExecutionIfStatement(context, methods[mi]),
-                                    methods[mi].ReturnType.IsKind(SyntaxKind.PredefinedType) &&
-                                    ((methods[mi].ReturnType as PredefinedTypeSyntax).Keyword.ToString() == "void") ?
-                                        SyntaxFactory.ExpressionStatement(GenerateInstanceMethodInvocation(context, methods[mi])) :
-                                        SyntaxFactory.ReturnStatement(GenerateInstanceMethodInvocation(context, methods[mi])) as StatementSyntax
+                                    GenerateCaptureExecutionIfStatement(context, rpcs[mi].clusterRPCAttrribute, rpcs[mi].method),
+                                    rpcs[mi].method.ReturnType.IsKind(SyntaxKind.PredefinedType) &&
+                                    ((rpcs[mi].method.ReturnType as PredefinedTypeSyntax).Keyword.ToString() == "void") ?
+                                        SyntaxFactory.ExpressionStatement(GenerateInstanceMethodInvocation(context, rpcs[mi].method)) :
+                                        SyntaxFactory.ReturnStatement(GenerateInstanceMethodInvocation(context, rpcs[mi].method)) as StatementSyntax
                                 })),
                                 semicolonToken: SyntaxFactory.Token(SyntaxKind.None)
                         )));
