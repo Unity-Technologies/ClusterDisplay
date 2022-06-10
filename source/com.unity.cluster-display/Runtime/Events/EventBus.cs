@@ -181,6 +181,7 @@ namespace Unity.ClusterDisplay
         {
             EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.CustomEvents, SerializeAndFlush);
             RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.CustomEvents, DeserializeAndPublish);
+            m_OutBuffer.Dispose();
         }
     }
 }

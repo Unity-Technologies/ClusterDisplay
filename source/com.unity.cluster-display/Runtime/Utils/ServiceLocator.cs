@@ -42,6 +42,8 @@ namespace Unity.ClusterDisplay.Utils
         /// <typeparam name="T">The service type.</typeparam>
         public static void Provide<T>(T provider) where T : class => ServiceProvider<T>.Service = provider;
 
+        public static void Withdraw<T>() where T : class => ServiceProvider<T>.Service = null;
+
         static class ServiceProvider<T> where T : class
         {
             public static T Service { get; set; }

@@ -140,12 +140,6 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        static void OnLoad ()
-        {
-            ClusterDisplayManager.awake -= Initialize;
-            ClusterDisplayManager.awake += Initialize;
-        }
-
         internal static void Initialize ()
         {
             ClusterDebug.Log($"Initializing {nameof(RPCRegistry)}");
@@ -160,8 +154,6 @@ namespace Unity.ClusterDisplay.RPC
 
             onInitialized?.Invoke();
             onInitialized = null;
-
-            ClusterDisplayManager.awake -= Initialize;
         }
 
         public static bool MethodRegistered(ushort rpcId)

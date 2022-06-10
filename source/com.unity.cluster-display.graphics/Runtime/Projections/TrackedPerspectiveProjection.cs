@@ -91,8 +91,10 @@ namespace Unity.ClusterDisplay.Graphics
                         m_ProjectionSurfaces[nodeIndex].ScreenResolution,
                         clusterSettings.OverScanInPixels, Vector2.zero)
                     .ScaleBias,
-                GraphicsUtil.k_IdentityScaleBias);
-
+                GraphicsUtil.k_IdentityScaleBias,
+                customBlitMaterial,
+                GetCustomBlitMaterialPropertyBlocks(nodeIndex));
+            
             ClearPreviews();
             if (IsDebug)
             {

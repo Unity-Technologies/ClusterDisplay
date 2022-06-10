@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -14,6 +14,44 @@ namespace Unity.ClusterDisplay.Graphics
     {
         [SerializeField]
         bool m_IsDebug;
+
+        Material m_CustomBlitMaterial;
+        Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
+        MaterialPropertyBlock m_CustomBlitMaterialPropertyBlock;
+
+        protected Material customBlitMaterial => m_CustomBlitMaterial;
+
+        protected MaterialPropertyBlock GetCustomBlitMaterialPropertyBlocks(int index)
+        {
+            if (m_CustomBlitMaterialPropertyBlocks == null)
+            {
+                return m_CustomBlitMaterialPropertyBlock;
+            }
+
+            if (!m_CustomBlitMaterialPropertyBlocks.TryGetValue(index, out var materialPropertyBlock))
+            {
+                throw new System.ArgumentException($"There is no: {nameof(MaterialPropertyBlock)} for index: {index}");
+            }
+
+            if (materialPropertyBlock == null)
+            {
+                throw new System.ArgumentException($"NULL: {nameof(MaterialPropertyBlock)} for index: {index}");
+            }
+
+            return materialPropertyBlock;
+        }
+
+        public void SetCustomBlitMaterial(Material material, MaterialPropertyBlock materialPropertyBlock = null)
+        {
+            m_CustomBlitMaterial = material;
+            m_CustomBlitMaterialPropertyBlock = materialPropertyBlock;
+        }
+
+        public void SetCustomBlitMaterial(Material material, Dictionary<int, MaterialPropertyBlock> materialPropertyBlocks = null)
+        {
+            m_CustomBlitMaterial = material;
+            m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
+        }
 
         [SerializeField]
         int m_NodeIndexOverride;

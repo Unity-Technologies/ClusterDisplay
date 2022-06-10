@@ -275,7 +275,7 @@ namespace Unity.ClusterDisplay
                     parametersPayloadSize,
                     ref rpcsBufferPosition))
                 {
-                    ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrame(out var frame) ? frame : 0)}): No method available to execute RPC: {rpcId}");
+                    ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): No method available to execute RPC: {rpcId}");
                     return false;
                 }
 
@@ -300,7 +300,7 @@ namespace Unity.ClusterDisplay
         }
 
         static void LogMissingMethod (QueuedRPCCall queuedRPCCall) =>
-            ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrame(out var frame) ? frame : 0)}): No method available to execute RPC: {queuedRPCCall.rpcRequest.rpcId}");
+            ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): No method available to execute RPC: {queuedRPCCall.rpcRequest.rpcId}");
 
         static void ExecuteQueued (QueuedRPCCall queuedRPCCall)
         {

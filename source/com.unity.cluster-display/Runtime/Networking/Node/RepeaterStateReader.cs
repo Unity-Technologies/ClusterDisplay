@@ -107,6 +107,11 @@ namespace Unity.ClusterDisplay
 
                     RestoreEmitterFrameData(outBuffer);
                     nodeSyncState.OnReceivedEmitterFrameData();
+
+                    // We might still have messages available, but processing them before the LastFrameData we just
+                    // received could result in skipping a LastFrameData, so stop right now, nodeSyncState now has
+                    // something to do anyway.
+                    break;
                 }
             }
         }

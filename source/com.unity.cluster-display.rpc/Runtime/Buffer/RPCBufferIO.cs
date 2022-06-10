@@ -24,13 +24,13 @@ namespace Unity.ClusterDisplay.RPC
 
         const byte k_RPCStateID = 128;
 
-        static ulong Frame => ClusterDisplayState.TryGetFrame(out var frame) ? frame : 0;
+        static ulong Frame => ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0;
 
         [IsEmitterMarker]
         public static bool CaptureExecution =>
             rpcBuffer.IsCreated &&
-                (ClusterDisplayState.IsActive &&
-                ClusterDisplayState.TryGetNodeRole(out var nodeRole) && nodeRole is NodeRole.Emitter ||
+                (ClusterDisplayState.GetIsActive() &&
+                ClusterDisplayState.GetNodeRole() is NodeRole.Emitter ||
                 m_OverrideCaptureExecution);
 
         static bool m_OverrideCaptureExecution = false;
