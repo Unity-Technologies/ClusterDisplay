@@ -5,9 +5,10 @@ using UnityEngine;
 
 public class Hello : MonoBehaviour
 {
-    [ClusterRPC]
-    public void World (float plz)
+    private void Awake()
     {
-        System.Console.WriteLine(plz);
+        World(1.4f);
     }
-}
+
+    [ClusterRPC]
+    public void World(float plz) {if(RPCBufferIO.CaptureExecution){}Debug.Log(plz);}}

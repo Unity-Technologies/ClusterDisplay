@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using UnityEngine;
 using System.Reflection;
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.RPC
                     return;
 
                 if (cachedRPCRegistryEditor == null)
-                    cachedRPCRegistryEditor = Editor.CreateEditor(rpcRegistryInstance, typeof(RPCRegistryEditor)) as RPCRegistryEditor;
+                    cachedRPCRegistryEditor = UnityEditor.Editor.CreateEditor(rpcRegistryInstance, typeof(RPCRegistryEditor)) as RPCRegistryEditor;
                 cachedRPCRegistryEditor.OnInspectorGUI();
             }
         }

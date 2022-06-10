@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.RPC
     {
 #if UNITY_EDITOR
         [CustomEditor(typeof(SceneObjectsRegistry))]
-        public class SceneObjectsRegistryEditor : Editor
+        public class SceneObjectsRegistryEditor : UnityEditor.Editor
         {
             public override void OnInspectorGUI() => base.OnInspectorGUI();
         }
