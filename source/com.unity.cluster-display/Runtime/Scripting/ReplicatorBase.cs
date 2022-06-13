@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.Scripting
         TContents m_StateCapture;
         ReplicatorMode m_Mode;
 
-        EventBus<ReplicationMessage<TContents>> EventBus { get; set; }
+        internal EventBus<ReplicationMessage<TContents>> EventBus { get; private set; }
 
         protected ReplicatorBase(Guid guid)
         {
@@ -228,7 +228,11 @@ namespace Unity.ClusterDisplay.Scripting
             set => m_Property = value;
         }
 
-        public Guid Guid => m_Guid;
+        public Guid Guid
+        {
+            get => m_Guid;
+            set => m_Guid.FromGuid(value);
+        }
 
         public bool IsValid
         {

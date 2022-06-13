@@ -136,7 +136,8 @@ namespace Unity.ClusterDisplay.Scripting
         protected override void ApplyMessage(in T message)
         {
 #if UNITY_EDITOR
-            return;
+            if (!Application.isPlaying)
+                return;
 #endif
             m_MemberAccessor.SetValue(message);
         }

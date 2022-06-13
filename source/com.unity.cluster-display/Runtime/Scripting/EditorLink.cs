@@ -102,18 +102,27 @@ namespace Unity.ClusterDisplay.Scripting
 
         async Task ReceiveRawData(CancellationToken token)
         {
-            while (!token.IsCancellationRequested)
+            try
             {
-                ClusterDebug.Log("[Editor Link] Start receiving");
-                var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                ClusterDebug.Log("[Editor Link] received message");
-                m_ReceivedBytes.Enqueue(result.Buffer);
+                while (!token.IsCancellationRequested)
+                {
+                    ClusterDebug.Log("[Editor Link] Start receiving");
+                    var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
+                    ClusterDebug.Log("[Editor Link] received message");
+                    EnqueueReceivedData(result.Buffer);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancelled. We can return normally.
             }
 
             ClusterDebug.Log("[Editor Link] Stopped receiving");
         }
 
-        void ProcessIncomingMessages()
+        internal void EnqueueReceivedData(byte[] data) => m_ReceivedBytes.Enqueue(data);
+
+        internal void ProcessIncomingMessages()
         {
             while (m_ReceivedBytes.TryDequeue(out var bytes))
             {
@@ -128,14 +137,15 @@ namespace Unity.ClusterDisplay.Scripting
         public void Dispose()
         {
             ClusterDebug.Log("[Editor Link] Closing connections");
-            m_CancellationTokenSource?.Dispose();
-            m_UdpClient?.Dispose();
-            m_ReceiveTask?.Dispose();
+            m_CancellationTokenSource.Cancel();
+            m_UdpClient?.Close();
+
+            m_CancellationTokenSource.Dispose();
             PlayerLoopExtensions.DeregisterUpdate<EditorLinkUpdate>(ProcessIncomingMessages);
         }
     }
 
-    static class TempExtensions
+    static class TaskExtensions
     {
         public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
         {

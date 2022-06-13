@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Utils
 
         public override string ToString() => ((Guid)this).ToString();
 
-        void FromGuid(Guid guid)
+        public void FromGuid(Guid guid)
         {
             ReadOnlySpan<byte> bytes = guid.ToByteArray();
             m_Low = BitConverter.ToInt64(bytes[..8]);

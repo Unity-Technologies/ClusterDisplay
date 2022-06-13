@@ -72,7 +72,8 @@ namespace Unity.ClusterDisplay.Scripting
         protected override void ApplyMessage(in TransformMessage message)
         {
 #if UNITY_EDITOR
-            return;
+            if (!Application.isPlaying)
+                return;
 #endif
             m_Target.localPosition = message.Position;
             m_Target.localRotation = message.Rotation;
