@@ -15,10 +15,11 @@ namespace Unity.ClusterDisplay.Scripting
     interface IReplicator : IDisposable
     {
         void OnPreFrame();
-        void OnEnable(ReplicatorMode mode);
-        void OnDisable();
+        void Initialize(ReplicatorMode mode);
         void Update();
         bool IsValid { get; }
+        bool IsInitialized { get; }
+        Guid Guid { get; }
         EditorLink EditorLink { get; set; }
     }
 
@@ -36,7 +37,8 @@ namespace Unity.ClusterDisplay.Scripting
 
     abstract class ReplicatorBase<TContents> : IReplicator where TContents : unmanaged, IEquatable<TContents>
     {
-        Guid Guid { get; }
+        public bool IsInitialized { get; private set; }
+        public Guid Guid { get; }
 
         IDisposable m_EventSubscriber;
 
@@ -89,13 +91,14 @@ namespace Unity.ClusterDisplay.Scripting
             });
         }
 
-        public void OnEnable(ReplicatorMode mode)
+        public void Initialize(ReplicatorMode mode)
         {
             m_Mode = mode;
             InitEventBus();
             m_StateCapture = GetCurrentState();
+            IsInitialized = true;
 
-            ClusterDebug.Log($"[Replicator] Enabled in {m_Mode} mode");
+            ClusterDebug.Log($"[Replicator] Initialized in {m_Mode} mode");
         }
 
         public void OnPreFrame()

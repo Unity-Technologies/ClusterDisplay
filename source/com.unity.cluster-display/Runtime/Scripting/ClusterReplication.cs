@@ -39,17 +39,13 @@ namespace Unity.ClusterDisplay.Scripting
 
         [SerializeField]
         EditorLinkConfig m_EditorLinkConfig;
-        bool m_EditorLinkConfigChanged;
 
         /// <summary>
         /// For inspector and serialization only. Do not use for business logic. Use
-        /// <see cref="m_Replicators"/> instead.
+        /// <see cref="Replicators"/> instead.
         /// </summary>
         [SerializeField]
         List<ReplicationTarget> m_ReplicationTargets;
-
-        Dictionary<ReplicationTarget, IReplicator> m_Replicators = new();
-
 
         // For efficiency, all instances of ClusterReplication should share a single
         // EditorLink.
@@ -57,6 +53,9 @@ namespace Unity.ClusterDisplay.Scripting
         AutoReleaseReference<EditorLinkConfig, EditorLink>.SharedRef m_EditorLinkReference;
 
         ReplicatorMode m_Mode = ReplicatorMode.Disabled;
+
+        internal Dictionary<ReplicationTarget, IReplicator> Replicators { get; private set; } = new();
+        internal EditorLink EditorLink => m_EditorLinkReference;
 
         static EditorLink CreateEditorLink(EditorLinkConfig config)
         {
@@ -128,7 +127,7 @@ namespace Unity.ClusterDisplay.Scripting
 
             ClusterDebug.Log("[Cluster Replication] Enabling editor link");
 
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
                 replicator.EditorLink = m_EditorLinkReference;
             }
@@ -140,7 +139,7 @@ namespace Unity.ClusterDisplay.Scripting
             m_EditorLinkReference?.Dispose();
             m_EditorLinkReference = null;
 
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
                 replicator.EditorLink = null;
             }
@@ -164,9 +163,9 @@ namespace Unity.ClusterDisplay.Scripting
 
         void EnableReplicators()
         {
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
-                replicator.OnEnable(m_Mode);
+                replicator.Initialize(m_Mode);
             }
         }
 
@@ -181,7 +180,7 @@ namespace Unity.ClusterDisplay.Scripting
 
         void OnPreFrame()
         {
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
                 replicator.OnPreFrame();
             }
@@ -190,38 +189,44 @@ namespace Unity.ClusterDisplay.Scripting
         void DisableReplicators()
         {
             m_EditorLinkReference?.Dispose();
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
-                replicator.OnDisable();
+                replicator.Dispose();
             }
         }
 
         void UpdateReplicators()
         {
-            foreach (var (_, replicator) in m_Replicators)
+            foreach (var (_, replicator) in Replicators)
             {
+                if (!replicator.IsInitialized)
+                    replicator.Initialize(m_Mode);
+
                 replicator.Update();
             }
         }
 
         static IReplicator MakeReplicator(ReplicationTarget target) =>
             s_SpecializedReplicators.TryGetValue(target.Component.GetType(),
-                out var create)
-                ? create(target)
+                out var createFunc)
+                ? createFunc(target)
                 : new GenericPropertyReplicator(target);
 
-        public void AddTarget(Component component, string property = null)
+        void AddTarget(ReplicationTarget target)
         {
-            var target = new ReplicationTarget {Component = component, Property = property};
-            m_Replicators.Add(target, MakeReplicator(target));
+            var replicator = MakeReplicator(target);
+            Replicators.Add(target, replicator);
         }
 
-        public void RemoveTarget(ReplicationTarget target) => m_Replicators.Remove(target);
+        public void AddTarget(Component component, string property = null) =>
+            AddTarget(new ReplicationTarget {Component = component, Property = property});
+
+        public void RemoveTarget(ReplicationTarget target) => Replicators.Remove(target);
 
         public void OnBeforeSerialize()
         {
             m_ReplicationTargets = new List<ReplicationTarget>();
-            foreach (var (target, replicator) in m_Replicators)
+            foreach (var (target, replicator) in Replicators)
             {
                 target.IsValid = replicator.IsValid;
                 m_ReplicationTargets.Add(target);
@@ -230,7 +235,11 @@ namespace Unity.ClusterDisplay.Scripting
 
         public void OnAfterDeserialize()
         {
-            m_Replicators = m_ReplicationTargets.ToDictionary(target => target, MakeReplicator);
+            Replicators.Clear();
+            foreach (var target in m_ReplicationTargets)
+            {
+                AddTarget(target);
+            }
         }
     }
 }
