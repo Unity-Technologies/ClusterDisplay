@@ -51,9 +51,10 @@ namespace Unity.ClusterDisplay.Graphics
             return false;
         }
 
-        void OnDisable()
+        public override void OnDisable()
         {
             ClearPreviews();
+            m_PreviewPool.Clear();
             foreach (var rt in m_RenderTargets.Values)
             {
                 if (rt != null)
@@ -94,7 +95,7 @@ namespace Unity.ClusterDisplay.Graphics
                 GraphicsUtil.k_IdentityScaleBias,
                 customBlitMaterial,
                 GetCustomBlitMaterialPropertyBlocks(nodeIndex));
-            
+
             ClearPreviews();
             if (IsDebug)
             {
@@ -118,7 +119,6 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 m_PreviewPool.Release(preview);
             }
-
             m_ActivePreviews.Clear();
         }
 
@@ -159,6 +159,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void RemoveSurface(int index)
         {
+            ClearPreviews();
             m_ProjectionSurfaces.RemoveAt(index);
 
             if (m_RenderTargets.TryGetValue(index, out var rt))

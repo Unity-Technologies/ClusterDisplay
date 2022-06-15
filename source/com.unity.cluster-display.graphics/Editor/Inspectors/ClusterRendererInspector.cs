@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         // We need to detect when the projection policy has changed. Caching the previous
         // value seems to be the most reliable way to detect changes.
-        Object m_CachedPolicyObject;
+        ProjectionPolicy m_CachedPolicyObject;
 
         void OnEnable()
         {
@@ -52,7 +52,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     {
                         DestroyImmediate(m_PolicyEditor);
                     }
-                    
+
+                    m_CachedPolicyObject?.OnDisable();
+
                     if (currentPolicy != null)
                     {
                         if (m_PolicyEditor == null)
@@ -69,13 +71,13 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
             EditorGUILayout.PropertyField(m_DelayPresentByOneFrameProp, Labels.GetGUIContent(Labels.Field.DelayPresentByOneFrame));
-            
+
             if (currentPolicy != null && m_PolicyEditor != null)
             {
                 m_PolicyEditor.OnInspectorGUI();
-                m_CachedPolicyObject = currentPolicy;
+                m_CachedPolicyObject = currentPolicy as ProjectionPolicy;
             }
-            
+
             serializedObject.ApplyModifiedProperties();
         }
 
