@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
@@ -115,7 +116,7 @@ namespace Unity.ClusterDisplay.Tests
             var alpha = new Alpha();
             ServiceLocator.Provide<IFoo>(alpha);
 
-            Assert.DoesNotThrow(()=> ServiceLocator.Get<IFoo>());
+            Assert.DoesNotThrow(() => ServiceLocator.Get<IFoo>());
             Assert.IsTrue(ServiceLocator.TryGet(out IFoo service));
             Assert.That(service, Is.EqualTo(ServiceLocator.Get<IFoo>()));
             Assert.That(service, Is.EqualTo(alpha));
@@ -129,6 +130,60 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(service, Is.EqualTo(bravo));
             Assert.That(ServiceLocator.Get<IFoo>(), Is.EqualTo(bravo));
             Assert.That(service.Value, Is.EqualTo(10));
+        }
+
+        class CountedObject : IDisposable
+        {
+            public int Id { get; private set; }
+            public static int[] InstanceCount { get; } = new int[16];
+
+            public CountedObject(int id)
+            {
+                Id = id;
+                InstanceCount[id]++;
+            }
+
+            public void Dispose()
+            {
+                if (Id < 0)
+                {
+                    throw new InvalidOperationException("Already disposed");
+                }
+
+                InstanceCount[Id]--;
+                Id = -1;
+            }
+        }
+
+        [Test]
+        public void TestSharedReferences()
+        {
+            SharedReferenceManager<int, CountedObject> sharedReferenceManager = new(i => new CountedObject(i));
+
+            Assert.That(CountedObject.InstanceCount, Is.All.Zero);
+
+            using (var ref1 = sharedReferenceManager.GetReference(8))
+            using (var ref2 = sharedReferenceManager.GetReference(11))
+            {
+                // New instances are instantiated in this scope
+                var obj1 = (CountedObject)ref1;
+                var obj2 = (CountedObject)ref2;
+                Assert.That(obj1.Id, Is.EqualTo(8));
+                Assert.That(obj2.Id, Is.EqualTo(11));
+                Assert.AreNotEqual(obj2, obj1);
+                Assert.That(CountedObject.InstanceCount[8], Is.EqualTo(1));
+                Assert.That(CountedObject.InstanceCount[11], Is.EqualTo(1));
+                using (var ref1_2 = sharedReferenceManager.GetReference(8))
+                {
+                    // Instance counts should never go above 1 (no new instances instantiated)
+                    Assert.AreEqual(ref1_2.Value, obj1);
+                    Assert.That(CountedObject.InstanceCount[8], Is.EqualTo(1));
+                    Assert.That(CountedObject.InstanceCount[11], Is.EqualTo(1));
+                }
+            }
+
+            // All instances disposed
+            Assert.That(CountedObject.InstanceCount, Is.All.Zero);
         }
     }
 }

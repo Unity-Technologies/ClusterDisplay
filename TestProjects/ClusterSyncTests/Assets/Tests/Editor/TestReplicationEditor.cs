@@ -19,8 +19,7 @@ public class TestReplicationEditor
     GameObject m_DestObject;
     EditorLinkConfig m_LinkConfig;
 
-    ClusterReplication m_ReplicationEmitter;
-    ClusterReplication m_ReplicationRepeater;
+    ClusterReplication m_Replication;
 
     [SetUp]
     public void SetUp()
@@ -33,8 +32,7 @@ public class TestReplicationEditor
         m_SourceObject.AddComponent<SomeComponent>();
         m_DestObject.AddComponent<SomeComponent>();
 
-        m_ReplicationEmitter = m_SourceObject.AddComponent<ClusterReplication>();
-        m_ReplicationRepeater = m_DestObject.AddComponent<ClusterReplication>();
+        m_Replication = m_SourceObject.AddComponent<ClusterReplication>();
 
         m_LinkConfig = ScriptableObject.CreateInstance<EditorLinkConfig>();
         m_LinkConfig.Parse("127.0.0.1:40001");
@@ -67,17 +65,17 @@ public class TestReplicationEditor
     public void TestAddReplicationTarget()
     {
         // invalid target (no property specified and no replicator specialization)
-        m_ReplicationEmitter.AddTarget(m_SourceObject.GetComponent<SomeComponent>());
+        m_Replication.AddTarget(m_SourceObject.GetComponent<SomeComponent>());
 
-        m_ReplicationEmitter.AddTarget(m_SourceObject.GetComponent<SomeComponent>(), "MyProperty");
-        m_ReplicationEmitter.AddTarget(m_SourceObject.GetComponent<Transform>());
+        m_Replication.AddTarget(m_SourceObject.GetComponent<SomeComponent>(), "MyProperty");
+        m_Replication.AddTarget(m_SourceObject.GetComponent<Transform>());
 
-        Assert.That(m_ReplicationEmitter.Replicators, Has.Count.EqualTo(3));
+        Assert.That(m_Replication.Replicators, Has.Count.EqualTo(3));
 
         // Call this to make sure the IsValid status appears correct in the inspector
-        m_ReplicationEmitter.OnBeforeSerialize();
+        m_Replication.OnBeforeSerialize();
 
-        foreach (var (target, replicator) in m_ReplicationEmitter.Replicators)
+        foreach (var (target, replicator) in m_Replication.Replicators)
         {
             if (target.Component is Transform || !string.IsNullOrEmpty(target.Property))
             {
@@ -115,26 +113,33 @@ public class TestReplicationEditor
     {
         using var udpClient = new UdpClient(m_LinkConfig.Port);
         udpClient.Client.ReceiveTimeout = 500;
-        m_ReplicationEmitter.AddTarget(m_SourceObject.GetComponent<Transform>());
+        m_Replication.AddTarget(m_SourceObject.GetComponent<Transform>());
 
-        Assert.That(m_ReplicationEmitter.EditorLink, Is.Null);
-        EnableEditorLink(m_ReplicationEmitter);
-        Assert.That(m_ReplicationEmitter.EditorLink, Is.Not.Null);
+        Assert.That(m_Replication.EditorLink, Is.Null);
+
+        // Note: All replicators currently operating in Editor mode because this is the default
+        // behaviour when running in the Editor without cluster logic enabled.
+
+        EnableEditorLink(m_Replication);
+        Assert.That(m_Replication.EditorLink, Is.Not.Null);
 
         // ReSharper disable once HeuristicUnreachableCode
 
-        // Note: m_ReplicationRepeater is currently operating in Editor mode because this is the default
-        // behaviour when running in the Editor without cluster logic enabled.
-        EnableEditorLink(m_ReplicationRepeater);
+        // Create another replication behaviour in the scene
+        var anotherReplicator = m_DestObject.AddComponent<ClusterReplication>();
+
+        EnableEditorLink(anotherReplicator);
 
         // There should be only one editor link instance in for all Replication scripts using
         // the same config
-        Assert.That(m_ReplicationRepeater.EditorLink, Is.EqualTo(m_ReplicationEmitter.EditorLink));
+        Assert.That(anotherReplicator.EditorLink, Is.EqualTo(m_Replication.EditorLink));
 
-        DisableEditorLink(m_ReplicationRepeater);
-        Assert.IsNull(m_ReplicationRepeater.EditorLink);
+        // Check that disabling works
+        DisableEditorLink(anotherReplicator);
+        Assert.IsNull(anotherReplicator.EditorLink);
 
-        var transformReplicator = m_ReplicationEmitter.Replicators.Values.First() ;
+        // Check that we have a property replicator
+        var transformReplicator = m_Replication.Replicators.Values.First() ;
         Assert.NotNull(transformReplicator);
 
         yield return null;

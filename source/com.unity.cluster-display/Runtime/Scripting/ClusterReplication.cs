@@ -49,8 +49,8 @@ namespace Unity.ClusterDisplay.Scripting
 
         // For efficiency, all instances of ClusterReplication should share a single
         // EditorLink.
-        static AutoReleaseReference<EditorLinkConfig, EditorLink> s_SharedEditorLink = new(CreateEditorLink);
-        AutoReleaseReference<EditorLinkConfig, EditorLink>.SharedRef m_EditorLinkReference;
+        static SharedReferenceManager<EditorLinkConfig, EditorLink> s_SharedEditorLink = new(CreateEditorLink);
+        SharedReferenceManager<EditorLinkConfig, EditorLink>.SharedRef m_EditorLinkReference;
 
         ReplicatorMode m_Mode = ReplicatorMode.Disabled;
 
