@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_ScreenSizeProp = serializedObject.FindProperty("m_Settings.PhysicalScreenSize");
             m_BezelProp = serializedObject.FindProperty("m_Settings.Bezel");
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
-            m_TileIndexProp = serializedObject.FindProperty("m_DebugSettings.TileIndexOverride");
+            m_TileIndexProp = serializedObject.FindProperty("m_NodeIndexOverride");
             m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.LayoutMode");
             m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.EnableKeyword");
             m_PresentClearColorProp = serializedObject.FindProperty("m_DebugSettings.PresentClearColor");
