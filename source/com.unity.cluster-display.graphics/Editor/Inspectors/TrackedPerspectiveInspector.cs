@@ -125,7 +125,13 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (active && focused)
             {
+                var previousSelection = m_SelectedSurfaceIndex;
                 m_SelectedSurfaceIndex = index;
+                if (m_SelectedSurfaceIndex != previousSelection)
+                {
+                    Debug.Log($"Selected surface {index}");
+                    SceneView.RepaintAll();
+                }
             }
 
             var element = m_SurfacesProp.GetArrayElementAtIndex(index);
