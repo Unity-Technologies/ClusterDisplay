@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
-using IdType = Unity.Collections.FixedString128Bytes;
+using IdType = System.Guid;
 
 namespace Unity.ClusterDisplay
 {
@@ -45,10 +45,12 @@ namespace Unity.ClusterDisplay
         readonly List<BulkEventListener> m_BulkListeners = new();
         readonly bool m_IsReadOnly;
 
-        // Note: we don't need an assembly-qualified name to get a unique identifier, since all
-        // nodes are running the same executable, and we're not using the id to do run-time
-        // instantiation.
-        static IdType s_EventTypeId = typeof(TEvent).GetFriendlyTypeName();
+        static readonly Guid k_NamespaceId = Guid.Parse("8876618a-f18a-11ec-8ea0-0242ac120002");
+
+        // Create a (effectively) unique identifier for this event bus based on the full-qualified name
+        // of the event type.
+        static IdType s_EventTypeId = GuidUtils.GetNameBasedGuid(k_NamespaceId,
+            typeof(TEvent).GetFriendlyTypeName());
 
         readonly int k_DataId;
 

@@ -185,5 +185,34 @@ namespace Unity.ClusterDisplay.Tests
             // All instances disposed
             Assert.That(CountedObject.InstanceCount, Is.All.Zero);
         }
+
+        [Test]
+        public void TestNameBasedGUID()
+        {
+            var namespaceGuid1 = Guid.NewGuid();
+            var namespaceGuid2 = Guid.NewGuid();
+            const string name1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+            const string name2 = "Ut in semper nibh";
+            var guid1 = GuidUtils.GetNameBasedGuid(namespaceGuid1, name1);
+            var guid2 = GuidUtils.GetNameBasedGuid(namespaceGuid1, name2);
+            var guid3 = GuidUtils.GetNameBasedGuid(namespaceGuid1, name1);
+            var guid4 = GuidUtils.GetNameBasedGuid(namespaceGuid2, name1);
+
+            // Same namespace, different names
+            Assert.AreNotEqual(guid1, guid2);
+
+            // Same namespace, same names
+            Assert.AreEqual(guid1, guid3);
+
+            // Different namespace, same names
+            Assert.AreNotEqual(guid1, guid4);
+
+            // 4 most sig. bits of time_hi_and_version (octets 6-7) should equal 5,
+            // indicating name-based GUID that uses SHA-1
+            // (i.e. higher 4 bits of octet 6)
+            var bytes = guid1.ToByteArray();
+            // In .NET byte ordering, octet 6 is actually byte 7
+            Assert.That(bytes[7] & 0b0101_0000, Is.EqualTo(0b0101_0000));
+        }
     }
 }
