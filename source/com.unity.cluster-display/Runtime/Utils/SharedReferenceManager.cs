@@ -6,12 +6,12 @@ namespace Unity.ClusterDisplay.Utils
 {
     /// <summary>
     /// Maintains a collection of objects and tracks references to them. Automatically
-    /// allocates/deallocates based on the current number of active shared references.
+    /// allocates/disposes based on the current number of active shared references.
     /// </summary>
     /// <typeparam name="TKey">Type used to initialize and identify a shared object.</typeparam>
     /// <typeparam name="TClass">Type of the shared objects.</typeparam>
     /// <remarks>
-    /// You can use this class to manage a resource shared by multiple objects that you want to automatically release
+    /// You can use this class to manage a resource shared by multiple objects that you want to automatically dispose
     /// when no longer in use. For example, a network socket (the class) bound to a specific port (the key).
     /// Not thread-safe.
     /// </remarks>
@@ -21,10 +21,19 @@ namespace Unity.ClusterDisplay.Utils
     {
         Func<TKey, TClass> m_CreateFunc;
 
-        struct CountedReference
+        class CountedReference
         {
-            public TClass Value;
-            public int Count;
+            public TClass Value { get; }
+            public int Count { get; private set; }
+
+            public void Increment() => ++Count;
+            public void Decrement() => --Count;
+
+            public CountedReference(TClass value)
+            {
+                Value = value;
+                Count = 1;
+            }
         }
 
         readonly Dictionary<TKey, CountedReference> m_References = new();
@@ -83,17 +92,12 @@ namespace Unity.ClusterDisplay.Utils
         {
             if (m_References.TryGetValue(key, out var reference))
             {
-                reference.Count++;
-                m_References[key] = reference;
+                reference.Increment();
                 return reference.Value;
             }
 
             var instance = m_CreateFunc(key);
-            m_References.Add(key, new CountedReference
-            {
-                Value = instance,
-                Count = 1
-            });
+            m_References.Add(key, new CountedReference(instance));
 
             return instance;
         }
@@ -102,16 +106,12 @@ namespace Unity.ClusterDisplay.Utils
         {
             if (!m_References.TryGetValue(key, out var reference)) return;
 
-            reference.Count--;
+            reference.Decrement();
 
             if (reference.Count == 0)
             {
                 reference.Value.Dispose();
                 m_References.Remove(key);
-            }
-            else
-            {
-                m_References[key] = reference;
             }
         }
     }
