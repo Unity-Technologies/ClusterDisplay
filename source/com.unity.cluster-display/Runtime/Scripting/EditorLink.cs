@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.Scripting
 {
     interface IMessageProcessor
     {
-        public void Dispatch(ReadOnlySpan<byte> data);
+        void Dispatch(ReadOnlySpan<byte> data);
     }
 
     class MessageHandlerWrapper<T> : IMessageProcessor where T : unmanaged
@@ -100,24 +100,24 @@ namespace Unity.ClusterDisplay.Scripting
             m_EventHandlers.Remove(guid);
         }
 
-        async Task ReceiveRawData(CancellationToken token)
+        Task ReceiveRawData(CancellationToken token)
         {
-            try
+            return Task.Run(() =>
             {
+                ClusterDebug.Log("[Editor Link] Start receiving");
+                IPEndPoint remoteEndPoint = default;
                 while (!token.IsCancellationRequested)
                 {
-                    ClusterDebug.Log("[Editor Link] Start receiving");
-                    var result = await m_UdpClient.ReceiveAsync().WithCancellation(token);
-                    ClusterDebug.Log("[Editor Link] received message");
-                    EnqueueReceivedData(result.Buffer);
+                    var bytes = m_UdpClient.Receive(ref remoteEndPoint);
+                    if (bytes.Length > 0)
+                    {
+                        ClusterDebug.Log("[Editor Link] received message");
+                        EnqueueReceivedData(bytes);
+                    }
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelled. We can return normally.
-            }
 
-            ClusterDebug.Log("[Editor Link] Stopped receiving");
+                ClusterDebug.Log("[Editor Link] Stopped receiving");
+            }, token);
         }
 
         internal void EnqueueReceivedData(byte[] data) => m_ReceivedBytes.Enqueue(data);

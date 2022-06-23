@@ -91,7 +91,7 @@ namespace Unity.ClusterDisplay.Scripting
         internal static void RegisterSpecializedReplicator(Type type, Func<ReplicationTarget, IReplicator> createFunc) =>
             s_SpecializedReplicators.Add(type, createFunc);
 
-        internal static bool HasSpecializedReplicator(Type t) => s_SpecializedReplicators.TryGetValue(t, out _);
+        internal static bool HasSpecializedReplicator(Type t) => s_SpecializedReplicators.ContainsKey(t);
 
         void OnEnable()
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace Unity.ClusterDisplay.Utils
         /// <returns>The first matching attribute instance, or null if the attribute was not found on the type.</returns>
         public static T GetAttribute<T>(this MemberInfo member, bool inherit = false) where T : Attribute
         {
-            return member.GetAttributes<T>().FirstOrDefault();
+            return member.GetAttributes<T>(inherit).FirstOrDefault();
         }
 
         /// <summary>
@@ -31,9 +32,9 @@ namespace Unity.ClusterDisplay.Utils
         /// <param name="inherit">When true, inspects the ancestors of the <paramref name="member"/> for the attribute.</param>
         /// <typeparam name="T">The type of attribute to search for.</typeparam>
         /// <returns>A new array containing the attribute instances, or an empty array if the attribute was not found on the type.</returns>
-        public static T[] GetAttributes<T>(this MemberInfo member, bool inherit = false) where T : Attribute
+        public static IEnumerable<T> GetAttributes<T>(this MemberInfo member, bool inherit = false) where T : Attribute
         {
-            return member.GetCustomAttributes(typeof(T), inherit).Cast<T>().ToArray();
+            return member.GetCustomAttributes(typeof(T), inherit).Cast<T>();
         }
 
         /// <summary>

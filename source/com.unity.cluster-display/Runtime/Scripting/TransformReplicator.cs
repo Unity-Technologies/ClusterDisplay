@@ -67,8 +67,10 @@ namespace Unity.ClusterDisplay.Scripting
 
         public override bool IsValid => m_Target != null;
 
+        /// <inheritdoc />
         protected override TransformMessage GetCurrentState() => new(m_Target);
 
+        /// <inheritdoc />
         protected override void ApplyMessage(in TransformMessage message)
         {
 #if UNITY_EDITOR

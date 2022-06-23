@@ -14,8 +14,18 @@ namespace Unity.ClusterDisplay.Scripting
 
     interface IReplicator : IDisposable
     {
+        /// <summary>
+        /// <see cref="OnPreFrame"/> is called during WaitForLastPresentationAndUpdateTime, at the beginning of the
+        /// update loop.
+        /// </summary>
         void OnPreFrame();
+
         void Initialize(ReplicatorMode mode);
+
+        /// <summary>
+        /// <see cref="Update"/> is called during PostLateUpdate.
+        /// </summary>
+        ///
         void Update();
         bool IsValid { get; }
         bool IsInitialized { get; }
@@ -42,11 +52,32 @@ namespace Unity.ClusterDisplay.Scripting
 
         IDisposable m_EventSubscriber;
 
+        /// <summary>
+        /// The latest unprocessed message received from the Editor Link. Applies to emitter only.
+        /// </summary>
         TContents m_LatestLinkMessage;
+
+        /// <summary>
+        /// Indicates that we should replicate (broadcast to the cluster) <see cref="m_LatestLinkMessage"/> instead of
+        /// whatever value this property currently has. Applies to emitter only.
+        /// </summary>
         bool m_HasLinkMessage;
 
+        /// <summary>
+        /// The latest unprocessed messaged received from <see cref="EventBus"/> (i.e. cluster data from the emitter).
+        /// If we are the emitter, this is a loopback message.
+        /// </summary>
         TContents m_LatestReplicatorMessage;
+
+        /// <summary>
+        /// Indicates that we should apply the data in <see cref="m_LatestReplicatorMessage"/> to the target property
+        /// (replacing its current value).
+        /// </summary>
         bool m_HasReplicatorMessage;
+
+        /// <summary>
+        /// Indicates whether the target property has changed value since the previous frame.
+        /// </summary>
         bool m_PropertyChanged;
 
         EditorLink m_EditorLink;
@@ -101,6 +132,7 @@ namespace Unity.ClusterDisplay.Scripting
             ClusterDebug.Log($"[Replicator] Initialized in {m_Mode} mode");
         }
 
+        /// <inheritdoc />
         public void OnPreFrame()
         {
             // During the sync point (the beginning of the game loop),
@@ -116,11 +148,7 @@ namespace Unity.ClusterDisplay.Scripting
             }
         }
 
-        public void OnDisable()
-        {
-            Dispose();
-        }
-
+        /// <inheritdoc />
         public void Update()
         {
             var newState = GetCurrentState();
@@ -192,8 +220,18 @@ namespace Unity.ClusterDisplay.Scripting
             }
         }
 
+        /// <summary>
+        /// Reads the current value of the target property and encode it in a <typeparamref name="TContents"/> structure.
+        /// </summary>
+        /// <returns>
+        /// The value of the target property has a <typeparamref name="TContents"/> structure.
+        /// </returns>
         protected abstract TContents GetCurrentState();
 
+        /// <summary>
+        /// Read the contents of <paramref name="message"/> and set the value of the target property accordingly.
+        /// </summary>
+        /// <param name="message">Replication message received from the cluster.</param>
         protected abstract void ApplyMessage(in TContents message);
 
         public void Dispose()

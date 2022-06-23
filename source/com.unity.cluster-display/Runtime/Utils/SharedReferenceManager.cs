@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.Utils
             public int Count;
         }
 
-        readonly Dictionary<TKey, CountedReference> k_References = new();
+        readonly Dictionary<TKey, CountedReference> m_References = new();
 
         /// <summary>
         /// A shared reference wrapping a <typeparamref name="SharedReferenceManager.TClass"/>.
@@ -81,15 +81,15 @@ namespace Unity.ClusterDisplay.Utils
 
         TClass Reserve(TKey key)
         {
-            if (k_References.TryGetValue(key, out var reference))
+            if (m_References.TryGetValue(key, out var reference))
             {
                 reference.Count++;
-                k_References[key] = reference;
+                m_References[key] = reference;
                 return reference.Value;
             }
 
             var instance = m_CreateFunc(key);
-            k_References.Add(key, new CountedReference
+            m_References.Add(key, new CountedReference
             {
                 Value = instance,
                 Count = 1
@@ -100,18 +100,18 @@ namespace Unity.ClusterDisplay.Utils
 
         void Release(TKey key)
         {
-            if (!k_References.TryGetValue(key, out var reference)) return;
+            if (!m_References.TryGetValue(key, out var reference)) return;
 
             reference.Count--;
 
             if (reference.Count == 0)
             {
                 reference.Value.Dispose();
-                k_References.Remove(key);
+                m_References.Remove(key);
             }
             else
             {
-                k_References[key] = reference;
+                m_References[key] = reference;
             }
         }
     }

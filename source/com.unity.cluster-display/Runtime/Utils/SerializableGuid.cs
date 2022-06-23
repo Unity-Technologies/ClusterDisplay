@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Utils
 {
     /// <summary>
-    /// A struct containing a 128-bit GUID that is compatible with Unity serialization.
+    /// A class containing a 128-bit GUID that is compatible with Unity serialization.
     /// </summary>
     [Serializable]
     public class SerializableGuid : ISerializationCallbackReceiver
