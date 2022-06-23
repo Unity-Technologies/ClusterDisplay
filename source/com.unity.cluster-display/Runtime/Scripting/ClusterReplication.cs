@@ -136,13 +136,12 @@ namespace Unity.ClusterDisplay.Scripting
         void DisableEditorLink()
         {
             ClusterDebug.Log("[Cluster Replication] Disabling editor link");
-            m_EditorLinkReference?.Dispose();
-            m_EditorLinkReference = null;
-
             foreach (var (_, replicator) in Replicators)
             {
                 replicator.EditorLink = null;
             }
+            m_EditorLinkReference?.Dispose();
+            m_EditorLinkReference = null;
         }
 
         public void OnEditorLinkChanged()
