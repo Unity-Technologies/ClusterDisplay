@@ -63,7 +63,6 @@ namespace Unity.ClusterDisplay.Scripting
                 m_UdpClient = new UdpClient(m_Config.Port);
             }
 
-            m_UdpClient.Client.ReceiveTimeout = 2000;
             m_UdpClient.Client.SendTimeout = 200;
 
             PlayerLoopExtensions.RegisterUpdate<PreLateUpdate, EditorLinkUpdate>(ProcessIncomingMessages);
@@ -106,9 +105,10 @@ namespace Unity.ClusterDisplay.Scripting
             {
                 ClusterDebug.Log("[Editor Link] Start receiving");
                 IPEndPoint remoteEndPoint = default;
-                while (!token.IsCancellationRequested)
+
+                try
                 {
-                    try
+                    while (!token.IsCancellationRequested)
                     {
                         var bytes = m_UdpClient.Receive(ref remoteEndPoint);
                         if (bytes.Length > 0)
@@ -117,10 +117,10 @@ namespace Unity.ClusterDisplay.Scripting
                             EnqueueReceivedData(bytes);
                         }
                     }
-                    catch (SocketException)
-                    {
-                        // Receive timed out. Can try again.
-                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    ClusterDebug.Log("[Editor Link] Socket closed.");
                 }
 
                 ClusterDebug.Log("[Editor Link] Stopped receiving");
@@ -148,6 +148,15 @@ namespace Unity.ClusterDisplay.Scripting
             m_UdpClient?.Close();
 
             m_CancellationTokenSource.Dispose();
+            try
+            {
+                m_ReceiveTask.Wait(2000);
+            }
+            catch (Exception e)
+            {
+                ClusterDebug.Log($"[Editor Link] {e.Message}");
+            }
+
             PlayerLoopExtensions.DeregisterUpdate<EditorLinkUpdate>(ProcessIncomingMessages);
         }
     }
