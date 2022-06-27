@@ -15,7 +15,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl.Editor
 {
-    class MissionControlWindow : EditorWindow
+    public class MissionControlWindow : EditorWindow
     {
         Server m_Server;
         NodeListView m_NodeListView;
@@ -40,11 +40,12 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
         CancellationTokenSource m_GeneralCancellationTokenSource;
 
         [MenuItem("Cluster Display/Mission Control")]
-        public static void ShowWindow()
+        public static MissionControlWindow ShowWindow()
         {
             var window = GetWindow<MissionControlWindow>();
             window.titleContent = new GUIContent("Cluster Display Mission Control");
             window.Show();
+            return window;
         }
 
         void Update()
@@ -90,16 +91,16 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
             InitializeServer();
 
             _ = Task.Run(async () =>
-            {
-                while (true)
                 {
-                    await Task.Delay(10000);
-                    if (m_Server != null)
+                    while (true)
                     {
-                        m_NodeListView.RefreshNodes(m_Server.Nodes);
+                        await Task.Delay(10000);
+                        if (m_Server != null)
+                        {
+                            m_NodeListView.RefreshNodes(m_Server.Nodes);
+                        }
                     }
-                }
-            }, m_GeneralCancellationTokenSource.Token)
+                }, m_GeneralCancellationTokenSource.Token)
                 .WithErrorHandling(LogException);
         }
 
@@ -271,5 +272,15 @@ namespace Unity.ClusterDisplay.MissionControl.Editor
                 SaveSettings();
             }
         }
+
+        public string FindFirstActiveEmitter() =>
+            m_Server.Nodes
+                .Join(MissionControlSettings.instance.NodeSettings,
+                    info => info.Id,
+                    settings => settings.Id,
+                    (info, settings) => (info, settings))
+                .Where(item => item.settings.IsActive && item.settings.ClusterId == 0)
+                .Select(item => item.info.Address.ToString())
+                .FirstOrDefault();
     }
 }

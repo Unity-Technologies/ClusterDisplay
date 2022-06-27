@@ -1,0 +1,20 @@
+{
+    "name": "Unity.ClusterDisplay.Tests.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:d96b87aa5a4b3df43ad26196f208473e",
+        "GUID:6c5328c2398433b49a7db588884065b0",
+        "GUID:0861eaad4777b824986b7d153336925a"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

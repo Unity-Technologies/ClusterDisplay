@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Tests
         public const int RxPort = 12345;
         public const int TxPort = 12346;
         public const string MulticastAddress = "224.0.1.0";
-        public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+        public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
         public const int MaxRetries = 20;
 
         public static readonly string AdapterName = NetworkingUtils.SelectNic().Name;

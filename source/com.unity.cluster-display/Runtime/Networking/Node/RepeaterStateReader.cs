@@ -43,27 +43,27 @@ namespace Unity.ClusterDisplay
             {(int)StateID.Random, RestoreRndGeneratorState}
         };
 
-        static readonly Dictionary<int, OnLoadCustomData> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
+        static readonly Dictionary<int, List<OnLoadCustomData>> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
             entry => entry.Key,
-            entry => entry.Value);
+            entry => new List<OnLoadCustomData>{entry.Value});
 
         internal static void RegisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
         {
-            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            if (k_LoadDataDelegates.TryGetValue(id, out var list))
             {
-                del += onLoadData;
+                list.Add(onLoadData);
             }
             else
             {
-                k_LoadDataDelegates.Add(id, onLoadData);
+                k_LoadDataDelegates.Add(id, new List<OnLoadCustomData>{onLoadData});
             }
         }
 
         internal static void UnregisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
         {
-            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            if (k_LoadDataDelegates.TryGetValue(id, out var list))
             {
-                del -= onLoadData;
+                list.Remove(onLoadData);
             }
         }
 
@@ -131,9 +131,12 @@ namespace Unity.ClusterDisplay
             foreach (var (id, data) in new FrameDataReader(bufferNative.GetSubArray(bufferPos, bufferLength)))
             {
                 // The built-in delegates restore the states of various subsystems
-                if (k_LoadDataDelegates.TryGetValue(id, out var onLoadCustomData))
+                if (k_LoadDataDelegates.TryGetValue(id, out var list))
                 {
-                    onLoadCustomData.Invoke(data);
+                    foreach (var onLoadCustomData in list)
+                    {
+                        onLoadCustomData.Invoke(data);
+                    }
                 }
             }
         }
