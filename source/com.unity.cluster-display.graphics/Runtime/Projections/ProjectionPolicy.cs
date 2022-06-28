@@ -85,6 +85,8 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         public virtual void OnDrawGizmos() { }
 
+        public virtual void OnDisable() { }
+
         /// <summary>
         /// Gets or sets the origin of the cluster display.
         /// </summary>
