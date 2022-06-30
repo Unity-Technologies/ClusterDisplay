@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Object to use to perform network access (sending or receiving).
         /// </summary>
-        public IUDPAgent UdpAgent { get; private set;  }
+        public IUdpAgent UdpAgent { get; private set;  }
 
         /// <summary>
         /// Index of the frame we are currently dealing with.
@@ -139,7 +139,7 @@ namespace Unity.ClusterDisplay
         /// <param name="config">Node's configuration.</param>
         /// <param name="udpAgent">Object through which we will perform communication with other nodes in the cluster.
         /// </param>
-        protected ClusterNode(ClusterNodeConfig config, IUDPAgent udpAgent)
+        protected ClusterNode(ClusterNodeConfig config, IUdpAgent udpAgent)
         {
             Config = config;
             UdpAgent = udpAgent;
@@ -155,44 +155,15 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~ClusterNode() => Dispose(false);
-
-        /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            var disposableUdpAgent = UdpAgent as IDisposable;
+            disposableUdpAgent?.Dispose();
+            var disposableState = m_CurrentState as IDisposable;
+            disposableState?.Dispose();
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    var disposableUdpAgent = UdpAgent as IDisposable;
-                    disposableUdpAgent?.Dispose();
-                    var disposableState = m_CurrentState as IDisposable;
-                    disposableState?.Dispose();
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Current state of the node.

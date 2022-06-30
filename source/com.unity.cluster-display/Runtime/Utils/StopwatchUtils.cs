@@ -21,7 +21,7 @@ namespace Utils
         }
 
         /// <summary>
-        /// Returns the <see cref="Stopwatch.GetTimestamp"/> value after <see cref="interval"/> has passed.
+        /// Returns the <see cref="Stopwatch.GetTimestamp"/> value after <paramref name="interval"/> has passed.
         /// </summary>
         /// <param name="interval">Time interval</param>
         public static long TimestampIn(TimeSpan interval)

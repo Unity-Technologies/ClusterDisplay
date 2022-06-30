@@ -11,19 +11,19 @@ using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase
 namespace Unity.ClusterDisplay.Tests
 {
     /// <summary>
-    /// Represent a fictive network to which multiple TestUDPAgent are connected.
+    /// Represent a fictive network to which multiple TestUdpAgent are connected.
     /// </summary>
-    class TestUDPAgentNetwork
+    class TestUdpAgentNetwork
     {
-        public List<TestUDPAgent> Agents { get; } = new();
+        public List<TestUdpAgent> Agents { get; } = new();
     }
 
     /// <summary>
-    /// Dummy <see cref="IUDPAgent"/> that does not really transmit and where everything sent is automatically received.
+    /// Dummy <see cref="IUdpAgent"/> that does not really transmit and where everything sent is automatically received.
     /// </summary>
-    class TestUDPAgent: IUDPAgent
+    class TestUdpAgent: IUdpAgent
     {
-        public TestUDPAgent(TestUDPAgentNetwork network, MessageType[] receivedMessageTypes)
+        public TestUdpAgent(TestUdpAgentNetwork network, MessageType[] receivedMessageTypes)
         {
             m_Network = network;
             network.Agents.Add(this);
@@ -37,15 +37,7 @@ namespace Unity.ClusterDisplay.Tests
 
         public void SendMessage<TM>(MessageType messageType, TM message) where TM : unmanaged
         {
-            foreach (var agent in m_Network.Agents)
-            {
-                if (agent.ReceivedMessageTypes.Contains(messageType))
-                {
-                    var receivedMessage = ReceivedMessage<TM>.GetFromPool();
-                    receivedMessage.Payload = message;
-                    agent.QueueReceivedMessage(receivedMessage);
-                }
-            }
+            SendMessage(messageType, message, s_EmptyNativeArray.AsReadOnly());
         }
 
         public void SendMessage<TM>(MessageType messageType, TM message, NativeArray<byte>.ReadOnly additionalData) where TM : unmanaged
@@ -56,7 +48,10 @@ namespace Unity.ClusterDisplay.Tests
                 {
                     var receivedMessage = ReceivedMessage<TM>.GetFromPool();
                     receivedMessage.Payload = message;
-                    receivedMessage.InitializeWithExtraData(new TestUDPAgentNativeExtraData(additionalData));
+                    if (additionalData.Length > 0)
+                    {
+                        receivedMessage.AdoptExtraData(new TestUdpAgentNativeExtraData(additionalData));
+                    }
                     agent.QueueReceivedMessage(receivedMessage);
                 }
             }
@@ -116,30 +111,26 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
-        TestUDPAgentNetwork m_Network;
+        TestUdpAgentNetwork m_Network;
         // Remark: Does not really need to be blocking but allow implementation of the interface to be simpler and this
         // is only a unit test class, so ok if not 100% optimal...
         BlockingCollection<ReceivedMessageBase> m_ReceivedMessages = new (new ConcurrentQueue<ReceivedMessageBase>());
+        static NativeArray<byte> s_EmptyNativeArray = new(0, Allocator.Persistent);
     }
 
-    class TestUDPAgentNativeExtraData: IReceivedMessageExtraData, IDisposable
+    class TestUdpAgentNativeExtraData: IReceivedMessageData
     {
-        public TestUDPAgentNativeExtraData(NativeArray<byte>.ReadOnly nativeReadOnly)
+        public TestUdpAgentNativeExtraData(NativeArray<byte>.ReadOnly nativeReadOnly)
         {
             m_NativeExtraData = new NativeArray<byte>(nativeReadOnly.Length, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             NativeArray<byte>.Copy(nativeReadOnly, m_NativeExtraData);
         }
 
-        public void Dispose()
-        {
-            m_NativeExtraData.Dispose();
-        }
-
         public int Length => m_NativeExtraData.Length;
 
-        public ExtraDataFormat PreferredFormat => ExtraDataFormat.NativeArray;
+        public ReceivedMessageDataFormat PreferredFormat => ReceivedMessageDataFormat.NativeArray;
 
-        public void AsManagedArray(out byte[] array, out int extraDataStart, out int extraDataLength)
+        public void AsManagedArray(out byte[] array, out int dataStart, out int dataLength)
         {
             if (m_ManagedExtraData == null)
             {
@@ -147,13 +138,18 @@ namespace Unity.ClusterDisplay.Tests
             }
 
             array = m_ManagedExtraData;
-            extraDataStart = 0;
-            extraDataLength = m_ManagedExtraData.Length;
+            dataStart = 0;
+            dataLength = m_ManagedExtraData.Length;
         }
 
         public NativeArray<byte> AsNativeArray()
         {
             return m_NativeExtraData;
+        }
+
+        public void Release()
+        {
+            m_NativeExtraData.Dispose();
         }
 
         NativeArray<byte> m_NativeExtraData;

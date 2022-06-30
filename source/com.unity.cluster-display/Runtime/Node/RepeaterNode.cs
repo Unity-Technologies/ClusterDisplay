@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay
         /// <param name="config">Node's configuration.</param>
         /// <param name="udpAgent">Object through which we will perform communication with other nodes in the cluster.
         /// Must support reception of <see cref="ReceiveMessageTypes"/>.</param>
-        public RepeaterNode(ClusterNodeConfig config, IUDPAgent udpAgent)
+        public RepeaterNode(ClusterNodeConfig config, IUdpAgent udpAgent)
             : base(config, udpAgent)
         {
             SetInitialState(Config.EnableHardwareSync ?

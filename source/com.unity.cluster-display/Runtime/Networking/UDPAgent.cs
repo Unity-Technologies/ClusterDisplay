@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -15,7 +14,6 @@ using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Pool;
 using UnityEngine.Profiling;
 using Utils;
 using Debug = UnityEngine.Debug;
@@ -24,9 +22,9 @@ using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase
 namespace Unity.ClusterDisplay
 {
     /// <summary>
-    /// Configuration parameters for <see cref="UDPAgent"/>.
+    /// Configuration parameters for <see cref="UdpAgent"/>.
     /// </summary>
-    struct UDPAgentConfig
+    struct UdpAgentConfig
     {
         /// <summary>
         /// Multicast IP address to which every multicast messages are being sent.
@@ -55,14 +53,14 @@ namespace Unity.ClusterDisplay
     /// </summary>
     /// <remarks>This class does not handle any loss detection or retransmission logic, this is to be done by the user
     /// of this class.</remarks>
-    class UDPAgent: IDisposable, IUDPAgent
+    class UdpAgent: IDisposable, IUdpAgent
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="config">Networking configuration</param>
         /// <exception cref="IOException">When no available network interface can be found</exception>
-        public UDPAgent(UDPAgentConfig config)
+        public UdpAgent(UdpAgentConfig config)
         {
             var (selectedNic, selectedNicAddress) = SelectNetworkInterface(config.AdapterName);
             if (selectedNic == null)
@@ -112,13 +110,13 @@ namespace Unity.ClusterDisplay
 
             // Other member variables used to send datagrams
             m_MulticastTxEndpoint = new IPEndPoint(config.MulticastIp, config.Port);
-            m_SendTempBuffers = new ObjectPool<byte[]>(() => new byte[m_Mtu]);
+            m_SendTempBuffers = new(() => new byte[m_Mtu]);
 
             // Prepare reception of messages
             if (SetupReceiveMessageFactory(config.ReceivedMessagesType))
             {
                 m_ReceiveThreadCancellationTokenSource = new CancellationTokenSource();
-                m_ExtraDataPool = new(() => new ManagedExtraData(this, m_Mtu));
+                m_ReceivedMessageDataPool = new(() => new ManagedReceivedMessageData(this, m_Mtu));
                 m_ReceiveThread = new Thread(ProcessIncomingDatagrams);
                 m_ReceiveThread.Name = $"ClusterDisplay UDP Reception {AdapterAddress}:{config.Port}";
                 m_ReceiveThread.Start();
@@ -126,17 +124,14 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~UDPAgent() => Dispose(false);
-
-        /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            m_ReceiveThreadCancellationTokenSource?.Cancel(); // Need to be canceled before disposing of the UdpClient
+            m_UdpClient?.Dispose(); // Interrupts any currently going on call to Receive in m_ReceiveThread
+            m_ReceiveThread?.Join();
+            m_ReceiveThreadCancellationTokenSource?.Dispose();
         }
 
         public IPAddress AdapterAddress { get; private set; }
@@ -145,40 +140,7 @@ namespace Unity.ClusterDisplay
 
         public void SendMessage<TM>(MessageType messageType, TM message) where TM: unmanaged
         {
-            // Remarks, Assert below check for profiler otherwise GetTypeOf generate tons of GC Alloc that makes
-            // profiling unnecessarily alarming.
-            Assert.IsTrue(Profiler.enabled || MessageTypeAttribute.GetTypeOf<TM>() == messageType);
-            if (Marshal.SizeOf(typeof(TM)) + sizeof(MessageType) > m_Mtu)
-            {
-                throw new ArgumentException("Marshal.SizeOf(typeof(TM)) > MaximumMessageSize.");
-            }
-
-            byte[] sendTempBuffer;
-            lock (m_SendTempBuffers)
-            {
-                sendTempBuffer = m_SendTempBuffers.Get();
-            }
-            try
-            {
-                sendTempBuffer[0] = (byte)messageType;
-                int toSendSize = 1;
-                toSendSize += message.StoreInBuffer(sendTempBuffer, 1);
-
-                // Remark: Sad but the following call perform some heap allocation (+/- 104 bytes per send).  AFAIK there
-                // is no way to avoid it.  Probably related to this suggested improvement to .Net:
-                // https://github.com/dotnet/runtime/issues/30797
-                m_UdpClient.Send(sendTempBuffer, toSendSize, m_MulticastTxEndpoint);
-
-                Stats.MessageSent(messageType);
-                LogMessage(message, true, 0);
-            }
-            finally
-            {
-                lock (m_SendTempBuffers)
-                {
-                    m_SendTempBuffers.Release(sendTempBuffer);
-                }
-            }
+            SendMessage(messageType, message, s_EmptyNativeArray.AsReadOnly());
         }
 
         public void SendMessage<TM>(MessageType messageType, TM message, NativeArray<byte>.ReadOnly additionalData) where TM: unmanaged
@@ -191,18 +153,17 @@ namespace Unity.ClusterDisplay
                 throw new ArgumentException("Marshal.SizeOf(typeof(TM)) + additionalData.Length > MaximumMessageSize.");
             }
 
-            byte[] sendTempBuffer;
-            lock (m_SendTempBuffers)
-            {
-                sendTempBuffer = m_SendTempBuffers.Get();
-            }
+            byte[] sendTempBuffer = m_SendTempBuffers.Get();
             try
             {
                 sendTempBuffer[0] = (byte)messageType;
                 int toSendSize = 1;
                 toSendSize += message.StoreInBuffer(sendTempBuffer, 1);
-                NativeArray<byte>.Copy(additionalData, 0, sendTempBuffer, toSendSize, additionalData.Length);
-                toSendSize += additionalData.Length;
+                if (additionalData.Length > 0)
+                {
+                    NativeArray<byte>.Copy(additionalData, 0, sendTempBuffer, toSendSize, additionalData.Length);
+                    toSendSize += additionalData.Length;
+                }
 
                 // Remark: Sad but the following call perform some heap allocation (+/- 104 bytes per send).  AFAIK there
                 // is no way to avoid it.  Probably related to this suggested improvement to .Net:
@@ -214,67 +175,26 @@ namespace Unity.ClusterDisplay
             }
             finally
             {
-                lock (m_SendTempBuffers)
-                {
-                    m_SendTempBuffers.Release(sendTempBuffer);
-                }
+                m_SendTempBuffers.Release(sendTempBuffer);
             }
         }
 
         public ReceivedMessageBase ConsumeNextReceivedMessage()
         {
-            lock (m_ReceivedMessagesLock)
-            {
-                for (;;)
-                {
-                    if (m_ReceivedMessages.TryDequeue(out var ret))
-                    {
-                        return ret;
-                    }
-
-                    Monitor.Wait(m_ReceivedMessagesLock);
-                }
-            }
+            return m_ReceivedMessages.ConsumeNext();
         }
 
         public ReceivedMessageBase TryConsumeNextReceivedMessage()
         {
-            lock (m_ReceivedMessagesLock)
-            {
-                m_ReceivedMessages.TryDequeue(out var ret);
-                return ret;
-            }
+            return m_ReceivedMessages.TryConsumeNext();
         }
 
         public ReceivedMessageBase TryConsumeNextReceivedMessage(TimeSpan timeout)
         {
-            long deadlineTimestamp = StopwatchUtils.TimestampIn(timeout);
-            lock (m_ReceivedMessagesLock)
-            {
-                do
-                {
-                    if (m_ReceivedMessages.TryDequeue(out var ret))
-                    {
-                        return ret;
-                    }
-
-                    Monitor.Wait(m_ReceivedMessagesLock, StopwatchUtils.TimeUntil(deadlineTimestamp));
-                } while (Stopwatch.GetTimestamp() < deadlineTimestamp);
-
-                return null;
-            }
+            return m_ReceivedMessages.TryConsumeNext(timeout);
         }
 
-        public int ReceivedMessagesCount
-        {
-            get
-            {
-                lock (m_ReceivedMessagesLock)
-                {
-                    return m_ReceivedMessages.Count;
-                }
-            }
-        }
+        public int ReceivedMessagesCount => m_ReceivedMessages.Count;
 
         public MessageType[] ReceivedMessageTypes { get; private set; }
 
@@ -282,17 +202,13 @@ namespace Unity.ClusterDisplay
         {
             add
             {
-                lock (m_MessagePreprocessors)
-                {
-                    m_MessagePreprocessors.Add(value);
-                }
+                using var arrayLock = m_MessagePreprocessors.Lock();
+                arrayLock.AppendToArray(value);
             }
             remove
             {
-                lock (m_MessagePreprocessors)
-                {
-                    m_MessagePreprocessors.Remove(value);
-                }
+                using var arrayLock = m_MessagePreprocessors.Lock();
+                arrayLock.RemoveFromArray(value);
             }
         }
 
@@ -301,8 +217,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Storage for OnMessagePreProcess.
         /// </summary>
-        /// <remarks>Must be locked before accessing it.</remarks>
-        List<MessagePreprocessor> m_MessagePreprocessors = new();
+        ArrayWithSpinLock<MessagePreprocessor> m_MessagePreprocessors = new();
 
         /// <summary>
         /// Returns the network adapter to use for data transmission and reception.
@@ -406,7 +321,7 @@ namespace Unity.ClusterDisplay
                 Enum.GetValues(typeof(MessageType)).Cast<MessageType>().OrderBy( mt => (int)mt );
             m_FactoryByMessageType = new MessageFactory[(int)messageTypes.Last() + 1];
             HashSet<MessageType> receivedMessageTypes = new();
-            foreach ((var messageType, var messageTypeAttribute) in MessageTypeAttribute.GetAllTypes())
+            foreach ((var messageType, var messageTypeAttribute) in MessageTypeAttribute.AllTypes)
             {
                 var messageTypeEnum = messageTypeAttribute.Type;
                 if (receivedMessagesType.Contains(messageTypeEnum) && !receivedMessageTypes.Contains(messageTypeEnum))
@@ -435,17 +350,13 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Datagram reception thread function (looping until UDPAgentConfig is disposed of).
+        /// Datagram reception thread function (looping until UdpAgentConfig is disposed of).
         /// </summary>
         void ProcessIncomingDatagrams()
         {
-            ManagedExtraData receiveExtraData;
-            lock (m_ExtraDataPool)
-            {
-                receiveExtraData = m_ExtraDataPool.Get();
-            }
+            ManagedReceivedMessageData receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
 
-            while (!m_ReceiveThreadCancellationTokenSource.Token.IsCancellationRequested)
+            while (!m_ReceiveThreadCancellationTokenSource.IsCancellationRequested)
             {
                 // Receive the next datagram
                 int receivedLength;
@@ -453,7 +364,7 @@ namespace Unity.ClusterDisplay
                 {
                     try
                     {
-                        receivedLength = m_UdpClient.Client.Receive(receiveExtraData.RawArray);
+                        receivedLength = m_UdpClient.Client.Receive(receiveReceivedMessageData.RawArray);
                         if (receivedLength < 1)
                         {
                             // Empty message, strange, let's just skip it...
@@ -485,7 +396,7 @@ namespace Unity.ClusterDisplay
                 using (s_MarkerCreateMessage.Auto())
                 {
                     // Get the factory for it
-                    var messageTypeByte = receiveExtraData.RawArray[0];
+                    var messageTypeByte = receiveReceivedMessageData.RawArray[0];
                     var receivedFactory = messageTypeByte < m_FactoryByMessageType.Length ? m_FactoryByMessageType[messageTypeByte] : null;
                     if (receivedFactory == null)
                     {
@@ -501,7 +412,7 @@ namespace Unity.ClusterDisplay
                     {
                         int leftOver;
                         (receivedMessage, leftOver) =
-                            receivedFactory(new ReadOnlySpan<byte>(receiveExtraData.RawArray, 1, receivedLength - 1));
+                            receivedFactory(new ReadOnlySpan<byte>(receiveReceivedMessageData.RawArray, 1, receivedLength - 1));
                         if (receivedMessage == null)
                         {
                             // A "normal failure" in the factory?  Let's continue...
@@ -510,15 +421,12 @@ namespace Unity.ClusterDisplay
 
                         if (leftOver > 0)
                         {
-                            // Instead of copying data around, move receiveExtraData to the receivedMessage and get a new
-                            // receiveExtraData.
-                            receiveExtraData.SetRange(receivedLength - leftOver, leftOver);
-                            receivedMessage.InitializeWithExtraData(receiveExtraData);
+                            // Instead of copying data around, move receiveReceivedMessageData to the receivedMessage and
+                            // get a new receiveReceivedMessageData.
+                            receiveReceivedMessageData.SetRange(receivedLength - leftOver, leftOver);
+                            receivedMessage.AdoptExtraData(receiveReceivedMessageData);
 
-                            lock (m_ExtraDataPool)
-                            {
-                                receiveExtraData = m_ExtraDataPool.Get();
-                            }
+                            receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
                         }
 
                         LogReceivedMessage(receivedMessage);
@@ -533,9 +441,9 @@ namespace Unity.ClusterDisplay
                 // Preprocess the message
                 using (s_MarkerPreprocessMessage.Auto())
                 {
-                    lock (m_MessagePreprocessors)
+                    using (var arrayLock = m_MessagePreprocessors.Lock())
                     {
-                        foreach (var preprocessor in m_MessagePreprocessors)
+                        foreach (var preprocessor in arrayLock.GetArray())
                         {
                             try
                             {
@@ -562,158 +470,120 @@ namespace Unity.ClusterDisplay
                 // At last we are ready to queue the message
                 using (s_MarkerQueueMessage.Auto())
                 {
-                    lock (m_ReceivedMessagesLock)
-                    {
-                        m_ReceivedMessages.Enqueue(receivedMessage);
-                        Monitor.Pulse(m_ReceivedMessagesLock);
-                    }
+                    m_ReceivedMessages.Enqueue(receivedMessage);
                 }
             }
 
-            receiveExtraData.Dispose();
+            receiveReceivedMessageData?.Release();
         }
 
         /// <summary>
-        /// Returns a <see cref="ManagedExtraData"/> to the pool.
+        /// Returns a <see cref="ManagedReceivedMessageData"/> to the pool.
         /// </summary>
         /// <param name="toReturn">To return to the pool.</param>
-        void ReturnManagedExtraData(ManagedExtraData toReturn)
+        void ReturnManagedReceivedMessageData(ManagedReceivedMessageData toReturn)
         {
-            lock (m_ExtraDataPool)
-            {
-                m_ExtraDataPool.Release(toReturn);
-            }
+            m_ReceivedMessageDataPool.Release(toReturn);
         }
 
         /// <summary>
-        /// IReceivedMessageExtraData that is used to receive all the packets and to be transferred as a
+        /// <see cref="IReceivedMessageData"/> that is used to receive all the packets and to be transferred as a
         /// <see cref="ReceivedMessageBase.ExtraData"/> if there is some additional data after the
         /// <see cref="ReceivedMessage{TM}.Payload"/>.
         /// </summary>
-        class ManagedExtraData: IReceivedMessageExtraData, IDisposable
+        class ManagedReceivedMessageData: IReceivedMessageData
         {
             /// <summary>
             /// Constructor
             /// </summary>
-            /// <param name="owner">Owning <see cref="UDPAgent"/> that contains the pool to which we should be
+            /// <param name="owner">Owning <see cref="UdpAgent"/> that contains the pool to which we should be
             /// returned to.</param>
             /// <param name="size">Size in bytes of the byte[] contained in this class.</param>
-            public ManagedExtraData(UDPAgent owner, int size)
+            public ManagedReceivedMessageData(UdpAgent owner, int size)
             {
                 m_Owner = owner;
                 m_Bytes = new byte[size];
             }
 
             /// <summary>
-            /// Raw access to the byte array contained in this ManagedExtraData
+            /// Raw access to the byte array contained in this ManagedReceivedMessageData
             /// </summary>
             public byte[] RawArray => m_Bytes;
 
             /// <summary>
-            /// Sets the range of the managed memory that forms the extra data for when methods of
-            /// <see cref="IReceivedMessageExtraData"/> are called.
+            /// Sets the range of the managed memory that forms the area of the byte[] to be considered by methods of
+            /// <see cref="IReceivedMessageData"/>.
             /// </summary>
-            /// <param name="extraDataStart">First byte in array that contains the extra data.</param>
-            /// <param name="extraDataLength">Length of the extra data (starting at <see cref="extraDataStart"/>).</param>
-            public void SetRange(int extraDataStart, int extraDataLength)
+            /// <param name="dataStart">First byte in array that contains the data.</param>
+            /// <param name="dataLength">Length of the data (starting at <paramref name="dataStart"/>).</param>
+            public void SetRange(int dataStart, int dataLength)
             {
-                if (extraDataStart + extraDataLength > m_Bytes.Length)
+                if (dataStart + dataLength > m_Bytes.Length)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(extraDataLength),
-                        "extraDataStart + extraDataLength > size of the ManagedExtraData.");
+                    throw new ArgumentOutOfRangeException(nameof(dataLength),
+                        "dataStart + dataLength > size of the ManagedReceivedMessageData.");
                 }
-                m_ExtraDataStart = extraDataStart;
-                m_ExtraDataLength = extraDataLength;
+                m_DataStart = dataStart;
+                m_DataLength = dataLength;
                 if (m_NativeArray.IsCreated)
                 {
                     m_NativeArray.Dispose();
                 }
             }
 
-            public ExtraDataFormat PreferredFormat => ExtraDataFormat.ManagedArray;
+            public ReceivedMessageDataFormat PreferredFormat => ReceivedMessageDataFormat.ManagedArray;
 
-            public int Length => m_ExtraDataLength;
+            public int Length => m_DataLength;
 
-            public void AsManagedArray(out byte[] array, out int extraDataStart, out int extraDataLength)
+            public void AsManagedArray(out byte[] array, out int dataStart, out int dataLength)
             {
                 array = m_Bytes;
-                extraDataStart = m_ExtraDataStart;
-                extraDataLength = m_ExtraDataLength;
+                dataStart = m_DataStart;
+                dataLength = m_DataLength;
             }
 
             public NativeArray<byte> AsNativeArray()
             {
                 if (!m_NativeArray.IsCreated)
                 {
-                    m_NativeArray = new NativeArray<byte>(m_Bytes, Allocator.Temp).GetSubArray(m_ExtraDataStart, m_ExtraDataLength);
+                    m_NativeArray = new NativeArray<byte>(m_Bytes, Allocator.Temp).GetSubArray(m_DataStart, m_DataLength);
                 }
                 return m_NativeArray;
             }
 
-            public void Dispose()
+            public void Release()
             {
-                m_ExtraDataStart = 0;
-                m_ExtraDataLength = 0;
+                m_DataStart = 0;
+                m_DataLength = 0;
                 if (m_NativeArray.IsCreated)
                 {
                     m_NativeArray.Dispose();
                 }
-                m_Owner.ReturnManagedExtraData(this);
+                m_Owner.ReturnManagedReceivedMessageData(this);
             }
 
             /// <summary>
-            /// Owning <see cref="UDPAgent"/> that contains the pool to which we should be returned to.
+            /// Owning <see cref="UdpAgent"/> that contains the pool to which we should be returned to.
             /// </summary>
-            UDPAgent m_Owner;
+            UdpAgent m_Owner;
             /// <summary>
-            /// Managed array of bytes in which the extra data is stored.
+            /// Managed array of bytes in which the data is stored.
             /// </summary>
             byte[] m_Bytes;
             /// <summary>
-            /// First byte in array that contains the extra data.
+            /// First byte in array that contains the data considered by methods of <see cref="IReceivedMessageData"/>.
             /// </summary>
-            int m_ExtraDataStart;
+            int m_DataStart;
             /// <summary>
-            /// Length of the extra data (starting at <see cref="m_ExtraDataStart"/>).
+            /// Length of the data (starting at <see cref="m_DataStart"/>) considered by methods of
+            /// <see cref="IReceivedMessageData"/>.
             /// </summary>
-            int m_ExtraDataLength;
+            int m_DataLength;
             /// <summary>
             /// Cache for calls to AsNativeArray.
             /// </summary>
             NativeArray<byte> m_NativeArray;
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    try
-                    {
-                        m_ReceiveThreadCancellationTokenSource?.Cancel(); // Need to be canceled before disposing of the UdpClient
-                        m_UdpClient?.Dispose(); // Interrupts any currently going on call to Receive in m_ReceiveThread
-                        m_ReceiveThread?.Join();
-                        m_ReceiveThreadCancellationTokenSource?.Dispose();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Main UdpClient used for reception of data and sending to the Multicast endpoint (config's MulticastIp:Port).
@@ -733,7 +603,7 @@ namespace Unity.ClusterDisplay
         /// <remarks>Would be nice to use <c>Span&lt;byte&gt;</c> from stackalloc in the methods that send messages, however
         /// we can't as the .net version we are targeting does not yet support sending from a <c>Span&lt;byte&gt;</c>, only
         /// from a <c>byte[]</c>.</remarks>
-        ObjectPool<byte[]> m_SendTempBuffers;
+        ConcurrentObjectPool<byte[]> m_SendTempBuffers;
         /// <summary>
         /// Object used to stop all the asynchronous work going on when we finish.
         /// </summary>
@@ -746,19 +616,9 @@ namespace Unity.ClusterDisplay
         /// ask for messages before returning missing FrameData datagrams.</remarks>
         Thread m_ReceiveThread;
         /// <summary>
-        /// Object to synchronize access to <see cref="m_ReceivedMessages"/>.
-        /// </summary>
-        object m_ReceivedMessagesLock = new object();
-        /// <summary>
         /// Queue of <see cref="ReceivedMessageBase"/> waiting to be consumed by our user.
         /// </summary>
-        /// <remarks>Would love to use <see cref="BlockingCollection{T}"/>, however every call to
-        /// <see><cref>BlockingCollection{T}.TryTake(T, Timespan)</cref></see> would result in 7 heap allocations.
-        /// Since most received messages get filtered by classes like <see cref="FrameDataAssembler"/> and the number of
-        /// messages reaching <see cref="m_ReceivedMessages"/> are not that high then the speed impact of using locks
-        /// vs <see cref="ConcurrentQueue{T}"/> should be acceptable.
-        /// </remarks>
-        Queue<ReceivedMessageBase> m_ReceivedMessages = new();
+        BlockingQueue<ReceivedMessageBase> m_ReceivedMessages = new();
         /// <summary>
         /// Custom delegate to create a <see cref="ReceivedMessage{M}"/> from a byte array (length must match sizeof(M)).
         /// </summary>
@@ -770,11 +630,18 @@ namespace Unity.ClusterDisplay
         /// </summary>
         MessageFactory[] m_FactoryByMessageType;
         /// <summary>
-        /// Pool of <see cref="ManagedExtraData"/> that allow avoiding constant allocation (and garbage collection) of
+        /// Pool of <see cref="ManagedReceivedMessageData"/> that allow avoiding constant allocation (and garbage collection) of
         /// byte[] used to receive the datagrams and to contain the received data.
         /// </summary>
-        ObjectPool<ManagedExtraData> m_ExtraDataPool;
+        ConcurrentObjectPool<ManagedReceivedMessageData> m_ReceivedMessageDataPool;
 
+        /// <summary>
+        /// Empty <see cref="NativeArray{T}"/> that should never be modified.  Use to unify cases with and without
+        /// additional data.
+        /// </summary>
+        /// <remarks>Cannot be made readonly because <see cref="NativeArray{T}.AsReadOnly"/> is not considered "pure"
+        /// and do internal modifications to s_EmptyNativeArray.</remarks>
+        static NativeArray<byte> s_EmptyNativeArray = new(0, Allocator.Persistent);
         /// <summary>
         /// <see cref="ProfilerMarker"/> used to identify the time spent doing actual network reception.
         /// </summary>

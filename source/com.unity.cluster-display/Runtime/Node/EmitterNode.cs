@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay
         /// <param name="emitterConfig">Emitter specific configuration.</param>
         /// <param name="udpAgent">Object through which we will perform communication with other nodes in the cluster.
         /// Must support reception of <see cref="ReceiveMessageTypes"/>.</param>
-        public EmitterNode(ClusterNodeConfig config, EmitterNodeConfig emitterConfig, IUDPAgent udpAgent)
+        public EmitterNode(ClusterNodeConfig config, EmitterNodeConfig emitterConfig, IUdpAgent udpAgent)
             : base(config, udpAgent)
         {
             EmitterConfig = emitterConfig;

@@ -155,7 +155,7 @@ namespace Unity.ClusterDisplay
 
         public void DisableClusterDisplay() => CleanUp();
 
-        bool TryInitializeEmitter(ClusterNodeConfig clusterNodeConfig, UDPAgentConfig udpConfig,
+        bool TryInitializeEmitter(ClusterNodeConfig clusterNodeConfig, UdpAgentConfig udpConfig,
             ClusterParams clusterParams)
         {
             InstanceLog($"Initializing {nameof(ClusterSync)} for emitter.");
@@ -166,7 +166,7 @@ namespace Unity.ClusterDisplay
                     ExpectedRepeaterCount = (byte)clusterParams.RepeaterCount
                 };
                 udpConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
-                LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, new UDPAgent(udpConfig));
+                LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, new UdpAgent(udpConfig));
 
                 NodeRole = NodeRole.Emitter;
                 RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
@@ -180,7 +180,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        bool TryInitializeRepeater(ClusterNodeConfig clusterNodeConfig, UDPAgentConfig udpConfig,
+        bool TryInitializeRepeater(ClusterNodeConfig clusterNodeConfig, UdpAgentConfig udpConfig,
             ClusterParams clusterParams)
         {
             InstanceLog($"Initializing {nameof(ClusterSync)} for repeater.");
@@ -188,7 +188,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 udpConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
-                LocalNode = new RepeaterNode(clusterNodeConfig, new UDPAgent(udpConfig));
+                LocalNode = new RepeaterNode(clusterNodeConfig, new UdpAgent(udpConfig));
 
                 NodeRole = NodeRole.Repeater;
 
@@ -214,7 +214,7 @@ namespace Unity.ClusterDisplay
                     EnableHardwareSync = clusterParams.EnableHardwareSync
                 };
 
-                var udpAgentConfig = new UDPAgentConfig
+                var udpAgentConfig = new UdpAgentConfig
                 {
                     MulticastIp = IPAddress.Parse(clusterParams.MulticastAddress),
                     Port = clusterParams.Port,

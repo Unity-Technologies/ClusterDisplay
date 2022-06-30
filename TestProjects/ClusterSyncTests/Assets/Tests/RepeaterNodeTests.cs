@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class RepeaterNodeTests
     {
-        UDPAgent m_EmitterAgent;
+        UdpAgent m_EmitterAgent;
         FrameDataSplitter m_EmitterFrameDataSplitter;
         EmitterStateWriter m_EmitterStateWriter;
         EventBus<TestData> m_EmitterEventBus;
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.Tests
                 EnableHardwareSync = false // Can't really test with true as computers running unit test don't have that hardware...
             };
 
-            m_RepeaterNode = new RepeaterNode(nodeConfig, new UDPAgent(repeaterAgentConfig));
+            m_RepeaterNode = new RepeaterNode(nodeConfig, new UdpAgent(repeaterAgentConfig));
             m_RepeaterEventBus = new(EventBusFlags.ReadFromCluster);
             m_RepeaterEventBus.Subscribe(testData =>
             {
@@ -111,7 +111,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Transmit the first frame
                 minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
-                m_EmitterStateWriter.PublishCurrentState(m_EmitterFrameDataSplitter, 0);
+                m_EmitterStateWriter.PublishCurrentState(0, m_EmitterFrameDataSplitter);
             });
 
             m_RepeaterNode.DoFrame();
@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay.Tests
 
                     // Transmit the frame data
                     minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
-                    m_EmitterStateWriter.PublishCurrentState(m_EmitterFrameDataSplitter, localFrameIndex);
+                    m_EmitterStateWriter.PublishCurrentState(localFrameIndex, m_EmitterFrameDataSplitter);
                 });
 
                 ConsumeAllReceivedEmitterMessages();

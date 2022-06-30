@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.Tests
         string m_InterfaceName;
 
         readonly List<ClusterSync> m_Instances = new();
-        UDPAgent m_TestAgent;
+        UdpAgent m_TestAgent;
 
         [SetUp]
         public void SetUp()
@@ -32,13 +32,13 @@ namespace Unity.ClusterDisplay.Tests
             m_InterfaceName = SelectNic().Name;
         }
 
-        UDPAgent GetTestAgent(IEnumerable<MessageType> receiveMessageTypes)
+        UdpAgent GetTestAgent(IEnumerable<MessageType> receiveMessageTypes)
         {
             var testConfig = udpConfig;
             testConfig.AdapterName = m_InterfaceName;
             testConfig.ReceivedMessagesType = receiveMessageTypes.ToArray();
 
-            return new UDPAgent(testConfig);
+            return new UdpAgent(testConfig);
         }
 
         [UnityTest]
@@ -277,7 +277,7 @@ namespace Unity.ClusterDisplay.Tests
             return (emitterWaitingToStart.WaitingOn[nodeId >> 6] & nodeIdBit) == 0;
         }
 
-        bool ConsumeFirstMessageOfRepeaterWhere<T>(IUDPAgent udpAgent, long testEndTimestamp,
+        bool ConsumeFirstMessageOfRepeaterWhere<T>(IUdpAgent udpAgent, long testEndTimestamp,
             Func<ReceivedMessage<T>, bool> predicate, IEnumerable<MessageType> typesToSkip = null) where T: unmanaged
         {
             var typesToSkipHashSet = new HashSet<MessageType>();

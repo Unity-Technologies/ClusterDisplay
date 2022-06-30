@@ -1,6 +1,7 @@
 ﻿using System;
 using Unity.Profiling;
 using UnityEngine;
+using Utils;
 
 namespace Unity.ClusterDisplay.EmitterStateMachine
 {
@@ -16,24 +17,20 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public EmitFrameState(EmitterNode node)
             : base(node)
         {
-            m_Splitter = new(Node.UdpAgent);
+            m_Splitter = new(Node.UdpAgent, new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
             m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence);
             m_Emitter = new(Node.Config.RepeatersDelayed);
             Node.UdpAgent.OnMessagePreProcess += AnswerRegisteringWithEmitter;
         }
 
         /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~EmitFrameState() => Dispose(false);
-
-        /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            m_Emitter?.Dispose();
+            m_StartHandler?.Dispose();
+            m_Splitter?.Dispose();
         }
 
         protected override NodeState DoFrameImplementation()
@@ -83,37 +80,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             }
             using (s_MarkerPublishState.Auto())
             {
-                m_Emitter.PublishCurrentState(m_Splitter, effectiveFrameIndex);
+                m_Emitter.PublishCurrentState(effectiveFrameIndex, m_Splitter);
             }
 
             // EmitFrameState never switch to another state...
             return null;
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    m_Emitter?.Dispose();
-                    m_StartHandler?.Dispose();
-                    m_Splitter?.Dispose();
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Handle reception of <see cref="RegisteringWithEmitter"/> and reply if their registration was accepted or not.

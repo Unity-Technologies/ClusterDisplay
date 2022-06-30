@@ -15,9 +15,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void WaitingOnSingleFrame()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var emitterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
-            var repeaterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
                 new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}));
 
@@ -48,9 +48,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void IgnoreDoubleSet()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var emitterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
-            var repeaterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
                 new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3,9}));
 
@@ -91,9 +91,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void RepeatersStopsWaiting()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var emitterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
-            var repeaterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
                 new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
 
@@ -139,9 +139,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void MessagesFromWrongFrameIgnored()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var emitterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
-            var repeaterAgent = new TestUDPAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
                 new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
 
@@ -215,7 +215,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(beforeSendingRightFramesTimestamp, Is.LessThanOrEqualTo(tryWaitEndTime));
         }
 
-        static void SendRepeaterWaiting(ulong frameIndex, byte repeaterId, bool willWaitNextFrame, IUDPAgent repeaterAgent)
+        static void SendRepeaterWaiting(ulong frameIndex, byte repeaterId, bool willWaitNextFrame, IUdpAgent repeaterAgent)
         {
             repeaterAgent.SendMessage(MessageType.RepeaterWaitingToStartFrame, new RepeaterWaitingToStartFrame()
             {

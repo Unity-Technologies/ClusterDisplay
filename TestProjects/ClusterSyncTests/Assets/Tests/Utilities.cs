@@ -99,6 +99,12 @@ namespace Unity.ClusterDisplay.Tests
             return ret;
         }
 
+        public static byte[] ToArray(this IReceivedMessageData data)
+        {
+            data.AsManagedArray(out var array, out var dataStart, out var dataLength);
+            return new Span<byte>(array, dataStart, dataLength).ToArray();
+        }
+
         public static IEnumerator ToCoroutine(this Task task, float timeoutSeconds)
         {
             var elapsed = 0f;

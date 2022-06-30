@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.Tests
 
         public static readonly string AdapterName = NetworkingUtils.SelectNic().Name;
 
-        public static readonly UDPAgentConfig udpConfig = new()
+        public static readonly UdpAgentConfig udpConfig = new()
         {
             MulticastIp = IPAddress.Parse(MulticastAddress),
             Port = TestPort,

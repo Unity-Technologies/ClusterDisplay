@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Utils;
 using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
@@ -13,9 +14,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void PassThroughSmallFrameData()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var sendAgent = new TestUDPAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
-            var recvAgent = new TestUDPAgent(testNetwork,new [] {MessageType.FrameData});
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
             using var frameDataSplitter = new FrameDataSplitter(sendAgent);
 
             const int frameDataLength = 500;
@@ -33,9 +34,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void SplitFrameData()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var sendAgent = new TestUDPAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
-            var recvAgent = new TestUDPAgent(testNetwork,new [] {MessageType.FrameData});
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
             using var frameDataSplitter = new FrameDataSplitter(sendAgent);
 
             // All our message sizes of this test are based on that, will need to update the test if it changes...
@@ -56,10 +57,11 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void RetransmitData()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var sendAgent = new TestUDPAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
-            var recvAgent = new TestUDPAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataSplitter = new FrameDataSplitter(sendAgent);
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
+            using var frameDataSplitter = new FrameDataSplitter(sendAgent,
+                new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
 
             // 1. Before testing re-transmit we need to first transmit something!
             // While at it, test that what we send to the repeaters is the expected content.
@@ -99,12 +101,17 @@ namespace Unity.ClusterDisplay.Tests
             TestReceivedFrameData(frame42Message2, 42, frame42DataLength, 2, dataPerMessage * 2,
                 frame42DataPayload[(dataPerMessage * 2)..]);
 
+            // So far, frameDataSplitter should still use every FrameData it has been pushed, so nothing should be
+            // returned to the object pool.
+            Assert.That(frameDataSplitter.FrameDataBufferPool.CountInactive, Is.Zero);
+
             // Transmit frame 43
             const int frame43DataLength = 4000;
             var frame43Data = AllocateRandomFrameDataBuffer(frame43DataLength);
             var frame43DataPayload = frame43Data.Data().ToArray();
             frameDataSplitter.SendFrameData(43, ref frame43Data);
             Assert.That(frame43Data, Is.Null);
+            Assert.That(frameDataSplitter.FrameDataBufferPool.CountInactive, Is.EqualTo(1));
 
             // Check that we receive what we expect
             Assert.That(recvAgent.ReceivedMessagesCount, Is.EqualTo(4));
@@ -170,9 +177,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void RetransmitFrame0Data()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var sendAgent = new TestUDPAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
-            var recvAgent = new TestUDPAgent(testNetwork,new [] {MessageType.FrameData});
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
             using var frameDataSplitter = new FrameDataSplitter(sendAgent);
 
             // All our message sizes of this test are based on that, will need to update the test if it changes...
@@ -245,9 +252,9 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void SkipFrames()
         {
-            var testNetwork = new TestUDPAgentNetwork();
-            var sendAgent = new TestUDPAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
-            var recvAgent = new TestUDPAgent(testNetwork,new [] {MessageType.FrameData});
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
             using var frameDataSplitter = new FrameDataSplitter(sendAgent);
 
             int frameDataLength = 500;
@@ -290,7 +297,7 @@ namespace Unity.ClusterDisplay.Tests
             int datagramIndex, int datagramDataOffset, byte[] extraData)
         {
             Assert.That(receivedMessage.Type, Is.EqualTo(MessageType.FrameData));
-            Assert.That(receivedMessage.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData));
+            Assert.That(receivedMessage.ExtraData.ToArray(), Is.EqualTo(extraData));
             var receivedFrameDataMessage = receivedMessage as ReceivedMessage<FrameData>;
             Assert.That(receivedFrameDataMessage, Is.Not.Null);
             Assert.That(receivedFrameDataMessage.Payload.FrameIndex, Is.EqualTo(frameIndex));
@@ -299,7 +306,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(receivedFrameDataMessage.Payload.DatagramDataOffset, Is.EqualTo(datagramDataOffset));
         }
 
-        static void SendReTransmit(IUDPAgent udpAgent, ulong frameIndex, int datagramIndexIndexStart,
+        static void SendReTransmit(IUdpAgent udpAgent, ulong frameIndex, int datagramIndexIndexStart,
             int datagramIndexIndexEnd)
         {
             var message = new RetransmitFrameData()
@@ -311,7 +318,7 @@ namespace Unity.ClusterDisplay.Tests
             udpAgent.SendMessage(MessageType.RetransmitFrameData, message);
         }
 
-        static void CompareNextRetransmitted(IUDPAgent udpAgent, ReceivedMessageBase compareTo)
+        static void CompareNextRetransmitted(IUdpAgent udpAgent, ReceivedMessageBase compareTo)
         {
             using var retransmitted = udpAgent.ConsumeNextReceivedMessage();
             var compareToFrameData = compareTo as ReceivedMessage<FrameData>;

@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.Tests
             using var testNode = CreateNode(TimeSpan.FromMilliseconds(500), 10, out var repeatersAgent);
             var testState = new WelcomeRepeatersState(testNode);
 
-            var presentRepeatersAgent = new ConcurrentBag<TestUDPAgent>();
+            var presentRepeatersAgent = new ConcurrentBag<TestUdpAgent>();
             var repeatersTask = repeatersAgent.Select(agent => Task.Run(() =>
             {
                 var registeringMessage = GetRegisteringWithEmitter(agent);
@@ -139,7 +139,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.DoesNotThrow(() => Task.WaitAll(repeatersTask));
         }
 
-        EmitterNode CreateNode(TimeSpan handshakeTime, byte repeaterCount, out TestUDPAgent[] repeatersAgent)
+        EmitterNode CreateNode(TimeSpan handshakeTime, byte repeaterCount, out TestUdpAgent[] repeatersAgent)
         {
             var nodeConfig = new ClusterNodeConfig()
             {
@@ -153,19 +153,19 @@ namespace Unity.ClusterDisplay.Tests
                 ExpectedRepeaterCount = repeaterCount
             };
 
-            var udpAgentNetwork = new TestUDPAgentNetwork();
-            var repeatersAgentList = new List<TestUDPAgent>();
+            var udpAgentNetwork = new TestUdpAgentNetwork();
+            var repeatersAgentList = new List<TestUdpAgent>();
             for (int i = 0; i < repeaterCount; ++i)
             {
-                repeatersAgentList.Add(new TestUDPAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
+                repeatersAgentList.Add(new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
             }
             repeatersAgent = repeatersAgentList.ToArray();
 
             return new EmitterNode(nodeConfig, emitterNodeConfig,
-                new TestUDPAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray()));
+                new TestUdpAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray()));
         }
 
-        static RegisteringWithEmitter GetRegisteringWithEmitter(TestUDPAgent repeaterUdpAgent)
+        static RegisteringWithEmitter GetRegisteringWithEmitter(TestUdpAgent repeaterUdpAgent)
         {
             return new RegisteringWithEmitter()
             {
@@ -193,7 +193,7 @@ namespace Unity.ClusterDisplay.Tests
                 ((ReceivedMessage<RepeaterRegistered>)receivedMessage).Payload.Accepted == accepted;
         }
 
-        static void TestNodeState(EmitterNode emitterNode, IEnumerable<TestUDPAgent> repeaterAgents)
+        static void TestNodeState(EmitterNode emitterNode, IEnumerable<TestUdpAgent> repeaterAgents)
         {
             int repeatersCount = repeaterAgents.Count();
             var repeatersStatus = emitterNode.RepeatersStatus;

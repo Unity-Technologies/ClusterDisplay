@@ -106,7 +106,7 @@ namespace Unity.ClusterDisplay
             Dispose(false);
         }
 
-        public void PublishCurrentState(FrameDataSplitter frameDataSplitter, ulong currentFrameId)
+        public void PublishCurrentState(ulong currentFrameId, FrameDataSplitter frameDataSplitter)
         {
             if (!m_StagedFrameDataValid)
             {
@@ -117,18 +117,13 @@ namespace Unity.ClusterDisplay
 
             // We must stop using m_StagedFrameData as frameDataSplitter is now "owning it" (so that he can re-use it
             // to repeat lost datagrams).  So recycle an old one or if none are available allocate a new one.
-            if (frameDataSplitter.UnusedFrameDataBuffers.TryDequeue(out var recycledFrameDataBuffer))
-            {
-                m_StagedFrameData = recycledFrameDataBuffer;
-            }
-            else
-            {
-                m_StagedFrameData = new();
-            }
+            m_StagedFrameData = frameDataSplitter.FrameDataBufferPool != null ?
+                frameDataSplitter.FrameDataBufferPool.Get() : new FrameDataBuffer();
+
             m_StagedFrameDataValid = false;
         }
 
-        internal static void StoreStateData(FrameDataBuffer frameDataBuffer)
+        static void StoreStateData(FrameDataBuffer frameDataBuffer)
         {
             foreach (var (id, dataDelegate) in s_StateDataDelegatesOverride ?? k_StateDataDelegates)
             {

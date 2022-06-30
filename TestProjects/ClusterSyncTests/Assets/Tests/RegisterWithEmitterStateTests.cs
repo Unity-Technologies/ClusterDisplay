@@ -192,7 +192,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 
-        RepeaterNode CreateNode(TimeSpan handshakeTime, out TestUDPAgent emitterAgent)
+        RepeaterNode CreateNode(TimeSpan handshakeTime, out TestUdpAgent emitterAgent)
         {
             var nodeConfig = new ClusterNodeConfig()
             {
@@ -201,10 +201,10 @@ namespace Unity.ClusterDisplay.Tests
                 CommunicationTimeout = m_MaxTestTime
             };
 
-            var udpAgentNetwork = new TestUDPAgentNetwork();
-            emitterAgent = new TestUDPAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray());
+            var udpAgentNetwork = new TestUdpAgentNetwork();
+            emitterAgent = new TestUdpAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray());
             return new RepeaterNode(nodeConfig,
-                new TestUDPAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
+                new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
         }
 
         bool IsValidRegisteringWithEmitter(ReceivedMessageBase receivedMessage, ClusterNode clusterNode)

@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.Tests
         class RepeaterData: IDisposable
         {
             public byte NodeId;
-            public UDPAgent UdpAgent;
+            public UdpAgent UdpAgent;
             public FrameDataAssembler Assembler;
             public EventBus<TestData> EventBus;
             public int ReceivedTestData;
@@ -33,7 +33,7 @@ namespace Unity.ClusterDisplay.Tests
                 EventBus?.Dispose();
             }
 
-            public void ProcessFrameData(IReceivedMessageExtraData extraData)
+            public void ProcessFrameData(IReceivedMessageData extraData)
             {
                 foreach (var frameData in new FrameDataReader(extraData.AsNativeArray()))
                 {
@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay.Tests
                 var testConfig = udpConfig;
                 testConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
                 ret.NodeId = nodeId;
-                ret.UdpAgent = new UDPAgent(testConfig);
+                ret.UdpAgent = new UdpAgent(testConfig);
                 ret.Assembler = new FrameDataAssembler(ret.UdpAgent, false);
                 ret.EventBus = new EventBus<TestData>(EventBusFlags.ReadFromCluster);
                 ret.EventBus.Subscribe(data =>
@@ -83,7 +83,7 @@ namespace Unity.ClusterDisplay.Tests
                 ExpectedRepeaterCount = (byte)k_RepeaterIds.Length
             };
 
-            m_Node = new EmitterNode(nodeConfig, emitterNodeConfig, new UDPAgent(emitterUdpConfig));
+            m_Node = new EmitterNode(nodeConfig, emitterNodeConfig, new UdpAgent(emitterUdpConfig));
 
             // Clear previous EventBus from previous tests
             EmitterStateWriter.ClearCustomDataDelegates();
@@ -545,7 +545,7 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
-        static void ClearMessagesOfType(IUDPAgent udpAgent, MessageType messageType)
+        static void ClearMessagesOfType(IUdpAgent udpAgent, MessageType messageType)
         {
             for (;;)
             {

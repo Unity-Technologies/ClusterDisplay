@@ -318,8 +318,8 @@ namespace Unity.ClusterDisplay.Tests
         [SetUp]
         public void Setup()
         {
-            var udpAgentNetwork = new TestUDPAgentNetwork();
-            m_RepeaterAgent = new TestUDPAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray());
+            var udpAgentNetwork = new TestUdpAgentNetwork();
+            m_RepeaterAgent = new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray());
 
             var nodeConfig = new ClusterNodeConfig()
             {
@@ -334,7 +334,7 @@ namespace Unity.ClusterDisplay.Tests
             };
 
             m_Node = new EmitterNode(nodeConfig, emitterNodeConfig,
-                new TestUDPAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray()));
+                new TestUdpAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray()));
             AddRepeaterNodesToEmitter();
 
             var stateDelegatesOverride = new (int, FrameDataBuffer.StoreDataDelegate)[] {((int)StateID.Time, StoreNextStateData)};
@@ -423,7 +423,7 @@ namespace Unity.ClusterDisplay.Tests
             newNodeConfig.CommunicationTimeout = communicationTimeout;
             newNodeConfig.RepeatersDelayed = delayedRepeater;
             var newEmitterNodeConfig = m_Node.EmitterConfig;
-            IUDPAgent repeaterUdpAgent = m_Node.UdpAgent;
+            IUdpAgent repeaterUdpAgent = m_Node.UdpAgent;
             m_Node.Dispose();
             m_Node = new EmitterNode(newNodeConfig, newEmitterNodeConfig, repeaterUdpAgent);
             AddRepeaterNodesToEmitter();
@@ -447,7 +447,7 @@ namespace Unity.ClusterDisplay.Tests
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);
         EmitterNode m_Node;
-        TestUDPAgent m_RepeaterAgent;
+        TestUdpAgent m_RepeaterAgent;
         Queue<byte[]> m_StateDataQueue = new ();
         Queue<byte[]> m_CustomDataQueue = new ();
     }

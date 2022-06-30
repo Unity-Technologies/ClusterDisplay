@@ -8,20 +8,20 @@ using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    public class UDPAgentTests
+    public class UdpAgentTests
     {
         [Test]
         public void Dispose()
         {
-            using var agent = new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
-            Thread.Sleep(100); // A small wait to give the time to threads inside UDPAgent to correctly start
+            using var agent = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            Thread.Sleep(100); // A small wait to give the time to threads inside UdpAgent to correctly start
         }
 
         [Test]
         public void SendReceive()
         {
-            using var sender =   new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var sender =   new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
 
             // Send
             RegisteringWithEmitter messageToSend;
@@ -54,8 +54,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void ReceivesNothing()
         {
-            using var sender =   new UDPAgent(GetConfig(null));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var sender =   new UdpAgent(GetConfig(null));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
 
             // Send
             RegisteringWithEmitter messageToSend;
@@ -74,8 +74,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void SendReceiveExtraData()
         {
-            using var sender =   new UDPAgent(GetConfig(new [] {MessageType.FrameData}));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.FrameData}));
+            using var sender =   new UdpAgent(GetConfig(new [] {MessageType.FrameData}));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.FrameData}));
 
             // Prepare message and Send
             var messageToSend = new FrameData()
@@ -97,7 +97,7 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(msg.Type, Is.EqualTo(MessageType.FrameData));
                 Assert.That(msg.ExtraData, Is.Not.Null);
                 Assert.That(msg.ExtraData.Length, Is.EqualTo(extraDataLength));
-                Assert.That(msg.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData));
+                Assert.That(msg.ExtraData.ToArray(), Is.EqualTo(extraData));
                 var msgOfType = msg as ReceivedMessage<FrameData>;
                 Assert.That(msgOfType, Is.Not.Null);
                 Assert.That(msgOfType.Payload.FrameIndex, Is.EqualTo(messageToSend.FrameIndex));
@@ -126,8 +126,8 @@ namespace Unity.ClusterDisplay.Tests
                 return receivedMessageOfType.Payload.NodeId;
             }
 
-            using var sender = new UDPAgent(GetConfig(null));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var sender = new UdpAgent(GetConfig(null));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
 
             // Send
             var messageToSend = new RegisteringWithEmitter()
@@ -176,8 +176,8 @@ namespace Unity.ClusterDisplay.Tests
                 return receivedMessageOfType.Payload.FrameIndex;
             }
 
-            using var sender = new UDPAgent(GetConfig(null));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.FrameData}));
+            using var sender = new UdpAgent(GetConfig(null));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.FrameData}));
 
             // Prepare message and Send
             var messageToSend = new FrameData()
@@ -205,10 +205,10 @@ namespace Unity.ClusterDisplay.Tests
 
             Assert.That(received1, Is.Not.Null);
             Assert.That(GetReceivedMessageFrameIndex(received1), Is.EqualTo(42));
-            Assert.That(received1.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData1));
+            Assert.That(received1.ExtraData.ToArray(), Is.EqualTo(extraData1));
             Assert.That(received2, Is.Not.Null);
             Assert.That(GetReceivedMessageFrameIndex(received2), Is.EqualTo(43));
-            Assert.That(received2.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData2));
+            Assert.That(received2.ExtraData.ToArray(), Is.EqualTo(extraData2));
 
             // Dispose of received2 so we should get it back next time we receive a message
             received2.Dispose();
@@ -234,11 +234,11 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(received3, Is.Not.Null);
             Assert.That(received3, Is.SameAs(received2));
             Assert.That(GetReceivedMessageFrameIndex(received3), Is.EqualTo(44));
-            Assert.That(received3.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData3));
+            Assert.That(received3.ExtraData.ToArray(), Is.EqualTo(extraData3));
             Assert.That(received4, Is.Not.Null);
             Assert.That(received4ExtraData, Is.SameAs(received2ExtraData)); //* See below
             Assert.That(GetReceivedMessageFrameIndex(received4), Is.EqualTo(45));
-            Assert.That(received4.ExtraData.ToSpan().ToArray(), Is.EqualTo(extraData4));
+            Assert.That(received4.ExtraData.ToArray(), Is.EqualTo(extraData4));
 
             //* Why is it received4ExtraData that is the same as received2ExtraData and not received3ExtraData?
             //  This is cause by the current implementation where the "receive buffer" is immediately picked up by the
@@ -249,8 +249,8 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void DealsWithDoubleReceivedMessageDispose()
         {
-            using var sender = new UDPAgent(GetConfig(null));
-            using var receiver = new UDPAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var sender = new UdpAgent(GetConfig(null));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
 
             // Send
             var messageToSend = new RegisteringWithEmitter()
@@ -283,9 +283,9 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(received3, Is.Not.SameAs(received2));
         }
 
-        static UDPAgentConfig GetConfig(MessageType[] receivedMessagesType)
+        static UdpAgentConfig GetConfig(MessageType[] receivedMessagesType)
         {
-            return new UDPAgentConfig()
+            return new UdpAgentConfig()
             {
                 MulticastIp = IPAddress.Parse("224.0.1.0"),
                 Port = k_TestPort,

@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay
 
     /// <summary>
     /// Correspond to the struct of the same name, used to identify the different messages that can be sent with
-    /// <see cref="UDPAgent"/>.
+    /// <see cref="UdpAgent"/>.
     /// </summary>
     enum MessageType: byte
     {
@@ -101,12 +101,8 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Return all the types with a <see cref="MessageTypeAttribute"/>.
         /// </summary>
-        static (Type type, MessageTypeAttribute attribute)[] s_AllWithTypes;
-        public static (Type type, MessageTypeAttribute attribute)[] GetAllTypes()
-        {
-            s_AllWithTypes ??= AttributeUtility.GetAllTypes<MessageTypeAttribute>();
-            return s_AllWithTypes;
-        }
+        public static (Type type, MessageTypeAttribute attribute)[] AllTypes { get; } =
+            AttributeUtility.GetAllTypes<MessageTypeAttribute>();
     }
 
     /// <summary>

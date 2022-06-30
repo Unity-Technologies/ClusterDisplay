@@ -224,7 +224,7 @@ namespace Unity.ClusterDisplay
             /// Accumulate statistics of <c>this</c> to another <see cref="IntervalStatistics"/>.
             /// </summary>
             /// <param name="accumulator">Object into which statistics are accumulated.</param>
-            /// <param name="contribution">What was added to <see cref="accumulator"/>.</param>
+            /// <param name="contribution">What was added to <paramref name="accumulator"/>.</param>
             public void ContributeTo(IntervalStatistics accumulator, IntervalStatistics contribution)
             {
                 for (int messageIndex = 0; messageIndex < m_Stats.Length; ++messageIndex)

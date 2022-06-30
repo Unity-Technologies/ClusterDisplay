@@ -3,72 +3,59 @@ using System.Net;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Pool;
-
+using Utils;
 using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.ReceivedMessageBase>;
-using ReturnExtraDataCallback = System.Action<byte[]>;
 
 namespace Unity.ClusterDisplay
 {
     /// <summary>
-    /// Ways for a <see cref="IReceivedMessageExtraData"/> to deal with data.
+    /// Ways for a <see cref="IReceivedMessageData"/> to deal with data.
     /// </summary>
-    enum ExtraDataFormat
+    enum ReceivedMessageDataFormat
     {
         ManagedArray,
         NativeArray
     }
 
     /// <summary>
-    /// Interface for extra data associated to <see cref="ReceivedMessageBase"/>.
+    /// Interface for data associated to <see cref="ReceivedMessageBase"/>.
     /// </summary>
-    interface IReceivedMessageExtraData
+    interface IReceivedMessageData
     {
         /// <summary>
-        /// Most efficient format for the <see cref="IReceivedMessageExtraData"/> to return the data it contains.
+        /// Most efficient format for the <see cref="IReceivedMessageData"/> to return the data it contains.
         /// </summary>
-        ExtraDataFormat PreferredFormat { get; }
+        ReceivedMessageDataFormat PreferredFormat { get; }
 
         /// <summary>
-        /// Returns the length of the data in the extra data.
+        /// Returns the length of the data.
         /// </summary>
         int Length { get; }
 
         /// <summary>
-        /// Returns the extra data as a managed array.
+        /// Returns the data as a managed array.
         /// </summary>
-        /// <param name="array">Array containing the extra data.  Content of the array shall not be modified.</param>
-        /// <param name="extraDataStart">First byte in array that contains the extra data.  Data before that index is
-        /// undefined.</param>
-        /// <param name="extraDataLength">Length of the extra data (starting at <see cref="extraDataStart"/>).</param>
+        /// <param name="array">Array containing the data.  Content of the array shall not be modified.</param>
+        /// <param name="dataStart">First byte in array that contains the data.  Data before that index is undefined.
+        /// </param>
+        /// <param name="dataLength">Length of the data (starting at <paramref name="dataStart"/>). </param>
         /// <remarks>Some implementation of the method might have to copy the data (to a managed array) but result
         /// will be cashed for cases where the method would be called multiple times.</remarks>
-        void AsManagedArray(out byte[] array, out int extraDataStart, out int extraDataLength);
+        void AsManagedArray(out byte[] array, out int dataStart, out int dataLength);
 
         /// <summary>
-        /// Returns the extra data as a native array.
+        /// Returns the data as a native array.
         /// </summary>
         /// <returns>The native array.</returns>
         /// <remarks>Some implementation of the method might have to copy the data (to a NativeArray) but result will be
         /// cashed for cases where the method would be called multiple times.</remarks>
         NativeArray<byte> AsNativeArray();
-    }
 
-    /// <summary>
-    /// Helpers for <see cref="IReceivedMessageExtraData"/>.
-    /// </summary>
-    static class ReceivedMessageExtraDataExtensions
-    {
         /// <summary>
-        /// Wrapper around <see cref="IReceivedMessageExtraData.AsManagedArray"/>.
+        /// Indicate that the "owner" of the <see cref="IReceivedMessageData"/> is done of it and it can be potentially
+        /// reused for other received messages.
         /// </summary>
-        /// <param name="extraData">The <see cref="IReceivedMessageExtraData"/>.</param>
-        /// <returns>A <see cref="Span{T}"/>.</returns>
-        public static Span<byte> ToSpan(this IReceivedMessageExtraData extraData)
-        {
-            extraData.AsManagedArray(out var array, out var dataStart, out var dataLength);
-            return new Span<byte>(array, dataStart, dataLength);
-        }
+        void Release();
     }
 
     /// <summary>
@@ -93,28 +80,29 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Extra data (bytes) that were present after the <see cref="ReceivedMessage{TM}.Payload"/> on the network.
         /// </summary>
-        public IReceivedMessageExtraData ExtraData { get => m_ExtraData; }
+        public IReceivedMessageData ExtraData => m_ExtraData;
 
         /// <summary>
-        /// Initialize the ReceivedMessageBase with <see cref="IReceivedMessageExtraData"/>.
+        /// Sets the <see cref="ExtraData"/> associated with the <see cref="IReceivedMessageData"/>.
         /// </summary>
-        /// <param name="extraData">The <see cref="IReceivedMessageExtraData"/> to initialize the
+        /// <param name="extraData">The <see cref="IReceivedMessageData"/> to initialize the
         /// <see cref="ReceivedMessageBase"/> with.</param>
-        /// <remarks>The <see cref="ReceivedMessageBase"/> will take "ownership" of the extra data and dispose of it
-        /// when the <see cref="ReceivedMessageBase"/> is disposed of.</remarks>
-        internal void InitializeWithExtraData(IReceivedMessageExtraData extraData)
+        /// <remarks>The <see cref="ReceivedMessageBase"/> will take "ownership" of the extra data and call the
+        /// <see cref="IReceivedMessageData.Release"/> method on it when the <see cref="ReceivedMessageBase"/> is
+        /// disposed of.</remarks>
+        internal void AdoptExtraData(IReceivedMessageData extraData)
         {
-            (m_ExtraData as IDisposable)?.Dispose();
+            m_ExtraData?.Release();
             m_ExtraData = extraData;
         }
 
         /// <summary>
         /// Returns the current <see cref="ExtraData"/> of this <see cref="ReceivedMessageBase"/> and remove it from this
-        /// <see cref="ReceivedMessageBase"/> so that it does not get disposed when <see cref="IDisposable.Dispose"/> is
-        /// called on this object.
+        /// <see cref="ReceivedMessageBase"/> so that the <see cref="IReceivedMessageData.Release"/> method does not get
+        /// called by this <see cref="ReceivedMessageBase"/>.
         /// </summary>
-        /// <returns></returns>
-        internal IReceivedMessageExtraData DetachExtraData()
+        /// <returns><see cref="ExtraData"/> value before calling this method.</returns>
+        internal IReceivedMessageData DetachExtraData()
         {
             var ret = m_ExtraData;
             m_ExtraData = null;
@@ -131,16 +119,12 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Method to be called when done of the ReceivedMessageBase to return it to the pool it belongs to.
+        /// Method to be called when done of the <see cref="ReceivedMessageBase"/> to return it to the pool it belongs to.
         /// </summary>
         protected virtual void ReturnToPool()
         {
-            var disposableExtraData = m_ExtraData as IDisposable;
-            if (disposableExtraData != null)
-            {
-                disposableExtraData.Dispose();
-                m_ExtraData = null;
-            }
+            m_ExtraData?.Release();
+            m_ExtraData = null;
         }
 
         /// <summary>
@@ -151,7 +135,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Extra data (bytes) that were present after the <see cref="ReceivedMessage{TM}.Payload"/> on the network.
         /// </summary>
-        IReceivedMessageExtraData m_ExtraData;
+        IReceivedMessageData m_ExtraData;
     }
 
     /// <summary>
@@ -183,13 +167,10 @@ namespace Unity.ClusterDisplay
         /// <remarks>Will automatically allocate a new one if there are no free instances in the pool.</remarks>
         public static ReceivedMessage<TM> GetFromPool()
         {
-            lock (s_InstancesPool)
-            {
-                var ret = s_InstancesPool.Get();
-                Debug.Assert(ret.IsInPool);
-                ret.IsInPool = false;
-                return ret;
-            }
+            var ret = s_InstancesPool.Get();
+            Debug.Assert(ret.IsInPool);
+            ret.IsInPool = false;
+            return ret;
         }
 
         /// <summary>
@@ -197,10 +178,10 @@ namespace Unity.ClusterDisplay
         /// when the <see cref="IDisposable.Dispose"/> method is called and fill it from the given byte array.
         /// </summary>
         /// <param name="fillFrom">Bytes to fill the message from (length must match sizeof(M))</param>
-        /// <returns>The <see cref="ReceivedMessage{M}"/> instance and the amount of data from <see cref="fillFrom"/>
-        /// that was not used to fill the <see cref="ReceivedMessage{M}"/>.</returns>
+        /// <returns>The <see cref="ReceivedMessage{M}"/> instance and the amount of data from
+        /// <paramref name="fillFrom"/> that was not used to fill the <see cref="ReceivedMessage{M}"/>.</returns>
         /// <remarks>Will automatically allocate a new one if there are no free instances in the pool.</remarks>
-        /// <exception cref="ArgumentException">If length of <see cref="fillFrom"/> does not match length of
+        /// <exception cref="ArgumentException">If length of <paramref name="fillFrom"/> does not match length of
         /// <see cref="TM"/>.</exception>
         public static (ReceivedMessageBase message, int leftOver) GetFromPool(ReadOnlySpan<byte> fillFrom)
         {
@@ -217,39 +198,41 @@ namespace Unity.ClusterDisplay
         {
             var newInstance = GetFromPool();
             newInstance.Payload = Payload;
-            InitializeWithExtraData(DetachExtraData());
+            AdoptExtraData(DetachExtraData());
             return newInstance;
         }
 
         protected override void ReturnToPool()
         {
+            // Remarks: We might be tempted to use ObjectPool.actionOnRelease to perform the work done in
+            // base.ReturnToPool, but that would mean that it would be done while s_instancesPool is internally locked.
+            // We can easily do it outside the lock, so let's reduce contention (and it is not too bad since returning
+            // to the pool is centralized through this method as this is the only way for specializing classes to do it
+            // (s_InstancesPool is private)).
             base.ReturnToPool();
-            lock (s_InstancesPool)
+            if (!IsInPool)
             {
-                if (!IsInPool)
-                {
-                    s_InstancesPool.Release(this);
-                    IsInPool = true;
-                }
-                else
-                {
-                    Debug.LogWarning($"Dispose called twice on {nameof(ReceivedMessage<TM>)}<{typeof(TM).Name}>");
-                }
+                IsInPool = true;
+                s_InstancesPool.Release(this);
+            }
+            else
+            {
+                Debug.LogWarning($"Dispose called twice on {nameof(ReceivedMessage<TM>)}<{typeof(TM).Name}>");
             }
         }
 
         /// <summary>
         /// Pool that allow avoiding constant allocation (and garbage collection) of <see cref="ReceivedMessage{TM}"/>.
         /// </summary>
-        static ObjectPool<ReceivedMessage<TM>> s_InstancesPool = new(() => new ReceivedMessage<TM>());
+        static ConcurrentObjectPool<ReceivedMessage<TM>> s_InstancesPool = new(() => new ReceivedMessage<TM>());
     }
 
     /// <summary>
-    /// Interface exposing public members of <see cref="UDPAgent"/>.
+    /// Interface exposing public members of <see cref="UdpAgent"/>.
     /// </summary>
-    /// <remarks>Mainly done to make unit testing of other classes using <see cref="UDPAgent"/> easier and to allow
+    /// <remarks>Mainly done to make unit testing of other classes using <see cref="UdpAgent"/> easier and to allow
     /// better testing.</remarks>
-    interface IUDPAgent
+    interface IUdpAgent
     {
         /// <summary>
         /// Address of the adapter from which we are sending / receiving messages.
@@ -285,7 +268,7 @@ namespace Unity.ClusterDisplay
         /// <param name="additionalData">Additional data to be appended to the data to send immediately after
         /// <see cref="message"/></param>
         /// <typeparam name="TM">Message type corresponding to messageType.</typeparam>
-        /// <remarks><see cref="messageType"/> could in theory be automatically deduced, however caller will always
+        /// <remarks><paramref name="messageType"/> could in theory be automatically deduced, however caller will always
         /// have it ready at hand which is faster than us trying to reflection or other mechanisms to find it.</remarks>
         /// <remarks>This is a blocking call (not asynchronous) as the calling code cannot / does not need to proceed
         /// until the message is sent.</remarks>
@@ -334,7 +317,7 @@ namespace Unity.ClusterDisplay
         int ReceivedMessagesCount { get; }
 
         /// <summary>
-        /// Message types that the <see cref="UDPAgent"/> has been configured to receive.
+        /// Message types that the <see cref="UdpAgent"/> has been configured to receive.
         /// </summary>
         /// <remarks>Can be used from any thread and does not change during execution.</remarks>
         MessageType[] ReceivedMessageTypes { get; }

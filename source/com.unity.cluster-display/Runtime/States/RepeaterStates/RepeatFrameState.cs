@@ -36,17 +36,11 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         }
 
         /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~RepeatFrameState() => Dispose(false);
-
-        /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            m_FrameDataAssembler?.Dispose();
         }
 
         protected override NodeState DoFrameImplementation()
@@ -217,29 +211,6 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             throw new TimeoutException("Repeater failed to perform network synchronization with emitter for " +
                 $"frame {Node.FrameIndex} within the allocated {Node.Config.CommunicationTimeout.TotalSeconds} seconds.");
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    m_FrameDataAssembler?.Dispose();
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Object responsible for assembling all the different parts of a FrameData and for requesting retransmission

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using Unity.Collections;
 using UnityEngine.Pool;
+using Utils;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
@@ -24,7 +25,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="udpAgent">Lower lever network access on which we over which we are receiving fragments of the
+        /// <param name="udpAgent">Object responsible for network access from which we are receiving fragments of the
         /// whole frame data (and over which we ask for retransmission if packet loss are suspected).</param>
         /// <param name="orderedReception">Assumes datagrams ordering is preserved along the complete transmission chain.
         /// This means that the <see cref="FrameDataAssembler"/> will immediately ask for a retransmission as soon as a
@@ -32,12 +33,12 @@ namespace Unity.ClusterDisplay
         /// <param name="firstFrameData">Some time a <see cref="NodeState"/> might have missed packet and only realize
         /// it once it receives a <see cref="FrameData"/>.  The goal of this member variable is to allow processing the
         /// <see cref="FrameData"/> as if it would have never been removed from the ReceivedMessage queue.</param>
-        public FrameDataAssembler(IUDPAgent udpAgent, bool orderedReception,
+        public FrameDataAssembler(IUdpAgent udpAgent, bool orderedReception,
             ReceivedMessage<FrameData> firstFrameData = null)
         {
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.FrameData))
             {
-                throw new ArgumentException("UDPAgent does not support receiving required MessageType.FrameData");
+                throw new ArgumentException("UdpAgent does not support receiving required MessageType.FrameData");
             }
 
             m_CurrentPartialFrame = new PartialFrameData(orderedReception);
@@ -46,7 +47,7 @@ namespace Unity.ClusterDisplay
             CreateNewNativeExtraDataPool();
             m_GetNewNativeExtraDataDelegate = GetNewNativeExtraData;
 
-            UDPAgent = udpAgent;
+            UdpAgent = udpAgent;
 
             if (firstFrameData != null)
             {
@@ -60,32 +61,36 @@ namespace Unity.ClusterDisplay
                 firstFrameData.Dispose();
             }
 
-            UDPAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
 
-            m_FrameCompletionMonitorThreadCancellationTokenSource = new();
+            m_FrameCompletionMonitorThreadRunning = true;
             m_FrameCompletionMonitorActive = new(false);
             m_FrameCompletionMonitorThread = new(FrameCompletionMonitorThreadFunc);
             m_FrameCompletionMonitorThread.Start();
         }
 
         /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~FrameDataAssembler() => Dispose(false);
-
-        /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            // Stop receiving callbacks about received datagrams
+            if (UdpAgent != null)
+            {
+                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+            }
+
+            // Stop thread monitoring received data
+            m_FrameCompletionMonitorThreadRunning = false;
+            m_FrameCompletionMonitorActive?.Set();
+            m_FrameCompletionMonitorThread?.Join();
         }
 
         /// <summary>
-        /// Lower lever network access on which we are sending individual fragments of the whole frame data.
+        /// Network access object from which we are receiving fragments of the whole frame data (and over which we ask
+        /// for retransmission if packet loss are suspected).
         /// </summary>
-        public IUDPAgent UDPAgent { get; private set; }
+        public IUdpAgent UdpAgent { get; }
 
         /// <summary>
         /// How long must a partial frame data remain before we request retransmission of the missing parts.
@@ -184,7 +189,7 @@ namespace Unity.ClusterDisplay
                                 DatagramIndex = 0,
                                 DatagramDataOffset = 0
                             };
-                        receivedFrameData.InitializeWithExtraData(m_CurrentPartialFrame.ConsumeCompletedFrame());
+                        receivedFrameData.AdoptExtraData(m_CurrentPartialFrame.ConsumeCompletedFrame());
                         var ret = receivedFrameData;
                         receivedFrameData = null; // So that it does not get disposed of in the finally
 
@@ -224,6 +229,7 @@ namespace Unity.ClusterDisplay
         /// <remarks>Assumes caller has already locked <see cref="m_ThisLock"/>.</remarks>
         void CreateNewNativeExtraDataPool()
         {
+            m_NativeExtraDataPool?.Dispose();
             m_NativeExtraDataPool = new(() => new NativeExtraData(this, m_NativeExtraDataPoolAllocSize));
         }
 
@@ -273,10 +279,10 @@ namespace Unity.ClusterDisplay
             int count = 0;
             while (pendingQueue.Count > 0)
             {
-                UDPAgent.SendMessage(MessageType.RetransmitFrameData, pendingQueue.Dequeue());
+                UdpAgent.SendMessage(MessageType.RetransmitFrameData, pendingQueue.Dequeue());
                 ++count;
             }
-            UDPAgent.Stats.RetransmitFrameDataSequence(count);
+            UdpAgent.Stats.RetransmitFrameDataSequence(count);
         }
 
         /// <summary>
@@ -288,11 +294,11 @@ namespace Unity.ClusterDisplay
         {
             long ticksToMillisecond = Stopwatch.Frequency / 1000;
 
-            while (!m_FrameCompletionMonitorThreadCancellationTokenSource.Token.IsCancellationRequested)
+            while (m_FrameCompletionMonitorThreadRunning)
             {
                 // Wait for the thread to be active
                 m_FrameCompletionMonitorActive.WaitOne();
-                if (m_FrameCompletionMonitorThreadCancellationTokenSource.Token.IsCancellationRequested)
+                if (!m_FrameCompletionMonitorThreadRunning)
                 {
                     break;
                 }
@@ -326,7 +332,7 @@ namespace Unity.ClusterDisplay
                     {
                         // It's being too long since we received some data for m_CurrentPartialFrame, ask for the
                         // missing parts.
-                        m_CurrentPartialFrame.AskForRetransmission(UDPAgent);
+                        m_CurrentPartialFrame.AskForRetransmission(UdpAgent);
                         sleepTime = (int)(m_FrameCompletionDelayTicks / ticksToMillisecond);
                         m_CurrentPartialFrame.UpdateLastReceivedDatagramTimestampToNow();
                     }
@@ -340,40 +346,9 @@ namespace Unity.ClusterDisplay
                 }
 
                 // Wait a little bit before checking again
-                m_FrameCompletionMonitorThreadCancellationTokenSource.Token.WaitHandle.WaitOne(sleepTime);
+                Thread.Sleep(sleepTime);
             }
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    if (UDPAgent != null)
-                    {
-                        UDPAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
-                    }
-
-                    m_FrameCompletionMonitorThreadCancellationTokenSource?.Cancel();
-                    m_FrameCompletionMonitorActive?.Set();
-                    m_FrameCompletionMonitorThread?.Join();
-                    m_FrameCompletionMonitorThreadCancellationTokenSource?.Dispose();
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Object to be locked when code needs to serialize access to member variables.
@@ -395,7 +370,9 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Pool that contains old NativeExtraData that can be re-used.
         /// </summary>
-        /// <remarks>Should lock <see cref="m_ThisLock"/> before accessing it.</remarks>
+        /// <remarks>Should lock <see cref="m_ThisLock"/> before accessing it.  Using
+        /// <see cref="ConcurrentObjectPool{T}"/> wouldn't be enough since we need to ensure some coherency with the
+        /// other member variables (in particular <see cref="m_NativeExtraDataPoolAllocSize"/>).</remarks>
         ObjectPool<NativeExtraData> m_NativeExtraDataPool;
         /// <summary>
         /// How many bytes are allocated in each of the NativeExtraData in <see cref="m_NativeExtraDataPool"/>.
@@ -418,9 +395,9 @@ namespace Unity.ClusterDisplay
         /// </summary>
         ManualResetEvent m_FrameCompletionMonitorActive;
         /// <summary>
-        /// Object used to stop all the asynchronous work going on when we finish.
+        /// Indicate if m_FrameCompletionMonitorThread should keep on running
         /// </summary>
-        CancellationTokenSource m_FrameCompletionMonitorThreadCancellationTokenSource;
+        volatile bool m_FrameCompletionMonitorThreadRunning;
         /// <summary>
         /// How long (int Stopwatch ticks) must a partial frame data remain before we request retransmission of the
         /// missing parts.
@@ -432,10 +409,10 @@ namespace Unity.ClusterDisplay
         long m_FrameCompletionDelayTicks = (4 * Stopwatch.Frequency) / 1000;
 
         /// <summary>
-        /// IReceivedMessageExtraData that is used to represent the extra data associated to
+        /// IReceivedMessageData that is used to represent the extra data associated to
         /// <see cref="ReceivedMessage{FrameData}"/> generated by FrameDataAssembler.
         /// </summary>
-        class NativeExtraData : IReceivedMessageExtraData, IDisposable
+        class NativeExtraData : IReceivedMessageData
         {
             /// <summary>
             /// Constructor
@@ -464,17 +441,17 @@ namespace Unity.ClusterDisplay
                 if (extraDataLength > m_NativeArray.Length)
                 {
                     throw new ArgumentOutOfRangeException(nameof(extraDataLength),
-                        "extraDataLength > size of the ManagedExtraData.");
+                        "dataLength > size of the ManagedExtraData.");
                 }
                 m_ExtraDataLength = extraDataLength;
                 m_ManagedArray = null;
             }
 
-            public ExtraDataFormat PreferredFormat => ExtraDataFormat.NativeArray;
+            public ReceivedMessageDataFormat PreferredFormat => ReceivedMessageDataFormat.NativeArray;
 
             public int Length => m_ExtraDataLength;
 
-            public void AsManagedArray(out byte[] array, out int extraDataStart, out int extraDataLength)
+            public void AsManagedArray(out byte[] array, out int dataStart, out int dataLength)
             {
                 if (m_ManagedArray == null)
                 {
@@ -483,8 +460,8 @@ namespace Unity.ClusterDisplay
                 }
 
                 array = m_ManagedArray;
-                extraDataStart = 0;
-                extraDataLength = m_ExtraDataLength;
+                dataStart = 0;
+                dataLength = m_ExtraDataLength;
             }
 
             public NativeArray<byte> AsNativeArray()
@@ -492,7 +469,7 @@ namespace Unity.ClusterDisplay
                 return m_NativeArray.GetSubArray(0, m_ExtraDataLength);
             }
 
-            public void Dispose()
+            public void Release()
             {
                 m_ExtraDataLength = 0;
                 m_ManagedArray = null;
@@ -500,7 +477,7 @@ namespace Unity.ClusterDisplay
             }
 
             /// <summary>
-            /// Owning <see cref="UDPAgent"/> that contains the pool to which we should be returned to.
+            /// Owning <see cref="UdpAgent"/> that contains the pool to which we should be returned to.
             /// </summary>
             FrameDataAssembler m_Owner;
             /// <summary>
@@ -565,7 +542,7 @@ namespace Unity.ClusterDisplay
                 {
                     if (m_ExtraData == null || receivedFrameData.Payload.DataLength > m_ExtraData.RawArray.Length)
                     {
-                        m_ExtraData?.Dispose();
+                        m_ExtraData?.Release();
                         m_ExtraData = extraDataProvider(receivedFrameData.Payload.DataLength);
                     }
                     m_FrameDataBytesLeftToCopy = receivedFrameData.Payload.DataLength;
@@ -602,12 +579,12 @@ namespace Unity.ClusterDisplay
                 // Copy the data
                 switch (receivedFrameData.ExtraData.PreferredFormat)
                 {
-                    case ExtraDataFormat.ManagedArray:
+                    case ReceivedMessageDataFormat.ManagedArray:
                         receivedFrameData.ExtraData.AsManagedArray(out var bytes, out var startIndex, out var length);
                         NativeArray<byte>.Copy(bytes, startIndex, m_ExtraData.RawArray,
                             receivedFrameData.Payload.DatagramDataOffset, length);
                         break;
-                    case ExtraDataFormat.NativeArray:
+                    case ReceivedMessageDataFormat.NativeArray:
                     default:
                         NativeArray<byte>.Copy(receivedFrameData.ExtraData.AsNativeArray(), 0, m_ExtraData.RawArray,
                             receivedFrameData.Payload.DatagramDataOffset, receivedFrameData.ExtraData.Length);
@@ -662,7 +639,7 @@ namespace Unity.ClusterDisplay
             /// Send the necessary retransmissions so that we receive the missing parts of the frame data.
             /// </summary>
             /// <param name="udpAgent">Network access used to send the retransmission requests.</param>
-            public void AskForRetransmission(IUDPAgent udpAgent)
+            public void AskForRetransmission(IUdpAgent udpAgent)
             {
                 int lastDatagramReceived = -1;
                 int askedRetransmit = 0;
@@ -753,7 +730,7 @@ namespace Unity.ClusterDisplay
             int m_ReceivedDatagramsCount;
             /// <summary>
             /// <see cref="NativeExtraData"/> that contains the data of all received <see cref="FrameData"/> assembled
-            /// into a single buffer ready to be used as <see cref="ReceivedMessage{TM}"/>extra data as soon as all
+            /// into a single buffer ready to be used as <see cref="ReceivedMessage{TM}.ExtraData"/> as soon as all
             /// parts have been received.
             /// </summary>
             NativeExtraData m_ExtraData;

@@ -254,6 +254,14 @@ namespace Utils
             : base(toSet) { }
 
         /// <summary>
+        /// Constructor setting the bits from a raw (unsafe) storage where the bits are stored.  Must match the format
+        /// of the <see cref="NodeIdBitVectorReadOnly.CopyTo(ulong*)"/> method.
+        /// </summary>
+        /// <param name="from">Unsafe array of 4 ulong from which to get the bits</param>
+        public unsafe NodeIdBitVector(ulong* from)
+            : base(from) { }
+
+        /// <summary>
         /// Get or set bits in the <see cref="NodeIdBitVector"/>.
         /// </summary>
         /// <param name="nodeId">Index of the bit to get or set (corresponding to a NodeId).</param>

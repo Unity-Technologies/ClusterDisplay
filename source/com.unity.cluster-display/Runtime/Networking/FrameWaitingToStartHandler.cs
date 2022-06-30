@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay
     /// all the repeater nodes that are ready.
     /// </summary>
     /// <remarks>Emitter is handling WaitingToStartFrame logic in a dedicated class like this one connected to
-    /// <see cref="IUDPAgent.OnMessagePreProcess"/> instead of manually in a <see cref="NodeState"/> so that it can
+    /// <see cref="IUdpAgent.OnMessagePreProcess"/> instead of manually in a <see cref="NodeState"/> so that it can
     /// react as quickly as possible to <see cref="RepeaterWaitingToStartFrame"/> so that repeater receives an
     /// <see cref="EmitterWaitingToStartFrame"/> quickly to avoid repeating <see cref="RepeaterWaitingToStartFrame"/>
     /// for nothing.</remarks>
@@ -22,41 +22,39 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="udpAgent">Object through we we are receiving <see cref="RepeaterWaitingToStartFrame"/> and
-        /// transmitting <see cref="EmitterWaitingToStartFrame"/>.</param>
+        /// <param name="udpAgent">Object through which we we are receiving <see cref="RepeaterWaitingToStartFrame"/>
+        /// and transmitting <see cref="EmitterWaitingToStartFrame"/>.</param>
         /// <param name="toWaitFor">Repeater nodes that we have to wait on through network synchronization.</param>
-        public FrameWaitingToStartHandler(IUDPAgent udpAgent, NodeIdBitVectorReadOnly toWaitFor)
+        public FrameWaitingToStartHandler(IUdpAgent udpAgent, NodeIdBitVectorReadOnly toWaitFor)
         {
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.RepeaterWaitingToStartFrame))
             {
-                throw new ArgumentException("UDPAgent does not support receiving required MessageType.RepeaterWaitingToStartFrame");
+                throw new ArgumentException("UdpAgent does not support receiving required MessageType.RepeaterWaitingToStartFrame");
             }
 
             m_ToWaitFor = new (toWaitFor);
             m_StillWaitingOn = new (toWaitFor);
 
-            UDPAgent = udpAgent;
-            UDPAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent = udpAgent;
+            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
         }
-
-        /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~FrameWaitingToStartHandler() => Dispose(false);
 
         /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if (UdpAgent != null)
+            {
+                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+            }
         }
 
         /// <summary>
-        /// Lower lever network access on which we are sending individual fragments of the whole frame data.
+        /// Network access object through which we we are receiving <see cref="RepeaterWaitingToStartFrame"/> and
+        /// transmitting <see cref="EmitterWaitingToStartFrame"/>.
         /// </summary>
-        public IUDPAgent UDPAgent { get; private set; }
+        public IUdpAgent UdpAgent { get; }
 
         /// <summary>
         /// Block execution until all repeaters are ready to start the given frame.
@@ -164,11 +162,11 @@ namespace Unity.ClusterDisplay
                     {
                         m_StillWaitingOn.CopyTo(answer.WaitingOn);
                     }
-                    UDPAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
+                    UdpAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
 
                     if (!wasSet)
                     {
-                        UDPAgent.Stats.SentMessageWasRepeat(MessageType.EmitterWaitingToStartFrame);
+                        UdpAgent.Stats.SentMessageWasRepeat(MessageType.EmitterWaitingToStartFrame);
                     }
                 }
                 else if (receivedWaitingToStart.Payload.FrameIndex < m_FrameIndex)
@@ -181,8 +179,8 @@ namespace Unity.ClusterDisplay
                     {
                         k_AllZero.CopyTo(answer.WaitingOn);
                     }
-                    UDPAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
-                    UDPAgent.Stats.SentMessageWasRepeat(MessageType.EmitterWaitingToStartFrame);
+                    UdpAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
+                    UdpAgent.Stats.SentMessageWasRepeat(MessageType.EmitterWaitingToStartFrame);
                 }
                 else if (receivedWaitingToStart.Payload.FrameIndex > m_FrameIndex)
                 {
@@ -194,32 +192,6 @@ namespace Unity.ClusterDisplay
             // We never pass any RepeaterWaitingToStartFrame through...
             return null;
         }
-
-        /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    if (UDPAgent != null)
-                    {
-                        UDPAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
-                    }
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
 
         /// <summary>
         /// Object to be locked when code needs to serialize access to member variables.

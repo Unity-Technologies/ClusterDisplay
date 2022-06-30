@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Utils;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
@@ -17,11 +16,15 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="udpAgent">Lower lever network access on which we are sending individual fragments of the whole
-        /// frame data.</param>
+        /// <param name="udpAgent">Object responsible for network access on which we are sending individual fragments of
+        /// the whole frame data.</param>
+        /// <param name="frameDataBufferPool">Object to which we return the <see cref="FrameDataBuffer"/> when we are
+        /// done of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will
+        /// instead be disposed of.</param>
         /// <param name="retransmitHistory">Number of frames we keep in history to be retransmitted (must be >= 2).</param>
         /// <exception cref="ArgumentException">If retransmitHistory &lt; 2.</exception>
-        public FrameDataSplitter(IUDPAgent udpAgent, int retransmitHistory = 2)
+        public FrameDataSplitter(IUdpAgent udpAgent, ConcurrentObjectPool<FrameDataBuffer> frameDataBufferPool = null,
+            int retransmitHistory = 2)
         {
             if (retransmitHistory < 2)
             {
@@ -29,11 +32,12 @@ namespace Unity.ClusterDisplay
             }
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.RetransmitFrameData))
             {
-                throw new ArgumentException("UDPAgent does not support receiving required MessageType.RetransmitFrameData");
+                throw new ArgumentException("UdpAgent does not support receiving required MessageType.RetransmitFrameData");
             }
 
-            UDPAgent = udpAgent;
-            m_MaxDataPerMessage = UDPAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
+            UdpAgent = udpAgent;
+            m_MaxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
+            FrameDataBufferPool = frameDataBufferPool;
             m_SentFramesInformation = new SentFrameInformation[retransmitHistory];
             m_NewestSentFramesInformationIndex = retransmitHistory - 1;
             for (int i = 0; i < retransmitHistory; ++i)
@@ -41,37 +45,57 @@ namespace Unity.ClusterDisplay
                 m_SentFramesInformation[i].DatagramSentTimestamp = new long[64]; // 64 datagrams should be enough for most frames
             }
 
-            UDPAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
         }
-
-        /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~FrameDataSplitter() => Dispose(false);
 
         /// <summary>
         /// IDisposable implementation
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            // Unregister from pre-processing received messages
+            if (UdpAgent != null)
+            {
+                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+            }
+
+            // Dispose of FrameDataBuffer we still know about (no one should be using them anyway, so let's
+            // proactively dispose of them instead of waiting for GC).
+            lock (m_SentFramesInformation)
+            {
+                for (int sentInformationIndex = 0; sentInformationIndex < m_SentFramesInformation.Length;
+                     ++sentInformationIndex)
+                {
+                    var sentFrameInformation = m_SentFramesInformation[sentInformationIndex];
+                    if (sentFrameInformation.DataBuffer != null)
+                    {
+                        Debug.Assert(sentFrameInformation.DataBuffer.IsValid);
+                        DoneOfFrameDataBuffer(sentFrameInformation.DataBuffer);
+
+                        // To be sure no one is referencing a "returned" DataBuffer...
+                        m_SentFramesInformation[sentInformationIndex] = new SentFrameInformation();
+                    }
+                }
+            }
         }
 
         /// <summary>
-        /// Lower lever network access on which we are sending individual fragments of the whole frame data.
+        /// Network access object on which we are sending individual fragments of the whole frame data.
         /// </summary>
-        public IUDPAgent UDPAgent { get; private set; }
+        public IUdpAgent UdpAgent { get; }
 
         /// <summary>
         /// Send the specified frame over the network (splitting it in multiple smaller packets that can then be
         /// reassembled).
         /// </summary>
         /// <param name="frameIndex">Index of the frame this message contains information about.</param>
-        /// <param name="frameData">The data to be transmitted.  Caller of this method shouldn't reused it for anything
-        /// else until this object returns it through <see cref="UnusedFrameDataBuffers"/>.</param>
-        /// <exception cref="ArgumentException">If <see cref="frameIndex"/> is not equal to the <see cref="frameIndex"/>
-        /// of the previous call + 1.</exception>
+        /// <param name="frameData">The data to be transmitted.  Caller of this method shouldn't reuse it for anything
+        /// else until it is returned through the <see cref="ConcurrentObjectPool{T}"/> passed in the constructor.
+        /// </param>
+        /// <exception cref="ArgumentException">If <paramref name="frameIndex"/> is not equal to the
+        /// <paramref name="frameIndex"/> of the previous call + 1.</exception>
+        /// <remarks><paramref name="frameData"/> should originate from <see cref="FrameDataBufferPool"/> if not
+        /// <c>null</c> (and will be returned to that pool once we are done of it).</remarks>
         public void SendFrameData(ulong frameIndex, ref FrameDataBuffer frameData)
         {
             // First things, let's add an entry to m_SentFramesInformation (in case we get retransmission requests while
@@ -89,7 +113,7 @@ namespace Unity.ClusterDisplay
                 if (newFrameToSend.DataBuffer != null)
                 {
                     Debug.Assert(newFrameToSend.DataBuffer.IsValid); // Otherwise it was disposed of before we were done which is bad...
-                    UnusedFrameDataBuffers.Enqueue(newFrameToSend.DataBuffer);
+                    DoneOfFrameDataBuffer(newFrameToSend.DataBuffer);
                 }
                 newFrameToSend.FrameIndex = frameIndex;
                 newFrameToSend.DataBuffer = frameData;
@@ -118,10 +142,11 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// <see cref="FrameDataBuffer"/> that are not used anymore by the <see cref="FrameDataSplitter"/> and can be
-        /// reused to contain data of other frames.
+        /// <see cref="ConcurrentObjectPool{T}"/> to which we return the <see cref="FrameDataBuffer"/> when we are done
+        /// of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will instead be
+        /// disposed of.
         /// </summary>
-        public ConcurrentQueue<FrameDataBuffer> UnusedFrameDataBuffers { get; } = new();
+        public ConcurrentObjectPool<FrameDataBuffer> FrameDataBufferPool { get; }
 
         /// <summary>
         /// Send the specified datagram.
@@ -155,7 +180,7 @@ namespace Unity.ClusterDisplay
             };
             int dataToSend = Math.Min(frameInformation.DataBuffer.Length - frameData.DatagramDataOffset,
                 m_MaxDataPerMessage);
-            UDPAgent.SendMessage(MessageType.FrameData, frameData,
+            UdpAgent.SendMessage(MessageType.FrameData, frameData,
                 frameInformation.DataBuffer.DataSpan(frameData.DatagramDataOffset, dataToSend));
             frameInformation.DatagramSentTimestamp[datagramIndex] = Stopwatch.GetTimestamp();
         }
@@ -233,11 +258,29 @@ namespace Unity.ClusterDisplay
                      datagramIndex < stopDatagramIndex; ++datagramIndex)
                 {
                     SendDatagramOf(frameDataInformation, datagramIndex);
-                    UDPAgent.Stats.SentMessageWasRepeat(MessageType.FrameData);
+                    UdpAgent.Stats.SentMessageWasRepeat(MessageType.FrameData);
                 }
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Method called when we are done of a <see cref="FrameDataBuffer"/>.
+        /// </summary>
+        /// <param name="doneOf"><see cref="FrameDataBuffer"/> to be returned to be re-used or disposed of if no one cares
+        /// in re-using.</param>
+        void DoneOfFrameDataBuffer(FrameDataBuffer doneOf)
+        {
+            if (FrameDataBufferPool != null)
+            {
+                FrameDataBufferPool.Release(doneOf);
+            }
+            else
+            {
+                // Let's make future GV work easier by disposing of it immediately...
+                doneOf.Dispose();
+            }
         }
 
         /// <summary>
@@ -260,52 +303,8 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Method unifying finalizer / IDisposable implementation.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> if called from <see cref="IDisposable.Dispose"/> or <c>false</c> if
-        /// called from the finalizer.</param>
-        protected void Dispose(bool disposing)
-        {
-            if (!m_DisposedOf)
-            {
-                if (disposing)
-                {
-                    // Dispose managed state (managed objects)
-                    if (UDPAgent != null)
-                    {
-                        UDPAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
-                    }
-
-                    // Dispose of FrameDataBuffer we still know about (no one should be using them anyway, so let's
-                    // proactively dispose of them instead of waiting for GC).
-                    lock (m_SentFramesInformation)
-                    {
-                        foreach (var sentFrameInformation in m_SentFramesInformation)
-                        {
-                            if (sentFrameInformation.DataBuffer != null)
-                            {
-                                Debug.Assert(sentFrameInformation.DataBuffer.IsValid);
-                                sentFrameInformation.DataBuffer.Dispose();
-                            }
-                        }
-                    }
-                    while (UnusedFrameDataBuffers.TryDequeue(out var frameDataBuffer))
-                    {
-                        frameDataBuffer.Dispose();
-                    }
-                }
-
-                // Free unmanaged resources (unmanaged objects) and override finalizer
-
-                // Done
-                m_DisposedOf = true;
-            }
-        }
-        bool m_DisposedOf;
-
-        /// <summary>
         /// Maximum amount of frame data that can be sent with each <see cref="FrameData"/> through
-        /// <see cref="UDPAgent"/>.
+        /// <see cref="UdpAgent"/>.
         /// </summary>
         readonly int m_MaxDataPerMessage;
         /// <summary>
