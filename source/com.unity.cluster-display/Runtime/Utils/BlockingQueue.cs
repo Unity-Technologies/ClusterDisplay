@@ -16,6 +16,7 @@ namespace Utils
     /// result in 7 heap allocations per dequeue calls.</remarks>
     /// <remarks>We are not systematically exposing methods or interfaces of <see cref="Queue{T}"/> as they are not
     /// necessarily concurrency friendly.</remarks>
+    /// <remarks>Could be replaced with System.Threading.Channels, but it is not yet part of .Net Standard 2.1.</remarks>
     class BlockingQueue<T> where T: class
     {
         public BlockingQueue()
