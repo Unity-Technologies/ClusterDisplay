@@ -35,11 +35,11 @@ namespace Utils
         }
 
         /// <summary>
-        /// Consumes (returns and removes from the queue) the object in front of the queue.
+        /// Removes and returns the object at the beginning of the <see cref="BlockingQueue{T}"/>.
         /// </summary>
         /// <returns>Object in front of the queue.</returns>
         /// <remarks>The call will block if no object are present in the queue.</remarks>
-        public T ConsumeNext()
+        public T Dequeue()
         {
             lock (m_Internal)
             {
@@ -56,41 +56,44 @@ namespace Utils
         }
 
         /// <summary>
-        /// Tries to consume (return and remove from the queue) the object in front of the queue.
+        /// Removes the object at the beginning of the <see cref="BlockingQueue{T}"/>, and copies it to the result
+        /// parameter.
         /// </summary>
-        /// <returns>Object in front of the queue.</returns>
-        public T TryConsumeNext()
+        /// <param name="result">The removed object.</param>
+        /// <returns><c>true</c> if the object is successfully removed; <c>false</c> if the <see cref="BlockingQueue{T}"/>
+        /// is empty.</returns>
+        public bool TryDequeue(out T result)
         {
             lock (m_Internal)
             {
-                m_Internal.TryDequeue(out var ret);
-                return ret;
+                return m_Internal.TryDequeue(out result);
             }
         }
 
         /// <summary>
-        /// Tries to consume (return and remove from the queue) the object in front of the queue and wait the specified
-        /// time period if the queue is empty.
+        /// Removes the object at the beginning of the <see cref="BlockingQueue{T}"/> (waiting for up to
+        /// <paramref name="timeout"/> if empty), and copies it to the result parameter.
         /// </summary>
+        /// <param name="result">The removed object.</param>
         /// <param name="timeout">Maximum amount of time to wait for an object.</param>
-        /// <returns>Object in front of the queue or <c>null</c> if waited for at least <paramref name="timeout"/> and
-        /// no object was received.</returns>
-        public T TryConsumeNext(TimeSpan timeout)
+        /// <returns><c>true</c> if the object is successfully removed; <c>false</c> if the <see cref="BlockingQueue{T}"/>
+        /// is empty for <paramref name="timeout"/>.</returns>
+        public bool TryDequeue(out T result, TimeSpan timeout)
         {
             long deadlineTimestamp = StopwatchUtils.TimestampIn(timeout);
             lock (m_Internal)
             {
                 do
                 {
-                    if (m_Internal.TryDequeue(out var ret))
+                    if (m_Internal.TryDequeue(out result))
                     {
-                        return ret;
+                        return true;
                     }
 
                     Monitor.Wait(m_Internal, StopwatchUtils.TimeUntil(deadlineTimestamp));
                 } while (Stopwatch.GetTimestamp() < deadlineTimestamp);
 
-                return null;
+                return false;
             }
         }
 

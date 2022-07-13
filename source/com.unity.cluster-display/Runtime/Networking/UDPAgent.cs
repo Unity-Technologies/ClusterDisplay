@@ -181,17 +181,17 @@ namespace Unity.ClusterDisplay
 
         public ReceivedMessageBase ConsumeNextReceivedMessage()
         {
-            return m_ReceivedMessages.ConsumeNext();
+            return m_ReceivedMessages.Dequeue();
         }
 
         public ReceivedMessageBase TryConsumeNextReceivedMessage()
         {
-            return m_ReceivedMessages.TryConsumeNext();
+            return m_ReceivedMessages.TryDequeue(out var ret) ? ret : null;
         }
 
         public ReceivedMessageBase TryConsumeNextReceivedMessage(TimeSpan timeout)
         {
-            return m_ReceivedMessages.TryConsumeNext(timeout);
+            return m_ReceivedMessages.TryDequeue(out var ret, timeout) ? ret : null;
         }
 
         public int ReceivedMessagesCount => m_ReceivedMessages.Count;
