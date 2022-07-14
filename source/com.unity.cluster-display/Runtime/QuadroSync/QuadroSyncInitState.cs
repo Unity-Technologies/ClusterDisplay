@@ -5,7 +5,7 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay
 {
-    class QuadroSyncInitState : HardwareSyncInitState
+    class QuadroSyncInitState: HardwareSyncInitState
     {
         bool m_Initialized;
 
@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay
 
         struct CheckQuadroInitState { }
 
-        protected override NodeState DoFrame(bool newFrame)
+        protected override NodeState DoFrameImplementation()
         {
             if (!m_Initialized)
             {
@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay
                 m_Initialized = true;
             }
 
-            return base.DoFrame(newFrame);
+            return base.DoFrameImplementation();
         }
 
         void ProcessQuadroSyncInitResult()
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay
             var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
             if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
             {
-                LocalNode.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
+                Node.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
 
                 // Initialization finished, we do not need to be called again
                 PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);

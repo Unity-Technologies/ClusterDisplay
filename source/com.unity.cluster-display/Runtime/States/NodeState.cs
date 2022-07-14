@@ -1,117 +1,88 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel;
+using Unity.Profiling.LowLevel.Unsafe;
 
 namespace Unity.ClusterDisplay
 {
+    /// <summary>
+    /// Base class for classes implementing the different states of a <see cref="ClusterNode"/>.
+    /// </summary>
+    /// <remarks>Some NodeStateV2 might implement <see cref="System.IDisposable"/>, so anybody "owning" a
+    /// <see cref="NodeState"/> of any type should think of testing for <see cref="System.IDisposable"/> and calling
+    /// the <see cref="System.IDisposable.Dispose"/> method when getting rid of it.</remarks>
     abstract class NodeState
     {
-        protected Stopwatch m_Time;
-        public NodeState PendingStateChange { get; set; }
-        public static bool Debugging { get; set; }
-
-        protected TimeSpan MaxTimeOut { get; set; } = new(0, 0, 0, 30, 0);
-
-        protected ClusterNode LocalNode { get; }
-
-        protected NodeState(ClusterNode localNode) => LocalNode = localNode;
-
-        // We want each deriving class to implement these so we stay
-        // within or exit DoFrame or DoLateFrame safetly.
-        public abstract bool ReadyToProceed { get; }
-        public abstract bool ReadyForNextFrame { get; }
-
-        public NodeState EnterState(NodeState oldState)
+        /// <summary>
+        /// Method to be called every time a frame is to be processed by that <see cref="NodeState"/>.
+        /// </summary>
+        /// <returns>If <c>null</c>, everything worked fine and we are done processing that frame.  If not <c>null</c>
+        /// then this state processing is over and the newly returned <see cref="NodeState"/> must also be called
+        /// for the same frame as the frame for which <see cref="DoFrame"/> was called.</returns>
+        public unsafe NodeState DoFrame()
         {
-            if (oldState != this)
+            var metadata = stackalloc ProfilerMarkerData[1];
+            metadata[0].Type = (byte)ProfilerMarkerDataType.UInt64;
+            metadata[0].Size = (uint)UnsafeUtility.SizeOf<ulong>();
+            ulong frameIndex = Node.FrameIndex;
+            metadata[0].Ptr = UnsafeUtility.AddressOf(ref frameIndex);
+            IntPtr markerHandle = GetProfilerMarker();
+            ProfilerUnsafeUtility.BeginSampleWithMetadata(markerHandle, 1, metadata);
+            try
             {
-                if (oldState != null)
-                {
-                    oldState.ExitState();
-                }
-                m_Time = new Stopwatch();
-                m_Time.Start();
-
-                InitState();
+                return DoFrameImplementation();
             }
-
-            return this;
-        }
-
-        protected virtual void InitState()
-        {
-        }
-
-        protected virtual NodeState DoFrame(bool newFrame)
-        {
-            return this;
-        }
-
-        protected virtual void DoLateFrame() { }
-
-        public virtual void OnEndFrame() { }
-
-        public NodeState ProcessFrame(bool newFrame)
-        {
-            var res = DoFrame(newFrame);
-            if (res != this)
+            finally
             {
-                res.EnterState(this);
-                return res;
-            }
-
-            // RemoveMe
-            if (Debugging)
-            {
-                if (newFrame)
-                    m_Time.Restart();
-
-                if (m_Time.ElapsedMilliseconds > MaxTimeOut.Milliseconds)
-                {
-                    var shutdown = new Shutdown();
-                    return shutdown.EnterState(this);
-                }
-            }
-
-            if (PendingStateChange != null)
-                return PendingStateChange.EnterState(this);
-
-            return this;
-        }
-
-        public void ProcessLateFrame() => DoLateFrame();
-
-        protected void ProcessUnhandledMessage(MessageHeader msgHeader)
-        {
-            switch (msgHeader.MessageType)
-            {
-                case EMessageType.GlobalShutdownRequest:
-                {
-                    PendingStateChange = new Shutdown();
-                    break;
-                }
-
-                case EMessageType.HelloEmitter:
-                    break;
-
-                case EMessageType.WelcomeRepeater:
-                    break;
-
-                default:
-                {
-                    throw new Exception($"Unexpected network message received: \"{msgHeader.MessageType}\".");
-                }
+                ProfilerUnsafeUtility.EndSample(markerHandle);
             }
         }
 
-        protected virtual void ExitState()
+        /// <summary>
+        /// Implementation of <see cref="DoFrame"/> to be defined by specializing classes that is called every time a
+        /// frame is to be processed by that <see cref="NodeState"/>.
+        /// </summary>
+        /// <returns>If <c>null</c>, everything worked fine and we are done processing that frame.  If not <c>null</c>
+        /// then this state processing is over and the newly returned <see cref="NodeState"/> must also be called
+        /// for the same frame as the frame for which <see cref="DoFrame"/> was called.</returns>
+        protected abstract NodeState DoFrameImplementation();
+
+        /// <summary>
+        /// Method to be implemented by specializing classes to return a static variable fill by calling
+        /// <see cref="CreateProfilingMarker"/>.
+        /// </summary>
+        /// <remarks>I agree we could do this using class attributes, a dictionary, ...  But a virtual method is the
+        /// fastest way of doing it.</remarks>
+        protected abstract IntPtr GetProfilerMarker();
+
+        /// <summary>
+        /// Node we are a state of.
+        /// </summary>
+        protected ClusterNode Node { get; }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="node">Node we are a state of.</param>
+        protected NodeState(ClusterNode node)
         {
-            ClusterDebug.Log("Exiting State:" + GetType().Name);
+            Node = node;
         }
 
-        public virtual string GetDebugString()
+        /// <summary>
+        /// Creates a profiling marker (with metadata to store the frame index) to be returned by GetProfilerMarker.
+        /// </summary>
+        /// <param name="stateName">Name of the specializing class.</param>
+        /// <returns>The created profiling marker.</returns>
+        /// <remarks>Should be called only once to initialize a static variable of the specializing class.</remarks>
+        protected static IntPtr CreateProfilingMarker(string stateName)
         {
-            return GetType().Name;
+            var handle = ProfilerUnsafeUtility.CreateMarker(stateName, ProfilerUnsafeUtility.CategoryScripts,
+                MarkerFlags.Default, 1);
+            ProfilerUnsafeUtility.SetMarkerMetadata(handle, 0, "Frame index", (byte)ProfilerMarkerDataType.UInt64,
+                (byte)ProfilerMarkerDataUnit.Count);
+            return handle;
         }
     }
 
@@ -121,40 +92,10 @@ namespace Unity.ClusterDisplay
     /// <typeparam name="T">The local node type</typeparam>
     abstract class NodeState<T> : NodeState where T : ClusterNode
     {
-        protected new T LocalNode => base.LocalNode as T;
+        protected new T Node => base.Node as T;
+
         protected NodeState(T node) : base(node)
         {
         }
-    }
-
-    // Shutdown state --------------------------------------------------------
-    sealed class Shutdown : NodeState
-    {
-        public override bool ReadyToProceed => true;
-        public override bool ReadyForNextFrame => true;
-
-        public Shutdown()
-            : base(null) { }
-    }
-
-    // FatalError state --------------------------------------------------------
-    sealed class FatalError : NodeState
-    {
-        public override bool ReadyToProceed => true;
-        public override bool ReadyForNextFrame => true;
-
-        public FatalError(string msg)
-            : base(null)
-        {
-            Message = msg;
-        }
-
-        protected override void ExitState()
-        {
-            base.ExitState();
-            ClusterDebug.LogError(Message);
-        }
-
-        public string Message { get; }
     }
 }

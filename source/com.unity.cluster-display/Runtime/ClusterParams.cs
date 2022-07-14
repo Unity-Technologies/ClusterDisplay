@@ -4,16 +4,13 @@ namespace Unity.ClusterDisplay
 {
     struct ClusterParams
     {
-        public bool         DebugFlag;
-
         public bool         ClusterLogicSpecified;
         public bool         EmitterSpecified;
 
         public byte         NodeID;
         public int          RepeaterCount;
 
-        public int          RXPort;
-        public int          TXPort;
+        public int          Port;
 
         public string       MulticastAddress;
         public string       AdapterName;
@@ -30,13 +27,11 @@ namespace Unity.ClusterDisplay
         public static ClusterParams FromCommandLine() =>
             new()
             {
-                DebugFlag                 = CommandLineParser.debugFlag.Defined,
                 ClusterLogicSpecified     = CommandLineParser.clusterDisplayLogicSpecified,
                 EmitterSpecified          = CommandLineParser.emitterSpecified.Value,
                 NodeID                    = CommandLineParser.nodeID.Value,
                 RepeaterCount             = CommandLineParser.emitterSpecified.Value ? CommandLineParser.repeaterCount.Value : 0,
-                RXPort                    = CommandLineParser.rxPort.Value,
-                TXPort                    = CommandLineParser.txPort.Value,
+                Port                      = CommandLineParser.port.Value,
                 MulticastAddress          = CommandLineParser.multicastAddress.Value,
                 AdapterName               = CommandLineParser.adapterName.Value,
                 TargetFps                 = CommandLineParser.targetFps.Value,

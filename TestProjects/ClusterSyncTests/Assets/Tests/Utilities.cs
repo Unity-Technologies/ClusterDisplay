@@ -88,6 +88,23 @@ namespace Unity.ClusterDisplay.Tests
 
     static class Utilities
     {
+        public static byte[] AllocRandomByteArray(int length)
+        {
+            var ret = new byte[length];
+            for (int currentPosition = 0; currentPosition < length; currentPosition += 16)
+            {
+                var toCopy = Guid.NewGuid().ToByteArray().AsSpan(new Range(0, Math.Min(length - currentPosition, 16)));
+                toCopy.CopyTo(new Span<byte>(ret, currentPosition, length - currentPosition));
+            }
+            return ret;
+        }
+
+        public static byte[] ToArray(this IReceivedMessageData data)
+        {
+            data.AsManagedArray(out var array, out var dataStart, out var dataLength);
+            return new Span<byte>(array, dataStart, dataLength).ToArray();
+        }
+
         public static IEnumerator ToCoroutine(this Task task, float timeoutSeconds)
         {
             var elapsed = 0f;
