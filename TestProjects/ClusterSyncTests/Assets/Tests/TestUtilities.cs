@@ -213,12 +213,12 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [Test]
-        public unsafe void NodeIdBitVectorFromUnsafeConstructor()
+        public void NodeIdBitVectorFromIndividualULongConstructor()
         {
-            var unsafeStorage = stackalloc ulong[4]{k_ManyBitsStorage[0], k_ManyBitsStorage[1], k_ManyBitsStorage[2],
-                k_ManyBitsStorage[3]};
-            TestHasBitsSet(new NodeIdBitVector(unsafeStorage), k_ManyBits);
-            TestHasBitsSet(new NodeIdBitVectorReadOnly(unsafeStorage), k_ManyBits);
+            TestHasBitsSet(new NodeIdBitVector(k_ManyBitsStorage[0], k_ManyBitsStorage[1], k_ManyBitsStorage[2],
+                k_ManyBitsStorage[3]), k_ManyBits);
+            TestHasBitsSet(new NodeIdBitVectorReadOnly(k_ManyBitsStorage[0], k_ManyBitsStorage[1], k_ManyBitsStorage[2],
+                k_ManyBitsStorage[3]), k_ManyBits);
         }
 
         [Test]
@@ -234,15 +234,14 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [Test]
-        public unsafe void NodeIdBitVectorCopyToUnsafeArray()
+        public void NodeIdBitVectorCopyToIndividualULong()
         {
             var toTest = new NodeIdBitVectorReadOnly(k_ManyBits);
-            var unsafeArray = stackalloc ulong[4];
-            toTest.CopyTo(unsafeArray);
-            Assert.That(unsafeArray[0], Is.EqualTo(k_ManyBitsStorage[0]));
-            Assert.That(unsafeArray[1], Is.EqualTo(k_ManyBitsStorage[1]));
-            Assert.That(unsafeArray[2], Is.EqualTo(k_ManyBitsStorage[2]));
-            Assert.That(unsafeArray[3], Is.EqualTo(k_ManyBitsStorage[3]));
+            toTest.CopyTo(out var ulong0, out var ulong1, out var ulong2, out var ulong3);
+            Assert.That(ulong0, Is.EqualTo(k_ManyBitsStorage[0]));
+            Assert.That(ulong1, Is.EqualTo(k_ManyBitsStorage[1]));
+            Assert.That(ulong2, Is.EqualTo(k_ManyBitsStorage[2]));
+            Assert.That(ulong3, Is.EqualTo(k_ManyBitsStorage[3]));
         }
 
         [Test]

@@ -158,10 +158,8 @@ namespace Unity.ClusterDisplay
                     {
                         FrameIndex = receivedWaitingToStart.Payload.FrameIndex
                     };
-                    unsafe
-                    {
-                        m_StillWaitingOn.CopyTo(answer.WaitingOn);
-                    }
+                    m_StillWaitingOn.CopyTo(out answer.WaitingOn0, out answer.WaitingOn1, out answer.WaitingOn2,
+                        out answer.WaitingOn3);
                     UdpAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
 
                     if (!wasSet)
@@ -175,10 +173,8 @@ namespace Unity.ClusterDisplay
                     {
                         FrameIndex = receivedWaitingToStart.Payload.FrameIndex
                     };
-                    unsafe
-                    {
-                        k_AllZero.CopyTo(answer.WaitingOn);
-                    }
+                    k_AllZero.CopyTo(out answer.WaitingOn0, out answer.WaitingOn1, out answer.WaitingOn2,
+                        out answer.WaitingOn3);
                     UdpAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, answer);
                     UdpAgent.Stats.SentMessageWasRepeat(MessageType.EmitterWaitingToStartFrame);
                 }

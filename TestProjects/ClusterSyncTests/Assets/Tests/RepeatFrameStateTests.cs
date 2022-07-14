@@ -467,10 +467,8 @@ namespace Unity.ClusterDisplay.Tests
         void SendEmitterWaitingToStartFrame(NodeIdBitVectorReadOnly stillWaitingNods, ulong frameIndex)
         {
             var message = new EmitterWaitingToStartFrame() {FrameIndex = frameIndex};
-            unsafe
-            {
-                stillWaitingNods.CopyTo(message.WaitingOn);
-            }
+            stillWaitingNods.CopyTo(out message.WaitingOn0, out message.WaitingOn1, out message.WaitingOn2,
+                out message.WaitingOn3);
             m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame, message);
         }
 

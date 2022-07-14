@@ -138,7 +138,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Wait for answer
                 Assert.That(ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(m_TestAgent, testDeadline,
-                    message => TestNotWaitingOnNodeId(message.Payload, k_RepeaterId)), Is.True);
+                    message => !message.Payload.IsWaitingOn(k_RepeaterId)), Is.True);
             });
 
             Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
@@ -269,12 +269,6 @@ namespace Unity.ClusterDisplay.Tests
             m_TestAgent?.Dispose();
 
             m_Instances.Clear();
-        }
-
-        static unsafe bool TestNotWaitingOnNodeId(EmitterWaitingToStartFrame emitterWaitingToStart, byte nodeId)
-        {
-            ulong nodeIdBit = 1ul << nodeId;
-            return (emitterWaitingToStart.WaitingOn[nodeId >> 6] & nodeIdBit) == 0;
         }
 
         bool ConsumeFirstMessageOfRepeaterWhere<T>(IUdpAgent udpAgent, long testEndTimestamp,

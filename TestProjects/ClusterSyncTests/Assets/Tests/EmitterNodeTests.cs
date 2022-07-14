@@ -150,7 +150,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int acknowledgedRepeaters = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(
-                    testEndTimestamp, (message, repeaterData) => TestNotWaitingOnNodeId(message.Payload, repeaterData.NodeId));
+                    testEndTimestamp, (message, repeaterData) => !message.Payload.IsWaitingOn(repeaterData.NodeId));
                 Assert.That(acknowledgedRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // We should now be receiving FrameData for FrameIndex 0
@@ -211,7 +211,7 @@ namespace Unity.ClusterDisplay.Tests
                         testEndTimestamp, (message, repeaterData) =>
                         {
                             Assert.That(message.Payload.FrameIndex, Is.EqualTo(localFrameIndex));
-                            return TestNotWaitingOnNodeId(message.Payload, repeaterData.NodeId);
+                            return !message.Payload.IsWaitingOn(repeaterData.NodeId);
                         });
                     Assert.That(acknowledgedRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
@@ -305,7 +305,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int acknowledgedRepeaters = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(
-                    testEndTimestamp, (message, repeaterData) => TestNotWaitingOnNodeId(message.Payload, repeaterData.NodeId));
+                    testEndTimestamp, (message, repeaterData) => !message.Payload.IsWaitingOn(repeaterData.NodeId));
                 Assert.That(acknowledgedRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // We should now be receiving FrameData for FrameIndex 0
@@ -435,7 +435,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int acknowledgedRepeaters = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(
-                    testEndTimestamp, (message, repeaterData) => TestNotWaitingOnNodeId(message.Payload, repeaterData.NodeId));
+                    testEndTimestamp, (message, repeaterData) => !message.Payload.IsWaitingOn(repeaterData.NodeId));
                 Assert.That(acknowledgedRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // We should now be receiving FrameData for FrameIndex 0
@@ -505,8 +505,7 @@ namespace Unity.ClusterDisplay.Tests
                         testEndTimestamp, (message, repeaterData) =>
                         {
                             Assert.That(message.Payload.FrameIndex, Is.EqualTo(localFrameIndex - 1));
-
-                            return TestNotWaitingOnNodeId(message.Payload, repeaterData.NodeId);
+                            return !message.Payload.IsWaitingOn(repeaterData.NodeId);
                         });
                     Assert.That(acknowledgedRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
@@ -600,12 +599,6 @@ namespace Unity.ClusterDisplay.Tests
                 }
             }
             return consumedCount;
-        }
-
-        static unsafe bool TestNotWaitingOnNodeId(EmitterWaitingToStartFrame emitterWaitingToStart, byte nodeId)
-        {
-            ulong nodeIdBit = 1ul << nodeId;
-            return (emitterWaitingToStart.WaitingOn[nodeId >> 6] & nodeIdBit) == 0;
         }
 
         [TearDown]

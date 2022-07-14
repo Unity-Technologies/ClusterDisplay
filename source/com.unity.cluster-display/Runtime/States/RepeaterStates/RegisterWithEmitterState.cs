@@ -94,9 +94,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
             } while (!hasReceivedRepeaterRegistered && registerDeadline > Stopwatch.GetTimestamp());
 
+            using var repeatFrameStateFirstFrameDataDisposer = repeatFrameStateFirstFrameData;
             if (!hasReceivedRepeaterRegistered)
             {
-                repeatFrameStateFirstFrameData?.Dispose();
                 throw new TimeoutException("Repeater failed to register with emitter in less than " +
                     $"{Node.Config.HandshakeTimeout.TotalSeconds} seconds");
             }

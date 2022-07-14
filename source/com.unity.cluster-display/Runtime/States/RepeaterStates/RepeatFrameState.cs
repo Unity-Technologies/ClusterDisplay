@@ -176,13 +176,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         var receivedEmitterWaitingToStartFrame = (ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage;
                         if (receivedEmitterWaitingToStartFrame.Payload.FrameIndex == Node.FrameIndex)
                         {
-                            bool emitterKnowsWeAreReady;
-                            unsafe
-                            {
-                                var payload = receivedEmitterWaitingToStartFrame.Payload;
-                                emitterKnowsWeAreReady =
-                                    (payload.WaitingOn[nodeId >> 6] & (1ul << (nodeId & 0b11_1111))) == 0;
-                            }
+                            var payload = receivedEmitterWaitingToStartFrame.Payload;
+                            bool emitterKnowsWeAreReady = !payload.IsWaitingOn(nodeId);
                             receivedMessage.Dispose();
                             if (emitterKnowsWeAreReady)
                             {

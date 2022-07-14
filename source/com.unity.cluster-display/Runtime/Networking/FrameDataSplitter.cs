@@ -39,11 +39,11 @@ namespace Unity.ClusterDisplay
             m_MaxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
             FrameDataBufferPool = frameDataBufferPool;
             m_SentFramesInformation = new SentFrameInformation[retransmitHistory];
-            m_NewestSentFramesInformationIndex = retransmitHistory - 1;
             for (int i = 0; i < retransmitHistory; ++i)
             {
-                m_SentFramesInformation[i].DatagramSentTimestamp = new long[64]; // 64 datagrams should be enough for most frames
+                m_SentFramesInformation[i] = new();
             }
+            m_NewestSentFramesInformationIndex = retransmitHistory - 1;
 
             UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
         }
@@ -71,10 +71,9 @@ namespace Unity.ClusterDisplay
                     {
                         Debug.Assert(sentFrameInformation.DataBuffer.IsValid);
                         DoneOfFrameDataBuffer(sentFrameInformation.DataBuffer);
-
-                        // To be sure no one is referencing a "returned" DataBuffer...
-                        m_SentFramesInformation[sentInformationIndex] = new SentFrameInformation();
+                        sentFrameInformation.DataBuffer = null;
                     }
+                    sentFrameInformation.Dispose();
                 }
             }
         }
@@ -98,10 +97,9 @@ namespace Unity.ClusterDisplay
         /// <c>null</c> (and will be returned to that pool once we are done of it).</remarks>
         public void SendFrameData(ulong frameIndex, ref FrameDataBuffer frameData)
         {
-            // First things, let's add an entry to m_SentFramesInformation (in case we get retransmission requests while
-            // we are still transmitting).
             lock (m_SentFramesInformation)
             {
+                // First things, let's add an entry to m_SentFramesInformation.
                 var previousLast = m_SentFramesInformation[m_NewestSentFramesInformationIndex];
                 if (previousLast.DataBuffer != null && previousLast.FrameIndex + 1 != frameIndex)
                 {
@@ -117,8 +115,7 @@ namespace Unity.ClusterDisplay
                 }
                 newFrameToSend.FrameIndex = frameIndex;
                 newFrameToSend.DataBuffer = frameData;
-                Array.Clear(newFrameToSend.DatagramSentTimestamp, 0, newFrameToSend.DatagramSentTimestamp.Length);
-                m_SentFramesInformation[m_OldestSentFramesInformationIndex] = newFrameToSend;
+                newFrameToSend.ClearDatagramSentTimestamps();
 
                 m_OldestSentFramesInformationIndex =
                     (m_OldestSentFramesInformationIndex + 1) % m_SentFramesInformation.Length;
@@ -155,18 +152,9 @@ namespace Unity.ClusterDisplay
         /// <param name="datagramIndex">Index of datagram in the sequence of datagrams for that frame.</param>
         void SendDatagramOf(SentFrameInformation frameInformation, int datagramIndex)
         {
-            if (datagramIndex > frameInformation.DatagramSentTimestamp.Length)
-            {
-                var newArray = new long[datagramIndex + 16];
-                Array.Copy(frameInformation.DatagramSentTimestamp, newArray, frameInformation.DatagramSentTimestamp.Length);
-                Array.Clear(newArray, frameInformation.DatagramSentTimestamp.Length,
-                    newArray.Length - frameInformation.DatagramSentTimestamp.Length);
-                frameInformation.DatagramSentTimestamp = newArray;
-            }
-
             // Check that the datagram has not already been sent "not long ago" to avoid unnecessary retransmission when
             // may repeaters ask for retransmission of the same thing.
-            if (Stopwatch.GetTimestamp() < frameInformation.DatagramSentTimestamp[datagramIndex] + m_ShortRetransmissionDelayTicks)
+            if (Stopwatch.GetTimestamp() < frameInformation.GetDatagramSendTime(datagramIndex) + m_ShortRetransmissionDelayTicks)
             {
                 return;
             }
@@ -182,7 +170,7 @@ namespace Unity.ClusterDisplay
                 m_MaxDataPerMessage);
             UdpAgent.SendMessage(MessageType.FrameData, frameData,
                 frameInformation.DataBuffer.DataSpan(frameData.DatagramDataOffset, dataToSend));
-            frameInformation.DatagramSentTimestamp[datagramIndex] = Stopwatch.GetTimestamp();
+            frameInformation.SetDatagramSendTime(datagramIndex, Stopwatch.GetTimestamp());
         }
 
         /// <summary>
@@ -286,20 +274,85 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Information stored about each sent frame that we keep to be able to retransmit parts of in case of a need.
         /// </summary>
-        struct SentFrameInformation
+        class SentFrameInformation: IDisposable
         {
+            /// <summary>
+            /// Constructor
+            /// </summary>
+            public SentFrameInformation()
+            {
+                m_DatagramSentTimestamp = new long[64]; // 64 datagrams should be enough for most frames
+            }
+
             /// <summary>
             /// Index of the frame this struct contains information about.
             /// </summary>
-            public ulong FrameIndex;
+            public ulong FrameIndex { get; set; }
             /// <summary>
             /// The data that was transmitted.
             /// </summary>
-            public FrameDataBuffer DataBuffer;
+            public FrameDataBuffer DataBuffer { get; set; }
+
+            /// <summary>
+            /// Clear the array of when was the datagrams composing this frame sent
+            /// </summary>
+            public void ClearDatagramSentTimestamps()
+            {
+                Array.Clear(m_DatagramSentTimestamp, 0, m_DatagramSentTimestamp.Length);
+            }
+
+            /// <summary>
+            /// Returns when was the last time <paramref name="datagramIndex"/> was sent.
+            /// </summary>
+            /// <param name="datagramIndex">Index of the datagram.</param>
+            /// <returns>When was the last time <paramref name="datagramIndex"/> was sent or <c>0</c> if it was never
+            /// sent.</returns>
+            public long GetDatagramSendTime(int datagramIndex)
+            {
+                GrowDatagramSentTimestampArrayIfNeeded(datagramIndex);
+                return m_DatagramSentTimestamp[datagramIndex];
+            }
+
+            /// <summary>
+            /// Sets when was the last time <paramref name="datagramIndex"/> was sent.
+            /// </summary>
+            /// <param name="datagramIndex">Index of the datagram.</param>
+            /// <param name="sendTime">When was the last time <paramref name="datagramIndex"/> was sent.</param>
+            public void SetDatagramSendTime(int datagramIndex, long sendTime)
+            {
+                GrowDatagramSentTimestampArrayIfNeeded(datagramIndex);
+                m_DatagramSentTimestamp[datagramIndex] = sendTime;
+            }
+
+            public void Dispose()
+            {
+                Debug.Assert(DataBuffer == null, "DataBuffer should have been returned to owner's FrameDataBufferPool before calling dispose.");
+                DataBuffer?.Dispose();
+                DataBuffer = null;
+            }
+
+            /// <summary>
+            /// Ensure <see cref="m_DatagramSentTimestamp"/> contains enough entries to store data for
+            /// <paramref name="datagramIndex"/> (and grow the array if it is too small).
+            /// </summary>
+            /// <param name="datagramIndex">Index of the datagram for which we need to store information in
+            /// <see cref="m_DatagramSentTimestamp"/>.</param>
+            void GrowDatagramSentTimestampArrayIfNeeded(int datagramIndex)
+            {
+                if (datagramIndex > m_DatagramSentTimestamp.Length)
+                {
+                    var newArray = new long[datagramIndex + 16];
+                    Array.Copy(m_DatagramSentTimestamp, newArray, m_DatagramSentTimestamp.Length);
+                    Array.Clear(newArray, m_DatagramSentTimestamp.Length,
+                        newArray.Length - m_DatagramSentTimestamp.Length);
+                    m_DatagramSentTimestamp = newArray;
+                }
+            }
+
             /// <summary>
             /// <see cref="Stopwatch.GetTimestamp"/> of when was the datagram corresponding to the index last sent.
             /// </summary>
-            public long[] DatagramSentTimestamp;
+            long[] m_DatagramSentTimestamp;
         }
 
         /// <summary>
@@ -316,7 +369,8 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Frame kept in case we need to retransmit sections of.
         /// </summary>
-        /// <remarks>Should always be locked before accessing.</remarks>
+        /// <remarks>Should always be locked before accessing it or any of the <see cref="SentFrameInformation"/> in it.
+        /// </remarks>
         SentFrameInformation[] m_SentFramesInformation;
         /// <summary>
         /// Index of the oldest <see cref="SentFrameInformation"/> in m_SentFramesInformation.

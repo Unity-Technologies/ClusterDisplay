@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
@@ -157,11 +157,8 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <remarks>A repeater that was refused should simply abort and shouldn't try to do anything from the traffic
         /// being sent on the multicast address.</remarks>
-        public bool Accepted { get => Convert.ToBoolean(m_Accepted); set => m_Accepted = Convert.ToByte(value); }
-        /// <summary>
-        /// Storage for <see cref="Accepted"/> (so that it is stored on 1 byte instead of 4).
-        /// </summary>
-        byte m_Accepted;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool Accepted;
     }
 
     /// <summary>
@@ -237,12 +234,8 @@ namespace Unity.ClusterDisplay
         /// Indicate to the emitter if this node will still use network sync on the next frame.  Once a repeater opted
         /// out of the network sync there is no getting back in.
         /// </summary>
-        public bool WillUseNetworkSyncOnNextFrame { get => Convert.ToBoolean(m_WillUseNetworkSyncOnNextFrame);
-            set => m_WillUseNetworkSyncOnNextFrame = Convert.ToByte(value); }
-        /// <summary>
-        /// Storage for <see cref="WillUseNetworkSyncOnNextFrame"/> (so that it is stored on 1 byte instead of 4).
-        /// </summary>
-        byte m_WillUseNetworkSyncOnNextFrame;
+        [MarshalAs(UnmanagedType.I1)]
+        public bool WillUseNetworkSyncOnNextFrame;
     }
 
     /// <summary>
@@ -251,7 +244,7 @@ namespace Unity.ClusterDisplay
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [MessageType(MessageType.EmitterWaitingToStartFrame)]
-    unsafe struct EmitterWaitingToStartFrame
+    struct EmitterWaitingToStartFrame
     {
         /// <summary>
         /// Index of the frame we are ready to start working on.
@@ -261,6 +254,51 @@ namespace Unity.ClusterDisplay
         /// Bits 0 .. 63 of bit field where the index of set bits indicate that the emitter is still waiting for that
         /// repeater to signal it is ready.
         /// </summary>
-        public fixed ulong WaitingOn[4];
+        public ulong WaitingOn0;
+        /// <summary>
+        /// Bits 64 .. 127 of bit field where the index of set bits indicate that the emitter is still waiting for that
+        /// repeater to signal it is ready.
+        /// </summary>
+        public ulong WaitingOn1;
+        /// <summary>
+        /// Bits 128 .. 191 of bit field where the index of set bits indicate that the emitter is still waiting for that
+        /// repeater to signal it is ready.
+        /// </summary>
+        public ulong WaitingOn2;
+        /// <summary>
+        /// Bits 192 .. 255 of bit field where the index of set bits indicate that the emitter is still waiting for that
+        /// repeater to signal it is ready.
+        /// </summary>
+        public ulong WaitingOn3;
+
+        /// <summary>
+        /// Returns (from the WaitingOn[0..3] ulong) if we are still waiting on the node with the specified identifier.
+        /// </summary>
+        /// <param name="nodeId">Node identifier</param>
+        /// <returns>Are we still waiting on <paramref name="nodeId"/>.</returns>
+        public bool IsWaitingOn(byte nodeId)
+        {
+            BitField64 storage;
+            switch (nodeId >> 6)
+            {
+                case 0:
+                    storage.Value = WaitingOn0;
+                    break;
+                case 1:
+                    storage.Value = WaitingOn1;
+                    break;
+                case 2:
+                    storage.Value = WaitingOn2;
+                    break;
+                case 3:
+                    storage.Value = WaitingOn3;
+                    break;
+                default:
+                    Debug.Assert(false, "Should not happen, byte >> 6 should only have 4 possible values...");
+                    storage.Value = 0;
+                    break;
+            }
+            return storage.IsSet(nodeId & 0b11_1111);
+        }
     }
 }

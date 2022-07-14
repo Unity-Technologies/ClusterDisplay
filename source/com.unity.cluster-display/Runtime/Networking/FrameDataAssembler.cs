@@ -49,16 +49,12 @@ namespace Unity.ClusterDisplay
 
             UdpAgent = udpAgent;
 
-            if (firstFrameData != null)
+            if (firstFrameData != null && firstFrameData.ExtraData != null)
             {
-                if (firstFrameData.ExtraData != null)
-                {
-                    Debug.Assert(m_CurrentPartialFrame.FrameIndex == ulong.MaxValue);
-                    m_CurrentPartialFrame.FrameIndex = firstFrameData.Payload.FrameIndex;
-                    m_CurrentPartialFrame.ConsumeReceivedData(firstFrameData, m_GetNewNativeExtraDataDelegate);
-                    SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
-                }
-                firstFrameData.Dispose();
+                Debug.Assert(m_CurrentPartialFrame.FrameIndex == ulong.MaxValue);
+                m_CurrentPartialFrame.FrameIndex = firstFrameData.Payload.FrameIndex;
+                m_CurrentPartialFrame.ConsumeReceivedData(firstFrameData, m_GetNewNativeExtraDataDelegate);
+                SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
             }
 
             UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
@@ -142,7 +138,6 @@ namespace Unity.ClusterDisplay
             }
 
             var receivedFrameData = (ReceivedMessage<FrameData>)received;
-            Debug.Assert(receivedFrameData != null); // since received.Type == MessageType.FrameData
             try // We use this try with a finally to be sure we will dispose of receivedFrameData except when we re-use
             {   // it to propagate the complete frame message.
 
@@ -238,19 +233,21 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="length">Length of data to fit.</param>
         /// <returns>A new (or recycled from the pool) <see cref="NativeExtraData"/>.</returns>
-        /// <remarks>Assumes caller has already locked <see cref="m_ThisLock"/>.</remarks>
         NativeExtraData GetNewNativeExtraData(int length)
         {
-            if (length > m_NativeExtraDataPoolAllocSize)
+            lock (m_ThisLock)
             {
-                do
+                if (length > m_NativeExtraDataPoolAllocSize)
                 {
-                    m_NativeExtraDataPoolAllocSize *= 2;
-                } while (length > m_NativeExtraDataPoolAllocSize);
+                    do
+                    {
+                        m_NativeExtraDataPoolAllocSize *= 2;
+                    } while (length > m_NativeExtraDataPoolAllocSize);
 
-                CreateNewNativeExtraDataPool();
+                    CreateNewNativeExtraDataPool();
+                }
+                return m_NativeExtraDataPool.Get();
             }
-            return m_NativeExtraDataPool.Get();
         }
 
         /// <summary>

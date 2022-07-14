@@ -233,14 +233,11 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(receivedEmitterWaiting.Payload.FrameIndex, Is.EqualTo(frameIndex));
             var compareArray = new ulong[4];
             (new NodeIdBitVectorReadOnly(stillWaitingNodes)).CopyTo(compareArray);
-            unsafe
-            {
-                var payload = receivedEmitterWaiting.Payload;
-                Assert.That(payload.WaitingOn[0], Is.EqualTo(compareArray[0]));
-                Assert.That(payload.WaitingOn[1], Is.EqualTo(compareArray[1]));
-                Assert.That(payload.WaitingOn[2], Is.EqualTo(compareArray[2]));
-                Assert.That(payload.WaitingOn[3], Is.EqualTo(compareArray[3]));
-            }
+            var payload = receivedEmitterWaiting.Payload;
+            Assert.That(payload.WaitingOn0, Is.EqualTo(compareArray[0]));
+            Assert.That(payload.WaitingOn1, Is.EqualTo(compareArray[1]));
+            Assert.That(payload.WaitingOn2, Is.EqualTo(compareArray[2]));
+            Assert.That(payload.WaitingOn3, Is.EqualTo(compareArray[3]));
         }
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);

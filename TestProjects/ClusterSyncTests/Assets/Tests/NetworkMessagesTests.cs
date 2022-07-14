@@ -115,25 +115,19 @@ namespace Unity.ClusterDisplay.Tests
             {
                 FrameIndex = 0x4567890110987654,
             };
-            unsafe
-            {
-                testStruct.WaitingOn[0] = 0x5678901221098765;
-                testStruct.WaitingOn[1] = 0x6789012332109876;
-                testStruct.WaitingOn[2] = 0x7890123443210987;
-                testStruct.WaitingOn[3] = 0x8901234554321098;
-            }
+            testStruct.WaitingOn0 = 0x5678901221098765;
+            testStruct.WaitingOn1 = 0x6789012332109876;
+            testStruct.WaitingOn2 = 0x7890123443210987;
+            testStruct.WaitingOn3 = 0x8901234554321098;
 
             var byteArray = ToByteArray(testStruct, sizeOfStruct);
             var roundTrip = FromByteArray<EmitterWaitingToStartFrame>(byteArray);
 
             Assert.That(roundTrip.FrameIndex, Is.EqualTo(testStruct.FrameIndex));
-            unsafe
-            {
-                Assert.That(roundTrip.WaitingOn[0], Is.EqualTo(testStruct.WaitingOn[0]));
-                Assert.That(roundTrip.WaitingOn[1], Is.EqualTo(testStruct.WaitingOn[1]));
-                Assert.That(roundTrip.WaitingOn[2], Is.EqualTo(testStruct.WaitingOn[2]));
-                Assert.That(roundTrip.WaitingOn[3], Is.EqualTo(testStruct.WaitingOn[3]));
-            }
+            Assert.That(roundTrip.WaitingOn0, Is.EqualTo(testStruct.WaitingOn0));
+            Assert.That(roundTrip.WaitingOn1, Is.EqualTo(testStruct.WaitingOn1));
+            Assert.That(roundTrip.WaitingOn2, Is.EqualTo(testStruct.WaitingOn2));
+            Assert.That(roundTrip.WaitingOn3, Is.EqualTo(testStruct.WaitingOn3));
         }
 
         static byte[] ToByteArray<T>(T toSerialize, int expectedSize) where T: unmanaged

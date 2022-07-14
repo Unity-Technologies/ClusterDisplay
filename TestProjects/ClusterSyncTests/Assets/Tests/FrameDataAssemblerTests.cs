@@ -44,6 +44,7 @@ namespace Unity.ClusterDisplay.Tests
 
             using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, frameDataFirstPart)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
+            frameDataFirstPart.Dispose();
 
             // Ideally we would like to have the assembled frame available in recvAgent, however since the received
             // message is a queue and their can be a lot of things already in that queue FrameDataAssembler' constructor

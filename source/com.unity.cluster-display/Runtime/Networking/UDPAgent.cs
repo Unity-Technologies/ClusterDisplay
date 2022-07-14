@@ -115,7 +115,6 @@ namespace Unity.ClusterDisplay
             // Prepare reception of messages
             if (SetupReceiveMessageFactory(config.ReceivedMessagesType))
             {
-                m_ReceiveThreadCancellationTokenSource = new CancellationTokenSource();
                 m_ReceivedMessageDataPool = new(() => new ManagedReceivedMessageData(this, m_Mtu));
                 m_ReceiveThread = new Thread(ProcessIncomingDatagrams);
                 m_ReceiveThread.Name = $"ClusterDisplay UDP Reception {AdapterAddress}:{config.Port}";
@@ -128,10 +127,9 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public void Dispose()
         {
-            m_ReceiveThreadCancellationTokenSource?.Cancel(); // Need to be canceled before disposing of the UdpClient
+            m_ReceiveThreadShouldStop = true;
             m_UdpClient?.Dispose(); // Interrupts any currently going on call to Receive in m_ReceiveThread
             m_ReceiveThread?.Join();
-            m_ReceiveThreadCancellationTokenSource?.Dispose();
         }
 
         public IPAddress AdapterAddress { get; private set; }
@@ -356,7 +354,7 @@ namespace Unity.ClusterDisplay
         {
             ManagedReceivedMessageData receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
 
-            while (!m_ReceiveThreadCancellationTokenSource.IsCancellationRequested)
+            while (!m_ReceiveThreadShouldStop)
             {
                 // Receive the next datagram
                 int receivedLength;
@@ -373,8 +371,7 @@ namespace Unity.ClusterDisplay
                     }
                     catch (SocketException e)
                     {
-                        if (e.SocketErrorCode == SocketError.Interrupted &&
-                            m_ReceiveThreadCancellationTokenSource.Token.IsCancellationRequested)
+                        if (e.SocketErrorCode == SocketError.Interrupted && m_ReceiveThreadShouldStop)
                         {
                             // We are shutting down, this is perfectly normal, just continue
                             continue;
@@ -607,7 +604,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Object used to stop all the asynchronous work going on when we finish.
         /// </summary>
-        CancellationTokenSource m_ReceiveThreadCancellationTokenSource;
+        volatile bool m_ReceiveThreadShouldStop;
         /// <summary>
         /// Thread responsible for receiving data.
         /// </summary>
@@ -730,13 +727,11 @@ namespace Unity.ClusterDisplay
                     repeaterWaiting.FrameIndex, repeaterWaiting.NodeId, repeaterWaiting.WillUseNetworkSyncOnNextFrame);
                 break;
             case EmitterWaitingToStartFrame emitterWaiting:
-                unsafe
-                {
-                    var waitingOn = new NodeIdBitVectorReadOnly(emitterWaiting.WaitingOn);
-                    stringBuilder.AppendFormat("EmitterWaitingToStartFrame : FrameIndex = {0}, " +
-                        "WaitingNodesBitField = {1}",
-                        emitterWaiting.FrameIndex, waitingOn);
-                }
+                var waitingOn = new NodeIdBitVectorReadOnly(emitterWaiting.WaitingOn0, emitterWaiting.WaitingOn1,
+                    emitterWaiting.WaitingOn2, emitterWaiting.WaitingOn3);
+                stringBuilder.AppendFormat("EmitterWaitingToStartFrame : FrameIndex = {0}, " +
+                    "WaitingNodesBitField = {1}",
+                    emitterWaiting.FrameIndex, waitingOn);
                 break;
             }
 

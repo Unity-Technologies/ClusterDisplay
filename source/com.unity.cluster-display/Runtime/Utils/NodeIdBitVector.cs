@@ -50,16 +50,18 @@ namespace Utils
         }
 
         /// <summary>
-        /// Constructor setting the bits from a raw (unsafe) storage where the bits are stored.  Must match the format
-        /// of the <see cref="CopyTo(ulong*)"/> method.
+        /// Constructor setting the bits from 4 ulong where their bits indicate if the corresponding node id bit is set.
         /// </summary>
-        /// <param name="from">Unsafe array of 4 ulong from which to get the bits</param>
-        public unsafe NodeIdBitVectorReadOnly(ulong* from)
+        /// <param name="from0">Contains the bits 0 to 63 indicating if bit is set for a node id 0 to 63.</param>
+        /// <param name="from1">Contains the bits 64 to 127 indicating if bit is set for a node id 64 to 127.</param>
+        /// <param name="from2">Contains the bits 128 to 191 indicating if bit is set for a node id 128 to 191.</param>
+        /// <param name="from3">Contains the bits 192 to 255 indicating if bit is set for a node id 192 to 255.</param>
+        public NodeIdBitVectorReadOnly(ulong from0, ulong from1, ulong from2, ulong from3)
         {
-            m_Storage[0].Value = from[0];
-            m_Storage[1].Value = from[1];
-            m_Storage[2].Value = from[2];
-            m_Storage[3].Value = from[3];
+            m_Storage[0].Value = from0;
+            m_Storage[1].Value = from1;
+            m_Storage[2].Value = from2;
+            m_Storage[3].Value = from3;
             m_SetBits = m_Storage[0].CountBits() + m_Storage[1].CountBits() + m_Storage[2].CountBits() +
                 m_Storage[3].CountBits();
         }
@@ -88,15 +90,18 @@ namespace Utils
         }
 
         /// <summary>
-        /// Copy all the bits contained in this vector to the given destination.
+        /// Copy all the bits contained in this vector to 4 ulong.
         /// </summary>
-        /// <param name="dest">unsafe ulong*, must be 4 longs</param>
-        public unsafe void CopyTo(ulong* dest)
+        /// <param name="dest0">Filled with the bits 0 to 63 indicating if bit is set for a node id 0 to 63.</param>
+        /// <param name="dest1">Filled with the bits 64 to 127 indicating if bit is set for a node id 64 to 127.</param>
+        /// <param name="dest2">Filled with the bits 128 to 191 indicating if bit is set for a node id 128 to 191.</param>
+        /// <param name="dest3">Filled with the bits 192 to 255 indicating if bit is set for a node id 192 to 255.</param>
+        public void CopyTo(out ulong dest0, out ulong dest1, out ulong dest2, out ulong dest3)
         {
-            dest[0] = m_Storage[0].Value;
-            dest[1] = m_Storage[1].Value;
-            dest[2] = m_Storage[2].Value;
-            dest[3] = m_Storage[3].Value;
+            dest0 = m_Storage[0].Value;
+            dest1 = m_Storage[1].Value;
+            dest2 = m_Storage[2].Value;
+            dest3 = m_Storage[3].Value;
         }
 
         /// <summary>
@@ -254,12 +259,14 @@ namespace Utils
             : base(toSet) { }
 
         /// <summary>
-        /// Constructor setting the bits from a raw (unsafe) storage where the bits are stored.  Must match the format
-        /// of the <see cref="NodeIdBitVectorReadOnly.CopyTo(ulong*)"/> method.
+        /// Constructor setting the bits from 4 ulong where their bits indicate if the corresponding node id bit is set.
         /// </summary>
-        /// <param name="from">Unsafe array of 4 ulong from which to get the bits</param>
-        public unsafe NodeIdBitVector(ulong* from)
-            : base(from) { }
+        /// <param name="from0">Contains the bits 0 to 63 indicating if bit is set for a node id 0 to 63.</param>
+        /// <param name="from1">Contains the bits 64 to 127 indicating if bit is set for a node id 64 to 127.</param>
+        /// <param name="from2">Contains the bits 128 to 191 indicating if bit is set for a node id 128 to 191.</param>
+        /// <param name="from3">Contains the bits 192 to 255 indicating if bit is set for a node id 192 to 255.</param>
+        public NodeIdBitVector(ulong from0, ulong from1, ulong from2, ulong from3)
+            : base(from0, from1, from2, from3) { }
 
         /// <summary>
         /// Get or set bits in the <see cref="NodeIdBitVector"/>.
