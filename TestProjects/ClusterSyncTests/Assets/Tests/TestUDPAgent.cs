@@ -3,10 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using Unity.Collections;
 using UnityEngine;
-using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.ReceivedMessageBase>;
+using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -78,30 +77,62 @@ namespace Unity.ClusterDisplay.Tests
 
         public ulong ReceivedMessagesSoFar { get; private set; }
 
-        public event MessagePreprocessor OnMessagePreProcess
+        public void AddPreProcess(int priority, MessagePreprocessor preProcessor)
         {
-            add => m_MessagePreprocessors.Add(value);
-            remove => m_MessagePreprocessors.Remove(value);
+            lock (m_MessagePreprocessors)
+            {
+                m_MessagePreprocessors.Add((priority, preProcessor));
+                var sorted = m_MessagePreprocessors.OrderBy(p => p.Item1).ToArray();
+                m_MessagePreprocessors.Clear();
+                m_MessagePreprocessors.AddRange(sorted);
+            }
         }
-        List<MessagePreprocessor> m_MessagePreprocessors = new();
+
+        public void RemovePreProcess(MessagePreprocessor preProcessor)
+        {
+            lock (m_MessagePreprocessors)
+            {
+                var index = m_MessagePreprocessors.FindIndex(tuple => tuple.Item2 == preProcessor);
+                if (index >= 0)
+                {
+                    m_MessagePreprocessors.RemoveAt(index);
+                    // No need to sort, removing does not change the order...
+                }
+            }
+        }
 
         public NetworkStatistics Stats { get; } = new NetworkStatistics();
 
         void QueueReceivedMessage(ReceivedMessageBase receivedMessage)
         {
-            foreach (var preprocessor in m_MessagePreprocessors)
+            lock (m_MessagePreprocessors)
             {
-                try
+                foreach (var (_, preprocessor) in m_MessagePreprocessors)
                 {
-                    receivedMessage = preprocessor(receivedMessage);
-                    if (receivedMessage == null)
+                    try
                     {
-                        break;
+                        var ret = preprocessor(receivedMessage);
+                        if (ret.DisposePreProcessedMessage)
+                        {
+                            Debug.Assert(!ReferenceEquals(ret.Result, receivedMessage),
+                                "Cannot dispose of a ReceivedMessage AND ask to continue processing it...");
+                            receivedMessage.Dispose();
+                            receivedMessage = ret.Result;
+                        }
+                        else if (ret.Result != null)
+                        {
+                            receivedMessage = ret.Result;
+                        }
+
+                        if (receivedMessage == null)
+                        {
+                            break;
+                        }
                     }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"Unexpected exception pre-processing received messages: {e}");
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Unexpected exception pre-processing received messages: {e}");
+                    }
                 }
             }
             if (receivedMessage != null)
@@ -112,6 +143,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         TestUdpAgentNetwork m_Network;
+        List<(int, MessagePreprocessor)> m_MessagePreprocessors = new();
         // Remark: Does not really need to be blocking but allow implementation of the interface to be simpler and this
         // is only a unit test class, so ok if not 100% optimal...
         BlockingCollection<ReceivedMessageBase> m_ReceivedMessages = new (new ConcurrentQueue<ReceivedMessageBase>());

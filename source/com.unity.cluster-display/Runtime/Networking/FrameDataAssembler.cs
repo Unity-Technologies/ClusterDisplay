@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay
                 SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
             }
 
-            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.frameDataProcessing, PreProcessReceivedMessage);
 
             m_FrameCompletionMonitorThreadRunning = true;
             m_FrameCompletionMonitorActive = new(false);
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay
             // Stop receiving callbacks about received datagrams
             if (UdpAgent != null)
             {
-                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+                UdpAgent.RemovePreProcess(PreProcessReceivedMessage);
             }
 
             // Stop thread monitoring received data
@@ -128,93 +128,83 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and assemble complete FrameData from them.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>Preprocessed <see cref="ReceivedMessageBase"/> or null if the message is to be dropped.</returns>
-        ReceivedMessageBase PreProcessReceivedMessage(ReceivedMessageBase received)
+        /// <returns>Summary of what happened during the pre-processing.</returns>
+        PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // We are only interested in FrameData we receive, everything else should simply pass through
             if (received.Type != MessageType.FrameData)
             {
-                return received;
+                return PreProcessResult.PassThrough();
             }
 
             var receivedFrameData = (ReceivedMessage<FrameData>)received;
-            try // We use this try with a finally to be sure we will dispose of receivedFrameData except when we re-use
-            {   // it to propagate the complete frame message.
-
-                if (received.ExtraData == null)
-                {
-                    // FrameData with no extra data, it does not provide any useful information, let's just discard it.
-                    return null;
-                }
-
-                lock (m_ThisLock)
-                {
-                    if (m_CurrentPartialFrame.FrameIndex == ulong.MaxValue) // Special case for first frame received
-                    {
-                        m_CurrentPartialFrame.FrameIndex = receivedFrameData.Payload.FrameIndex;
-                    }
-                    if (receivedFrameData.Payload.FrameIndex == m_CurrentPartialFrame.FrameIndex)
-                    {
-                        m_CurrentPartialFrame.ConsumeReceivedData(receivedFrameData, m_GetNewNativeExtraDataDelegate);
-                        SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
-                    }
-                    else if (receivedFrameData.Payload.FrameIndex == m_CurrentPartialFrame.FrameIndex + 1)
-                    {
-                        // Looks like we are receiving data for the next frame.  Packets ordering issue?  Anyhow, save
-                        // it so that we don't have to ask to retransmit it when m_CurrentPartialFrame is completed.
-                        m_NextPartialFrame.FrameIndex = receivedFrameData.Payload.FrameIndex;
-                        m_NextPartialFrame.ConsumeReceivedData(receivedFrameData, m_GetNewNativeExtraDataDelegate);
-                        SendPendingRetransmissionRequests(m_NextPartialFrame.PendingRetransmissions);
-                    }
-                    // We could in theory receive messages for older or newer frames, but we cannot really do anything
-                    // for them, so continue waiting for m_CurrentPartialFrame to be completed...
-
-                    // Always deliver FrameData in order, so the only one we can try to deliver is m_CurrentPartialFrame.
-                    // Always check for IsFrameDataComplete even if the message did not have any useful contribution as
-                    // previous received message might have completed m_CurrentPartialFrame while m_NextPartialFrame was
-                    // already complete and waiting for delivery.
-                    if (m_CurrentPartialFrame.IsFrameDataComplete)
-                    {
-                        // CurrentPartialFrame is not partial anymore, so update received so that it contains the new
-                        // complete extra data.
-                        receivedFrameData.Payload = new FrameData()
-                            {
-                                FrameIndex = m_CurrentPartialFrame.FrameIndex,
-                                DataLength = m_CurrentPartialFrame.DataLength,
-                                DatagramIndex = 0,
-                                DatagramDataOffset = 0
-                            };
-                        receivedFrameData.AdoptExtraData(m_CurrentPartialFrame.ConsumeCompletedFrame());
-                        var ret = receivedFrameData;
-                        receivedFrameData = null; // So that it does not get disposed of in the finally
-
-                        // Prepare m_CurrentPartialFrame to receive next frame
-                        if (m_NextPartialFrame.FrameIndex == m_CurrentPartialFrame.FrameIndex + 1)
-                        {
-                            (m_CurrentPartialFrame, m_NextPartialFrame) = (m_NextPartialFrame, m_CurrentPartialFrame);
-                            m_NextPartialFrame.FrameIndex = ulong.MaxValue;
-                        }
-                        else
-                        {
-                            ++m_CurrentPartialFrame.FrameIndex;
-                        }
-
-                        // Deactivate FrameCompletionMonitor until our user inform us that the next frame is needed (this
-                        // way the FrameCompletionMonitorThread will not constantly wake up to discover it has nothing
-                        // to do).
-                        m_FrameCompletionMonitorActive.Reset();
-
-                        // Done
-                        return ret;
-                    }
-                }
-            }
-            finally
+            if (received.ExtraData == null)
             {
-                receivedFrameData?.Dispose();
+                // FrameData with no extra data, it does not provide any useful information, let's just discard it.
+                return PreProcessResult.Stop();
             }
 
-            return null;
+            lock (m_ThisLock)
+            {
+                if (m_CurrentPartialFrame.FrameIndex == ulong.MaxValue) // Special case for first frame received
+                {
+                    m_CurrentPartialFrame.FrameIndex = receivedFrameData.Payload.FrameIndex;
+                }
+                if (receivedFrameData.Payload.FrameIndex == m_CurrentPartialFrame.FrameIndex)
+                {
+                    m_CurrentPartialFrame.ConsumeReceivedData(receivedFrameData, m_GetNewNativeExtraDataDelegate);
+                    SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
+                }
+                else if (receivedFrameData.Payload.FrameIndex == m_CurrentPartialFrame.FrameIndex + 1)
+                {
+                    // Looks like we are receiving data for the next frame.  Packets ordering issue?  Anyhow, save
+                    // it so that we don't have to ask to retransmit it when m_CurrentPartialFrame is completed.
+                    m_NextPartialFrame.FrameIndex = receivedFrameData.Payload.FrameIndex;
+                    m_NextPartialFrame.ConsumeReceivedData(receivedFrameData, m_GetNewNativeExtraDataDelegate);
+                    SendPendingRetransmissionRequests(m_NextPartialFrame.PendingRetransmissions);
+                }
+                // We could in theory receive messages for older or newer frames, but we cannot really do anything
+                // for them, so continue waiting for m_CurrentPartialFrame to be completed...
+
+                // Always deliver FrameData in order, so the only one we can try to deliver is m_CurrentPartialFrame.
+                // Always check for IsFrameDataComplete even if the message did not have any useful contribution as
+                // previous received message might have completed m_CurrentPartialFrame while m_NextPartialFrame was
+                // already complete and waiting for delivery.
+                if (m_CurrentPartialFrame.IsFrameDataComplete)
+                {
+                    // CurrentPartialFrame is not partial anymore, so update received so that it contains the new
+                    // complete extra data.
+                    receivedFrameData.Payload = new FrameData()
+                        {
+                            FrameIndex = m_CurrentPartialFrame.FrameIndex,
+                            DataLength = m_CurrentPartialFrame.DataLength,
+                            DatagramIndex = 0,
+                            DatagramDataOffset = 0
+                        };
+                    receivedFrameData.AdoptExtraData(m_CurrentPartialFrame.ConsumeCompletedFrame());
+
+                    // Prepare m_CurrentPartialFrame to receive next frame
+                    if (m_NextPartialFrame.FrameIndex == m_CurrentPartialFrame.FrameIndex + 1)
+                    {
+                        (m_CurrentPartialFrame, m_NextPartialFrame) = (m_NextPartialFrame, m_CurrentPartialFrame);
+                        m_NextPartialFrame.FrameIndex = ulong.MaxValue;
+                    }
+                    else
+                    {
+                        ++m_CurrentPartialFrame.FrameIndex;
+                    }
+
+                    // Deactivate FrameCompletionMonitor until our user inform us that the next frame is needed (this
+                    // way the FrameCompletionMonitorThread will not constantly wake up to discover it has nothing
+                    // to do).
+                    m_FrameCompletionMonitorActive.Reset();
+
+                    // Done
+                    return PreProcessResult.PassThrough();
+                }
+            }
+
+            return PreProcessResult.Stop();
         }
 
         /// <summary>

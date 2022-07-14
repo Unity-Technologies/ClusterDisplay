@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine;
 using Utils;
-using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.ReceivedMessageBase>;
+using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay
 {
@@ -228,6 +228,68 @@ namespace Unity.ClusterDisplay
     }
 
     /// <summary>
+    /// Return value for <see cref="MessagePreprocessor"/>.
+    /// </summary>
+    struct PreProcessResult
+    {
+        /// <summary>
+        /// Should the caller of the preprocess callback <see cref="IDisposable.Dispose"/> the received message because
+        /// it is not needed anymore?
+        /// </summary>
+        public bool DisposePreProcessedMessage { get; private set; }
+        /// <summary>
+        /// <see cref="ReceivedMessageBase"/> that is to be passed to the next pre-process or added to the received
+        /// message queue when all pre-process have been executed.
+        /// </summary>
+        public ReceivedMessageBase Result { get; private set; }
+
+        /// <summary>
+        /// Value to be returned by a pre-process to indicate that the received message should continue flowing through
+        /// the pre-process chain.
+        /// </summary>
+        public static PreProcessResult PassThrough()
+        {
+            return new PreProcessResult(){DisposePreProcessedMessage = false, Result = null};
+        }
+
+        /// <summary>
+        /// Value to be returned by a pre-process to indicate that processing of the <see cref="ReceivedMessageBase"/>
+        /// should be stopped (not passed to subsequent pre-process nor added to the received message queue).
+        /// </summary>
+        public static PreProcessResult Stop()
+        {
+            return new PreProcessResult(){DisposePreProcessedMessage = true, Result = null};
+        }
+
+        /// <summary>
+        /// Value to be returned by a pre-process to indicate that the pre-processed <see cref="ReceivedMessageBase"/>
+        /// should be disposed of and replaces by a new one.
+        /// </summary>
+        public static PreProcessResult ReplaceMessage(ReceivedMessageBase newMessage)
+        {
+            return new PreProcessResult(){DisposePreProcessedMessage = true, Result = newMessage};
+        }
+    }
+
+    /// <summary>
+    /// Suggested priority for <see cref="ReceivedMessageBase"/> pre-processing.
+    /// </summary>
+    public static class UdpAgentPreProcessPriorityTable
+    {
+        // Repeaters receive ton of FrameData fragments, so put them first in the list
+        public const int frameDataProcessing = 1000;
+        // We shouldn't receive a lot, but emitter want to be able to react to retransmit request as fast as possible.
+        public const int retransmitFrameDataProcessing = 900;
+
+        // Processing of RepeaterWaitingToStartFrame is important but not as critical as we should normally be using
+        // hardware synchronization as opposed to network based synchronization...
+        public const int repeaterWaitingToStartFrame = 500;
+
+        // Processing of registering node is far from being as critical as the rest...
+        public const int registeringWithEmitter = 100;
+    }
+
+    /// <summary>
     /// Interface exposing public members of <see cref="UdpAgent"/>.
     /// </summary>
     /// <remarks>Mainly done to make unit testing of other classes using <see cref="UdpAgent"/> easier and to allow
@@ -323,14 +385,24 @@ namespace Unity.ClusterDisplay
         MessageType[] ReceivedMessageTypes { get; }
 
         /// <summary>
-        /// Callbacks that are called as we received new messages.
+        /// Adds a <see cref="MessagePreprocessor"/> to the list of processing to be applied to
+        /// <see cref="ReceivedMessageBase"/> before being added to queue of received messages.
         /// </summary>
-        /// <remarks>They can modify the message, create a new one (and return the new one) or even stop reception of
-        /// the message (by calling <see cref="IDisposable.Dispose"/> and returning null).</remarks>
-        /// <remarks>Processing of received messages should be kept to a minimum as any message taking longer than it
-        /// should to preprocess will stall all other incoming messages.</remarks>
+        /// <param name="priority">Priority of the pre-processing being added wrt the other pre-process.  Higher
+        /// priority pre-processing will be performed first.  It is strongly recommended to regroup all priorities in
+        /// <see cref="UdpAgentPreProcessPriorityTable"/>.</param>
+        /// <param name="preProcessor">Function to be executed to pre-process the message.</param>
         /// <remarks>Can be used from any thread.</remarks>
-        event MessagePreprocessor OnMessagePreProcess;
+        void AddPreProcess(int priority, MessagePreprocessor preProcessor);
+
+        /// <summary>
+        /// Removes a <see cref="MessagePreprocessor"/> from the list of processing to be applied to
+        /// <see cref="ReceivedMessageBase"/> before being added to queue of received messages.
+        /// </summary>
+        /// <param name="preProcessor">Function previously added to the list by calling <see cref="AddPreProcess"/> to
+        /// be removed from the list.</param>
+        /// <remarks>Can be used from any thread.</remarks>
+        void RemovePreProcess(MessagePreprocessor preProcessor);
 
         /// <summary>
         /// Various statistics about networking.

@@ -7,7 +7,8 @@ using Utils;
 namespace Unity.ClusterDisplay.RepeaterStateMachine
 {
     /// <summary>
-    /// <see cref="NodeState"/> that wait for frame data from an emitter and set it in the current game state.
+    /// <see cref="NodeState"/> that wait for frame data from an emitter and repeat it by setting it in the current game
+    /// state.
     /// </summary>
     class RepeatFrameState: NodeState<RepeaterNode>, IDisposable
     {
@@ -23,9 +24,10 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         {
             // Remark: Although my past experiences (with Mellanox network adapters) showed me that order of datagrams
             // seem to be preserved between the sender and the receiver, our current setup with an Intel X550 and
-            // interrupt moderation activated show that packet can be slightly broken.  Deactivating interrupt moderation
-            // fixed the problem but since packet lost should be something really rare anyway and we prefer to reduce
-            // constraint on hardware / driver / system configuration, we decided to simply turn off the feature for now.
+            // interrupt moderation activated show that packet order can be slightly broken.  Deactivating interrupt
+            // moderation fixed the problem but since packet lost should be something really rare anyway and we prefer
+            // to reduce constraint on hardware / driver / system configuration, we decided to simply turn off the
+            // feature for now.
             bool orderedReception;
 #if CLUSTER_DISPLAY_ORDER_PRESERVING_NETWORK
             orderedReception = true;

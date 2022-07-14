@@ -17,7 +17,7 @@ using UnityEngine.Assertions;
 using UnityEngine.Profiling;
 using Utils;
 using Debug = UnityEngine.Debug;
-using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.ReceivedMessageBase>;
+using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay
 {
@@ -196,26 +196,29 @@ namespace Unity.ClusterDisplay
 
         public MessageType[] ReceivedMessageTypes { get; private set; }
 
-        public event MessagePreprocessor OnMessagePreProcess
+        public void AddPreProcess(int priority, MessagePreprocessor preProcessor)
         {
-            add
+            lock (m_MessagePreprocessors)
             {
-                using var arrayLock = m_MessagePreprocessors.Lock();
-                arrayLock.AppendToArray(value);
+                m_MessagePreprocessors.Add((priority, preProcessor));
+                UpdateSortedMessagePreprocessors();
             }
-            remove
+        }
+
+        public void RemovePreProcess(MessagePreprocessor preProcessor)
+        {
+            lock (m_MessagePreprocessors)
             {
-                using var arrayLock = m_MessagePreprocessors.Lock();
-                arrayLock.RemoveFromArray(value);
+                var index = m_MessagePreprocessors.FindIndex(tuple => tuple.Item2 == preProcessor);
+                if (index >= 0)
+                {
+                    m_MessagePreprocessors.RemoveAt(index);
+                    UpdateSortedMessagePreprocessors();
+                }
             }
         }
 
         public NetworkStatistics Stats { get; } = new NetworkStatistics();
-
-        /// <summary>
-        /// Storage for OnMessagePreProcess.
-        /// </summary>
-        ArrayWithSpinLock<MessagePreprocessor> m_MessagePreprocessors = new();
 
         /// <summary>
         /// Returns the network adapter to use for data transmission and reception.
@@ -438,13 +441,25 @@ namespace Unity.ClusterDisplay
                 // Preprocess the message
                 using (s_MarkerPreprocessMessage.Auto())
                 {
-                    using (var arrayLock = m_MessagePreprocessors.Lock())
+                    using (var arrayLock = m_SortedMessagePreprocessors.Lock())
                     {
                         foreach (var preprocessor in arrayLock.GetArray())
                         {
                             try
                             {
-                                receivedMessage = preprocessor(receivedMessage);
+                                var ret = preprocessor(receivedMessage);
+                                if (ret.DisposePreProcessedMessage)
+                                {
+                                    Debug.Assert(!ReferenceEquals(ret.Result, receivedMessage),
+                                        "Cannot dispose of a ReceivedMessage AND ask to continue processing it...");
+                                    receivedMessage.Dispose();
+                                    receivedMessage = ret.Result;
+                                }
+                                else if (ret.Result != null)
+                                {
+                                    receivedMessage = ret.Result;
+                                }
+
                                 if (receivedMessage == null)
                                 {
                                     break;
@@ -481,6 +496,19 @@ namespace Unity.ClusterDisplay
         void ReturnManagedReceivedMessageData(ManagedReceivedMessageData toReturn)
         {
             m_ReceivedMessageDataPool.Release(toReturn);
+        }
+
+        /// <summary>
+        /// Update sorted array of <see cref="MessagePreprocessor"/> to the given list.
+        /// </summary>
+        void UpdateSortedMessagePreprocessors()
+        {
+            lock (m_MessagePreprocessors)
+            {
+                using var lockedArray = m_SortedMessagePreprocessors.Lock();
+                lockedArray.SetArray(m_MessagePreprocessors.OrderBy(p => p.Item1).
+                    Select(p => p.Item2).ToArray());
+            }
         }
 
         /// <summary>
@@ -617,6 +645,15 @@ namespace Unity.ClusterDisplay
         /// </summary>
         BlockingQueue<ReceivedMessageBase> m_ReceivedMessages = new();
         /// <summary>
+        /// Non sorted list of <see cref="MessagePreprocessor"/> with their priority.
+        /// </summary>
+        /// <remarks>Must be locked before using it.</remarks>
+        List<(int, MessagePreprocessor)> m_MessagePreprocessors = new();
+        /// <summary>
+        /// Array of <see cref="MessagePreprocessor"/> sorted by priority that can quickly accessed from any thread.
+        /// </summary>
+        ArrayWithSpinLock<MessagePreprocessor> m_SortedMessagePreprocessors = new();
+        /// <summary>
         /// Custom delegate to create a <see cref="ReceivedMessage{M}"/> from a byte array (length must match sizeof(M)).
         /// </summary>
         /// <remarks>Cannot use <see cref="Func{ReadOnlySpan, ReceivedMessageBase}"/> as it does not allow using
@@ -649,8 +686,7 @@ namespace Unity.ClusterDisplay
         /// </summary>
         static ProfilerMarker s_MarkerCreateMessage = new ProfilerMarker("CreateMessage");
         /// <summary>
-        /// <see cref="ProfilerMarker"/> used to identify the time spent pre-processing (<see cref="OnMessagePreProcess"/>)
-        /// the <see cref="ReceivedMessage{TM}"/>.
+        /// <see cref="ProfilerMarker"/> used to identify the time spent pre-processing the <see cref="ReceivedMessage{TM}"/>.
         /// </summary>
         static ProfilerMarker s_MarkerPreprocessMessage = new ProfilerMarker("PreprocessMessage");
         /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -130,15 +131,22 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(m_TestAgent, testDeadline,
                     message => message.Payload.NodeId == k_RepeaterId && message.Payload.Accepted), Is.True);
 
-                // Inform emitter that the repeater is ready to start its test
-                m_TestAgent.SendMessage(MessageType.RepeaterWaitingToStartFrame, new RepeaterWaitingToStartFrame
+                bool receivedEmitterWaitingToStartFrame = false;
+                while (Stopwatch.GetTimestamp() < testDeadline && !receivedEmitterWaitingToStartFrame)
                 {
-                    FrameIndex = 0, NodeId = k_RepeaterId, WillUseNetworkSyncOnNextFrame = true
-                });
+                    // Inform emitter that the repeater is ready to start its test
+                    m_TestAgent.SendMessage(MessageType.RepeaterWaitingToStartFrame, new RepeaterWaitingToStartFrame
+                    {
+                        FrameIndex = 0, NodeId = k_RepeaterId, WillUseNetworkSyncOnNextFrame = true
+                    });
 
-                // Wait for answer
-                Assert.That(ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(m_TestAgent, testDeadline,
-                    message => !message.Payload.IsWaitingOn(k_RepeaterId)), Is.True);
+                    // Wait for answer (but not for too long as it is possible we sent previous
+                    // RepeaterWaitingToStartFrame before the emitter was ready to deal with it...
+                    receivedEmitterWaitingToStartFrame = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(
+                        m_TestAgent, StopwatchUtils.TimestampIn(TimeSpan.FromMilliseconds(100)),
+                        message => !message.Payload.IsWaitingOn(k_RepeaterId));
+                }
+                Assert.That(receivedEmitterWaitingToStartFrame, Is.True);
             });
 
             Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));

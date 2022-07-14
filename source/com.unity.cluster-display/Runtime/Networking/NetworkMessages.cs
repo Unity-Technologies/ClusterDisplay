@@ -279,25 +279,14 @@ namespace Unity.ClusterDisplay
         public bool IsWaitingOn(byte nodeId)
         {
             BitField64 storage;
-            switch (nodeId >> 6)
+            storage.Value = (nodeId >> 6) switch
             {
-                case 0:
-                    storage.Value = WaitingOn0;
-                    break;
-                case 1:
-                    storage.Value = WaitingOn1;
-                    break;
-                case 2:
-                    storage.Value = WaitingOn2;
-                    break;
-                case 3:
-                    storage.Value = WaitingOn3;
-                    break;
-                default:
-                    Debug.Assert(false, "Should not happen, byte >> 6 should only have 4 possible values...");
-                    storage.Value = 0;
-                    break;
-            }
+                0 => WaitingOn0,
+                1 => WaitingOn1,
+                2 => WaitingOn2,
+                3 => WaitingOn3,
+                _ => throw new IndexOutOfRangeException("Should not happen, byte >> 6 should only have 4 possible values...")
+            };
             return storage.IsSet(nodeId & 0b11_1111);
         }
     }

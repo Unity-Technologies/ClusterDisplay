@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             m_Splitter = new(Node.UdpAgent, new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
             m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence);
             m_Emitter = new(Node.Config.RepeatersDelayed);
-            Node.UdpAgent.OnMessagePreProcess += AnswerRegisteringWithEmitter;
+            Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.registeringWithEmitter, AnswerRegisteringWithEmitter);
         }
 
         /// <summary>
@@ -31,6 +31,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             m_Emitter?.Dispose();
             m_StartHandler?.Dispose();
             m_Splitter?.Dispose();
+            Node.UdpAgent?.RemovePreProcess(AnswerRegisteringWithEmitter);
         }
 
         protected override NodeState DoFrameImplementation()
@@ -94,23 +95,20 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// <remarks>Necessary to deal with the case where the <see cref="RepeaterRegistered"/> sent during
         /// <see cref="WelcomeRepeatersState"/> was lost.  Repeater will repeat the <see cref="RepeaterRegistered"/>
         /// and so we have to also repeat the answer.  We however do not accept new repeaters, it is too late.</remarks>
-        ReceivedMessageBase AnswerRegisteringWithEmitter(ReceivedMessageBase message)
+        /// <returns>Summary of what happened during the pre-processing.</returns>
+        PreProcessResult AnswerRegisteringWithEmitter(ReceivedMessageBase message)
         {
             if (message.Type != MessageType.RegisteringWithEmitter)
             {
-                return message;
+                return PreProcessResult.PassThrough();
             }
 
-            using var receivedRegisteringWithEmitter = message as ReceivedMessage<RegisteringWithEmitter>;
-            if (receivedRegisteringWithEmitter != null)
-            {
-                var answer =
-                    Node.RepeatersStatus.ProcessRegisteringMessage(receivedRegisteringWithEmitter.Payload, false);
-                Node.UdpAgent.SendMessage(MessageType.RepeaterRegistered, answer);
-                Node.UdpAgent.Stats.SentMessageWasRepeat(MessageType.RepeaterRegistered);
-            }
+            var receivedRegisteringWithEmitter = (ReceivedMessage<RegisteringWithEmitter>)message;
+            var answer = Node.RepeatersStatus.ProcessRegisteringMessage(receivedRegisteringWithEmitter.Payload, false);
+            Node.UdpAgent.SendMessage(MessageType.RepeaterRegistered, answer);
+            Node.UdpAgent.Stats.SentMessageWasRepeat(MessageType.RepeaterRegistered);
 
-            return null;
+            return PreProcessResult.Stop();
         }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Utils;
-using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
@@ -13,8 +12,8 @@ namespace Unity.ClusterDisplay
     /// all the repeater nodes that are ready.
     /// </summary>
     /// <remarks>Emitter is handling WaitingToStartFrame logic in a dedicated class like this one connected to
-    /// <see cref="IUdpAgent.OnMessagePreProcess"/> instead of manually in a <see cref="NodeState"/> so that it can
-    /// react as quickly as possible to <see cref="RepeaterWaitingToStartFrame"/> so that repeater receives an
+    /// <see cref="IUdpAgent.AddPreProcess"/> instead of manually in a <see cref="NodeState"/> so that it can react as
+    /// quickly as possible to <see cref="RepeaterWaitingToStartFrame"/> so that repeater receives an
     /// <see cref="EmitterWaitingToStartFrame"/> quickly to avoid repeating <see cref="RepeaterWaitingToStartFrame"/>
     /// for nothing.</remarks>
     class FrameWaitingToStartHandler: IDisposable
@@ -36,7 +35,7 @@ namespace Unity.ClusterDisplay
             m_StillWaitingOn = new (toWaitFor);
 
             UdpAgent = udpAgent;
-            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.repeaterWaitingToStartFrame, PreProcessReceivedMessage);
         }
 
         /// <summary>
@@ -46,7 +45,7 @@ namespace Unity.ClusterDisplay
         {
             if (UdpAgent != null)
             {
-                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+                UdpAgent.RemovePreProcess(PreProcessReceivedMessage);
             }
         }
 
@@ -125,17 +124,16 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and track the state of repeaters that are ready to proceed to the next frame.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>Preprocessed <see cref="ReceivedMessageBase"/> or null if the message is to be dropped.</returns>
-        ReceivedMessageBase PreProcessReceivedMessage(ReceivedMessageBase received)
+        /// <returns>Summary of what happened during the pre-processing.</returns>
+        PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // We are only interested in FrameData we receive, everything else should simply pass through
             if (received.Type != MessageType.RepeaterWaitingToStartFrame)
             {
-                return received;
+                return PreProcessResult.PassThrough();
             }
 
-            using var receivedWaitingToStart = received as ReceivedMessage<RepeaterWaitingToStartFrame>;
-            Debug.Assert(receivedWaitingToStart != null); // since received.Type == MessageType.RepeaterWaitingToStartFrame
+            var receivedWaitingToStart = (ReceivedMessage<RepeaterWaitingToStartFrame>)received;
 
             lock (m_ThisLock)
             {
@@ -186,7 +184,7 @@ namespace Unity.ClusterDisplay
             }
 
             // We never pass any RepeaterWaitingToStartFrame through...
-            return null;
+            return PreProcessResult.Stop();
         }
 
         /// <summary>

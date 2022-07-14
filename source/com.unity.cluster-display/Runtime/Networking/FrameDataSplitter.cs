@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay
             }
             m_NewestSentFramesInformationIndex = retransmitHistory - 1;
 
-            UdpAgent.OnMessagePreProcess += PreProcessReceivedMessage;
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.retransmitFrameDataProcessing, PreProcessReceivedMessage);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay
             // Unregister from pre-processing received messages
             if (UdpAgent != null)
             {
-                UdpAgent.OnMessagePreProcess -= PreProcessReceivedMessage;
+                UdpAgent.RemovePreProcess(PreProcessReceivedMessage);
             }
 
             // Dispose of FrameDataBuffer we still know about (no one should be using them anyway, so let's
@@ -177,16 +177,15 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and check for FrameData retransmission request.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>Preprocessed <see cref="ReceivedMessageBase"/> or null if the message is to be dropped.</returns>
-        ReceivedMessageBase PreProcessReceivedMessage(ReceivedMessageBase received)
+        /// <returns>Summary of what happened during the pre-processing.</returns>
+        PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // We are only interested in retransmit requests, everything else should simply pass through
             if (received.Type != MessageType.RetransmitFrameData)
             {
-                return received;
+                return PreProcessResult.PassThrough();
             }
 
-            using var toDisposeOfReceivedAtExit = received;
             var retransmitMessage = (ReceivedMessage<RetransmitFrameData>)received;
             Debug.Assert(retransmitMessage != null); // since received.Type == MessageType.FrameData
 
@@ -208,7 +207,7 @@ namespace Unity.ClusterDisplay
                             $"anymore: {retransmitMessage.Payload.FrameIndex}, we only have frames in the range of " +
                             $"[{oldestFrameIndex}, {newestFrameIndex}], skipping.");
                     }
-                    return null;
+                    return PreProcessResult.Stop();
                 }
 
                 // Validate we have data for that frame
@@ -232,7 +231,7 @@ namespace Unity.ClusterDisplay
                 if (frameDataInformation.DataBuffer == null)
                 {
                     Debug.LogWarning($"Asking to retransmit a frame for which we have no data.");
-                    return null;
+                    return PreProcessResult.Stop();
                 }
 
                 // Re-send datagrams
@@ -250,7 +249,7 @@ namespace Unity.ClusterDisplay
                 }
             }
 
-            return null;
+            return PreProcessResult.Stop();
         }
 
         /// <summary>
