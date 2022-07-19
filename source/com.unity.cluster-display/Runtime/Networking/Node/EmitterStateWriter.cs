@@ -1,44 +1,43 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine;
-using buint = System.UInt32;
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC.Runtime")]
 
 namespace Unity.ClusterDisplay
 {
-    internal class EmitterStateWriter : IDisposable
+    class EmitterStateWriter : IDisposable
     {
-        private const int k_MaxFrameNetworkByteBufferSize = ushort.MaxValue;
-
         bool m_Disposed;
 
-        FrameDataBuffer m_StagedFrameData = new(k_MaxFrameNetworkByteBufferSize);
-        FrameDataBuffer m_CurrentFrameData = new(k_MaxFrameNetworkByteBufferSize);
+        FrameDataBuffer m_StagedFrameData = new();
+        FrameDataBuffer m_CurrentFrameData = new();
         bool m_CurrentFrameDataValid;
         bool m_StagedFrameDataValid;
-
-        private byte[] m_MsgBuffer = Array.Empty<byte>();
 
         /// <summary>
         /// Engine state data gets collected on each frame but may be published on a delay.
         /// </summary>
-        static readonly (byte, FrameDataBuffer.StoreDataDelegate)[] k_StateDataDelegates =
+        static readonly (int, FrameDataBuffer.StoreDataDelegate)[] k_StateDataDelegates =
         {
-            ((byte)StateID.Time, ClusterSerialization.SaveTimeManagerState),
-            ((byte)StateID.Input, ClusterSerialization.SaveInputManagerState),
-            ((byte)StateID.Random, SaveRandomState),
+            ((int)StateID.Time, ClusterSerialization.SaveTimeManagerState),
+            ((int)StateID.Input, ClusterSerialization.SaveInputManagerState),
+            ((int)StateID.Random, SaveRandomState),
         };
+
+        /// <summary>
+        /// Overrides k_StateDataDelegates when performing unit tests.
+        /// </summary>
+        static (int, FrameDataBuffer.StoreDataDelegate)[] s_StateDataDelegatesOverride;
 
         /// <summary>
         /// Custom data gets published on the same frame that delegates are invoked.
         /// </summary>
         static readonly Dictionary<int, List<FrameDataBuffer.StoreDataDelegate>> k_CustomDataDelegates = new();
 
-        private readonly bool k_RepeatersDelayed;
+        readonly bool k_RepeatersDelayed;
 
         internal static void RegisterOnStoreCustomDataDelegate(int id, FrameDataBuffer.StoreDataDelegate storeDataDelegate)
         {
@@ -61,6 +60,16 @@ namespace Unity.ClusterDisplay
         }
 
         internal static void ClearCustomDataDelegates() => k_CustomDataDelegates.Clear();
+
+        internal static void OverrideStateDelegates((int, FrameDataBuffer.StoreDataDelegate)[] delegates)
+        {
+            s_StateDataDelegatesOverride = delegates;
+        }
+
+        internal static void ClearStateDelegatesOverride()
+        {
+            s_StateDataDelegatesOverride = null;
+        }
 
         public EmitterStateWriter(bool repeatersDelayed)
         {
@@ -97,38 +106,26 @@ namespace Unity.ClusterDisplay
             Dispose(false);
         }
 
-        public void PublishCurrentState(UDPAgent agent, ulong currentFrameId)
+        public void PublishCurrentState(ulong currentFrameId, FrameDataSplitter frameDataSplitter)
         {
             if (!m_StagedFrameDataValid)
             {
                 return;
             }
 
-            var mainMessageSize = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<EmitterLastFrameData>();
-            var len = mainMessageSize + m_StagedFrameData.Length;
+            frameDataSplitter.SendFrameData(currentFrameId, ref m_StagedFrameData);
 
-            if (m_MsgBuffer.Length < len)
-                m_MsgBuffer = new byte[len];
+            // We must stop using m_StagedFrameData as frameDataSplitter is now "owning it" (so that he can re-use it
+            // to repeat lost datagrams).  So recycle an old one or if none are available allocate a new one.
+            m_StagedFrameData = frameDataSplitter.FrameDataBufferPool != null ?
+                frameDataSplitter.FrameDataBufferPool.Get() : new FrameDataBuffer();
 
-            var msg = new EmitterLastFrameData() {FrameNumber = currentFrameId };
-            msg.StoreInBuffer(m_MsgBuffer, Marshal.SizeOf<MessageHeader>()); // Leaver room for header
-
-            // Copy state + custom data
-            m_StagedFrameData.CopyTo(m_MsgBuffer, mainMessageSize);
-
-            var msgHdr = new MessageHeader()
-            {
-                MessageType = EMessageType.LastFrameData,
-                Flags = MessageHeader.EFlag.Broadcast,
-                PayloadSize = (UInt16)m_StagedFrameData.Length
-            };
-
-            agent.PublishMessage(msgHdr, m_MsgBuffer);
+            m_StagedFrameDataValid = false;
         }
 
-        internal static void StoreStateData(FrameDataBuffer frameDataBuffer)
+        static void StoreStateData(FrameDataBuffer frameDataBuffer)
         {
-            foreach (var (id, dataDelegate) in k_StateDataDelegates)
+            foreach (var (id, dataDelegate) in s_StateDataDelegatesOverride ?? k_StateDataDelegates)
             {
                 frameDataBuffer.Store(id, dataDelegate);
             }

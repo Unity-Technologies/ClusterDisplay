@@ -66,23 +66,31 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 var currentSurface = projection.Surfaces[i];
                 if (i == m_SelectedSurfaceIndex)
                 {
-                    var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
-                    if (newSurface != currentSurface)
+                    Handles.color = k_SelectedColor;
+                    using (var changeCheck = new EditorGUI.ChangeCheckScope())
                     {
-                        Undo.RecordObject(target, "Modify Projection Surface");
-                        projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
-
-                        // We need to update the cluster rendering, but Update and LateUpdate
-                        // do not happen after OnSceneGUI changes, so we need to explicitly request
-                        // that the Editor execute an update loop.
-                        if (!Application.isPlaying)
+                        var newSurface = DoSurfaceHandles(currentSurface, projection.Origin);
+                        if (changeCheck.changed)
                         {
-                            EditorApplication.QueuePlayerLoopUpdate();
+                            Undo.RecordObject(target, "Modify Projection Surface");
+
+                            projection.SetSurface(m_SelectedSurfaceIndex, newSurface);
+
+                            // We need to update the cluster rendering, but Update and LateUpdate
+                            // do not happen after OnSceneGUI changes, so we need to explicitly request
+                            // that the Editor execute an update loop.
+                            if (!Application.isPlaying)
+                            {
+                                EditorApplication.QueuePlayerLoopUpdate();
+                            }
+
+                            Repaint();
+
+                            Handles.DrawAAPolyLine(k_LineWidth, newSurface.GetPolyLine(projection.Origin));
                         }
                     }
 
-                    Handles.color = k_SelectedColor;
-                    Handles.DrawAAPolyLine(k_LineWidth, newSurface.GetPolyLine(projection.Origin));
+                    Handles.DrawAAPolyLine(k_LineWidth, currentSurface.GetPolyLine(projection.Origin));
                 }
                 else
                 {
@@ -94,12 +102,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         static ProjectionSurface DoSurfaceHandles(ProjectionSurface surface, Matrix4x4 rootTransform)
         {
-            var rotation = rootTransform.rotation * surface.LocalRotation;
-            rotation.Normalize();
-            var position = rootTransform.MultiplyPoint(surface.LocalPosition);
+            var rotation = (rootTransform.rotation * surface.LocalRotation).normalized;
+            var position = rootTransform.MultiplyPoint3x4(surface.LocalPosition);
+
             rotation = Handles.RotationHandle(rotation, position);
-            surface.LocalRotation = (rotation * rootTransform.inverse.rotation).normalized;
-            surface.LocalPosition = rootTransform.inverse.MultiplyPoint(Handles.PositionHandle(position, rotation));
+            surface.LocalRotation = (rootTransform.inverse.rotation * rotation).normalized;
+            surface.LocalPosition = rootTransform.inverse.MultiplyPoint3x4(Handles.PositionHandle(position, rotation));
             return surface;
         }
 
@@ -117,7 +125,13 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (active && focused)
             {
+                var previousSelection = m_SelectedSurfaceIndex;
                 m_SelectedSurfaceIndex = index;
+                if (m_SelectedSurfaceIndex != previousSelection)
+                {
+                    Debug.Log($"Selected surface {index}");
+                    SceneView.RepaintAll();
+                }
             }
 
             var element = m_SurfacesProp.GetArrayElementAtIndex(index);

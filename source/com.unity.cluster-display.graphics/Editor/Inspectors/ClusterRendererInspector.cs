@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         // We need to detect when the projection policy has changed. Caching the previous
         // value seems to be the most reliable way to detect changes.
-        Object m_CachedPolicyObject;
+        ProjectionPolicy m_CachedPolicyObject;
 
         void OnEnable()
         {
@@ -38,44 +38,46 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             CheckForClusterCameraComponents();
 
             serializedObject.Update();
-            var currentPolicy = m_PolicyProp.objectReferenceValue;
+            EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
 
-            using (var check = new EditorGUI.ChangeCheckScope())
+            var currentPolicy = m_PolicyProp.objectReferenceValue as ProjectionPolicy;
+
+            // Make sure we are drawing the correct editor for the selected policy.
+            // This hacky method detects if the policy has changed, either triggered by the user through
+            // the Inspector, or some other logic (e.g. the undo system)
+            if (m_CachedPolicyObject != currentPolicy)
             {
-                EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
-                // Make sure we are drawing the correct editor for the selected policy.
-                // This detects if the policy has changed. Not all changes come from the Inspector.
-                // e.g. The scene undo stack could change it.
-                if (check.changed || m_CachedPolicyObject != currentPolicy)
+                if (m_PolicyEditor != null)
                 {
-                    if (m_PolicyEditor != null)
-                    {
-                        DestroyImmediate(m_PolicyEditor);
-                    }
-                    
-                    if (currentPolicy != null)
-                    {
-                        if (m_PolicyEditor == null)
-                        {
-                            m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
-                        }
-                    }
-                    else
-                    {
-                        EditorGUILayout.HelpBox(k_NoPolicyMessage, MessageType.Warning);
-                    }
+                    DestroyImmediate(m_PolicyEditor);
                 }
+
+                if (m_CachedPolicyObject != null)
+                {
+                    m_CachedPolicyObject.OnDisable();
+                }
+
+                m_CachedPolicyObject = currentPolicy;
+            }
+
+            if (currentPolicy != null && m_PolicyEditor == null)
+            {
+                m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
             }
 
             EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
             EditorGUILayout.PropertyField(m_DelayPresentByOneFrameProp, Labels.GetGUIContent(Labels.Field.DelayPresentByOneFrame));
-            
-            if (currentPolicy != null && m_PolicyEditor != null)
+
+            if (currentPolicy != null)
             {
+                Debug.Assert(m_PolicyEditor != null);
                 m_PolicyEditor.OnInspectorGUI();
-                m_CachedPolicyObject = currentPolicy;
             }
-            
+            else
+            {
+                EditorGUILayout.HelpBox(k_NoPolicyMessage, MessageType.Warning);
+            }
+
             serializedObject.ApplyModifiedProperties();
         }
 

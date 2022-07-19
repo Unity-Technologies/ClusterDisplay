@@ -5,35 +5,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Profiling;
 using UnityEngine;
 
 [assembly: InternalsVisibleTo("Unity.ClusterDisplay.RPC")]
 
 namespace Unity.ClusterDisplay
 {
-    internal class RepeaterStateReader
+    class RepeaterStateReader
     {
-        private byte[] m_OutBuffer = new byte[0];
-
-        private IRepeaterNodeSyncState nodeSyncState;
-
-        // For debugging ----------------------------------
-        private UInt64 m_LastReportedFrameDone = 0;
-        private UInt64 m_LastRxFrameStart = 0;
-        private UInt64 m_RxCount = 0;
-        private UInt64 m_TxCount = 0;
-        public UInt64 RxCount => m_RxCount;
-        public UInt64 TxCount => m_TxCount;
-
-        public UInt64 LastReportedFrameDone => m_LastReportedFrameDone;
-        public UInt64 LastRxFrameStart => m_LastRxFrameStart;
-
-        private ProfilerMarker m_MarkerReceivedGoFromEmitter = new ProfilerMarker("ReceivedGoFromEmitter");
-        private DebugPerf m_NetworkingOverhead = new DebugPerf();
-
-        public float NetworkingOverheadAverage => m_NetworkingOverhead.Average;
-
         internal delegate bool OnLoadCustomData(NativeArray<byte> stateData);
 
         static readonly Dictionary<int, OnLoadCustomData> k_BuiltInOnLoadDelegates = new()
@@ -43,27 +22,27 @@ namespace Unity.ClusterDisplay
             {(int)StateID.Random, RestoreRndGeneratorState}
         };
 
-        static readonly Dictionary<int, OnLoadCustomData> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
+        static readonly Dictionary<int, List<OnLoadCustomData>> k_LoadDataDelegates = k_BuiltInOnLoadDelegates.ToDictionary(
             entry => entry.Key,
-            entry => entry.Value);
+            entry => new List<OnLoadCustomData>{entry.Value});
 
         internal static void RegisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
         {
-            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            if (k_LoadDataDelegates.TryGetValue(id, out var list))
             {
-                del += onLoadData;
+                list.Add(onLoadData);
             }
             else
             {
-                k_LoadDataDelegates.Add(id, onLoadData);
+                k_LoadDataDelegates.Add(id, new List<OnLoadCustomData>{onLoadData});
             }
         }
 
         internal static void UnregisterOnLoadDataDelegate(int id, OnLoadCustomData onLoadData)
         {
-            if (k_LoadDataDelegates.TryGetValue(id, out var del))
+            if (k_LoadDataDelegates.TryGetValue(id, out var list))
             {
-                del -= onLoadData;
+                list.Remove(onLoadData);
             }
         }
 
@@ -77,89 +56,26 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        public RepeaterStateReader(IRepeaterNodeSyncState nodeSyncState) => this.nodeSyncState = nodeSyncState;
-
-        public void PumpMsg(UDPAgent agent, ulong currentFrameID)
+        /// <summary>
+        /// Restore emitter's game state to the current repeater's game state.
+        /// </summary>
+        /// <param name="nativeArray">Serialized game state.</param>
+        public static void RestoreEmitterFrameData(NativeArray<byte> nativeArray)
         {
-            while (agent.NextAvailableRxMsg(out var msgHdr, out var outBuffer))
-            {
-                m_RxCount++;
-
-                if (msgHdr.MessageType != EMessageType.LastFrameData)
-                {
-                    nodeSyncState.OnUnhandledNetworkMessage(msgHdr);
-                    continue;
-                }
-
-                using (m_MarkerReceivedGoFromEmitter.Auto())
-                {
-                    m_NetworkingOverhead.SampleNow();
-                    ClusterDebug.Assert(outBuffer.Length > 0, "invalid buffer!");
-
-                    var respMsg = outBuffer.LoadStruct<EmitterLastFrameData>(msgHdr.OffsetToPayload);
-
-                    // The emitter is on the next frame, so were matching against the previous frame.
-                    if (respMsg.FrameNumber != currentFrameID)
-                    {
-                        ClusterDebug.LogWarning($"Message of type: {msgHdr.MessageType} with sequence ID: {msgHdr.SequenceID} is for frame: {respMsg.FrameNumber} when we are on frame: {currentFrameID}. Any of the following could have occurred:\n\t1. We already interpreted the message, but an ACK was never sent to the emitter.\n\t2. We already interpreted the message, but our ACK never reached the emitter.\n\t3. We some how never received this message. Yet we proceeded to the next frame anyways.");
-                        continue;
-                    }
-
-                    RestoreEmitterFrameData(outBuffer);
-                    nodeSyncState.OnReceivedEmitterFrameData();
-
-                    // We might still have messages available, but processing them before the LastFrameData we just
-                    // received could result in skipping a LastFrameData, so stop right now, nodeSyncState now has
-                    // something to do anyway.
-                    break;
-                }
-            }
-        }
-
-        void RestoreEmitterFrameData(byte[] buffer)
-        {
-            // Read the frame data from the emitter
-            var msgHdr = buffer.LoadStruct<MessageHeader>();
-            var bufferPos = msgHdr.OffsetToPayload + Marshal.SizeOf<EmitterLastFrameData>();
-            var bufferLength = buffer.Length - bufferPos;
-            if (bufferLength <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(buffer), $"{nameof(buffer)} does not contain frame data");
-            }
-
-            using var bufferNative = new NativeArray<byte>(buffer, Allocator.Temp);
-            foreach (var (id, data) in new FrameDataReader(bufferNative.GetSubArray(bufferPos, bufferLength)))
+            foreach (var (id, data) in new FrameDataReader(nativeArray))
             {
                 // The built-in delegates restore the states of various subsystems
-                if (k_LoadDataDelegates.TryGetValue(id, out var onLoadCustomData))
+                if (k_LoadDataDelegates.TryGetValue(id, out var list))
                 {
-                    onLoadCustomData.Invoke(data);
+                    foreach (var onLoadCustomData in list)
+                    {
+                        onLoadCustomData.Invoke(data);
+                    }
                 }
             }
         }
 
-        public void SignalEnteringNextFrame(UDPAgent agent, ulong currentFrameID)
-        {
-            ClusterDebug.Log($"(Frame: {currentFrameID}): Signaling Frame Done.");
-
-            // Send out to server that this repeater has finished with last requested frame.
-            var msgHdr = new MessageHeader() {MessageType = EMessageType.EnterNextFrame, DestinationIDs = nodeSyncState.EmitterNodeIdMask,};
-
-            var len = Marshal.SizeOf<MessageHeader>() + Marshal.SizeOf<RepeaterEnteredNextFrame>();
-            if (m_OutBuffer.Length != len)
-                m_OutBuffer = new byte[len];
-
-            var msg = new RepeaterEnteredNextFrame() {FrameNumber = currentFrameID};
-
-            m_LastReportedFrameDone = currentFrameID;
-            msg.StoreInBuffer(m_OutBuffer, Marshal.SizeOf<MessageHeader>());
-
-            m_NetworkingOverhead.RefPoint();
-            agent.PublishMessage(msgHdr, m_OutBuffer);
-            m_TxCount++;
-        }
-
-        private static unsafe bool RestoreRndGeneratorState(NativeArray<byte> stateData)
+        static unsafe bool RestoreRndGeneratorState(NativeArray<byte> stateData)
         {
             UnityEngine.Random.State rndState = default;
             var rawData = (byte*)&rndState;

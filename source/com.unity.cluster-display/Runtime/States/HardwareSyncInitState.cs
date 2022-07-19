@@ -1,7 +1,6 @@
 using System;
 using Unity.ClusterDisplay.EmitterStateMachine;
 using Unity.ClusterDisplay.RepeaterStateMachine;
-using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
@@ -14,31 +13,35 @@ namespace Unity.ClusterDisplay
     /// Derive from this class and return an instance of the child in
     /// <see cref="Create"/> to perform actual initialization of hardware.
     /// </remarks>
-    class HardwareSyncInitState : NodeState
+    class HardwareSyncInitState: NodeState
     {
-        public override bool ReadyToProceed => false;
-        public override bool ReadyForNextFrame => false;
-
         public static NodeState Create(ClusterNode node)
         {
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
             return new QuadroSyncInitState(node);
 #else
+            ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
             return new HardwareSyncInitState(node);
 #endif
         }
 
-        protected HardwareSyncInitState(ClusterNode localNode)
-            : base(localNode)
+        protected HardwareSyncInitState(ClusterNode node)
+            : base(node)
         {
-            ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
         }
 
-        protected override NodeState DoFrame(bool newFrame) =>
-            LocalNode switch {
-                EmitterNode emitterNode => new WaitingForAllClients(emitterNode),
-                RepeaterNode repeaterNode => new RegisterWithEmitter(repeaterNode),
-                _ => throw new ArgumentOutOfRangeException(nameof(LocalNode))
+        protected override NodeState DoFrameImplementation() =>
+            Node switch {
+                EmitterNode emitterNode => new WelcomeRepeatersState(emitterNode),
+                RepeaterNode repeaterNode => new RegisterWithEmitterState(repeaterNode),
+                _ => throw new ArgumentOutOfRangeException(nameof(Node))
             };
+
+        protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;
+
+        /// <summary>
+        /// Value returned by <see cref="GetProfilerMarker"/>.
+        /// </summary>
+        static IntPtr s_ProfilerMarker = CreateProfilingMarker(nameof(HardwareSyncInitState));
     }
 }

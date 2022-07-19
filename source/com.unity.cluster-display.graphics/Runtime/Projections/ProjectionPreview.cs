@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     /// <summary>
     /// Script that draws an unlit textured plane hidden in the hierarchy
-    /// and not rendered by the game camera. 
+    /// and not rendered by the game camera.
     /// </summary>
     /// <remarks>
     /// Use this script to preview projection surfaces (screens).

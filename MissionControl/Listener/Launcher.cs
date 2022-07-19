@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -61,11 +61,9 @@ namespace Unity.ClusterDisplay.MissionControl
 
         static string GetCommandLineArgString(in LaunchInfo launchInfo)
         {
-            var outgoingPort = launchInfo.NodeID == 0 ? launchInfo.RxPort.ToString() : launchInfo.TxPort.ToString();
-            var incomingPort = launchInfo.NodeID == 0 ? launchInfo.TxPort.ToString() : launchInfo.RxPort.ToString();
             var address = new IPAddress(launchInfo.MulticastAddress).ToString();
             var isEmitter = launchInfo.NodeID == 0;
-            var emitterArg = launchInfo.UseDeprecatedArgNames ? "-masterNode" : "-emitterNode";
+            const string emitterArg = "-emitterNode";
             const string repeaterArg = "-node";
 
             var args = new List<string>
@@ -73,7 +71,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 isEmitter ? emitterArg : repeaterArg,
                 launchInfo.NodeID.ToString(),
                 isEmitter ? launchInfo.NumRepeaters.ToString() : string.Empty,
-                $"{address}:{outgoingPort},{incomingPort}",
+                $"{address}:{launchInfo.Port}",
                 "-handshakeTimeout",
                 launchInfo.HandshakeTimeoutMilliseconds.ToString(),
                 "-communicationTimeout",

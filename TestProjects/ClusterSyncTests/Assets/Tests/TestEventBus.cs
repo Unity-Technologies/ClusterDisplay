@@ -1,7 +1,12 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
+using Unity.ClusterDisplay.Scripting;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Tests
 {

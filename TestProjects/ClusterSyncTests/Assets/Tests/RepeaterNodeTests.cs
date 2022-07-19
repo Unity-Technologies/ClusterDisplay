@@ -1,11 +1,15 @@
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Unity.ClusterDisplay.RepeaterStateMachine;
 using Unity.ClusterDisplay.Utils;
+using Utils;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
 using static Unity.ClusterDisplay.Tests.NodeTestUtils;
 
@@ -13,212 +17,194 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class RepeaterNodeTests
     {
-        UDPAgent m_TestAgent;
-        NodeState m_State;
-        RepeaterNode m_Node;
+        UdpAgent m_EmitterAgent;
+        FrameDataSplitter m_EmitterFrameDataSplitter;
+        EmitterStateWriter m_EmitterStateWriter;
+        EventBus<TestData> m_EmitterEventBus;
+        RepeaterNode m_RepeaterNode;
+        EventBus<TestData> m_RepeaterEventBus;
+        int m_ReceivedBusDataCount;
         const byte k_EmitterId = 0;
         const byte k_RepeaterId = 1;
 
         [SetUp]
         public void SetUp()
         {
-            var testAgentConfig = udpConfig;
-            testAgentConfig.nodeId = k_EmitterId;
-            testAgentConfig.rxPort = udpConfig.txPort;
-            testAgentConfig.txPort = udpConfig.rxPort;
-
-            m_TestAgent = new UDPAgent(testAgentConfig);
+            var emitterAgentConfig = udpConfig;
+            emitterAgentConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
+            m_EmitterAgent = new(emitterAgentConfig);
+            m_EmitterFrameDataSplitter = new(m_EmitterAgent);
+            m_EmitterStateWriter = new(false);
+            m_EmitterEventBus = new(EventBusFlags.WriteToCluster);
 
             RepeaterStateReader.ClearOnLoadDataDelegates();
-            var repeaterUdpConfig = udpConfig;
-            repeaterUdpConfig.nodeId = k_RepeaterId;
-            m_Node = new RepeaterNode(new RepeaterNode.Config
+            var repeaterAgentConfig = udpConfig;
+            repeaterAgentConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
+            var nodeConfig = new ClusterNodeConfig
             {
-                MainConfig =
+                NodeId = k_RepeaterId,
+                HandshakeTimeout = NodeTestUtils.Timeout,
+                CommunicationTimeout = NodeTestUtils.Timeout,
+                RepeatersDelayed = false,
+                EnableHardwareSync = false // Can't really test with true as computers running unit test don't have that hardware...
+            };
+
+            m_RepeaterNode = new RepeaterNode(nodeConfig, new UdpAgent(repeaterAgentConfig));
+            m_RepeaterEventBus = new(EventBusFlags.ReadFromCluster);
+            m_RepeaterEventBus.Subscribe(testData =>
+            {
+                ++m_ReceivedBusDataCount;
+
+                ulong effectiveFrameIndex = m_RepeaterNode.FrameIndex;
+                switch (testData.EnumVal)
                 {
-                    UdpAgentConfig = repeaterUdpConfig
+                    case StateID.Random:
+                        Assert.That(testData.LongVal, Is.EqualTo(effectiveFrameIndex * effectiveFrameIndex));
+                        break;
+                    case StateID.Input:
+                        Assert.That(testData.LongVal, Is.EqualTo(effectiveFrameIndex * effectiveFrameIndex + 1));
+                        break;
+                    default:
+                        Assert.Fail("Unexpected testData.EnumVal");
+                        break;
                 }
+                Assert.That(testData.FloatVal, Is.EqualTo(effectiveFrameIndex));
             });
-            Assert.IsTrue(m_Node.EmitterNodeIdMask[k_EmitterId]);
-        }
-
-        [Test]
-        public void TestRegisterWithEmitter()
-        {
-            // Create the state under test
-            var registerState = new RegisterWithEmitter(m_Node);
-
-            var allNodesMask = m_Node.UdpAgent.AllNodesMask;
-            Assert.IsFalse(allNodesMask[k_EmitterId]);
-
-            // Before receiving a WelcomeRepeater, we should be staying in this state
-            registerState.EnterState(null);
-            Assert.That(registerState.ProcessFrame(true), Is.EqualTo(registerState));
-
-            // The state should be broadcasting HelloEmitter messages
-            var (header, rolePublication) = m_TestAgent.ReceiveMessage<RolePublication>();
-
-            Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-            Assert.That(rolePublication.NodeRole, Is.EqualTo(NodeRole.Repeater));
-
-            // ReadyToProceed should be false. This state does not allow advancement of frames
-            Assert.IsFalse(registerState.ReadyToProceed);
-
-            // Send an acceptance message
-            m_TestAgent.PublishMessage(new MessageHeader
-            {
-                MessageType = EMessageType.WelcomeRepeater,
-                DestinationIDs = BitVector.FromIndex(header.OriginID),
-            });
-
-            // Wait for the state to transition
-            m_State = RunStateUntilTransition(registerState);
-            Assert.That(m_State, Is.TypeOf<RepeaterSynchronization>());
-
-            allNodesMask = m_Node.UdpAgent.AllNodesMask;
-            Assert.IsTrue(allNodesMask[k_EmitterId]);
         }
 
         [UnityTest]
-        public IEnumerator TestRepeaterSynchronization()
+        public IEnumerator StatesTransitions()
         {
-            var repeaterSynchronization = new RepeaterSynchronization(m_Node);
-            repeaterSynchronization.EnterState(null);
+            long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
 
-            // listener for custom frame data
-            const byte customId = 42;
-            const int magicNumber = 12345;
-            var customDataCallCount = 0;
-            RepeaterStateReader.RegisterOnLoadDataDelegate(customId, data =>
+            // ======== First Frame ======
+            PublishEvents();
+            m_EmitterStateWriter.GatherFrameState(); // Has to be called from this thread, can't be done in a task
+            long minimalDoFrameExitTimestamp = long.MaxValue;
+            var emittersJobForFrame0 = Task.Run(() =>
             {
-                if (data.LoadStruct<int>() == magicNumber)
+                // Receive repeaters registration message
+                using var receivedRegisteringMessage = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RegisteringWithEmitter>;
+                Assert.That(receivedRegisteringMessage, Is.Not.Null);
+                Assert.That(receivedRegisteringMessage.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+
+                // Answer
+                m_EmitterAgent.SendMessage(MessageType.RepeaterRegistered, new RepeaterRegistered
                 {
-                    customDataCallCount++;
-                }
-                return true;
+                    NodeId = receivedRegisteringMessage.Payload.NodeId,
+                    IPAddressBytes = receivedRegisteringMessage.Payload.IPAddressBytes,
+                    Accepted = true
+                });
+
+                // Receive message about ready to start frame
+                using var receivedRepeaterWaiting = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RepeaterWaitingToStartFrame>;
+                Assert.That(receivedRepeaterWaiting, Is.Not.Null);
+                Assert.That(receivedRepeaterWaiting.Payload.FrameIndex, Is.EqualTo(0));
+                Assert.That(receivedRepeaterWaiting.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+                Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.True);
+
+                // Answer
+                m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                    new EmitterWaitingToStartFrame {FrameIndex = 0});
+
+                // Transmit the first frame
+                minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
+                m_EmitterStateWriter.PublishCurrentState(0, m_EmitterFrameDataSplitter);
             });
 
-            // Buffer to hold custom data
-            using var frameData = new FrameDataBuffer(128);
-            var customData = new byte[128];
+            m_RepeaterNode.DoFrame();
+            long doFrameExitTimestamp = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(emittersJobForFrame0.Wait);
+            Assert.That(doFrameExitTimestamp, Is.GreaterThanOrEqualTo(minimalDoFrameExitTimestamp));
+            Assert.That(m_ReceivedBusDataCount, Is.EqualTo(2));
 
-            // Simulate several frames
-            const int kNumFrames = 4;
-            for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
+            // ======= End of Frame ===========
+            m_RepeaterNode.ConcludeFrame();
+            yield return null;
+
+            // ======= Frame 1 -> 4 ===========
+            for (ulong frameIdx = 1; frameIdx < 5; ++frameIdx)
             {
-                // ======= Start of Repeater frame ===========
-                Assert.AreEqual(m_Node.CurrentFrameID, frameNum);
+                PublishEvents();
+                m_EmitterStateWriter.GatherFrameState(); // Has to be called from this thread, can't be done in a task
+                ulong localFrameIndex = frameIdx; // To avoid "captured variable is modified in the outer scope" warnings
+                minimalDoFrameExitTimestamp = long.MaxValue;
+                var repeatersJobForFrame = Task.Run(() =>
+                {
+                    // A little sleep to be sure repeater is really waiting after the emitter
+                    Thread.Sleep(50);
 
-                // The state should waiting for the emitter data that marks the sync point
-                // at the beginning of the frame
-                Assert.IsFalse(repeaterSynchronization.ReadyToProceed);
-                Assert.IsTrue(RunStateUpdateUntil(repeaterSynchronization,
-                    state => state.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
+                    // Receive message about ready to start frame
+                    using var receivedRepeaterWaiting = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RepeaterWaitingToStartFrame>;
+                    Assert.That(receivedRepeaterWaiting, Is.Not.Null);
+                    Assert.That(receivedRepeaterWaiting.Payload.FrameIndex, Is.EqualTo(localFrameIndex));
+                    Assert.That(receivedRepeaterWaiting.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+                    Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.True);
 
-                // Simulate a EmitterLastFrameData message from the emitter
-                // The FrameData contains just a custom message.
-                frameData.Clear();
-                var someValue = magicNumber;
-                frameData.Store(customId, ref someValue);
-                frameData.Store((byte) StateID.End);
-                frameData.CopyTo(customData);
-                var (header, lastFrameMsg) = GenerateMessage(k_EmitterId,
-                    new byte[] {k_RepeaterId},
-                    EMessageType.LastFrameData,
-                    new EmitterLastFrameData()
-                    {
-                        FrameNumber = frameNum
-                    },
-                    MessageHeader.EFlag.Broadcast,
-                    customData);
+                    // Answer
+                    m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                        new EmitterWaitingToStartFrame {FrameIndex = localFrameIndex});
 
-                m_TestAgent.PublishMessage(header, lastFrameMsg);
+                    // Transmit the frame data
+                    minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
+                    m_EmitterStateWriter.PublishCurrentState(localFrameIndex, m_EmitterFrameDataSplitter);
+                });
 
-                // LastFrameData received. Continue with the frame.
-                Assert.IsTrue(RunStateUntilReadyToProceed(repeaterSynchronization));
-                Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
+                ConsumeAllReceivedEmitterMessages();
+
+                m_RepeaterNode.DoFrame();
+                doFrameExitTimestamp = Stopwatch.GetTimestamp();
+                Assert.DoesNotThrow(repeatersJobForFrame.Wait);
+                Assert.That(doFrameExitTimestamp, Is.GreaterThanOrEqualTo(minimalDoFrameExitTimestamp));
+                Assert.That(m_ReceivedBusDataCount, Is.EqualTo((frameIdx + 1) * 2));
 
                 // ======= End of Frame ===========
-                m_Node.EndFrame();
+                m_RepeaterNode.ConcludeFrame();
                 yield return null;
-
-                // ======= Start of frame > 0 ===========
-                // Do the EnteredNextFrame signal exchange
-                m_State = repeaterSynchronization.ProcessFrame(newFrame: true);
-                Assert.That(repeaterSynchronization.Stage, Is.EqualTo(RepeaterSynchronization.EStage.EnteredNextFrame));
-
-                // Repeater signals start of new frame and waits for ack
-                m_State = repeaterSynchronization.ProcessFrame(false);
-                Assert.That(repeaterSynchronization.Stage, Is.EqualTo(RepeaterSynchronization.EStage.WaitForEmitterACK));
-
-                // Emitter expects to receive a signal that node as entered a new frame
-                // (ack is taken care of internally by UDPAgent)
-                var receiveMessage = m_TestAgent
-                    .ReceiveMessageAsync<RepeaterEnteredNextFrame>()
-                    .ToCoroutine();
-
-                yield return receiveMessage.WaitForCompletion((float) Timeout.TotalSeconds);
-
-                Assert.True(receiveMessage.IsSuccessful);
-                var (rxHeader, _) = receiveMessage.Result;
-                Assert.That(rxHeader.MessageType, Is.EqualTo(EMessageType.EnterNextFrame));
             }
-
-            Assert.That(customDataCallCount, Is.EqualTo(kNumFrames));
         }
 
-        [UnityTest]
-        public IEnumerator TestRepeaterSynchronizationHardwareSync()
+        void ConsumeAllReceivedEmitterMessages()
         {
-            m_Node.HasHardwareSync = true;
-            var repeaterSynchronization = new RepeaterSynchronization(m_Node);
-            repeaterSynchronization.EnterState(null);
-
-            // Simulate several frames
-            const int kNumFrames = 4;
-            for (var frameNum = 0ul; frameNum < kNumFrames; frameNum++)
+            for (;;)
             {
-                // ======= Start of Repeater frame ===========
-                Assert.AreEqual(m_Node.CurrentFrameID, frameNum);
-
-                // The state should waiting for the emitter data that marks the sync point
-                // at the beginning of the frame
-                repeaterSynchronization.ProcessFrame(true);
-                Assert.IsFalse(repeaterSynchronization.ReadyToProceed);
-                Assert.IsTrue(RunStateUpdateUntil(repeaterSynchronization,
-                    state => state.Stage == RepeaterSynchronization.EStage.WaitingOnEmitterFrameData));
-
-                // Simulate a EmitterLastFrameData message from the emitter
-                var (header, lastFrameMsg) = GenerateMessage(k_EmitterId,
-                    new byte[] {k_RepeaterId},
-                    EMessageType.LastFrameData,
-                    new EmitterLastFrameData()
-                    {
-                        FrameNumber = frameNum
-                    },
-                    MessageHeader.EFlag.Broadcast,
-                    Enumerable.Repeat<byte>(0, 32).ToArray()); // Pad with zeros to signal end of data
-
-                m_TestAgent.PublishMessage(header, lastFrameMsg);
-
-                // LastFrameData received. Continue with the frame.
-                Assert.IsTrue(RunStateUntilReadyToProceed(repeaterSynchronization));
-                Assert.IsTrue(RunStateUntilReadyForNextFrame(repeaterSynchronization));
-
-                // ======= End of Frame ===========
-                m_Node.EndFrame();
-                yield return null;
+                using var receivedMessage = m_EmitterAgent.TryConsumeNextReceivedMessage();
+                if (receivedMessage == null)
+                {
+                    break;
+                }
             }
         }
 
         [TearDown]
         public void TearDown()
         {
-            // Awkward way to invoke m_State.ExitState
-            new NullState().EnterState(m_State);
+            m_RepeaterEventBus?.Dispose();
+            m_RepeaterNode?.Dispose();
+            m_EmitterEventBus?.Dispose();
+            m_EmitterStateWriter?.Dispose();
+            m_EmitterFrameDataSplitter?.Dispose();
+            m_EmitterAgent?.Dispose();
+        }
 
-            m_Node.Exit();
-            m_TestAgent.Dispose();
+        void PublishEvents()
+        {
+            m_EmitterEventBus.Publish(new TestData
+            {
+                EnumVal = StateID.Random,
+                LongVal = (long)(m_RepeaterNode.FrameIndex * m_RepeaterNode.FrameIndex),
+                FloatVal = m_RepeaterNode.FrameIndex,
+            });
+
+            m_EmitterEventBus.Publish(new TestData
+            {
+                EnumVal = StateID.Input,
+                LongVal = (long)(m_RepeaterNode.FrameIndex * m_RepeaterNode.FrameIndex) + 1,
+                FloatVal = m_RepeaterNode.FrameIndex,
+            });
         }
     }
 }

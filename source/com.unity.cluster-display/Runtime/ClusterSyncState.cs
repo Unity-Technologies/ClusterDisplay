@@ -33,14 +33,14 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Assigned node ID.
         /// </summary>
-        ushort NodeID { get; }
+        byte NodeID { get; }
         /// <summary>
         /// Adjusted node ID for rendering.
         /// </summary>
         /// <remarks>
         /// This could differ from NodeID if not all nodes perform rendering (non-rendering nodes are skipped).
         /// </remarks>
-        ushort RenderNodeID { get; }
+        byte RenderNodeID { get; }
         bool RepeatersDelayedOneFrame { get; }
         bool ReplaceHeadlessEmitter { get; }
 
@@ -55,12 +55,12 @@ namespace Unity.ClusterDisplay
         public bool IsClusterLogicEnabled { get; private set; }
 
         public bool IsTerminated { get; private set; }
-        public ulong Frame => LocalNode.CurrentFrameID;
+        public ulong Frame => LocalNode.FrameIndex;
 
-        public ushort NodeID => LocalNode.NodeID;
-        public ushort RenderNodeID =>
+        public byte NodeID => LocalNode.Config.NodeId;
+        public byte RenderNodeID =>
             ReplaceHeadlessEmitter && NodeRole is NodeRole.Repeater
-                ? (ushort)(NodeID - 1)
+                ? (byte)(NodeID - 1)
                 : NodeID;
 
         public bool RepeatersDelayedOneFrame { get; private set; }

@@ -8,161 +8,234 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Unity.ClusterDisplay.Utils;
+using Unity.Collections;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Assertions;
+using UnityEngine.Profiling;
+using Utils;
 using Debug = UnityEngine.Debug;
+using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay
 {
-    class UDPAgent : IDisposable
+    /// <summary>
+    /// Configuration parameters for <see cref="UdpAgent"/>.
+    /// </summary>
+    struct UdpAgentConfig
     {
-        const int k_RxQueueCapacity = 256;
-        public static int MaxSupportedNodeCount = BitVector.Length;
+        /// <summary>
+        /// Multicast IP address to which every multicast messages are being sent.
+        /// </summary>
+        public IPAddress MulticastIp;
 
-        private bool m_ExtensiveLogging = false;
+        /// <summary>
+        /// The port to which we are sending messages and on which we are receiving messages (same for both).
+        /// </summary>
+        public int Port;
 
-        internal struct Message
+        /// <summary>
+        /// Network adapter name. If null or empty, the adapter will be selected automagically.
+        /// </summary>
+        public string AdapterName;
+
+        /// <summary>
+        /// Types of message we support receiving (other type of messages are simply discarded as soon as received).
+        /// </summary>
+        /// <remarks>The whole receiving thread logic will not be present if null or empty.</remarks>
+        public MessageType[] ReceivedMessagesType;
+    }
+
+    /// <summary>
+    /// Class taking care of the network access for Cluster Display.
+    /// </summary>
+    /// <remarks>This class does not handle any loss detection or retransmission logic, this is to be done by the user
+    /// of this class.</remarks>
+    class UdpAgent: IDisposable, IUdpAgent
+    {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="config">Networking configuration</param>
+        /// <exception cref="IOException">When no available network interface can be found</exception>
+        public UdpAgent(UdpAgentConfig config)
         {
-            public MessageHeader header;
-            public byte[] payload;
-            public TimeSpan ts;
-        }
-
-        internal struct PendingAck
-        {
-            public Message message;
-            public byte nodeId;
-            public TimeSpan ts;
-        }
-
-        private IPAddress m_MulticastAddress;
-        private int m_RxPort;
-        private int m_TxPort;
-        private int m_TotalResendCount;
-        private int m_TotalSentCount;
-        string m_AdapterName;
-
-        private UInt64 m_NextMessageId;
-
-        public BitVector AllNodesMask { get; set; }
-        public byte LocalNodeID { get; private set; }
-        public BitVector LocalNodeIDMask => BitVector.FromIndex(LocalNodeID);
-
-        private UdpClient m_Connection;
-        private IPEndPoint m_TxEndPoint;
-        private IPEndPoint m_RxEndPoint;
-
-        readonly BlockingCollection<Message> m_RxQueue;
-        readonly ConcurrentDictionary<(ulong, byte), PendingAck> m_TxQueuePendingAcks;
-
-        public bool HasPendingAcks => !m_TxQueuePendingAcks.IsEmpty;
-
-        internal ICollection<PendingAck> PendingAcks => m_TxQueuePendingAcks.Values;
-
-        readonly CancellationTokenSource m_CTS;
-
-        readonly ConcurrentQueue<MessageHeader> m_DeadMessages;
-
-        private Stopwatch m_ConnectionClock = new Stopwatch();
-        private TimeSpan m_AcceptedAckDelay = new TimeSpan(0, 0, 0, 1, 000);
-        private TimeSpan m_MessageAckTimeout;
-
-        private MessageHeader.EFlag m_ExtraHdrFlags = MessageHeader.EFlag.None;
-
-        public Action<string> OnError { get; set; }
-
-        public NetworkingStats CurrentNetworkStats
-        {
-            get
+            var (selectedNic, selectedNicAddress) = SelectNetworkInterface(config.AdapterName);
+            if (selectedNic == null)
             {
-                var stats = new NetworkingStats()
-                {
-                    rxQueueSize = m_RxQueue.Count,
-                    pendingAckQueueSize = m_TxQueuePendingAcks.Count,
-                    failedMsgs = m_DeadMessages?.Count ?? 0,
-                    totalResends = m_TotalResendCount,
-                    msgsSent = m_TotalSentCount,
-                };
+                throw new IOException("There are no available network interfaces that support Cluster Display");
+            }
+            Assert.IsNotNull(selectedNicAddress);
+            AdapterAddress = selectedNicAddress.Address;
 
-                return stats;
+            try
+            {
+                m_Mtu = selectedNic.GetIPProperties().GetIPv4Properties().Mtu;
+            }
+            catch (Exception)
+            {
+                // For some reason GetIPv4Properties throw with a NullReferenceException when running on Yamato, let's
+                // assume a default MTU size if anything goes wrong.
+                m_Mtu = 1400;
+            }
+            MaximumMessageSize = m_Mtu - 1 /*for the Message type*/;
+
+            // Create the UdpClient
+            m_UdpClient = new();
+            // Set buffers to ushort.MaxValue.  Maybe we can have better values than that, but old code was doing it and
+            // so far tests shows it gives good results, so let's keep it this way.
+            m_UdpClient.Client.SendBufferSize = ushort.MaxValue;
+            m_UdpClient.Client.ReceiveBufferSize = ushort.MaxValue;
+            // Ask to send the multicast traffic using the specified adapter
+            m_UdpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface,
+                AdapterAddress.GetAddressBytes());
+            // There should be only one hop between the emitter and repeater
+            // Food for thought: Should we make this configurable to work on slightly more complex network infrastructures?
+            m_UdpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
+            // Allow multiple ClusterDisplay applications to bind on the same address and port. Useful for when running
+            // multiple nodes locally and unit testing.
+            // Food for thought: Does it have a performance cost? Do we want to have it configurable or disabled in some
+            //                   cases?
+            m_UdpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            // Bind to receive from the selected adapter on the same port than the port we are sending to (everyone will
+            // use the same port).
+            m_UdpClient.Client.Bind(new IPEndPoint(AdapterAddress, config.Port));
+            // Join the multicast group
+            m_UdpClient.JoinMulticastGroup(config.MulticastIp);
+            // This is normally true by default but this is required to keep things simple (unit tests working, multiple
+            // instances on the same computer, ...).  So let's get sure it is on.
+            m_UdpClient.MulticastLoopback = true;
+
+            // Other member variables used to send datagrams
+            m_MulticastTxEndpoint = new IPEndPoint(config.MulticastIp, config.Port);
+            m_SendTempBuffers = new(() => new byte[m_Mtu]);
+
+            // Prepare reception of messages
+            if (SetupReceiveMessageFactory(config.ReceivedMessagesType))
+            {
+                m_ReceivedMessageDataPool = new(() => new ManagedReceivedMessageData(this, m_Mtu));
+                m_ReceiveThread = new Thread(ProcessIncomingDatagrams);
+                m_ReceiveThread.Name = $"ClusterDisplay UDP Reception {AdapterAddress}:{config.Port}";
+                m_ReceiveThread.Start();
             }
         }
 
         /// <summary>
-        /// Configuration parameters for <see cref="UDPAgent"/>.
+        /// IDisposable implementation
         /// </summary>
-        public struct Config
+        public void Dispose()
         {
-            /// <summary>
-            /// Unique ID identifying this node on the cluster network.
-            /// </summary>
-            public byte nodeId;
-
-            /// <summary>
-            /// The IP address of the remote endpoint messages to which messages are sent.
-            /// Should be a valid multicast address.
-            /// </summary>
-            public string ip;
-
-            /// <summary>
-            /// The port on which to receive messages.
-            /// </summary>
-            public int rxPort;
-
-            /// <summary>
-            /// The port of the remote endpoint to which messages are sent.
-            /// </summary>
-            public int txPort;
-            /// <summary>
-            /// Network communications timeout.
-            /// </summary>
-            public TimeSpan timeOut;
-            /// <summary>
-            /// Network adapter name. If null or empty, the adapter will be selected automatically.
-            /// </summary>
-            /// <remarks>
-            /// Can be empty or <see langword="null"/> to automatically select an adapter.
-            /// The name cannot be "lo0" on macOS due to some obscure bug:
-            /// https://github.com/dotnet/corefx/issues/25699#issuecomment-349263573
-            /// </remarks>
-            public string adapterName;
+            m_ReceiveThreadShouldStop = true;
+            m_UdpClient?.Dispose(); // Interrupts any currently going on call to Receive in m_ReceiveThread
+            m_ReceiveThread?.Join();
         }
 
-        public UDPAgent(Config config)
+        public IPAddress AdapterAddress { get; private set; }
+
+        public int MaximumMessageSize { get; private set; }
+
+        public void SendMessage<TM>(MessageType messageType, TM message) where TM: unmanaged
         {
-            ClusterDebug.Log($"Constructed new {nameof(UDPAgent)}.");
-
-            LocalNodeID = config.nodeId;
-            m_RxPort = config.rxPort;
-            m_TxPort = config.txPort;
-            m_MulticastAddress = IPAddress.Parse(config.ip);
-            m_MessageAckTimeout = config.timeOut;
-            m_AdapterName = config.adapterName;
-
-            m_RxQueue = new BlockingCollection<Message>(k_RxQueueCapacity);
-
-            m_TxQueuePendingAcks = new ConcurrentDictionary<(ulong, byte), PendingAck>();
-            m_CTS = new CancellationTokenSource();
-            m_DeadMessages = new ConcurrentQueue<MessageHeader>();
-            Initialize();
+            SendMessage(messageType, message, s_EmptyNativeArray.AsReadOnly());
         }
 
-        ~UDPAgent() => Dispose();
+        public void SendMessage<TM>(MessageType messageType, TM message, NativeArray<byte>.ReadOnly additionalData) where TM: unmanaged
+        {
+            // Remarks, Assert below check for profiler otherwise GetTypeOf generate tons of GC Alloc that makes
+            // profiling unnecessarily alarming.
+            Assert.IsTrue(Profiler.enabled || MessageTypeAttribute.GetTypeOf<TM>() == messageType);
+            if (Marshal.SizeOf(typeof(TM)) + sizeof(MessageType) + additionalData.Length > m_Mtu)
+            {
+                throw new ArgumentException("Marshal.SizeOf(typeof(TM)) + additionalData.Length > MaximumMessageSize.");
+            }
 
-        private bool SelectNetworkInterface(out NetworkInterface selectedNic)
+            byte[] sendTempBuffer = m_SendTempBuffers.Get();
+            try
+            {
+                sendTempBuffer[0] = (byte)messageType;
+                int toSendSize = 1;
+                toSendSize += message.StoreInBuffer(sendTempBuffer, 1);
+                if (additionalData.Length > 0)
+                {
+                    NativeArray<byte>.Copy(additionalData, 0, sendTempBuffer, toSendSize, additionalData.Length);
+                    toSendSize += additionalData.Length;
+                }
+
+                // Remark: Sad but the following call perform some heap allocation (+/- 104 bytes per send).  AFAIK there
+                // is no way to avoid it.  Probably related to this suggested improvement to .Net:
+                // https://github.com/dotnet/runtime/issues/30797
+                m_UdpClient.Send(sendTempBuffer, toSendSize, m_MulticastTxEndpoint);
+
+                Stats.MessageSent(messageType);
+                LogMessage(message, true, additionalData.Length);
+            }
+            finally
+            {
+                m_SendTempBuffers.Release(sendTempBuffer);
+            }
+        }
+
+        public ReceivedMessageBase ConsumeNextReceivedMessage()
+        {
+            return m_ReceivedMessages.Dequeue();
+        }
+
+        public ReceivedMessageBase TryConsumeNextReceivedMessage()
+        {
+            return m_ReceivedMessages.TryDequeue(out var ret) ? ret : null;
+        }
+
+        public ReceivedMessageBase TryConsumeNextReceivedMessage(TimeSpan timeout)
+        {
+            return m_ReceivedMessages.TryDequeue(out var ret, timeout) ? ret : null;
+        }
+
+        public int ReceivedMessagesCount => m_ReceivedMessages.Count;
+
+        public MessageType[] ReceivedMessageTypes { get; private set; }
+
+        public void AddPreProcess(int priority, MessagePreprocessor preProcessor)
+        {
+            lock (m_MessagePreprocessors)
+            {
+                m_MessagePreprocessors.Add((priority, preProcessor));
+                UpdateSortedMessagePreprocessors();
+            }
+        }
+
+        public void RemovePreProcess(MessagePreprocessor preProcessor)
+        {
+            lock (m_MessagePreprocessors)
+            {
+                var index = m_MessagePreprocessors.FindIndex(tuple => tuple.Item2 == preProcessor);
+                if (index >= 0)
+                {
+                    m_MessagePreprocessors.RemoveAt(index);
+                    UpdateSortedMessagePreprocessors();
+                }
+            }
+        }
+
+        public NetworkStatistics Stats { get; } = new NetworkStatistics();
+
+        /// <summary>
+        /// Returns the network adapter to use for data transmission and reception.
+        /// </summary>
+        /// <param name="adapterName">Provided network adapter name.</param>
+        /// <returns>The selected network interface and the IP address identifying it.</returns>
+        static (NetworkInterface, UnicastIPAddressInformation) SelectNetworkInterface(string adapterName)
         {
             var nics = NetworkInterface.GetAllNetworkInterfaces();
-            List<NetworkInterface> upNics = new List<NetworkInterface>();
-            selectedNic = null;
+            NetworkInterface firstUpNic = null;
+            UnicastIPAddressInformation firstUpNicIPAddress = null;
 
-            for (var index = 0; index < nics.Length; index++)
+            foreach (var nic in nics)
             {
-                var nic = nics[index];
                 ClusterDebug.Log($"Polling interface: \"{nic.Name}\".");
 
-                bool isExplicitNic = !string.IsNullOrEmpty(m_AdapterName) && nic.Name == m_AdapterName;
+                bool isExplicitNic = !string.IsNullOrEmpty(adapterName) && nic.Name == adapterName;
                 bool isUp = nic.OperationalStatus == OperationalStatus.Up;
 
                 if (!isUp)
@@ -177,7 +250,7 @@ namespace Unity.ClusterDisplay
                 }
 
                 var ipProperties = nic.GetIPProperties();
-                if (!ipProperties.MulticastAddresses.Any())
+                if (ipProperties == null || !ipProperties.MulticastAddresses.Any())
                 {
                     continue;
                 }
@@ -187,424 +260,545 @@ namespace Unity.ClusterDisplay
                     continue;
                 }
 
-                upNics.Add(nic);
+                UnicastIPAddressInformation nicIPAddress = null;
+                foreach (var ip in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (ip.Address.AddressFamily != AddressFamily.InterNetwork)
+                        continue;
+
+                    nicIPAddress = ip;
+                    break;
+                }
+
+                if (nicIPAddress == null)
+                {
+                    continue;
+                }
+
+                if (IPAddress.IsLoopback(nicIPAddress.Address))
+                {
+                    // Skip loopback adapter as they cause all sort of problems with multicast...
+                    continue;
+                }
+
+                firstUpNic ??= nic;
+                firstUpNicIPAddress ??= nicIPAddress;
                 if (!isExplicitNic)
+                {
                     continue;
-
-                selectedNic = nic;
-                ClusterDebug.Log($"Selecting explicit interface: \"{selectedNic.Name}\".");
-            }
-
-            if (selectedNic == null)
-            {
-                if (upNics.Count == 0)
-                {
-                    ClusterDebug.LogError($"There are NO available interfaces to bind cluster display to.");
-                    return false;
                 }
 
-                selectedNic = upNics[0];
-                ClusterDebug.Log($"No explicit interface defined, defaulting to interface: \"{selectedNic.Name}\".");
+                ClusterDebug.Log($"Selecting explicit interface: \"{nic.Name} with ip {nicIPAddress.Address}\".");
+                return (nic, nicIPAddress);
             }
 
-            return true;
+            // If we reach this point then there was no explicit nic selected, use the first up nic as the automatic one
+            if (firstUpNic == null)
+            {
+                ClusterDebug.LogError($"There are NO available interfaces to bind cluster display to.");
+                return (null, null);
+            }
+
+            ClusterDebug.Log($"No explicit interface defined, defaulting to interface: \"{firstUpNic.Name}\".");
+            return (firstUpNic, firstUpNicIPAddress);
         }
 
-        void Initialize()
+        /// <summary>
+        /// Setup the factory responsible for creating the different <see cref="ReceivedMessageBase"/> based on the
+        /// <see cref="MessageType"/> of the received messages.
+        /// </summary>
+        /// <param name="receivedMessagesType">Type of <see cref="ReceivedMessageBase"/> that we should properly
+        /// reception and make available to caller of the <see cref="ConsumeNextReceivedMessage()"/> method.</param>
+        /// <returns>Do we have any MessageType to receive?</returns>
+        bool SetupReceiveMessageFactory(MessageType[] receivedMessagesType)
         {
-            if (Application.isEditor)
-                m_ExtraHdrFlags = MessageHeader.EFlag.SentFromEditorProcess;
-
-            m_ConnectionClock.Start();
-            m_TxEndPoint = new IPEndPoint(m_MulticastAddress, m_TxPort);
-            m_RxEndPoint = new IPEndPoint(IPAddress.Any, m_RxPort);
-
-            var conn = new UdpClient();
-            conn.Client.SendBufferSize = ushort.MaxValue;
-            conn.Client.ReceiveBufferSize = ushort.MaxValue;
-            conn.Client.DontFragment = false;
-
-            // Bind a particular NIC
-            if (!SelectNetworkInterface(out var selectedNic))
+            if (receivedMessagesType == null)
             {
-                throw new IOException("There are no available network interfaces that support Cluster Display");
-            }
-
-            ClusterDebug.Log($"Binding to interface: \"{selectedNic.Name}\".");
-
-            foreach (var ip in selectedNic.GetIPProperties().UnicastAddresses)
-            {
-                if (ip.Address.AddressFamily != AddressFamily.InterNetwork)
-                    continue;
-
-                Debug.Log(ip.Address);
-                conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, ip.Address.GetAddressBytes());
-            }
-
-            conn.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            conn.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 1);
-            conn.Client.Bind(m_RxEndPoint);
-
-            conn.JoinMulticastGroup(m_MulticastAddress);
-            m_Connection = conn;
-
-            m_Connection.BeginReceive(ReceiveMessage, null);
-            Task.Run(() => ResendDroppedMsgs(m_CTS.Token), m_CTS.Token);
-        }
-
-        public void Stop() => Dispose();
-
-        public void Dispose()
-        {
-            ClusterDebug.Log($"Disposing {nameof(UDPAgent)}.");
-            try
-            {
-                m_CTS.Cancel();
-
-                m_Connection.Close();
-                m_Connection.Dispose();
-                m_RxQueue.Dispose();
-
-                m_Connection = null;
-            }
-            catch { }
-        }
-
-        public BitVector NewNodeNotification(byte newNodeId)
-        {
-            if (newNodeId + 1 > MaxSupportedNodeCount)
-            {
-                OnError($"Node id must be in the range of [0,{MaxSupportedNodeCount - 1}]");
-            }
-            else
-            {
-                AllNodesMask = AllNodesMask.SetBit(newNodeId);
-            }
-
-            return AllNodesMask;
-        }
-
-        public bool NextAvailableRxMsg(out MessageHeader header, out byte[] payload, int timeoutMilliseconds)
-        {
-            try
-            {
-                if (m_RxQueue.TryTake(out var msg, timeoutMilliseconds, m_CTS.Token))
-                {
-                    header = msg.header;
-                    payload = msg.payload;
-                    return true;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                ClusterDebug.Log("UDPAgent operation cancelled");
-            }
-
-            header = default;
-            payload = null;
-            return false;
-        }
-
-        public bool NextAvailableRxMsg(out MessageHeader header, out byte[] payload)
-        {
-            if (m_RxQueue.TryTake(out var msg))
-            {
-                header = msg.header;
-                payload = msg.payload;
-                return true;
-            }
-
-            header = default;
-            payload = null;
-            return false;
-        }
-
-        // msgRaw should have a blank space at start for header that gets written by this method.
-        public bool PublishMessage(MessageHeader msgHeader, byte[] msgRaw)
-        {
-            msgHeader.m_Version = MessageHeader.CurrentVersion;
-            msgHeader.OriginID = LocalNodeID;
-            msgHeader.SequenceID = m_NextMessageId++;
-            msgHeader.OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>();
-            msgHeader.Flags |= m_ExtraHdrFlags;
-
-            if (!msgHeader.DestinationIDs.Any())
-            {
-                if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.Broadcast))
-                    msgHeader.DestinationIDs = AllNodesMask;
-                else
-                {
-                    OnError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
-                    return false;
-                }
-            }
-
-            msgHeader.StoreInBuffer(msgRaw, 0);
-            var msg = new Message()
-            {
-                ts = m_ConnectionClock.Elapsed,
-                header = msgHeader,
-                payload = msgRaw
-            };
-
-            SendMessage(ref msg);
-            return true;
-        }
-
-        public bool PublishMessage(MessageHeader msgHeader)
-        {
-            try
-            {
-                msgHeader.m_Version = MessageHeader.CurrentVersion;
-                msgHeader.OriginID = LocalNodeID;
-                msgHeader.SequenceID = m_NextMessageId++;
-                msgHeader.OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>();
-                msgHeader.Flags |= m_ExtraHdrFlags;
-
-                if (!msgHeader.DestinationIDs.Any())
-                {
-                    if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.Broadcast))
-                        msgHeader.DestinationIDs = AllNodesMask;
-                    else
-                    {
-                        OnError("Cannot PublishMessage with not destination nodes selected: " + msgHeader.MessageType);
-                        return false;
-                    }
-                }
-
-                var rawMsg = msgHeader.ToByteArray();
-                var msg = new Message()
-                {
-                    ts = m_ConnectionClock.Elapsed,
-                    header = msgHeader,
-                    payload = rawMsg,
-                };
-
-                SendMessage(ref msg);
-
-                if (msgHeader.Flags.HasFlag(MessageHeader.EFlag.LoopBackToSender))
-                {
-                    var rxmsg = new Message() {header = msgHeader, payload = msg.payload};
-                    if (!m_RxQueue.TryAdd(rxmsg))
-                    {
-                        ClusterDebug.LogWarning("Receive queue is full. Messages will be dropped.");
-                    }
-                }
-            }
-
-            catch (Exception e)
-            {
-                ClusterDebug.LogException(e);
                 return false;
             }
 
-            return true;
-        }
-
-        private void ReceiveMessage(IAsyncResult ar)
-        {
-            if (m_Connection == null) return;
-
-            byte[] receiveBytes;
-            try
+            var getFromPoolArgTypes = new[] {typeof(ReadOnlySpan<byte>)};
+            var messageTypes =
+                Enum.GetValues(typeof(MessageType)).Cast<MessageType>().OrderBy( mt => (int)mt );
+            m_FactoryByMessageType = new MessageFactory[(int)messageTypes.Last() + 1];
+            HashSet<MessageType> receivedMessageTypes = new();
+            foreach ((var messageType, var messageTypeAttribute) in MessageTypeAttribute.AllTypes)
             {
-                receiveBytes = m_Connection.EndReceive(ar, ref m_RxEndPoint);
-            }
-            catch (ObjectDisposedException)
-            {
-                // Callback was fired after we've already shut down. Bail.
-                return;
-            }
-
-            var header = receiveBytes.LoadStruct<MessageHeader>();
-            if (header.OriginID != LocalNodeID && header.DestinationIDs[LocalNodeID])
-            {
-                ClusterDebug.Log($"(Sequence ID: {header.SequenceID}): Received message of type: {header.MessageType}");
-
-                // If we've received an ACK from some node
-                if (header.MessageType == EMessageType.AckMsgRx)
+                var messageTypeEnum = messageTypeAttribute.Type;
+                if (receivedMessagesType.Contains(messageTypeEnum) && !receivedMessageTypes.Contains(messageTypeEnum))
                 {
-                    var key = (header.SequenceID, header.OriginID);
-                    if (m_TxQueuePendingAcks.TryGetValue(key, out var pendingAck))
+                    var genericInstanceType = typeof(ReceivedMessage<>).MakeGenericType(messageType);
+                    var getFromPoolMethodInfo = genericInstanceType.GetMethod("GetFromPool", getFromPoolArgTypes);
+                    if (getFromPoolMethodInfo != null)
                     {
-                        var roundTripTime = (m_ConnectionClock.Elapsed - pendingAck.ts);
-                        ClusterDebug.Log($"Received ACK from node: {header.OriginID} with sequence ID: {header.SequenceID} with a round trip time of {roundTripTime.TotalMilliseconds} ms.");
-
-                        m_TxQueuePendingAcks.Remove(key, out _);
-                    }
-                }
-
-                else // If we've received some message that ss NOT an ACK from some node (emitter or repeater).
-                {
-                    var msg = new Message() {header = header, payload = receiveBytes};
-                    if (!m_RxQueue.TryAdd(msg))
-                    {
-                        ClusterDebug.LogWarning("Receive queue is full. Messages will be dropped.");
-                    }
-
-                    // Respond to the sending node with an ACK that we've received the message.
-                    if (!header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck))
-                    {
-                        SendMsgRxAck(ref header, msg.ts);
+                        m_FactoryByMessageType[(int)messageTypeEnum] =
+                            (MessageFactory)Delegate.CreateDelegate(typeof(MessageFactory), getFromPoolMethodInfo);
+                        receivedMessageTypes.Add(messageTypeEnum);
                     }
                 }
             }
 
-            if (!m_CTS.IsCancellationRequested)
-                m_Connection.BeginReceive(ReceiveMessage, null);
-        }
-
-        private void SendMsgRxAck(ref MessageHeader rxHeader, TimeSpan ts)
-        {
-            var ack = new MessageHeader()
+            if (receivedMessageTypes.Count > 0)
             {
-                DestinationIDs = BitVector.FromIndex(rxHeader.OriginID),
-                OriginID = LocalNodeID,
-                MessageType = EMessageType.AckMsgRx,
-                SequenceID = rxHeader.SequenceID,
-                PayloadSize = 0,
-                m_Version = MessageHeader.CurrentVersion,
-                Flags = MessageHeader.EFlag.DoesNotRequireAck | m_ExtraHdrFlags,
-                OffsetToPayload = (UInt16) Marshal.SizeOf<MessageHeader>()
-            };
-
-            var buffer = ack.ToByteArray();
-            var ackMsg = new Message()
-            {
-                ts = ts,
-                header = ack,
-                payload = buffer
-            };
-
-            ClusterDebug.Log($"(Sending ACK from node: {ack.OriginID} to nodes: {ack.DestinationIDs} for message type: {rxHeader.MessageType}");
-            SendMessage(ref ackMsg);
-        }
-
-        private void SendMessage(ref Message msg)
-        {
-            if (msg.payload.Length > ushort.MaxValue)
-            {
-                OnError($"Unable to send message of type: {msg.header.MessageType}, the message payload is larger then the MTU size: {ushort.MaxValue}");
-                return;
+                ReceivedMessageTypes = receivedMessageTypes.OrderBy(mt => (int)mt).ToArray();
+                return true;
             }
-
-            ClusterDebug.Log($"(Sequence ID: {msg.header.SequenceID}): " +
-                $"Sending message of type: {msg.header.MessageType} of size: {msg.payload.Length} " +
-                $"to:  {m_TxEndPoint} " +
-                $"with flags {msg.header.Flags}");
-
-            if (!msg.header.Flags.HasFlag(MessageHeader.EFlag.DoesNotRequireAck) &&
-                !msg.header.Flags.HasFlag(MessageHeader.EFlag.Resending))
+            else
             {
-                var destinations = msg.header.DestinationIDs
-                    .MaskBits(AllNodesMask)
-                    .UnsetBit(LocalNodeID);
-                for (var i = 0; i < BitVector.Length; i++)
+                m_FactoryByMessageType = null;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Datagram reception thread function (looping until UdpAgentConfig is disposed of).
+        /// </summary>
+        void ProcessIncomingDatagrams()
+        {
+            ManagedReceivedMessageData receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
+
+            while (!m_ReceiveThreadShouldStop)
+            {
+                // Receive the next datagram
+                int receivedLength;
+                using (s_MarkerReceive.Auto())
                 {
-                    if (destinations[i])
+                    try
                     {
-                        var pendingAck = new PendingAck
+                        receivedLength = m_UdpClient.Client.Receive(receiveReceivedMessageData.RawArray);
+                        if (receivedLength < 1)
                         {
-                            message = msg,
-                            ts = m_ConnectionClock.Elapsed,
-                            nodeId = (byte) i
-                        };
-                        if (!m_TxQueuePendingAcks.TryAdd((msg.header.SequenceID, (byte) i), pendingAck))
-                        {
-                            ClusterDebug.Log($"Could not queue ack for {(msg.header.SequenceID, i)}. Is this a duplicate?");
+                            // Empty message, strange, let's just skip it...
+                            continue;
                         }
                     }
+                    catch (SocketException e)
+                    {
+                        if (e.SocketErrorCode == SocketError.Interrupted && m_ReceiveThreadShouldStop)
+                        {
+                            // We are shutting down, this is perfectly normal, just continue
+                            continue;
+                        }
+                        else
+                        {
+                            Debug.LogError($"Socket.Receive error: {e}");
+                            continue;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Socket.Receive error: {e}");
+                        continue;
+                    }
+                }
+
+                ReceivedMessageBase receivedMessage;
+                using (s_MarkerCreateMessage.Auto())
+                {
+                    // Get the factory for it
+                    var messageTypeByte = receiveReceivedMessageData.RawArray[0];
+                    var receivedFactory = messageTypeByte < m_FactoryByMessageType.Length ? m_FactoryByMessageType[messageTypeByte] : null;
+                    if (receivedFactory == null)
+                    {
+                        // This is perfectly normal if reception of that message type is not enabled, just skip it and say
+                        // nothing...
+                        continue;
+                    }
+
+                    Stats.MessageReceived((MessageType)messageTypeByte);
+
+                    // Create the message
+                    try
+                    {
+                        int leftOver;
+                        (receivedMessage, leftOver) =
+                            receivedFactory(new ReadOnlySpan<byte>(receiveReceivedMessageData.RawArray, 1, receivedLength - 1));
+                        if (receivedMessage == null)
+                        {
+                            // A "normal failure" in the factory?  Let's continue...
+                            continue;
+                        }
+
+                        if (leftOver > 0)
+                        {
+                            // Instead of copying data around, move receiveReceivedMessageData to the receivedMessage and
+                            // get a new receiveReceivedMessageData.
+                            receiveReceivedMessageData.SetRange(receivedLength - leftOver, leftOver);
+                            receivedMessage.AdoptExtraData(receiveReceivedMessageData);
+
+                            receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
+                        }
+
+                        LogReceivedMessage(receivedMessage);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed to parse message of type {messageTypeByte}: {e}");
+                        continue;
+                    }
+                }
+
+                // Preprocess the message
+                using (s_MarkerPreprocessMessage.Auto())
+                {
+                    using (var arrayLock = m_SortedMessagePreprocessors.Lock())
+                    {
+                        foreach (var preprocessor in arrayLock.GetArray())
+                        {
+                            try
+                            {
+                                var ret = preprocessor(receivedMessage);
+                                if (ret.DisposePreProcessedMessage)
+                                {
+                                    Debug.Assert(!ReferenceEquals(ret.Result, receivedMessage),
+                                        "Cannot dispose of a ReceivedMessage AND ask to continue processing it...");
+                                    receivedMessage.Dispose();
+                                    receivedMessage = ret.Result;
+                                }
+                                else if (ret.Result != null)
+                                {
+                                    receivedMessage = ret.Result;
+                                }
+
+                                if (receivedMessage == null)
+                                {
+                                    break;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogError($"Unexpected exception pre-processing received messages: {e}");
+                            }
+                        }
+                    }
+
+                    if (receivedMessage == null)
+                    {
+                        // Looks like a pre-process discarded the message, let's move on to the next one
+                        continue;
+                    }
+                }
+
+                // At last we are ready to queue the message
+                using (s_MarkerQueueMessage.Auto())
+                {
+                    m_ReceivedMessages.Enqueue(receivedMessage);
                 }
             }
 
-            m_Connection.SendAsync(msg.payload, msg.payload.Length, m_TxEndPoint);
-            Interlocked.Increment(ref m_TotalSentCount);
-
-            if (m_ExtensiveLogging)
-                ClusterDebug.Log("Tx msg: " + msg.header.MessageType);
+            receiveReceivedMessageData?.Release();
         }
 
-        // This runs on another thread and loops forever validating whether we need to resend a message
-        // if we haven't received an ACK for that message within a period.
-        private void ResendDroppedMsgs(CancellationToken ctk)
+        /// <summary>
+        /// Returns a <see cref="ManagedReceivedMessageData"/> to the pool.
+        /// </summary>
+        /// <param name="toReturn">To return to the pool.</param>
+        void ReturnManagedReceivedMessageData(ManagedReceivedMessageData toReturn)
         {
-            Span<(ulong, byte)> expired = stackalloc (ulong, byte)[1000];
-            while (!ctk.IsCancellationRequested)
+            m_ReceivedMessageDataPool.Release(toReturn);
+        }
+
+        /// <summary>
+        /// Update sorted array of <see cref="MessagePreprocessor"/> to the given list.
+        /// </summary>
+        void UpdateSortedMessagePreprocessors()
+        {
+            lock (m_MessagePreprocessors)
             {
-                int expiredCount = 0;
-                var tsNow = m_ConnectionClock.Elapsed;
-                var allPendingAcks = m_TxQueuePendingAcks.Values;
-
-                // Determine if we've timed on receiving any ACKs for messages we've sent previously.
-                foreach (var pendingAck in allPendingAcks)
-                {
-                    if (tsNow - pendingAck.ts < m_AcceptedAckDelay)
-                        continue;
-
-                    if (expiredCount >= expired.Length)
-                    {
-                        ClusterDebug.LogError($"There are to many expired ACKs! Cannot queue pending ACK: (Sequence ID: {pendingAck.message.header.SequenceID}, Message Type: {pendingAck.message.header.MessageType})");
-                        break;
-                    }
-
-                    ClusterDebug.LogWarning($"Never received ACK from node: {pendingAck.nodeId} for message: (Sequence ID: {pendingAck.message.header.SequenceID}, Message Type: {pendingAck.message.header.MessageType}), queuing message for resend.");
-                    expired[expiredCount++] = (pendingAck.message.header.SequenceID, pendingAck.nodeId);
-                }
-
-                // These acks are late in coming, so re-sending messages
-                if (expiredCount == 0)
-                    continue;
-
-                ClusterDebug.LogWarning($"Attempting to resend: {expiredCount} ACKs.");
-
-                int resentACKs = 0;
-                for (var i = 0; i < expiredCount; i++)
-                {
-                    if (!m_TxQueuePendingAcks.TryGetValue(expired[i], out var expiredAck))
-                    {
-                        continue;
-                    }
-
-                    if (tsNow - expiredAck.message.ts > m_MessageAckTimeout)
-                    {
-                        ClusterDebug.LogWarning(
-                            $"Message of type: {expiredAck.message.header.MessageType} with sequence ID: " +
-                            "{expiredAck.message.header.SequenceID} could not be delivered after multiple " +
-                            "resends. Either the message was:" +
-                            "\n\t1. Never received." +
-                            "\n\t2. The receiver never responded with an ACK." +
-                            "\n\t3. We never received the ACK and the packet was dropped.");
-
-                        m_TxQueuePendingAcks.TryRemove(expired[i], out _);
-                        continue;
-                    }
-
-                    // Update destination ID, flags, and timestamps in the header
-                    var updatedAck = expiredAck;
-                    var msg = updatedAck.message;
-                    var header = msg.header;
-                    header.DestinationIDs = BitVector.FromIndex(updatedAck.nodeId);
-                    header.Flags |= MessageHeader.EFlag.Resending;
-                    msg.header = header;
-                    updatedAck.message = msg;
-
-                    updatedAck.ts = m_ConnectionClock.Elapsed;
-
-                    // Need to overwrite the header data in the payload field also
-                    updatedAck.message.header.StoreInBuffer(updatedAck.message.payload);
-
-                    if (m_TxQueuePendingAcks.TryUpdate(expired[i], updatedAck, expiredAck))
-                    {
-                        m_TotalResendCount++;
-                        resentACKs++;
-
-                        ClusterDebug.LogWarning($"Resending message of type: {expiredAck.message.header.MessageType} with sequence ID: {expiredAck.message.header.SequenceID}");
-                        SendMessage(ref updatedAck.message);
-                    }
-                }
-
-                ClusterDebug.LogWarning($"Remaining messages to resend: {expiredCount - resentACKs}");
+                using var lockedArray = m_SortedMessagePreprocessors.Lock();
+                lockedArray.SetArray(m_MessagePreprocessors.OrderBy(p => p.Item1).
+                    Select(p => p.Item2).ToArray());
             }
         }
+
+        /// <summary>
+        /// <see cref="IReceivedMessageData"/> that is used to receive all the packets and to be transferred as a
+        /// <see cref="ReceivedMessageBase.ExtraData"/> if there is some additional data after the
+        /// <see cref="ReceivedMessage{TM}.Payload"/>.
+        /// </summary>
+        class ManagedReceivedMessageData: IReceivedMessageData
+        {
+            /// <summary>
+            /// Constructor
+            /// </summary>
+            /// <param name="owner">Owning <see cref="UdpAgent"/> that contains the pool to which we should be
+            /// returned to.</param>
+            /// <param name="size">Size in bytes of the byte[] contained in this class.</param>
+            public ManagedReceivedMessageData(UdpAgent owner, int size)
+            {
+                m_Owner = owner;
+                m_Bytes = new byte[size];
+            }
+
+            /// <summary>
+            /// Raw access to the byte array contained in this ManagedReceivedMessageData
+            /// </summary>
+            public byte[] RawArray => m_Bytes;
+
+            /// <summary>
+            /// Sets the range of the managed memory that forms the area of the byte[] to be considered by methods of
+            /// <see cref="IReceivedMessageData"/>.
+            /// </summary>
+            /// <param name="dataStart">First byte in array that contains the data.</param>
+            /// <param name="dataLength">Length of the data (starting at <paramref name="dataStart"/>).</param>
+            public void SetRange(int dataStart, int dataLength)
+            {
+                if (dataStart + dataLength > m_Bytes.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(dataLength),
+                        "dataStart + dataLength > size of the ManagedReceivedMessageData.");
+                }
+                m_DataStart = dataStart;
+                m_DataLength = dataLength;
+                if (m_NativeArray.IsCreated)
+                {
+                    m_NativeArray.Dispose();
+                }
+            }
+
+            public ReceivedMessageDataFormat PreferredFormat => ReceivedMessageDataFormat.ManagedArray;
+
+            public int Length => m_DataLength;
+
+            public void AsManagedArray(out byte[] array, out int dataStart, out int dataLength)
+            {
+                array = m_Bytes;
+                dataStart = m_DataStart;
+                dataLength = m_DataLength;
+            }
+
+            public NativeArray<byte> AsNativeArray()
+            {
+                if (!m_NativeArray.IsCreated)
+                {
+                    m_NativeArray = new NativeArray<byte>(m_Bytes, Allocator.Temp).GetSubArray(m_DataStart, m_DataLength);
+                }
+                return m_NativeArray;
+            }
+
+            public void Release()
+            {
+                m_DataStart = 0;
+                m_DataLength = 0;
+                if (m_NativeArray.IsCreated)
+                {
+                    m_NativeArray.Dispose();
+                }
+                m_Owner.ReturnManagedReceivedMessageData(this);
+            }
+
+            /// <summary>
+            /// Owning <see cref="UdpAgent"/> that contains the pool to which we should be returned to.
+            /// </summary>
+            UdpAgent m_Owner;
+            /// <summary>
+            /// Managed array of bytes in which the data is stored.
+            /// </summary>
+            byte[] m_Bytes;
+            /// <summary>
+            /// First byte in array that contains the data considered by methods of <see cref="IReceivedMessageData"/>.
+            /// </summary>
+            int m_DataStart;
+            /// <summary>
+            /// Length of the data (starting at <see cref="m_DataStart"/>) considered by methods of
+            /// <see cref="IReceivedMessageData"/>.
+            /// </summary>
+            int m_DataLength;
+            /// <summary>
+            /// Cache for calls to AsNativeArray.
+            /// </summary>
+            NativeArray<byte> m_NativeArray;
+        }
+
+        /// <summary>
+        /// Main UdpClient used for reception of data and sending to the Multicast endpoint (config's MulticastIp:Port).
+        /// </summary>
+        UdpClient m_UdpClient;
+        /// <summary>
+        /// MTU of the adapter used to communicate.
+        /// </summary>
+        int m_Mtu;
+        /// <summary>
+        /// <see cref="IPEndPoint"/> to which send all the multicast traffic.
+        /// </summary>
+        IPEndPoint m_MulticastTxEndpoint;
+        /// <summary>
+        /// Buffers to be used by the send message methods.
+        /// </summary>
+        /// <remarks>Would be nice to use <c>Span&lt;byte&gt;</c> from stackalloc in the methods that send messages, however
+        /// we can't as the .net version we are targeting does not yet support sending from a <c>Span&lt;byte&gt;</c>, only
+        /// from a <c>byte[]</c>.</remarks>
+        ConcurrentObjectPool<byte[]> m_SendTempBuffers;
+        /// <summary>
+        /// Object used to stop all the asynchronous work going on when we finish.
+        /// </summary>
+        volatile bool m_ReceiveThreadShouldStop;
+        /// <summary>
+        /// Thread responsible for receiving data.
+        /// </summary>
+        /// <remarks>We need to process receptions of data on a dedicated thread.  This is necessary as handling
+        /// retransmission of lost FrameData datagrams has to be done ASAP and cannot wait for some game loop code to
+        /// ask for messages before returning missing FrameData datagrams.</remarks>
+        Thread m_ReceiveThread;
+        /// <summary>
+        /// Queue of <see cref="ReceivedMessageBase"/> waiting to be consumed by our user.
+        /// </summary>
+        BlockingQueue<ReceivedMessageBase> m_ReceivedMessages = new();
+        /// <summary>
+        /// Non sorted list of <see cref="MessagePreprocessor"/> with their priority.
+        /// </summary>
+        /// <remarks>Must be locked before using it.</remarks>
+        List<(int, MessagePreprocessor)> m_MessagePreprocessors = new();
+        /// <summary>
+        /// Array of <see cref="MessagePreprocessor"/> sorted by priority that can quickly accessed from any thread.
+        /// </summary>
+        ArrayWithSpinLock<MessagePreprocessor> m_SortedMessagePreprocessors = new();
+        /// <summary>
+        /// Custom delegate to create a <see cref="ReceivedMessage{M}"/> from a byte array (length must match sizeof(M)).
+        /// </summary>
+        /// <remarks>Cannot use <see cref="Func{ReadOnlySpan, ReceivedMessageBase}"/> as it does not allow using
+        /// ReadOnlySpan as a generic argument.</remarks>
+        delegate (ReceivedMessageBase message, int leftOver) MessageFactory(ReadOnlySpan<byte> bytes);
+        /// <summary>
+        /// <see cref="ReceivedMessage{M}"/> factory function indexed on <see cref="MessageType"/>.
+        /// </summary>
+        MessageFactory[] m_FactoryByMessageType;
+        /// <summary>
+        /// Pool of <see cref="ManagedReceivedMessageData"/> that allow avoiding constant allocation (and garbage collection) of
+        /// byte[] used to receive the datagrams and to contain the received data.
+        /// </summary>
+        ConcurrentObjectPool<ManagedReceivedMessageData> m_ReceivedMessageDataPool;
+
+        /// <summary>
+        /// Empty <see cref="NativeArray{T}"/> that should never be modified.  Use to unify cases with and without
+        /// additional data.
+        /// </summary>
+        /// <remarks>Cannot be made readonly because <see cref="NativeArray{T}.AsReadOnly"/> is not considered "pure"
+        /// and do internal modifications to s_EmptyNativeArray.</remarks>
+        static NativeArray<byte> s_EmptyNativeArray = new(0, Allocator.Persistent);
+        /// <summary>
+        /// <see cref="ProfilerMarker"/> used to identify the time spent doing actual network reception.
+        /// </summary>
+        static ProfilerMarker s_MarkerReceive = new ProfilerMarker("Receive");
+        /// <summary>
+        /// <see cref="ProfilerMarker"/> used to identify the time spent creating the <see cref="ReceivedMessage{TM}"/>
+        /// from the received buffer.
+        /// </summary>
+        static ProfilerMarker s_MarkerCreateMessage = new ProfilerMarker("CreateMessage");
+        /// <summary>
+        /// <see cref="ProfilerMarker"/> used to identify the time spent pre-processing the <see cref="ReceivedMessage{TM}"/>.
+        /// </summary>
+        static ProfilerMarker s_MarkerPreprocessMessage = new ProfilerMarker("PreprocessMessage");
+        /// <summary>
+        /// <see cref="ProfilerMarker"/> used to identify the time spent adding <see cref="ReceivedMessage{TM}"/> to the
+        /// received queue.
+        /// </summary>
+        static ProfilerMarker s_MarkerQueueMessage = new ProfilerMarker("QueueMessage");
+
+        [Conditional("CLUSTER_DISPLAY_NETWORK_LOG")]
+        static void LogReceivedMessage(ReceivedMessageBase receivedMessage)
+        {
+            int extraDataLength = receivedMessage.ExtraData?.Length ?? 0;
+            switch (receivedMessage.Type)
+            {
+            case MessageType.RegisteringWithEmitter:
+                LogMessage(((ReceivedMessage<RegisteringWithEmitter>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            case MessageType.RepeaterRegistered:
+                LogMessage(((ReceivedMessage<RepeaterRegistered>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            case MessageType.FrameData:
+                LogMessage(((ReceivedMessage<FrameData>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            case MessageType.RetransmitFrameData:
+                LogMessage(((ReceivedMessage<RetransmitFrameData>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            case MessageType.RepeaterWaitingToStartFrame:
+                LogMessage(((ReceivedMessage<RepeaterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            case MessageType.EmitterWaitingToStartFrame:
+                LogMessage(((ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength);
+                break;
+            }
+        }
+
+        [Conditional("CLUSTER_DISPLAY_NETWORK_LOG")]
+        static void LogMessage(object message, bool send, int extraDataLength)
+        {
+            var stringBuilder = new StringBuilder();
+            var messageTime = (double)(Stopwatch.GetTimestamp() - k_StartTime) / Stopwatch.Frequency;
+            stringBuilder.AppendFormat("{0:0.0000}", messageTime);
+            stringBuilder.Append(send ? ", Send " : ", Recv ");
+            switch (message)
+            {
+            case RegisteringWithEmitter registering:
+                {
+                    var bytes = BitConverter.GetBytes(registering.IPAddressBytes);
+                    stringBuilder.AppendFormat("RegisteringWithEmitter     : NodeId = {0}, IPAddress = {1}.{2}.{3}.{4}",
+                        registering.NodeId, bytes[0], bytes[1], bytes[2], bytes[3] );
+                }
+                break;
+            case RepeaterRegistered registered:
+                {
+                    var bytes = BitConverter.GetBytes(registered.IPAddressBytes);
+                    stringBuilder.AppendFormat("RepeaterRegistered         : NodeId = {0}, IPAddress = " +
+                        "{1}.{2}.{3}.{4}, Accepted = {5}",
+                        registered.NodeId, bytes[0], bytes[1], bytes[2], bytes[3], registered.Accepted);
+                }
+                break;
+            case FrameData frameData:
+                stringBuilder.AppendFormat("FrameData                  : FrameIndex = {0}, DataLength = {1}, " +
+                    "DatagramIndex = {2}, DatagramDataOffset = {3}, ExtraDataLength = {4}",
+                    frameData.FrameIndex, frameData.DataLength, frameData.DatagramIndex, frameData.DatagramDataOffset,
+                    extraDataLength);
+                break;
+            case RetransmitFrameData retransmit:
+                stringBuilder.AppendFormat("RetransmitFrameData        : FrameIndex = {0}, " +
+                    "DatagramIndexIndexStart = {1}, DatagramIndexIndexEnd = {2}",
+                    retransmit.FrameIndex, retransmit.DatagramIndexIndexStart, retransmit.DatagramIndexIndexEnd);
+                break;
+            case RepeaterWaitingToStartFrame repeaterWaiting:
+                stringBuilder.AppendFormat("RepeaterWaitingToStartFrame: FrameIndex = {0}, NodeId = {1}, " +
+                    "WillUseNetworkSyncOnNextFrame = {2}",
+                    repeaterWaiting.FrameIndex, repeaterWaiting.NodeId, repeaterWaiting.WillUseNetworkSyncOnNextFrame);
+                break;
+            case EmitterWaitingToStartFrame emitterWaiting:
+                var waitingOn = new NodeIdBitVectorReadOnly(emitterWaiting.WaitingOn0, emitterWaiting.WaitingOn1,
+                    emitterWaiting.WaitingOn2, emitterWaiting.WaitingOn3);
+                stringBuilder.AppendFormat("EmitterWaitingToStartFrame : FrameIndex = {0}, " +
+                    "WaitingNodesBitField = {1}",
+                    emitterWaiting.FrameIndex, waitingOn);
+                break;
+            }
+
+            lock (s_LogThreadLock)
+            {
+                if (s_LogThread == null)
+                {
+                    s_LogThread = new Thread(WriteMessageLogThreadFunc);
+                    s_LogThread.Start();
+                }
+            }
+            s_LogQueue.Add(stringBuilder.ToString());
+        }
+
+        static void WriteMessageLogThreadFunc()
+        {
+            var logFilePath = Path.Combine(Environment.GetEnvironmentVariable("AppData"), "..", "LocalLow",
+                k_CompanyName, k_ProductName, "Network.log");
+            using StreamWriter file = new(logFilePath);
+            for (;;)
+            {
+                var line = s_LogQueue.Take();
+                file.WriteLine(line);
+            }
+        }
+
+        static readonly long k_StartTime = Stopwatch.GetTimestamp();
+        static readonly string k_CompanyName = Application.companyName; // Done here since it can only be called from
+        static readonly string k_ProductName = Application.productName; // the main thread.
+        static object s_LogThreadLock = new ();
+        static BlockingCollection<string> s_LogQueue = new(new ConcurrentQueue<string>());
+        static Thread s_LogThread;
     }
 }

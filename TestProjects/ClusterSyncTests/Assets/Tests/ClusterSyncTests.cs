@@ -1,14 +1,18 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Utils;
 using Object = UnityEngine.Object;
 using static Unity.ClusterDisplay.Tests.NetworkingUtils;
 using static Unity.ClusterDisplay.Tests.NodeTestUtils;
+using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -19,9 +23,8 @@ namespace Unity.ClusterDisplay.Tests
         const byte k_RepeaterId = 1;
         string m_InterfaceName;
 
-        readonly List<ClusterSync> m_Instances = new List<ClusterSync>();
-        UDPAgent m_TestAgent;
-        Action<ClusterSyncLooper.TickType> m_TickHandler;
+        readonly List<ClusterSync> m_Instances = new();
+        UdpAgent m_TestAgent;
 
         [SetUp]
         public void SetUp()
@@ -30,15 +33,13 @@ namespace Unity.ClusterDisplay.Tests
             m_InterfaceName = SelectNic().Name;
         }
 
-        UDPAgent GetTestAgent(byte nodeId, int rxPort, int txPort)
+        UdpAgent GetTestAgent(IEnumerable<MessageType> receiveMessageTypes)
         {
             var testConfig = udpConfig;
-            testConfig.nodeId = nodeId;
-            testConfig.rxPort = rxPort;
-            testConfig.txPort = txPort;
-            testConfig.adapterName = m_InterfaceName;
+            testConfig.AdapterName = m_InterfaceName;
+            testConfig.ReceivedMessagesType = receiveMessageTypes.ToArray();
 
-            return new UDPAgent(testConfig);
+            return new UdpAgent(testConfig);
         }
 
         [UnityTest]
@@ -87,46 +88,98 @@ namespace Unity.ClusterDisplay.Tests
                 RepeaterCount = numRepeaters,
                 MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = RxPort,
-                TXPort = TxPort,
+                Port = TestPort,
                 CommunicationTimeout = Timeout,
                 HandshakeTimeout = Timeout
             });
-            m_TestAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
+            m_TestAgent = GetTestAgent(RepeaterNode.ReceiveMessageTypes);
 
-            m_TickHandler = tickType =>
+            using var emitterEventBus = new EventBus<TestData>(emitterClusterSync);
+            int receivedOnLoopback = 0;
+            emitterEventBus.Subscribe(testData =>
             {
-                if (tickType == ClusterSyncLooper.TickType.DoFrame)
+                ++receivedOnLoopback;
+
+                switch (testData.EnumVal)
                 {
-                    using var testAgent = GetTestAgent(k_RepeaterId, TxPort, RxPort);
-
-                    var node = emitterClusterSync.LocalNode as EmitterNode;
-
-                    Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
-
-                    Assert.That(emitterClusterSync.NodeID, Is.EqualTo(k_EmitterId));
-                    Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
-
-                    Assert.That(node, Is.Not.Null);
-                    Assert.That(node.RemoteNodes.Count, Is.Zero);
-                    Assert.That(node.TotalExpectedRemoteNodesCount, Is.EqualTo(numRepeaters));
-
-                    var (header, rawMsg) = GenerateMessage(k_RepeaterId, new[] {k_EmitterId},
-                        EMessageType.HelloEmitter, new RolePublication {NodeRole = NodeRole.Repeater});
-
-                    m_TestAgent.PublishMessage(header, rawMsg);
-                    ClusterSyncLooper.onInstanceTick -= m_TickHandler;
+                case StateID.Random:
+                    Assert.That(testData.LongVal, Is.EqualTo(42));
+                    Assert.That(testData.FloatVal, Is.EqualTo(28.42f));
+                    break;
+                case StateID.Input:
+                    Assert.That(testData.LongVal, Is.EqualTo(28));
+                    Assert.That(testData.FloatVal, Is.EqualTo(42.28f));
+                    break;
+                default:
+                    Assert.Fail("Unexpected testData.EnumVal");
+                    break;
                 }
-            };
+            });
 
-            ClusterSyncLooper.onInstanceTick += m_TickHandler;
+            long testDeadline = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(10));
+
+            var registerWithEmitterTask = Task.Run(() =>
+            {
+                // Register with emitter
+                m_TestAgent.SendMessage(MessageType.RegisteringWithEmitter, new RegisteringWithEmitter
+                {
+                    NodeId = k_RepeaterId,
+                    IPAddressBytes = BitConverter.ToUInt32(m_TestAgent.AdapterAddress.GetAddressBytes())
+                });
+
+                // Wait for answer
+                Assert.That(ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(m_TestAgent, testDeadline,
+                    message => message.Payload.NodeId == k_RepeaterId && message.Payload.Accepted), Is.True);
+
+                bool receivedEmitterWaitingToStartFrame = false;
+                while (Stopwatch.GetTimestamp() < testDeadline && !receivedEmitterWaitingToStartFrame)
+                {
+                    // Inform emitter that the repeater is ready to start its test
+                    m_TestAgent.SendMessage(MessageType.RepeaterWaitingToStartFrame, new RepeaterWaitingToStartFrame
+                    {
+                        FrameIndex = 0, NodeId = k_RepeaterId, WillUseNetworkSyncOnNextFrame = true
+                    });
+
+                    // Wait for answer (but not for too long as it is possible we sent previous
+                    // RepeaterWaitingToStartFrame before the emitter was ready to deal with it...
+                    receivedEmitterWaitingToStartFrame = ConsumeFirstMessageOfRepeaterWhere<EmitterWaitingToStartFrame>(
+                        m_TestAgent, StopwatchUtils.TimestampIn(TimeSpan.FromMilliseconds(100)),
+                        message => !message.Payload.IsWaitingOn(k_RepeaterId));
+                }
+                Assert.That(receivedEmitterWaitingToStartFrame, Is.True);
+            });
+
+            Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
+            Assert.That(emitterClusterSync.NodeID, Is.EqualTo(k_EmitterId));
+            Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
 
             var node = emitterClusterSync.LocalNode as EmitterNode;
             Assert.That(node, Is.Not.Null);
-            while (node.RemoteNodes.Count != numRepeaters)
+            Assert.That(node, Is.Not.Null);
+            Assert.That(node.RepeatersStatus.RepeaterPresence.SetBitsCount, Is.Zero);
+            Assert.That(node.EmitterConfig.ExpectedRepeaterCount, Is.EqualTo(numRepeaters));
+
+            emitterEventBus.Publish(new TestData
+            {
+                EnumVal = StateID.Random,
+                LongVal = 42,
+                FloatVal = 28.42f,
+            });
+
+            emitterEventBus.Publish(new TestData
+            {
+                EnumVal = StateID.Input,
+                LongVal = 28,
+                FloatVal = 42.28f,
+            });
+
+            while (node.RepeatersStatus.RepeaterPresence.SetBitsCount != numRepeaters)
             {
                 yield return null;
             }
+
+            Assert.DoesNotThrow(registerWithEmitterTask.Wait);
+            Assert.That(receivedOnLoopback, Is.EqualTo(2));
         }
 
         [UnityTest]
@@ -142,13 +195,12 @@ namespace Unity.ClusterDisplay.Tests
                 NodeID = k_RepeaterId,
                 MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
-                RXPort = RxPort,
-                TXPort = TxPort,
+                Port = TestPort,
                 CommunicationTimeout = Timeout,
                 HandshakeTimeout = Timeout
             });
 
-            m_TestAgent = GetTestAgent(k_EmitterId, TxPort, RxPort);
+            m_TestAgent = GetTestAgent(EmitterNode.ReceiveMessageTypes);
 
             Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
 
@@ -158,221 +210,60 @@ namespace Unity.ClusterDisplay.Tests
             var node = repeaterClusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
 
-            var step = (HelloEmitter: 0, WelcomeRepeater: 1, LastFrameData: 2);
-            int currentStep = 0;
+            long testDeadline = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(10));
 
-            // Piggy backing off of ClusterSync.OnInnerLoop in order to receive ticks from SystemUpdate while loop.
-            m_TickHandler = tickType =>
+            using var emitterFrameDataSplitter = new FrameDataSplitter(m_TestAgent);
+
+            var emitFirstFrame = Task.Run(() =>
             {
-                if (tickType != ClusterSyncLooper.TickType.DoFrame)
-                {
-                    return;
-                }
+                // Receive repeaters registration message
+                using var receivedRegisteringMessage = m_TestAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(testDeadline)) as ReceivedMessage<RegisteringWithEmitter>;
+                Assert.That(receivedRegisteringMessage, Is.Not.Null);
+                Assert.That(receivedRegisteringMessage.Payload.NodeId, Is.EqualTo(k_RepeaterId));
 
-                if (currentStep == step.HelloEmitter)
+                // Answer
+                m_TestAgent.SendMessage(MessageType.RepeaterRegistered, new RepeaterRegistered
                 {
-                    var (header, rolePublication) = m_TestAgent.ReceiveMessage<RolePublication>();
-                    if (header.MessageType == EMessageType.AckMsgRx)
+                    NodeId = receivedRegisteringMessage.Payload.NodeId,
+                    IPAddressBytes = receivedRegisteringMessage.Payload.IPAddressBytes,
+                    Accepted = true
+                });
+
+                // Receive message about ready to start frame
+                Assert.That(ConsumeFirstMessageOfRepeaterWhere<RepeaterWaitingToStartFrame>(m_TestAgent, testDeadline,
+                    message =>
                     {
-                        return;
-                    }
+                        return message.Payload.FrameIndex == 0 && message.Payload.NodeId == k_RepeaterId;
+                    }), Is.True);
 
-                    Assert.That(header.MessageType, Is.EqualTo(EMessageType.HelloEmitter));
-                    Assert.That(rolePublication.NodeRole, Is.EqualTo(NodeRole.Repeater));
-                    Assert.That(header.OriginID, Is.EqualTo(k_RepeaterId));
-                }
+                // Answer
+                m_TestAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                    new EmitterWaitingToStartFrame {FrameIndex = 0});
 
-                else if (currentStep == step.WelcomeRepeater)
+                // Transmit the first frame's data
+                // Remarks: Transmit "dummy data" as valid state data would cause confusion in the unit test runner
+                // system and "yield return null" would not return "soon enough" and the test would timeout.
+                var frameDataBuffer = new FrameDataBuffer();
+                frameDataBuffer.Store(42, nativeArray =>
                 {
-                    // Send an acceptance message
-                    m_TestAgent.PublishMessage(new MessageHeader {MessageType = EMessageType.WelcomeRepeater, DestinationIDs = BitVector.FromIndex(k_RepeaterId),});
-                }
-
-                else if (currentStep == step.LastFrameData)
-                {
-                    Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
-
-                    // Send a GO message
-                    var (txHeader, lastFrameMsg) = GenerateMessage(k_EmitterId, new byte[] {k_RepeaterId}, EMessageType.LastFrameData, new EmitterLastFrameData() {FrameNumber = 0}, MessageHeader.EFlag.Broadcast, Enumerable.Repeat((byte)0, 32).ToArray()); // trailing 0s to indicate empty state data
-
-                    m_TestAgent.PublishMessage(txHeader, lastFrameMsg);
-                    Assert.That(node.EmitterNodeId, Is.EqualTo(k_EmitterId));
-
-                    ClusterSyncLooper.onInstanceTick -= m_TickHandler;
-                }
-
-                // Step to the next state.
-                currentStep++;
-            };
-
-            ClusterSyncLooper.onInstanceTick += m_TickHandler;
-            while (currentStep < step.LastFrameData)
-                yield return null;
-        }
-
-        private ClusterSync CreateEmitter ()
-        {
-            const int numRepeaters = 1;
-
-            var emitterClusterSync = new ClusterSync("Emitter");
-            m_Instances.Add(emitterClusterSync);
-
-            emitterClusterSync.EnableClusterDisplay(new ClusterParams
-            {
-                ClusterLogicSpecified = true,
-                EmitterSpecified = true,
-                NodeID = k_EmitterId,
-                RepeaterCount = numRepeaters,
-                MulticastAddress = MulticastAddress,
-                AdapterName = m_InterfaceName,
-                RXPort = RxPort,
-                TXPort = TxPort,
-                CommunicationTimeout = Timeout,
-                HandshakeTimeout = Timeout
-            });
-            return emitterClusterSync;
-        }
-
-        private ClusterSync CreateRepeater ()
-        {
-            var repeaterClusterSync = new ClusterSync("Repeater");
-
-            m_Instances.Add(repeaterClusterSync);
-
-            repeaterClusterSync.EnableClusterDisplay(new ClusterParams
-            {
-                ClusterLogicSpecified = true,
-                EmitterSpecified = false,
-                NodeID = k_RepeaterId,
-                MulticastAddress = MulticastAddress,
-                AdapterName = m_InterfaceName,
-                RXPort = TxPort,
-                TXPort = RxPort,
-                CommunicationTimeout = Timeout,
-                HandshakeTimeout = Timeout
-            });
-            return repeaterClusterSync;
-        }
-
-        /// <summary>
-        ///  This test FIRST initializes a EMITTER ClusterSync, then a REPEATER
-        ///  ClusterSync. Therefore, the emitter is the first delegate registered
-        ///  in ClusterSyncLooper. This demonstrates that the we can change the
-        ///  order with SystemUpdate and everything works.
-        /// </summary>
-        /// <returns></returns>
-        [UnityTest]
-        public IEnumerator EmitterThenRepeaterLockstepFor10Frames()
-        {
-            var emitterClusterSync = CreateEmitter();
-            var repeaterClusterSync = CreateRepeater();
-
-            // Use eventbus to check that custom data is passed correctly
-            var subCalls = 0f;
-            using var eventBus = new EventBus<TestData>();
-            using var subscriber = eventBus.Subscribe(data =>
-            {
-                var expectedId = data.EnumVal switch
-                {
-                    StateID.Input => k_EmitterId,
-                    StateID.Random => k_RepeaterId,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-                Debug.Log($"Eventbus received {data.FloatVal}");
-                Assert.That(data.LongVal, Is.EqualTo(expectedId));
-                subCalls++;
-            });
-
-            // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            m_TickHandler = tickType =>
-            {
-                if (tickType != ClusterSyncLooper.TickType.DoFrame)
-                {
-                    return;
-                }
-
-                Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
-                Assert.That(emitterClusterSync.NodeID, Is.EqualTo(0));
-
-                Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(repeaterClusterSync.NodeRole, Is.EqualTo(NodeRole.Repeater));
-                Assert.That(repeaterClusterSync.NodeID, Is.EqualTo(k_RepeaterId));
-            };
-
-            ClusterSyncLooper.onInstanceTick += m_TickHandler;
-
-            while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
-            {
-                eventBus.Publish(new TestData
-                {
-                    EnumVal = StateID.Random,
-                    LongVal = repeaterClusterSync.NodeID,
-                    FloatVal = repeaterClusterSync.CurrentFrameID,
+                    nativeArray.CopyTo(AllocRandomByteArray(nativeArray.Length));
+                    return nativeArray.Length;
                 });
+                emitterFrameDataSplitter.SendFrameData(0, ref frameDataBuffer);
+            });
 
-                eventBus.Publish(new TestData
-                {
-                    EnumVal = StateID.Input,
-                    LongVal = emitterClusterSync.NodeID,
-                    FloatVal = emitterClusterSync.CurrentFrameID,
-                });
-
-                Debug.Log($"Eventbus publishing {repeaterClusterSync.CurrentFrameID}");
+            while (node.FrameIndex == 0)
+            {
                 yield return null;
             }
 
-            Assert.That(subCalls, Is.EqualTo(20));
-
-            ClusterSyncLooper.onInstanceTick -= m_TickHandler;
-        }
-
-        /// <summary>
-        ///  This test FIRST initializes a REPEATER ClusterSync, then a EMITTER
-        ///  ClusterSync. Therefore, the repeater is the first delegate registered
-        ///  in ClusterSyncLooper. This demonstrates that the we can change the
-        ///  order with SystemUpdate and everything works.
-        /// </summary>
-        /// <returns></returns>
-        [UnityTest]
-        public IEnumerator RepeaterThenEmitterLockstepFor10Frames()
-        {
-            var repeaterClusterSync = CreateRepeater();
-            var emitterClusterSync = CreateEmitter();
-
-            // Piggy back on SystemUpdate in order to validate state for both the emitter and repeater.
-            m_TickHandler = tickType =>
-            {
-                if (tickType != ClusterSyncLooper.TickType.DoFrame)
-                {
-                    return;
-                }
-
-                Assert.That(repeaterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(repeaterClusterSync.NodeRole, Is.EqualTo(NodeRole.Repeater));
-                Assert.That(repeaterClusterSync.NodeID, Is.EqualTo(k_RepeaterId));
-
-                Assert.That(emitterClusterSync.IsClusterLogicEnabled, Is.True);
-                Assert.That(emitterClusterSync.NodeRole, Is.EqualTo(NodeRole.Emitter));
-                Assert.That(emitterClusterSync.NodeID, Is.EqualTo(0));
-            };
-
-            ClusterSyncLooper.onInstanceTick += m_TickHandler;
-
-            while (emitterClusterSync.CurrentFrameID < 10 && repeaterClusterSync.CurrentFrameID < 10)
-                yield return null;
-
-            ClusterSyncLooper.onInstanceTick -= m_TickHandler;
+            Assert.DoesNotThrow(emitFirstFrame.Wait);
         }
 
         [TearDown]
         public void TearDown()
         {
-            if (m_TickHandler != null)
-            {
-                ClusterSyncLooper.onInstanceTick -= m_TickHandler;
-            }
-
             if (m_TestGameObject != null)
             {
                 Object.Destroy(m_TestGameObject);
@@ -386,6 +277,41 @@ namespace Unity.ClusterDisplay.Tests
             m_TestAgent?.Dispose();
 
             m_Instances.Clear();
+        }
+
+        bool ConsumeFirstMessageOfRepeaterWhere<T>(IUdpAgent udpAgent, long testEndTimestamp,
+            Func<ReceivedMessage<T>, bool> predicate, IEnumerable<MessageType> typesToSkip = null) where T: unmanaged
+        {
+            var typesToSkipHashSet = new HashSet<MessageType>();
+            if (typesToSkip != null)
+            {
+                foreach (var type in typesToSkip)
+                {
+                    typesToSkipHashSet.Add(type);
+                }
+            }
+
+            for (;;)
+            {
+                using var receivedMessage = udpAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(testEndTimestamp));
+                if (receivedMessage == null)
+                {   // Timeout
+                    return false;
+                }
+
+                if (typesToSkipHashSet.Contains(receivedMessage.Type))
+                {   // Type of message to ignore
+                    continue;
+                }
+
+                var receivedOfType = receivedMessage as ReceivedMessage<T>;
+                Assert.That(receivedOfType, Is.Not.Null);
+                if (predicate(receivedOfType))
+                {
+                    return true;
+                }
+            }
         }
     }
 }
