@@ -21,9 +21,20 @@ MonoBehaviour:
   lightLayerName5: Light Layer 5
   lightLayerName6: Light Layer 6
   lightLayerName7: Light Layer 7
+  decalLayerName0: Decal Layer default
+  decalLayerName1: Decal Layer 1
+  decalLayerName2: Decal Layer 2
+  decalLayerName3: Decal Layer 3
+  decalLayerName4: Decal Layer 4
+  decalLayerName5: Decal Layer 5
+  decalLayerName6: Decal Layer 6
+  decalLayerName7: Decal Layer 7
   m_StripDebugVariants: 1
   m_StripUnusedPostProcessingVariants: 0
   m_StripUnusedVariants: 1
+  m_EnableRenderGraph: 0
+  m_StripUnusedLODCrossFadeVariants: 1
+  m_StripScreenCoordOverrideVariants: 0
   supportRuntimeDebugDisplay: 0
   m_ShaderVariantLogLevel: 0
   m_ExportShaderVariants: 1
