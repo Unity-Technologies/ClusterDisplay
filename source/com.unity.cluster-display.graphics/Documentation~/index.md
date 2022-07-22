@@ -25,7 +25,7 @@ We suggest using [Git Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submo
 ) to download the package to more easily update.
 
 ## Requirements
-This package depends on a [custom branch of Graphics](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/cluster-display/backport/v8.3.1) or [custom branch of Graphics for HDRP XR](https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/cluster-display/backport-xr/v8.3.1). The changes in the custom branch are not available through the Package Manager and must checked out and referenced locally in the project's `manifest.json` file.
+Cluster Display Graphics depends on URP or HDRP 14.0.3 (Unity 2022.2 and above). Install either "Universal RP" or "High Definition RP" from the package manager.
 
 This package also has a dependency on [com.unity.cluster-display](https://github.com/Unity-Technologies/ClusterDisplay/source/com.unity.cluster-display) for the core Cluster Display functionality.
 
@@ -110,14 +110,6 @@ However, if we use a high *scatter* value, artefacts become apparent despite ove
 ## Using Unity.ClusterDisplay.Graphics
 
 #### ClusterRenderer
-
-Cluster Display supports SRP, HDRP and URP. However, to toggle between HDRP and URP, you must use the following scripting define symbols:
-* `CLUSTER_DISPLAY_URP` For enabling cluster display render pipeline for URP. 
-* `CLUSTER_DISPLAY_HDRP` For enabling cluster display render pipeline for HDRP.
-
-#### XR vs Standard Rendering
-Previously, cluster display worked with a custom HDRP branch that refactored the XR api to become public instead of internal. However, in order to improve compatibility with various SRPs, cluster display has been refactored to support XR mode, standard HDRP mode and standard URP mode. The difference being that XR API will render multiple views using single pass stereo, while the standard mode will render the camera in a for loop. To enable XR mode, you will need to use HDRP and the following scripting define symbols: `CLUSTER_DISPLAY_XR` and `CLUSTER_DISPLAY_HDRP`.
-
 To enable Cluster Display graphics features for a project, add a `ClusterRenderer` component to the scene to be displayed. Only one component of that type is expected to be active at any given time. The `ClusterRenderer` component is responsible for managing projection, overscan and activation of Cluster Display-specific shader features (in HDRP). It also offers some debugging features. This component comes also has a custom inspector.
 
 In normal mode, the inspector exposes `Grid` size, `Physical Screen Size`, `Bezel` and `Overscan`. If no bezel is needed both fields can be safely ignored. Leaving `Physical Screen Size` to zero simply bypasses bezel.
@@ -148,21 +140,18 @@ Some parameters may be passed as command line arguments to a Unity application u
 We support the following arguments:
 
 * `--debug` start the cluster renderer in debug mode
-* `--gridsize` cluster grid size, argument passed as `[columns]x[rows]` (example: `4x2`)
+* `--gridSize` cluster grid size, argument passed as `[columns]x[rows]` (example: `4x2`)
 * `--overscan` amount of overscan in pixels passed as an integer
 * `--bezel` bezel size in mms, passed as `[horizontal]x[vertical]` (example: `24x32`)
 * `--physicalscreensize` physical screen size in mms, passed as `[width]x[height]`
 
 #### Shading Features
 
-Cluster Display shading features are enabled using a keyword managed by the `ClusterRenderer`. We provide the following macros:
+Cluster Display shading features are enabled when using the ClusterRendering to manage rendering. The rendering pipeline provides the following macros:
 
-* `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES(xy)`: converts Normalized Device Coordinates to Normalized Cluster Coordinates. Think of normalized cluster coordinates as normalized device coordinates if the whole cluster display grid was one big display.
-* `CLUSTER_TO_DEVICE_NORMALIZED_COORDINATES(xy)`: invert of `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES`.
-* `DEVICE_TO_CLUSTER_FULLSCREEN_UV(xy)`: converts full screen UV coordinates to cluster space. Built on top of `DEVICE_TO_CLUSTER_NORMALIZED_COORDINATES` and meant as a shorthand when working with full screen passes.
-* `CLUSTER_TO_DEVICE_FULLSCREEN_UV(xy)`: invert of `DEVICE_TO_CLUSTER_FULLSCREEN_UV`.
-* `CLUSTER_GRID_SIZE`: grid size.
-* `CLUSTER_SCREEN_SIZE`: size of the pixel surface formed by the grid of displays.
+* `SCREEN_COORD_APPLY_SCALEBIAS`: converts full screen UV coordinates to cluster space.
+* `SCREEN_COORD_REMOVE_SCALEBIAS`: inverse of `SCREEN_COORD_APPLY_SCALEBIAS`
+* `SCREEN_SIZE_OVERRIDE`: size of the pixel surface formed by the grid of displays.
 
 ## Cluster Display Graphics Tips
 
@@ -179,3 +168,9 @@ hdCam.colorPyramidHistoryIsValid = false;
 #### Operating System Overlays
 
 Whenever you have operating system managed overlays (toolbar, window) on top of your full screen Unity application, a one frame delay may be introduced causing cluster synchronization artefacts.
+
+#### Shader Stripping
+
+The screen coord override variants needed for fullscreen post effects should not be stripped
+when building a standalone player. Make sure the "Strip Screen Coord Override Variants" option
+in **Project Settings | Graphics | Global Settings** is unchecked.
