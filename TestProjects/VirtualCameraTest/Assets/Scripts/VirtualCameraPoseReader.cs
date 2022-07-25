@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Reflection;
 using Unity.LiveCapture;
 using Unity.LiveCapture.CompanionApp;
@@ -7,6 +6,14 @@ using Unity.LiveCapture.VirtualCamera;
 using UnityEngine;
 using UnityEngine.Assertions;
 
+/// <summary>
+/// A simple device implementation that reads Pose packets from the Virtual Camera companion app
+/// and applies it to a transform, bypassing the processing of the VirtualCameraDevice script.
+/// </summary>
+/// <remarks>
+/// This class leverages a lot of internal functionality from Unity.LiveCapture.VirtualCamera that
+/// we access via reflection.
+/// </remarks>
 [CreateDeviceMenuItemAttribute("Virtual Camera Pose Reader")]
 public class VirtualCameraPoseReader : CompanionAppDevice<IVirtualCameraClient>
 {
@@ -24,6 +31,26 @@ public class VirtualCameraPoseReader : CompanionAppDevice<IVirtualCameraClient>
     [SerializeField]
     Transform m_Actor;
 
+    class PoseEventAdapterBase
+    {
+        public VirtualCameraPoseReader poseReader { get; set; }
+    }
+
+    /// <summary>
+    /// Generic class used for instantiating a method with the correct signature
+    /// to subscribe to PoseSampleReceived events.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    class PoseEventAdapter<T> : PoseEventAdapterBase
+    {
+        public void OnPoseSampleReceived(T sample)
+        {
+            Assert.IsNotNull(poseReader);
+            var pose = (Pose)k_PoseField.GetValue(sample);
+            poseReader.OnPoseSampleReceived(pose);
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -33,6 +60,8 @@ public class VirtualCameraPoseReader : CompanionAppDevice<IVirtualCameraClient>
             return;
         }
 
+        // Instantiate a method that provides the appropriate signature for PoseSampleReceived.
+        // this assumes that the event is an Action<T>
         var typeArgs = k_PoseEvent.EventHandlerType.GenericTypeArguments;
         var poseBridgeType = typeof(PoseEventAdapter<>).MakeGenericType(typeArgs);
         var adapter = Activator.CreateInstance(poseBridgeType) as PoseEventAdapterBase;
@@ -69,21 +98,6 @@ public class VirtualCameraPoseReader : CompanionAppDevice<IVirtualCameraClient>
     public override void Write(ITakeBuilder takeBuilder)
     {
         throw new NotImplementedException();
-    }
-
-    class PoseEventAdapterBase
-    {
-        public VirtualCameraPoseReader poseReader { get; set; }
-    }
-
-    class PoseEventAdapter<T> : PoseEventAdapterBase
-    {
-        public void OnPoseSampleReceived(T sample)
-        {
-            Assert.IsNotNull(poseReader);
-            var pose = (Pose)k_PoseField.GetValue(sample);
-            poseReader.OnPoseSampleReceived(pose);
-        }
     }
 
     void OnPoseSampleReceived(Pose pose)
