@@ -45,7 +45,7 @@ public class LiveCaptureConnectionRunner : MonoBehaviour
         {
             // In the editor, StartServer() is automatically called when entering play mode.
 #if !UNITY_EDITOR
-            m_StartMethod?.Invoke(m_Server, null);
+            k_StartMethod?.Invoke(m_Server, null);
 #endif
         }
     }

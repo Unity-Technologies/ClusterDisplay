@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: df95adf4eb1984d488c5ae4ae852f483, type: 3}
-  m_Name: VcamProjection
+  m_Name: VR_Room_2x2
   m_EditorClassIdentifier: 
   m_IsDebug: 0
   m_NodeIndexOverride: 0
