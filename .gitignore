@@ -35,6 +35,7 @@ GfxPluginQuadroSync/out
 # Generated files
 CMakeCache.txt
 packages-lock.json
+Unity.VisualScripting.Generated/
 
 # CI artifacts
 upm-ci~/
