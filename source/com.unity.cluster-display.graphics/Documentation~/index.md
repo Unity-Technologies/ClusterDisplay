@@ -171,6 +171,4 @@ Whenever you have operating system managed overlays (toolbar, window) on top of 
 
 #### Shader Stripping
 
-The screen coord override variants needed for fullscreen post effects should not be stripped
-when building a standalone player. Make sure the "Strip Screen Coord Override Variants" option
-in **Project Settings | Graphics | Global Settings** is unchecked.
+The screen coord override variants needed for fullscreen post effects should not be stripped when building a standalone player. Make sure the "Strip Screen Coord Override Variants" option in **Project Settings | Graphics | Global Settings** is unchecked.

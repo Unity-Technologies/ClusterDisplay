@@ -37,8 +37,6 @@ In order to resolve this, you will need to configure your [IGMP](https://en.wiki
 
 ## Post-processing effects don't look right in the player when using Tiled Projection Policy
 
-Certain post-processing effects, such as Vignette, Lens Distortion, and Chromatic Abberation, use
-"screen coord override" shader variants to account the cluster grid. Make sure that "Strip Screen Coord Override
-Variants" is disabled in your graphics settings.
+Certain post-processing effects, such as Vignette, Lens Distortion, and Chromatic Abberation, use "screen coord override" shader variants to account the cluster grid. Make sure that "Strip Screen Coord Override Variants" is disabled in your graphics settings.
 
 ![](images/shader-stripping.png)
