@@ -30,7 +30,7 @@ namespace GfxQuadroSync
 
         void Prepare();
         InitializeStatus Initialize(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
-        bool TestCanGetFrameCount(IUnknown* pDevice);
+        bool CanGetFrameCount(IUnknown* pDevice);
         void Dispose(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
 
         void SetupWorkStation();

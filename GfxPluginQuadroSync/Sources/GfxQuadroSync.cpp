@@ -135,7 +135,7 @@ namespace GfxQuadroSync
                 // So far, the only way I found to detect this is to try to get the frame count.  Based on tests it
                 // fails if there is no reachable "Quadro-Sync master device".  I would love to have something more
                 // direct but Quadro-Sync API is rather minimalist (maybe to much).
-                if (s_SwapGroupClient.TestCanGetFrameCount(s_GraphicsDevice->GetDevice()))
+                if (s_SwapGroupClient.CanGetFrameCount(s_GraphicsDevice->GetDevice()))
                 {
                     CLUSTER_LOG << "Quadro Sync initialized (got feedback from Quadro-Sync master device)";
                     s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
