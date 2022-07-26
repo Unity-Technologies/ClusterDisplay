@@ -26,20 +26,21 @@ namespace GfxQuadroSync
     enum class QuadroSyncInitializationStatus : uint32_t
     {
         NotInitialized = 0,
-        Initialized = 1,
-        FailedUnityInterfacesNull = 2,
-        UnsupportedGraphicApi = 3,
-        MissingDevice = 4,
-        MissingSwapChain = 5,
+        WaitingFeedbackFromEmitter = 1,
+        Initialized = 2,
+        FailedUnityInterfacesNull = 3,
+        UnsupportedGraphicApi = 4,
+        MissingDevice = 5,
+        MissingSwapChain = 6,
 
         // The following mirror PluginCSwapGroupClient::InitializeStatus
-        SwapChainOrBarrierGenericFailure = 6,
-        NoSwapGroupDetected = 7,
-        QuerySwapGroupFailed = 8,
-        FailedToJoinSwapGroup = 9,
-        SwapGroupMismatch = 10,
-        FailedToBindSwapBarrier = 11,
-        SwapBarrierIdMismatch = 12,
+        SwapChainOrBarrierGenericFailure = 7,
+        NoSwapGroupDetected = 8,
+        QuerySwapGroupFailed = 9,
+        FailedToJoinSwapGroup = 10,
+        SwapGroupMismatch = 11,
+        FailedToBindSwapBarrier = 12,
+        SwapBarrierIdMismatch = 13,
     };
     static std::atomic<QuadroSyncInitializationStatus> s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
 
@@ -125,6 +126,21 @@ namespace GfxQuadroSync
         {
             if (!IsContextValid())
                 return false;
+
+            // Even if all the calls in initialize succeeded, it does not mean that the Quadro-Sync "cluster" is 
+            // correctly configured, connected, and everything is up and running.  There might be various things that 
+            // prevent it from properly communicating with the "Quadro-Sync master device".
+            if (s_InitializationStatus == QuadroSyncInitializationStatus::WaitingFeedbackFromEmitter)
+            {
+                // So far, the only way I found to detect this is to try to get the frame count.  Based on tests it
+                // fails if there is no reachable "Quadro-Sync master device".  I would love to have something more
+                // direct but Quadro-Sync API is rather minimalist (maybe to much).
+                if (s_SwapGroupClient.TestCanGetFrameCount(s_GraphicsDevice->GetDevice()))
+                {
+                    CLUSTER_LOG << "Quadro Sync initialized (got feedback from Quadro-Sync master device)";
+                    s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
+                }
+            }
 
             return s_SwapGroupClient.Render(
                 s_GraphicsDevice->GetDevice(),
@@ -363,8 +379,8 @@ namespace GfxQuadroSync
         auto swapGroupClientInitializeStatus = s_SwapGroupClient.Initialize(s_GraphicsDevice->GetDevice(), s_GraphicsDevice->GetSwapChain());
         if (swapGroupClientInitializeStatus == PluginCSwapGroupClient::InitializeStatus::Success)
         {
-            s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
-            CLUSTER_LOG << "Quadro Sync initialized succeeded";
+            s_InitializationStatus = QuadroSyncInitializationStatus::WaitingFeedbackFromEmitter;
+            CLUSTER_LOG << "Quadro Sync initialized (but still waiting feedback from Quadro-Sync master device)";
         }
         else
         {
