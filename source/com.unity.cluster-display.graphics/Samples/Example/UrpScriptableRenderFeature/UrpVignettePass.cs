@@ -22,7 +22,7 @@ sealed class UrpVignettePass : ScriptableRenderPass
         {
             return;
         }
-        
+
         var target = renderingData.cameraData.renderer.cameraColorTargetHandle;
         var descriptor = renderingData.cameraData.cameraTargetDescriptor;
 
@@ -31,9 +31,9 @@ sealed class UrpVignettePass : ScriptableRenderPass
         // Note the use of a temporary render target since we read then write to the camera target.
         cmd.GetTemporaryRT(UrpVignetteFeature.ShaderProperties._TempTex, descriptor);
         cmd.SetRenderTarget(UrpVignetteFeature.ShaderProperties._TempTex);
-        cmd.SetGlobalTexture(UrpVignetteFeature.ShaderProperties._SourceTex, target);
-        cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, Material, 0, 0);
+
+        Blitter.BlitTexture(cmd, target, new Vector4(1, 1, 0, 0), Material, 0);
+
         cmd.Blit(UrpVignetteFeature.ShaderProperties._TempTex, target);
         cmd.ReleaseTemporaryRT(UrpVignetteFeature.ShaderProperties._TempTex);
 
