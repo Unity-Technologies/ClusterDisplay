@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics
         public override void Enable(GameObject gameObject)
         {
             m_Camera = gameObject.GetOrAddComponent<Camera>();
-            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave;
+            m_Camera.hideFlags = HideFlags.NotEditable | HideFlags.DontSave | HideFlags.HideInHierarchy;
 
             // We use the camera to blit to screen.
             // Configure it to minimize wasteful rendering.
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             base.Enable(gameObject);
         }
-        
+
         protected override void Bind(bool delayed)
         {
             if (delayed)

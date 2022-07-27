@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        void OnDisable()
+        public override void OnDisable()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_RenderTarget);
         }

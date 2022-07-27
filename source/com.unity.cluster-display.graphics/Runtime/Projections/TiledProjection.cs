@@ -117,7 +117,7 @@ namespace Unity.ClusterDisplay.Graphics
             public bool UseDebugViewportSubsection;
         }
 
-        void OnDisable()
+        public override void OnDisable()
         {
             m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
