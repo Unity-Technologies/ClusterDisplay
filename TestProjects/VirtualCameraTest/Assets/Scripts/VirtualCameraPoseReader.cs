@@ -40,7 +40,7 @@ public class VirtualCameraPoseReader : CompanionAppDevice<IVirtualCameraClient>
     /// Generic class used for instantiating a method with the correct signature
     /// to subscribe to PoseSampleReceived events.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">The argument type of the PoseSampleReceived event.</typeparam>
     class PoseEventAdapter<T> : PoseEventAdapterBase
     {
         public void OnPoseSampleReceived(T sample)

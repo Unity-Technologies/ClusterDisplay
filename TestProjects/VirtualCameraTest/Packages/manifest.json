@@ -7,7 +7,7 @@
     "com.unity.cluster-display.mission-control": "file:../../../MissionControl/com.unity.cluster-display.mission-control",
     "com.unity.collab-proxy": "1.15.18",
     "com.unity.feature.development": "1.0.1",
-    "com.unity.live-capture": "file:C:/Users/wen.zhang/dev/VirtualProduction/Packages/com.unity.live-capture",
+    "com.unity.live-capture": "3.0.0-pre.6",
     "com.unity.render-pipelines.universal": "14.0.3",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.7.1",
