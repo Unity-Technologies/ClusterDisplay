@@ -12,9 +12,9 @@ namespace Unity.ClusterDisplay
         /// </summary>
         NotInitialized = 0,
         /// <summary>
-        /// QuadroSync is initialized but still waiting from feedback from emitter
+        /// QuadroSync is initialized but still waiting from feedback from Quadro-Sync master.
         /// </summary>
-        WaitingFeedbackFromEmitter = 1,
+        WaitingFeedbackFromQuadroSyncMaster = 1,
         /// <summary>
         /// QuadroSync is initialized and should be usable.
         /// </summary>
@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay
             enumValue switch
             {
                 GfxPluginQuadroSyncInitializationState.NotInitialized => "Not initialized",
-                GfxPluginQuadroSyncInitializationState.WaitingFeedbackFromEmitter => "Waiting for emitter",
+                GfxPluginQuadroSyncInitializationState.WaitingFeedbackFromQuadroSyncMaster => "Waiting for Quadro Sync master",
                 GfxPluginQuadroSyncInitializationState.Initialized => "Initialized",
                 GfxPluginQuadroSyncInitializationState.FailedUnityInterfacesNull => "Unity interfaces null",
                 GfxPluginQuadroSyncInitializationState.UnsupportedGraphicApi => "Unsupported graphic api",
