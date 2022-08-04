@@ -1,4 +1,4 @@
-Shader "Hidden/MeshWarp"
+Shader "Hidden/ClusterDisplay/MeshWarp"
 {
     Properties
     {

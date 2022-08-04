@@ -14,7 +14,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 Debug.Log($"Added {GraphicsUtil.k_BlitShaderName} to the list of Always Included shader.");
             }
-            
+
+            if (Util.AddAlwaysIncludedShaderIfNeeded(GraphicsUtil.k_WarpShaderName))
+            {
+                Debug.Log($"Added {GraphicsUtil.k_WarpShaderName} to the list of Always Included shader.");
+            }
+
             // Sanity check.
             if (XRSettings.enabled)
             {
