@@ -24,6 +24,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         public const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
+        public const string k_WarpShaderName = "Hidden/ClusterDisplay/MeshWarp";
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
@@ -174,7 +175,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             rt = null;
         }
-        
+
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
     }

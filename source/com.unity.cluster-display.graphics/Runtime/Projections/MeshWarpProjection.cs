@@ -124,7 +124,7 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_Meshes.Count == 0) return;
             if (m_WarpMaterial == null)
             {
-                m_WarpMaterial = new Material(Shader.Find("Hidden/MeshWarp"));
+                m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
             }
 
             var mainRenderSize = ChooseMainRenderTargetSize();
@@ -139,31 +139,33 @@ namespace Unity.ClusterDisplay.Graphics
                 GraphicsUtil.AllocateIfNeeded(ref m_MainRenderTarget, mainRenderSize.x, mainRenderSize.y);
                 m_MainRenderTarget.name = "Mesh Warp Main Render";
                 cameraScope.Render(m_MainRenderTarget, null);
+            }
 
-                m_WarpMaterial.mainTexture = m_MainRenderTarget;
-                m_WarpMaterial.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
-                m_WarpMaterial.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
+            m_WarpMaterial.mainTexture = m_MainRenderTarget;
+            m_WarpMaterial.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
+            m_WarpMaterial.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
 
-                if (IsDebug)
+            if (IsDebug)
+            {
+                for (var index = 0; index < m_Meshes.Count; ++index)
                 {
-                    for (var index = 0; index < m_Meshes.Count; ++index)
-                    {
-                        var meshData = m_Meshes[index];
-                        RenderMesh(meshData, clusterSettings, m_WarpMaterial, activeCamera,
-                            GetRenderTexture(index, meshData.ScreenResolution));
-                    }
-                }
-                else
-                {
-                    if (nodeIndex >= m_Meshes.Count)
-                    {
-                        return;
-                    }
-
-                    var meshData = m_Meshes[nodeIndex];
+                    var meshData = m_Meshes[index];
                     RenderMesh(meshData, clusterSettings, m_WarpMaterial, activeCamera,
-                        GetRenderTexture(nodeIndex, meshData.ScreenResolution));
+                        GetRenderTexture(index, meshData.ScreenResolution));
                 }
+            }
+            else
+            {
+                if (nodeIndex >= m_Meshes.Count)
+                {
+                    return;
+                }
+
+                var meshData = m_Meshes[nodeIndex];
+
+                Debug.Log($"RenderMesh {nodeIndex}");
+                RenderMesh(meshData, clusterSettings, m_WarpMaterial, activeCamera,
+                    GetRenderTexture(nodeIndex, meshData.ScreenResolution));
             }
 
             if (IsDebug)
@@ -204,6 +206,8 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
         }
 
+        readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo() {GridSize = new Vector2Int(1, 1)};
+
         void RenderMesh(MeshData mesh, ClusterRendererSettings clusterRendererSettings, Material material,
             Camera activeCamera = null, RenderTexture target = null)
         {
@@ -213,19 +217,26 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            // TODO: account for overscan
-            // WZ HACK: Set the bounds very large so it's not culled. Is there a better way to do this?
-            const float bigNumber = 2000f;
-
             var localToWorld = Origin * Matrix4x4.TRS(mesh.Position, Quaternion.Euler(mesh.Rotation), mesh.Scale);
-            mesh.Mesh.bounds = new Bounds(Vector3.zero, Vector3.one * bigNumber);
-
             UnityEngine.Graphics.DrawMesh(mesh.Mesh, localToWorld, material, 0, activeCamera);
+
             if (activeCamera)
             {
-                activeCamera.targetTexture = target;
-                activeCamera.Render();
+                using var scope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
+
+                // TODO: account for overscan
+                // Make sure the mesh isn't culled by pointing the camera at it
+                var meshCenter = localToWorld.MultiplyPoint(mesh.Mesh.bounds.center);
+                activeCamera.transform.LookAt(meshCenter, Vector3.up);
+
+                scope.Render(target, null);
             }
+        }
+
+        public override void OnDrawGizmos()
+        {
+            base.OnDrawGizmos();
+            m_Gizmo.Draw();
         }
 
         RenderTexture GetRenderTexture(int index, Vector2Int resolution)
