@@ -273,6 +273,10 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
+#if CLUSTER_DISPLAY_HDRP
+        public override bool DisableCameraPersistentHistory => IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardStitcher;
+#endif
+
         void RenderTile(
             RenderTexture target,
             Camera camera,

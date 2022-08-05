@@ -63,6 +63,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             EditorGUILayout.PropertyField(m_LayoutProp);
             if ((LayoutMode) m_LayoutProp.intValue == LayoutMode.StandardStitcher)
             {
+#if CLUSTER_DISPLAY_HDRP
+                EditorGUILayout.HelpBox("Standard Stitcher mode does not supportcamera persistent history (used by "+
+                    "effects like motion blur), it will be disabled.", MessageType.Warning);
+#endif
                 EditorGUILayout.PropertyField(m_PresentClearColorProp);
             }
 

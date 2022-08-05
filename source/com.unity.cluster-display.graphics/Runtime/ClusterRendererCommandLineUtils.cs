@@ -34,10 +34,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             renderer.DelayPresentByOneFrame = clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame;
 
+            // Only apply cmd line settings to the policy when not in the editor, as it otherwise cause problems with
+            // affecting ScriptableObjects that keep modifications done to them in play mode.
+#if !UNITY_EDITOR
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {
                 ApplyCmdLineSettings(projectionPolicy);
             }
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

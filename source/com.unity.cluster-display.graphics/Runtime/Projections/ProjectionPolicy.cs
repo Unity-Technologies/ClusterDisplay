@@ -107,6 +107,15 @@ namespace Unity.ClusterDisplay.Graphics
             set => m_NodeIndexOverride = value;
         }
 
+#if CLUSTER_DISPLAY_HDRP
+        /// <summary>
+        /// Policies that render the camera from multiple viewpoints are not compatible with
+        /// camera persistent history.  This property is to be set to true by those policies
+        /// (at the expense of some effects like motion blur that will be disabled).
+        /// </summary>
+        public virtual bool DisableCameraPersistentHistory => false;
+#endif
+
         protected int GetEffectiveNodeIndex() =>
             !IsDebug && ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
             clusterSync.IsClusterLogicEnabled

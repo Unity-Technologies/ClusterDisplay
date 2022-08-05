@@ -101,8 +101,16 @@ namespace Unity.ClusterDisplay.Graphics
                 m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(camera.gameObject);
                 m_HadCustomRenderSettings = m_AdditionalCameraData.customRenderingSettings;
 
-                // Required, see ClusterCamera for assignment/restore/comment.
-                Assert.IsTrue(m_AdditionalCameraData.hasPersistentHistory);
+                // Since we will render this camera procedurally rendered, we need to retain history buffers even if
+                // the camera is disabled.
+                // Remarks: We need to check it here when scopes are constructed so that we can set the right value
+                // based on the policy support for persistent history.  Restoring the value when cluster render is
+                // done by ClusterCamera.
+                if (ClusterRenderer.TryGetInstance(out var clusterRenderer))
+                {
+                    m_AdditionalCameraData.hasPersistentHistory =
+                        !clusterRenderer.ProjectionPolicy.DisableCameraPersistentHistory;
+                }
 
                 if (renderFeature != RenderFeature.None)
                 {
