@@ -178,5 +178,22 @@ namespace Unity.ClusterDisplay.Graphics
 
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+
+        public static void SaveCubemapToFile(RenderTexture rt, string path)
+        {
+            var equirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
+            rt.ConvertToEquirect(equirect, Camera.MonoOrStereoscopicEye.Mono);
+
+            RenderTexture.active = equirect;
+            Texture2D tex = new Texture2D(equirect.width, equirect.height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, equirect.width, equirect.height), 0, 0);
+            RenderTexture.active = null;
+
+            byte[] bytes;
+            bytes = tex.EncodeToPNG();
+
+            System.IO.File.WriteAllBytes(path, bytes);
+            Debug.Log("Saved to " + path);
+        }
     }
 }

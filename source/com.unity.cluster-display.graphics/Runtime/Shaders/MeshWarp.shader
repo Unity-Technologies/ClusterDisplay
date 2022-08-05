@@ -33,8 +33,9 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
 
             struct v2f
             {
-                float3 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                float3 uv : TEXCOORD0;
+                float3 worldPosition: TEXCOORD1;
             };
 
             sampler2D _MainTex;
@@ -42,6 +43,9 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
 
             float4x4 _CameraTransform;
             float4x4 _CameraProjection;
+
+            UNITY_DECLARE_TEXCUBE(_OuterFrustum);
+            float3 _OuterFrustumCenter;
 
             // returns 1 if v inside the box, returns 0 otherwise
             float InsideRect(float2 v, float2 bottomLeft, float2 topRight)
@@ -54,6 +58,12 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
                 // In that case s.x * s.y = 1 * 1 = 1.
                 float2 s = step(bottomLeft, v) - step(topRight, v);
                 return s.x * s.y;
+            }
+
+            // returns 1 if value is >= 0, returns 0 otherwise
+            float IsPositive(float value)
+            {
+                return step(0.0f, value);
             }
 
             v2f vert(appdata v)
@@ -77,8 +87,9 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
                 // Calculate the UV mapping by projecting the vertices into normalized screen space
                 // using the specified camera matrices.
                 const float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1.0));
+                o.worldPosition = worldPos.xyz;
                 float4 posInCameraSpace = mul(_CameraTransform, worldPos);
-                float depth = posInCameraSpace.z;
+                float depth = -posInCameraSpace.z;
                 float4 clipCoord = mul(_CameraProjection, posInCameraSpace);
                 float4 normalized = clipCoord / clipCoord.w;
                 normalized.xy = (normalized.xy + float2(1, 1)) * 0.5;
@@ -96,10 +107,16 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
             fixed4 frag(v2f i) : SV_Target
             {
                 // Remove the depth multiplier
-                float2 uv = i.uv.xy / i.uv.z;
+                const float2 uv = i.uv.xy / i.uv.z;
 
-                // sample the texture
-                return tex2D(_MainTex, uv) * InsideRect(uv.xy, float2(0, 0), float2(1, 1));
+                // Compute blend of inner / outer frustum
+                const float4 innerFrustumSample = tex2D(_MainTex, uv);
+                const float3 cubeMapSampleCoord = i.worldPosition - _OuterFrustumCenter;
+                const float4 outerFrustumSample = UNITY_SAMPLE_TEXCUBE(_OuterFrustum, cubeMapSampleCoord);
+
+                // Blend them together
+                const float innerFrustumAlpha = InsideRect(uv.xy, float2(0, 0), float2(1, 1)) * IsPositive(i.uv.z);
+                return innerFrustumSample * innerFrustumAlpha + outerFrustumSample * (1 - innerFrustumAlpha);
             }
             ENDCG
         }

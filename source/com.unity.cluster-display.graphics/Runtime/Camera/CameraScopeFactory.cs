@@ -48,21 +48,27 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Target = m_Camera.targetTexture;
             }
 
+            public void PreRender(Vector3? position = null, Quaternion? rotation = null)
+            {
+                var transform = m_Camera.transform;
+
+                var userModifiedPosition = position ?? transform.position;
+                var userModifiedRotation = rotation ?? transform.rotation;
+
+                transform.position = userModifiedPosition;
+                transform.rotation = userModifiedRotation;
+            }
+
             public void PreRender(RenderTexture target,
                 Matrix4x4? projection,
                 Vector3? position = null,
                 Quaternion? rotation = null)
             {
-                var transform = m_Camera.transform;
+                PreRender(position, rotation);
 
                 var userModifiedProjectionMatrix = projection ?? m_Camera.projectionMatrix;
-                var userModifiedPosition = position ?? transform.position;
-                var userModifiedRotation = rotation ?? transform.rotation;
 
                 m_Camera.targetTexture = target;
-
-                transform.position = userModifiedPosition;
-                transform.rotation = userModifiedRotation;
                 m_Camera.projectionMatrix = userModifiedProjectionMatrix;
 
                 m_Camera.cullingMatrix = userModifiedProjectionMatrix * m_Camera.worldToCameraMatrix;
@@ -149,6 +155,12 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Camera.Render();
             }
 
+            public void RenderToCubemap(RenderTexture target, Vector3? position = null)
+            {
+                m_BaseCameraScope.PreRender(position);
+                m_Camera.RenderToCubemap(target);
+            }
+
             public void Dispose()
             {
                 m_AdditionalCameraData.hasPersistentHistory = true;
@@ -195,6 +207,12 @@ namespace Unity.ClusterDisplay.Graphics
                 m_Camera.Render();
             }
 
+            public void RenderToCubemap(RenderTexture target, Vector3? position = null)
+            {
+                m_BaseCameraScope.PreRender(position, null);
+                m_Camera.RenderToCubemap(target);
+            }
+
             public void Dispose()
             {
                 m_AdditionalCameraData.useScreenCoordOverride = false;
@@ -206,6 +224,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             public void Dispose() { }
             public void Render(RenderTexture target, Matrix4x4? projection, Vector4? screenSizeOverride, Vector4? screenCoordScaleBias, Vector3? position, Quaternion? rotation) { }
+            public void RenderToCubemap(RenderTexture target, Vector3? position = null) { }
         }
 
         public static ICameraScope Create(

@@ -67,17 +67,25 @@ namespace Unity.ClusterDisplay.Graphics
     {
         [SerializeField]
         List<MeshData> m_Meshes = new();
+        [SerializeField]
+        Vector3 m_StagePosition;
+        [SerializeField]
+        int m_OuterFrustumCubemapSize = 512;
 
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
+        RenderTexture m_OuterFrustumTarget;
 
         BlitCommand m_BlitCommand;
         Material m_WarpMaterial;
         RenderTexture m_MainRenderTarget;
+        GameObject m_TestCamera;
 
         readonly Dictionary<int, Material> m_PreviewMaterials = new();
 
         static readonly int k_CameraTransform = Shader.PropertyToID("_CameraTransform");
         static readonly int k_CameraProjection = Shader.PropertyToID("_CameraProjection");
+        static readonly int k_OuterFrustum = Shader.PropertyToID("_OuterFrustum");
+        static readonly int k_OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
 
         Vector2Int ChooseMainRenderTargetSize()
         {
@@ -106,6 +114,12 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_RenderTargets.Clear();
 
+            if (m_OuterFrustumTarget != null)
+            {
+                m_OuterFrustumTarget.Release();
+                m_OuterFrustumTarget = null;
+            }
+
             DestroyImmediate(m_WarpMaterial);
             m_WarpMaterial = null;
 
@@ -133,6 +147,24 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize,
+                    m_OuterFrustumCubemapSize))
+            {
+                m_OuterFrustumTarget.dimension = UnityEngine.Rendering.TextureDimension.Cube;
+                m_OuterFrustumTarget.name = $"Outer frustum Render Target";
+            }
+
+            // TODO: Check when m_StagePosition or the mesh changes and calculate which face of the cube map we need to
+            // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
+            // seeing which color are present on the mesh.
+            using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
+            {
+                cameraScope.RenderToCubemap(m_OuterFrustumTarget, m_StagePosition);
+
+                // Enable code below to dump the cubemap to disk and make debugging easier
+                //GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+            }
+
             // TODO: increase camera FOV for overscan
             using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
             {
@@ -144,6 +176,8 @@ namespace Unity.ClusterDisplay.Graphics
             m_WarpMaterial.mainTexture = m_MainRenderTarget;
             m_WarpMaterial.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
             m_WarpMaterial.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
+            m_WarpMaterial.SetTexture(k_OuterFrustum, m_OuterFrustumTarget);
+            m_WarpMaterial.SetVector(k_OuterFrustumCenter, m_StagePosition);
 
             if (IsDebug)
             {
