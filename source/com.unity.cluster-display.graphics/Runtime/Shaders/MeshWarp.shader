@@ -3,6 +3,8 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
+        _BackgroundTex ("Background Texture", CUBE) = "white" {}
+        _BackgroundColor ("Background Color", COLOR) = (1, 1, 1, 1)
     }
     SubShader
     {
@@ -44,8 +46,9 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
             float4x4 _CameraTransform;
             float4x4 _CameraProjection;
 
-            UNITY_DECLARE_TEXCUBE(_OuterFrustum);
+            UNITY_DECLARE_TEXCUBE(_BackgroundTex);
             float3 _OuterFrustumCenter;
+            float4 _BackgroundColor;
 
             // returns 1 if v inside the box, returns 0 otherwise
             float InsideRect(float2 v, float2 bottomLeft, float2 topRight)
@@ -112,7 +115,7 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
                 // Compute blend of inner / outer frustum
                 const float4 innerFrustumSample = tex2D(_MainTex, uv);
                 const float3 cubeMapSampleCoord = i.worldPosition - _OuterFrustumCenter;
-                const float4 outerFrustumSample = UNITY_SAMPLE_TEXCUBE(_OuterFrustum, cubeMapSampleCoord);
+                const float4 outerFrustumSample = UNITY_SAMPLE_TEXCUBE(_BackgroundTex, cubeMapSampleCoord) * _BackgroundColor;
 
                 // Blend them together
                 const float innerFrustumAlpha = InsideRect(uv.xy, float2(0, 0), float2(1, 1)) * IsPositive(i.uv.z);

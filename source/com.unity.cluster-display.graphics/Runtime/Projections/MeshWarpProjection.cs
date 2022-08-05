@@ -1,9 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Numerics;
 using UnityEngine;
-using UnityEngine.Assertions;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Quaternion = UnityEngine.Quaternion;
 using Vector2 = UnityEngine.Vector2;
@@ -68,12 +67,20 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         List<MeshData> m_Meshes = new();
         [SerializeField]
-        Vector3 m_StagePosition;
+        Vector3 m_OuterViewPosition;
         [SerializeField]
         int m_OuterFrustumCubemapSize = 512;
+        [SerializeField]
+        Color m_BackgroundColor = Color.black;
+
+        [SerializeField]
+        bool m_RenderOuterFrustum;
+        [SerializeField]
+        bool m_FillEntireMesh;
 
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
         RenderTexture m_OuterFrustumTarget;
+        Cubemap m_BlankBackground;
 
         BlitCommand m_BlitCommand;
         Material m_WarpMaterial;
@@ -84,7 +91,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         static readonly int k_CameraTransform = Shader.PropertyToID("_CameraTransform");
         static readonly int k_CameraProjection = Shader.PropertyToID("_CameraProjection");
-        static readonly int k_OuterFrustum = Shader.PropertyToID("_OuterFrustum");
+        static readonly int k_OuterFrustum = Shader.PropertyToID("_BackgroundTex");
+        static readonly int k_BackgroundColor = Shader.PropertyToID("_BackgroundColor");
         static readonly int k_OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
 
         Vector2Int ChooseMainRenderTargetSize()
@@ -131,15 +139,38 @@ namespace Unity.ClusterDisplay.Graphics
             m_PreviewMaterials.Clear();
         }
 
+        void InitializeIfNeeded()
+        {
+            if (m_WarpMaterial == null)
+            {
+                m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
+            }
+
+            if (m_BlankBackground == null)
+            {
+                m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeY, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeZ, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveX, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveY, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveZ, 0, 0, Color.white);
+            }
+
+            if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, m_OuterFrustumCubemapSize))
+            {
+                m_OuterFrustumTarget.dimension = TextureDimension.Cube;
+                m_OuterFrustumTarget.name = "Outer frustum Render Target";
+            }
+        }
+
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var nodeIndex = GetEffectiveNodeIndex();
 
             if (m_Meshes.Count == 0) return;
-            if (m_WarpMaterial == null)
-            {
-                m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
-            }
+
+            InitializeIfNeeded();
 
             var mainRenderSize = ChooseMainRenderTargetSize();
             if (mainRenderSize.sqrMagnitude == 0)
@@ -147,22 +178,17 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize,
-                    m_OuterFrustumCubemapSize))
+            var cubeMapCenter = Origin.MultiplyPoint(m_OuterViewPosition);
+            if (m_RenderOuterFrustum)
             {
-                m_OuterFrustumTarget.dimension = UnityEngine.Rendering.TextureDimension.Cube;
-                m_OuterFrustumTarget.name = $"Outer frustum Render Target";
-            }
-
-            // TODO: Check when m_StagePosition or the mesh changes and calculate which face of the cube map we need to
-            // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
-            // seeing which color are present on the mesh.
-            using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
-            {
-                cameraScope.RenderToCubemap(m_OuterFrustumTarget, m_StagePosition);
+                // TODO: Check when m_OuterViewPosition or the mesh changes and calculate which face of the cube map we need to
+                // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
+                // seeing which color are present on the mesh.
+                using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
+                cameraScope.RenderToCubemap(m_OuterFrustumTarget, cubeMapCenter);
 
                 // Enable code below to dump the cubemap to disk and make debugging easier
-                //GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+                // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
             }
 
             // TODO: increase camera FOV for overscan
@@ -176,8 +202,9 @@ namespace Unity.ClusterDisplay.Graphics
             m_WarpMaterial.mainTexture = m_MainRenderTarget;
             m_WarpMaterial.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
             m_WarpMaterial.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
-            m_WarpMaterial.SetTexture(k_OuterFrustum, m_OuterFrustumTarget);
-            m_WarpMaterial.SetVector(k_OuterFrustumCenter, m_StagePosition);
+            m_WarpMaterial.SetTexture(k_OuterFrustum, m_RenderOuterFrustum ? m_OuterFrustumTarget : m_BlankBackground);
+            m_WarpMaterial.SetColor(k_BackgroundColor, m_RenderOuterFrustum ? Color.white : m_BackgroundColor);
+            m_WarpMaterial.SetVector(k_OuterFrustumCenter, cubeMapCenter);
 
             if (IsDebug)
             {
@@ -215,7 +242,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                     material.mainTexture = GetRenderTexture(index, mesh.ScreenResolution);
 
-                    RenderMesh(m_Meshes[index], clusterSettings, material, null, null);
+                    RenderMesh(m_Meshes[index], clusterSettings, material);
                 }
             }
 

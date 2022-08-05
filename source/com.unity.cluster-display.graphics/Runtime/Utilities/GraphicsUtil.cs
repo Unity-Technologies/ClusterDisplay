@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.Graphics
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
-        static GraphicsFormat GetGraphicsFormat()
+        public static GraphicsFormat GetGraphicsFormat()
         {
             if (s_GraphicsFormat == GraphicsFormat.None)
             {
