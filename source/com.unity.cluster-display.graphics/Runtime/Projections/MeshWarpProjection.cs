@@ -60,24 +60,31 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 
-    [PopupItem("Mesh Warp")]
     [CreateAssetMenu(fileName = "Mesh Warp Projection",
         menuName = "Cluster Display/Mesh Warp Projection")]
     sealed class MeshWarpProjection : ProjectionPolicy
     {
         [SerializeField]
         List<MeshData> m_Meshes = new();
+        [SerializeField]
+        Vector3 m_StagePosition;
+        [SerializeField]
+        int m_OuterFrustumCubemapSize = 512;
 
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
+        RenderTexture m_OuterFrustumTarget;
 
         BlitCommand m_BlitCommand;
         Material m_WarpMaterial;
         RenderTexture m_MainRenderTarget;
+        GameObject m_TestCamera;
 
         readonly Dictionary<int, Material> m_PreviewMaterials = new();
 
         static readonly int k_CameraTransform = Shader.PropertyToID("_CameraTransform");
         static readonly int k_CameraProjection = Shader.PropertyToID("_CameraProjection");
+        static readonly int k_OuterFrustum = Shader.PropertyToID("_OuterFrustum");
+        static readonly int k_OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
 
         Vector2Int ChooseMainRenderTargetSize()
         {
@@ -106,6 +113,12 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_RenderTargets.Clear();
 
+            if (m_OuterFrustumTarget != null)
+            {
+                m_OuterFrustumTarget.Release();
+                m_OuterFrustumTarget = null;
+            }
+
             DestroyImmediate(m_WarpMaterial);
             m_WarpMaterial = null;
 
@@ -115,6 +128,28 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             m_PreviewMaterials.Clear();
+        }
+
+        RenderTexture m_TestEquirect;
+        void SaveCubemapToFile(RenderTexture rt, string path)
+        {
+            if (m_TestEquirect == null || m_TestEquirect.width != rt.width * 4 || m_TestEquirect.height != rt.height * 3)
+            {
+                m_TestEquirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
+            }
+
+            m_OuterFrustumTarget.ConvertToEquirect(m_TestEquirect, Camera.MonoOrStereoscopicEye.Mono);
+
+            RenderTexture.active = m_TestEquirect;
+            Texture2D tex = new Texture2D(m_TestEquirect.width, m_TestEquirect.height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, m_TestEquirect.width, m_TestEquirect.height), 0, 0);
+            RenderTexture.active = null;
+
+            byte[] bytes;
+            bytes = tex.EncodeToPNG();
+
+            System.IO.File.WriteAllBytes(path, bytes);
+            Debug.Log("Saved to " + path);
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
@@ -133,6 +168,24 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
+            if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize,
+                    m_OuterFrustumCubemapSize))
+            {
+                m_OuterFrustumTarget.dimension = UnityEngine.Rendering.TextureDimension.Cube;
+                m_OuterFrustumTarget.name = $"Outer frustum Render Target";
+            }
+
+            // TODO: Check when m_StagePosition or the mesh changes and calculate which face of the cube map we need to
+            // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
+            // seeing which color are present on the mesh.
+            using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
+            {
+                cameraScope.RenderToCubemap(m_OuterFrustumTarget, m_StagePosition);
+
+                // Enable code below to dump the cubemap to disk and make debugging easier
+                //SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+            }
+
             // TODO: increase camera FOV for overscan
             using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
             {
@@ -144,6 +197,8 @@ namespace Unity.ClusterDisplay.Graphics
             m_WarpMaterial.mainTexture = m_MainRenderTarget;
             m_WarpMaterial.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
             m_WarpMaterial.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
+            m_WarpMaterial.SetTexture(k_OuterFrustum, m_OuterFrustumTarget);
+            m_WarpMaterial.SetVector(k_OuterFrustumCenter, m_StagePosition);
 
             if (IsDebug)
             {
