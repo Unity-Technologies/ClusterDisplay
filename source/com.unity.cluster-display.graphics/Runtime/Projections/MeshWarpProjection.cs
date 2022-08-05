@@ -240,8 +240,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
         }
 
-        readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo() {GridSize = new Vector2Int(1, 1)};
-
         void RenderMesh(MeshData mesh, ClusterRendererSettings clusterRendererSettings, Material material,
             Camera activeCamera = null, RenderTexture target = null)
         {
@@ -252,7 +250,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             var localToWorld = Origin * Matrix4x4.TRS(mesh.Position, Quaternion.Euler(mesh.Rotation), mesh.Scale);
-            UnityEngine.Graphics.DrawMesh(mesh.Mesh, localToWorld, material, 0, activeCamera);
+            UnityEngine.Graphics.DrawMesh(mesh.Mesh,
+                localToWorld,
+                material,
+                ClusterRenderer.ProjectionSurfaceLayer,
+                activeCamera,
+                submeshIndex: 0,
+                properties: null,
+                castShadows: false);
 
             if (activeCamera)
             {
@@ -263,15 +268,13 @@ namespace Unity.ClusterDisplay.Graphics
                 var meshCenter = localToWorld.MultiplyPoint(mesh.Mesh.bounds.center);
                 activeCamera.transform.LookAt(meshCenter, Vector3.up);
 
+                // Render just the mesh (ignore the scene)
+                activeCamera.cullingMask = 1 << ClusterRenderer.ProjectionSurfaceLayer;
+
                 scope.Render(target, null);
             }
         }
 
-        public override void OnDrawGizmos()
-        {
-            base.OnDrawGizmos();
-            m_Gizmo.Draw();
-        }
 
         RenderTexture GetRenderTexture(int index, Vector2Int resolution)
         {
