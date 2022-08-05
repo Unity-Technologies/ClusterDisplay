@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    [PopupItem("Camera Override")]
     [CreateAssetMenu(fileName = "CameraOverride", menuName = "Cluster Display/Camera Override Projection")]
     public class CameraOverrideProjection : ProjectionPolicy
     {

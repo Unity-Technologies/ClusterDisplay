@@ -77,6 +77,7 @@ namespace Unity.ClusterDisplay.Graphics
         public bool EnableKeyword;
     }
 
+    [PopupItem("Tiled")]
     [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
     sealed class TiledProjection : ProjectionPolicy
     {

@@ -60,6 +60,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 
+    [PopupItem("Mesh Warp")]
     [CreateAssetMenu(fileName = "Mesh Warp Projection",
         menuName = "Cluster Display/Mesh Warp Projection")]
     sealed class MeshWarpProjection : ProjectionPolicy
@@ -130,28 +131,6 @@ namespace Unity.ClusterDisplay.Graphics
             m_PreviewMaterials.Clear();
         }
 
-        RenderTexture m_TestEquirect;
-        void SaveCubemapToFile(RenderTexture rt, string path)
-        {
-            if (m_TestEquirect == null || m_TestEquirect.width != rt.width * 4 || m_TestEquirect.height != rt.height * 3)
-            {
-                m_TestEquirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
-            }
-
-            m_OuterFrustumTarget.ConvertToEquirect(m_TestEquirect, Camera.MonoOrStereoscopicEye.Mono);
-
-            RenderTexture.active = m_TestEquirect;
-            Texture2D tex = new Texture2D(m_TestEquirect.width, m_TestEquirect.height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, m_TestEquirect.width, m_TestEquirect.height), 0, 0);
-            RenderTexture.active = null;
-
-            byte[] bytes;
-            bytes = tex.EncodeToPNG();
-
-            System.IO.File.WriteAllBytes(path, bytes);
-            Debug.Log("Saved to " + path);
-        }
-
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
             var nodeIndex = GetEffectiveNodeIndex();
@@ -183,7 +162,7 @@ namespace Unity.ClusterDisplay.Graphics
                 cameraScope.RenderToCubemap(m_OuterFrustumTarget, m_StagePosition);
 
                 // Enable code below to dump the cubemap to disk and make debugging easier
-                //SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+                //GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
             }
 
             // TODO: increase camera FOV for overscan
