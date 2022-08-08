@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityObject = UnityEngine.Object;
 
-public class TiledProjectionPostProcessTest : ClusterRendererPostProcessTest
+public class TiledProjectionPostProcessTest : TiledClusterRenderPostProcessTest
 {
     [OneTimeSetUp]
     public void LoadScene()

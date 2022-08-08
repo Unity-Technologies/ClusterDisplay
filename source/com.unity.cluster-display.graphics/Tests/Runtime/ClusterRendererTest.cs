@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Assert.IsNotNull(m_ImageComparisonSettings, "Missing image comparison settings.");
 
             EditorBridge.OpenGameView();
-            
+
             var success = EditorBridge.SetGameViewSize(
                 m_ImageComparisonSettings.TargetWidth,
                 m_ImageComparisonSettings.TargetHeight);
@@ -50,7 +50,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             var width = m_ImageComparisonSettings.TargetWidth;
             var height = m_ImageComparisonSettings.TargetHeight;
-                
+
             GraphicsUtil.AllocateIfNeeded(ref m_VanillaCapture, width, height);
             m_VanillaCaptureTex2D = new Texture2D(width, height);
 
@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             yield return GraphicsTestUtil.DoScreenCapture(m_VanillaCapture);
         }
-        protected IEnumerator RenderOverscan()
+        protected virtual IEnumerator RenderOverscan()
         {
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
             m_ClusterCaptureTex2D = new Texture2D(width, height);
-            
+
             // Enable ClusterRenderer to render the camera through cluster display pipeline.
             m_ClusterRenderer.gameObject.SetActive(true);
 
@@ -95,10 +95,10 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             {
                 preRender.Invoke();
             }
-            
+
             Assert.IsNotNull(m_Camera, $"{nameof(m_Camera)} not assigned.");
             Assert.IsNotNull(m_ClusterRenderer, $"{nameof(m_ClusterRenderer)} not assigned.");
-            
+
             var width = m_ImageComparisonSettings.TargetWidth;
             var height = m_ImageComparisonSettings.TargetHeight;
 
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             Action exceptionHandler = null)
         {
             InitializeTest();
-            
+
             yield return GraphicsTestUtil.PreWarm();
 
             if (preRender != null)
@@ -172,7 +172,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
 
             GraphicsTestUtil.CopyToTexture2D(m_VanillaCapture, m_VanillaCaptureTex2D);
             GraphicsTestUtil.CopyToTexture2D(m_ClusterCapture, m_ClusterCaptureTex2D);
-            
+
             if (exceptionHandler == null)
             {
                 ImageAssert.AreEqual(m_VanillaCaptureTex2D, m_ClusterCaptureTex2D, m_ImageComparisonSettings);
