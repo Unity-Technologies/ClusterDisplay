@@ -39,18 +39,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Mesh Mesh => m_Mesh;
 
-        Bounds m_Bounds;
-
-        public Bounds Bounds => m_Bounds;
-
-        public void CalculateBounds(Matrix4x4 origin)
+        public Bounds CalculateBounds(Matrix4x4 origin)
         {
             var localToWorld = origin * Matrix4x4.TRS(Position, Quaternion.Euler(Rotation), Scale);
-            m_Bounds = new Bounds(localToWorld.MultiplyPoint(m_Mesh.bounds.center), Vector3.zero);
-            foreach (var corner in m_Mesh.bounds.GetCorners())
+            var bounds = new Bounds(localToWorld.MultiplyPoint(m_Mesh.bounds.center), Vector3.zero);
+            foreach (var corner in m_Mesh.bounds.Corners())
             {
-                m_Bounds.Encapsulate(localToWorld.MultiplyPoint(corner));
+                bounds.Encapsulate(localToWorld.MultiplyPoint(corner));
             }
+
+            return bounds;
         }
     }
 
@@ -59,6 +57,13 @@ namespace Unity.ClusterDisplay.Graphics
         menuName = "Cluster Display/Mesh Warp Projection")]
     sealed class MeshWarpProjection : ProjectionPolicy
     {
+        public enum OuterFrustumMode
+        {
+            RealtimeCubemap,
+            StaticCubemap,
+            SolidColor
+        }
+
         [SerializeField]
         List<MeshData> m_Meshes = new();
         [SerializeField]
@@ -72,10 +77,10 @@ namespace Unity.ClusterDisplay.Graphics
         Cubemap m_StaticCubemap;
 
         [SerializeField]
-        bool m_RenderOuterFrustum;
+        bool m_RenderInnerOuterFrustum;
 
         [SerializeField]
-        bool m_FillEntireMesh;
+        OuterFrustumMode m_OuterFrustumMode;
 
         // RTs holding the results of the normal "flat" renders
         readonly Dictionary<int, RenderTexture> m_MainRenderTargets = new();
@@ -159,7 +164,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             var cubeMapCenter = Origin.MultiplyPoint(m_OuterViewPosition);
-            if (m_RenderOuterFrustum && !m_StaticCubemap && !m_FillEntireMesh)
+            if (m_RenderInnerOuterFrustum && m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap)
             {
                 if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, m_OuterFrustumCubemapSize))
                 {
@@ -177,9 +182,22 @@ namespace Unity.ClusterDisplay.Graphics
                 // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
             }
 
-            Texture outerFrustumCubemap = m_StaticCubemap ? m_StaticCubemap : m_OuterFrustumTarget;
-            m_WarpMaterial.SetTexture(k_OuterFrustum, m_RenderOuterFrustum ? outerFrustumCubemap : m_BlankBackground);
-            m_WarpMaterial.SetColor(k_BackgroundColor, m_RenderOuterFrustum ? Color.white : m_BackgroundColor);
+            Texture outerFrustumCubemap = m_OuterFrustumMode switch
+            {
+                OuterFrustumMode.RealtimeCubemap => m_OuterFrustumTarget,
+                OuterFrustumMode.StaticCubemap => m_StaticCubemap,
+                OuterFrustumMode.SolidColor => m_BlankBackground,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            var backgroundColor = m_OuterFrustumMode switch {
+                OuterFrustumMode.RealtimeCubemap or OuterFrustumMode.StaticCubemap => Color.white,
+                OuterFrustumMode.SolidColor => m_BackgroundColor,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            m_WarpMaterial.SetTexture(k_OuterFrustum, outerFrustumCubemap);
+            m_WarpMaterial.SetColor(k_BackgroundColor, backgroundColor);
             m_WarpMaterial.SetVector(k_OuterFrustumCenter, cubeMapCenter);
 
             foreach (var index in m_NodesToRender)
@@ -192,52 +210,41 @@ namespace Unity.ClusterDisplay.Graphics
                     break;
                 }
 
-                var mainRenderTarget = m_MainRenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Mesh Warp Main Render");
+                var mainRenderTarget = m_MainRenderTargets.GetOrAllocate(index,
+                    meshData.ScreenResolution,
+                    "Main Render");
 
-                var planes = GeometryUtility.CalculateFrustumPlanes(activeCamera);
-                Matrix4x4? mainProjectionOverride = null;
-                Quaternion? rotationOverride = null;
-                Matrix4x4? worldToCameraMatrixOverride = null;
-                meshData.CalculateBounds(Origin);
-                if (m_FillEntireMesh)
+                var meshBounds = meshData.CalculateBounds(Origin);
+
+                Matrix4x4 projectionOverride = activeCamera.projectionMatrix;
+                Quaternion rotationOverride = activeCamera.transform.rotation;
+                Matrix4x4 worldToCameraOverride = activeCamera.worldToCameraMatrix;
+
+                if (!m_RenderInnerOuterFrustum)
                 {
-                    var position = activeCamera.transform.position;
-                    var up = activeCamera.transform.up;
-                    var gizmo = m_FrustumGizmos.GetOrCreate(index);
-                    gizmo.GridSize = Vector2Int.one;
-
-                    var lookDir = meshData.Bounds.center - position;
-                    var rotation = Quaternion.LookRotation(lookDir, up);
-
-                    // Note that cameraToWorld follows the OpenGL convention, which is right-handed and -Z forward
-                    var scale = activeCamera.transform.localScale;
-                    scale.z = -scale.z;
-                    var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
-                    var projection = meshData.Bounds.GetBoundingProjection(worldToCamera, activeCamera.nearClipPlane,
-                        activeCamera.farClipPlane);
-
-                    gizmo.ViewProjectionInverse = (projection * worldToCamera).inverse;
-
-                    worldToCameraMatrixOverride = worldToCamera;
-                    mainProjectionOverride = projection;
-                    rotationOverride = rotation;
+                    (projectionOverride, worldToCameraOverride, rotationOverride) =
+                        activeCamera.GetBoundingOverrides(meshBounds);
                 }
 
-                if (GeometryUtility.TestPlanesAABB(planes, meshData.Bounds) || m_FillEntireMesh)
+                var worldToProjection = projectionOverride * worldToCameraOverride;
+
+                var gizmo = m_FrustumGizmos.GetOrCreate(index);
+                gizmo.ViewProjectionInverse = worldToProjection.inverse;
+                gizmo.GridSize = Vector2Int.one;
+
+                if (GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(worldToProjection), meshBounds))
                 {
-                    using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
-                    {
-                        cameraScope.Render(mainRenderTarget, mainProjectionOverride,
-                            null, null, null,
-                            rotationOverride);
-                    }
+                    using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
+                    cameraScope.Render(mainRenderTarget, projectionOverride,
+                        null, null, null,
+                        rotationOverride);
                 }
 
                 var prop = m_WarpMaterialProperties.GetOrCreate(index);
 
                 prop.SetTexture(k_MainTex, mainRenderTarget);
-                prop.SetMatrix(k_CameraTransform, worldToCameraMatrixOverride ?? activeCamera.worldToCameraMatrix);
-                prop.SetMatrix(k_CameraProjection, mainProjectionOverride ?? activeCamera.projectionMatrix);
+                prop.SetMatrix(k_CameraTransform, worldToCameraOverride);
+                prop.SetMatrix(k_CameraProjection, projectionOverride);
 
                 RenderMesh(meshData, clusterSettings, m_WarpMaterial, prop, activeCamera,
                     m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp"));
@@ -270,12 +277,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnDrawGizmos()
         {
-            // base.OnDrawGizmos();
-            foreach (var meshData in m_Meshes)
-            {
-                Gizmos.DrawWireCube(meshData.Bounds.center, meshData.Bounds.extents * 2);
-            }
-
             foreach (var frustumGizmo in m_FrustumGizmos.Values)
             {
                 frustumGizmo.Draw();
@@ -323,7 +324,7 @@ namespace Unity.ClusterDisplay.Graphics
         }
     }
 
-    static class ProjectionHelpers
+    static class MeshProjectionExtensions
     {
         public static RenderTexture GetOrAllocate(this Dictionary<int, RenderTexture> renderTextures, int index,
             Vector2Int resolution, string name = "")
@@ -355,7 +356,7 @@ namespace Unity.ClusterDisplay.Graphics
             renderTextures.Clear();
         }
 
-        public static T GetOrCreate<T>(this Dictionary<int, T> dictionary, int index) where T : new()
+        public static TValue GetOrCreate<TValue, TKey>(this Dictionary<TKey, TValue> dictionary, TKey index) where TValue : new()
         {
             if (!dictionary.TryGetValue(index, out var item))
             {
@@ -366,14 +367,24 @@ namespace Unity.ClusterDisplay.Graphics
             return item;
         }
 
-        public static IEnumerable<Vector3> GetCorners(this Bounds bounds) =>
-            new[] {bounds.min, bounds.max, new(bounds.min.x, bounds.min.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.max.z),};
+        public static IEnumerable<Vector3> Corners(this Bounds bounds) =>
+            new[]
+            {
+                bounds.min, bounds.max,
+                new(bounds.min.x, bounds.min.y, bounds.max.z),
+                new(bounds.min.x, bounds.max.y, bounds.max.z),
+                new(bounds.min.x, bounds.max.y, bounds.min.z),
+                new(bounds.max.x, bounds.max.y, bounds.min.z),
+                new(bounds.max.x, bounds.min.y, bounds.min.z),
+                new(bounds.max.x, bounds.min.y, bounds.max.z),
+            };
 
-        public static Matrix4x4 GetBoundingProjection(this Bounds bounds, Matrix4x4 worldToCamera, float zNear, float zFar)
+        static Matrix4x4 GetBoundingProjection(this IEnumerable<Vector3> vertices, Matrix4x4 worldToCamera,
+            float zNear, float zFar)
         {
             float maxSlopeX = 0;
             float maxSlopeY = 0;
-            foreach (var t in bounds.GetCorners())
+            foreach (var t in vertices)
             {
                 var p = worldToCamera.MultiplyPoint(t);
                 var slopeX = Mathf.Abs(p.x / p.z);
@@ -392,6 +403,29 @@ namespace Unity.ClusterDisplay.Graphics
             var aspect = maxSlopeX / maxSlopeY;
             var fieldOfView = Mathf.Atan(maxSlopeY) * 2 * Mathf.Rad2Deg;
             return Matrix4x4.Perspective(fieldOfView, aspect, zNear, zFar);
+        }
+
+        public static (Matrix4x4 projection, Matrix4x4 worldToCamera, Quaternion rotation) GetBoundingOverrides(
+            this Camera camera,
+            Bounds bounds)
+        {
+            var transform = camera.transform;
+            var position = transform.position;
+            var up = transform.up;
+
+            var lookDir = bounds.center - position;
+            var rotation = Quaternion.LookRotation(lookDir, up);
+
+            // Note that cameraToWorld follows the OpenGL convention, which is right-handed and -Z forward
+            var scale = camera.transform.localScale;
+            scale.z = -scale.z;
+            var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
+            var projection = bounds.Corners().GetBoundingProjection(
+                worldToCamera,
+                camera.nearClipPlane,
+                camera.farClipPlane);
+
+            return (projection, worldToCamera, rotation);
         }
     }
 }
