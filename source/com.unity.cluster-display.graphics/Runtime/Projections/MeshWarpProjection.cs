@@ -43,22 +43,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         public Bounds Bounds => m_Bounds;
 
-        Vector3[] BoundsCorners => new[]
-        {
-            m_Mesh.bounds.min, m_Mesh.bounds.max,
-            new(m_Mesh.bounds.min.x, m_Mesh.bounds.min.y, m_Mesh.bounds.max.z),
-            new(m_Mesh.bounds.min.x, m_Mesh.bounds.max.y, m_Mesh.bounds.max.z),
-            new(m_Mesh.bounds.min.x, m_Mesh.bounds.max.y, m_Mesh.bounds.min.z),
-            new(m_Mesh.bounds.max.x, m_Mesh.bounds.max.y, m_Mesh.bounds.min.z),
-            new(m_Mesh.bounds.max.x, m_Mesh.bounds.min.y, m_Mesh.bounds.min.z),
-            new(m_Mesh.bounds.max.x, m_Mesh.bounds.min.y, m_Mesh.bounds.max.z),
-        };
-
         public void CalculateBounds(Matrix4x4 origin)
         {
             var localToWorld = origin * Matrix4x4.TRS(Position, Quaternion.Euler(Rotation), Scale);
             m_Bounds = new Bounds(localToWorld.MultiplyPoint(m_Mesh.bounds.center), Vector3.zero);
-            foreach (var corner in BoundsCorners)
+            foreach (var corner in m_Mesh.bounds.GetCorners())
             {
                 m_Bounds.Encapsulate(localToWorld.MultiplyPoint(corner));
             }
@@ -170,7 +159,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             var cubeMapCenter = Origin.MultiplyPoint(m_OuterViewPosition);
-            if (m_RenderOuterFrustum && !m_StaticCubemap)
+            if (m_RenderOuterFrustum && !m_StaticCubemap && !m_FillEntireMesh)
             {
                 if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, m_OuterFrustumCubemapSize))
                 {
@@ -206,21 +195,49 @@ namespace Unity.ClusterDisplay.Graphics
                 var mainRenderTarget = m_MainRenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Mesh Warp Main Render");
 
                 var planes = GeometryUtility.CalculateFrustumPlanes(activeCamera);
+                Matrix4x4? mainProjectionOverride = null;
+                Quaternion? rotationOverride = null;
+                Matrix4x4? worldToCameraMatrixOverride = null;
                 meshData.CalculateBounds(Origin);
-                if (GeometryUtility.TestPlanesAABB(planes, meshData.Bounds))
+                if (m_FillEntireMesh)
                 {
-                    Debug.Log($"Main render {index}");
+                    var position = activeCamera.transform.position;
+                    var up = activeCamera.transform.up;
+                    var gizmo = m_FrustumGizmos.GetOrCreate(index);
+                    gizmo.GridSize = Vector2Int.one;
+
+                    var lookDir = meshData.Bounds.center - position;
+                    var rotation = Quaternion.LookRotation(lookDir, up);
+
+                    // Note that cameraToWorld follows the OpenGL convention, which is right-handed and -Z forward
+                    var scale = activeCamera.transform.localScale;
+                    scale.z = -scale.z;
+                    var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
+                    var projection = meshData.Bounds.GetBoundingProjection(worldToCamera, activeCamera.nearClipPlane,
+                        activeCamera.farClipPlane);
+
+                    gizmo.ViewProjectionInverse = (projection * worldToCamera).inverse;
+
+                    worldToCameraMatrixOverride = worldToCamera;
+                    mainProjectionOverride = projection;
+                    rotationOverride = rotation;
+                }
+
+                if (GeometryUtility.TestPlanesAABB(planes, meshData.Bounds) || m_FillEntireMesh)
+                {
                     using (var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None))
                     {
-                        cameraScope.Render(mainRenderTarget, null);
+                        cameraScope.Render(mainRenderTarget, mainProjectionOverride,
+                            null, null, null,
+                            rotationOverride);
                     }
                 }
 
                 var prop = m_WarpMaterialProperties.GetOrCreate(index);
 
                 prop.SetTexture(k_MainTex, mainRenderTarget);
-                prop.SetMatrix(k_CameraTransform, activeCamera.worldToCameraMatrix);
-                prop.SetMatrix(k_CameraProjection, activeCamera.projectionMatrix);
+                prop.SetMatrix(k_CameraTransform, worldToCameraMatrixOverride ?? activeCamera.worldToCameraMatrix);
+                prop.SetMatrix(k_CameraProjection, mainProjectionOverride ?? activeCamera.projectionMatrix);
 
                 RenderMesh(meshData, clusterSettings, m_WarpMaterial, prop, activeCamera,
                     m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp"));
@@ -257,6 +274,11 @@ namespace Unity.ClusterDisplay.Graphics
             foreach (var meshData in m_Meshes)
             {
                 Gizmos.DrawWireCube(meshData.Bounds.center, meshData.Bounds.extents * 2);
+            }
+
+            foreach (var frustumGizmo in m_FrustumGizmos.Values)
+            {
+                frustumGizmo.Draw();
             }
         }
 
@@ -299,47 +321,6 @@ namespace Unity.ClusterDisplay.Graphics
                 scope.Render(target, null);
             }
         }
-
-        // static Matrix4x4 GetBoundingProjection(Camera camera, Bounds bounds)
-        // {
-        //     var corners = new Vector3[]
-        //     {
-        //         bounds.min,
-        //         bounds.max,
-        //         new (bounds.min.x, bounds.min.y, bounds.max.z),
-        //         new (bounds.min.x, bounds.max.y, bounds.max.z),
-        //         new (bounds.min.x, bounds.max.y, bounds.min.z),
-        //         new (bounds.max.x, bounds.max.y, bounds.min.z),
-        //         new (bounds.max.x, bounds.min.y, bounds.min.z),
-        //         new (bounds.max.x, bounds.min.y, bounds.max.z),
-        //     };
-
-        //     // var frustumCorners = camera.CalculateFrustumCorners()
-        //     float maxSlopeX = 0;
-        //     float maxSlopeY = 0;
-        //     foreach (var t in corners)
-        //     {
-        //         var p = camera.worldToCameraMatrix.MultiplyPoint(t);
-        //         var slopeX = p.x / p.z;
-        //         if (slopeX > maxSlopeX)
-        //         {
-        //             maxSlopeX = slopeX;
-        //         }
-        //         var slopeY = p.y / p.z;
-        //         if (slopeY > maxSlopeY)
-        //         {
-        //             maxSlopeX = slopeY;
-        //         }
-        //     }
-
-        //     camera.aspect = maxSlopeX / maxSlopeY;
-        //     camera.fieldOfView = Mathf.Atan(maxSlopeY) * 2 * Mathf.Rad2Deg;
-
-        //     // FrustumPlanes planes = new FrustumPlanes
-        //     // {
-        //     //     bottom = camera.projectionMatrix.z
-        //     // }
-        // }
     }
 
     static class ProjectionHelpers
@@ -383,6 +364,34 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             return item;
+        }
+
+        public static IEnumerable<Vector3> GetCorners(this Bounds bounds) =>
+            new[] {bounds.min, bounds.max, new(bounds.min.x, bounds.min.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.max.z),};
+
+        public static Matrix4x4 GetBoundingProjection(this Bounds bounds, Matrix4x4 worldToCamera, float zNear, float zFar)
+        {
+            float maxSlopeX = 0;
+            float maxSlopeY = 0;
+            foreach (var t in bounds.GetCorners())
+            {
+                var p = worldToCamera.MultiplyPoint(t);
+                var slopeX = Mathf.Abs(p.x / p.z);
+                if (slopeX > maxSlopeX)
+                {
+                    maxSlopeX = slopeX;
+                }
+
+                var slopeY = Mathf.Abs(p.y / p.z);
+                if (slopeY > maxSlopeY)
+                {
+                    maxSlopeY = slopeY;
+                }
+            }
+
+            var aspect = maxSlopeX / maxSlopeY;
+            var fieldOfView = Mathf.Atan(maxSlopeY) * 2 * Mathf.Rad2Deg;
+            return Matrix4x4.Perspective(fieldOfView, aspect, zNear, zFar);
         }
     }
 }
