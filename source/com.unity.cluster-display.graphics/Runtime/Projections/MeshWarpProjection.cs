@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
-using UnityEngine.Rendering;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Quaternion = UnityEngine.Quaternion;
 using Vector2 = UnityEngine.Vector2;
@@ -82,10 +81,10 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         OuterFrustumMode m_OuterFrustumMode;
 
-        // RTs holding the results of the normal "flat" renders
+        // RTs holding the results of the main "flat" renders
         readonly Dictionary<int, RenderTexture> m_MainRenderTargets = new();
 
-        // Visualizes the frustums of the "flat" renders
+        // Visualizes the frustums of the main renders
         readonly Dictionary<int, SlicedFrustumGizmo> m_FrustumGizmos = new();
 
         // Material that takes a flat render and reprojects in onto a mesh surface
@@ -112,6 +111,8 @@ namespace Unity.ClusterDisplay.Graphics
         // Property blocks for preview materials
         readonly Dictionary<int, MaterialPropertyBlock> m_PreviewMaterialProperties = new();
 
+        // The node indices to render. Typically this is an array of 1 determined
+        // by the cluster's ID assignment.
         int[] m_NodesToRender;
 
         static readonly int k_MainTex = Shader.PropertyToID("_MainTex");
@@ -124,12 +125,13 @@ namespace Unity.ClusterDisplay.Graphics
         void OnValidate()
         {
             m_NodesToRender = IsDebug ? Enumerable.Range(0, m_Meshes.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
+            m_FrustumGizmos.Clear();
         }
 
         void OnEnable()
         {
             m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
-            m_PreviewMaterial = new Material(Shader.Find("Unlit/Texture"));
+            m_PreviewMaterial = new Material(Shader.Find("Unlit/Transparent"));
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
             m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
             m_BlankBackground.SetPixel(CubemapFace.NegativeY, 0, 0, Color.white);
@@ -157,90 +159,66 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
-            if (m_Meshes.Count == 0) return;
-
             var nodeIndex = GetEffectiveNodeIndex();
+
+            if (m_Meshes.Count == 0 || nodeIndex >= m_Meshes.Count) return;
+
             if (!Application.isEditor)
             {
                 m_NodesToRender ??= new[] {nodeIndex};
             }
 
-            if (!IsDebug && nodeIndex >= m_Meshes.Count)
+            if (m_RenderInnerOuterFrustum)
             {
-                return;
-            }
-
-            var cubeMapCenter = Origin.MultiplyPoint(m_OuterViewPosition);
-            if (m_RenderInnerOuterFrustum && m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap)
-            {
-                if (GraphicsUtil.AllocateIfNeeded(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, m_OuterFrustumCubemapSize))
+                var cubeMapCenter = Origin.MultiplyPoint(m_OuterViewPosition);
+                if (m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap)
                 {
-                    m_OuterFrustumTarget.dimension = TextureDimension.Cube;
-                    m_OuterFrustumTarget.name = "Outer frustum Render Target";
+                    activeCamera.RenderRealtimeCubemap(ref m_OuterFrustumTarget, m_OuterFrustumCubemapSize, cubeMapCenter);
                 }
 
-                // TODO: Check when m_OuterViewPosition or the mesh changes and calculate which face of the cube map we need to
-                // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
-                // seeing which color are present on the mesh.
-                using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
-                cameraScope.RenderToCubemap(m_OuterFrustumTarget, cubeMapCenter);
-
-                // Enable code below to dump the cubemap to disk and make debugging easier
-                // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+                ConfigureOuterFrustumRendering(cubeMapCenter);
             }
-
-            Texture outerFrustumCubemap = m_OuterFrustumMode switch
-            {
-                OuterFrustumMode.RealtimeCubemap => m_OuterFrustumTarget,
-                OuterFrustumMode.StaticCubemap => m_StaticCubemap,
-                OuterFrustumMode.SolidColor => m_BlankBackground,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            var backgroundColor = m_OuterFrustumMode switch
-            {
-                OuterFrustumMode.RealtimeCubemap or OuterFrustumMode.StaticCubemap => Color.white,
-                OuterFrustumMode.SolidColor => m_BackgroundColor,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            m_WarpMaterial.SetTexture(k_OuterFrustum, outerFrustumCubemap);
-            m_WarpMaterial.SetColor(k_BackgroundColor, backgroundColor);
-            m_WarpMaterial.SetVector(k_OuterFrustumCenter, cubeMapCenter);
 
             foreach (var index in m_NodesToRender)
             {
                 var meshData = m_Meshes[index];
                 if (!meshData.Mesh || meshData.ScreenResolution.sqrMagnitude == 0 || meshData.Scale.sqrMagnitude == 0)
                 {
+                    // TODO: provide this warning in the UI
                     Debug.LogWarning("Malformed mesh description");
                     break;
                 }
 
-                // Overscan is applied to the main (flat) render.
+                // Overscan is applied to the main render.
                 var overscannedResolution = meshData.ScreenResolution + Vector2Int.one * clusterSettings.OverScanInPixels;
                 var mainRenderTarget = m_MainRenderTargets.GetOrAllocate(index,
                     overscannedResolution,
                     "Main Render");
 
+                // Calculate the camera settings for the main render.
+                // These can differ from activeCamera's original settings due to overscan
+                // or the requirement to completely fill in the mesh surface.
                 var meshBounds = meshData.CalculateBounds(Origin);
 
-                Matrix4x4 projectionOverride = activeCamera.projectionMatrix;
-                Quaternion rotationOverride = activeCamera.transform.rotation;
-                Matrix4x4 worldToCameraOverride = activeCamera.worldToCameraMatrix;
+                var cameraOverrides = activeCamera.ComputeSettingsForMainRender(meshData.ScreenResolution,
+                    clusterSettings.OverScanInPixels,
+                    m_RenderInnerOuterFrustum ? null : meshBounds);
 
-                if (!m_RenderInnerOuterFrustum)
+                var worldToProjection = cameraOverrides.projection * cameraOverrides.worldToCamera;
+
+                // Perform the main render.
+                // We only need to do this if the mesh is visible to the main render.
+                // For instance, if the camera is facing away from the mesh,
+                // then we can skip the main render entirely.
+                if (GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(worldToProjection), meshBounds))
                 {
-                    (projectionOverride, worldToCameraOverride, rotationOverride) =
-                        activeCamera.GetBoundingOverrides(meshBounds);
+                    using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
+                    cameraScope.Render(mainRenderTarget, cameraOverrides.projection,
+                        null, null, null,
+                        cameraOverrides.rotation);
                 }
 
-                projectionOverride =
-                    projectionOverride.GetOverscanProjection(meshData.ScreenResolution,
-                        clusterSettings.OverScanInPixels);
-
-                var worldToProjection = projectionOverride * worldToCameraOverride;
-
+                // Update frustum visualization
                 if (m_FrustumGizmos.GetOrCreate(index, out var gizmo))
                 {
                     gizmo.GridSize = Vector2Int.one;
@@ -248,30 +226,28 @@ namespace Unity.ClusterDisplay.Graphics
 
                 gizmo.ViewProjectionInverse = worldToProjection.inverse;
 
-                if (GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(worldToProjection), meshBounds))
-                {
-                    using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
-                    cameraScope.Render(mainRenderTarget, projectionOverride,
-                        null, null, null,
-                        rotationOverride);
-                }
-
+                // Perform the warping
+                var localToWorld = Origin * Matrix4x4.TRS(meshData.Position, Quaternion.Euler(meshData.Rotation), meshData.Scale);
                 m_WarpMaterialProperties.GetOrCreate(index, out var prop);
                 prop.SetTexture(k_MainTex, mainRenderTarget);
-                prop.SetMatrix(k_CameraTransform, worldToCameraOverride);
-                prop.SetMatrix(k_CameraProjection, projectionOverride);
+                prop.SetMatrix(k_CameraTransform, cameraOverrides.worldToCamera);
+                prop.SetMatrix(k_CameraProjection, cameraOverrides.projection);
 
                 var warpRenderTarget = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp");
-                RenderMesh(meshData, m_WarpMaterial, prop, activeCamera, warpRenderTarget);
+                meshData.Draw(localToWorld, m_WarpMaterial, prop, activeCamera, warpRenderTarget);
 
                 if (IsDebug)
                 {
+                    // Apply the warp result to the mesh for debug visualization. Since no camera
+                    // is specified, it will be rendered by any active camera. When Cluster Renderer
+                    // is enabled, the only "active" camera should be the SceneView.
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
                     previewMatProp.SetTexture(k_MainTex, warpRenderTarget);
-                    RenderMesh(meshData, m_PreviewMaterial, previewMatProp);
+                    meshData.Draw(localToWorld, m_PreviewMaterial, previewMatProp);
                 }
             }
 
+            // Prepare to blit the warp render target to the screen.
             if (m_RenderTargets.TryGetValue(nodeIndex, out var warpResult))
             {
                 // Since the warping operation already accounts for overscan, we don't
@@ -286,6 +262,31 @@ namespace Unity.ClusterDisplay.Graphics
                     customBlitMaterial,
                     GetCustomBlitMaterialPropertyBlocks(nodeIndex));
             }
+        }
+
+        void ConfigureOuterFrustumRendering(Vector3 cubeMapCenter)
+        {
+            Texture outerFrustumCubemap;
+            var backgroundColor = Color.white;
+            switch (m_OuterFrustumMode)
+            {
+                case OuterFrustumMode.RealtimeCubemap:
+                    outerFrustumCubemap = m_OuterFrustumTarget;
+                    break;
+                case OuterFrustumMode.StaticCubemap:
+                    outerFrustumCubemap = m_StaticCubemap;
+                    break;
+                case OuterFrustumMode.SolidColor:
+                    outerFrustumCubemap = m_BlankBackground;
+                    backgroundColor = m_BackgroundColor;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            m_WarpMaterial.SetTexture(k_OuterFrustum, outerFrustumCubemap);
+            m_WarpMaterial.SetColor(k_BackgroundColor, backgroundColor);
+            m_WarpMaterial.SetVector(k_OuterFrustumCenter, cubeMapCenter);
         }
 
         public override void OnDrawGizmos()
@@ -304,148 +305,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
-        }
-
-        void RenderMesh(MeshData mesh, Material material,
-            MaterialPropertyBlock propertyBlock = null,
-            Camera activeCamera = null, RenderTexture target = null)
-        {
-            var localToWorld = Origin * Matrix4x4.TRS(mesh.Position, Quaternion.Euler(mesh.Rotation), mesh.Scale);
-            UnityEngine.Graphics.DrawMesh(mesh.Mesh,
-                localToWorld,
-                material,
-                ClusterRenderer.ProjectionSurfaceLayer,
-                activeCamera,
-                submeshIndex: 0,
-                properties: propertyBlock,
-                castShadows: false);
-
-            if (activeCamera)
-            {
-                using var scope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
-
-                // Make sure the mesh isn't culled by pointing the camera at it
-                var meshCenter = localToWorld.MultiplyPoint(mesh.Mesh.bounds.center);
-                activeCamera.transform.LookAt(meshCenter, Vector3.up);
-
-                // Render just the mesh (ignore the scene)
-                activeCamera.cullingMask = 1 << ClusterRenderer.ProjectionSurfaceLayer;
-
-                scope.Render(target, null);
-            }
-        }
-    }
-
-    static class MeshProjectionExtensions
-    {
-        public static RenderTexture GetOrAllocate(this Dictionary<int, RenderTexture> renderTextures, int index,
-            Vector2Int resolution, string name = "")
-        {
-            renderTextures.TryGetValue(index, out var rt);
-
-            if (GraphicsUtil.AllocateIfNeeded(
-                ref rt,
-                resolution.x,
-                resolution.y))
-            {
-                rt.name = $"RT {name} {index}";
-                renderTextures[index] = rt;
-            }
-
-            return rt;
-        }
-
-        public static void Clean(this Dictionary<int, RenderTexture> renderTextures)
-        {
-            foreach (var rt in renderTextures.Values)
-            {
-                if (rt)
-                {
-                    rt.Release();
-                }
-            }
-
-            renderTextures.Clear();
-        }
-
-        public static bool GetOrCreate<TValue, TKey>(this Dictionary<TKey, TValue> dictionary, TKey index, out TValue item) where TValue : new()
-        {
-            var found = dictionary.TryGetValue(index, out item);
-            if (!found)
-            {
-                item = new TValue();
-                dictionary.Add(index, item);
-            }
-
-            return !found;
-        }
-
-        public static IEnumerable<Vector3> Corners(this Bounds bounds) =>
-            new[] {bounds.min, bounds.max, new(bounds.min.x, bounds.min.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.max.z), new(bounds.min.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.max.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.min.z), new(bounds.max.x, bounds.min.y, bounds.max.z),};
-
-        static Matrix4x4 GetBoundingProjection(this IEnumerable<Vector3> vertices, Matrix4x4 worldToCamera,
-            float zNear, float zFar)
-        {
-            float maxSlopeX = 0;
-            float maxSlopeY = 0;
-            foreach (var t in vertices)
-            {
-                var p = worldToCamera.MultiplyPoint(t);
-                var slopeX = Mathf.Abs(p.x / p.z);
-                if (slopeX > maxSlopeX)
-                {
-                    maxSlopeX = slopeX;
-                }
-
-                var slopeY = Mathf.Abs(p.y / p.z);
-                if (slopeY > maxSlopeY)
-                {
-                    maxSlopeY = slopeY;
-                }
-            }
-
-            var aspect = maxSlopeX / maxSlopeY;
-            var fieldOfView = Mathf.Atan(maxSlopeY) * 2 * Mathf.Rad2Deg;
-            return Matrix4x4.Perspective(fieldOfView, aspect, zNear, zFar);
-        }
-
-        public static Matrix4x4 GetOverscanProjection(this Matrix4x4 projection, Vector2Int resolution, int overscanPixels)
-        {
-            if (overscanPixels <= 0)
-            {
-                return projection;
-            }
-
-            var frustumPlanes = projection.decomposeProjection;
-            var overscanMultiplier = Vector2.one + Vector2.one * overscanPixels / resolution;
-            frustumPlanes.left *= overscanMultiplier.x;
-            frustumPlanes.right *= overscanMultiplier.x;
-            frustumPlanes.top *= overscanMultiplier.y;
-            frustumPlanes.bottom *= overscanMultiplier.y;
-            return Matrix4x4.Frustum(frustumPlanes);
-        }
-
-        public static (Matrix4x4 projection, Matrix4x4 worldToCamera, Quaternion rotation) GetBoundingOverrides(
-            this Camera camera,
-            Bounds bounds)
-        {
-            var transform = camera.transform;
-            var position = transform.position;
-            var up = transform.up;
-
-            var lookDir = bounds.center - position;
-            var rotation = Quaternion.LookRotation(lookDir, up);
-
-            // Note that cameraToWorld follows the OpenGL convention, which is right-handed and -Z forward
-            var scale = camera.transform.localScale;
-            scale.z = -scale.z;
-            var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
-            var projection = bounds.Corners().GetBoundingProjection(
-                worldToCamera,
-                camera.nearClipPlane,
-                camera.farClipPlane);
-
-            return (projection, worldToCamera, rotation);
         }
     }
 }
