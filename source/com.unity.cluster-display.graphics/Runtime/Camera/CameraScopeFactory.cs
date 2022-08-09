@@ -16,6 +16,7 @@ namespace Unity.ClusterDisplay.Graphics
         None = 0,
         AsymmetricProjection = 1 << 0,
         ScreenCoordOverride = 1 << 1,
+        ClearHistory = 1 << 2,
         AsymmetricProjectionAndScreenCoordOverride = AsymmetricProjection | ScreenCoordOverride,
         All = ~0
     }
@@ -91,6 +92,7 @@ namespace Unity.ClusterDisplay.Graphics
             readonly Camera m_Camera;
             readonly HDAdditionalCameraData m_AdditionalCameraData;
             readonly bool m_HadCustomRenderSettings;
+            readonly bool m_ForceClearHistory;
 
             public HdrpCameraScope(
                 Camera camera,
@@ -103,6 +105,8 @@ namespace Unity.ClusterDisplay.Graphics
 
                 // Required, see ClusterCamera for assignment/restore/comment.
                 Assert.IsTrue(m_AdditionalCameraData.hasPersistentHistory);
+
+                var forceClearHistory = false;
 
                 if (renderFeature != RenderFeature.None)
                 {
@@ -119,7 +123,14 @@ namespace Unity.ClusterDisplay.Graphics
                         m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = true;
                         m_AdditionalCameraData.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.ScreenCoordOverride, true);
                     }
+
+                    if (renderFeature.HasFlag(RenderFeature.ClearHistory))
+                    {
+                        forceClearHistory = true;
+                    }
                 }
+
+                m_ForceClearHistory = forceClearHistory;
             }
 
             public void Render(RenderTexture target,
@@ -133,12 +144,14 @@ namespace Unity.ClusterDisplay.Graphics
 
                 m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
                 m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;
+                m_AdditionalCameraData.hasPersistentHistory = !m_ForceClearHistory;
 
                 m_Camera.Render();
             }
 
             public void Dispose()
             {
+                m_AdditionalCameraData.hasPersistentHistory = true;
                 m_AdditionalCameraData.customRenderingSettings = m_HadCustomRenderSettings;
                 m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.AsymmetricProjection] = false;
                 m_AdditionalCameraData.renderingPathCustomFrameSettingsOverrideMask.mask[(int) FrameSettingsField.ScreenCoordOverride] = false;
@@ -174,7 +187,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_BaseCameraScope.PreRender(target, projection, position, rotation);
 
                 Debug.Assert(m_UseScreenCoordOverride == screenSizeOverride.HasValue);
-                
+
                 m_AdditionalCameraData.useScreenCoordOverride = m_UseScreenCoordOverride;
                 m_AdditionalCameraData.screenSizeOverride = screenSizeOverride ?? GraphicsUtil.k_IdentityScaleBias;
                 m_AdditionalCameraData.screenCoordScaleBias = screenCoordScaleBias ?? GraphicsUtil.k_IdentityScaleBias;

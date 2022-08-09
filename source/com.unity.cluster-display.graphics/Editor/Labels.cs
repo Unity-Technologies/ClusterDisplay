@@ -3,7 +3,7 @@
 namespace Unity.ClusterDisplay.Graphics
 {
     // TODO use static GUIContents
-    // A centralized place to store tooltip messages.
+    // A centralized place to store tooltip messages and other messages.
     // As they may be used for custom inspectors and runtime GUI, etc...
     static class Labels
     {
@@ -25,7 +25,8 @@ namespace Unity.ClusterDisplay.Graphics
             ScaleBiasOffset,
             ProjectionPolicy,
             DefaultProjectionSurface,
-            DelayPresentByOneFrame
+            DelayPresentByOneFrame,
+            ForceClearHistory
         }
 
         static string GetName(Field field)
@@ -49,6 +50,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.ProjectionPolicy: return "Projection Policy";
                 case Field.DefaultProjectionSurface: return "New default (planar) surface";
                 case Field.DelayPresentByOneFrame: return "Delay Present By One Frame";
+                case Field.ForceClearHistory: return "Force Clear History";
             }
 
             return string.Empty;
@@ -73,7 +75,8 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.DebugViewportSubsection: return "Activate/Deactivate direct viewport control, bypassing tile index completely.";
                 case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";
                 case Field.ProjectionPolicy: return "The method with which the content is projected for display.";
-                case Field.DelayPresentByOneFrame: return "If true, delays presentation by one frame";
+                case Field.DelayPresentByOneFrame: return "If true, delays presentation by one frame.";
+                case Field.ForceClearHistory: return "If true, clears HDRP accumulation buffers (hiding some problems caused by Standard Stitcher Layout Mode).";
             }
 
             return string.Empty;
@@ -82,6 +85,23 @@ namespace Unity.ClusterDisplay.Graphics
         public static GUIContent GetGUIContent(Field field)
         {
             return new GUIContent(GetName(field), GetTooltip(field));
+        }
+
+        public enum MessageID
+        {
+            StandardStitcherWarning
+        }
+
+        public static string GetMessage(MessageID message)
+        {
+            switch (message)
+            {
+                case MessageID.StandardStitcherWarning: return "Standard Stitcher mode does not support camera " +
+                    "persistent history (used by effects like motion blur).  Try activating the Force Clear History " +
+                    "option below to lessen the problem (but disable parts of those effects).";
+            }
+
+            return string.Empty;
         }
     }
 }
