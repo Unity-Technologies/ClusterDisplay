@@ -11,13 +11,20 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         static class Contents
         {
+            public static readonly GUIStyle ButtonToggleStyle = "Button";
             public static readonly GUIContent IsDebug = EditorGUIUtility.TrTextContent("Debug Mode",
                 "Preview meshes in Editor.");
             public static readonly GUIContent NodeIndex = EditorGUIUtility.TrTextContent("Node Index Override",
                 "Render the specified node (when previewing in the Editor");
+
             public static readonly GUIContent InnerOuterFrustum = EditorGUIUtility.TrTextContent(
-                "Render inner+outer frustum",
+                "Inner/Outer Frustum",
                 "Render separate inner and outer frustum regions. The active camera is reflected in the inner frustum.");
+
+            public static readonly GUIContent FullScreen = EditorGUIUtility.TrTextContent(
+                "Full Screen",
+                "Fill the entire mesh surface with the projection.");
+
             public static readonly GUIContent OuterFrustumMode = EditorGUIUtility.TrTextContent("Outer Frustum Mode",
                 "How the outer frustum region is rendered.");
             public static readonly GUIContent BackgroundColor = EditorGUIUtility.TrTextContent("Background Color");
@@ -57,8 +64,23 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             EditorGUILayout.PropertyField(m_IsDebugProp, Contents.IsDebug);
             EditorGUILayout.PropertyField(m_NodeIndexProp, Contents.NodeIndex);
-            EditorGUILayout.PropertyField(m_RenderInnerOuterProp, Contents.InnerOuterFrustum);
+
             var outerFrustumEnabled = m_RenderInnerOuterProp.boolValue;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (var change = new EditorGUI.ChangeCheckScope())
+                {
+                    outerFrustumEnabled = GUILayout.Toggle(outerFrustumEnabled, Contents.InnerOuterFrustum, Contents.ButtonToggleStyle);
+                    outerFrustumEnabled = !GUILayout.Toggle(!outerFrustumEnabled, Contents.FullScreen, Contents.ButtonToggleStyle);
+
+                    if (change.changed)
+                    {
+                        m_RenderInnerOuterProp.boolValue = outerFrustumEnabled;
+                        serializedObject.ApplyModifiedProperties();
+                    }
+                }
+            }
 
             if (outerFrustumEnabled)
             {
