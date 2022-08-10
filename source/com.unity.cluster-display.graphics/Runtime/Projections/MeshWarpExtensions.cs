@@ -7,6 +7,16 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class MeshWarpExtensions
     {
+        /// <summary>
+        /// Retrieves (allocating of needed) a <see cref="RenderTexture"/> from a dictionary with
+        /// the specified key and resolution.
+        /// </summary>
+        /// <param name="renderTextures">A dictionary of <see cref="RenderTexture"s/>.</param>
+        /// <param name="key">The key that identifies the desired texture.</param>
+        /// <param name="resolution">The desired resolution in pixels.</param>
+        /// <param name="name">Name assigned to the texture, if allocating.</param>
+        /// <typeparam name="TKey">The dictionary key type.</typeparam>
+        /// <returns>A valid <see cref="RenderTexture"/> with the desired resolution.</returns>
         public static RenderTexture GetOrAllocate<TKey>(this Dictionary<TKey, RenderTexture> renderTextures, TKey key,
             Vector2Int resolution, string name = "")
         {
@@ -17,13 +27,16 @@ namespace Unity.ClusterDisplay.Graphics
                 resolution.x,
                 resolution.y))
             {
-                rt.name = $"RT {name} {key}";
+                rt.name = $"{name}:{key}";
                 renderTextures[key] = rt;
             }
 
             return rt;
         }
 
+        /// <summary>
+        /// Releases all <see cref="RenderTexture"/>s in the dictionary and clears it.
+        /// </summary>
         public static void Clean<TKey>(this Dictionary<TKey, RenderTexture> renderTextures)
         {
             foreach (var rt in renderTextures.Values)
@@ -37,18 +50,25 @@ namespace Unity.ClusterDisplay.Graphics
             renderTextures.Clear();
         }
 
-        public static bool GetOrCreate<TValue, TKey>(this Dictionary<TKey, TValue> dictionary, TKey index, out TValue item) where TValue : new()
+        /// <summary>
+        /// Retrieves an item from the dictionary. If the item does not exist, it will be created using the default
+        /// constructor and added to the dictionary.
+        /// </summary>
+        public static bool GetOrCreate<TValue, TKey>(this Dictionary<TKey, TValue> dictionary, TKey key, out TValue item) where TValue : new()
         {
-            var found = dictionary.TryGetValue(index, out item);
+            var found = dictionary.TryGetValue(key, out item);
             if (!found)
             {
                 item = new TValue();
-                dictionary.Add(index, item);
+                dictionary.Add(key, item);
             }
 
             return !found;
         }
 
+        /// <summary>
+        /// Returns a collection containing the 8 corners of a <see cref="Bounds"/> struct.
+        /// </summary>
         public static IEnumerable<Vector3> Corners(this Bounds bounds) =>
             new[] {bounds.min, bounds.max,
                 new(bounds.min.x, bounds.min.y, bounds.max.z),
@@ -58,6 +78,15 @@ namespace Unity.ClusterDisplay.Graphics
                 new(bounds.max.x, bounds.min.y, bounds.min.z),
                 new(bounds.max.x, bounds.min.y, bounds.max.z),};
 
+        /// <summary>
+        /// Computes a perspective projection matrix that can encompass the given vertices.
+        /// </summary>
+        /// <param name="vertices">A collection of vertices in world space.</param>
+        /// <param name="worldToCamera">Matrix that transforms from world to camera space.</param>
+        /// <param name="zNear">The near clipping plane.</param>
+        /// <param name="zFar">The far clipping plane value.</param>
+        /// <returns>A symmetric perspective projection that can view all the vertices.</returns>
+        /// <remarks>The result is undefined if any vertices are behind the camera.</remarks>
         static Matrix4x4 GetBoundingProjection(this IEnumerable<Vector3> vertices, Matrix4x4 worldToCamera,
             float zNear, float zFar)
         {
@@ -84,13 +113,15 @@ namespace Unity.ClusterDisplay.Graphics
             return Matrix4x4.Perspective(fieldOfView, aspect, zNear, zFar);
         }
 
+        /// <summary>
+        /// Computes a projection matrix that applies the given amount of overscan.
+        /// </summary>
+        /// <param name="projection">The original projection matrix.</param>
+        /// <param name="resolution">The original resolution.</param>
+        /// <param name="overscanPixels">The amount of overscan in pixels.</param>
+        /// <returns>A new projection matrix that will give the desired overscan.</returns>
         static Matrix4x4 GetOverscanProjection(this Matrix4x4 projection, Vector2Int resolution, int overscanPixels)
         {
-            if (overscanPixels <= 0)
-            {
-                return projection;
-            }
-
             var frustumPlanes = projection.decomposeProjection;
             var overscanMultiplier = Vector2.one + Vector2.one * overscanPixels / resolution;
             frustumPlanes.left *= overscanMultiplier.x;
@@ -100,18 +131,29 @@ namespace Unity.ClusterDisplay.Graphics
             return Matrix4x4.Frustum(frustumPlanes);
         }
 
+        /// <summary>
+        /// Computes camera parameters that, when applied, will make the given bounds completely visible.
+        /// </summary>
+        /// <param name="camera">The camera for which to compute the parameters.</param>
+        /// <param name="bounds">The bounds that should be made visible.</param>
+        /// <returns>The overridden projection, world to camera matrix, and rotation.</returns>
+        /// <remarks>
+        /// This method computes overrides for projection and rotation only (assumes that the position is locked).
+        /// </remarks>
         static (Matrix4x4 projection, Matrix4x4 worldToCamera, Quaternion rotation) GetBoundingOverrides(
             this Camera camera,
             Bounds bounds)
         {
             var transform = camera.transform;
             var position = transform.position;
+            // TODO: we can compute "up" more intelligently to minimize the FOV that we need to render.
             var up = transform.up;
 
             var lookDir = bounds.center - position;
             var rotation = Quaternion.LookRotation(lookDir, up);
 
-            // Note that cameraToWorld follows the OpenGL convention, which is right-handed and -Z forward
+            // We need to account for the fact that worldToCamera follows the OpenGL convention,
+            // which is right-handed and -Z forward, while Unity's transforms are left-handed and +Z forward.
             var scale = camera.transform.localScale;
             scale.z = -scale.z;
             var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
@@ -123,6 +165,13 @@ namespace Unity.ClusterDisplay.Graphics
             return (projection, worldToCamera, rotation);
         }
 
+        /// <summary>
+        /// Computes camera parameters to include overscan and, optionally, to ensure a given mesh
+        /// (defined by its bounds) is visible in its entirety
+        /// </summary>
+        /// <remarks>
+        /// We can use the <paramref name="bounds"/> argument render projection that can "fill up" an entire mesh.
+        /// </remarks>
         public static (Matrix4x4 projection, Matrix4x4 worldToCamera, Quaternion rotation) ComputeSettingsForMainRender(
             this Camera camera,
             Vector2Int resolution,
@@ -161,7 +210,14 @@ namespace Unity.ClusterDisplay.Graphics
             // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
         }
 
-        public static void Draw(this MeshData mesh, Matrix4x4 localToWorld, Material material,
+        /// <summary>
+        /// Renders the given mesh.
+        /// </summary>
+        /// <remarks>
+        /// If a camera is specified, ensures that the mesh is visible (not culled), but
+        /// nothing else (i.e. the rest of the scene is not rendered).
+        /// </remarks>
+        public static void Render(this MeshData mesh, Matrix4x4 localToWorld, Material material,
             MaterialPropertyBlock propertyBlock = null,
             Camera activeCamera = null, RenderTexture target = null)
         {

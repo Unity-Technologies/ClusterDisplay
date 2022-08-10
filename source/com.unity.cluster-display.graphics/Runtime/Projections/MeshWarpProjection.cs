@@ -58,8 +58,17 @@ namespace Unity.ClusterDisplay.Graphics
     {
         public enum OuterFrustumMode
         {
+            /// <summary>
+            /// Render the outer frustum with a cubemap. It is re-generated on each frame.
+            /// </summary>
             RealtimeCubemap,
+            /// <summary>
+            /// Use a baked cubemap asset to render the outer frustum.
+            /// </summary>
             StaticCubemap,
+            /// <summary>
+            /// Render the outer frustum with a solid color.
+            /// </summary>
             SolidColor
         }
 
@@ -234,16 +243,21 @@ namespace Unity.ClusterDisplay.Graphics
                 prop.SetMatrix(k_CameraProjection, cameraOverrides.projection);
 
                 var warpRenderTarget = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp");
-                meshData.Draw(localToWorld, m_WarpMaterial, prop, activeCamera, warpRenderTarget);
+                meshData.Render(localToWorld, m_WarpMaterial, prop, activeCamera, warpRenderTarget);
+            }
 
-                if (IsDebug)
+            if (IsDebug)
+            {
+                foreach (var index in m_NodesToRender)
                 {
                     // Apply the warp result to the mesh for debug visualization. Since no camera
                     // is specified, it will be rendered by any active camera. When Cluster Renderer
                     // is enabled, the only "active" camera should be the SceneView.
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
-                    previewMatProp.SetTexture(k_MainTex, warpRenderTarget);
-                    meshData.Draw(localToWorld, m_PreviewMaterial, previewMatProp);
+                    previewMatProp.SetTexture(k_MainTex, m_RenderTargets[index]);
+                    var meshData = m_Meshes[index];
+                    var localToWorld = Origin * Matrix4x4.TRS(meshData.Position, Quaternion.Euler(meshData.Rotation), meshData.Scale);
+                    meshData.Render(localToWorld, m_PreviewMaterial, previewMatProp);
                 }
             }
 
