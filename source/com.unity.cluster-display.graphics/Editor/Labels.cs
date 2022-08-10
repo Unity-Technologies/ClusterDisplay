@@ -76,7 +76,7 @@ namespace Unity.ClusterDisplay.Graphics
                 case Field.ScaleBiasOffset: return "Compositing offset allowing for overscanned pixels visualization.";
                 case Field.ProjectionPolicy: return "The method with which the content is projected for display.";
                 case Field.DelayPresentByOneFrame: return "If true, delays presentation by one frame.";
-                case Field.ForceClearHistory: return "If true, clears HDRP accumulation buffers (hiding some problems caused by Standard Stitcher Layout Mode).";
+                case Field.ForceClearHistory: return "If true, clears HDRP accumulation buffers (preventing potential issues related to motion vectors caused by Standard Stitcher Layout Mode).";
             }
 
             return string.Empty;
