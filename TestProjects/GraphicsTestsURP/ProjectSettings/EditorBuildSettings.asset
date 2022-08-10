@@ -26,4 +26,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/CustomBlitMaterial.unity
     guid: e0bd2a13709517c40853100d0321439c
+  - enabled: 1
+    path: Assets/Scenes/MeshWarpProjection.unity
+    guid: ac83caf3bf0b9964d96b4c165eb3d6de
   m_configObjects: {}
