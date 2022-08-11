@@ -56,7 +56,6 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
 
         internal const int VirtualObjectLayer = 12;
-        internal const int ProjectionSurfaceLayer = 13;
 
         // TODO: Create a custom icon.
         const string k_IconName = "BuildSettings.Metro On@2x";

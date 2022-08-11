@@ -209,43 +209,5 @@ namespace Unity.ClusterDisplay.Graphics
             // Enable code below to dump the cubemap to disk and make debugging easier
             // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
         }
-
-        /// <summary>
-        /// Renders the given mesh.
-        /// </summary>
-        /// <remarks>
-        /// If a camera is specified, ensures that the mesh is visible (not culled), but
-        /// nothing else (i.e. the rest of the scene is not rendered).
-        /// </remarks>
-        public static void Render(this MeshData mesh, Matrix4x4 localToWorld, Material material,
-            MaterialPropertyBlock propertyBlock = null,
-            Camera activeCamera = null, RenderTexture target = null)
-        {
-            // TODO: merge ProjectionSurfaceLayer with VirtualObjectLayer
-            UnityEngine.Graphics.DrawMesh(mesh.Mesh,
-                localToWorld,
-                material,
-                ClusterRenderer.ProjectionSurfaceLayer,
-                activeCamera,
-                submeshIndex: 0,
-                properties: propertyBlock,
-                castShadows: false);
-
-            if (activeCamera)
-            {
-                using var scope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
-
-                // Point the camera at the mesh to make sure the mesh isn't culled.
-                // Note that the transform component will be ignored by the warp shader (we don't
-                // use the built-in camera transform uniforms).
-                var meshCenter = localToWorld.MultiplyPoint(mesh.Mesh.bounds.center);
-                activeCamera.transform.LookAt(meshCenter, Vector3.up);
-
-                // Render just the mesh (ignore the scene)
-                activeCamera.cullingMask = 1 << ClusterRenderer.ProjectionSurfaceLayer;
-
-                scope.Render(target, null);
-            }
-        }
     }
 }
