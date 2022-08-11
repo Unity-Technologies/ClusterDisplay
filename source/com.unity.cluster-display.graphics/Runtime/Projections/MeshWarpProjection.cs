@@ -132,8 +132,6 @@ namespace Unity.ClusterDisplay.Graphics
         static readonly int k_BackgroundColor = Shader.PropertyToID("_BackgroundColor");
         static readonly int k_OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
 
-        CommandBuffer m_WarpCommandBuffer;
-
         void OnValidate()
         {
             m_NodesToRender = IsDebug ? Enumerable.Range(0, m_Meshes.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
@@ -142,7 +140,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEnable()
         {
-            m_WarpCommandBuffer = CommandBufferPool.Get();
             m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
             m_PreviewMaterial = new Material(Shader.Find("Unlit/Transparent"));
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
@@ -168,11 +165,6 @@ namespace Unity.ClusterDisplay.Graphics
             DestroyImmediate(m_WarpMaterial);
             DestroyImmediate(m_PreviewMaterial);
             DestroyImmediate(m_BlankBackground);
-            if (m_WarpCommandBuffer != null)
-            {
-                CommandBufferPool.Release(m_WarpCommandBuffer);
-                m_WarpCommandBuffer = null;
-            }
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
@@ -196,6 +188,8 @@ namespace Unity.ClusterDisplay.Graphics
 
                 ConfigureOuterFrustumRendering(cubeMapCenter);
             }
+
+            var cmd = CommandBufferPool.Get();
 
             foreach (var index in m_NodesToRender)
             {
@@ -252,12 +246,12 @@ namespace Unity.ClusterDisplay.Graphics
                 prop.SetMatrix(k_CameraProjection, cameraOverrides.projection);
 
                 var warpRenderTarget = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp");
-                m_WarpCommandBuffer.SetRenderTarget(warpRenderTarget);
-                m_WarpCommandBuffer.DrawMesh(meshData.Mesh, localToWorld, m_WarpMaterial, 0, 0, prop);
+                cmd.SetRenderTarget(warpRenderTarget);
+                cmd.DrawMesh(meshData.Mesh, localToWorld, m_WarpMaterial, 0, 0, prop);
             }
 
-            UnityEngine.Graphics.ExecuteCommandBuffer(m_WarpCommandBuffer);
-            m_WarpCommandBuffer.Clear();
+            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
 
             if (IsDebug)
             {
