@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
@@ -84,6 +85,8 @@ namespace Unity.ClusterDisplay.Graphics
         /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
         /// </summary>
         public virtual void OnDrawGizmos() { }
+
+        public virtual void OnEnable() { }
 
         public virtual void OnDisable() { }
 

@@ -140,9 +140,9 @@ namespace Unity.ClusterDisplay.Graphics
             m_FrustumGizmos.Clear();
         }
 
-        void OnEnable()
+        public override void OnEnable()
         {
-            m_WarpCommandBuffer = new CommandBuffer() {name = "Warp Command Buffer"};
+            m_WarpCommandBuffer = CommandBufferPool.Get();
             m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
             m_PreviewMaterial = new Material(Shader.Find("Unlit/Transparent"));
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
@@ -168,7 +168,11 @@ namespace Unity.ClusterDisplay.Graphics
             DestroyImmediate(m_WarpMaterial);
             DestroyImmediate(m_PreviewMaterial);
             DestroyImmediate(m_BlankBackground);
-            m_WarpCommandBuffer.Release();
+            if (m_WarpCommandBuffer != null)
+            {
+                CommandBufferPool.Release(m_WarpCommandBuffer);
+                m_WarpCommandBuffer = null;
+            }
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
