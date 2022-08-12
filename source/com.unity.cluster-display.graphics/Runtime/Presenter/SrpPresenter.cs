@@ -114,7 +114,8 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 CommandBuffer = cmd,
                 FlipY = flipY,
-                CameraPixelRect = pixelRect
+                CameraPixelRect = pixelRect,
+                BackBuffer = target
             });
         }
 

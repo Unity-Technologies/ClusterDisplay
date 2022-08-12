@@ -233,13 +233,21 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var worldToProjection = cameraOverrides.projection * cameraOverrides.worldToCamera;
 
+                // FIXME: We currently need to disable the history if we're rendering per-frame cubemaps
+                // because this interferes with motion blur, TAA, and other temporal operations.
+                // One way to fix this is to render the cubemap from another camera.
+                var renderFeatureFlags = IsDebug ||
+                    m_RenderInnerOuterFrustum && m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap
+                        ? RenderFeature.ClearHistory
+                        : RenderFeature.None;
+
                 // Perform the main render.
                 // We only need to do this if the mesh is visible to the main render.
                 // For instance, if the camera is facing away from the mesh,
                 // then we can skip the main render entirely.
                 if (GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(worldToProjection), meshBounds))
                 {
-                    using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
+                    using var cameraScope = CameraScopeFactory.Create(activeCamera, renderFeatureFlags);
                     cameraScope.Render(mainRenderTarget, cameraOverrides.projection,
                         null, null, null,
                         cameraOverrides.rotation);
@@ -361,7 +369,7 @@ namespace Unity.ClusterDisplay.Graphics
                     meshCommand.PropertyBlock);
             }
 
-            commandBuffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+            commandBuffer.SetRenderTarget(args.BackBuffer);
             GraphicsUtil.Blit(commandBuffer, m_BlitCommand, args.FlipY);
         }
     }

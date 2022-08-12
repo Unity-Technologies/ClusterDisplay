@@ -203,7 +203,7 @@ namespace Unity.ClusterDisplay.Graphics
             // TODO: Check when m_OuterViewPosition or the mesh changes and calculate which face of the cube map we need to
             // render.  One approach could be to render a cube map with Red, Green and Blue faces on the geometry and
             // seeing which color are present on the mesh.
-            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.None);
+            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.ClearHistory);
             cameraScope.RenderToCubemap(renderTarget, cubeMapCenter);
 
             // Enable code below to dump the cubemap to disk and make debugging easier
