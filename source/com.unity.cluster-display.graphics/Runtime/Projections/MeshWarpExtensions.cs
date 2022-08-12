@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -8,10 +10,10 @@ namespace Unity.ClusterDisplay.Graphics
     static class MeshWarpExtensions
     {
         /// <summary>
-        /// Retrieves (allocating of needed) a <see cref="RenderTexture"/> from a dictionary with
+        /// Retrieves (allocating if needed) a <see cref="RenderTexture"/> from a dictionary with
         /// the specified key and resolution.
         /// </summary>
-        /// <param name="renderTextures">A dictionary of <see cref="RenderTexture"s/>.</param>
+        /// <param name="renderTextures">A dictionary of <see cref="RenderTexture"/>s.</param>
         /// <param name="key">The key that identifies the desired texture.</param>
         /// <param name="resolution">The desired resolution in pixels.</param>
         /// <param name="name">Name assigned to the texture, if allocating.</param>
@@ -67,16 +69,23 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         /// <summary>
-        /// Returns a collection containing the 8 corners of a <see cref="Bounds"/> struct.
+        /// Fills a collection with the 8 corners of a <see cref="Bounds"/> struct.
         /// </summary>
-        public static IEnumerable<Vector3> Corners(this Bounds bounds) =>
-            new[] {bounds.min, bounds.max,
-                new(bounds.min.x, bounds.min.y, bounds.max.z),
-                new(bounds.min.x, bounds.max.y, bounds.max.z),
-                new(bounds.min.x, bounds.max.y, bounds.min.z),
-                new(bounds.max.x, bounds.max.y, bounds.min.z),
-                new(bounds.max.x, bounds.min.y, bounds.min.z),
-                new(bounds.max.x, bounds.min.y, bounds.max.z),};
+        /// <param name="bounds">The bounds.</param>
+        /// <param name="corners">Array that will contain the output corners. Must contain at least 8 elements.</param>
+        public static void GetCorners(this Bounds bounds, Span<Vector3> corners)
+        {
+            Assert.IsTrue(corners.Length >= 8);
+
+            corners[0] = bounds.min;
+            corners[1] = bounds.max;
+            corners[2] = new Vector3(bounds.min.x, bounds.min.y, bounds.max.z);
+            corners[3] = new Vector3(bounds.min.x, bounds.max.y, bounds.max.z);
+            corners[4] = new Vector3(bounds.min.x, bounds.max.y, bounds.min.z);
+            corners[5] = new Vector3(bounds.max.x, bounds.max.y, bounds.min.z);
+            corners[6] = new Vector3(bounds.max.x, bounds.min.y, bounds.min.z);
+            corners[7] = new Vector3(bounds.max.x, bounds.min.y, bounds.max.z);
+        }
 
         /// <summary>
         /// Computes a perspective projection matrix that can encompass the given vertices.
@@ -87,7 +96,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <param name="zFar">The far clipping plane value.</param>
         /// <returns>A symmetric perspective projection that can view all the vertices.</returns>
         /// <remarks>The result is undefined if any vertices are behind the camera.</remarks>
-        static Matrix4x4 GetBoundingProjection(this IEnumerable<Vector3> vertices, Matrix4x4 worldToCamera,
+        static Matrix4x4 GetBoundingProjection(this Span<Vector3> vertices, Matrix4x4 worldToCamera,
             float zNear, float zFar)
         {
             float maxSlopeX = 0;
@@ -96,16 +105,10 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 var p = worldToCamera.MultiplyPoint(t);
                 var slopeX = Mathf.Abs(p.x / p.z);
-                if (slopeX > maxSlopeX)
-                {
-                    maxSlopeX = slopeX;
-                }
+                maxSlopeX = Math.Max(maxSlopeX, slopeX);
 
                 var slopeY = Mathf.Abs(p.y / p.z);
-                if (slopeY > maxSlopeY)
-                {
-                    maxSlopeY = slopeY;
-                }
+                maxSlopeY = Math.Max(maxSlopeY, slopeY);
             }
 
             var aspect = maxSlopeX / maxSlopeY;
@@ -157,7 +160,9 @@ namespace Unity.ClusterDisplay.Graphics
             var scale = camera.transform.localScale;
             scale.z = -scale.z;
             var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
-            var projection = bounds.Corners().GetBoundingProjection(
+            Span<Vector3> corners = stackalloc Vector3[8];
+            bounds.GetCorners(corners);
+            var projection = corners.GetBoundingProjection(
                 worldToCamera,
                 camera.nearClipPlane,
                 camera.farClipPlane);

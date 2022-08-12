@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
     [CustomEditor(typeof(MeshWarpProjection))]
-    class MeshWarpInspector : NestedInspector
+    class MeshWarpProjectionInspector : NestedInspector
     {
         static class Contents
         {
@@ -85,18 +85,20 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             if (outerFrustumEnabled)
             {
                 EditorGUILayout.PropertyField(m_OuterFrustumModeProp, Contents.OuterFrustumMode);
-                switch (m_OuterFrustumModeProp.enumValueIndex)
+                switch ((MeshWarpProjection.OuterFrustumMode)m_OuterFrustumModeProp.enumValueIndex)
                 {
-                    case (int) MeshWarpProjection.OuterFrustumMode.SolidColor:
+                    case MeshWarpProjection.OuterFrustumMode.SolidColor:
                         EditorGUILayout.PropertyField(m_BackgroundColorProp, Contents.BackgroundColor);
                         break;
-                    case (int) MeshWarpProjection.OuterFrustumMode.StaticCubemap:
+                    case MeshWarpProjection.OuterFrustumMode.StaticCubemap:
                         EditorGUILayout.PropertyField(m_StaticCubemapProp, Contents.StaticCubemap);
                         break;
-                    case (int)MeshWarpProjection.OuterFrustumMode.RealtimeCubemap:
+                    case MeshWarpProjection.OuterFrustumMode.RealtimeCubemap:
                         EditorGUILayout.PropertyField(m_OuterViewPositionProp, Contents.OuterViewPosition);
                         EditorGUILayout.PropertyField(m_CubemapSizeProp, Contents.CubemapSize);
                         break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
 

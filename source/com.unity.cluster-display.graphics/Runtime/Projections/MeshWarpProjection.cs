@@ -46,7 +46,9 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var localToWorld = origin * Matrix4x4.TRS(Position, Quaternion.Euler(Rotation), Scale);
             var bounds = new Bounds(localToWorld.MultiplyPoint(m_Mesh.bounds.center), Vector3.zero);
-            foreach (var corner in m_Mesh.bounds.Corners())
+            Span<Vector3> corners = stackalloc Vector3[8];
+            m_Mesh.bounds.GetCorners(corners);
+            foreach (var corner in corners)
             {
                 bounds.Encapsulate(localToWorld.MultiplyPoint(corner));
             }
@@ -159,6 +161,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
             m_PreviewMaterial = new Material(Shader.Find("Unlit/Transparent"));
+
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
             m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
             m_BlankBackground.SetPixel(CubemapFace.NegativeY, 0, 0, Color.white);
@@ -166,6 +169,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_BlankBackground.SetPixel(CubemapFace.PositiveX, 0, 0, Color.white);
             m_BlankBackground.SetPixel(CubemapFace.PositiveY, 0, 0, Color.white);
             m_BlankBackground.SetPixel(CubemapFace.PositiveZ, 0, 0, Color.white);
+            m_BlankBackground.Apply();
         }
 
         public override void OnDisable()
@@ -173,11 +177,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_MainRenderTargets.Clean();
             m_RenderTargets.Clean();
 
-            if (m_OuterFrustumTarget != null)
-            {
-                m_OuterFrustumTarget.Release();
-                m_OuterFrustumTarget = null;
-            }
+            GraphicsUtil.DeallocateIfNeeded(ref m_OuterFrustumTarget);
 
             DestroyImmediate(m_WarpMaterial);
             DestroyImmediate(m_PreviewMaterial);
