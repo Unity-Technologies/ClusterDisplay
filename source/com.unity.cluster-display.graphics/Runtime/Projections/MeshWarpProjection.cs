@@ -11,6 +11,9 @@ using Vector3 = UnityEngine.Vector3;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// Holds information about a mesh surface
+    /// </summary>
     [Serializable]
     class MeshData
     {
@@ -50,6 +53,18 @@ namespace Unity.ClusterDisplay.Graphics
 
             return bounds;
         }
+    }
+
+    /// <summary>
+    /// Holds data needed to perform a mesh render.
+    /// </summary>
+    struct DrawMeshCommand
+    {
+        public Mesh Mesh;
+        public Matrix4x4 LocalToWorldMatrix;
+        public Material Material;
+        public MaterialPropertyBlock PropertyBlock;
+        public RenderTexture Target;
     }
 
     [PopupItem("Mesh Warp")]
@@ -121,6 +136,8 @@ namespace Unity.ClusterDisplay.Graphics
         // Property blocks for preview materials
         readonly Dictionary<int, MaterialPropertyBlock> m_PreviewMaterialProperties = new();
 
+        readonly Queue<DrawMeshCommand> m_WarpCommands = new();
+
         // The node indices to render. Typically this is an array of 1 determined
         // by the cluster's ID assignment.
         int[] m_NodesToRender;
@@ -189,8 +206,6 @@ namespace Unity.ClusterDisplay.Graphics
                 ConfigureOuterFrustumRendering(cubeMapCenter);
             }
 
-            var cmd = CommandBufferPool.Get();
-
             foreach (var index in m_NodesToRender)
             {
                 var meshData = m_Meshes[index];
@@ -245,13 +260,15 @@ namespace Unity.ClusterDisplay.Graphics
                 prop.SetMatrix(k_CameraTransform, cameraOverrides.worldToCamera);
                 prop.SetMatrix(k_CameraProjection, cameraOverrides.projection);
 
-                var warpRenderTarget = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp");
-                cmd.SetRenderTarget(warpRenderTarget);
-                cmd.DrawMesh(meshData.Mesh, localToWorld, m_WarpMaterial, 0, 0, prop);
+                m_WarpCommands.Enqueue(new DrawMeshCommand
+                {
+                    Mesh = meshData.Mesh,
+                    LocalToWorldMatrix = localToWorld,
+                    Material = m_WarpMaterial,
+                    PropertyBlock = prop,
+                    Target = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp")
+                });
             }
-
-            UnityEngine.Graphics.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
 
             if (IsDebug)
             {
@@ -332,7 +349,20 @@ namespace Unity.ClusterDisplay.Graphics
                 return;
             }
 
-            GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
+            var commandBuffer = args.CommandBuffer;
+            while (m_WarpCommands.TryDequeue(out var meshCommand))
+            {
+                commandBuffer.SetRenderTarget(meshCommand.Target);
+                commandBuffer.DrawMesh(meshCommand.Mesh,
+                    meshCommand.LocalToWorldMatrix,
+                    meshCommand.Material,
+                    submeshIndex: 0,
+                    shaderPass: 0,
+                    meshCommand.PropertyBlock);
+            }
+
+            commandBuffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+            GraphicsUtil.Blit(commandBuffer, m_BlitCommand, args.FlipY);
         }
     }
 }
