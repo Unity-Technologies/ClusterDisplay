@@ -197,7 +197,17 @@ namespace Unity.ClusterDisplay.Graphics
             return (projection, worldToCamera, rotation);
         }
 
-        public static void RenderRealtimeCubemap(this Camera activeCamera, ref RenderTexture renderTarget, int size, Vector3 cubeMapCenter)
+        /// <summary>
+        /// Renders a cubemap to the specified <see cref="RenderTexture"/>.
+        /// </summary>
+        /// <param name="activeCamera">The camera to be used rendering.</param>
+        /// <param name="renderTarget">The <see cref="RenderTexture"/> to store the output.</param>
+        /// <param name="size">The size of the cubemap (in pixels).</param>
+        /// <param name="cubeMapCenter">The position in world space to render the cubemap from.</param>
+        public static void RenderRealtimeCubemap(this Camera activeCamera,
+            ref RenderTexture renderTarget,
+            int size,
+            Vector3 cubeMapCenter)
         {
             if (GraphicsUtil.AllocateIfNeeded(ref renderTarget, size, size))
             {

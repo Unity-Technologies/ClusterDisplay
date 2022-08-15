@@ -72,6 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
     [PopupItem("Mesh Warp")]
     [CreateAssetMenu(fileName = "Mesh Warp Projection",
         menuName = "Cluster Display/Mesh Warp Projection")]
+    [RequiresUnreferencedShader]
     sealed class MeshWarpProjection : ProjectionPolicy
     {
         public enum OuterFrustumMode
@@ -89,6 +90,20 @@ namespace Unity.ClusterDisplay.Graphics
             /// </summary>
             SolidColor
         }
+
+        static class ShaderIDs
+        {
+            public static readonly int _MainTex = Shader.PropertyToID("_MainTex");
+            public static readonly int _CameraTransform = Shader.PropertyToID("_CameraTransform");
+            public static readonly int _CameraProjection = Shader.PropertyToID("_CameraProjection");
+            public static readonly int _BackgroundTex = Shader.PropertyToID("_BackgroundTex");
+            public static readonly int _BackgroundColor = Shader.PropertyToID("_BackgroundColor");
+            public static readonly int _OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
+        }
+
+        const string k_PreviewShaderName = "Unlit/Transparent";
+        [AlwaysIncludeShader]
+        const string k_WarpShaderName = "Hidden/ClusterDisplay/MeshWarp";
 
         [SerializeField]
         List<MeshData> m_Meshes = new();
@@ -144,13 +159,6 @@ namespace Unity.ClusterDisplay.Graphics
         // by the cluster's ID assignment.
         int[] m_NodesToRender;
 
-        static readonly int k_MainTex = Shader.PropertyToID("_MainTex");
-        static readonly int k_CameraTransform = Shader.PropertyToID("_CameraTransform");
-        static readonly int k_CameraProjection = Shader.PropertyToID("_CameraProjection");
-        static readonly int k_OuterFrustum = Shader.PropertyToID("_BackgroundTex");
-        static readonly int k_BackgroundColor = Shader.PropertyToID("_BackgroundColor");
-        static readonly int k_OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
-
         void OnValidate()
         {
             m_NodesToRender = IsDebug ? Enumerable.Range(0, m_Meshes.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
@@ -159,8 +167,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void OnEnable()
         {
-            m_WarpMaterial = new Material(Shader.Find(GraphicsUtil.k_WarpShaderName));
-            m_PreviewMaterial = new Material(Shader.Find("Unlit/Transparent"));
+            m_WarpMaterial = GraphicsUtil.CreateHiddenMaterial(k_WarpShaderName);
+            m_PreviewMaterial = GraphicsUtil.CreateHiddenMaterial(k_PreviewShaderName);
 
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), TextureCreationFlags.None);
             m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
@@ -188,7 +196,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var nodeIndex = GetEffectiveNodeIndex();
 
-            if (m_Meshes.Count == 0 || nodeIndex >= m_Meshes.Count) return;
+            if (m_Meshes.Count == 0 || (!IsDebug && nodeIndex >= m_Meshes.Count)) return;
 
             if (!Application.isEditor)
             {
@@ -264,9 +272,9 @@ namespace Unity.ClusterDisplay.Graphics
                 // Perform the warping
                 var localToWorld = Origin * Matrix4x4.TRS(meshData.Position, Quaternion.Euler(meshData.Rotation), meshData.Scale);
                 m_WarpMaterialProperties.GetOrCreate(index, out var prop);
-                prop.SetTexture(k_MainTex, mainRenderTarget);
-                prop.SetMatrix(k_CameraTransform, cameraOverrides.worldToCamera);
-                prop.SetMatrix(k_CameraProjection, cameraOverrides.projection);
+                prop.SetTexture(ShaderIDs._MainTex, mainRenderTarget);
+                prop.SetMatrix(ShaderIDs._CameraTransform, cameraOverrides.worldToCamera);
+                prop.SetMatrix(ShaderIDs._CameraProjection, cameraOverrides.projection);
 
                 m_WarpCommands.Enqueue(new DrawMeshCommand
                 {
@@ -286,7 +294,7 @@ namespace Unity.ClusterDisplay.Graphics
                     // is specified, it will be rendered by any active camera. When Cluster Renderer
                     // is enabled, the only "active" camera should be the SceneView.
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
-                    previewMatProp.SetTexture(k_MainTex, m_RenderTargets[index]);
+                    previewMatProp.SetTexture(ShaderIDs._MainTex, m_RenderTargets[index]);
                     var meshData = m_Meshes[index];
                     var localToWorld = Origin * Matrix4x4.TRS(meshData.Position, Quaternion.Euler(meshData.Rotation), meshData.Scale);
                     UnityEngine.Graphics.DrawMesh(meshData.Mesh,
@@ -337,9 +345,9 @@ namespace Unity.ClusterDisplay.Graphics
                     throw new ArgumentOutOfRangeException();
             }
 
-            m_WarpMaterial.SetTexture(k_OuterFrustum, outerFrustumCubemap);
-            m_WarpMaterial.SetColor(k_BackgroundColor, backgroundColor);
-            m_WarpMaterial.SetVector(k_OuterFrustumCenter, cubeMapCenter);
+            m_WarpMaterial.SetTexture(ShaderIDs._BackgroundTex, outerFrustumCubemap);
+            m_WarpMaterial.SetColor(ShaderIDs._BackgroundColor, backgroundColor);
+            m_WarpMaterial.SetVector(ShaderIDs._OuterFrustumCenter, cubeMapCenter);
         }
 
         public override void OnDrawGizmos()
