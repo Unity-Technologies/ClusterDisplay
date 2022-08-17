@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 StartInfo =
                 {
                     FileName = "robocopy.exe",
-                    Arguments = $"{sharedProjectDir} {localProjectionDir} {k_CopyParams}"
+                    Arguments = $"\"{sharedProjectDir}\" \"{localProjectionDir}\" {k_CopyParams}"
                 }
             };
             Trace.WriteLine($"{copyProcess.StartInfo.FileName} {copyProcess.StartInfo.Arguments}");
@@ -109,7 +109,7 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 StartInfo =
                 {
-                    FileName = playerInfo.ExecutablePath,
+                    FileName = $"\"{playerInfo.ExecutablePath}\"",
                     Arguments = argString,
                     WorkingDirectory = Directory.GetParent(playerInfo.ExecutablePath)?.FullName ?? string.Empty
                 }
