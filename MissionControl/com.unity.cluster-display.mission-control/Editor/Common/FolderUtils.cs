@@ -29,19 +29,13 @@ namespace Unity.ClusterDisplay.MissionControl
 
             var dirInfo = new DirectoryInfo(path);
 
-            if (dirInfo.GetFiles("*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault() is not { } exeFileInfo)
-            {
-                return false;
-            }
+            var executables = dirInfo.GetFiles("*.exe", SearchOption.TopDirectoryOnly);
 
             var productName = string.Empty;
             var companyName = string.Empty;
             if (dirInfo.GetFiles(k_PlayerDllName, SearchOption.TopDirectoryOnly).Length > 0)
             {
-                var appFileInfo = dirInfo.GetFiles("app.info", new EnumerationOptions
-                {
-                    RecurseSubdirectories = true
-                }).FirstOrDefault();
+                var appFileInfo = dirInfo.GetFiles("app.info", new EnumerationOptions {RecurseSubdirectories = true}).FirstOrDefault();
 
                 if (appFileInfo != null)
                 {
@@ -58,7 +52,17 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             }
 
-            info = new PlayerInfo(productName, companyName, exeFileInfo.FullName);
+            // For Unity players, the expected executable name is {productName}.exe
+            var maybeFileInfo = string.IsNullOrEmpty(productName)
+                ? executables.FirstOrDefault()
+                : executables.FirstOrDefault(fileInfo => fileInfo.Name.StartsWith(productName));
+
+            if (maybeFileInfo?.FullName is not { } exePath)
+            {
+                return false;
+            }
+
+            info = new PlayerInfo(productName, companyName, exePath);
 
             return true;
         }
