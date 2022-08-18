@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEditor;
 using Object = UnityEngine.Object;
@@ -11,7 +13,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
-        const string k_NoPolicyMessage = "No projection policy assigned. You can create a new Projection Policy using the \"Create/Cluster Display\" menu.";
+        const string k_NoPolicyMessage = "No projection policy assigned.";
+        const string k_ChangePolicyMessage = "Old projection policy settings will be lost. Continue?";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
@@ -19,12 +22,22 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         NestedInspector m_PolicyEditor;
 
-        // We need to detect when the projection policy has changed. Caching the previous
-        // value seems to be the most reliable way to detect changes.
-        ProjectionPolicy m_CachedPolicyObject;
+        ClusterRenderer m_ClusterRenderer;
+
+        static readonly TypeCache.TypeCollection k_ProjectionPolicyTypes;
+        static readonly GUIContent[] k_ProjectionPolicyGUIOptions;
+
+        static ClusterRendererInspector()
+        {
+            k_ProjectionPolicyTypes = TypeCache.GetTypesDerivedFrom<ProjectionPolicy>();
+            k_ProjectionPolicyGUIOptions = k_ProjectionPolicyTypes
+                .Select(t => new GUIContent(t.GetCustomAttribute<PopupItemAttribute>()?.ItemName ?? t.Name))
+                .ToArray();
+        }
 
         void OnEnable()
         {
+            m_ClusterRenderer = target as ClusterRenderer;
             m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
             m_DelayPresentByOneFrameProp = serializedObject.FindProperty("m_DelayPresentByOneFrame");
@@ -38,30 +51,35 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             CheckForClusterCameraComponents();
 
             serializedObject.Update();
-            EditorGUILayout.PropertyField(m_PolicyProp, Labels.GetGUIContent(Labels.Field.ProjectionPolicy));
-
             var currentPolicy = m_PolicyProp.objectReferenceValue as ProjectionPolicy;
-
-            // Make sure we are drawing the correct editor for the selected policy.
-            // This hacky method detects if the policy has changed, either triggered by the user through
-            // the Inspector, or some other logic (e.g. the undo system)
-            if (m_CachedPolicyObject != currentPolicy)
+            using (var changeCheck = new EditorGUI.ChangeCheckScope())
             {
-                if (m_PolicyEditor != null)
-                {
-                    DestroyImmediate(m_PolicyEditor);
-                }
+                var policyIndex = currentPolicy != null ? k_ProjectionPolicyTypes.IndexOf(currentPolicy.GetType()) : -1;
 
-                if (m_CachedPolicyObject != null)
-                {
-                    m_CachedPolicyObject.OnDisable();
-                }
+                policyIndex = EditorGUILayout.Popup(Labels.GetGUIContent(Labels.Field.ProjectionPolicy),
+                    policyIndex,
+                    k_ProjectionPolicyGUIOptions);
 
-                if (currentPolicy)
+                if (changeCheck.changed)
                 {
-                    currentPolicy.OnEnable();
+                    if (currentPolicy != null)
+                    {
+                        Undo.DestroyObjectImmediate(currentPolicy);
+                    }
+
+                    if (m_PolicyEditor != null)
+                    {
+                        DestroyImmediate(m_PolicyEditor);
+                    }
+
+                    currentPolicy =
+                        (ProjectionPolicy)Undo.AddComponent(m_ClusterRenderer.gameObject,
+                            k_ProjectionPolicyTypes[policyIndex]);
+
+                    currentPolicy.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+
+                    m_PolicyProp.objectReferenceValue = currentPolicy;
                 }
-                m_CachedPolicyObject = currentPolicy;
             }
 
             if (currentPolicy != null && m_PolicyEditor == null)

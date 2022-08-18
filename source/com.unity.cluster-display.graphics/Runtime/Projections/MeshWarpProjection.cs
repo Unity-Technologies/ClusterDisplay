@@ -70,8 +70,6 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [PopupItem("Mesh Warp")]
-    [CreateAssetMenu(fileName = "Mesh Warp Projection",
-        menuName = "Cluster Display/Mesh Warp Projection")]
     [RequiresUnreferencedShader]
     sealed class MeshWarpProjection : ProjectionPolicy
     {
@@ -165,7 +163,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_FrustumGizmos.Clear();
         }
 
-        public override void OnEnable()
+        void OnEnable()
         {
             m_WarpMaterial = GraphicsUtil.CreateHiddenMaterial(k_WarpShaderName);
             m_PreviewMaterial = GraphicsUtil.CreateHiddenMaterial(k_PreviewShaderName);
@@ -180,7 +178,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_BlankBackground.Apply();
         }
 
-        public override void OnDisable()
+        public void OnDisable()
         {
             m_MainRenderTargets.Clean();
             m_RenderTargets.Clean();
@@ -350,7 +348,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_WarpMaterial.SetVector(ShaderIDs._OuterFrustumCenter, cubeMapCenter);
         }
 
-        public override void OnDrawGizmos()
+        public void OnDrawGizmos()
         {
             foreach (var frustumGizmo in m_FrustumGizmos.Values)
             {
