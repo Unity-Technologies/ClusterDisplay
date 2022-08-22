@@ -1,4 +1,4 @@
-*.sln
+./*.sln
 *.swp
 *.csproj
 .DS_Store
