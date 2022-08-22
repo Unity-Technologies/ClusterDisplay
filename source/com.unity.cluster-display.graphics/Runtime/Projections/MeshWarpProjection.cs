@@ -61,7 +61,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         static class ShaderIDs
         {
-            public static readonly int _MainTex = Shader.PropertyToID("_MainTex");
             public static readonly int _CameraTransform = Shader.PropertyToID("_CameraTransform");
             public static readonly int _CameraProjection = Shader.PropertyToID("_CameraProjection");
             public static readonly int _BackgroundTex = Shader.PropertyToID("_BackgroundTex");
@@ -118,9 +117,6 @@ namespace Unity.ClusterDisplay.Graphics
         // Command for the final present
         BlitCommand m_BlitCommand;
 
-        // Material for drawing the warped renders onto the meshes for preview purposes
-        Material m_PreviewMaterial;
-
         // Property blocks for preview materials
         readonly Dictionary<int, MaterialPropertyBlock> m_PreviewMaterialProperties = new();
 
@@ -141,6 +137,10 @@ namespace Unity.ClusterDisplay.Graphics
                 Surfaces = surfaces;
                 foreach (var surface in Surfaces)
                 {
+                    if (surface.MeshRenderer == null)
+                    {
+                        continue;
+                    }
                     surface.IsEnabled = surface.MeshRenderer.enabled;
                     surface.MeshRenderer.enabled = false;
                 }
@@ -150,6 +150,10 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 foreach (var surface in Surfaces)
                 {
+                    if (surface.MeshRenderer == null)
+                    {
+                        continue;
+                    }
                     surface.MeshRenderer.enabled = surface.IsEnabled;
                 }
             }
@@ -173,7 +177,6 @@ namespace Unity.ClusterDisplay.Graphics
         void OnEnable()
         {
             m_WarpMaterial = GraphicsUtil.CreateHiddenMaterial(k_WarpShaderName);
-            m_PreviewMaterial = GraphicsUtil.CreateHiddenMaterial(k_PreviewShaderName);
 
             m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), 0);
             m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
@@ -193,7 +196,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.DeallocateIfNeeded(ref m_OuterFrustumTarget);
 
             DestroyImmediate(m_WarpMaterial);
-            DestroyImmediate(m_PreviewMaterial);
             DestroyImmediate(m_BlankBackground);
         }
 
@@ -286,7 +288,7 @@ namespace Unity.ClusterDisplay.Graphics
 
                 // Perform the warping
                 m_WarpMaterialProperties.GetOrCreate(index, out var prop);
-                prop.SetTexture(ShaderIDs._MainTex, mainRenderTarget);
+                prop.SetTexture(GraphicsUtil.ShaderIDs._MainTex, mainRenderTarget);
                 prop.SetMatrix(ShaderIDs._CameraTransform, cameraOverrides.worldToCamera);
                 prop.SetMatrix(ShaderIDs._CameraProjection, cameraOverrides.projection);
 
@@ -310,12 +312,12 @@ namespace Unity.ClusterDisplay.Graphics
                     // is specified, it will be rendered by any active camera. When Cluster Renderer
                     // is enabled, the only "active" camera should be the SceneView.
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
-                    previewMatProp.SetTexture(ShaderIDs._MainTex, m_RenderTargets[index]);
+                    previewMatProp.SetTexture(GraphicsUtil.ShaderIDs._MainTex, m_RenderTargets[index]);
                     var meshData = m_ProjectionSurfaces[index];
                     var localToWorld = meshData.MeshRenderer.localToWorldMatrix;
                     UnityEngine.Graphics.DrawMesh(m_Meshes[meshData],
                         localToWorld,
-                        m_PreviewMaterial,
+                        GraphicsUtil.GetPreviewMaterial(),
                         ClusterRenderer.VirtualObjectLayer,
                         camera: null,
                         submeshIndex: 0,

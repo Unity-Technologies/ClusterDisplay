@@ -40,19 +40,25 @@ namespace Unity.ClusterDisplay.Graphics
 
         public static readonly Vector4 k_IdentityScaleBias = new Vector4(1, 1, 0, 0);
 
-        static class ShaderIDs
+        internal static class ShaderIDs
         {
+            public static readonly int _MainTex = Shader.PropertyToID("_MainTex");
             public static readonly int _BlitTexture = Shader.PropertyToID("_BlitTexture");
             public static readonly int _BlitScaleBias = Shader.PropertyToID("_BlitScaleBias");
             public static readonly int _BlitScaleBiasRt = Shader.PropertyToID("_BlitScaleBiasRt");
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
 
+        // Material for performing the cluster present
         [AlwaysIncludeShader]
         public const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
 
+        // Material for drawing the warped renders onto the meshes for preview purposes
+        const string k_PreviewShaderName = "Hidden/ClusterDisplay/ProjectionPreview";
+
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
+        static Material s_PreviewMaterial;
 
         public static GraphicsFormat GetGraphicsFormat()
         {
@@ -86,6 +92,16 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             return s_BlitMaterial;
+        }
+
+        public static Material GetPreviewMaterial()
+        {
+            if (s_PreviewMaterial == null)
+            {
+                s_PreviewMaterial = CreateHiddenMaterial(k_PreviewShaderName);
+            }
+
+            return s_PreviewMaterial;
         }
 
         public static Material CreateHiddenMaterial(string shaderName)

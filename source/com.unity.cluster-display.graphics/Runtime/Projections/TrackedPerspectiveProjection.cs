@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Experimental.Rendering;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -20,17 +17,12 @@ namespace Unity.ClusterDisplay.Graphics
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
         BlitCommand m_BlitCommand;
 
-        readonly UnityEngine.Pool.ObjectPool<ProjectionPreview> m_PreviewPool =
-            new(
-                createFunc: ProjectionPreview.Create,
-                actionOnGet: p => p.gameObject.SetActive(true),
-                actionOnRelease: p => p.gameObject.SetActive(false),
-                actionOnDestroy: p => DestroyImmediate(p.gameObject)
-            );
-
-        readonly List<ProjectionPreview> m_ActivePreviews = new();
-
         public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
+
+        // Property blocks for preview materials
+        readonly Dictionary<int, MaterialPropertyBlock> m_PreviewMaterialProperties = new();
+
+        Mesh m_PlaneMesh;
 
         public bool SetSurface(ProjectionSurface surface, int index = -1)
         {
@@ -49,10 +41,13 @@ namespace Unity.ClusterDisplay.Graphics
             return false;
         }
 
-        public void OnDisable()
+        void OnEnable()
         {
-            ClearPreviews();
-            m_PreviewPool.Clear();
+            m_PlaneMesh = ProjectionSurface.CreateMesh();
+        }
+
+        void OnDisable()
+        {
             foreach (var rt in m_RenderTargets.Values)
             {
                 if (rt != null)
@@ -61,6 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
                 }
             }
             m_RenderTargets.Clear();
+            DestroyImmediate(m_PlaneMesh);
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
@@ -94,7 +90,6 @@ namespace Unity.ClusterDisplay.Graphics
                 customBlitMaterial,
                 GetCustomBlitMaterialPropertyBlocks(nodeIndex));
 
-            ClearPreviews();
             if (IsDebug)
             {
                 DrawPreview(clusterSettings);
@@ -111,15 +106,6 @@ namespace Unity.ClusterDisplay.Graphics
             GraphicsUtil.Blit(args.CommandBuffer, m_BlitCommand, args.FlipY);
         }
 
-        void ClearPreviews()
-        {
-            foreach (var preview in m_ActivePreviews)
-            {
-                m_PreviewPool.Release(preview);
-            }
-            m_ActivePreviews.Clear();
-        }
-
         void DrawPreview(ClusterRendererSettings clusterSettings)
         {
             for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
@@ -127,15 +113,17 @@ namespace Unity.ClusterDisplay.Graphics
                 if (m_RenderTargets.TryGetValue(index, out var rt))
                 {
                     var surface = m_ProjectionSurfaces[index];
-                    var preview = m_PreviewPool.Get();
-                    m_ActivePreviews.Add(preview);
+                    var localToWorldMatrix = Origin * Matrix4x4.TRS(surface.LocalPosition, surface.LocalRotation, surface.Scale);
+                    m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
+                    previewMatProp.SetTexture(GraphicsUtil.ShaderIDs._MainTex, m_RenderTargets[index]);
 
-                    preview.Draw(Origin.MultiplyPoint(surface.LocalPosition),
-                        Origin.rotation * surface.LocalRotation,
-                        surface.Scale,
-                        rt,
-                        surface.ScreenResolution,
-                        clusterSettings.OverScanInPixels);
+                    UnityEngine.Graphics.DrawMesh(m_PlaneMesh,
+                        localToWorldMatrix,
+                        GraphicsUtil.GetPreviewMaterial(),
+                        ClusterRenderer.VirtualObjectLayer,
+                        camera: null,
+                        submeshIndex: 0,
+                        previewMatProp);
                 }
             }
         }
@@ -157,7 +145,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void RemoveSurface(int index)
         {
-            ClearPreviews();
             m_ProjectionSurfaces.RemoveAt(index);
 
             if (m_RenderTargets.TryGetValue(index, out var rt))

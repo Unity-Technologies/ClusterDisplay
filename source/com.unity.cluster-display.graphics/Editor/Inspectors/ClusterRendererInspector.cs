@@ -14,7 +14,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
         const string k_NoPolicyMessage = "No projection policy assigned.";
-        const string k_ChangePolicyMessage = "Old projection policy settings will be lost. Continue?";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
@@ -111,7 +110,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         void OnSceneGUI()
         {
-            if (m_PolicyEditor != null)
+            if (m_PolicyEditor != null && m_PolicyEditor.target != null)
             {
                 m_PolicyEditor.OnSceneGUI();
             }

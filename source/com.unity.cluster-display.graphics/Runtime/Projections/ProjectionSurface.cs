@@ -35,17 +35,18 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         [SerializeField]
         public Quaternion LocalRotation;
-        
+
         /// <summary>
         /// Base (untransformed) vertices of a surface (i.e. unit size).
         /// </summary>
-        static readonly Vector3[] k_UnitPlaneVerts = {
+        static Vector3[] UnitPlaneVerts { get; } =
+        {
             new(0.5f, -0.5f, 0),
             new(-0.5f, -0.5f, 0),
             new(0.5f, 0.5f, 0),
             new(-0.5f, 0.5f, 0)
         };
-        
+
         /// <summary>
         /// Indices of 4 vertices that form a right-angled plane, in anti-clockwise
         /// order starting at the bottom-left.
@@ -53,12 +54,23 @@ namespace Unity.ClusterDisplay.Graphics
         /// <remarks>
         /// Given in the following order: [bottom-left, bottom-right, top-right, top-left].
         /// </remarks>
-        static readonly int[] k_UnitPlaneWinding = {0, 1, 3, 2};
-        
+        static int[] UnitPlaneWinding { get; } = {0, 1, 3, 2};
+
         /// <summary>
-        /// Indices used to draw the surface as a polygon.
+        /// Indices used to draw the surface as a triangular mesh.
         /// </summary>
-        static readonly int[] k_UnitPlaneDrawIndices = {0, 1, 3, 2, 0};
+        static int[] UnitPlaneTriangles { get; } = {0, 2, 1, 1, 2, 3};
+
+        /// <summary>
+        /// UVs of the planar mesh.
+        /// </summary>
+        static Vector2[] UnitPlaneUVs { get; } =
+        {
+            new(0, 0),
+            new(1, 0),
+            new(0, 1),
+            new(1, 1)
+        };
 
         /// <summary>
         /// Creates a planar projection surface defaults for size, orientation, and position.
@@ -75,6 +87,19 @@ namespace Unity.ClusterDisplay.Graphics
                 LocalPosition = Vector3.forward * 3f,
                 LocalRotation = Quaternion.Euler(0, 180, 0)
             };
+        }
+
+        /// <summary>
+        /// Creates a mesh representation of the unit plane.
+        /// </summary>
+        /// <returns></returns>
+        public static Mesh CreateMesh()
+        {
+            var mesh = new Mesh();
+            mesh.SetVertices(UnitPlaneVerts);
+            mesh.SetTriangles(UnitPlaneTriangles, 0);
+            mesh.SetUVs(0, UnitPlaneUVs);
+            return mesh;
         }
 
         /// <summary>
@@ -112,7 +137,7 @@ namespace Unity.ClusterDisplay.Graphics
         /// <summary>
         /// Indices used to draw the surface as a polygon.
         /// </summary>
-        internal int[] Indices => k_UnitPlaneDrawIndices;
+        static int[] Indices { get; } = {0, 1, 3, 2, 0};
 
         /// <summary>
         /// Get vertices in a world coordinate system.
@@ -121,14 +146,14 @@ namespace Unity.ClusterDisplay.Graphics
         /// <returns></returns>
         internal Vector3[] GetVertices(Matrix4x4 rootTransform)
         {
-            Debug.Assert(k_UnitPlaneVerts != null);
-            
+            Debug.Assert(UnitPlaneVerts != null);
+
             var surfaceTransform = rootTransform * Matrix4x4.TRS(LocalPosition, LocalRotation, Scale);
 
-            var vertsWorld = new Vector3[k_UnitPlaneVerts.Length];
-            for (var i = 0; i < k_UnitPlaneVerts.Length; i++)
+            var vertsWorld = new Vector3[UnitPlaneVerts.Length];
+            for (var i = 0; i < UnitPlaneVerts.Length; i++)
             {
-                vertsWorld[i] = surfaceTransform.MultiplyPoint(k_UnitPlaneVerts[i]);
+                vertsWorld[i] = surfaceTransform.MultiplyPoint(UnitPlaneVerts[i]);
             }
 
             return vertsWorld;
@@ -153,15 +178,15 @@ namespace Unity.ClusterDisplay.Graphics
         /// <returns></returns>
         internal FrustumPlane GetFrustumPlane(Matrix4x4 rootTransform)
         {
-            Debug.Assert(k_UnitPlaneVerts is {Length: >= 4});
-            
+            Debug.Assert(UnitPlaneVerts is {Length: >= 4});
+
             var surfaceTransform = rootTransform * Matrix4x4.TRS(LocalPosition, LocalRotation, Scale);
 
             return new FrustumPlane(
-                bottomLeft: k_UnitPlaneVerts[k_UnitPlaneWinding[0]],
-                bottomRight: k_UnitPlaneVerts[k_UnitPlaneWinding[1]],
-                topLeft: k_UnitPlaneVerts[k_UnitPlaneWinding[3]],
-                topRight: k_UnitPlaneVerts[k_UnitPlaneWinding[2]]
+                bottomLeft: UnitPlaneVerts[UnitPlaneWinding[0]],
+                bottomRight: UnitPlaneVerts[UnitPlaneWinding[1]],
+                topLeft: UnitPlaneVerts[UnitPlaneWinding[3]],
+                topRight: UnitPlaneVerts[UnitPlaneWinding[2]]
             ).ApplyTransform(surfaceTransform);
         }
 
