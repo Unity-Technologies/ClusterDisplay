@@ -174,6 +174,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                 throw new System.NullReferenceException($"Unable to retrieve NativeArray type parameter.");
             }
 
+            Debug.Log($"Type argument of native collection: \"{typeArgument.ToFullString()}\".");
             return GenerateMarshalSizeOfValueType(context.Compilation.GetSemanticModel(typeArgument.SyntaxTree).GetTypeInfo(typeSyntax, context.CancellationToken));
         }
 
@@ -198,12 +199,13 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
             if (typeInfo.Type.IsValueType)
             {
-                if (typeInfo.Type.ContainingNamespace.Name == "Unity.Collections" && typeInfo.Type.Name == "NativeArray")
+                Debug.Log($"Value type: \"{typeInfo.Type.Name}\", Namespace: \"{typeInfo.Type.ContainingNamespace.Name}\".");
+                if (typeInfo.Type.ContainingNamespace.Name == "Collections" && typeInfo.Type.Name == "NativeArray")
                 {
                     return (parameter, GenerateMarshalSizeOfNativeArray(context, parameter.Type), true);
                 }
 
-                return (parameter, GenerateMarshalSizeOfValueType(typeInfo), true);
+                return (parameter, GenerateMarshalSizeOfValueType(typeInfo), false);
             }
 
             else if (parameter.Type.IsKind(SyntaxKind.ArrayType))
@@ -365,14 +367,17 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                 var methodSymbolInfo = semanticModel.GetDeclaredSymbol(rpcs[mi]);
                 var attributeData = methodSymbolInfo.GetAttributes().FirstOrDefault(attribute => attribute.AttributeClass.Name == "ClusterRPC");
 
+                TypeDeclarationSyntax targetType = null;
+                string extensionClassName = null;
                 try
                 {
-                    var type = rpcs[mi].Parent as TypeDeclarationSyntax;
-                    string extensionClassName = $"{type.Identifier}Extensions";
+                    targetType = rpcs[mi].Parent as TypeDeclarationSyntax;
+                    extensionClassName = $"{targetType.Identifier}Extensions";
+
                     bool extensionClassExists = generatedExtensions.TryGetValue(extensionClassName, out var extensionClass);
                     if (!extensionClassExists)
                     {
-                        extensionClass = (type, SyntaxFactory.ClassDeclaration(
+                        extensionClass = (targetType, SyntaxFactory.ClassDeclaration(
                             attributeLists: SyntaxFactory.List<AttributeListSyntax>(),
                             modifiers: SyntaxFactory.TokenList(
                                 SyntaxFactory.Token(SyntaxKind.PublicKeyword),
@@ -398,7 +403,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
                                     SyntaxFactory.Parameter(
                                         attributeLists: SyntaxFactory.List<AttributeListSyntax>(),
                                         modifiers: SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ThisKeyword)),
-                                        type: SyntaxFactory.ParseTypeName(type.Identifier.ToString()),
+                                        type: SyntaxFactory.ParseTypeName(targetType.Identifier.ToString()),
                                         identifier: SyntaxFactory.ParseToken("instance"),
                                         @default: null)
                                 })).AddParameters(rpcs[mi].ParameterList.Parameters.ToArray()),
@@ -426,7 +431,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
                 catch (System.Exception exception)
                 {
-                    Debug.LogException(exception);
+                    Debug.LogError($"Unable to extend class: \"{targetType.Identifier}\", the following exception occurred:\n{exception}");
                     continue;
                 }
 
@@ -434,7 +439,10 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
             foreach (var generated in generatedExtensions)
             {
+                if (!generated.Key.Contains("Hello"))
+                    continue;
                 var compilationUnitRoot = generated.Value.targetType.SyntaxTree.GetCompilationUnitRoot(context.CancellationToken);
+                
                 var compilationUnit = SyntaxFactory.CompilationUnit(
                     compilationUnitRoot.Externs,
                     compilationUnitRoot.Usings.AddRange(new[]
@@ -459,7 +467,7 @@ namespace Unity.ClusterDisplay.Editor.SourceGenerators
 
                 var generatedCode = compilationUnit.NormalizeWhitespace().GetText(encoding: Encoding.UTF8);
                 Debug.Log($"Generated extension class for type: \"{generated.Value.targetType.Identifier}\n{generatedCode}");
-                context.AddSource($"{generated.Value.targetType.Identifier}.Generated", generatedCode);
+                // context.AddSource($"{generated.Value.targetType.Identifier}.Generated", generatedCode);
             }
         }
 

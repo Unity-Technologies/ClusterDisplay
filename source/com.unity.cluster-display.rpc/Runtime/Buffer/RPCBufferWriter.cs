@@ -64,9 +64,11 @@ namespace Unity.ClusterDisplay.RPC
             {
                 UnsafeUtility.MemCpy((byte*)buffer.GetUnsafePtr(), rpcBuffer.GetUnsafePtr(), rpcBufferSize);
                 int bufferLength = (int)rpcBufferSize;
+                rpcBufferSize = 0;
                 return bufferLength;
             }
 
+            rpcBufferSize = 0;
             return 0;
         }
 
