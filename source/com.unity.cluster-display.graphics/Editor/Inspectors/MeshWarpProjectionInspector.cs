@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         SerializedProperty m_IsDebugProp;
         SerializedProperty m_NodeIndexProp;
-        SerializedProperty m_MeshesProp;
+        SerializedProperty m_SurfacesProp;
         SerializedProperty m_OuterViewPositionProp;
         SerializedProperty m_CubemapSizeProp;
         SerializedProperty m_BackgroundColorProp;
@@ -49,7 +49,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
             m_NodeIndexProp = serializedObject.FindProperty("m_NodeIndexOverride");
-            m_MeshesProp = serializedObject.FindProperty("m_Meshes");
+            m_SurfacesProp = serializedObject.FindProperty("m_ProjectionSurfaces");
             m_OuterViewPositionProp = serializedObject.FindProperty("m_OuterViewPosition");
             m_CubemapSizeProp = serializedObject.FindProperty("m_OuterFrustumCubemapSize");
             m_BackgroundColorProp = serializedObject.FindProperty("m_BackgroundColor");
@@ -102,7 +102,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 }
             }
 
-            EditorGUILayout.PropertyField(m_MeshesProp);
+            EditorGUILayout.PropertyField(m_SurfacesProp);
 
             serializedObject.ApplyModifiedProperties();
         }
