@@ -18,6 +18,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_PresentClearColorProp;
         SerializedProperty m_ViewportSectionProp;
         SerializedProperty m_ScaleBiasProp;
+#if CLUSTER_DISPLAY_HDRP
+        SerializedProperty m_ForceClearHistoryProp;
+#endif
 
         public void OnEnable()
         {
@@ -32,6 +35,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_DebugViewportProp = serializedObject.FindProperty("m_DebugSettings.UseDebugViewportSubsection");
             m_ViewportSectionProp = serializedObject.FindProperty("m_DebugSettings.ViewportSubsection");
             m_ScaleBiasProp = serializedObject.FindProperty("m_DebugSettings.ScaleBiasTextOffset");
+#if CLUSTER_DISPLAY_HDRP
+            m_ForceClearHistoryProp = serializedObject.FindProperty("m_DebugSettings.ForceClearHistory");
+#endif
         }
 
         public override void OnInspectorGUI()
@@ -63,6 +69,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             EditorGUILayout.PropertyField(m_LayoutProp);
             if ((LayoutMode) m_LayoutProp.intValue == LayoutMode.StandardStitcher)
             {
+#if CLUSTER_DISPLAY_HDRP
+                EditorGUILayout.HelpBox(Labels.GetMessage(Labels.MessageID.StandardStitcherWarning), MessageType.Warning);
+#endif
                 EditorGUILayout.PropertyField(m_PresentClearColorProp);
             }
 
@@ -86,6 +95,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     m_ViewportSectionProp.rectValue = viewportRect;
                 }
             }
+
+#if CLUSTER_DISPLAY_HDRP
+            EditorGUILayout.PropertyField(m_ForceClearHistoryProp, Labels.GetGUIContent(Labels.Field.ForceClearHistory));
+#endif
         }
     }
 }

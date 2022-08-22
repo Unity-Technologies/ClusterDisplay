@@ -193,6 +193,12 @@ namespace GfxQuadroSync
         return (status == NVAPI_OK) ? InitializeStatus::Success : InitializeStatus::Failed;
     }
 
+    bool PluginCSwapGroupClient::CanGetFrameCount(IUnknown* const pDevice)
+    {
+        NvU32 frameCount = 0;
+        return NvAPI_D3D1x_QueryFrameCount(pDevice, &frameCount) == NVAPI_OK;
+    }
+    
     void PluginCSwapGroupClient::Dispose(IUnknown* const pDevice,
                                          IDXGISwapChain* const pSwapChain)
     {

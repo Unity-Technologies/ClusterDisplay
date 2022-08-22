@@ -75,6 +75,10 @@ namespace Unity.ClusterDisplay.Graphics
         /// in order to observe tiled projection artefacts.
         /// </summary>
         public bool EnableKeyword;
+
+#if CLUSTER_DISPLAY_HDRP
+        public bool ForceClearHistory;
+#endif
     }
 
     [PopupItem("Tiled")]
@@ -115,9 +119,12 @@ namespace Unity.ClusterDisplay.Graphics
             // Debug data.
             public Rect DebugViewportSubsection;
             public bool UseDebugViewportSubsection;
+#if CLUSTER_DISPLAY_HDRP
+            public bool ForceClearHistory;
+#endif
         }
 
-        void OnDisable()
+        public override void OnDisable()
         {
             m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
@@ -165,7 +172,10 @@ namespace Unity.ClusterDisplay.Graphics
                 BlitParams = blitParams,
                 PostEffectsParams = postEffectsParams,
                 DebugViewportSubsection = m_DebugSettings.ViewportSubsection,
-                UseDebugViewportSubsection = IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardTile && m_DebugSettings.UseDebugViewportSubsection
+                UseDebugViewportSubsection = IsDebug && m_DebugSettings.LayoutMode == LayoutMode.StandardTile && m_DebugSettings.UseDebugViewportSubsection,
+#if CLUSTER_DISPLAY_HDRP
+                ForceClearHistory = m_DebugSettings.ForceClearHistory
+#endif
             };
 
             // Allocate tiles targets.
@@ -251,9 +261,14 @@ namespace Unity.ClusterDisplay.Graphics
             ref TileProjectionContext tileProjectionContext,
             List<BlitCommand> commands)
         {
-            using var cameraScope = CameraScopeFactory.Create(
-                camera,
-                RenderFeature.AsymmetricProjectionAndScreenCoordOverride);
+            var renderFeatures = RenderFeature.AsymmetricProjectionAndScreenCoordOverride;
+#if CLUSTER_DISPLAY_HDRP
+            if (tileProjectionContext.ForceClearHistory)
+            {
+                renderFeatures |= RenderFeature.ClearHistory;
+            }
+#endif
+            using var cameraScope = CameraScopeFactory.Create(camera, renderFeatures);
 
             for (var tileIndex = 0; tileIndex != tileProjectionContext.NumTiles; ++tileIndex)
             {

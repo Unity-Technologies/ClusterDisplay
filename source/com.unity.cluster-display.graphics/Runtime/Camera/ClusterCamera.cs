@@ -35,8 +35,8 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
 #endif
-        bool m_ShouldRestore;
-        
+        bool m_RendererEnabled;
+
         void Update()
         {
             if (m_Camera.enabled && ClusterRenderer.IsActive())
@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
 #endif
-            
+
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
             ClusterCameraManager.Instance.Register(m_Camera);
@@ -69,7 +69,7 @@ namespace Unity.ClusterDisplay.Graphics
             ClusterCameraManager.Instance.Unregister(m_Camera);
             ClusterRenderer.Enabled -= OnRendererEnabled;
             ClusterRenderer.Disabled -= OnRendererDisabled;
-            
+
             // In case the renderer is still active;
             if (ClusterRenderer.IsActive())
             {
@@ -80,7 +80,14 @@ namespace Unity.ClusterDisplay.Graphics
         void OnRendererEnabled()
         {
             Assert.IsNotNull(m_Camera);
-            Assert.IsFalse(m_ShouldRestore);
+            if (m_RendererEnabled)
+            {
+                // It is entirely possible that OnRendererEnabled has already been called.  This can happen if OnEnable
+                // of the ClusterCamera is called before OnEnable of ClusterRenderer.  We get called twice because even
+                // if OnEnable of the ClusterRenderer hasn't been called yet, isActiveAndEnabled is returning true and
+                // so ClusterCamera.OnEnable called this method.
+                return;
+            }
 
             // Save camera state.
             m_CameraState = new CameraState
@@ -91,8 +98,8 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
             };
 
-            m_ShouldRestore = true;
-            
+            m_RendererEnabled = true;
+
             m_Camera.enabled = false;
 #if CLUSTER_DISPLAY_HDRP
             // Since we will render this camera procedurally rendered,
@@ -103,16 +110,16 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnRendererDisabled()
         {
-            Assert.IsTrue(m_ShouldRestore);
-            
+            Assert.IsTrue(m_RendererEnabled);
+
             // TODO What if the user alters the camera state between Enable() and here?
             // Restore camera state.
             m_Camera.enabled = m_CameraState.Enabled;
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
 #endif
-            
-            m_ShouldRestore = false;
+
+            m_RendererEnabled = false;
         }
     }
 

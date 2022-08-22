@@ -3,7 +3,7 @@ Shader "Hidden/ClusterDisplay/Samples/URP/Vignette"
     SubShader
     {
         // See https://forum.unity.com/threads/package-requirements-in-shaderlab.1108832/
-        PackageRequirements { "com.unity.render-pipelines.universal" : "14.0.0" }
+        PackageRequirements { "com.unity.render-pipelines.universal" : "14.0.3" }
 
         Pass
         {
@@ -12,15 +12,16 @@ Shader "Hidden/ClusterDisplay/Samples/URP/Vignette"
             Cull Off
 
             HLSLPROGRAM
-            #pragma vertex FullscreenVert
+            #pragma vertex Vert
             #pragma fragment Fragment
-            
+
             // Note the multi-compile statement necessary to toggle Cluster Display related shader features.
             #pragma multi_compile_fragment _ SCREEN_COORD_OVERRIDE
 
             // This file provides Cluster Display related shader features.
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ScreenCoordOverride.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/Utils/Fullscreen.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             TEXTURE2D_X(_SourceTex);
             SAMPLER(sampler_SourceTex);
@@ -31,11 +32,11 @@ Shader "Hidden/ClusterDisplay/Samples/URP/Vignette"
             half4 Fragment (Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                
-                half4 baseColor = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_SourceTex, input.uv);
+
+                half4 baseColor = SAMPLE_TEXTURE2D_X(_SourceTex, sampler_SourceTex, input.texcoord);
 
                 // Transform UVs to Cluster Space to evaluate the vignette.
-                float2 transformedUV = SCREEN_COORD_APPLY_SCALEBIAS(input.uv);
+                float2 transformedUV = SCREEN_COORD_APPLY_SCALEBIAS(input.texcoord);
 
                 float2 dist = abs(transformedUV - float2(0.5, 0.5)) * 2 * _Intensity;
 

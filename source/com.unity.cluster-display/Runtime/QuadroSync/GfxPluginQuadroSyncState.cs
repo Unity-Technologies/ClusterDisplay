@@ -12,55 +12,59 @@ namespace Unity.ClusterDisplay
         /// </summary>
         NotInitialized = 0,
         /// <summary>
+        /// QuadroSync is initialized but still waiting from feedback from Quadro-Sync master.
+        /// </summary>
+        WaitingFeedbackFromQuadroSyncMaster = 1,
+        /// <summary>
         /// QuadroSync is initialized and should be usable.
         /// </summary>
-        Initialized = 1,
+        Initialized = 2,
         /// <summary>
         /// Initialization failed because the received Unity interfaces was null.
         /// </summary>
-        FailedUnityInterfacesNull = 2,
+        FailedUnityInterfacesNull = 3,
         /// <summary>
         /// Initialization failed because of an unsupported graphic api.
         /// </summary>
-        UnsupportedGraphicApi = 3,
+        UnsupportedGraphicApi = 4,
         /// <summary>
         /// Failed to get the ID3D[11|12]Device.
         /// </summary>
-        MissingDevice = 4,
+        MissingDevice = 5,
         /// <summary>
         /// Failed to get the IDXGISwapChain.
         /// </summary>
-        MissingSwapChain = 5,
+        MissingSwapChain = 6,
         /// <summary>
         /// Initialization failed because of a generic error when trying to setup swap chain or barrier for QuadroSync.
         /// </summary>
-        SwapChainOrBarrierGenericFailure = 6,
+        SwapChainOrBarrierGenericFailure = 7,
         /// <summary>
         /// Initialization failed because no swap group support was detect.  Is the hardware present?
         /// </summary>
-        NoSwapGroupDetected = 7,
+        NoSwapGroupDetected = 8,
         /// <summary>
         /// Initialization failed because of a problem querying information about swap groups.
         /// </summary>
-        QuerySwapGroupFailed = 8,
+        QuerySwapGroupFailed = 9,
         /// <summary>
         /// Initialization failed because there was a failure joining the swap group.
         /// </summary>
-        FailedToJoinSwapGroup = 9,
+        FailedToJoinSwapGroup = 10,
         /// <summary>
         /// Initialization failed because a mismatch was detected between the swap group identifier and the available
         /// swap groups.
         /// </summary>
-        SwapGroupMismatch = 10,
+        SwapGroupMismatch = 11,
         /// <summary>
         /// Initialization failed because there was a failure joining the swap barrier.
         /// </summary>
-        FailedToBindSwapBarrier = 11,
+        FailedToBindSwapBarrier = 12,
         /// <summary>
         /// Initialization failed because a mismatch was detected between the swap barrier identifier and the available
         /// swap barriers.
         /// </summary>
-        SwapBarrierIdMismatch = 12,
+        SwapBarrierIdMismatch = 13,
     }
 
     public static class GfxPluginQuadroSyncInitializationStateExtension
@@ -75,6 +79,7 @@ namespace Unity.ClusterDisplay
             enumValue switch
             {
                 GfxPluginQuadroSyncInitializationState.NotInitialized => "Not initialized",
+                GfxPluginQuadroSyncInitializationState.WaitingFeedbackFromQuadroSyncMaster => "Waiting for Quadro Sync master",
                 GfxPluginQuadroSyncInitializationState.Initialized => "Initialized",
                 GfxPluginQuadroSyncInitializationState.FailedUnityInterfacesNull => "Unity interfaces null",
                 GfxPluginQuadroSyncInitializationState.UnsupportedGraphicApi => "Unsupported graphic api",

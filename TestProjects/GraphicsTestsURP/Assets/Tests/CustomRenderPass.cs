@@ -36,9 +36,9 @@ public class CustomRenderPass : ScriptableRenderPass
 
         cmd.GetTemporaryRT(ShaderProperties._TempTex, descriptor);
         cmd.SetRenderTarget(ShaderProperties._TempTex);
-        cmd.SetGlobalTexture(ShaderProperties._SourceTex, target);
-        cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
-        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_Material, 0, 0);
+
+        Blitter.BlitTexture(cmd, target, new Vector4(1, 1, 0, 0), m_Material, 0);
+
         cmd.Blit(ShaderProperties._TempTex, target);
         cmd.ReleaseTemporaryRT(ShaderProperties._TempTex);
 

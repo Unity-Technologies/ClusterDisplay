@@ -11,5 +11,7 @@ namespace Unity.ClusterDisplay.Graphics
             Vector4? screenCoordScaleBias = null,
             Vector3? position = null,
             Quaternion? rotation = null);
+
+        void RenderToCubemap(RenderTexture target, Vector3? position = null);
     }
 }

@@ -139,6 +139,10 @@ namespace Unity.ClusterDisplay.Graphics
             SceneView.RepaintAll();
 #endif
             Enabled.Invoke();
+            if (m_ProjectionPolicy)
+            {
+                m_ProjectionPolicy.OnEnable();
+            }
         }
 
         void Update()
@@ -157,6 +161,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
+            if (m_ProjectionPolicy)
+            {
+                m_ProjectionPolicy.OnDisable();
+            }
         }
 
         void OnPresent(PresentArgs args)

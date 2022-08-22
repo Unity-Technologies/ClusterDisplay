@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df95adf4eb1984d488c5ae4ae852f483, type: 3}
+  m_Name: VR_Room_2x2
+  m_EditorClassIdentifier: 
+  m_IsDebug: 0
+  m_NodeIndexOverride: 0
+  m_ProjectionSurfaces:
+  - Name: Screen 0
+    ScreenResolution: {x: 1920, y: 1080}
+    PhysicalSize: {x: 0.62, y: 0.33}
+    LocalPosition: {x: 0.31, y: 0.603, z: 0}
+    LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
+  - Name: Screen 1
+    ScreenResolution: {x: 1920, y: 1080}
+    PhysicalSize: {x: 0.62, y: 0.33}
+    LocalPosition: {x: 0.952, y: 0.603, z: 0}
+    LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
+  - Name: Screen 2
+    ScreenResolution: {x: 1920, y: 1080}
+    PhysicalSize: {x: 0.62, y: 0.33}
+    LocalPosition: {x: 0.31, y: 0.245, z: 0}
+    LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
+  - Name: Screen 3
+    ScreenResolution: {x: 1920, y: 1080}
+    PhysicalSize: {x: 0.62, y: 0.33}
+    LocalPosition: {x: 0.952, y: 0.245, z: 0}
+    LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}

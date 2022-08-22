@@ -1,10 +1,5 @@
 # Graphics
-Cluster display supports both URP (Universal Render Pipeline) and HDRP (High Definition Render Pipeline).
-
-Until our teams contributions are accepted into the trunk of [Unity's Graphics repository](https://github.com/Unity-Technologies/Graphics), you will be using a [branch](https://github.com/Unity-Technologies/Graphics/tree/cluster-display/etienne%2Fupgrade-test) of this repository.
-
-The repository for cluster display should already contain copies of these branched graphics packages and you can follow the following instructions to setup references to these packages in an existing project [here](setup-existing-project.md).
-
+Cluster Display supports both Universal Render Pipeline 14.0.3 (URP) and High Definition Render Pipeline 14.0.3 (HDRP). They can be installed from the Package Manager in Unity 2022.2 and newer.
 
 ## Cluster Display Renderer Features
 ### Overscan
@@ -22,12 +17,7 @@ Most features throughout both render pipelines are supported. However, there are
 ## HDRP
 
 * The following post processing effects are unsupported:
-    * Automatic camera exposure.
-    * Motion Blur
+    * Automatic camera exposure
     * Volumetric Clouds
-
-## URP
-* The following post processing effects are unsupported:
-    * Motion Blur
 
 Both HDRP and URP are large and complex. Therefore, if you discover additional broken features that you feel should be supported, contact us!

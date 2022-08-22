@@ -57,6 +57,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     m_CachedPolicyObject.OnDisable();
                 }
 
+                if (currentPolicy)
+                {
+                    currentPolicy.OnEnable();
+                }
                 m_CachedPolicyObject = currentPolicy;
             }
 

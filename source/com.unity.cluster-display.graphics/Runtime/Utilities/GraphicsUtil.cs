@@ -5,6 +5,31 @@ using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
+    /// <summary>
+    /// Add this to a class that uses an unreferenced shader.
+    /// </summary>
+    /// <remarks>
+    /// Mark fields/properties that give the name(s) of the required shader(s) with <see cref="AlwaysIncludeShaderAttribute"/>.
+    /// </remarks>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
+    class RequiresUnreferencedShaderAttribute : Attribute
+    {
+    }
+
+    /// <summary>
+    /// Marks the field or property to hold the value of an unreferenced shader, so it
+    /// gets included in the project's "Always included shaders" setting.
+    /// </summary>
+    /// <remarks>
+    /// The field or property must be <see langword="static"/>.
+    /// The enclosing type must have the <see cref="RequiresUnreferencedShaderAttribute"/> attribute.
+    /// </remarks>
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    class AlwaysIncludeShaderAttribute : Attribute
+    {
+    }
+
+    [RequiresUnreferencedShader]
     internal static class GraphicsUtil
     {
         // Will only be used for Legacy if we end up supporting it.
@@ -23,11 +48,13 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
         }
 
+        [AlwaysIncludeShader]
         public const string k_BlitShaderName = "Hidden/ClusterDisplay/Blit";
+
         static MaterialPropertyBlock s_PropertyBlock;
         static Material s_BlitMaterial;
 
-        static GraphicsFormat GetGraphicsFormat()
+        public static GraphicsFormat GetGraphicsFormat()
         {
             if (s_GraphicsFormat == GraphicsFormat.None)
             {
@@ -55,20 +82,25 @@ namespace Unity.ClusterDisplay.Graphics
         {
             if (s_BlitMaterial == null)
             {
-                var shader = Shader.Find(k_BlitShaderName);
-                if (shader == null)
-                {
-                    throw new InvalidOperationException($"Could not find shader \"{k_BlitShaderName}\", " +
-                        "make sure it has been added to the list of Always Included shaders");
-                }
-
-                s_BlitMaterial = new Material(shader)
-                {
-                    hideFlags = HideFlags.HideAndDontSave
-                };
+                s_BlitMaterial = CreateHiddenMaterial(k_BlitShaderName);
             }
 
             return s_BlitMaterial;
+        }
+
+        public static Material CreateHiddenMaterial(string shaderName)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                throw new InvalidOperationException($"Could not find shader \"{shaderName}\", " +
+                    "make sure it has been added to the list of Always Included shaders");
+            }
+
+            return new Material(shader)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
         }
 
         public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)
@@ -174,8 +206,25 @@ namespace Unity.ClusterDisplay.Graphics
 
             rt = null;
         }
-        
+
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
+
+        public static void SaveCubemapToFile(RenderTexture rt, string path)
+        {
+            var equirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
+            rt.ConvertToEquirect(equirect, Camera.MonoOrStereoscopicEye.Mono);
+
+            RenderTexture.active = equirect;
+            Texture2D tex = new Texture2D(equirect.width, equirect.height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, equirect.width, equirect.height), 0, 0);
+            RenderTexture.active = null;
+
+            byte[] bytes;
+            bytes = tex.EncodeToPNG();
+
+            System.IO.File.WriteAllBytes(path, bytes);
+            Debug.Log("Saved to " + path);
+        }
     }
 }

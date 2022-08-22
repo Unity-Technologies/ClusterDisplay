@@ -7,27 +7,17 @@
     Explanation here: [Editor Testing](./editor-testing.md)
 
 2. Navigate to your project's **Packages\manifest.json**.
-2. Add the cluster display packages:
+3. Add the cluster display packages:
     ```
         "com.unity.cluster-display": "file:{path to package}/source/com.unity.cluster-display",
         "com.unity.cluster-display.graphics": "file:{path to package}/source/com.unity.cluster-display.graphics",
         "com.unity.cluster-display.rpc": "file:{path to package}/source/com.unity.cluster-display.rpc",
         "com.unity.cluster-display.helpers": "file:{path to package}/source/com.unity.cluster-display.helpers",
     ```
-4. Add the following graphics package dependencies:
-    ```
-        "com.unity.render-pipelines.core": "file:{path to package}/com.unity.render-pipelines.core",
-        "com.unity.render-pipelines.high-definition-config": "file:{path to package}/com.unity.render-pipelines.high-definition-config",
-        "com.unity.shadergraph": "file:{path to package}/com.unity.shadergraph",
-        "com.unity.visualeffectgraph": "file:{path to package}/com.unity.visualeffectgraph",
-    ```
 5. Then add **ONE** of the following to import the custom branch of either URP **OR** HDRP:
     ```
-        "com.unity.render-pipelines.universal": "file:{path to package}/com.unity.render-pipelines.universal",
-        "com.unity.render-pipelines.high-definition": "file:{path to package}/com.unity.render-pipelines.high-definition",
-        "com.unity.render-pipelines.high-definition-config": "file:{path to package}/com.unity.render-pipelines.high-definition-config",
-        "com.unity.shadergraph": "file:{path to package}/com.unity.shadergraph",
-        "com.unity.visualeffectgraph": "file:{path to package}/com.unity.visualeffectgraph",
+        "com.unity.render-pipelines.universal": "14.0.3",
+        "com.unity.render-pipelines.high-definition": "14.0.3"
     ```
 6. Now add a reference to your project package:
     ```

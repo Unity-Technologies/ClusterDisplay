@@ -4,6 +4,7 @@
   - [QuadroSync is not Working](#quadrosync-is-not-working)
   - [I Need to Debug Something](#i-need-to-debug-something)
   - [Cluster Timesout After Period](#cluster-timesout-after-period)
+  - [Post-processing effects don't look right in the player when using Tiled Projection Policy](#post-processing-effects-dont-look-right-in-the-player-when-using-tiled-projection-policy)
 
 ## Screen is Black in URP
 You may need to perform the following:
@@ -33,3 +34,9 @@ Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the p
 Routers & switches periodically propagate membership query to all members of a multicast group. This is done to determine whether a multicast group should expire or not. Some enterprise routers and switches will NOT do this by default and automatically expire multicast group after a period of time essentially preventing nodes inside the cluster from communicating with each other.
 
 In order to resolve this, you will need to configure your [IGMP](https://en.wikipedia.org/wiki/Internet_Group_Management_Protocol) settings in your router/switch so it will not expire those multicast groups. These settings are different for every switch manufacturer, so you will need to search your hardware's manual and settings interface for these settings.
+
+## Post-processing effects don't look right in the player when using Tiled Projection Policy
+
+Certain post-processing effects, such as Vignette, Lens Distortion, and Chromatic Abberation, use "screen coord override" shader variants to account the cluster grid. Make sure that "Strip Screen Coord Override Variants" is disabled in your graphics settings.
+
+![](images/shader-stripping.png)

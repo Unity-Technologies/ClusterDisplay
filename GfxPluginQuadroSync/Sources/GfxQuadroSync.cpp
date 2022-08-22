@@ -26,22 +26,42 @@ namespace GfxQuadroSync
     enum class QuadroSyncInitializationStatus : uint32_t
     {
         NotInitialized = 0,
-        Initialized = 1,
-        FailedUnityInterfacesNull = 2,
-        UnsupportedGraphicApi = 3,
-        MissingDevice = 4,
-        MissingSwapChain = 5,
+        WaitingFeedbackFromQuadroSyncMaster = 1,
+        Initialized = 2,
+        FailedUnityInterfacesNull = 3,
+        UnsupportedGraphicApi = 4,
+        MissingDevice = 5,
+        MissingSwapChain = 6,
 
         // The following mirror PluginCSwapGroupClient::InitializeStatus
-        SwapChainOrBarrierGenericFailure = 6,
-        NoSwapGroupDetected = 7,
-        QuerySwapGroupFailed = 8,
-        FailedToJoinSwapGroup = 9,
-        SwapGroupMismatch = 10,
-        FailedToBindSwapBarrier = 11,
-        SwapBarrierIdMismatch = 12,
+        SwapChainOrBarrierGenericFailure = 7,
+        NoSwapGroupDetected = 8,
+        QuerySwapGroupFailed = 9,
+        FailedToJoinSwapGroup = 10,
+        SwapGroupMismatch = 11,
+        FailedToBindSwapBarrier = 12,
+        SwapBarrierIdMismatch = 13,
     };
     static std::atomic<QuadroSyncInitializationStatus> s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
+    static uint64_t s_FailedCanGetFrameCount = 0;
+    static uint64_t s_NextCanGetFrameCountCheckTick = 0;
+    static uint64_t s_PerformanceCounterFrequency = 0;
+    constexpr uint64_t NBR_CAN_GET_FRAME_COUNT_BEFORE_THROTTLE = 60; // This is one second at 60 fps...
+    constexpr uint64_t NBR_SECONDS_BETWEEN_CAN_GET_FRAME_COUNT = 1;  // Let's check every second once we are throttled...
+
+    uint64_t GetCurrentPerformanceCounterTick()
+    {
+        LARGE_INTEGER ret;
+        if (QueryPerformanceCounter(&ret))
+        {
+            return ret.QuadPart;
+        }
+        else
+        {
+            // I've never seen QueryPerformanceCounter fail, but let's play safe...
+            return 0;
+        }
+    }
 
     // Override the function defining the load of the plugin
     extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API
@@ -60,6 +80,12 @@ namespace GfxQuadroSync
                 // Run OnGraphicsDeviceEvent(initialize) manually on plugin load
                 // to not miss the event in case the graphics device is already initialized
                 OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
+            }
+
+            LARGE_INTEGER performanceCounterFrequency;
+            if (QueryPerformanceFrequency(&performanceCounterFrequency))
+            {
+                s_PerformanceCounterFrequency = performanceCounterFrequency.QuadPart;
             }
         }
         else
@@ -125,6 +151,41 @@ namespace GfxQuadroSync
         {
             if (!IsContextValid())
                 return false;
+
+            // Even if all the calls in initialize succeeded, it does not mean that the Quadro-Sync "cluster" is 
+            // correctly configured, connected, and everything is up and running.  There might be various things that 
+            // prevent it from properly communicating with the "Quadro-Sync master device".
+            if (s_InitializationStatus == QuadroSyncInitializationStatus::WaitingFeedbackFromQuadroSyncMaster)
+            {
+                // Based on Ian Williams (part of Quadro Sync team at Nvidia), NvAPI_D3D1x_QueryFrameCount can be quite
+                // slow.  So we want to avoid calling it constantly for nothing, so check it quickly when we start and
+                // then only check it every second...
+                if (s_FailedCanGetFrameCount < NBR_CAN_GET_FRAME_COUNT_BEFORE_THROTTLE ||
+                    GetCurrentPerformanceCounterTick() > s_NextCanGetFrameCountCheckTick)
+                {
+                    // So far, the only way I found to detect this is to try to get the frame count.  Based on tests it
+                    // fails if there is no reachable "Quadro-Sync master device".  I would love to have something more
+                    // direct but Quadro-Sync API is rather minimalist (maybe to much).
+                    if (s_SwapGroupClient.CanGetFrameCount(s_GraphicsDevice->GetDevice()))
+                    {
+                        CLUSTER_LOG << "Quadro Sync initialized (got feedback from Quadro-Sync master device)";
+                        s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
+                    }
+
+                    ++s_FailedCanGetFrameCount;
+                    if (s_FailedCanGetFrameCount >= NBR_CAN_GET_FRAME_COUNT_BEFORE_THROTTLE)
+                    {
+                        if (s_FailedCanGetFrameCount == NBR_CAN_GET_FRAME_COUNT_BEFORE_THROTTLE)
+                        {
+                            CLUSTER_LOG_WARNING << "Quadro Sync was not able to get feedback from Quadro-Sync master "
+                                << "device after " << NBR_CAN_GET_FRAME_COUNT_BEFORE_THROTTLE << " times.  Will now "
+                                << "check every " << NBR_SECONDS_BETWEEN_CAN_GET_FRAME_COUNT << " second(s).";
+                        }
+                        s_NextCanGetFrameCountCheckTick = GetCurrentPerformanceCounterTick() +
+                            NBR_SECONDS_BETWEEN_CAN_GET_FRAME_COUNT * s_PerformanceCounterFrequency;
+                    }
+                }
+            }
 
             return s_SwapGroupClient.Render(
                 s_GraphicsDevice->GetDevice(),
@@ -363,8 +424,8 @@ namespace GfxQuadroSync
         auto swapGroupClientInitializeStatus = s_SwapGroupClient.Initialize(s_GraphicsDevice->GetDevice(), s_GraphicsDevice->GetSwapChain());
         if (swapGroupClientInitializeStatus == PluginCSwapGroupClient::InitializeStatus::Success)
         {
-            s_InitializationStatus = QuadroSyncInitializationStatus::Initialized;
-            CLUSTER_LOG << "Quadro Sync initialized succeeded";
+            s_InitializationStatus = QuadroSyncInitializationStatus::WaitingFeedbackFromQuadroSyncMaster;
+            CLUSTER_LOG << "Quadro Sync initialized (but still waiting feedback from Quadro-Sync master device)";
         }
         else
         {
@@ -405,6 +466,8 @@ namespace GfxQuadroSync
         s_SwapGroupClient.DisposeWorkStation();
 
         s_InitializationStatus = QuadroSyncInitializationStatus::NotInitialized;
+        s_FailedCanGetFrameCount = 0;
+        s_NextCanGetFrameCountCheckTick = 0;
     }
 
     // Directly join or leave the Swap Group and Barrier

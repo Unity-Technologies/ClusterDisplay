@@ -71,6 +71,8 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             var height = m_ImageComparisonSettings.TargetHeight;
 
             GraphicsUtil.AllocateIfNeeded(ref m_ClusterCapture, width, height);
+            m_ClusterCapture.filterMode = FilterMode.Point;
+            m_ClusterCapture.wrapMode = TextureWrapMode.Repeat;
             m_ClusterCaptureTex2D = new Texture2D(width, height);
             
             // Enable ClusterRenderer to render the camera through cluster display pipeline.
