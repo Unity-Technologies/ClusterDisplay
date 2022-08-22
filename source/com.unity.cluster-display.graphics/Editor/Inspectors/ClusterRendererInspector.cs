@@ -70,6 +70,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     if (m_PolicyEditor != null)
                     {
                         DestroyImmediate(m_PolicyEditor);
+                        m_PolicyEditor = null;
                     }
 
                     currentPolicy =
@@ -82,7 +83,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 }
             }
 
-            if (currentPolicy != null && m_PolicyEditor == null)
+            if (currentPolicy == null)
+            {
+                DestroyImmediate(m_PolicyEditor);
+                m_PolicyEditor = null;
+            }
+            else if (m_PolicyEditor == null || m_PolicyEditor.target != currentPolicy)
             {
                 m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
             }
