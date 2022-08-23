@@ -129,7 +129,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 m_SelectedSurfaceIndex = index;
                 if (m_SelectedSurfaceIndex != previousSelection)
                 {
-                    Debug.Log($"Selected surface {index}");
                     SceneView.RepaintAll();
                 }
             }
