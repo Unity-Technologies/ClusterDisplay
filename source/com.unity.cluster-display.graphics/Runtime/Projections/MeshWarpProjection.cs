@@ -25,6 +25,8 @@ namespace Unity.ClusterDisplay.Graphics
         // Records the "enabled" state of the MeshRenderer so it can be disabled and restored
         // when performing the main render.
         public bool IsEnabled { get; set; }
+
+        public bool IsValid => m_MeshRenderer != null && m_ScreenResolution.IsValidResolution();
     }
 
     /// <summary>
@@ -159,19 +161,26 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
+        public IReadOnlyList<MeshProjectionSurface> ProjectionSurfaces => m_ProjectionSurfaces;
+
         void OnValidate()
         {
-            m_NodesToRender = IsDebug ? Enumerable.Range(0, m_ProjectionSurfaces.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
+            m_NodesToRender = IsDebug ? Enumerable.Range(0, ProjectionSurfaces.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
             m_FrustumGizmos.Clear();
 
             m_Meshes.Clear();
-            foreach (var surface in m_ProjectionSurfaces)
+            foreach (var surface in ProjectionSurfaces)
             {
                 if (surface.MeshRenderer != null && surface.MeshRenderer.TryGetComponent<MeshFilter>(out var filter))
                 {
                     m_Meshes.Add(surface, filter.sharedMesh);
                 }
             }
+        }
+
+        public void AddSurface()
+        {
+            m_ProjectionSurfaces.Add(new MeshProjectionSurface());
         }
 
         void OnEnable()
@@ -203,7 +212,7 @@ namespace Unity.ClusterDisplay.Graphics
         {
             var nodeIndex = GetEffectiveNodeIndex();
 
-            if (m_ProjectionSurfaces.Count == 0 || (!IsDebug && nodeIndex >= m_ProjectionSurfaces.Count)) return;
+            if (ProjectionSurfaces.Count == 0 || (!IsDebug && nodeIndex >= ProjectionSurfaces.Count)) return;
 
             if (!Application.isEditor)
             {
@@ -211,7 +220,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             // Hide the projection surfaces for performing the main render.
-            using var hideScope = new HideSurfacesScope(m_ProjectionSurfaces);
+            using var hideScope = new HideSurfacesScope(ProjectionSurfaces);
 
             if (m_RenderInnerOuterFrustum)
             {
@@ -226,7 +235,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             foreach (var index in m_NodesToRender)
             {
-                var meshData = m_ProjectionSurfaces[index];
+                var meshData = ProjectionSurfaces[index];
                 if (meshData.MeshRenderer == null)
                 {
                     continue;
@@ -234,10 +243,8 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var rendererEnabled = meshData.MeshRenderer.enabled;
                 meshData.MeshRenderer.enabled = false;
-                if (!meshData.MeshRenderer || meshData.ScreenResolution.sqrMagnitude == 0)
+                if (!meshData.IsValid)
                 {
-                    // TODO: provide this warning in the UI
-                    Debug.LogWarning("Malformed mesh description");
                     break;
                 }
 
@@ -308,12 +315,17 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 foreach (var index in m_NodesToRender)
                 {
+                    var meshData = ProjectionSurfaces[index];
+                    if (!meshData.IsValid)
+                    {
+                        continue;
+                    }
+
                     // Apply the warp result to the mesh for debug visualization. Since no camera
                     // is specified, it will be rendered by any active camera. When Cluster Renderer
                     // is enabled, the only "active" camera should be the SceneView.
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
                     previewMatProp.SetTexture(GraphicsUtil.ShaderIDs._MainTex, m_RenderTargets[index]);
-                    var meshData = m_ProjectionSurfaces[index];
                     var localToWorld = meshData.MeshRenderer.localToWorldMatrix;
                     UnityEngine.Graphics.DrawMesh(m_Meshes[meshData],
                         localToWorld,
@@ -334,7 +346,7 @@ namespace Unity.ClusterDisplay.Graphics
                 m_BlitCommand = new BlitCommand(
                     warpResult,
                     new BlitParams(
-                            m_ProjectionSurfaces[nodeIndex].ScreenResolution,
+                            ProjectionSurfaces[nodeIndex].ScreenResolution,
                             0, Vector2.zero)
                         .ScaleBias,
                     GraphicsUtil.k_IdentityScaleBias,
@@ -378,7 +390,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public override void Present(PresentArgs args)
         {
-            if (m_ProjectionSurfaces.Count == 0 || m_BlitCommand.texture == null)
+            if (ProjectionSurfaces.Count == 0 || m_BlitCommand.texture == null)
             {
                 return;
             }

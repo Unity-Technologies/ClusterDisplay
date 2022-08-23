@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -224,5 +225,8 @@ namespace Unity.ClusterDisplay.Graphics
             // Enable code below to dump the cubemap to disk and make debugging easier
             // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsValidResolution(this Vector2Int resolution) => resolution.x > 0 && resolution.y > 0;
     }
 }

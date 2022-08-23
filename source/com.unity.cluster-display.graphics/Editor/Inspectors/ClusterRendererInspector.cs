@@ -66,12 +66,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                         Undo.DestroyObjectImmediate(currentPolicy);
                     }
 
-                    if (m_PolicyEditor != null)
-                    {
-                        DestroyImmediate(m_PolicyEditor);
-                        m_PolicyEditor = null;
-                    }
-
                     currentPolicy =
                         (ProjectionPolicy)Undo.AddComponent(m_ClusterRenderer.gameObject,
                             k_ProjectionPolicyTypes[policyIndex]);
@@ -82,13 +76,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 }
             }
 
-            if (currentPolicy == null)
+            // Check that we're rendering the correct inspector for the active policy. The policy
+            // may have changed outside of OnInspectorGUI (e.g. undo system).
+            if (m_PolicyEditor == null || m_PolicyEditor.target != currentPolicy)
             {
                 DestroyImmediate(m_PolicyEditor);
-                m_PolicyEditor = null;
-            }
-            else if (m_PolicyEditor == null || m_PolicyEditor.target != currentPolicy)
-            {
                 m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
             }
 
