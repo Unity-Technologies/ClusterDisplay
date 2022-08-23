@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
     /// Defines a physical planar projection surface.
     /// </summary>
     [Serializable]
-    public struct ProjectionSurface : IEquatable<ProjectionSurface>
+    public struct PlanarProjectionSurface : IEquatable<PlanarProjectionSurface>
     {
         [SerializeField]
         public string Name;
@@ -77,9 +77,9 @@ namespace Unity.ClusterDisplay.Graphics
         /// </summary>
         /// <param name="name">Name of the surface.</param>
         /// <returns></returns>
-        public static ProjectionSurface Create(string name)
+        public static PlanarProjectionSurface Create(string name)
         {
-            return new ProjectionSurface
+            return new PlanarProjectionSurface
             {
                 Name = name,
                 ScreenResolution = new Vector2Int(1920, 1080),
@@ -190,7 +190,7 @@ namespace Unity.ClusterDisplay.Graphics
             ).ApplyTransform(surfaceTransform);
         }
 
-        public bool Equals(ProjectionSurface other)
+        public bool Equals(PlanarProjectionSurface other)
         {
             return Name == other.Name &&
                 ScreenResolution.Equals(other.ScreenResolution) &&
@@ -199,19 +199,19 @@ namespace Unity.ClusterDisplay.Graphics
                 LocalRotation.Equals(other.LocalRotation);
         }
 
-        public static bool operator ==(ProjectionSurface left, ProjectionSurface right)
+        public static bool operator ==(PlanarProjectionSurface left, PlanarProjectionSurface right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(ProjectionSurface left, ProjectionSurface right)
+        public static bool operator !=(PlanarProjectionSurface left, PlanarProjectionSurface right)
         {
             return !left.Equals(right);
         }
 
         public override bool Equals(object obj)
         {
-            return obj is ProjectionSurface other && Equals(other);
+            return obj is PlanarProjectionSurface other && Equals(other);
         }
 
         public override int GetHashCode()

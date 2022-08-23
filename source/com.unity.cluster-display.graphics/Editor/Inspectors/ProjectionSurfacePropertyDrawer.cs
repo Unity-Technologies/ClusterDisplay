@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
-    [CustomPropertyDrawer(typeof(ProjectionSurface))]
+    [CustomPropertyDrawer(typeof(PlanarProjectionSurface))]
     class ProjectionSurfacePropertyDrawer : PropertyDrawer
     {
         public static float GetHeight(SerializedProperty property)
@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             return height;
         }
-        
+
         public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
         {
             var nameProp = property.FindPropertyRelative("Name");
@@ -29,7 +29,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             var position = new Rect(rect.x, rect.y + 2, rect.width, EditorGUIUtility.singleLineHeight);
             var lineHeight = EditorGUIUtility.singleLineHeight + 2;
-            
+
             using (new EditorGUI.IndentLevelScope())
             {
 

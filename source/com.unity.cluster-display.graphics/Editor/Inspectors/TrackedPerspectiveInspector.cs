@@ -100,7 +100,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
         }
 
-        static ProjectionSurface DoSurfaceHandles(ProjectionSurface surface, Matrix4x4 rootTransform)
+        static PlanarProjectionSurface DoSurfaceHandles(PlanarProjectionSurface surface, Matrix4x4 rootTransform)
         {
             var rotation = (rootTransform.rotation * surface.LocalRotation).normalized;
             var position = rootTransform.MultiplyPoint3x4(surface.LocalPosition);

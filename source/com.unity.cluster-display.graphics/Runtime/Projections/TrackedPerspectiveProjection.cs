@@ -12,19 +12,19 @@ namespace Unity.ClusterDisplay.Graphics
         const string k_SurfaceIconName = "d_BuildSettings.Standalone.Small";
 
         [SerializeField]
-        List<ProjectionSurface> m_ProjectionSurfaces = new();
+        List<PlanarProjectionSurface> m_ProjectionSurfaces = new();
 
         readonly Dictionary<int, RenderTexture> m_RenderTargets = new();
         BlitCommand m_BlitCommand;
 
-        public IReadOnlyList<ProjectionSurface> Surfaces => m_ProjectionSurfaces;
+        public IReadOnlyList<PlanarProjectionSurface> Surfaces => m_ProjectionSurfaces;
 
         // Property blocks for preview materials
         readonly Dictionary<int, MaterialPropertyBlock> m_PreviewMaterialProperties = new();
 
         Mesh m_PlaneMesh;
 
-        public bool SetSurface(ProjectionSurface surface, int index = -1)
+        public bool SetSurface(PlanarProjectionSurface surface, int index = -1)
         {
             if (index == -1)
             {
@@ -43,7 +43,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            m_PlaneMesh = ProjectionSurface.CreateMesh();
+            m_PlaneMesh = PlanarProjectionSurface.CreateMesh();
         }
 
         void OnDisable()
@@ -72,7 +72,7 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
                 {
-                    RenderSurface(index, clusterSettings, activeCamera);
+                    RenderSurface(index, clusterSettings, activeCamera, true);
                 }
             }
             else
@@ -140,7 +140,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         public void AddSurface()
         {
-            m_ProjectionSurfaces.Add(ProjectionSurface.Create($"Screen {m_ProjectionSurfaces.Count}"));
+            m_ProjectionSurfaces.Add(PlanarProjectionSurface.Create($"Screen {m_ProjectionSurfaces.Count}"));
         }
 
         public void RemoveSurface(int index)
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public void SetSurface(int index, ProjectionSurface surface)
+        public void SetSurface(int index, PlanarProjectionSurface surface)
         {
             Assert.IsTrue(index < m_ProjectionSurfaces.Count);
             m_ProjectionSurfaces[index] = surface;
@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay.Graphics
             return rt;
         }
 
-        void RenderSurface(int index, ClusterRendererSettings clusterSettings, Camera activeCamera)
+        void RenderSurface(int index, ClusterRendererSettings clusterSettings, Camera activeCamera, bool debug = false)
         {
             var surface = m_ProjectionSurfaces[index];
             var overscannedSize = surface.ScreenResolution + clusterSettings.OverScanInPixels * 2 * Vector2Int.one;
@@ -203,7 +203,12 @@ namespace Unity.ClusterDisplay.Graphics
                 surface.ScreenResolution,
                 clusterSettings.OverScanInPixels);
 
-            using var cameraScope = CameraScopeFactory.Create(activeCamera, RenderFeature.AsymmetricProjection);
+            var renderFeatures = RenderFeature.AsymmetricProjection;
+            if (debug)
+            {
+                renderFeatures |= RenderFeature.ClearHistory;
+            }
+            using var cameraScope = CameraScopeFactory.Create(activeCamera, renderFeatures);
 
             cameraScope.Render(GetRenderTexture(index, overscannedSize),
                 projectionMatrix,
@@ -211,7 +216,7 @@ namespace Unity.ClusterDisplay.Graphics
                 rotation: alignedRotation);
         }
 
-        static Vector3 ProjectPointToPlane(Vector3 pt, in ProjectionSurface.FrustumPlane plane)
+        static Vector3 ProjectPointToPlane(Vector3 pt, in PlanarProjectionSurface.FrustumPlane plane)
         {
             var normal = Vector3.Cross(plane.BottomRight - plane.BottomLeft,
                     plane.TopLeft - plane.BottomLeft)
@@ -221,7 +226,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         static Matrix4x4 GetProjectionMatrix(
             Matrix4x4 originalProjection,
-            in ProjectionSurface.FrustumPlane plane,
+            in PlanarProjectionSurface.FrustumPlane plane,
             Vector2Int resolution,
             int overScanInPixels)
         {
