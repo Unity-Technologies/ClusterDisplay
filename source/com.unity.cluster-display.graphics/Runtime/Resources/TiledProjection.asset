@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1933924b584769a45b617bf586c53a0b, type: 3}
   m_Name: TiledProjection
   m_EditorClassIdentifier: 
-  m_IsDebug: 0
+  m_IsDebug: 1
+  m_NodeIndexOverride: 0
   m_Settings:
-    GridSize: {x: 2, y: 1}
-    Bezel: {x: 0, y: 0}
-    PhysicalScreenSize: {x: 0, y: 0}
+    GridSize: {x: 2, y: 2}
+    Bezel: {x: 10, y: 15}
+    PhysicalScreenSize: {x: 1600, y: 900}
   m_DebugSettings:
     TileIndexOverride: 0
     UseDebugViewportSubsection: 1
@@ -30,3 +31,4 @@ MonoBehaviour:
     PresentClearColor: {r: 0, g: 0, b: 0, a: 0}
     ScaleBiasTextOffset: {x: 0, y: 0}
     EnableKeyword: 1
+    ForceClearHistory: 0

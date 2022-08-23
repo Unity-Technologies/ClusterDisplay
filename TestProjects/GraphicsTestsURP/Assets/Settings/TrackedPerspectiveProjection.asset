@@ -13,10 +13,10 @@ MonoBehaviour:
   m_Name: TrackedPerspectiveProjection
   m_EditorClassIdentifier: 
   m_IsDebug: 0
+  m_NodeIndexOverride: 0
   m_ProjectionSurfaces:
   - Name: Screen 0
     ScreenResolution: {x: 1920, y: 1080}
     PhysicalSize: {x: 25.605963, y: 25.605963}
     LocalPosition: {x: 0, y: 1, z: 16.25}
     LocalRotation: {x: -0.0000012516948, y: 1, z: 5.329059e-14, w: -0.00000004371138}
-  m_NodeIndexOverride: 0

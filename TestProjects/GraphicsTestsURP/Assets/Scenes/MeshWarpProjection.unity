@@ -566,6 +566,7 @@ GameObject:
   - component: {fileID: 567723788}
   - component: {fileID: 567723790}
   - component: {fileID: 567723791}
+  - component: {fileID: 567723792}
   m_Layer: 0
   m_Name: ClusterRenderer
   m_TagString: Untagged
@@ -587,7 +588,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Settings:
     m_OverscanInPixels: 0
-  m_ProjectionPolicy: {fileID: 11400000, guid: 5b15441d0954fdd4c920fe18ee26e134, type: 2}
+  m_ProjectionPolicy: {fileID: 567723792}
   m_DelayPresentByOneFrame: 0
 --- !u!4 &567723789
 Transform:
@@ -691,6 +692,29 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &567723792
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 567723786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78bca1c717056704ebc84ba657e18772, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsDebug: 0
+  m_NodeIndexOverride: 0
+  m_ProjectionSurfaces:
+  - m_MeshRenderer: {fileID: 716384789}
+    m_ScreenResolution: {x: 1920, y: 1080}
+  m_OuterViewPosition: {fileID: 0}
+  m_OuterFrustumCubemapSize: 512
+  m_BackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  m_StaticCubemap: {fileID: 0}
+  m_RenderInnerOuterFrustum: 0
+  m_OuterFrustumMode: 0
 --- !u!1 &583575040
 GameObject:
   m_ObjectHideFlags: 0
