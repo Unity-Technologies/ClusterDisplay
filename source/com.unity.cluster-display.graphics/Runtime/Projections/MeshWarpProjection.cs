@@ -268,10 +268,11 @@ namespace Unity.ClusterDisplay.Graphics
                 // FIXME: We currently need to disable the history if we're rendering per-frame cubemaps
                 // because this interferes with motion blur, TAA, and other temporal operations.
                 // One way to fix this is to render the cubemap from another camera.
-                var renderFeatureFlags = IsDebug ||
-                    m_RenderInnerOuterFrustum && m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap
-                        ? RenderFeature.ClearHistory
-                        : RenderFeature.None;
+                RenderFeature renderFeatureFlags = RenderFeature.AsymmetricProjection;
+                if (IsDebug || m_RenderInnerOuterFrustum && m_OuterFrustumMode == OuterFrustumMode.RealtimeCubemap)
+                {
+                    renderFeatureFlags |= RenderFeature.ClearHistory;
+                }
 
                 // Perform the main render.
                 // We only need to do this if the mesh is visible to the main render.

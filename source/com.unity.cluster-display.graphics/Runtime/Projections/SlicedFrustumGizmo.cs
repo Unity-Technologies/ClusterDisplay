@@ -48,9 +48,6 @@ namespace Unity.ClusterDisplay.Graphics
             if (m_GridSize.x < 1 || m_GridSize.y < 1)
                 return;
 
-            var camera = Camera.current;
-            if (camera == null)
-                return;
 
             // lazy mesh instanciation
             if (m_Mesh == null)
@@ -110,10 +107,10 @@ namespace Unity.ClusterDisplay.Graphics
 
             // Append vertices
             // - front
-            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMin, 0)));
-            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMin, 0)));
-            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMax, 0)));
-            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMax, 0)));
+            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMin, -1)));
+            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMin, -1)));
+            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMax, viewportSection.yMax, -1)));
+            vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMax, -1)));
 
             // - back
             vertices.Add(viewProjectionInverse.MultiplyPoint(new Vector3(viewportSection.xMin, viewportSection.yMin, 1)));
