@@ -70,8 +70,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                         (ProjectionPolicy)Undo.AddComponent(m_ClusterRenderer.gameObject,
                             k_ProjectionPolicyTypes[policyIndex]);
 
-                    currentPolicy.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
-
                     m_PolicyProp.objectReferenceValue = currentPolicy;
                 }
             }
@@ -81,7 +79,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             if (m_PolicyEditor == null || m_PolicyEditor.target != currentPolicy)
             {
                 DestroyImmediate(m_PolicyEditor);
-                m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                if (currentPolicy is not null)
+                {
+                    currentPolicy.hideFlags = HideFlags.HideInInspector;
+                    m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                }
             }
 
             EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
