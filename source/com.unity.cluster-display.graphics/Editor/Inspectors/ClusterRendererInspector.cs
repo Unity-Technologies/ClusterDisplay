@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_OverscanProp;
         SerializedProperty m_DelayPresentByOneFrameProp;
 
-        NestedInspector m_PolicyEditor;
+        UnityEditor.Editor m_PolicyEditor;
 
         ClusterRenderer m_ClusterRenderer;
 
@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 if (currentPolicy is not null)
                 {
                     currentPolicy.hideFlags = HideFlags.HideInInspector;
-                    m_PolicyEditor = CreateEditor(currentPolicy) as NestedInspector;
+                    m_PolicyEditor = CreateEditor(currentPolicy);
                 }
             }
 
@@ -104,9 +104,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         void OnSceneGUI()
         {
-            if (m_PolicyEditor != null && m_PolicyEditor.target != null)
+            if (m_PolicyEditor != null && m_PolicyEditor.target != null &&
+                m_PolicyEditor is NestedInspector policyEditor)
             {
-                m_PolicyEditor.OnSceneGUI();
+                policyEditor.OnSceneGUI();
             }
         }
 
