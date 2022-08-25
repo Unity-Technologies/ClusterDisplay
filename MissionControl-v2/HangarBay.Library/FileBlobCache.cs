@@ -18,26 +18,26 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     /// <summary>
     /// Main class responsible for managing the files in the different storage folders.
     /// </summary>
-    public class CacheManager
+    public class FileBlobCache
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="logger">Object used to send logging messages.</param>
-        public CacheManager(ILogger logger)
+        public FileBlobCache(ILogger logger)
         {
             m_Logger = logger;
         }
 
         /// <summary>
-        /// Function called by CacheManager when asked to copy a file.
+        /// Function called by <see cref="FileBlobCache"/> when asked to copy a file.
         /// </summary>
         /// <remarks>Func first string is the path to the file to copy and the second one is the path to the
         /// destination.  Returns a <see cref="Task"/> that is to be completed when copy is finished.</remarks>
         public Func<string, string, Task> CopyFileCallback { get; set; } = (string _, string _) => Task.CompletedTask;
 
         /// <summary>
-        /// Function called by CacheManager when a file is to be fetched.
+        /// Function called by <see cref="FileBlobCache"/> when a file is to be fetched.
         /// </summary>
         /// <remarks>Func Guid is the fileblob identifier of the file to fetch and the string is the path of where to
         /// save that fetched content.  Returns a <see cref="Task"/> that is to be completed when fetch is completed.
@@ -177,7 +177,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 if (m_StorageFolders.ContainsKey(effectivePath))
                 {
                     throw new ArgumentException(nameof(config),
-                        $"CacheManager already contain a StorageFolder with the path {effectivePath}.");
+                        $"{nameof(FileBlobCache)} already contain a StorageFolder with the path {effectivePath}.");
                 }
 
                 // Load information about the folder
@@ -245,7 +245,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
                 {
                     throw new ArgumentException(nameof(config),
-                        $"CacheManager does not contain a StorageFolder with the path {config.Path}.");
+                        $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {config.Path}.");
                 }
 
                 storageFolderInfo.MaximumSize = config.MaximumSize;
@@ -298,7 +298,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
                     {
                         throw new ArgumentException(nameof(path),
-                            $"CacheManager does not contain a StorageFolder with the path {path}.");
+                            $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {path}.");
                     }
 
                     storageFolderInfo.MaximumSize = 0;
@@ -477,7 +477,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Computes the status of the storage folders in which the <see cref="CacheManager"/> stores cached files.
+        /// Computes the status of the storage folders in which the <see cref="FileBlobCache"/> stores cached files.
         /// </summary>
         /// <returns></returns>
         public StorageFolderStatus[] GetStorageFolderStatus()
@@ -679,7 +679,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         object m_Lock = new();
 
         /// <summary>
-        /// All the files managed by the CacheManager.
+        /// All the files managed by the <see cref="FileBlobCache"/>.
         /// </summary>
         /// <remarks>Including referenced files not yet present in any cache.</remarks>
         Dictionary<Guid, CacheFileInfo> m_Files = new();
