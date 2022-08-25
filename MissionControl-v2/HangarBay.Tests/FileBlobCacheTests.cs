@@ -21,9 +21,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [TearDown]
         public void TearDown()
         {
-            Assert.That(_loggerStub.Messages, Is.Empty);
+            Assert.That(m_LoggerStub.Messages, Is.Empty);
 
-            foreach (string folder in _storageFolders)
+            foreach (string folder in m_StorageFolders)
             {
                 try
                 {
@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public void IncDecUsageCountWOStorage()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
 
             var fileBlob1Id = Guid.NewGuid();
             var fileBlob1CompressedSize = Random.Shared.Next(1024, 1024 * 1024);
@@ -57,23 +57,23 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             fileBlobCache.DecreaseUsageCount(fileBlob1Id);
             fileBlobCache.DecreaseUsageCount(fileBlob1Id);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(0));
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(0));
             fileBlobCache.DecreaseUsageCount(fileBlob1Id);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(_loggerStub.Messages[0].Content.Contains(fileBlob1Id.ToString()), Is.True);
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
+            Assert.That(m_LoggerStub.Messages[0].Content.Contains(fileBlob1Id.ToString()), Is.True);
             fileBlobCache.DecreaseUsageCount(fileBlob2Id);
             fileBlobCache.DecreaseUsageCount(fileBlob2Id);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(1));
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
             fileBlobCache.DecreaseUsageCount(fileBlob2Id);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(2));
-            Assert.That(_loggerStub.Messages[1].Content.Contains(fileBlob2Id.ToString()), Is.True);
-            _loggerStub.Messages.Clear();
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(2));
+            Assert.That(m_LoggerStub.Messages[1].Content.Contains(fileBlob2Id.ToString()), Is.True);
+            m_LoggerStub.Messages.Clear();
         }
 
         [Test]
         public async Task SimpleCopyFile()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
 
             var storageFolderConfig = new StorageFolderConfig();
             storageFolderConfig.Path = GetNewStorageFolder();
@@ -122,7 +122,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task EvictWhenLowOnSpace()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -253,7 +253,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task FetchFail()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             bool fetchShouldSucceed = true;
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
@@ -308,7 +308,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task CopyFail()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -361,7 +361,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task SimultaneousCopyOfSameFileWaitingOnFetch()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             var fetchTCS = new TaskCompletionSource();
             int fetchCallCount = 0;
             fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
@@ -429,7 +429,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             completedFetchTCS[fileBlob1] = new TaskCompletionSource();
             completedFetchTCS[fileBlob2] = new TaskCompletionSource();
 
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCallCount = 0;
             fileBlobCache.FetchFileCallback = async (Guid fileBlobId, string cachePath) =>
                 {
@@ -498,7 +498,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public void AddStorageFolderErrors()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -530,7 +530,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task DeleteStorageFolder()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -575,7 +575,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task DeleteStorageFolderBlockWhileFileFetched()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             var fetchTCS = new TaskCompletionSource();
             fetchTCS.SetResult(); // We want the first ones to immediately proceed
             fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
@@ -641,7 +641,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task DeleteStorageFolderBlockWhileCopying()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -714,7 +714,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task UpdateStorageFolder()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -782,7 +782,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task CacheFull()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -823,7 +823,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task UseUnreferenced()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
@@ -853,11 +853,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             fileBlobCache.DecreaseUsageCount(fileBlob);
 
             // While at it, to decrease reference yet another time, it should generate a warning message.
-            Assert.That(_loggerStub.Messages, Is.Empty);
+            Assert.That(m_LoggerStub.Messages, Is.Empty);
             fileBlobCache.DecreaseUsageCount(fileBlob);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(_loggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            _loggerStub.Messages.Clear();
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
+            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
+            m_LoggerStub.Messages.Clear();
 
             // As a result we should get an exception when asking to copy that blob
             Assert.That(async () => await fileBlobCache.CopyFileToAsync(fileBlob, "C:\\Temp\\BlobB"),
@@ -884,7 +884,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task DecreaseUsageOfInUse()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
@@ -914,12 +914,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             });
 
             // Decrease usage while in use, should generate a warning and postpone work until not in use anymore
-            Assert.That(_loggerStub.Messages, Is.Empty);
+            Assert.That(m_LoggerStub.Messages, Is.Empty);
             fileBlobCache.DecreaseUsageCount(fileBlob);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(_loggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(_loggerStub.Messages[0].Content.Contains(fileBlob.ToString()), Is.True);
-            _loggerStub.Messages.Clear();
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
+            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
+            Assert.That(m_LoggerStub.Messages[0].Content.Contains(fileBlob.ToString()), Is.True);
+            m_LoggerStub.Messages.Clear();
 
             await Task.Delay(50);
 
@@ -950,7 +950,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task SaveAndLoadStorageFolder()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
@@ -996,7 +996,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // Rebuild a new FileBlobCache from that saved content
             var oldFileBlobCache = fileBlobCache;
-            fileBlobCache = new FileBlobCache(_loggerStub);
+            fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = oldFileBlobCache.FetchFileCallback;
             fileBlobCache.CopyFileCallback = oldFileBlobCache.CopyFileCallback;
             oldFileBlobCache = null;
@@ -1033,7 +1033,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task SaveAndLoadStorageFolderWhileInUse()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             TaskCompletionSource fetchTCS = new();
             fetchTCS.SetResult();
@@ -1102,7 +1102,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // Rebuild a new FileBlobCache from that saved content
             var oldFileBlobCache = fileBlobCache;
-            fileBlobCache = new FileBlobCache(_loggerStub);
+            fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = oldFileBlobCache.FetchFileCallback;
             fileBlobCache.CopyFileCallback = oldFileBlobCache.CopyFileCallback;
             oldFileBlobCache = null;
@@ -1131,7 +1131,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task FileInTwoStoragesOnReload()
         {
             // Prepare first FileBlobCache with 2 files
-            var fileBlobCache1 = new FileBlobCache(_loggerStub);
+            var fileBlobCache1 = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             fileBlobCache1.FetchFileCallback = (Guid _, string cachePath) =>
                 {
@@ -1174,7 +1174,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             fileBlobCache1.PersistStorageFolderStates();
 
             // Prepare second FileBlobCache with again 2 files (one is the same as in the first one)
-            var fileBlobCache2 = new FileBlobCache(_loggerStub);
+            var fileBlobCache2 = new FileBlobCache(m_LoggerStub);
             fileBlobCache2.FetchFileCallback = fileBlobCache1.FetchFileCallback;
             fileBlobCache2.CopyFileCallback = fileBlobCache1.CopyFileCallback;
 
@@ -1205,7 +1205,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             fileBlobCache2.PersistStorageFolderStates();
 
             // Create a new FileBlobCache using both storage folders
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = fileBlobCache1.FetchFileCallback;
             fileBlobCache.CopyFileCallback = fileBlobCache1.CopyFileCallback;
 
@@ -1216,16 +1216,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             fileBlobCache.AddStorageFolder(folderAConfig);
             fileBlobCache.DecreaseUsageCount(fileBlob3);
-            Assert.That(_loggerStub.Messages, Is.Empty);
+            Assert.That(m_LoggerStub.Messages, Is.Empty);
             fileBlobCache.AddStorageFolder(folderBConfig);
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(2));
-            Assert.That(_loggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(_loggerStub.Messages[0].Content.Contains(fileBlob2.ToString()), Is.True);
-            Assert.That(_loggerStub.Messages[0].Content.Contains("found in both"), Is.True);
-            Assert.That(_loggerStub.Messages[1].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(_loggerStub.Messages[1].Content.Contains(fileBlob3.ToString()), Is.True);
-            Assert.That(_loggerStub.Messages[1].Content.Contains("found in both"), Is.True);
-            _loggerStub.Messages.Clear();
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(2));
+            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
+            Assert.That(m_LoggerStub.Messages[0].Content.Contains(fileBlob2.ToString()), Is.True);
+            Assert.That(m_LoggerStub.Messages[0].Content.Contains("found in both"), Is.True);
+            Assert.That(m_LoggerStub.Messages[1].Level, Is.EqualTo(LogLevel.Warning));
+            Assert.That(m_LoggerStub.Messages[1].Content.Contains(fileBlob3.ToString()), Is.True);
+            Assert.That(m_LoggerStub.Messages[1].Content.Contains("found in both"), Is.True);
+            m_LoggerStub.Messages.Clear();
 
             var copyTasks = new List<Task>();
             copyTasks.Add( fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1") );
@@ -1246,7 +1246,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task ReloadInSmaller()
         {
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
                 {
@@ -1290,7 +1290,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // Rebuild a new FileBlobCache from that saved content
             var oldFileBlobCache = fileBlobCache;
-            fileBlobCache = new FileBlobCache(_loggerStub);
+            fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = oldFileBlobCache.FetchFileCallback;
             fileBlobCache.CopyFileCallback = oldFileBlobCache.CopyFileCallback;
             oldFileBlobCache = null;
@@ -1313,7 +1313,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task DealingWithZombies()
         {
             // Create a cache with some content
-            var fileBlobCache = new FileBlobCache(_loggerStub);
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             List<string> fetchedFiles = new();
             fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
@@ -1359,7 +1359,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             });
 
             // Lock a file so that it cannot be deleted
-            Assert.That(_loggerStub.Messages, Is.Empty);
+            Assert.That(m_LoggerStub.Messages, Is.Empty);
             Guid fileBlob4 = Guid.NewGuid();
             using (var openedFile = File.Open(fetchedFiles[1], FileMode.Open))
             {
@@ -1367,10 +1367,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 fileBlobCache.IncreaseUsageCount(fileBlob4, 400, 10000);
                 await fileBlobCache.CopyFileToAsync(fileBlob4, "C:\\Temp\\Blob4");
             }
-            Assert.That(_loggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(_loggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(_loggerStub.Messages[0].Content.Contains(fileBlob2.ToString()), Is.True);
-            _loggerStub.Messages.Clear();
+            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
+            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
+            Assert.That(m_LoggerStub.Messages[0].Content.Contains(fileBlob2.ToString()), Is.True);
+            m_LoggerStub.Messages.Clear();
 
             CompareStatus(fileBlobCache, new[] {
                 new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 912, UnreferencedSize = 0,
@@ -1383,7 +1383,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Rebuild a new FileBlobCache from that saved content (will now get rid of zombies since the file is not
             // locked anymore).
             var oldFileBlobCache = fileBlobCache;
-            fileBlobCache = new FileBlobCache(_loggerStub);
+            fileBlobCache = new FileBlobCache(m_LoggerStub);
             fileBlobCache.FetchFileCallback = oldFileBlobCache.FetchFileCallback;
             fileBlobCache.CopyFileCallback = oldFileBlobCache.CopyFileCallback;
             oldFileBlobCache = null;
@@ -1402,7 +1402,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             {
                 folderPath = folderPath.ToLower();
             }
-            _storageFolders.Add(folderPath);
+            m_StorageFolders.Add(folderPath);
             return folderPath;
         }
 
@@ -1427,7 +1427,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
-        List<string> _storageFolders = new();
-        LoggerStub _loggerStub = new();
+        List<string> m_StorageFolders = new();
+        LoggerStub m_LoggerStub = new();
     }
 }

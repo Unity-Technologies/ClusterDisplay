@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     /// <summary>
     /// Main class responsible for managing the files in the different storage folders.
     /// </summary>
-    public class FileBlobCache
+    public class FileBlobCache: IFileBlobCache
     {
         /// <summary>
         /// Constructor
@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when a file is to be fetched.
         /// </summary>
-        /// <remarks>Func Guid is the fileblob identifier of the file to fetch and the string is the path of where to
+        /// <remarks>Func's Guid is the fileblob identifier of the file to fetch and the string is the path of where to
         /// save that fetched content.  Returns a <see cref="Task"/> that is to be completed when fetch is completed.
         /// </remarks>
         public Func<Guid, string, Task> FetchFileCallback { get; set; } = (Guid _, string _) => Task.CompletedTask;
@@ -186,9 +186,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 if (File.Exists(storageFolderMetadataJson))
                 {
                     StorageFolderInfo? deserialized;
-                    using (var createStream = File.Open(storageFolderMetadataJson, FileMode.Open))
+                    using (var loadStream = File.Open(storageFolderMetadataJson, FileMode.Open))
                     {
-                        deserialized = JsonSerializer.Deserialize<StorageFolderInfo>(createStream);
+                        deserialized = JsonSerializer.Deserialize<StorageFolderInfo>(loadStream);
                     }
                     if (deserialized == null)
                     {
@@ -267,8 +267,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         try
                         {
                             string storageFolderMetadataJson = Path.Combine(storageFolder.FullPath, "metadata.json");
-                            using FileStream createStream = File.Create(storageFolderMetadataJson);
-                            JsonSerializer.Serialize(createStream, storageFolder);
+                            using FileStream serializeStream = File.Create(storageFolderMetadataJson);
+                            JsonSerializer.Serialize(serializeStream, storageFolder);
                             storageFolder.NeedSaving = false;
                         }
                         catch (Exception e)
