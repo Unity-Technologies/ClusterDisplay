@@ -41,11 +41,6 @@ namespace Unity.ClusterDisplay.Graphics
             return false;
         }
 
-        void OnEnable()
-        {
-            m_PlaneMesh = PlanarProjectionSurface.CreateMesh();
-        }
-
         void OnDisable()
         {
             foreach (var rt in m_RenderTargets.Values)
@@ -108,6 +103,11 @@ namespace Unity.ClusterDisplay.Graphics
 
         void DrawPreview(ClusterRendererSettings clusterSettings)
         {
+            if (m_PlaneMesh == null)
+            {
+                m_PlaneMesh = PlanarProjectionSurface.CreateMesh();
+            }
+
             for (var index = 0; index < m_ProjectionSurfaces.Count; index++)
             {
                 if (m_RenderTargets.TryGetValue(index, out var rt))

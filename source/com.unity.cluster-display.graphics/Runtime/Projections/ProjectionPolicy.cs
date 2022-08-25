@@ -56,6 +56,15 @@ namespace Unity.ClusterDisplay.Graphics
             m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
         }
 
+        protected virtual void OnEnable()
+        {
+            if (!hideFlags.HasFlag(HideFlags.HideInInspector))
+            {
+                Debug.LogError("Projection policies cannot be created in the Inspector using \"Add Component\".");
+                DestroyImmediate(this);
+            }
+        }
+
         [SerializeField]
         int m_NodeIndexOverride;
 
