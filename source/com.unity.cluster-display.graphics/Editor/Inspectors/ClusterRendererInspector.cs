@@ -42,6 +42,23 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_DelayPresentByOneFrameProp = serializedObject.FindProperty("m_DelayPresentByOneFrame");
         }
 
+        /// <summary>
+        /// Helper function to let us change the projection policy on the undo stack.
+        /// </summary>
+        /// <param name="clusterRenderer"></param>
+        /// <param name="policyType"></param>
+        /// <param name="oldPolicy"></param>
+        internal static void SetProjectionPolicy(ClusterRenderer clusterRenderer, Type policyType)
+        {
+            if (clusterRenderer.ProjectionPolicy != null)
+            {
+                Undo.DestroyObjectImmediate(clusterRenderer.ProjectionPolicy);
+            }
+
+            clusterRenderer.ProjectionPolicy =
+                (ProjectionPolicy)Undo.AddComponent(clusterRenderer.gameObject, policyType);
+        }
+
         public override void OnInspectorGUI()
         {
 #if CLUSTER_DISPLAY_URP
@@ -61,16 +78,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
                 if (changeCheck.changed)
                 {
-                    if (currentPolicy != null)
-                    {
-                        Undo.DestroyObjectImmediate(currentPolicy);
-                    }
-
-                    currentPolicy =
-                        (ProjectionPolicy)Undo.AddComponent(m_ClusterRenderer.gameObject,
-                            k_ProjectionPolicyTypes[policyIndex]);
-
-                    m_PolicyProp.objectReferenceValue = currentPolicy;
+                    SetProjectionPolicy(m_ClusterRenderer, k_ProjectionPolicyTypes[policyIndex]);
+                    serializedObject.Update();
                 }
             }
 

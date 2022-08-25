@@ -125,14 +125,23 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             {
                 foreach (var surface in m_Projection.ProjectionSurfaces)
                 {
-                    m_SelectedRenderers.Add(surface.MeshRenderer.gameObject);
+                    if (surface.MeshRenderer != null)
+                    {
+                        m_SelectedRenderers.Add(surface.MeshRenderer.gameObject);
+                    }
                 }
             }
             else
             {
                 foreach (var index in m_SurfacesList.selectedIndices)
                 {
-                    m_SelectedRenderers.Add(m_Projection.ProjectionSurfaces[index].MeshRenderer.gameObject);
+                    if (index < 0 || index >= m_Projection.ProjectionSurfaces.Count) break;
+
+                    var renderer = m_Projection.ProjectionSurfaces[index].MeshRenderer;
+                    if (renderer != null)
+                    {
+                        m_SelectedRenderers.Add(renderer.gameObject);
+                    }
                 }
             }
             Handles.DrawOutline(m_SelectedRenderers, Color.green);

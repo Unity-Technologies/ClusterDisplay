@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_CustomBlitMaterialPropertyBlocks = materialPropertyBlocks;
         }
 
-        protected virtual void OnEnable()
+        protected virtual void Update()
         {
             if (!hideFlags.HasFlag(HideFlags.HideInInspector))
             {

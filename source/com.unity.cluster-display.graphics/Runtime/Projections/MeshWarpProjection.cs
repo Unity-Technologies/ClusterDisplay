@@ -183,7 +183,7 @@ namespace Unity.ClusterDisplay.Graphics
             m_ProjectionSurfaces.Add(new MeshProjectionSurface());
         }
 
-        protected override void OnEnable()
+        void OnEnable()
         {
             m_WarpMaterial = GraphicsUtil.CreateHiddenMaterial(k_WarpShaderName);
 
