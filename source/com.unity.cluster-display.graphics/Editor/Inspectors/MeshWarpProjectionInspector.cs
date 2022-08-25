@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -54,6 +55,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         ReorderableList m_SurfacesList;
 
         MeshWarpProjection m_Projection;
+        readonly List<GameObject> m_SelectedRenderers = new();
 
         void OnEnable()
         {
@@ -111,6 +113,29 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             Undo.RegisterCompleteObjectUndo(m_Projection, Contents.UndoCreateSurface);
             m_Projection.AddSurface();
+        }
+
+        public override void OnSceneGUI()
+        {
+            // Draw outlines around the projection surfaces (only works during the Repaint event).
+            if (Event.current.type != EventType.Repaint) return;
+
+            m_SelectedRenderers.Clear();
+            if (m_SurfacesList.selectedIndices.Count == 0)
+            {
+                foreach (var surface in m_Projection.ProjectionSurfaces)
+                {
+                    m_SelectedRenderers.Add(surface.MeshRenderer.gameObject);
+                }
+            }
+            else
+            {
+                foreach (var index in m_SurfacesList.selectedIndices)
+                {
+                    m_SelectedRenderers.Add(m_Projection.ProjectionSurfaces[index].MeshRenderer.gameObject);
+                }
+            }
+            Handles.DrawOutline(m_SelectedRenderers, Color.green);
         }
 
         public override void OnInspectorGUI()
