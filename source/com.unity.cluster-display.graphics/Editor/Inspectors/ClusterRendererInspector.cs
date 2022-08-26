@@ -14,6 +14,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
         const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
         const string k_NoPolicyMessage = "No projection policy assigned.";
+        const string k_UseInspector = "New projection policy assigned to the Cluster Renderer component. Use the " +
+                                      "Cluster Rendering inspector to modify it.";
+
+        const string k_MultipleDisallowed = "Multiple Projection Policies are not permitted.";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
@@ -57,6 +61,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             clusterRenderer.ProjectionPolicy =
                 (ProjectionPolicy)Undo.AddComponent(clusterRenderer.gameObject, policyType);
+
+            clusterRenderer.ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
         }
 
         public override void OnInspectorGUI()
@@ -64,6 +70,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 #if CLUSTER_DISPLAY_URP
             RenderFeatureEditorUtils<ClusterRenderer, InjectionPointRenderFeature>.OnInspectorGUI();
 #endif
+            DisallowMultiplePolicies();
             CheckForClusterCameraComponents();
 
             serializedObject.Update();
@@ -90,7 +97,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 DestroyImmediate(m_PolicyEditor);
                 if (currentPolicy is not null)
                 {
-                    currentPolicy.hideFlags = HideFlags.HideInInspector;
                     m_PolicyEditor = CreateEditor(currentPolicy);
                 }
             }
@@ -109,6 +115,28 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        void DisallowMultiplePolicies()
+        {
+            foreach (var projectionPolicy in m_ClusterRenderer.GetComponents<ProjectionPolicy>())
+            {
+                if (projectionPolicy == m_ClusterRenderer.ProjectionPolicy)
+                {
+                    projectionPolicy.hideFlags = HideFlags.HideInInspector;
+                    continue;
+                }
+
+                if (m_ClusterRenderer.ProjectionPolicy == null)
+                {
+                    m_ClusterRenderer.ProjectionPolicy = projectionPolicy;
+                    Debug.LogWarning(k_UseInspector);
+                    continue;
+                }
+
+                DestroyImmediate(projectionPolicy);
+                Debug.LogError(k_MultipleDisallowed);
+            }
         }
 
         void OnSceneGUI()

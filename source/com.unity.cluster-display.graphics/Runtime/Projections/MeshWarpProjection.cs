@@ -99,6 +99,7 @@ namespace Unity.ClusterDisplay.Graphics
         readonly Dictionary<int, SlicedFrustumGizmo> m_FrustumGizmos = new();
 
         // Material that takes a flat render and reprojects in onto a mesh surface
+        [SerializeField, HideInInspector]
         Material m_WarpMaterial;
 
         // Property blocks for the warp material
@@ -113,6 +114,7 @@ namespace Unity.ClusterDisplay.Graphics
         // RT holding the realtime cubemap
         RenderTexture m_OuterFrustumTarget;
 
+        [SerializeField, HideInInspector]
         // Hardcoded cubemap with a single white pixel on each face
         Cubemap m_BlankBackground;
 
@@ -185,16 +187,22 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            m_WarpMaterial = GraphicsUtil.CreateHiddenMaterial(k_WarpShaderName);
+            if (m_WarpMaterial == null)
+            {
+                m_WarpMaterial = new Material(Shader.Find(k_WarpShaderName));
+            }
 
-            m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), 0);
-            m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
-            m_BlankBackground.SetPixel(CubemapFace.NegativeY, 0, 0, Color.white);
-            m_BlankBackground.SetPixel(CubemapFace.NegativeZ, 0, 0, Color.white);
-            m_BlankBackground.SetPixel(CubemapFace.PositiveX, 0, 0, Color.white);
-            m_BlankBackground.SetPixel(CubemapFace.PositiveY, 0, 0, Color.white);
-            m_BlankBackground.SetPixel(CubemapFace.PositiveZ, 0, 0, Color.white);
-            m_BlankBackground.Apply();
+            if (m_BlankBackground == null)
+            {
+                m_BlankBackground = new Cubemap(1, GraphicsUtil.GetGraphicsFormat(), 0);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeX, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeY, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.NegativeZ, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveX, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveY, 0, 0, Color.white);
+                m_BlankBackground.SetPixel(CubemapFace.PositiveZ, 0, 0, Color.white);
+                m_BlankBackground.Apply();
+            }
         }
 
         public void OnDisable()
@@ -204,8 +212,6 @@ namespace Unity.ClusterDisplay.Graphics
 
             GraphicsUtil.DeallocateIfNeeded(ref m_OuterFrustumTarget);
 
-            DestroyImmediate(m_WarpMaterial);
-            DestroyImmediate(m_BlankBackground);
         }
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
