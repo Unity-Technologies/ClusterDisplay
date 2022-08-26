@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
@@ -30,5 +24,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// Number of bytes taken by the file content.
         /// </summary>
         public long Size { get; set; }
+
+        /// <summary>
+        /// Returns if the content referenced by this <see cref="PayloadFile"/> is the same as the given one.
+        /// </summary>
+        /// <param name="other">The other <see cref="PayloadFile"/>.</param>
+        public bool IsSameContent(PayloadFile other)
+        {
+            return FileBlob == other.FileBlob && CompressedSize == other.CompressedSize && Size == other.Size;
+        }
     }
 }

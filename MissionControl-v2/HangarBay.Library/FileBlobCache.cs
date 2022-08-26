@@ -1,16 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
@@ -30,19 +21,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Function called by <see cref="FileBlobCache"/> when asked to copy a file.
-        /// </summary>
-        /// <remarks>Func first string is the path to the file to copy and the second one is the path to the
-        /// destination.  Returns a <see cref="Task"/> that is to be completed when copy is finished.</remarks>
-        public Func<string, string, Task> CopyFileCallback { get; set; } = (string _, string _) => Task.CompletedTask;
-
-        /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when a file is to be fetched.
         /// </summary>
         /// <remarks>Func's Guid is the fileblob identifier of the file to fetch and the string is the path of where to
         /// save that fetched content.  Returns a <see cref="Task"/> that is to be completed when fetch is completed.
         /// </remarks>
         public Func<Guid, string, Task> FetchFileCallback { get; set; } = (Guid _, string _) => Task.CompletedTask;
+
+        /// <summary>
+        /// Function called by <see cref="FileBlobCache"/> when asked to copy a file.
+        /// </summary>
+        /// <remarks>Func first string is the path to the file to copy and the second one is the path to the
+        /// destination.  Returns a <see cref="Task"/> that is to be completed when copy is finished.</remarks>
+        public Func<string, string, Task> CopyFileCallback { get; set; } = (string _, string _) => Task.CompletedTask;
 
         /// <summary>
         /// Increase usage count of the file with the given file blob identifier.
