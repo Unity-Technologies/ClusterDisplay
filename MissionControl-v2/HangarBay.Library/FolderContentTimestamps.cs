@@ -1,5 +1,3 @@
-using System.IO;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -207,12 +205,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <returns>The string</returns>
         static string GetEntriesKey(string filePath, string basePath)
         {
-            var ret = Path.GetRelativePath(basePath, filePath);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                ret = ret.ToLower();
-            }
-            return ret;
+            return Path.GetRelativePath(basePath, filePath);
         }
 
         /// <summary>

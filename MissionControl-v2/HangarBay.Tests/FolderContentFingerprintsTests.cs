@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
@@ -138,11 +131,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         string GetNewStorageFolder()
         {
-            var folderPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                folderPath = folderPath.ToLower();
-            }
+            var folderPath = Path.Combine(Path.GetTempPath(), "FolderContentFingerprintsTests_" + Guid.NewGuid().ToString());
             m_StorageFolders.Add(folderPath);
             return folderPath;
         }

@@ -1,4 +1,4 @@
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
     /// Class used to specify the configuration of an Hangar Bay's folder where it stores the cached files.

@@ -1,6 +1,3 @@
-using System.IO;
-using System.Runtime.InteropServices;
-
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
@@ -31,10 +28,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
                 {
                     // Clean and simplify the path
                     string cleanedPath = Path.GetFullPath(file.Path, cleanRoot);
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        cleanedPath = cleanedPath.ToLower();
-                    }
 
                     // Get already existing files with the same cleaned path (and validate equivalent) or add a new one.
                     if (files.TryGetValue(cleanedPath, out var mergedFile))

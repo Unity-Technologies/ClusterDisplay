@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -171,6 +170,36 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         $"{nameof(FileBlobCache)} already contain a StorageFolder with the path {effectivePath}.");
                 }
 
+                // Testing for the folder being already added using m_StorageFolders.ContainsKey, however it is not
+                // bullet proof as there could be some symbolic links involved or different case on a case insensitive
+                // file system.  Detect it by creating a file in the folder.
+                if (Directory.Exists(effectivePath))
+                {
+                    string testFilename = Guid.NewGuid().ToString();
+                    string testPath = Path.Combine(effectivePath, testFilename);
+                    try
+                    {
+                        File.WriteAllText(testPath, testFilename);
+                        foreach (var storageFolder in m_StorageFolders.Values)
+                        {
+                            if (File.Exists(Path.Combine(storageFolder.FullPath, testFilename)))
+                            {
+                                throw new ArgumentException(nameof(config),
+                                    $"{nameof(FileBlobCache)} already contain a StorageFolder with the path " +
+                                    $"{storageFolder.FullPath} that is the equivalent to {config.Path}.");
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            File.Delete(testPath);
+                        }
+                        catch(Exception){ }
+                    }
+                }
+
                 // Load information about the folder
                 StorageFolderInfo storageFolderInfo;
                 string storageFolderMetadataJson = Path.Combine(effectivePath, "metadata.json");
@@ -276,7 +305,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </summary>
         /// <param name="path">Path of the storage folder to delete</param>
         /// <remarks>This method was implemented to keep it as simple as possible.  We simply delete all the cached
-        /// content or the storage folder, we don't try to migrated it to another storage folder (it will have to be
+        /// content of the storage folder, we don't try to migrate it to another storage folder (it will have to be
         /// re-downloaded from MissionControl if needed).</remarks>
         public async Task DeleteStorageFolderAsync(string path)
         {
@@ -316,6 +345,79 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     taskOfFilesInUse = storageFolderInfo.InUse.Select(fi => Task.WhenAll(fi.AllTasks.ToArray())).ToArray();
                 }
                 await Task.WhenAny(taskOfFilesInUse);
+            }
+        }
+
+        /// <summary>
+        /// Remove a storage folder from the FileBlobCache without removing the files.
+        /// </summary>
+        /// <param name="path">Path of the storage folder to delete</param>
+        /// <remarks>This method was implemented to keep it as simple as possible and will be delayed until there is
+        /// no more file in use in the storage folder and new files might be fetch in that to be removed storage folder
+        /// while we are waiting.  Not 100% optimal, but adding and removing folders shouldn't happen that often anyway.
+        /// </remarks>
+        public async Task RemoveStorageFolderAsync(string path)
+        {
+            StorageFolderInfo? disconnectedStorageFolder = null;
+
+            string effectivePath = GetEffectiveStoragePath(path);
+            for ( ; ; )
+            {
+                Task[]? taskOfFilesInUse = null;
+                lock (m_Lock)
+                {
+                    if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
+                    {
+                        throw new ArgumentException(nameof(path),
+                            $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {path}.");
+                    }
+
+                    if (storageFolderInfo.InUse.First == null)
+                    {
+                        // No files are in use, we can break the link between m_Files and the StorageFolderInfo.
+                        foreach (var fileInfo in storageFolderInfo.InCache)
+                        {
+                            Debug.Assert(fileInfo.FetchTask == null);
+                            Debug.Assert(fileInfo.CopyTasks.Count == 0);
+                            fileInfo.StorageFolder = null;
+                            fileInfo.NodeInList = null;
+                        }
+                        foreach (var fileInfo in storageFolderInfo.Unreferenced)
+                        {
+                            Debug.Assert(fileInfo.FetchTask == null);
+                            Debug.Assert(fileInfo.CopyTasks.Count == 0);
+                            fileInfo.StorageFolder = null;
+                            fileInfo.NodeInList = null;
+                        }
+                        m_StorageFolders.Remove(effectivePath);
+                        disconnectedStorageFolder = storageFolderInfo;
+                        break;
+                    }
+
+                    // If we reach this point, some files are still in use, wait until one of them is completed and try
+                    // again.
+                    taskOfFilesInUse = storageFolderInfo.InUse.Select(fi => Task.WhenAll(fi.AllTasks.ToArray())).ToArray();
+                }
+                await Task.WhenAny(taskOfFilesInUse);
+            }
+
+            if (disconnectedStorageFolder != null)
+            {
+                // One last save before completely forgetting about the storage folder (in case someone wants to reload
+                // it later on).
+                if (disconnectedStorageFolder.NeedSaving)
+                {
+                    try
+                    {
+                        string storageFolderMetadataJson = Path.Combine(disconnectedStorageFolder.FullPath, "metadata.json");
+                        using FileStream serializeStream = File.Create(storageFolderMetadataJson);
+                        JsonSerializer.Serialize(serializeStream, disconnectedStorageFolder);
+                    }
+                    catch (Exception e)
+                    {
+                        m_Logger.LogWarning($"Failed to save state of {disconnectedStorageFolder.UserPath}: {e}");
+                    }
+                }
             }
         }
 
@@ -496,15 +598,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Return the final effective path (resolving relative path, case insensitivity under windows, ...)
         /// </summary>
         /// <param name="path">User provided path.</param>
-        string GetEffectiveStoragePath(string path)
+        public static string GetEffectiveStoragePath(string path)
         {
             var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            path = Path.GetFullPath(path, assemblyFolder!);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                path = path.ToLower();
-            }
-            return path;
+            return Path.GetFullPath(path, assemblyFolder!);
         }
 
         /// <summary>
@@ -576,11 +673,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         continue;
                     }
 
-                    // Assert below is because if it would be == 0, it means that it has have an entry in a storage
-                    // folder, so the if above should have generated a warning, deleted the duplicated file and moved
-                    // to the next entry.
-                    Debug.Assert(globalFileInfo.ReferenceCount > 0);
-                    inCache.Add(globalFileInfo);
+                    if (globalFileInfo.ReferenceCount > 0)
+                    {
+                        inCache.Add(globalFileInfo);
+                    }
+                    else
+                    {
+                        unreferenced.Add(globalFileInfo);
+                    }
                     globalFileInfo.StorageFolder = storageFolder;
                 }
                 else

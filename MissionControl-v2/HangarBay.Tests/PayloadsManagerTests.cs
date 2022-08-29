@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
@@ -339,11 +338,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         string GetNewStorageFolder()
         {
-            var folderPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                folderPath = folderPath.ToLower();
-            }
+            var folderPath = Path.Combine(Path.GetTempPath(), "PayloadsManagerTests_" + Guid.NewGuid().ToString());
             m_StorageFolders.Add(folderPath);
             return folderPath;
         }

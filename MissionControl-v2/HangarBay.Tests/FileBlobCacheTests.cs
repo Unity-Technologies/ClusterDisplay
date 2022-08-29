@@ -511,6 +511,24 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Double add should fail
             Assert.That(() => fileBlobCache.AddStorageFolder(folderConfig), Throws.TypeOf<ArgumentException>());
 
+            // Double add through a different path.
+            // We can get through this case through symbolic links or case insensitive filenames.  Since Windows
+            // requires an elevated privilege to create symbolic links and most file systems under windows are case
+            // insensitive let's simply change the case of the folder.
+            string aliasPath = "";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                aliasPath = folderConfig.Path.ToLower();
+            }
+            else
+            {
+                Assert.Fail("TODO");
+            }
+            var aliasConfig = new StorageFolderConfig();
+            aliasConfig.Path = aliasPath;
+            aliasConfig.MaximumSize = folderConfig.MaximumSize;
+            Assert.That(() => fileBlobCache.AddStorageFolder(aliasConfig), Throws.TypeOf<ArgumentException>());
+
             // Same for equivalent path
             folderConfig.Path = Path.Combine(folderConfig.Path, "Patate", "..");
             Assert.That(() => fileBlobCache.AddStorageFolder(folderConfig), Throws.TypeOf<ArgumentException>());
@@ -705,6 +723,157 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // All storage folders should be gone
             CompareStatus(fileBlobCache, new StorageFolderStatus[] {});
+        }
+
+        [Test]
+        public async Task RemoveStorageFolder()
+        {
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+                {
+                    File.WriteAllText(cachePath, "Some content");
+                    return Task.CompletedTask;
+                };
+            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+
+            var folder1000Config = new StorageFolderConfig();
+            folder1000Config.Path = GetNewStorageFolder();
+            folder1000Config.MaximumSize = 1000;
+            fileBlobCache.AddStorageFolder(folder1000Config);
+
+            Guid fileBlob1 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob1, 1, 10000);
+
+            await fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1");
+
+            Guid fileBlob2 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob2, 10, 10000);
+
+            await fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2");
+
+            Guid fileBlob3 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob3, 100, 10000);
+
+            await fileBlobCache.CopyFileToAsync(fileBlob3, "C:\\Temp\\Blob3");
+
+            fileBlobCache.DecreaseUsageCount(fileBlob2);
+
+            CompareStatus(fileBlobCache, new[] {
+                new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 111, UnreferencedSize = 10,
+                                            ZombiesSize = 0, MaximumSize = 1000 }
+            });
+
+            // Remove the storage folder
+            Assert.That(() => fileBlobCache.RemoveStorageFolderAsync(GetNewStorageFolder()),
+                        Throws.TypeOf<ArgumentException>());
+            await fileBlobCache.RemoveStorageFolderAsync(folder1000Config.Path);
+            CompareStatus(fileBlobCache, new StorageFolderStatus[] {});
+
+            // Add it back
+            fileBlobCache.AddStorageFolder(folder1000Config);
+            CompareStatus(fileBlobCache, new[] {
+                new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 111, UnreferencedSize = 10,
+                                            ZombiesSize = 0, MaximumSize = 1000 }
+            });
+
+            // Ask for the files just to be sure everything is ok
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+                {
+                    Assert.Fail("Everything should be present in the folder so we shouldn't need to be called.");
+                    return Task.CompletedTask;
+                };
+            await fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1b");
+            Assert.That(async () => await fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2b"),
+                Throws.TypeOf<ArgumentException>());
+            fileBlobCache.IncreaseUsageCount(fileBlob2, 10, 10000);
+            await fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2b");
+            await fileBlobCache.CopyFileToAsync(fileBlob3, "C:\\Temp\\Blob3b");
+        }
+
+        [Test]
+        public async Task RemoveStorageFolderWhileInUse()
+        {
+            var fileBlobCache = new FileBlobCache(m_LoggerStub);
+            var fetchTcs = new TaskCompletionSource();
+            fetchTcs.SetResult();
+            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
+                {
+                    await fetchTcs.Task;
+                    File.WriteAllText(cachePath, "Some content");
+                };
+            var copyTcs = new TaskCompletionSource();
+            copyTcs.SetResult();
+            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+                {
+                    await copyTcs.Task;
+                };
+
+            var folder1000Config = new StorageFolderConfig();
+            folder1000Config.Path = GetNewStorageFolder();
+            folder1000Config.MaximumSize = 1000;
+            fileBlobCache.AddStorageFolder(folder1000Config);
+
+            Guid fileBlob1 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob1, 1, 10000);
+
+            await fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1");
+
+            Guid fileBlob2 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob2, 10, 10000);
+
+            copyTcs = new();
+            var fileBlob2Task = fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2");
+
+            Guid fileBlob3 = Guid.NewGuid();
+            fileBlobCache.IncreaseUsageCount(fileBlob3, 100, 10000);
+
+            fetchTcs = new();
+            var fileBlob3Task = fileBlobCache.CopyFileToAsync(fileBlob3, "C:\\Temp\\Blob3");
+
+            CompareStatus(fileBlobCache, new[] {
+                new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 111, UnreferencedSize = 0,
+                                            ZombiesSize = 0, MaximumSize = 1000 }
+            });
+
+            // Remove the storage folder
+            Assert.That(() => fileBlobCache.RemoveStorageFolderAsync(GetNewStorageFolder()),
+                        Throws.TypeOf<ArgumentException>());
+            var removeStorageTask = fileBlobCache.RemoveStorageFolderAsync(folder1000Config.Path);
+
+            await Task.Delay(50);
+            Assert.That(fileBlob2Task.IsCompleted, Is.False);
+            Assert.That(fileBlob3Task.IsCompleted, Is.False);
+            Assert.That(removeStorageTask.IsCompleted, Is.False);
+            CompareStatus(fileBlobCache, new[] {
+                new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 111, UnreferencedSize = 0,
+                                            ZombiesSize = 0, MaximumSize = 1000 }
+            });
+
+            // Unblock everything
+            fetchTcs.SetResult();
+            copyTcs.SetResult();
+            await fileBlob2Task;
+            await fileBlob3Task;
+
+            await removeStorageTask;
+            CompareStatus(fileBlobCache, new StorageFolderStatus[] {});
+
+            // Add it back
+            fileBlobCache.AddStorageFolder(folder1000Config);
+            CompareStatus(fileBlobCache, new[] {
+                new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 111, UnreferencedSize = 0,
+                                            ZombiesSize = 0, MaximumSize = 1000 }
+            });
+
+            // Ask for the files just to be sure everything is ok
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+                {
+                    Assert.Fail("Everything should be present in the folder so we shouldn't need to be called.");
+                    return Task.CompletedTask;
+                };
+            await fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1b");
+            await fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2b");
+            await fileBlobCache.CopyFileToAsync(fileBlob3, "C:\\Temp\\Blob3b");
         }
 
         [Test]
@@ -1393,11 +1562,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         string GetNewStorageFolder()
         {
-            var folderPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                folderPath = folderPath.ToLower();
-            }
+            var folderPath = Path.Combine(Path.GetTempPath(), "FileBlobCacheTests_" + Guid.NewGuid().ToString());
             m_StorageFolders.Add(folderPath);
             return folderPath;
         }
