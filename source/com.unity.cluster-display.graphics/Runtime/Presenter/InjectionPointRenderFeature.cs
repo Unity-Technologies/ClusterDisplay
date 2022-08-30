@@ -34,7 +34,10 @@ namespace Unity.ClusterDisplay.Graphics
         {
             m_Pass = new InjectionPointRenderPass
             {
-                renderPassEvent = RenderPassEvent.AfterRendering,
+                // HACK: This is a temporary workaround for a URP bug so tests that use ScreenCapture can pass.
+                renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing,
+                // Remove the line above and uncomment the line below once the the URP bug is resolved.
+                // renderPassEvent = RenderPassEvent.AfterRendering,
             };
         }
 

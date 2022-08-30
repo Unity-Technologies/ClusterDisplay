@@ -70,7 +70,6 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _OuterFrustumCenter = Shader.PropertyToID("_OuterFrustumCenter");
         }
 
-        const string k_PreviewShaderName = "Hidden/ClusterDisplay/ProjectionPreview";
         [AlwaysIncludeShader]
         const string k_WarpShaderName = "Hidden/ClusterDisplay/MeshWarp";
 

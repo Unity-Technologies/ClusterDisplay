@@ -51,7 +51,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         /// </summary>
         /// <param name="clusterRenderer"></param>
         /// <param name="policyType"></param>
-        /// <param name="oldPolicy"></param>
         internal static void SetProjectionPolicy(ClusterRenderer clusterRenderer, Type policyType)
         {
             if (clusterRenderer.ProjectionPolicy != null)

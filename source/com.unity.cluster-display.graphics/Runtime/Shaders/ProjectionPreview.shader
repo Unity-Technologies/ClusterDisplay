@@ -33,8 +33,8 @@ Shader "Hidden/ClusterDisplay/ProjectionPreview"
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                float2 uv : TEXCOORD0;
             };
 
             sampler2D _MainTex;
