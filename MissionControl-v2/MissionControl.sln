@@ -10,6 +10,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HangarBay.Library", "HangarBay.Library\HangarBay.Library.csproj", "{D95ADB57-92B9-4750-90D8-3E444A184600}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HangarBay.Tests", "HangarBay.Tests\HangarBay.Tests.csproj", "{DAB5A6D4-0145-4109-82CF-CA486E2A1944}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CDB43A32-FA48-4047-83A8-BFBCF23B94F1} = {CDB43A32-FA48-4047-83A8-BFBCF23B94F1}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

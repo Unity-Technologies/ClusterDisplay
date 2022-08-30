@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +35,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             m_PersistPath = Path.GetFullPath(configuration["configPath"], assemblyFolder!);
 
             Initialize(configuration);
+            m_InitialEndPoints = m_Config.ControlEndPoints.ToArray();
+
+            ValidateNew += ValidateNewConfig;
+            Changed += ConfigChanged;
         }
 
         /// <summary>
@@ -108,54 +114,60 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 }
             }
 
-            // Validate the new configuration
             try
             {
-                var configChange = new ConfigChangeSurvey(newConfig);
-                ValidateNew?.Invoke(configChange);
-                if (!configChange.Accepted)
+                // Validate the new configuration
+                try
                 {
-                    return configChange.RejectReasons;
+                    var configChange = new ConfigChangeSurvey(newConfig);
+                    ValidateNew?.Invoke(configChange);
+                    if (!configChange.Accepted)
+                    {
+                        return configChange.RejectReasons;
+                    }
+                }
+                catch(Exception e)
+                {
+                    return new[] { e.ToString() };
+                }
+
+                // Make the change
+                lock (m_Lock)
+                {
+                    m_Config = newConfig;
+                }
+
+                // Broadcast the news
+                try
+                {
+                    var tasks = Changed?.GetInvocationList().Select(d => ((Func<Task>)d)());
+                    if (tasks != null && tasks.Any())
+                    {
+                        await Task.WhenAll(tasks);
+                    }
+                }
+                catch(Exception e)
+                {
+                    m_Logger.LogError($"Exception informing about an accepted configuration change, sate of some " +
+                                      $"services might be out of sync and a restart should be done: {e}");
+                    m_StatusService.Value.SignalPendingRestart();
+                }
+
+                // And save and return
+                Save();
+
+                // Done
+                return Enumerable.Empty<string>();
+            }
+            finally
+            {
+                lock (m_Lock)
+                {
+                    Debug.Assert(m_ExecutingSetCurrent == setCurrentCompleteTCS.Task);
+                    m_ExecutingSetCurrent = null;
+                    setCurrentCompleteTCS.SetResult();
                 }
             }
-            catch(Exception e)
-            {
-                return new[] { e.ToString() };
-            }
-
-            // Make the change
-            lock (m_Lock)
-            {
-                m_Config = newConfig;
-            }
-
-            // Broadcast the news
-            try
-            {
-                var tasks = Changed?.GetInvocationList().Select(d => ((Func<Task>)d)());
-                if (tasks != null && tasks.Any())
-                {
-                    await Task.WhenAll(tasks);
-                }
-            }
-            catch(Exception e)
-            {
-                m_Logger.LogError($"Exception informing about an accepted configuration change, sate of some " +
-                                  $"services might be out of sync and a restart should be done: {e}");
-                m_StatusService.Value.SignalPendingRestart();
-            }
-
-            // And save and return
-            Save();
-
-            // Done
-            lock (m_Lock)
-            {
-                Debug.Assert(m_ExecutingSetCurrent == setCurrentCompleteTCS.Task);
-                m_ExecutingSetCurrent = null;
-                setCurrentCompleteTCS.SetResult();
-            }
-            return Enumerable.Empty<string>();
         }
 
         /// <summary>
@@ -269,6 +281,88 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         }
 
         /// <summary>
+        /// Validate a new configuration
+        /// </summary>
+        /// <param name="newConfig">Information about the new configuration</param>
+        /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some 
+        /// parts are not really owned by any actual services (like control endpoints).</remarks>
+        private void ValidateNewConfig(ConfigChangeSurvey newConfig)
+        {
+            foreach (var endpoint in newConfig.Proposed.ControlEndPoints)
+            {
+                try
+                {
+                    // Unfortunately Uri does not support parsing uri like : http://*:8100, so we have to check it ourselves.
+                    string effectiveEndpoint = endpoint;
+                    if (endpoint.ToLower().StartsWith("http://*"))
+                    {
+                        effectiveEndpoint = "http://0.0.0.0" + endpoint.Substring(8);
+                    }
+
+                    var uri = new Uri(effectiveEndpoint);
+                    if (uri.Scheme.ToLower() != "http")
+                    {
+                        newConfig.Reject($"{endpoint} does not start with http://.");
+                        return;
+                    }
+                    if (!IPAddress.TryParse(uri.Host, out var parsedAddress))
+                    {
+                        newConfig.Reject($"Failed to parse {uri.Host} to an IP address.");
+                        return;
+                    }
+                    if (parsedAddress.Equals(IPAddress.Any) || parsedAddress.Equals(IPAddress.IPv6Any) ||
+                        parsedAddress.Equals(IPAddress.Loopback) || parsedAddress.Equals(IPAddress.IPv6Loopback))
+                    {
+                        continue;
+                    }
+
+                    // Try to see if it is one of our local addresses
+                    bool found = false;
+                    foreach (NetworkInterface item in NetworkInterface.GetAllNetworkInterfaces())
+                    {
+                        if (item.OperationalStatus == OperationalStatus.Up)
+                        {
+                            IPInterfaceProperties adapterProperties = item.GetIPProperties();
+                            foreach (UnicastIPAddressInformation ip in adapterProperties.UnicastAddresses)
+                            {
+                                if (ip.Address.Equals(parsedAddress))
+                                {
+                                    found = true;
+                                    break;  // break the loop!!
+                                }
+                            }
+                        }
+                        if (found) { break; }
+                    }
+                    if (!found)
+                    {
+                        newConfig.Reject($"{uri.Host} does not refer to a local IP address.");
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    newConfig.Reject($"Error parsing {endpoint}: {e}");
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// React to configuration changes
+        /// </summary>
+        /// <remarks>Normally we want every service to deal with changes in their "own part" of the configuration, 
+        /// however some parts are not really owned by any actual services (like control endpoints).</remarks>
+        private Task ConfigChanged()
+        {
+            if (!m_Config.ControlEndPoints.SequenceEqual(m_InitialEndPoints))
+            {
+                m_StatusService.Value.SignalPendingRestart();
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Default endpoint
         /// </summary>
         const string k_DefaultEndpoint = "http://0.0.0.0:8100";
@@ -280,6 +374,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// Where the configuration was from and where to save it.
         /// </summary>
         string m_PersistPath;
+
+        /// <summary>
+        /// <see cref="Config.ControlEndPoints"/> at startup.
+        /// </summary>
+        readonly string[] m_InitialEndPoints;
 
         /// <summary>
         /// Used to synchronize access to the member variables below.

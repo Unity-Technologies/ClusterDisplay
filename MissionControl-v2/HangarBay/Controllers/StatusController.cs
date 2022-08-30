@@ -19,6 +19,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             return Ok(m_StatusService.Build());
         }
 
-        private readonly StatusService m_StatusService;
+        readonly StatusService m_StatusService;
     }
 }

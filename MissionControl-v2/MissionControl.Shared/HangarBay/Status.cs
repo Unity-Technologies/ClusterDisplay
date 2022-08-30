@@ -27,5 +27,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// Status of the different storage folders.
         /// </summary>
         public IEnumerable<StorageFolderStatus> StorageFolders { get; set; } = Enumerable.Empty<StorageFolderStatus>();
+
+        public override bool Equals(Object? obj)
+        {
+            if (obj == null || obj.GetType() != typeof(Status))
+            {
+                return false;
+            }
+            var other = (Status)obj;
+
+            return Version == other.Version && StartTime == other.StartTime &&
+                PendingRestart == other.PendingRestart && StorageFolders.SequenceEqual(other.StorageFolders);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Version, StartTime, PendingRestart, StorageFolders);
+        }
     }
 }

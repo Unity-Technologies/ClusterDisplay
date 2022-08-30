@@ -24,7 +24,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             m_Manager = new(logger, configuration["payloadsCatalog"], fileBlobCache.Cache);
         }
 
-        private readonly ILogger<PayloadsService> m_Logger;
+        readonly ILogger<PayloadsService> m_Logger;
 
         /// <summary>
         /// The object doing most of the work

@@ -108,8 +108,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             }
         }
 
-        private readonly ILogger<FileBlobCacheService> m_Logger;
-        private readonly ConfigService m_ConfigService;
+        readonly ILogger<FileBlobCacheService> m_Logger;
+        readonly ConfigService m_ConfigService;
 
         /// <summary>
         /// The object doing most of the work

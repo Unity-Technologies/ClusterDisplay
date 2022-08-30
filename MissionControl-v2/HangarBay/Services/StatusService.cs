@@ -19,10 +19,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
     /// </summary>
     public class StatusService
     {
-        public StatusService(ILogger<StatusService> logger, ConfigService configService)
+        public StatusService(ILogger<StatusService> logger, ConfigService configService,
+                             FileBlobCacheService fileBlobService)
         {
             m_Logger = logger;
             m_Config = configService;
+            m_FileBlobCacheService = fileBlobService;
 
             var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
             if (assemblyVersion != null)
@@ -35,6 +37,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 m_Logger.LogError($"Failed to get the assembly version, fall-back to {m_HangarBayVersion}.");
             }
         }
+
+        /// <summary>
+        /// Does the HangarBay has to be restarted?
+        /// </summary>
+        public bool HasPendingRestart => m_PendingRestart;
 
         /// <summary>
         /// Indicate that the HangarBay that requires a restart.
@@ -54,11 +61,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             ret.Version = m_HangarBayVersion;
             ret.StartTime = m_StartTime;
             ret.PendingRestart = m_PendingRestart;
+            ret.StorageFolders = m_FileBlobCacheService.Cache.GetStorageFolderStatus();
             return ret;
         }
 
         readonly ILogger<StatusService> m_Logger;
         readonly ConfigService m_Config;
+        readonly FileBlobCacheService m_FileBlobCacheService;
 
         /// <summary>
         /// Version of the HangarBay

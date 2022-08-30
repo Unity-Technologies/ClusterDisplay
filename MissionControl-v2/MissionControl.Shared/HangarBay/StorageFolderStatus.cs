@@ -30,5 +30,23 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// Maximum number of bytes to be used by files in the StorageFolder.
         /// </summary>
         public long MaximumSize { get; set; }
+
+        public override bool Equals(Object? obj)
+        {
+            if (obj == null || obj.GetType() != typeof(StorageFolderStatus))
+            {
+                return false;
+            }
+            var other = (StorageFolderStatus)obj;
+
+            return Path == other.Path && CurrentSize == other.CurrentSize &&
+                UnreferencedSize == other.UnreferencedSize && ZombiesSize == other.ZombiesSize &&
+                MaximumSize == other.MaximumSize;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Path, MaximumSize, UnreferencedSize, ZombiesSize, MaximumSize);
+        }
     }
 }

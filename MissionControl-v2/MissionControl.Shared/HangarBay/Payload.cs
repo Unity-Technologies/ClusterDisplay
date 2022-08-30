@@ -1,3 +1,5 @@
+using System.Drawing;
+
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
@@ -47,6 +49,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             var ret = new Payload();
             ret.Files = files.Values;
             return ret;
+        }
+
+        public override bool Equals(Object? obj)
+        {
+            if (obj == null || obj.GetType() != typeof(Payload))
+            {
+                return false;
+            }
+            var other = (Payload)obj;
+
+            return Files == other.Files;
+        }
+
+        public override int GetHashCode()
+        {
+            return Files.GetHashCode();
         }
     }
 }

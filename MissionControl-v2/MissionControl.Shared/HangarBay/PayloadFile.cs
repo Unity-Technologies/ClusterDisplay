@@ -33,5 +33,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         {
             return FileBlob == other.FileBlob && CompressedSize == other.CompressedSize && Size == other.Size;
         }
+
+        public override bool Equals(Object? obj)
+        {
+            if (obj == null || obj.GetType() != typeof(PayloadFile))
+            {
+                return false;
+            }
+            var other = (PayloadFile)obj;
+
+            return Path == other.Path && FileBlob == other.FileBlob && CompressedSize == other.CompressedSize &&
+                Size == other.Size;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Path, FileBlob, CompressedSize, Size);
+        }
     }
 }
