@@ -1,6 +1,8 @@
 using System.Linq;
 using UnityEditor;
 using System;
+using System.Reflection;
+using UnityEngine;
 using static Unity.ClusterDisplay.Graphics.Editor.ClusterRendererInspector;
 
 namespace Unity.ClusterDisplay.Graphics
@@ -25,13 +27,7 @@ namespace Unity.ClusterDisplay.Graphics
                     return;
                 }
 
-                var firstProjectionPolicy = AssetDatabase
-                    .FindAssets($"t:{typeof(ProjectionPolicy).Name}")
-                    .Select(guid => AssetDatabase
-                        .LoadAssetAtPath<ProjectionPolicy>(AssetDatabase
-                        .GUIDToAssetPath(guid))).FirstOrDefault();
-
-                clusterRenderer.ProjectionPolicy = firstProjectionPolicy;
+                SetProjectionPolicy(clusterRenderer, typeof(TiledProjection));
                 AddMissingClusterCameraComponents();
             };
         }

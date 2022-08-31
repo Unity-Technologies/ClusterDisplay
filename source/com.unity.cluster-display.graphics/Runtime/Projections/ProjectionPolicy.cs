@@ -11,7 +11,9 @@ namespace Unity.ClusterDisplay.Graphics
     /// <remarks>
     /// Implement this abstract class to perform custom rendering and presentation operations.
     /// </remarks>
-    public abstract class ProjectionPolicy : ScriptableObject
+    [Serializable]
+    [ExecuteAlways]
+    public abstract class ProjectionPolicy : MonoBehaviour
     {
         [SerializeField]
         bool m_IsDebug;
@@ -80,15 +82,6 @@ namespace Unity.ClusterDisplay.Graphics
         /// output to the current display output device.
         /// </remarks>
         public abstract void Present(PresentArgs args);
-
-        /// <summary>
-        /// Called on the <see cref="ClusterRenderer"/>'s <c>OnDrawGizmos</c> event.
-        /// </summary>
-        public virtual void OnDrawGizmos() { }
-
-        public virtual void OnEnable() { }
-
-        public virtual void OnDisable() { }
 
         /// <summary>
         /// Gets or sets the origin of the cluster display.

@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.Graphics.Tests
             RenderTexture.active = restore;
         }
 
-        public static ProjectionSurface AlignSurfaceWithCameraFrustum(ProjectionSurface surface, Camera camera, float nearPlaneOffset, Transform rendererTransform)
+        public static PlanarProjectionSurface AlignSurfaceWithCameraFrustum(PlanarProjectionSurface surface, Camera camera, float nearPlaneOffset, Transform rendererTransform)
         {
             // Evaluate surface in local camera space.
             var distance = nearPlaneOffset + camera.nearClipPlane;
