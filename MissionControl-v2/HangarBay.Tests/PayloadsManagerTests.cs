@@ -128,7 +128,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 throw new ArgumentException($"Unknown {nameof(payloadId)}");
             };
 
-            var resultingPayload1 = await payloadsManager.GetPayload(payloadId, null);
+            var resultingPayload1 = await payloadsManager.GetPayload(payloadId);
             Assert.That(resultingPayload1, Is.SameAs(payload));
             Assert.That(fetchCallCount, Is.EqualTo(1));
             Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(3));
@@ -205,7 +205,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             {
                 throw new TestException();
             };
-            Assert.That(() => payloadsManager.GetPayload(somePayloadId, null), Throws.TypeOf<TestException>());
+            Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<TestException>());
 
             // Test that everything get rolled-back when a problem is detected while increasing entries usage
             Guid repeatedFileId = Guid.NewGuid();
@@ -222,7 +222,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             payloadsManager.FetchFileCallback = (Guid id, object? _) => Task.FromResult(payload);
 
             m_FileBlobCacheStub.FakeIncreaseUsageCountErrorIn = 4;
-            Assert.That(() => payloadsManager.GetPayload(somePayloadId, null), Throws.TypeOf<FileBlobCacheStub.FakeException>());
+            Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<FileBlobCacheStub.FakeException>());
             Assert.That(m_FileBlobCacheStub.CompareEntries(new FileBlobCacheStub.Entry[] {
                 new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
                 new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
@@ -234,7 +234,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             m_FileBlobCacheStub.Entries.Clear();
 
             // Ok, let's try one list time, this time we wont throw a wrench in the machine and it should work!
-            var fetchedPayload = await payloadsManager.GetPayload(somePayloadId, null);
+            var fetchedPayload = await payloadsManager.GetPayload(somePayloadId);
             Assert.That(fetchedPayload, Is.SameAs(payload));
             Assert.That(m_FileBlobCacheStub.CompareEntries(new [] {
                 new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
@@ -272,8 +272,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 return payload;
             };
 
-            var getRequest1Task = payloadsManager.GetPayload(payloadId, null);
-            var getRequest2Task = payloadsManager.GetPayload(payloadId, null);
+            var getRequest1Task = payloadsManager.GetPayload(payloadId);
+            var getRequest2Task = payloadsManager.GetPayload(payloadId);
 
             await Task.Delay(50);
 
@@ -312,8 +312,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             };
 
             var payloadId = Guid.NewGuid();
-            var getRequest1Task = payloadsManager.GetPayload(payloadId, null);
-            var getRequest2Task = payloadsManager.GetPayload(payloadId, null);
+            var getRequest1Task = payloadsManager.GetPayload(payloadId);
+            var getRequest2Task = payloadsManager.GetPayload(payloadId);
 
             await Task.Delay(50);
 
@@ -331,7 +331,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 return Task.FromResult(new Payload());
             };
 
-            var result = await payloadsManager.GetPayload(payloadId, null);
+            var result = await payloadsManager.GetPayload(payloadId);
             Assert.That(result.Files, Is.Empty);
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
         }

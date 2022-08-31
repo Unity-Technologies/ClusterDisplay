@@ -44,7 +44,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <param name="payloadIdentifier"><see cref="Payload"/>'s identifier.</param>
         /// <param name="fetchCookie">Cookie passed to <see cref="FetchFileCallback"/> if we need to fetch the
         /// <see cref="Payload"/>.</param>
-        public Task<Payload> GetPayload(Guid payloadIdentifier, object? fetchCookie)
+        public Task<Payload> GetPayload(Guid payloadIdentifier, object? fetchCookie = null)
         {
             lock (m_Lock)
             {

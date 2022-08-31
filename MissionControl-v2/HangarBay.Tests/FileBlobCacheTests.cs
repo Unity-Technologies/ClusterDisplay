@@ -78,7 +78,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             Guid fetchedGuid = Guid.Empty;
             string fetchPath = "";
-            fileBlobCache.FetchFileCallback = (Guid blobId, string path) =>
+            fileBlobCache.FetchFileCallback = (Guid blobId, string path, object? _) =>
                 {
                     fetchedGuid = blobId;
                     fetchPath = path;
@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             string copyFrom = "";
             string copyTo = "";
-            fileBlobCache.CopyFileCallback = (string from, string to) =>
+            fileBlobCache.CopyFileCallback = (string from, string to, object? _) =>
                 {
                     copyFrom = from;
                     copyTo = to;
@@ -119,12 +119,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task EvictWhenLowOnSpace()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -251,7 +251,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             bool fetchShouldSucceed = true;
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     if (fetchShouldSucceed)
                     {
@@ -263,7 +263,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                         throw new TestException();
                     }
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -305,7 +305,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task CopyFail()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
@@ -313,7 +313,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             bool copyShouldSucceed = true;
             int copyStarted = 0;
             int copyFinished = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyStarted);
                     if (copyShouldSucceed)
@@ -360,14 +360,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             var fetchTCS = new TaskCompletionSource();
             int fetchCallCount = 0;
-            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCallCount);
                     await fetchTCS.Task;
                     File.WriteAllText(cachePath, "Some content");
                 };
             int copyCallCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCallCount);
                     return Task.CompletedTask;
@@ -427,7 +427,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCallCount = 0;
-            fileBlobCache.FetchFileCallback = async (Guid fileBlobId, string cachePath) =>
+            fileBlobCache.FetchFileCallback = async (Guid fileBlobId, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCallCount);
                     if (completedFetchTCS.TryGetValue(fileBlobId, out var tcs))
@@ -437,7 +437,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     File.WriteAllText(cachePath, "Some content");
                 };
             int copyCallCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCallCount);
                     return Task.CompletedTask;
@@ -495,12 +495,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public void AddStorageFolderErrors()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folderConfig = new StorageFolderConfig();
             folderConfig.Path = GetNewStorageFolder();
@@ -545,12 +545,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task DeleteStorageFolder()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -592,12 +592,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             var fetchTCS = new TaskCompletionSource();
             fetchTCS.SetResult(); // We want the first ones to immediately proceed
-            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath, object? _) =>
                 {
                     await fetchTCS.Task;
                     File.WriteAllText(cachePath, "Some content");
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -656,14 +656,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task DeleteStorageFolderBlockWhileCopying()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
             var copyTCS = new TaskCompletionSource();
             copyTCS.SetResult(); // We want the first ones to immediately proceed
-            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+            fileBlobCache.CopyFileCallback = async (string _, string _, object? _) =>
                 {
                     await copyTCS.Task;
                 };
@@ -729,12 +729,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task RemoveStorageFolder()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -777,7 +777,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             });
 
             // Ask for the files just to be sure everything is ok
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Assert.Fail("Everything should be present in the folder so we shouldn't need to be called.");
                     return Task.CompletedTask;
@@ -796,14 +796,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             var fetchTcs = new TaskCompletionSource();
             fetchTcs.SetResult();
-            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath, object? _) =>
                 {
                     await fetchTcs.Task;
                     File.WriteAllText(cachePath, "Some content");
                 };
             var copyTcs = new TaskCompletionSource();
             copyTcs.SetResult();
-            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+            fileBlobCache.CopyFileCallback = async (string _, string _, object? _) =>
                 {
                     await copyTcs.Task;
                 };
@@ -866,7 +866,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             });
 
             // Ask for the files just to be sure everything is ok
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Assert.Fail("Everything should be present in the folder so we shouldn't need to be called.");
                     return Task.CompletedTask;
@@ -880,12 +880,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task UpdateStorageFolder()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
-            fileBlobCache.CopyFileCallback = (string _, string _) => Task.CompletedTask;
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) => Task.CompletedTask;
 
             var folder1000Config = new StorageFolderConfig();
             folder1000Config.Path = GetNewStorageFolder();
@@ -948,13 +948,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task CacheFull()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
             var copyTCS = new TaskCompletionSource();
-            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+            fileBlobCache.CopyFileCallback = async (string _, string _, object? _) =>
                 {
                     await copyTCS.Task;
                 };
@@ -990,13 +990,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     return Task.CompletedTask;
                 };
             int copyCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     return Task.CompletedTask;
@@ -1050,13 +1050,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public async Task DecreaseUsageOfInUse()
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     File.WriteAllText(cachePath, "Some content");
                     return Task.CompletedTask;
                 };
             var copyTCS = new TaskCompletionSource();
-            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+            fileBlobCache.CopyFileCallback = async (string _, string _, object? _) =>
                 {
                     await copyTCS.Task;
                 };
@@ -1117,13 +1117,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     return Task.CompletedTask;
                 };
             int copyCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     return Task.CompletedTask;
@@ -1202,7 +1202,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             int fetchCount = 0;
             TaskCompletionSource fetchTCS = new();
             fetchTCS.SetResult();
-            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = async (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     await fetchTCS.Task;
@@ -1210,7 +1210,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             int copyCount = 0;
             TaskCompletionSource copyTCS = new();
             copyTCS.SetResult();
-            fileBlobCache.CopyFileCallback = async (string _, string _) =>
+            fileBlobCache.CopyFileCallback = async (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     await copyTCS.Task;
@@ -1298,13 +1298,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Prepare first FileBlobCache with 2 files
             var fileBlobCache1 = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
-            fileBlobCache1.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache1.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     return Task.CompletedTask;
                 };
             int copyCount = 0;
-            fileBlobCache1.CopyFileCallback = (string _, string _) =>
+            fileBlobCache1.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     return Task.CompletedTask;
@@ -1413,13 +1413,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     return Task.CompletedTask;
                 };
             int copyCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     return Task.CompletedTask;
@@ -1481,7 +1481,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var fileBlobCache = new FileBlobCache(m_LoggerStub);
             int fetchCount = 0;
             List<string> fetchedFiles = new();
-            fileBlobCache.FetchFileCallback = (Guid _, string cachePath) =>
+            fileBlobCache.FetchFileCallback = (Guid _, string cachePath, object? _) =>
                 {
                     Interlocked.Increment(ref fetchCount);
                     StringBuilder builder = new();
@@ -1490,7 +1490,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     return Task.CompletedTask;
                 };
             int copyCount = 0;
-            fileBlobCache.CopyFileCallback = (string _, string _) =>
+            fileBlobCache.CopyFileCallback = (string _, string _, object? _) =>
                 {
                     Interlocked.Increment(ref copyCount);
                     return Task.CompletedTask;

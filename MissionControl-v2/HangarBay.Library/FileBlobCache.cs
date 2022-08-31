@@ -22,17 +22,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when a file is to be fetched.
         /// </summary>
-        /// <remarks>Func's Guid is the fileblob identifier of the file to fetch and the string is the path of where to
-        /// save that fetched content.  Returns a <see cref="Task"/> that is to be completed when fetch is completed.
-        /// </remarks>
-        public Func<Guid, string, Task> FetchFileCallback { get; set; } = (Guid _, string _) => Task.CompletedTask;
+        /// <remarks>Func's <see cref="Guid"/> is the file blob identifier of the file to fetch, the
+        /// <see cref="String"/> is the path of where to save that fetched content and the <see cref="Object"/> is the
+        /// cookie received by <see cref="CopyFileToAsync"/>.  Returns a <see cref="Task"/> that is to be completed when
+        /// fetch is completed.</remarks>
+        public Func<Guid, string, object?, Task> FetchFileCallback { get; set; } =
+            (Guid _, string _, object? _) => Task.CompletedTask;
 
         /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when asked to copy a file.
         /// </summary>
-        /// <remarks>Func first string is the path to the file to copy and the second one is the path to the
-        /// destination.  Returns a <see cref="Task"/> that is to be completed when copy is finished.</remarks>
-        public Func<string, string, Task> CopyFileCallback { get; set; } = (string _, string _) => Task.CompletedTask;
+        /// <remarks>Func first <see cref="String"/> is the path to the file to copy, the second one is the path to the 
+        /// destination and the <see cref="Object"/> is the cookie received by <see cref="CopyFileToAsync"/>.  Returns a
+        /// <see cref="Task"/> that is to be completed when copy is finished.</remarks>
+        public Func<string, string, object?, Task> CopyFileCallback { get; set; } =
+            (string _, string _, object? _) => Task.CompletedTask;
 
         /// <summary>
         /// Increase usage count of the file with the given file blob identifier.
@@ -426,11 +430,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </summary>
         /// <param name="fileBlobId">FileBlob (content) identifier.</param>
         /// <param name="toPath">Complete path (directory and filename) of where to copy the file.</param>
+        /// <param name="cookie">Cookie passed to <see cref="FetchFileCallback"/> and <see cref="CopyFileCallback"/>.
+        /// </param>
         /// <exception cref="ArgumentException">If no information about <paramref name="fileBlobId"/> can be found.
         /// </exception>
         /// <exception cref="InvalidOperationException">If no free space can be found to store the file in cache.
         /// </exception>
-        public async Task CopyFileToAsync(Guid fileBlobId, string toPath)
+        public async Task CopyFileToAsync(Guid fileBlobId, string toPath, object? cookie = null)
         {
             Monitor.Enter(m_Lock);
             try
@@ -461,7 +467,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         {
                             var cachePath = storageFolder.GetPath(fileBlobId);
                             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-                            await FetchFileCallback(fileBlobId, cachePath);
+                            await FetchFileCallback(fileBlobId, cachePath, cookie);
                         }
                     );
                     fileInfo.FetchTask = fetchTask;
@@ -531,7 +537,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     fileInfo.NodeInList = fileInfo.StorageFolder.InUse.AddLast(fileInfo);
                     fileInfo.StorageFolder.NeedSaving = true;
                 }
-                var copyTask = Task.Run(async () => await CopyFileCallback(fileInfo.StorageFolder.GetPath(fileBlobId), toPath));
+                var copyTask = Task.Run(async () => await CopyFileCallback(fileInfo.StorageFolder.GetPath(fileBlobId), toPath, cookie));
                 fileInfo.CopyTasks.Add(copyTask);
 
                 // Copy it
@@ -572,7 +578,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Computes the status of the storage folders in which the <see cref="FileBlobCache"/> stores cached files.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The computed status.</returns>
         public StorageFolderStatus[] GetStorageFolderStatus()
         {
             lock (m_Lock)

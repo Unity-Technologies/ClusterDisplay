@@ -227,7 +227,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// </summary>
         /// <param name="configuration">.Net configuration coming from various sources (static, does not change
         /// during the execution of the application, often comes from appsettings.json).</param>
-        private void Initialize(IConfiguration configuration)
+        void Initialize(IConfiguration configuration)
         {
             bool configLoaded = false;
             try
@@ -267,7 +267,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Save the current configuration.
         /// </summary>
-        private void Save()
+        void Save()
         {
             try
             {
@@ -286,7 +286,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <param name="newConfig">Information about the new configuration</param>
         /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some 
         /// parts are not really owned by any actual services (like control endpoints).</remarks>
-        private void ValidateNewConfig(ConfigChangeSurvey newConfig)
+        void ValidateNewConfig(ConfigChangeSurvey newConfig)
         {
             foreach (var endpoint in newConfig.Proposed.ControlEndPoints)
             {
@@ -353,7 +353,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// </summary>
         /// <remarks>Normally we want every service to deal with changes in their "own part" of the configuration, 
         /// however some parts are not really owned by any actual services (like control endpoints).</remarks>
-        private Task ConfigChanged()
+        Task ConfigChanged()
         {
             if (!m_Config.ControlEndPoints.SequenceEqual(m_InitialEndPoints))
             {

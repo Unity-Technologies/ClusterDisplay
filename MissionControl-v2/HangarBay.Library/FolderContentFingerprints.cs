@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -16,16 +17,23 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </summary>
         /// <param name="path">Path to the folder from which to build the <see cref="FolderContentFingerprints"/>.
         /// </param>
+        /// <param name="payload">List of files in <paramref name="path"/>.</param>
         /// <returns>Newly created <see cref="FolderContentFingerprints"/>.</returns>
-        public static FolderContentFingerprints BuildFrom(string path)
+        public static FolderContentFingerprints BuildFrom(string path, Payload payload)
         {
             FolderContentFingerprints ret = new ();
 
             var files = GetAllFilesIn(path);
+            var payloadFiles = IndexPayload(path, payload);
 
+            // Fill entries
             foreach (var filePath in files)
             {
-                ret.m_Entries.Add(GetEntriesKey(filePath, path), new Entry(filePath));
+                string entryKey = GetEntriesKey(filePath, path);
+                if (payloadFiles.TryGetValue(entryKey, out var payloadFile))
+                {
+                    ret.m_Entries.Add(entryKey, new Entry(filePath, payloadFile.FileBlob));
+                }
             }
 
             return ret;
@@ -66,25 +74,33 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Delete any new file in the folder or any file modified since the fingerprints in this object has been taken.
+        /// Prepare the given folder to receive the specified payload.  This method will remove any new file or file 
+        /// that changed since the fingerprints were taken or that contains a different blob then the one from the
+        /// provided payload.
         /// </summary>
-        /// <param name="path">Path to the folder to clean</param>
-        public void CleanModified(string path, ILogger logger)
+        /// <param name="path">Path to the folder to clean.</param>
+        /// <param name="payload">List of files that we want to prepare the folder for.</param>
+        /// <param name="logger">Logger in case of problem.</param>
+        public void PrepareForPayload(string path, Payload payload, ILogger logger)
         {
             var cleanedPath = Path.GetFullPath(path);
             var files = GetAllFilesIn(cleanedPath);
+            var payloadFiles = IndexPayload(path, payload);
 
-            // Delete new or modified files
+            // Delete new, modified or files with the wrong content
             HashSet<string> potentiallyEmptyFolders = new();
             foreach (var filePath in files)
             {
                 var searchKey = GetEntriesKey(filePath, path);
                 bool shouldDelete = true;
-                if (m_Entries.TryGetValue(searchKey, out Entry entry))
+                if (m_Entries.TryGetValue(searchKey, out var entry))
                 {
-                    if (entry.EquivalentTo(new Entry(filePath)))
+                    if (payloadFiles.TryGetValue(searchKey, out var payloadFile))
                     {
-                        shouldDelete = false;
+                        if (entry.Equals(new Entry(filePath, payloadFile.FileBlob)))
+                        {
+                            shouldDelete = false;
+                        }
                     }
                 }
 
@@ -101,8 +117,18 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     }
                     catch(Exception)
                     {
-                        logger.LogError($"Failed to delete {filePath}");
-                        throw;
+                        if (payloadFiles.ContainsKey(searchKey))
+                        {
+                            // The payload we will want to copy need that file, so we have to remove the file...
+                            logger.LogError($"Failed to delete {filePath}");
+                            throw;
+                        }
+                        else
+                        {
+                            // The list of files we want to prepare does not contain that file, so we can probably
+                            // allow a few zombies around...
+                            logger.LogWarning($"Failed to delete {filePath}");
+                        }
                     }
                 }
             }
@@ -155,25 +181,39 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             /// <summary>
             /// Constructor
             /// </summary>
-            /// <param name="filePath">Path to the file</param>
-            public Entry(string filePath)
+            /// <param name="filePath">Path to the file.</param>
+            /// <param name="fileBlobId">Identifier representing the content of the file.</param>
+            public Entry(string filePath, Guid fileBlobId)
             {
                 LastWriteTime = File.GetLastWriteTimeUtc(filePath);
-            }
-
-            /// <summary>
-            /// Returns if this <see cref="Entry"/> is equivalent to the other provided <see cref="Entry"/>.
-            /// </summary>
-            /// <param name="other">The other <see cref="Entry"/>.</param>
-            public bool EquivalentTo(Entry other)
-            {
-                return LastWriteTime == other.LastWriteTime;
+                BlobId = fileBlobId;
             }
 
             /// <summary>
             /// When was the last time the file written to.
             /// </summary>
             public DateTime LastWriteTime { get; set; }
+
+            /// <summary>
+            /// FileBlobId representing the content of the file.
+            /// </summary>
+            public Guid BlobId { get; set; } = Guid.Empty;
+
+            public override bool Equals(Object? obj)
+            {
+                if (obj!.GetType() != typeof(Entry))
+                {
+                    return false;
+                }
+                var other = (Entry)obj;
+
+                return LastWriteTime == other.LastWriteTime && BlobId == other.BlobId;
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(LastWriteTime, BlobId);
+            }
         }
 
         /// <summary>
@@ -206,6 +246,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         static string GetEntriesKey(string filePath, string basePath)
         {
             return Path.GetRelativePath(basePath, filePath);
+        }
+
+        /// <summary>
+        /// Index the payload files in a way similar to the one we use to index our entries.
+        /// </summary>
+        /// <param name="path">Path to the folder relative to which all the files in <paramref name="payload"/> are.
+        /// </param>
+        /// <param name="payload">The <see cref="Payload"/> to index.</param>
+        /// <returns>Indexed <see cref="PayloadFile"/>s.</returns>
+        static Dictionary<string, PayloadFile> IndexPayload(string path, Payload payload)
+        {
+            return new Dictionary<string, PayloadFile>(
+                payload.Files.Select(f => new KeyValuePair<string, PayloadFile>(GetEntriesKey(Path.Combine(path, f.Path), path), f)));
         }
 
         /// <summary>
