@@ -142,7 +142,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 catch (AggregateException ae)
                 {
                     ExceptionDispatchInfo.Capture(ae.InnerException!).Throw();
-                    throw new Exception(); // Should never reach this code as the above should throw...
+
+                    // Should never reach this code as the above should throw...  To avoid warnings with code analysis
+                    // tools that does not detect it.
+                    throw new Exception();
                 }
 
                 // Update FileBlobCache usage information

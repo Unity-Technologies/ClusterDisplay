@@ -1,8 +1,5 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.IO.Pipelines;
-using System.Net.Http;
-using Microsoft.Extensions.Hosting.Internal;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
@@ -20,16 +17,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
     /// </summary>
     public class FileBlobCacheService
     {
-        public FileBlobCacheService(ILogger<FileBlobCacheService> logger, ConfigService configService,
-            HttpClient httpClient)
+        public FileBlobCacheService(ILogger<FileBlobCacheService> logger, HttpClient httpClient,
+            IHostApplicationLifetime applicationLifetime, ConfigService configService)
         {
             m_Logger = logger;
-            m_ConfigService = configService;
             m_HttpClient = httpClient;
+            m_ConfigService = configService;
             m_Cache = new(logger);
 
             m_Cache.FetchFileCallback += FetchFileCallback;
             m_Cache.CopyFileCallback += CopyFileCallback;
+
+            applicationLifetime.ApplicationStopping.Register(() => {
+                m_Cache.PersistStorageFolderStates();
+            });
+
+            _ = PeriodicPersistStorageFoldersState(applicationLifetime.ApplicationStopping);
 
             // Load current list of storage folders and save any changes done while loading
             UpdateCacheConfiguration().Wait();
@@ -163,6 +166,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             string blobSource = (string)cookie;
 
             var response = await m_HttpClient.GetAsync(new Uri(new Uri(blobSource), $"api/v1/fileBlobs/{fileBlob}"));
+            response.EnsureSuccessStatusCode();
             using (var fileStream = new FileStream(fetchPath, FileMode.CreateNew))
             {
                 await response.Content.CopyToAsync(fileStream);
@@ -195,9 +199,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             public static Task Do(string fromPath, string toPath)
             {
                 return Task.Run(async () => {
-                    var decompressor = new Decompressor(fromPath, toPath);
-                    await decompressor.m_Decompressor.CopyToAsync(decompressor.m_OutputFileStream);
-                    decompressor.Dispose();
+                    Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
+                    using (var decompressor = new Decompressor(fromPath, toPath))
+                    {
+                        await decompressor.m_Decompressor.CopyToAsync(decompressor.m_OutputFileStream);
+                    }
                 });
             }
 
@@ -220,9 +226,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             GZipStream m_Decompressor;
         }
 
+        /// <summary>
+        /// Task being executed periodically in the background to persist the current state of storage folders.
+        /// </summary>
+        /// <param name="cancellationToken">Indicate that we should stop saving.</param>
+        async Task PeriodicPersistStorageFoldersState(CancellationToken cancellationToken)
+        {
+            var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                m_Cache.PersistStorageFolderStates();
+            }
+        }
+
         readonly ILogger<FileBlobCacheService> m_Logger;
-        readonly ConfigService m_ConfigService;
         readonly HttpClient m_HttpClient;
+        readonly ConfigService m_ConfigService;
 
         /// <summary>
         /// The object doing most of the work

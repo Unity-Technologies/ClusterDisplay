@@ -263,7 +263,114 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(status.PendingRestart, Is.False);
         }
 
-        // FSTL TODO: Tester les changements de config simultané (enlever un storage folder pendant qu'un fichier est en train de se faire fetcher)
+        [Test]
+        public async Task ConfigIsSaved()
+        {
+            string hangarBayFolder = GetTestTempFolder();
+
+            // Initial start of the server, set config and stop it
+            await m_ProcessHelper.Start(hangarBayFolder);
+
+            var newConfig = await m_ProcessHelper.GetConfig();
+            var storageFolder0 =
+                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
+            var storageFolder1 =
+                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 20L * 1024 * 1024 * 1024 };
+            newConfig.StorageFolders = new[] { storageFolder0, storageFolder1 };
+
+            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            var updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(newConfig.StorageFolders, Is.EqualTo(updatedConfig.StorageFolders));
+
+            m_ProcessHelper.Stop();
+
+            // Now let's start it back, it should have saved the config
+            await m_ProcessHelper.Start(hangarBayFolder);
+            updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(newConfig.StorageFolders, Is.EqualTo(updatedConfig.StorageFolders));
+        }
+
+        [Test]
+        public async Task ConcurrentChanges()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            // Initial config
+            var newConfig = await m_ProcessHelper.GetConfig();
+            var storageFolder0 =
+                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
+            newConfig.StorageFolders = new[] { storageFolder0 };
+
+            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            // Start a mission control stub so that we can request some files and have that request block so that we can 
+            // test concurrent setting of config.
+            var missionControlStub = new MissionControlStub();
+            missionControlStub.Start();
+            try
+            {
+                var payload1 = Guid.NewGuid();
+                var fileBlob1 = Guid.NewGuid();
+                missionControlStub.AddFile(payload1, "file1.txt", fileBlob1, "File1 content");
+
+                var fetchFileCheckpoint = new MissionControlStubCheckpoint();
+                missionControlStub.AddFileCheckpoint(fileBlob1, fetchFileCheckpoint);
+
+                var prepareCommand = new PrepareCommand()
+                {
+                    Path = Path.Combine(GetTestTempFolder(), "PrepareInto"),
+                    PayloadIds = new[] { payload1 },
+                    PayloadSource = MissionControlStub.HttpListenerEndpoint
+                };
+                var asyncPrepare = m_ProcessHelper.PostCommand(prepareCommand);
+                await fetchFileCheckpoint.WaitingOnCheckpoint;
+
+                // Now that we have a blocked prepare, some things could block setting config, but we should still be
+                // able to change endpoints.
+                newConfig.ControlEndPoints = newConfig.ControlEndPoints.Append("http://0.0.0.0:8300");
+                httpRet = await m_ProcessHelper.PutConfig(newConfig);
+                Assert.That(httpRet, Is.Not.Null);
+                Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+
+                // However trying to remove the storage folder used by the blocked prepare should block.
+                var storageFolder1 =
+                    new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
+                newConfig.StorageFolders = new[] { storageFolder1 };
+                var blockPutConfig1 = m_ProcessHelper.PutConfig(newConfig);
+
+                // And changing endpoints should now block because we want to keep things in order.
+                newConfig.ControlEndPoints = newConfig.ControlEndPoints.Append("http://[::]:8400");
+                var blockPutConfig2 = m_ProcessHelper.PutConfig(newConfig);
+
+                // Wait a little bit to be sure our diagnostic of blocking is good
+                await Task.Delay(100);
+
+                Assert.That(asyncPrepare.IsCompleted, Is.False);
+                Assert.That(blockPutConfig1.IsCompleted, Is.False);
+                Assert.That(blockPutConfig2.IsCompleted, Is.False);
+
+                // Unblock everything
+                fetchFileCheckpoint.UnblockCheckpoint();
+
+                // Wait for things to complete
+                await asyncPrepare;
+                await blockPutConfig1;
+                await blockPutConfig2;
+
+                // Get the effective finale configuration
+                var effectiveConfig = await m_ProcessHelper.GetConfig();
+                Assert.That(effectiveConfig, Is.EqualTo(newConfig));
+            }
+            finally
+            {
+                missionControlStub.Stop();
+            }
+        }
 
         string GetTestTempFolder()
         {

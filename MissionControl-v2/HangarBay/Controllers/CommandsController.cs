@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Services;
@@ -9,11 +10,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
     public class CommandsController: ControllerBase
     {
         public CommandsController(ILogger<CommandsController> logger, IHostApplicationLifetime applicationLifetime,
-            PayloadsService payloadsService)
+            PayloadsService payloadsService, FileBlobCacheService fileBlobCacheService)
         {
             m_Logger = logger;
             m_ApplicationLifetime = applicationLifetime;
             m_PayloadsService = payloadsService;
+            m_FileBlobCacheService = fileBlobCacheService;
         }
 
         [HttpPost]
@@ -33,42 +35,55 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="command">The command to execute</param>
         async Task<IActionResult> OnPrepare(PrepareCommand command)
         {
-            if (Path.IsPathFullyQualified(command.Path))
+            if (!Path.IsPathFullyQualified(command.Path))
             {
                 return BadRequest($"{command.Path} is not an absolute path.");
             }
 
-            // Get the payloads
-            var payloads = new List<Payload>();
             try
             {
+                // Get the payloads
+                IEnumerable<Payload> payloads = Enumerable.Empty<Payload>();
                 var payloadsTask = new List<Task<Payload>>();
                 foreach (var payloadId in command.PayloadIds)
                 {
                     payloadsTask.Add(m_PayloadsService.GetPayload(payloadId, command.PayloadSource));
                 }
                 await Task.WhenAll(payloadsTask);
+                payloads = payloadsTask.Select(pt => pt.Result);
+
+                // Merge them together into a single list of files
+                Payload mergedPayload;
+                try
+                {
+                    mergedPayload = Payload.Merge(payloads);
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.ToString());
+                }
+
+                // Now the real work, prepare the folder
+                var result = EnsurePathIsClean(command.Path, mergedPayload);
+                if (result != null) return result;
+                await FillFolder(command.Path, mergedPayload, command.PayloadSource);
+
+                // And last step save it's state
+                var fingerprints = FolderContentFingerprints.BuildFrom(command.Path, mergedPayload);
+                var fingerprintsStorage = command.Path.TrimEnd(k_PathTrimEndChar) + ".fingerprints.json";
+                fingerprints.SaveTo(fingerprintsStorage);
+
+                // We are done
+                return Ok();
+            }
+            catch (HttpRequestException e)
+            {
+                return StatusCode((int)e.StatusCode!, e.ToString());
             }
             catch (Exception e)
             {
-                return Conflict(e);
+                return Conflict(e.ToString());
             }
-
-            // Merge them together into a single list of files
-            Payload mergedPayload;
-            try
-            {
-                mergedPayload = Payload.Merge(payloads);
-            }
-            catch (Exception e)
-            {
-                return BadRequest(e);
-            }
-
-            // Now the real work, prepare the folder
-            var result = EnsurePathIsClean(command.Path, mergedPayload);
-            if (result != null) return result;
-            return await FillFolder(command.Path, mergedPayload, command.PayloadSource);
         }
 
         /// <summary>
@@ -143,7 +158,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             }
             catch (Exception e)
             {
-                return Conflict(e);
+                return Conflict(e.ToString());
             }
 
             // Done
@@ -156,19 +171,30 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="path">Path of the folder.</param>
         /// <param name="incomingPayload">Files to be copied in <paramref name="path"/>.</param>
         /// <param name="fileBlobsSource">Where to get missing file blobs from.</param>
-        Task<IActionResult> FillFolder(string path, Payload incomingPayload, string fileBlobsSource)
+        async Task<IActionResult> FillFolder(string path, Payload incomingPayload, string fileBlobsSource)
         {
+            var copyTasks = new List<Task>();
             foreach (var payloadFile in incomingPayload.Files)
             {
+                // We assume that any file already existing must be equivalent to what we want to get, otherwise
+                // EnsurePathIsClean should have removed it or failed.
                 string filePath = Path.Combine(path, payloadFile.Path);
-                if (System.IO.File.Exists(filePath))
+                if (!System.IO.File.Exists(filePath))
                 {
-                    // We assume that any file already existing must be equivalent to what we want to get, otherwise
-                    // EnsurePathIsClean should have removed it or failed.
+                    try
+                    {
+                        copyTasks.Add(m_FileBlobCacheService.CopyFileTo(payloadFile.FileBlob, filePath, fileBlobsSource));
+                    }
+                    catch (Exception e)
+                    {
+                        return Conflict(e.ToString());
+                    }
                 }
             }
 
-            return Task.FromResult<IActionResult>(Ok());
+            await Task.WhenAll(copyTasks);
+
+            return Ok();
         }
 
         /// <summary>
@@ -186,5 +212,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         readonly ILogger<CommandsController> m_Logger;
         readonly IHostApplicationLifetime m_ApplicationLifetime;
         readonly PayloadsService m_PayloadsService;
+        readonly FileBlobCacheService m_FileBlobCacheService;
     }
 }

@@ -35,7 +35,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
                         {
                             "prepare" => JsonSerializer.Deserialize<PrepareCommand>(rootElement, options),
                             "shutdown" => JsonSerializer.Deserialize<ShutdownCommand>(rootElement, options),
-                        _ => throw new JsonException($"{typeValue} is not a known command type.")
+                            _ => throw new JsonException($"{typeValue} is not a known command type.")
                         };
                 }
 
