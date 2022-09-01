@@ -158,6 +158,7 @@ namespace Unity.ClusterDisplay.Graphics
             public void RenderToCubemap(RenderTexture target, Vector3? position = null)
             {
                 m_BaseCameraScope.PreRender(position);
+                m_AdditionalCameraData.hasPersistentHistory = !m_ForceClearHistory;
                 m_Camera.RenderToCubemap(target);
             }
 
