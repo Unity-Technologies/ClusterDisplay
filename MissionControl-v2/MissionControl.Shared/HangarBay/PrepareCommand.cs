@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
@@ -48,7 +42,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(PayloadIds, PayloadSource, Path);
+            HashCode hashCode = new();
+            foreach (var payloadId in PayloadIds)
+            {
+                hashCode.Add(payloadId.GetHashCode());
+            }
+            return HashCode.Combine(hashCode.ToHashCode(), PayloadSource, Path);
         }
     }
 }

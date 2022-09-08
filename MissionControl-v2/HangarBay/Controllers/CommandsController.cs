@@ -1,4 +1,8 @@
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Services;
@@ -10,10 +14,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
     public class CommandsController: ControllerBase
     {
         public CommandsController(ILogger<CommandsController> logger, IHostApplicationLifetime applicationLifetime,
-            PayloadsService payloadsService, FileBlobCacheService fileBlobCacheService)
+            HttpClient httpClient, PayloadsService payloadsService, FileBlobCacheService fileBlobCacheService)
         {
             m_Logger = logger;
             m_ApplicationLifetime = applicationLifetime;
+            m_HttpClient = httpClient;
             m_PayloadsService = payloadsService;
             m_FileBlobCacheService = fileBlobCacheService;
         }
@@ -24,7 +29,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             return command.Type switch
             {
                 CommandType.Prepare => OnPrepare((PrepareCommand)command),
+                CommandType.Restart => OnRestart((RestartCommand)command),
                 CommandType.Shutdown => OnSutdown((ShutdownCommand)command),
+                CommandType.Upgrade => OnUpgrade((UpgradeCommand)command),
                 _ => Task.FromResult<IActionResult>(BadRequest("Unknown command type"))
             };
         }
@@ -207,10 +214,103 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             return Task.FromResult<IActionResult>(Accepted());
         }
 
+        /// <summary>
+        /// Execute a <see cref="RestartCommand"/>.
+        /// </summary>
+        /// <param name="command">The command to execute</param>
+        Task<IActionResult> OnRestart(RestartCommand command)
+        {
+            string fullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            string startupFolder = Path.GetDirectoryName(fullPath)!;
+            string filename = Path.GetFileName(fullPath)!;
+
+            ProcessStartInfo startInfo = new();
+            startInfo.Arguments = GetCurrentProcessArguments();
+            startInfo.FileName = filename;
+            startInfo.UseShellExecute = true;
+            startInfo.WindowStyle = ProcessWindowStyle.Minimized;
+            startInfo.WorkingDirectory = startupFolder;
+
+            RemoteManagement.StartAndWaitForThisProcess(startInfo, command.TimeoutSec);
+
+            m_ApplicationLifetime.StopApplication();
+            return Task.FromResult<IActionResult>(Accepted());
+        }
+
+        /// <summary>
+        /// Execute a <see cref="UpgradeCommand"/>.
+        /// </summary>
+        /// <param name="command">The command to execute.</param>
+        async Task<IActionResult> OnUpgrade(UpgradeCommand command)
+        {
+            string thisProcessFullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            string thisProcessDirectory = Path.GetDirectoryName(thisProcessFullPath)!;
+            string thisProcessFilename = Path.GetFileName(thisProcessFullPath);
+            string setupDirectory = Path.GetFullPath(Path.Combine(thisProcessDirectory, "..", "install"));
+
+            // Clean destination folder
+            try
+            {
+                if (Directory.Exists(setupDirectory))
+                {
+                    Directory.Delete(setupDirectory, true);
+                }
+                Directory.CreateDirectory(setupDirectory);
+            }
+            catch (Exception e)
+            {
+                return Conflict($"Error preparing installation folder {setupDirectory}: {e}");
+            }
+
+            // Download and unzip
+            try
+            {
+                var response = await m_HttpClient.GetAsync(command.NewVersionUrl);
+                response.EnsureSuccessStatusCode();
+                using (var archive  = new ZipArchive(response.Content.ReadAsStream()))
+                {
+                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    {
+                        string destinationPath = Path.GetFullPath(Path.Combine(setupDirectory, entry.FullName));
+                        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+                        entry.ExtractToFile(destinationPath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return Conflict($"Error preparing installation from {command.NewVersionUrl} to {setupDirectory}: {e}");
+            }
+
+            // Launch the upgrade process
+            ProcessStartInfo startInfo = new();
+            startInfo.Arguments = GetCurrentProcessArguments();
+            startInfo.FileName = thisProcessFilename;
+            startInfo.UseShellExecute = true;
+            startInfo.WindowStyle = ProcessWindowStyle.Minimized;
+            startInfo.WorkingDirectory = setupDirectory;
+            RemoteManagement.UpdateThisProcess(startInfo, thisProcessDirectory, command.TimeoutSec);
+
+            // Initiate our termination
+            m_ApplicationLifetime.StopApplication();
+            return Accepted();
+        }
+
+        /// <summary>
+        /// Returns a string from the command line arguments used to launch this process.
+        /// </summary>
+        /// <returns></returns>
+        private string GetCurrentProcessArguments()
+        {
+            var arguments = RemoteManagement.FilterCommandLineArguments(Environment.GetCommandLineArgs()).Skip(1);
+            return RemoteManagement.AssembleCommandLineArguments(arguments);
+        }
+
         static readonly char[] k_PathTrimEndChar = new[] { '/', '\\' };
 
         readonly ILogger<CommandsController> m_Logger;
         readonly IHostApplicationLifetime m_ApplicationLifetime;
+        readonly HttpClient m_HttpClient;
         readonly PayloadsService m_PayloadsService;
         readonly FileBlobCacheService m_FileBlobCacheService;
     }

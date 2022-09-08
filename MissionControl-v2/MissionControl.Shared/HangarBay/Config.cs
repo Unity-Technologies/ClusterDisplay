@@ -35,7 +35,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ControlEndPoints, StorageFolders);
+            HashCode hashCode = new();
+            foreach (var controlPoint in ControlEndPoints)
+            {
+                hashCode.Add(controlPoint.GetHashCode());
+            }
+            foreach (var storageFolder in StorageFolders)
+            {
+                hashCode.Add(storageFolder.GetHashCode());
+            }
+            return hashCode.ToHashCode();
         }
     }
 }

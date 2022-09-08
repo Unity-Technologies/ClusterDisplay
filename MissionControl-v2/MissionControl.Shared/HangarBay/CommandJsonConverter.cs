@@ -1,12 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
@@ -35,6 +28,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
                         {
                             "prepare" => JsonSerializer.Deserialize<PrepareCommand>(rootElement, options),
                             "shutdown" => JsonSerializer.Deserialize<ShutdownCommand>(rootElement, options),
+                            "restart" => JsonSerializer.Deserialize<RestartCommand>(rootElement, options),
+                            "upgrade" => JsonSerializer.Deserialize<UpgradeCommand>(rootElement, options),
                             _ => throw new JsonException($"{typeValue} is not a known command type.")
                         };
                 }

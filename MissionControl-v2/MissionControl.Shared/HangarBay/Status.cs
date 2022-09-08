@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class Status
@@ -42,7 +36,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Version, StartTime, PendingRestart, StorageFolders);
+            HashCode hashCode = new();
+            foreach (var storageFolder in StorageFolders)
+            {
+                hashCode.Add(storageFolder.GetHashCode());
+            }
+            return HashCode.Combine(Version, StartTime, PendingRestart, hashCode.ToHashCode());
         }
     }
 }

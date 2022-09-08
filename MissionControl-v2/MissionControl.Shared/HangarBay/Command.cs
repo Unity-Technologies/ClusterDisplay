@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
@@ -17,9 +12,17 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         Prepare,
         /// <summary>
+        /// <see cref="RestartCommand"/>
+        /// </summary>
+        Restart,
+        /// <summary>
         /// <see cref="ShutdownCommand"/>
         /// </summary>
-        Shutdown
+        Shutdown,
+        /// <summary>
+        /// <see cref="UpgradeCommand"/>
+        /// </summary>
+        Upgrade
     }
 
     /// <summary>

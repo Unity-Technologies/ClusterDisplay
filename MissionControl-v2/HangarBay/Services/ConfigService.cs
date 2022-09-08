@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 {
                     using (var loadStream = File.Open(configPath, FileMode.Open))
                     {
-                        var config = JsonSerializer.Deserialize<Config>(loadStream);
+                        var config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                         return config.ControlEndPoints.ToArray();
                     }
                 }
@@ -236,7 +236,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 {
                     using (var loadStream = File.Open(m_PersistPath, FileMode.Open))
                     {
-                        m_Config = JsonSerializer.Deserialize<Config>(loadStream);
+                        m_Config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     }
                     m_Logger.LogInformation($"Loaded configuration from {m_PersistPath}.");
                     configLoaded = true;
@@ -272,7 +272,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             try
             {
                 using FileStream serializeStream = File.Create(m_PersistPath);
-                JsonSerializer.Serialize(serializeStream, Current);
+                JsonSerializer.Serialize(serializeStream, Current, Json.SerializerOptions);
             }
             catch (Exception e)
             {
@@ -386,7 +386,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         object m_Lock = new object();
 
         /// <summary>
-        /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurent
+        /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurrent
         /// calls to the method.
         /// </summary>
         Task? m_ExecutingSetCurrent;

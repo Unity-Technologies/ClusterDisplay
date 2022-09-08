@@ -3,6 +3,13 @@ using Unity.ClusterDisplay.MissionControl;
 using Unity.ClusterDisplay.MissionControl.HangarBay;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Services;
 
+// Hook for remote management at startup
+RemoteManagement remoteManagement = new();
+if (!remoteManagement.InterceptStartup())
+{
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureAppConfiguration(configure => {
     var argMapping = new Dictionary<string, string>();
@@ -24,6 +31,8 @@ builder.Services.AddFileBlobCacheService();
 builder.Services.AddPayloadsService();
 
 builder.Services.Configure<JsonOptions>(options => { Json.AddToSerializerOptions(options.SerializerOptions); });
+builder.Services.Configure<HostOptions>(options => {
+    options.ShutdownTimeout = TimeSpan.FromSeconds(Convert.ToInt32(builder.Configuration["shutdownTimeoutSec"])); });
 
 var app = builder.Build();
 

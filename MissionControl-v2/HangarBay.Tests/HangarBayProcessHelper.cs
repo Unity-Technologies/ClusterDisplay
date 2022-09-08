@@ -15,21 +15,23 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
     internal class HangarBayProcessHelper : IDisposable
     {
-        public async Task Start(string path)
+        public async Task Start(string path, string fromPath = "")
         {
-            var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            Assert.That(assemblyFolder, Is.Not.Null);
-            assemblyFolder = assemblyFolder.Replace("HangarBay.Tests", "HangarBay");
+            if (string.IsNullOrEmpty(fromPath))
+            {
+                fromPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+                fromPath = fromPath.Replace("HangarBay.Tests", "HangarBay");
+            }
 
             Assert.That(m_Process, Is.Null);
             var startInfo = new ProcessStartInfo()
             {
-                FileName = Path.Combine(assemblyFolder, "HangarBay.exe"),
+                FileName = Path.Combine(fromPath, "HangarBay.exe"),
                 Arguments = $"-masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{path}/config.json\" " +
                     $"-p \"{path}/payloads\"",
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Minimized,
-                WorkingDirectory = assemblyFolder
+                WorkingDirectory = fromPath
             };
             m_Process = Process.Start(startInfo);
             Assert.That(m_Process, Is.Not.Null);

@@ -5,8 +5,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
@@ -117,6 +119,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
+        public void AddPayloadCheckpoint(Guid payloadId, MissionControlStubCheckpoint checkpoint)
+        {
+            lock (m_Lock)
+            {
+                Assert.That(m_Payloads.TryGetValue(payloadId, out var payloadInfo), Is.True);
+                payloadInfo!.Checkpoints.Add(checkpoint);
+            }
+        }
+
         public void AddFileCheckpoint(Guid fileBlobId, MissionControlStubCheckpoint checkpoint)
         {
             lock (m_Lock)
@@ -128,6 +139,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         public ConcurrentQueue<HistoryEntry> History { get; private set; } = new();
 
+        public Action<string, HttpMethod, HttpListenerResponse> FallbackHandler { get; set; } =
+            (string _, HttpMethod _, HttpListenerResponse response) => Respond(response, HttpStatusCode.NotFound);
+
         void ProcessRequestTask(Task<HttpListenerContext> task)
         {
             if (!task.IsFaulted)
@@ -135,12 +149,17 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 try
                 {
                     ProcessRequest(task.Result);
+                    m_HttpListener.GetContextAsync().ContinueWith(ProcessRequestTask);
                 }
                 catch
                 {
-                    Respond(task.Result.Response, HttpStatusCode.InternalServerError);
+                    try
+                    {
+                        Respond(task.Result.Response, HttpStatusCode.InternalServerError);
+                        m_HttpListener.GetContextAsync().ContinueWith(ProcessRequestTask);
+                    }
+                    catch{ }
                 }
-                m_HttpListener.GetContextAsync().ContinueWith(ProcessRequestTask);
             }
         }
 
@@ -179,7 +198,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
             else
             {
-                Respond(response, HttpStatusCode.NotFound);
+                FallbackHandler(requestedUri, httpMethod, response);
             }
         }
 
@@ -192,13 +211,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             lock (m_Lock)
             {
-                if (!m_Payloads.TryGetValue(payloadId, out var payload))
+                if (!m_Payloads.TryGetValue(payloadId, out var payloadInfo))
                 {
                     Respond(response, HttpStatusCode.NotFound);
                     return;
                 }
 
-                RespondJson(response, payload);
+                var checkpointsTask = payloadInfo.Checkpoints.Select(c => c.PerformCheckpoint()).ToArray();
+                if (checkpointsTask != null)
+                {
+                    Task.WaitAll(checkpointsTask);
+                }
+
+                RespondJson(response, payloadInfo);
             }
         }
 
@@ -233,7 +258,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
-        void Respond(HttpListenerResponse response, HttpStatusCode statusCode)
+        static void Respond(HttpListenerResponse response, HttpStatusCode statusCode)
         {
             response.StatusCode = (int)statusCode;
             response.Close();
@@ -258,6 +283,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         class PayloadInfo
         {
             public List<PayloadFile> Files { get; private set; } = new();
+            [JsonIgnore]
+            public List<MissionControlStubCheckpoint> Checkpoints { get; private set; } = new();
         }
 
         const string m_HttpListenerEndpoint = "http://localhost:8000/";

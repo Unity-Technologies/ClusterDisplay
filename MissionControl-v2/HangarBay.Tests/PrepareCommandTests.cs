@@ -508,7 +508,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         }
 
         [Test]
-        public async Task StorageFolderStateIsSaved()
+        public async Task StorageFolderStatusIsSaved()
         {
             var hangarBayFolder = await StartAndConfigureProcess();
 
@@ -539,6 +539,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(status, Is.Not.Null);
             Assert.That(status.StorageFolders.Count(), Is.EqualTo(1));
             var savedStorageFolderStatus = status.StorageFolders.First();
+            Assert.That(savedStorageFolderStatus, Is.Not.Null);
+            // Remark: The expected value below might change if for whatever reason the compression algorithm of the .
+            // net framework changes.
+            Assert.That(savedStorageFolderStatus.CurrentSize, Is.EqualTo(58));
 
             // Stop the server and restart it
             m_ProcessHelper.Stop();

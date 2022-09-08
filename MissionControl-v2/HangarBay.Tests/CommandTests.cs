@@ -32,5 +32,28 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
         }
+
+        [Test]
+        public void Restart()
+        {
+            var toSerialize = new RestartCommand();
+            toSerialize.TimeoutSec = 42;
+            var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
+            var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
+            Assert.That(deserialized, Is.Not.Null);
+            Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        public void Upgrade()
+        {
+            var toSerialize = new UpgradeCommand();
+            toSerialize.NewVersionUrl = "http://mission-control-server:8000/hangarbay.zip";
+            toSerialize.TimeoutSec = 42;
+            var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
+            var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
+            Assert.That(deserialized, Is.Not.Null);
+            Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
     }
 }
