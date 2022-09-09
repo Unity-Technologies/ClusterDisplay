@@ -3,7 +3,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <summary>
     /// <see cref="Command"/> asking the HangarBay to prepare a folder with the given list of payloads.
     /// </summary>
-    public class PrepareCommand: Command
+    public class PrepareCommand: Command, IEquatable<PrepareCommand>
     {
         /// <summary>
         /// Constructor
@@ -28,26 +28,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public string Path { get; set; } = "";
 
-        public override bool Equals(Object? obj)
+        public bool Equals(PrepareCommand? other)
         {
-            if (obj == null || obj.GetType() != typeof(PrepareCommand))
+            if (other == null || other.GetType() != typeof(PrepareCommand))
             {
                 return false;
             }
-            var other = (PrepareCommand)obj;
 
             return PayloadIds.SequenceEqual(other.PayloadIds) && PayloadSource == other.PayloadSource &&
                 Path == other.Path;
-        }
-
-        public override int GetHashCode()
-        {
-            HashCode hashCode = new();
-            foreach (var payloadId in PayloadIds)
-            {
-                hashCode.Add(payloadId.GetHashCode());
-            }
-            return HashCode.Combine(hashCode.ToHashCode(), PayloadSource, Path);
         }
     }
 }

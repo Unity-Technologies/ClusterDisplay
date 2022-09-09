@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
 {
@@ -19,11 +18,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
     /// </summary>
     public class StatusService
     {
-        public StatusService(ILogger<StatusService> logger, ConfigService configService,
-                             FileBlobCacheService fileBlobService)
+        public StatusService(ILogger<StatusService> logger, FileBlobCacheService fileBlobService)
         {
             m_Logger = logger;
-            m_Config = configService;
             m_FileBlobCacheService = fileBlobService;
 
             var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
@@ -34,7 +31,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             else
             {
                 m_HangarBayVersion = "0.0.0.0";
-                m_Logger.LogError($"Failed to get the assembly version, fall-back to {m_HangarBayVersion}.");
+                m_Logger.LogError("Failed to get the assembly version, fall-back to {HangarBayVersion}",
+                    m_HangarBayVersion);
             }
         }
 
@@ -65,8 +63,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             return ret;
         }
 
+        // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
         readonly ILogger<StatusService> m_Logger;
-        readonly ConfigService m_Config;
         readonly FileBlobCacheService m_FileBlobCacheService;
 
         /// <summary>
@@ -82,6 +80,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Has some operations been done on the HangarBay that requires a restart?
         /// </summary>
-        bool m_PendingRestart = false;
+        bool m_PendingRestart;
     }
 }

@@ -1,8 +1,5 @@
 using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Services;
@@ -30,7 +27,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             {
                 CommandType.Prepare => OnPrepare((PrepareCommand)command),
                 CommandType.Restart => OnRestart((RestartCommand)command),
-                CommandType.Shutdown => OnSutdown((ShutdownCommand)command),
+                CommandType.Shutdown => OnShutdown(),
                 CommandType.Upgrade => OnUpgrade((UpgradeCommand)command),
                 _ => Task.FromResult<IActionResult>(BadRequest("Unknown command type"))
             };
@@ -50,14 +47,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             try
             {
                 // Get the payloads
-                IEnumerable<Payload> payloads = Enumerable.Empty<Payload>();
                 var payloadsTask = new List<Task<Payload>>();
                 foreach (var payloadId in command.PayloadIds)
                 {
                     payloadsTask.Add(m_PayloadsService.GetPayload(payloadId, command.PayloadSource));
                 }
                 await Task.WhenAll(payloadsTask);
-                payloads = payloadsTask.Select(pt => pt.Result);
+                IEnumerable<Payload> payloads = payloadsTask.Select(pt => pt.Result);
 
                 // Merge them together into a single list of files
                 Payload mergedPayload;
@@ -73,7 +69,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                 // Now the real work, prepare the folder
                 var result = EnsurePathIsClean(command.Path, mergedPayload);
                 if (result != null) return result;
-                await FillFolder(command.Path, mergedPayload, command.PayloadSource);
+                result = await FillFolder(command.Path, mergedPayload, command.PayloadSource);
+                if (result != null) return result;
 
                 // And last step save it's state
                 var fingerprints = FolderContentFingerprints.BuildFrom(command.Path, mergedPayload);
@@ -112,8 +109,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                 }
                 catch (Exception e)
                 {
-                    m_Logger.LogWarning($"Failed to load fingerprints from {fingerprintsStorage}, will delete the " +
-                        $"folder start from scratch: {e}");
+                    m_Logger.LogWarning(e, "Failed to load fingerprints from {FingerprintsStorage}, will delete " +
+                        "the folder start from scratch", fingerprintsStorage);
                 }
             }
 
@@ -128,8 +125,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                     }
                     catch (Exception e)
                     {
-                        m_Logger.LogWarning($"Failed to load old content of {path}, will continue hopping remaining " +
-                            $"files will not cause problems: {e}");
+                        m_Logger.LogWarning(e, "Failed to load old content of {Path}, will continue hopping " +
+                            $"remaining files will not cause problems", path);
 
                         // Are any of the files left part of incomingPayload?  If so this is a major error and we cannot
                         // continue...
@@ -178,7 +175,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="path">Path of the folder.</param>
         /// <param name="incomingPayload">Files to be copied in <paramref name="path"/>.</param>
         /// <param name="fileBlobsSource">Where to get missing file blobs from.</param>
-        async Task<IActionResult> FillFolder(string path, Payload incomingPayload, string fileBlobsSource)
+        /// <returns>Error result or <c>null</c> if everything worked as expected.</returns>
+        async Task<IActionResult?> FillFolder(string path, Payload incomingPayload, string fileBlobsSource)
         {
             var copyTasks = new List<Task>();
             foreach (var payloadFile in incomingPayload.Files)
@@ -201,14 +199,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
 
             await Task.WhenAll(copyTasks);
 
-            return Ok();
+            return null;
         }
 
         /// <summary>
         /// Execute a <see cref="PrepareCommand"/>.
         /// </summary>
-        /// <param name="command">The command to execute</param>
-        Task<IActionResult> OnSutdown(ShutdownCommand command)
+        Task<IActionResult> OnShutdown()
         {
             m_ApplicationLifetime.StopApplication();
             return Task.FromResult<IActionResult>(Accepted());
@@ -222,7 +219,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         {
             string fullPath = Process.GetCurrentProcess().MainModule!.FileName!;
             string startupFolder = Path.GetDirectoryName(fullPath)!;
-            string filename = Path.GetFileName(fullPath)!;
+            string filename = Path.GetFileName(fullPath);
 
             ProcessStartInfo startInfo = new();
             startInfo.Arguments = GetCurrentProcessArguments();
@@ -267,14 +264,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             {
                 var response = await m_HttpClient.GetAsync(command.NewVersionUrl);
                 response.EnsureSuccessStatusCode();
-                using (var archive  = new ZipArchive(response.Content.ReadAsStream()))
+                using var archive = new ZipArchive(await response.Content.ReadAsStreamAsync());
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    foreach (ZipArchiveEntry entry in archive.Entries)
-                    {
-                        string destinationPath = Path.GetFullPath(Path.Combine(setupDirectory, entry.FullName));
-                        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-                        entry.ExtractToFile(destinationPath);
-                    }
+                    string destinationPath = Path.GetFullPath(Path.Combine(setupDirectory, entry.FullName));
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+                    entry.ExtractToFile(destinationPath);
                 }
             }
             catch (Exception e)
@@ -300,7 +295,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// Returns a string from the command line arguments used to launch this process.
         /// </summary>
         /// <returns></returns>
-        private string GetCurrentProcessArguments()
+        string GetCurrentProcessArguments()
         {
             var arguments = RemoteManagement.FilterCommandLineArguments(Environment.GetCommandLineArgs()).Skip(1);
             return RemoteManagement.AssembleCommandLineArguments(arguments);

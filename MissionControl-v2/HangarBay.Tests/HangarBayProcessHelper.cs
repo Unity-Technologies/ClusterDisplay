@@ -1,19 +1,13 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
-    internal class HangarBayProcessHelper : IDisposable
+    class HangarBayProcessHelper : IDisposable
     {
         public async Task Start(string path, string fromPath = "")
         {
@@ -41,7 +35,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Stopwatch startDeadline = Stopwatch.StartNew();
             while (startDeadline.Elapsed < k_ConnectionTimeout)
             {
-                Assert.That(m_Process.HasExited, Is.False);
+                Assert.That(m_Process!.HasExited, Is.False);
                 try
                 {
                     var status = await m_HttpClient.GetFromJsonAsync<Status>("status");
@@ -70,7 +64,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             {
                 Assert.That(shutdownTask.Result.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
             }
-            bool waitRet = m_Process.WaitForExit((int)(k_ConnectionTimeout - stopwatch.Elapsed).TotalMilliseconds);
+            bool waitRet = m_Process!.WaitForExit((int)(k_ConnectionTimeout - stopwatch.Elapsed).TotalMilliseconds);
             if (!waitRet)
             {
                 m_Process.Kill();
@@ -82,25 +76,25 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public Task<Config> GetConfig()
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient.GetFromJsonAsync<Config>("config", Json.SerializerOptions);
+            return m_HttpClient!.GetFromJsonAsync<Config>("config", Json.SerializerOptions);
         }
 
         public Task<HttpResponseMessage> PutConfig(Config config)
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient.PutAsJsonAsync("config", config, Json.SerializerOptions);
+            return m_HttpClient!.PutAsJsonAsync("config", config, Json.SerializerOptions);
         }
 
         public Task<Status?> GetStatus()
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
+            return m_HttpClient!.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
         }
 
         public Task<HttpResponseMessage> PostCommand<T>(T command) where T: Command
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient.PostAsJsonAsync("commands", command, Json.SerializerOptions);
+            return m_HttpClient!.PostAsJsonAsync("commands", command, Json.SerializerOptions);
         }
 
         public async Task<string[]> GetErrorDetails(HttpContent response)
@@ -108,7 +102,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             string errorDetailsString = await response.ReadAsStringAsync();
             var ret = JsonSerializer.Deserialize<string[]>(errorDetailsString);
             Assert.That(ret, Is.Not.Null);
-            return ret;
+            return ret!;
         }
 
         public void Dispose()

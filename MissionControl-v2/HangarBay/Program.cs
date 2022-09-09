@@ -50,7 +50,7 @@ app.Services.GetService<PayloadsService>();
 
 // Setup watch of parent process for termination
 var appLifetime = app.Services.GetService<IHostApplicationLifetime>();
-MasterProcessWatcher.Setup(appLifetime == null ? CancellationToken.None : appLifetime.ApplicationStopping);
+MasterProcessWatcher.Setup(appLifetime?.ApplicationStopping ?? CancellationToken.None);
 
 app.Run();
 

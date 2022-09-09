@@ -1,13 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -21,14 +14,14 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that will be
         /// copied to the installation path (second <see cref="string"/> parameter of the delegate).</remarks>
-        public Action<string, string> PreUpgradeCopy { get; set; } = (string _, string _) => { };
+        public Action<string, string> PreUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>
         /// Callback called after copy of files for an upgrade.
         /// </summary>
-        /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that have been 
+        /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that have been
         /// copied to the installation path (second <see cref="string"/> parameter of the delegate).</remarks>
-        public Action<string, string> PostUpgradeCopy { get; set; } = (string _, string _) => { };
+        public Action<string, string> PostUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>
         /// Method to be called as soon as possible as part of the service's (HangarBay, LaunchPad, ...) startup to
@@ -105,7 +98,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// Starts the specified process supporting <see cref="RemoteManagement"/> and configure it to wait for this
         /// process to be terminated before actually starting.
         /// </summary>
-        /// <param name="startInfo">Startup information as it would be used with <see cref="Process.Start"/>.</param>
+        /// <param name="startInfo">Startup information as it would be used with
+        /// <see cref="Process.Start(ProcessStartInfo)"/>.</param>
         /// <param name="maxWaitSeconds">Maximum number of seconds the other process will wait for this process to exit
         /// before killing it.  This process will wait twice that amount for it to give some feedback.</param>
         /// <remarks><paramref name="startInfo"/> will be modified.</remarks>
@@ -241,7 +235,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Failed to get sempahore to signal {semaphoreName}: {e}");
+                    Console.WriteLine($"Failed to get semaphore to signal {semaphoreName}: {e}");
                     return false;
                 }
 
@@ -390,7 +384,6 @@ namespace Unity.ClusterDisplay.MissionControl
         /// cannot be erased.</remarks>
         static void CleanPath(string toClean)
         {
-            // Prepare upgrade
             try
             {
                 Directory.Delete(toClean, true);
@@ -398,7 +391,6 @@ namespace Unity.ClusterDisplay.MissionControl
             catch (Exception e)
             {
                 Console.WriteLine($"Failed to delete files from {toClean}: {e}");
-                return;
             }
         }
     }

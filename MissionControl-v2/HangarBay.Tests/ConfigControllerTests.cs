@@ -1,11 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
@@ -27,7 +22,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     Directory.Delete(folder, true);
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
             }
         }
 
@@ -54,10 +52,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Check that the status is updated
             var status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            var folderStatus0 = status.StorageFolders.Where(fs => fs.Path == storageFolder0.Path).FirstOrDefault();
+            var folderStatus0 = status!.StorageFolders.FirstOrDefault(fs => fs.Path == storageFolder0.Path);
             Assert.That(folderStatus0, Is.EqualTo(new StorageFolderStatus() {
                 Path = storageFolder0.Path, MaximumSize = storageFolder0.MaximumSize }));
-            var folderStatus1 = status.StorageFolders.Where(fs => fs.Path == storageFolder1.Path).FirstOrDefault();
+            var folderStatus1 = status.StorageFolders.FirstOrDefault(fs => fs.Path == storageFolder1.Path);
             Assert.That(folderStatus1, Is.EqualTo(new StorageFolderStatus() {
                 Path = storageFolder1.Path, MaximumSize = storageFolder1.MaximumSize }));
         }
@@ -84,7 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(currentConfig.StorageFolders, Is.Not.Empty);
             var currentStatus = await m_ProcessHelper.GetStatus();
             Assert.That(currentStatus, Is.Not.Null);
-            Assert.That(currentStatus.StorageFolders, Is.Not.Empty);
+            Assert.That(currentStatus!.StorageFolders, Is.Not.Empty);
 
             // Try adding a valid path and an invalid one (none should be considered because of the invalid one).
             newConfig.StorageFolders = new StorageFolderConfig[] { };
@@ -108,7 +106,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(currentConfig.StorageFolders.First().Path, Is.EqualTo(originalPath));
             currentStatus = await m_ProcessHelper.GetStatus();
             Assert.That(currentStatus, Is.Not.Null);
-            Assert.That(currentStatus.StorageFolders.Count, Is.EqualTo(1));
+            Assert.That(currentStatus!.StorageFolders.Count, Is.EqualTo(1));
             Assert.That(currentStatus.StorageFolders.First().Path, Is.EqualTo(originalPath));
         }
 
@@ -127,7 +125,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             var status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            Assert.That(status.PendingRestart, Is.False);
+            Assert.That(status!.PendingRestart, Is.False);
 
             // Now do a real change
             newConfig.ControlEndPoints = new[] { "http://127.0.0.1:8200", "http://0.0.0.0:8300" };
@@ -143,7 +141,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Check that the status is updated
             status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            Assert.That(status.PendingRestart, Is.True);
+            Assert.That(status!.PendingRestart, Is.True);
 
             // Restoring to the original shouldn't impact PendingRestart (as other stuff might have set the
             // PendingRestart flag).
@@ -153,7 +151,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
             status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            Assert.That(status.PendingRestart, Is.True);
+            Assert.That(status!.PendingRestart, Is.True);
         }
 
         [Test]
@@ -190,7 +188,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Check that there isn't a restart pending
             var status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            Assert.That(status.PendingRestart, Is.False);
+            Assert.That(status!.PendingRestart, Is.False);
         }
 
         [Test]
@@ -260,7 +258,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Check that the pending restart has been cleared
             var status = await m_ProcessHelper.GetStatus();
             Assert.That(status, Is.Not.Null);
-            Assert.That(status.PendingRestart, Is.False);
+            Assert.That(status!.PendingRestart, Is.False);
         }
 
         [Test]
@@ -308,7 +306,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(httpRet, Is.Not.Null);
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
-            // Start a mission control stub so that we can request some files and have that request block so that we can 
+            // Start a mission control stub so that we can request some files and have that request block so that we can
             // test concurrent setting of config.
             var missionControlStub = new MissionControlStub();
             missionControlStub.Start();

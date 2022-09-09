@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Size (in bytes) of all the file <see cref="CacheFileInfo"/> in our different lists.
         /// </summary>
         [JsonIgnore]
-        public long FileInfoSize { get => InCache.CompressedSize + Unreferenced.CompressedSize + InUse.CompressedSize; }
+        public long FileInfoSize => InCache.CompressedSize + Unreferenced.CompressedSize + InUse.CompressedSize;
 
         /// <summary>
         /// Size (in bytes) of all the zombies
@@ -59,7 +59,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Size of all the files in the storage folder (except the metadata json).
         /// </summary>
         [JsonIgnore]
-        public long EffectiveSize { get => FileInfoSize + ZombiesSize; }
+        public long EffectiveSize => FileInfoSize + ZombiesSize;
 
         /// <summary>
         /// Maximum number of bytes to be used by files in the StorageFolder.
@@ -71,7 +71,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// How much free space there is in the folder?
         /// </summary>
         [JsonIgnore]
-        public long FreeSpace { get => MaximumSize - EffectiveSize; }
+        public long FreeSpace => MaximumSize - EffectiveSize;
 
         /// <summary>
         /// Does the metadata about the file information need to be updated?
@@ -104,15 +104,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             }
             catch (Exception)
             {
-                logger.LogWarning($"Failed to delete {fileBlobInfo} from {UserPath}, will be added to zombies.");
+                logger.LogWarning("Failed to delete {FileBlobInfo} from {UserPath}, will be added to zombies",
+                    fileBlobInfo, UserPath);
                 Zombies.Add(fileBlobInfo);
 
                 try
                 {
-                    var dotNetFileInfo = new System.IO.FileInfo(filePath);
+                    var dotNetFileInfo = new FileInfo(filePath);
                     ZombiesSize += dotNetFileInfo.Length;
                 }
-                catch(Exception) {}
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 
@@ -126,7 +130,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 if (Unreferenced.First != null)
                 {
-                    EvictNextUnrefrenced(logger);
+                    EvictNextUnreferenced(logger);
                 }
                 else if (InCache.First != null)
                 {
@@ -145,7 +149,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// method).
         /// </summary>
         /// <param name="logger">Logger to use in case of error.</param>
-        public void EvictNextUnrefrenced(ILogger logger)
+        public void EvictNextUnreferenced(ILogger logger)
         {
             var toRemove = Unreferenced.First!.Value;
             Debug.Assert(toRemove.CopyTasks.Count == 0);

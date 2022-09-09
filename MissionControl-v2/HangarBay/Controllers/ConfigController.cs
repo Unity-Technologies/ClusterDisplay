@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         public async Task<IActionResult> Put(Config config)
         {
             var ret = await m_Config.SetCurrent(config);
-            if (ret != null && ret.Any())
+            if (ret.Any())
             {
                 return BadRequest(ret);
             }

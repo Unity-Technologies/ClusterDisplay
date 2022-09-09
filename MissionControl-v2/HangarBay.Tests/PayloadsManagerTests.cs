@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [SetUp]
         public void SetUp()
         {
-            
+
         }
 
         [TearDown]
@@ -23,7 +23,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     Directory.Delete(folder, true);
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
             }
         }
 
@@ -54,7 +57,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             var someCookie = new object();
             int fetchCallCount = 0;
-            payloadsManager.FetchFileCallback = (Guid payloadId, object? cookie) =>
+            payloadsManager.FetchFileCallback = (payloadId, cookie) =>
             {
                 Interlocked.Increment(ref fetchCallCount);
                 if (cookie != someCookie)
@@ -88,7 +91,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Reload
             var payloadsManagerNew = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
             payloadsManagerNew.FetchFileCallback = payloadsManager.FetchFileCallback;
-            payloadsManager = null;
             // We cannot compare entries in details since reload order is "random"
             Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(5));
             m_FileBlobCacheStub.Clear();
@@ -110,7 +112,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
-            Guid uniqueFile2 = Guid.NewGuid();
 
             var payloadId = Guid.NewGuid();
             var payload = new Payload();
@@ -121,7 +122,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             };
 
             int fetchCallCount = 0;
-            payloadsManager.FetchFileCallback = (Guid id, object? _) =>
+            payloadsManager.FetchFileCallback = (id, _) =>
             {
                 Interlocked.Increment(ref fetchCallCount);
                 if (id == payloadId) return Task.FromResult(payload);
@@ -136,11 +137,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // Add an unrelated json file in the folder and try to load
             string unrelatedFilePath = Path.Combine(storageFolder, "Unrelated.json");
-            File.WriteAllText(unrelatedFilePath, "{}");
+            await File.WriteAllTextAsync(unrelatedFilePath, "{}");
 
             Assert.That(m_LoggerStub.Messages, Is.Empty);
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            var payloadsManagerNew = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
             Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
             Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
             Assert.That(m_LoggerStub.Messages[0].Content.Contains("Unexpected filename"), Is.True);
@@ -153,11 +154,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Add a .json file with non json content in it and try to load
             string badPayloadFilename = $"{Guid.NewGuid()}.json";
             string badPayloadPath = Path.Combine(storageFolder, badPayloadFilename);
-            File.WriteAllText(badPayloadPath, "This is not a json");
+            await File.WriteAllTextAsync(badPayloadPath, "This is not a json");
 
             Assert.That(m_LoggerStub.Messages, Is.Empty);
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            payloadsManagerNew = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
             Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
             Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
             Assert.That(m_LoggerStub.Messages[0].Content.Contains("Failed loading back"), Is.True);
@@ -172,7 +173,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             Assert.That(m_LoggerStub.Messages, Is.Empty);
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            payloadsManagerNew = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
             Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
             Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
             Assert.That(m_LoggerStub.Messages[0].Content.Contains("processing files of"), Is.True);
@@ -201,10 +202,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var somePayloadId = Guid.NewGuid();
 
             // Test an exception during FetchFileCallback
-            payloadsManager.FetchFileCallback = (Guid id, object? _) =>
-            {
-                throw new TestException();
-            };
+            payloadsManager.FetchFileCallback = (_, _) => throw new TestException();
             Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<TestException>());
 
             // Test that everything get rolled-back when a problem is detected while increasing entries usage
@@ -219,7 +217,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 new PayloadFile() {Path="somethingElse",   FileBlob = uniqueFile2,    CompressedSize = 280, Size = 560}
             };
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            payloadsManager.FetchFileCallback = (Guid id, object? _) => Task.FromResult(payload);
+            payloadsManager.FetchFileCallback = (_, _) => Task.FromResult(payload);
 
             m_FileBlobCacheStub.FakeIncreaseUsageCountErrorIn = 4;
             Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<FileBlobCacheStub.FakeException>());
@@ -265,7 +263,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             TaskCompletionSource fetchTcs = new();
             int fetchCount = 0;
-            payloadsManager.FetchFileCallback = async (Guid _, object? _) =>
+            payloadsManager.FetchFileCallback = async (_, _) =>
             {
                 Interlocked.Increment(ref fetchCount);
                 await fetchTcs.Task;
@@ -304,7 +302,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             TaskCompletionSource fetchTcs = new();
             int fetchCount = 0;
-            payloadsManager.FetchFileCallback = async (Guid _, object? _) =>
+            payloadsManager.FetchFileCallback = async (_, _) =>
             {
                 Interlocked.Increment(ref fetchCount);
                 await fetchTcs.Task;
@@ -326,10 +324,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
 
             // However we should be able to try again once everything is failed
-            payloadsManager.FetchFileCallback = (Guid _, object? _) =>
-            {
-                return Task.FromResult(new Payload());
-            };
+            payloadsManager.FetchFileCallback = (_, _) => Task.FromResult(new Payload());
 
             var result = await payloadsManager.GetPayload(payloadId);
             Assert.That(result.Files, Is.Empty);
@@ -343,7 +338,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             return folderPath;
         }
 
-        bool ComparePayload(Payload payload1, Payload payload2)
+        static bool ComparePayload(Payload payload1, Payload payload2)
         {
             return JsonSerializer.Serialize(payload1) == JsonSerializer.Serialize(payload2);
         }

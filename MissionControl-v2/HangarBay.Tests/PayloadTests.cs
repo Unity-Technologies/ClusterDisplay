@@ -134,7 +134,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             return true;
         }
 
-        bool ComparePayload(PayloadFile payloadFile1, PayloadFile payloadFile2)
+        static bool ComparePayload(PayloadFile payloadFile1, PayloadFile payloadFile2)
         {
             return JsonSerializer.Serialize(payloadFile1) == JsonSerializer.Serialize(payloadFile2);
         }

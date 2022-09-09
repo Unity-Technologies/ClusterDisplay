@@ -9,8 +9,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     /// </summary>
     /// <remarks>Assumes that the CompressedSize of <see cref="CacheFileInfo"/> added in the list never change.
     /// </remarks>
-    class FileInfoLinkedList: ICollection<CacheFileInfo>, IEnumerable<CacheFileInfo>, IEnumerable,
-        IReadOnlyCollection<CacheFileInfo>, ICollection, IDeserializationCallback, ISerializable
+    class FileInfoLinkedList: ICollection<CacheFileInfo>, IReadOnlyCollection<CacheFileInfo>, ICollection,
+        IDeserializationCallback, ISerializable
     {
         public FileInfoLinkedList()
         {
@@ -23,9 +23,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
 
-        public LinkedListNode<CacheFileInfo>? Last { get => m_Storage.Last; }
-        public LinkedListNode<CacheFileInfo>? First { get => m_Storage.First; }
-        public int Count { get => m_Storage.Count; }
+        public LinkedListNode<CacheFileInfo>? Last => m_Storage.Last;
+        public LinkedListNode<CacheFileInfo>? First => m_Storage.First;
+        public int Count => m_Storage.Count;
 
         public void AddAfter(LinkedListNode<CacheFileInfo> node, LinkedListNode<CacheFileInfo> newNode)
         {

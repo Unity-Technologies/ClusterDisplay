@@ -4,7 +4,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <see cref="Command"/> asking the HangarBay to shutdown.  Use with care as the only way to restart it is to some
     /// manual interventions on the computer running it, designed to be sued as part of automated testing.
     /// </summary>
-    public class ShutdownCommand: Command
+    public class ShutdownCommand: Command, IEquatable<ShutdownCommand>
     {
         /// <summary>
         /// Constructor
@@ -14,14 +14,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             Type = CommandType.Shutdown;
         }
 
-        public override bool Equals(Object? obj)
+        public bool Equals(ShutdownCommand? other)
         {
-            return obj.GetType() == typeof(ShutdownCommand);
-        }
-
-        public override int GetHashCode()
-        {
-            return typeof(ShutdownCommand).GetHashCode();
+            return other != null && other.GetType() == typeof(ShutdownCommand);
         }
     }
 }

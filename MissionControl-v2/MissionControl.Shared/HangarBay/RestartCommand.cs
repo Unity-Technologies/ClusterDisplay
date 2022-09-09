@@ -3,7 +3,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <summary>
     /// <see cref="Command"/> asking the HangarBay to restart.
     /// </summary>
-    public class RestartCommand: Command
+    public class RestartCommand: Command, IEquatable<RestartCommand>
     {
         /// <summary>
         /// Constructor
@@ -18,20 +18,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public int TimeoutSec { get; set; } = 60;
 
-        public override bool Equals(Object? obj)
+        public bool Equals(RestartCommand? other)
         {
-            if (obj == null || obj.GetType() != typeof(RestartCommand))
+            if (other == null || other.GetType() != typeof(RestartCommand))
             {
                 return false;
             }
-            var other = (RestartCommand)obj;
 
             return TimeoutSec == other.TimeoutSec;
-        }
-
-        public override int GetHashCode()
-        {
-            return TimeoutSec.GetHashCode();
         }
     }
 }

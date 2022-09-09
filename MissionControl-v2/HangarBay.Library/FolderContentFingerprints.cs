@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </summary>
         /// <remarks>For now it only contains one property, but created this struct to make future modifications easier
         /// if ever we need additional information to better detect file changes.</remarks>
-        struct Entry
+        struct Entry: IEquatable<Entry>
         {
             /// <summary>
             /// Default empty constructor
@@ -199,20 +199,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             /// </summary>
             public Guid BlobId { get; set; } = Guid.Empty;
 
-            public override bool Equals(Object? obj)
+            public bool Equals(Entry other)
             {
-                if (obj!.GetType() != typeof(Entry))
-                {
-                    return false;
-                }
-                var other = (Entry)obj;
-
                 return LastWriteTime == other.LastWriteTime && BlobId == other.BlobId;
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(LastWriteTime, BlobId);
             }
         }
 

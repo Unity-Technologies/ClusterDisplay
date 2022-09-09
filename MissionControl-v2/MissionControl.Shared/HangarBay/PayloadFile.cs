@@ -3,7 +3,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <summary>
     /// Information about a Payload's file.
     /// </summary>
-    public class PayloadFile
+    public class PayloadFile: IEquatable<PayloadFile>
     {
         /// <summary>
         /// Path of the file relative to root of the folder where the asset files will be stored.
@@ -34,21 +34,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             return FileBlob == other.FileBlob && CompressedSize == other.CompressedSize && Size == other.Size;
         }
 
-        public override bool Equals(Object? obj)
+        public bool Equals(PayloadFile? other)
         {
-            if (obj == null || obj.GetType() != typeof(PayloadFile))
+            if (other == null || other.GetType() != typeof(PayloadFile))
             {
                 return false;
             }
-            var other = (PayloadFile)obj;
 
             return Path == other.Path && FileBlob == other.FileBlob && CompressedSize == other.CompressedSize &&
                 Size == other.Size;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Path, FileBlob, CompressedSize, Size);
         }
     }
 }

@@ -1,6 +1,6 @@
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
-    public class Status
+    public class Status: IEquatable<Status>
     {
         /// <summary>
         /// Version number of the running HangarBay executable.
@@ -22,26 +22,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public IEnumerable<StorageFolderStatus> StorageFolders { get; set; } = Enumerable.Empty<StorageFolderStatus>();
 
-        public override bool Equals(Object? obj)
+        public bool Equals(Status? other)
         {
-            if (obj == null || obj.GetType() != typeof(Status))
+            if (other == null || other.GetType() != typeof(Status))
             {
                 return false;
             }
-            var other = (Status)obj;
 
             return Version == other.Version && StartTime == other.StartTime &&
                 PendingRestart == other.PendingRestart && StorageFolders.SequenceEqual(other.StorageFolders);
-        }
-
-        public override int GetHashCode()
-        {
-            HashCode hashCode = new();
-            foreach (var storageFolder in StorageFolders)
-            {
-                hashCode.Add(storageFolder.GetHashCode());
-            }
-            return HashCode.Combine(Version, StartTime, PendingRestart, hashCode.ToHashCode());
         }
     }
 }

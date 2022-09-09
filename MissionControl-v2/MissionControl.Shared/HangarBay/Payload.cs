@@ -1,11 +1,9 @@
-using System.Drawing;
-
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
     /// Information about a Payload
     /// </summary>
-    public class Payload
+    public class Payload: IEquatable<Payload>
     {
         /// <summary>
         /// List of files composing the Payload
@@ -13,7 +11,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         public IEnumerable<PayloadFile> Files { get; set; } = Enumerable.Empty<PayloadFile>();
 
         /// <summary>
-        /// Merge the content (files) of the given <see cref="Payload"/>s into a new one.  Files present in multiple 
+        /// Merge the content (files) of the given <see cref="Payload"/>s into a new one.  Files present in multiple
         /// payloads will kept once.
         /// </summary>
         /// <param name="payloads">From where to take the files to merge in this <see cref="Payload"/>.</param>
@@ -51,20 +49,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             return ret;
         }
 
-        public override bool Equals(Object? obj)
+        public bool Equals(Payload? other)
         {
-            if (obj == null || obj.GetType() != typeof(Payload))
+            if (other == null || other.GetType() != typeof(Payload))
             {
                 return false;
             }
-            var other = (Payload)obj;
 
-            return Files == other.Files;
-        }
-
-        public override int GetHashCode()
-        {
-            return Files.GetHashCode();
+            return Files.SequenceEqual(other.Files);
         }
     }
 }

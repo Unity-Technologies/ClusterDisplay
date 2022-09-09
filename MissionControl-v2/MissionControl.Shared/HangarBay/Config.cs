@@ -4,7 +4,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// HangarBay's configuration.  This data is also the content of the config.json file used to store the
     /// configuration of the service.
     /// </summary>
-    public struct Config
+    public struct Config: IEquatable<Config>
     {
         /// <summary>
         /// Constructor
@@ -21,30 +21,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public IEnumerable<StorageFolderConfig> StorageFolders { get; set; } = Enumerable.Empty<StorageFolderConfig>();
 
-        public override bool Equals(Object? obj)
+        public bool Equals(Config other)
         {
-            if (obj == null || obj.GetType() != typeof(Config))
+            if (other.GetType() != typeof(Config))
             {
                 return false;
             }
-            var other = (Config)obj;
 
             return ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 StorageFolders.SequenceEqual(other.StorageFolders);
-        }
-
-        public override int GetHashCode()
-        {
-            HashCode hashCode = new();
-            foreach (var controlPoint in ControlEndPoints)
-            {
-                hashCode.Add(controlPoint.GetHashCode());
-            }
-            foreach (var storageFolder in StorageFolders)
-            {
-                hashCode.Add(storageFolder.GetHashCode());
-            }
-            return hashCode.ToHashCode();
         }
     }
 }

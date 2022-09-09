@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
-    internal class CommandJsonConverter : JsonConverter<Command>
+    class CommandJsonConverter : JsonConverter<Command>
     {
         public override bool CanConvert(Type type)
         {

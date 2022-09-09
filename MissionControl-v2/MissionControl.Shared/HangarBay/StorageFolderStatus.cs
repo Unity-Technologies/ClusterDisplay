@@ -3,7 +3,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <summary>
     /// Class used to transmit the status of a Hangar Bay's folder where it stores the cached files.
     /// </summary>
-    public class StorageFolderStatus
+    public class StorageFolderStatus: IEquatable<StorageFolderStatus>
     {
         /// <summary>
         /// Path to the folder managed by the Hangar Bay in which it stores cached files.
@@ -31,22 +31,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public long MaximumSize { get; set; }
 
-        public override bool Equals(Object? obj)
+        public bool Equals(StorageFolderStatus? other)
         {
-            if (obj == null || obj.GetType() != typeof(StorageFolderStatus))
+            if (other == null || other.GetType() != typeof(StorageFolderStatus))
             {
                 return false;
             }
-            var other = (StorageFolderStatus)obj;
 
             return Path == other.Path && CurrentSize == other.CurrentSize &&
                 UnreferencedSize == other.UnreferencedSize && ZombiesSize == other.ZombiesSize &&
                 MaximumSize == other.MaximumSize;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Path, MaximumSize, UnreferencedSize, ZombiesSize, MaximumSize);
         }
     }
 }

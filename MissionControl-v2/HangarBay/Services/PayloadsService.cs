@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
@@ -20,7 +19,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         public PayloadsService(IConfiguration configuration, ILogger<PayloadsService> logger,
             FileBlobCacheService fileBlobCache, HttpClient httpClient)
         {
-            m_Logger = logger;
             m_HttpClient = httpClient;
 
             m_Manager = fileBlobCache.NewPayloadsManager(logger, configuration["payloadsCatalog"]);
@@ -48,7 +46,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         async Task<Payload> FetchPayload(Guid payloadIdentifier, object? cookie)
         {
             Debug.Assert(cookie != null); // GetPayload always passes a fetchCookie
-            string payloadSource = (string)cookie!;
+            string payloadSource = (string)cookie;
 
             var fetched = await m_HttpClient.GetFromJsonAsync<Payload>(
                 new Uri(new Uri(payloadSource), $"api/v1/payloads/{payloadIdentifier}"));
@@ -59,7 +57,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             return fetched;
         }
 
-        readonly ILogger<PayloadsService> m_Logger;
         readonly HttpClient m_HttpClient;
 
         /// <summary>

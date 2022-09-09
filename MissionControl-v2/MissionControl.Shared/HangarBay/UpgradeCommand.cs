@@ -3,7 +3,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     /// <summary>
     /// <see cref="Command"/> asking the HangarBay to restart.
     /// </summary>
-    public class UpgradeCommand: Command
+    public class UpgradeCommand: Command, IEquatable<UpgradeCommand>
     {
         /// <summary>
         /// Constructor
@@ -23,20 +23,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// </summary>
         public int TimeoutSec { get; set; } = 60;
 
-        public override bool Equals(Object? obj)
+        public bool Equals(UpgradeCommand? other)
         {
-            if (obj == null || obj.GetType() != typeof(UpgradeCommand))
+            if (other == null || other.GetType() != typeof(UpgradeCommand))
             {
                 return false;
             }
-            var other = (UpgradeCommand)obj;
 
             return NewVersionUrl == other.NewVersionUrl && TimeoutSec == other.TimeoutSec;
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(NewVersionUrl, TimeoutSec);
         }
     }
 }

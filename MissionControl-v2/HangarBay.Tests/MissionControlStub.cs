@@ -1,47 +1,41 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
-    internal class MissionControlStubCheckpoint
+    class MissionControlStubCheckpoint
     {
-        public Task WaitingOnCheckpoint => m_WaitingOnCheckpointTCS.Task;
+        public Task WaitingOnCheckpoint => m_WaitingOnCheckpointTcs.Task;
 
         public Task PerformCheckpoint()
         {
-            m_WaitingOnCheckpointTCS.SetResult();
-            return m_CheckpointFinishedTCS.Task;
+            m_WaitingOnCheckpointTcs.SetResult();
+            return m_CheckpointFinishedTcs.Task;
         }
 
         public void UnblockCheckpoint()
         {
-            m_CheckpointFinishedTCS.SetResult();
+            m_CheckpointFinishedTcs.SetResult();
         }
 
-        TaskCompletionSource m_WaitingOnCheckpointTCS = new();
-        TaskCompletionSource m_CheckpointFinishedTCS = new();
+        TaskCompletionSource m_WaitingOnCheckpointTcs = new();
+        TaskCompletionSource m_CheckpointFinishedTcs = new();
     }
 
     /// <summary>
     /// Helper class that mimics the MissionControl rest interface to allow testing HangarBay code.
     /// </summary>
-    internal class MissionControlStub
+    class MissionControlStub
     {
         public static string HttpListenerEndpoint => "http://localhost:8000/";
 
         public MissionControlStub()
         {
-            m_HttpListener.Prefixes.Add(m_HttpListenerEndpoint);
+            m_HttpListener.Prefixes.Add(k_HttpListenerEndpoint);
         }
 
         public void Start()
@@ -85,7 +79,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
                         using (var compressedStream = new MemoryStream())
                         using (var compressor = new GZipStream(compressedStream, CompressionMode.Compress))
-                        {                            
+                        {
                             contentStream.CopyTo(compressor);
                             compressor.Flush();
 
@@ -140,7 +134,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         public ConcurrentQueue<HistoryEntry> History { get; private set; } = new();
 
         public Action<string, HttpMethod, HttpListenerResponse> FallbackHandler { get; set; } =
-            (string _, HttpMethod _, HttpListenerResponse response) => Respond(response, HttpStatusCode.NotFound);
+            (_, _, response) => Respond(response, HttpStatusCode.NotFound);
 
         void ProcessRequestTask(Task<HttpListenerContext> task)
         {
@@ -158,7 +152,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                         Respond(task.Result.Response, HttpStatusCode.InternalServerError);
                         m_HttpListener.GetContextAsync().ContinueWith(ProcessRequestTask);
                     }
-                    catch{ }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
         }
@@ -170,7 +167,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var response = ctxt.Response;
             Assert.That(response, Is.Not.Null);
 
-            var requestedUri = new Uri(m_HttpListenerEndpoint).MakeRelativeUri(request.Url!).ToString();
+            var requestedUri = new Uri(k_HttpListenerEndpoint).MakeRelativeUri(request.Url!).ToString();
             var httpMethod = new HttpMethod(request.HttpMethod);
             History.Enqueue(new HistoryEntry() { Uri = requestedUri, Method = httpMethod });
 
@@ -218,10 +215,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 }
 
                 var checkpointsTask = payloadInfo.Checkpoints.Select(c => c.PerformCheckpoint()).ToArray();
-                if (checkpointsTask != null)
-                {
-                    Task.WaitAll(checkpointsTask);
-                }
+                Task.WaitAll(checkpointsTask);
 
                 RespondJson(response, payloadInfo);
             }
@@ -243,10 +237,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 }
 
                 var checkpointsTask = fileInfo.Checkpoints.Select(c => c.PerformCheckpoint()).ToArray();
-                if (checkpointsTask != null)
-                {
-                    Task.WaitAll(checkpointsTask);
-                }
+                Task.WaitAll(checkpointsTask);
 
                 response.StatusCode = (int)HttpStatusCode.OK;
                 response.ContentType = "application/gzip";
@@ -264,7 +255,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             response.Close();
         }
 
-        void RespondJson<T>(HttpListenerResponse response, T toSerialize, HttpStatusCode statusCode = HttpStatusCode.OK)
+        static void RespondJson<T>(HttpListenerResponse response, T toSerialize, HttpStatusCode statusCode = HttpStatusCode.OK)
         {
             response.StatusCode = (int)statusCode;
             response.ContentType = "application/json";
@@ -287,7 +278,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             public List<MissionControlStubCheckpoint> Checkpoints { get; private set; } = new();
         }
 
-        const string m_HttpListenerEndpoint = "http://localhost:8000/";
+        const string k_HttpListenerEndpoint = "http://localhost:8000/";
         HttpListener m_HttpListener = new();
 
         object m_Lock = new object();

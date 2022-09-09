@@ -64,6 +64,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <see cref="FetchTask"/> and <see cref="CopyTasks"/>.
         /// </summary>
         [JsonIgnore]
-        public IEnumerable<Task> AllTasks { get => FetchTask != null ? CopyTasks.Append(FetchTask) : CopyTasks; }
+        public IEnumerable<Task> AllTasks => FetchTask != null ? CopyTasks.Append(FetchTask) : CopyTasks;
     }
 }

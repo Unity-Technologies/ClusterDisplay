@@ -2,7 +2,7 @@ using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
-    internal class FileBlobCacheStub : IFileBlobCache
+    class FileBlobCacheStub : IFileBlobCache
     {
         public class Entry
         {
@@ -21,8 +21,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             public override bool CompareTo(Entry other)
             {
-                IncreaseEntry? otherIncrease = other as IncreaseEntry;
-                return otherIncrease != null &&
+                return other is IncreaseEntry otherIncrease &&
                        CompressedSize == otherIncrease.CompressedSize &&
                        Size == otherIncrease.Size &&
                        base.CompareTo(other);
@@ -33,8 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             public override bool CompareTo(Entry other)
             {
-                DecreaseEntry? otherDecrease = other as DecreaseEntry;
-                return otherDecrease != null &&
+                return other is DecreaseEntry otherDecrease &&
                        base.CompareTo(other);
             }
         }

@@ -22,21 +22,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when a file is to be fetched.
         /// </summary>
-        /// <remarks>Func's <see cref="Guid"/> is the file blob identifier of the file to fetch, the
+        /// <remarks>Func <see cref="Guid"/> is the file blob identifier of the file to fetch, the
         /// <see cref="String"/> is the path of where to save that fetched content and the <see cref="Object"/> is the
         /// cookie received by <see cref="CopyFileToAsync"/>.  Returns a <see cref="Task"/> that is to be completed when
         /// fetch is completed.</remarks>
-        public Func<Guid, string, object?, Task> FetchFileCallback { get; set; } =
-            (Guid _, string _, object? _) => Task.CompletedTask;
+        public Func<Guid, string, object?, Task> FetchFileCallback { get; set; } = (_, _, _) => Task.CompletedTask;
 
         /// <summary>
         /// Function called by <see cref="FileBlobCache"/> when asked to copy a file.
         /// </summary>
-        /// <remarks>Func first <see cref="String"/> is the path to the file to copy, the second one is the path to the 
+        /// <remarks>Func first <see cref="String"/> is the path to the file to copy, the second one is the path to the
         /// destination and the <see cref="Object"/> is the cookie received by <see cref="CopyFileToAsync"/>.  Returns a
         /// <see cref="Task"/> that is to be completed when copy is finished.</remarks>
-        public Func<string, string, object?, Task> CopyFileCallback { get; set; } =
-            (string _, string _, object? _) => Task.CompletedTask;
+        public Func<string, string, object?, Task> CopyFileCallback { get; set; } = (_, _, _) => Task.CompletedTask;
 
         /// <summary>
         /// Increase usage count of the file with the given file blob identifier.
@@ -55,11 +53,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     // We already knew about that file, just increase usage count
                     if (compressedSize != fileInfo.CompressedSize)
                     {
-                        throw new ArgumentException(nameof(compressedSize), "CompressedSize does not match compressed size of previous entry.  A given fileBlobId should always have the same compressed size.");
+                        throw new ArgumentException("CompressedSize does not match compressed size of previous entry.  " +
+                            "A given fileBlobId should always have the same compressed size.", nameof(compressedSize));
                     }
                     if (size != fileInfo.Size)
                     {
-                        throw new ArgumentException(nameof(size), "Size does not match size of previous entry.  A given fileBlobId should always have the same compressed size.");
+                        throw new ArgumentException("Size does not match size of previous entry.  A given fileBlobId " +
+                            "should always have the same compressed size.", nameof(size));
                     }
                     ++fileInfo.ReferenceCount;
 
@@ -111,25 +111,25 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 if (!m_Files.TryGetValue(fileBlobId, out var fileInfo))
                 {
-                    m_Logger.LogWarning($"Trying to remove a reference to {fileBlobId} but there is no file with that " +
-                        $"identifier.  Will skip but this is not supposed to happen.");
+                    m_Logger.LogWarning("Trying to remove a reference to {FileBlobId} but there is no file with that " +
+                        $"identifier, will skip but this is not supposed to happen", fileBlobId);
                     return;
                 }
                 if (fileInfo.ReferenceCount <= 0)
                 {
-                    m_Logger.LogWarning($"Trying to remove a reference to {fileBlobId} but the file was not already " +
-                        $"referenced.  Will skip but this is not supposed to happen.");
+                    m_Logger.LogWarning("Trying to remove a reference to {FileBlobId} but the file was not already " +
+                        $"referenced, will skip but this is not supposed to happen", fileBlobId);
                     return;
                 }
                 if (fileInfo.ReferenceCount == 1 && (fileInfo.FetchTask != null || fileInfo.CopyTasks.Count > 0))
                 {
                     if (!muteDefer)
                     {
-                        m_Logger.LogWarning($"Unexpected, trying to remove the last usage of {fileBlobId} that is " +
+                        m_Logger.LogWarning("Unexpected, trying to remove the last usage of {FileBlobId} that is " +
                             $"currently in use, will defer its processing (asynchronously) for when it will not be " +
-                            $"used anymore.");
+                            $"used anymore", fileBlobId);
                     }
-                    Task.WhenAll(fileInfo.AllTasks).ContinueWith(t => DecreaseUsageCount(fileBlobId, true));
+                    Task.WhenAll(fileInfo.AllTasks).ContinueWith(_ => DecreaseUsageCount(fileBlobId, true));
                     return;
                 }
                 --fileInfo.ReferenceCount;
@@ -200,7 +200,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         {
                             File.Delete(testPath);
                         }
-                        catch(Exception){ }
+                        catch (Exception)
+                        {
+                            // ignored
+                        }
                     }
                 }
 
@@ -214,12 +217,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     {
                         deserialized = JsonSerializer.Deserialize<StorageFolderInfo>(loadStream);
                     }
-                    if (deserialized == null)
-                    {
-                        throw new NullReferenceException(
-                            $"Got an unexpected null StorageFolderInfo while de-serializing {storageFolderMetadataJson}.");
-                    }
-                    storageFolderInfo = deserialized;
+
+                    storageFolderInfo = deserialized ?? throw new NullReferenceException(
+                        $"Got an unexpected null StorageFolderInfo while de-serializing {storageFolderMetadataJson}.");
                     storageFolderInfo.FullPath = effectivePath;
                     storageFolderInfo.MaximumSize = config.MaximumSize;
                     ConcludeStorageFolderInfoLoading(storageFolderInfo);
@@ -258,7 +258,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <exception cref="ArgumentException">If asking to update a non existing storage folder or if the new
         /// configuration is not compatible.</exception>
         /// <remarks>This method was implemented to keep it as simple as possible.  In case where the new configuration
-        /// has a lower maximum size than the current content of the storage folder we simply delete the oldest content, 
+        /// has a lower maximum size than the current content of the storage folder we simply delete the oldest content,
         /// we don't try to migrated it to another storage folder (it will have to be re-downloaded from MissionControl
         /// if needed).</remarks>
         public void UpdateStorageFolder(StorageFolderConfig config)
@@ -297,7 +297,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         }
                         catch (Exception e)
                         {
-                            m_Logger.LogWarning($"Failed to save state of {storageFolder.UserPath}: {e}");
+                            m_Logger.LogWarning(e, "Failed to save state of {StorageFolderUserPath}",
+                                storageFolder.UserPath);
                         }
                     }
                 }
@@ -316,7 +317,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             string effectivePath = GetEffectiveStoragePath(path);
             for ( ; ; )
             {
-                Task[]? taskOfFilesInUse = null;
+                Task[]? taskOfFilesInUse;
                 lock (m_Lock)
                 {
                     if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
@@ -338,7 +339,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         }
                         catch(Exception e)
                         {
-                            m_Logger.LogError($"Failed to completely cleanup {path}: {e}");
+                            m_Logger.LogError(e, "Failed to completely cleanup {Path}", path);
                         }
                         m_StorageFolders.Remove(effectivePath);
                         return;
@@ -362,12 +363,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </remarks>
         public async Task RemoveStorageFolderAsync(string path)
         {
-            StorageFolderInfo? disconnectedStorageFolder = null;
+            StorageFolderInfo? disconnectedStorageFolder;
 
             string effectivePath = GetEffectiveStoragePath(path);
             for ( ; ; )
             {
-                Task[]? taskOfFilesInUse = null;
+                Task[]? taskOfFilesInUse;
                 lock (m_Lock)
                 {
                     if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
@@ -405,22 +406,20 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 await Task.WhenAny(taskOfFilesInUse);
             }
 
-            if (disconnectedStorageFolder != null)
+            // One last save before completely forgetting about the storage folder (in case someone wants to reload
+            // it later on).
+            if (disconnectedStorageFolder.NeedSaving)
             {
-                // One last save before completely forgetting about the storage folder (in case someone wants to reload
-                // it later on).
-                if (disconnectedStorageFolder.NeedSaving)
+                try
                 {
-                    try
-                    {
-                        string storageFolderMetadataJson = Path.Combine(disconnectedStorageFolder.FullPath, "metadata.json");
-                        using FileStream serializeStream = File.Create(storageFolderMetadataJson);
-                        JsonSerializer.Serialize(serializeStream, disconnectedStorageFolder);
-                    }
-                    catch (Exception e)
-                    {
-                        m_Logger.LogWarning($"Failed to save state of {disconnectedStorageFolder.UserPath}: {e}");
-                    }
+                    string storageFolderMetadataJson = Path.Combine(disconnectedStorageFolder.FullPath, "metadata.json");
+                    using FileStream serializeStream = File.Create(storageFolderMetadataJson);
+                    await JsonSerializer.SerializeAsync(serializeStream, disconnectedStorageFolder);
+                }
+                catch (Exception e)
+                {
+                    m_Logger.LogWarning(e, "Failed to save state of {DisconnectedFolderPath}",
+                        disconnectedStorageFolder.UserPath);
                 }
             }
         }
@@ -641,7 +640,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 toFindMatchFor.AddLast(fileInfo);
             }
-            (var inCache, var unreferenced) = FindMatchingFiles(storageFolder, toFindMatchFor);
+            var (inCache, unreferenced) = FindMatchingFiles(storageFolder, toFindMatchFor);
             storageFolder.InCache = inCache;
             storageFolder.InUse.Clear();
             storageFolder.Unreferenced = unreferenced;
@@ -673,8 +672,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     // We found an entry in m_Files, use this one instead of the one from fileInfoList
                     if (globalFileInfo.StorageFolder != null)
                     {
-                        m_Logger.LogWarning($"{fileInfo.Id} was found in both {storageFolder.UserPath} and " +
-                            $"{globalFileInfo.StorageFolder.UserPath}, it will be deleted from {storageFolder.UserPath}.");
+                        m_Logger.LogWarning("{FileInfoId} was found in both {StorageFolderPath1} and " +
+                            "{StorageFolderPath2}, it will be deleted from {StorageFolderPathDelete}",
+                            fileInfo.Id, storageFolder.UserPath, globalFileInfo.StorageFolder.UserPath,
+                            storageFolder.UserPath);
                         storageFolder.DeleteFile(m_Logger, fileInfo.Id);
                         continue;
                     }
@@ -729,7 +730,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 // Sort storage folder based on their relative fullness and try to use the most empty one.
                 var sortedFolders = m_StorageFolders.Values.OrderBy(
-                    sfi => (double)sfi.EffectiveSize / (double)sfi.MaximumSize);
+                    sfi => (double)sfi.EffectiveSize / sfi.MaximumSize);
                 foreach (var folder in sortedFolders)
                 {
                     if (folder.FreeSpace >= fileSize)
@@ -745,7 +746,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 var oldestUnreferenced = sortedUnreferenced.First();
                 if (oldestUnreferenced.Unreferenced.First != null)
                 {
-                    oldestUnreferenced.EvictNextUnrefrenced(m_Logger);
+                    oldestUnreferenced.EvictNextUnreferenced(m_Logger);
                     continue;
                 }
                 var sortedCached = m_StorageFolders.Values.OrderBy(

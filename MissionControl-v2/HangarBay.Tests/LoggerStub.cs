@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
-    internal class LoggerStub : ILogger
+    class LoggerStub : ILogger
     {
         class DummyDisposable : IDisposable
         {

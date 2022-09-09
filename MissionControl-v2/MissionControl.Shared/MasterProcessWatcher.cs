@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -15,7 +11,7 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Setup watching of master process (only if the command line parameters specifying it is present).
         /// </summary>
-        static public void Setup(CancellationToken cancellationToken)
+        public static void Setup(CancellationToken cancellationToken)
         {
             string? processIdString = null;
             var args = Environment.GetCommandLineArgs();
@@ -48,7 +44,7 @@ namespace Unity.ClusterDisplay.MissionControl
                 {
                     Environment.Exit(-1);
                 }
-            });
+            }, cancellationToken);
         }
     }
 }

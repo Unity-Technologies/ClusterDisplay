@@ -11,9 +11,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             AddToSerializerOptions(k_SerializerOptions);
         }
 
-        static public JsonSerializerOptions SerializerOptions => k_SerializerOptions;
+        public static JsonSerializerOptions SerializerOptions => k_SerializerOptions;
 
-        static public void AddToSerializerOptions(JsonSerializerOptions options)
+        public static void AddToSerializerOptions(JsonSerializerOptions options)
         {
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));

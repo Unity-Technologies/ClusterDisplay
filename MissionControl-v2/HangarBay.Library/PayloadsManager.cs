@@ -31,12 +31,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Function called by <see cref="PayloadsManager"/> when we are asked for a new Payload.
         /// </summary>
-        /// <remarks>Func's Guid is the <see cref="Payload"/>'s identifier while the object is a cookie received by
+        /// <remarks>Func Guid is the <see cref="Payload"/>'s identifier while the object is a cookie received by
         /// GetPayload and passed to this method.  Returns a <see cref="Task"/> that is to be completed when fetch is
         /// completed.
         /// </remarks>
         public Func<Guid, object?, Task<Payload>> FetchFileCallback { get; set; } =
-            (Guid _, object? _) => Task.FromResult<Payload>(new Payload());
+            (_, _) => Task.FromResult(new Payload());
 
         /// <summary>
         /// Returns the <see cref="Payload"/> with the given identifier.
@@ -67,16 +67,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             foreach (var file in files)
             {
                 // Parse filename
-                var fileNameWOExtension = Path.GetFileNameWithoutExtension(file);
+                var fileNameWoExtension = Path.GetFileNameWithoutExtension(file);
                 Guid payloadIdentifier;
                 try
                 {
-                    payloadIdentifier = Guid.Parse(fileNameWOExtension);
+                    payloadIdentifier = Guid.Parse(fileNameWoExtension);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    m_Logger.LogWarning($"Unexpected filename ({fileNameWOExtension}.json) encountered while loading " +
-                        $"previous payloads.  Will skip it.");
+                    m_Logger.LogWarning(e, "Unexpected filename ({FileNameWoExtension}.json) encountered while loading " +
+                        "previous payloads, will skip it", fileNameWoExtension);
                     continue;
                 }
 
@@ -84,15 +84,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 Payload payload;
                 try
                 {
-                    using (var loadStream = File.Open(file, FileMode.Open))
-                    {
-                        var deserialized = JsonSerializer.Deserialize<Payload>(loadStream);
-                        payload = deserialized ?? throw new NullReferenceException("Deserialize returned null");
-                    }
+                    using var loadStream = File.Open(file, FileMode.Open);
+                    var deserialized = JsonSerializer.Deserialize<Payload>(loadStream);
+                    payload = deserialized ?? throw new NullReferenceException("Deserialize returned null");
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    m_Logger.LogWarning($"Failed loading back {fileNameWOExtension}.json, will have to be re-fetched.");
+                    m_Logger.LogWarning(e, "Failed loading back {FileNameWoExtension}.json, will have to be re-fetched",
+                        fileNameWoExtension);
                     continue;
                 }
 
@@ -106,7 +105,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         usageCountIncreased.Add(payloadFile.FileBlob);
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     // Something fail, try to rollback
                     foreach (var toDecrease in ((IEnumerable<Guid>)usageCountIncreased).Reverse())
@@ -114,7 +113,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         m_FileBlobCache.DecreaseUsageCount(toDecrease);
                     }
 
-                    m_Logger.LogWarning($"There was a problem processing files of {fileNameWOExtension}.json, will have to be re-fetched.");
+                    m_Logger.LogWarning(e, "There was a problem processing files of {FileNameWoExtension}.json, will " +
+                        "have to be re-fetched", fileNameWoExtension);
                     continue;
                 }
 
@@ -199,10 +199,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Object to lock to synchronize access to m_Payloads.
         /// </summary>
-        object m_Lock = new object();
+        object m_Lock = new();
 
         /// <summary>
-        /// Dictionary of all the <see cref="PayloadInfo"/> we know about.
+        /// Dictionary of all the <see cref="Payload"/> we know about.
         /// </summary>
         Dictionary<Guid, Task<Payload>> m_Payloads = new();
     }

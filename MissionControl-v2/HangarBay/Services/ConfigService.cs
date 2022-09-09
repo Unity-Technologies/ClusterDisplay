@@ -1,10 +1,8 @@
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
 {
@@ -34,7 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             m_PersistPath = Path.GetFullPath(configuration["configPath"], assemblyFolder!);
 
-            Initialize(configuration);
+            Initialize();
             m_InitialEndPoints = m_Config.ControlEndPoints.ToArray();
 
             ValidateNew += ValidateNewConfig;
@@ -58,16 +56,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 if (File.Exists(configPath))
                 {
-                    using (var loadStream = File.Open(configPath, FileMode.Open))
-                    {
-                        var config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
-                        return config.ControlEndPoints.ToArray();
-                    }
+                    using var loadStream = File.Open(configPath, FileMode.Open);
+                    var config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
+                    return config.ControlEndPoints.ToArray();
                 }
             }
             catch (Exception)
             {
+                // ignored
             }
+
             return new[] { k_DefaultEndpoint };
         }
 
@@ -92,16 +90,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <returns>List of reasons why it was rejected (or an empty list if changes was done with success).</returns>
         public async Task<IEnumerable<string>> SetCurrent(Config newConfig)
         {
-            TaskCompletionSource? setCurrentCompleteTCS = null;
-            while (setCurrentCompleteTCS == null)
+            TaskCompletionSource? setCurrentCompleteTcs = null;
+            while (setCurrentCompleteTcs == null)
             {
                 Task? toWaitOn = null;
                 lock (m_Lock)
                 {
                     if (m_ExecutingSetCurrent == null)
                     {
-                        setCurrentCompleteTCS = new();
-                        m_ExecutingSetCurrent = setCurrentCompleteTCS.Task;
+                        setCurrentCompleteTcs = new();
+                        m_ExecutingSetCurrent = setCurrentCompleteTcs.Task;
                     }
                     else
                     {
@@ -148,8 +146,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 }
                 catch(Exception e)
                 {
-                    m_Logger.LogError($"Exception informing about an accepted configuration change, sate of some " +
-                                      $"services might be out of sync and a restart should be done: {e}");
+                    m_Logger.LogError(e, "Exception informing about an accepted configuration change, sate of some " +
+                                      "services might be out of sync and a restart of the HangarBay should be done");
                     m_StatusService.Value.SignalPendingRestart();
                 }
 
@@ -163,9 +161,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 lock (m_Lock)
                 {
-                    Debug.Assert(m_ExecutingSetCurrent == setCurrentCompleteTCS.Task);
+                    Debug.Assert(m_ExecutingSetCurrent == setCurrentCompleteTcs.Task);
                     m_ExecutingSetCurrent = null;
-                    setCurrentCompleteTCS.SetResult();
+                    setCurrentCompleteTcs.SetResult();
                 }
             }
         }
@@ -208,26 +206,24 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             /// <summary>
             /// Reasons why the new configuration is not acceptable.
             /// </summary>
-            private List<string> m_RejectReasons = new();
+            List<string> m_RejectReasons = new();
         }
 
         /// <summary>
         /// Event fire to anybody that want to validate a new configuration (and potentially reject it before it gets
         /// applied).
         /// </summary>
-        public event Action<ConfigChangeSurvey>? ValidateNew = null;
+        public event Action<ConfigChangeSurvey>? ValidateNew;
 
         /// <summary>
         /// Indicate that the configuration changed.
         /// </summary>
-        public event Func<Task>? Changed = null;
+        public event Func<Task>? Changed;
 
         /// <summary>
         /// Initialize the service
         /// </summary>
-        /// <param name="configuration">.Net configuration coming from various sources (static, does not change
-        /// during the execution of the application, often comes from appsettings.json).</param>
-        void Initialize(IConfiguration configuration)
+        void Initialize()
         {
             bool configLoaded = false;
             try
@@ -238,17 +234,18 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                     {
                         m_Config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     }
-                    m_Logger.LogInformation($"Loaded configuration from {m_PersistPath}.");
+                    m_Logger.LogInformation("Loaded configuration from {PersistPath}", m_PersistPath);
                     configLoaded = true;
                 }
                 else
                 {
-                    m_Logger.LogInformation("Starting from a brand new default configuration.");
+                    m_Logger.LogInformation("Starting from a brand new default configuration");
                 }
             }
             catch (Exception e)
             {
-                m_Logger.LogInformation($"Failed to load {m_PersistPath}, will use the default configuration: {e}");
+                m_Logger.LogInformation(e, "Failed to load {PersistPath}, will use the default configuration",
+                    m_PersistPath);
             }
 
             if (!configLoaded)
@@ -276,7 +273,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             }
             catch (Exception e)
             {
-                m_Logger.LogError($"Failed to save updated configuration to {m_PersistPath}: {e}");
+                m_Logger.LogError(e, "Failed to save updated configuration to {PersistPath}", m_PersistPath);
             }
         }
 
@@ -284,7 +281,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// Validate a new configuration
         /// </summary>
         /// <param name="newConfig">Information about the new configuration</param>
-        /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some 
+        /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some
         /// parts are not really owned by any actual services (like control endpoints).</remarks>
         void ValidateNewConfig(ConfigChangeSurvey newConfig)
         {
@@ -351,7 +348,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// React to configuration changes
         /// </summary>
-        /// <remarks>Normally we want every service to deal with changes in their "own part" of the configuration, 
+        /// <remarks>Normally we want every service to deal with changes in their "own part" of the configuration,
         /// however some parts are not really owned by any actual services (like control endpoints).</remarks>
         Task ConfigChanged()
         {
