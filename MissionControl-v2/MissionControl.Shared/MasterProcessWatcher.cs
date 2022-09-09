@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
             {
-                if (args[i] == "-masterPid")
+                if (args[i] == "--masterPid")
                 {
                     processIdString = args[i + 1];
                     break;

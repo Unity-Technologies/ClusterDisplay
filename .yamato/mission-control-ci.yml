@@ -1,0 +1,42 @@
+test_platforms:
+- name: win
+  type: Unity::VM
+  image: package-ci/win10:stable
+  flavor: b1.large
+all_test_projects:
+  - path : TestProjects/GraphicsTestsHDRP
+    name : HDRPTest
+    gfx : true
+  - path : TestProjects/GraphicsTestsURP
+    name : URPTest
+    gfx : true
+  - path : TestProjects/ClusterSyncTests
+    name : CoreSync
+    gfx : false
+---
+
+{% for editor in test_editors -%}
+{% for project in all_test_projects -%}
+test_{{ platform.name }}_{{ project.name }}:
+  name : Test {{ project.name }} {{ platform.name }}
+  agent:
+    type: {{ platform.type }}
+    image: {{ platform.image }}
+    flavor: {{ platform.flavor }}
+  commands:
+  - echo ********** FAKE TESTS **********
+{% endfor -%}
+{% endfor -%}
+
+test_trigger:
+  name: Run Mission Control tests after package changes
+  triggers:
+    expression: |
+      pull_request.target eq "dev" AND
+      pull_request.push.changes.any match "MissionControl-v2/**"
+  dependencies:
+{% for platform in test_platforms -%}
+{% for project in all_test_projects -%}
+    - .yamato/mission-control-ci.yml#test_{{platform.name}}_{{ project.name }}
+{% endfor -%}
+{% endfor -%}

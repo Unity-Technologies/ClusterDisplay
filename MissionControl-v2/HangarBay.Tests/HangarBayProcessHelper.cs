@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var startInfo = new ProcessStartInfo()
             {
                 FileName = Path.Combine(fromPath, "HangarBay.exe"),
-                Arguments = $"-masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{path}/config.json\" " +
+                Arguments = $"--masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{path}/config.json\" " +
                     $"-p \"{path}/payloads\"",
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Minimized,

@@ -28,7 +28,7 @@ pack_{{ project.name }}:
 {% if project.gfx == "true" -%}
     - git submodule update --init
 {% endif -%}
-    - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm 
+    - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm
     - upm-ci project pack --project-path {{ project.path }}
   artifacts:
     packages:
@@ -38,7 +38,7 @@ pack_{{ project.name }}:
   dependencies:
       - .yamato/upm-ci.yml#build_win
 {% endif -%}
-      
+
 {% endfor %}
 
 build_win:
@@ -67,7 +67,7 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.name }}:
 {% if project.gfx == "true" -%}
   - git submodule update --init
 {% endif -%}
-  - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm  
+  - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm
   - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.path }}
   artifacts:
     logs.zip:
@@ -86,7 +86,8 @@ test_trigger_gfx:
     expression: |
       pull_request.target eq "dev" AND
       (pull_request.push.changes.any match "source/com.unity.cluster-display.graphics/**" OR
-      pull_request.push.changes.any match "TestProjects/GraphicsTests*/**")
+      pull_request.push.changes.any match "TestProjects/GraphicsTests*/**") AND NOT
+      pull_request.push.changes.any match "MissionControl-v2/**"
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
@@ -104,7 +105,8 @@ test_trigger:
     expression: |
       pull_request.target eq "dev" AND NOT
       (pull_request.push.changes.all match "source/com.unity.cluster-display.graphics/**" OR
-      pull_request.push.changes.all match "TestProjects/GraphicsTests*/**")
+      pull_request.push.changes.all match "TestProjects/GraphicsTests*/**") AND NOT
+      pull_request.push.changes.any match "MissionControl-v2/**"
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
