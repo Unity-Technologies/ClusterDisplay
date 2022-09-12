@@ -86,8 +86,7 @@ test_trigger_gfx:
     expression: |
       pull_request.target eq "dev" AND
       (pull_request.push.changes.any match "source/com.unity.cluster-display.graphics/**" OR
-      pull_request.push.changes.any match "TestProjects/GraphicsTests*/**") AND NOT
-      pull_request.push.changes.any match "MissionControl-v2/**"
+      pull_request.push.changes.any match "TestProjects/GraphicsTests*/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}
@@ -105,8 +104,8 @@ test_trigger:
     expression: |
       pull_request.target eq "dev" AND NOT
       (pull_request.push.changes.all match "source/com.unity.cluster-display.graphics/**" OR
-      pull_request.push.changes.all match "TestProjects/GraphicsTests*/**") AND NOT
-      pull_request.push.changes.any match "MissionControl-v2/**"
+      pull_request.push.changes.all match "TestProjects/GraphicsTests*/**" OR
+      pull_request.push.changes.all match "MissionControl-v2/**")
   dependencies:
 {% for editor in test_editors -%}
 {% for platform in test_platforms -%}

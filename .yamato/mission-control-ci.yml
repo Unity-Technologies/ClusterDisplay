@@ -4,18 +4,11 @@ test_platforms:
   image: package-ci/win10:stable
   flavor: b1.large
 all_test_projects:
-  - path : TestProjects/GraphicsTestsHDRP
-    name : HDRPTest
-    gfx : true
-  - path : TestProjects/GraphicsTestsURP
-    name : URPTest
-    gfx : true
-  - path : TestProjects/ClusterSyncTests
-    name : CoreSync
-    gfx : false
+  - path : HangarBay.Tests
+    name : HangarBay
 ---
-
-{% for editor in test_editors -%}
+name: Mission Control
+{% for platform in test_platforms -%}
 {% for project in all_test_projects -%}
 test_{{ platform.name }}_{{ project.name }}:
   name : Test {{ project.name }} {{ platform.name }}
