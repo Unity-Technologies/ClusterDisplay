@@ -8,8 +8,8 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class RPCTestRecorder
     {
-        readonly Dictionary<string, bool> propagatedRPCs = new Dictionary<string, bool>();
-        readonly Dictionary<string, bool> executedRPCs = new Dictionary<string, bool>();
+        readonly Dictionary<string, bool> m_PropagatedRPCs = new Dictionary<string, bool>();
+        readonly Dictionary<string, bool> m_ExecutedRPCs = new Dictionary<string, bool>();
 
         public bool PropagatedAllRPCs
         {
@@ -17,11 +17,10 @@ namespace Unity.ClusterDisplay.Tests
             {
                 string rpcsToBePropagated = "Still waiting for propagation of the following RPCs:";
                 bool allPropagated = true;
-                foreach (var keyValuePair in propagatedRPCs)
+                foreach (var keyValuePair in m_PropagatedRPCs)
                 {
                     if (keyValuePair.Value)
                     {
-                        allPropagated &= true;
                         continue;
                     }
 
@@ -44,11 +43,10 @@ namespace Unity.ClusterDisplay.Tests
             {
                 string rpcsToBeExecuted = "Still waiting for execution of the following RPCs:";
                 bool allExecuted = true;
-                foreach (var keyValuePair in executedRPCs)
+                foreach (var keyValuePair in m_ExecutedRPCs)
                 {
                     if (keyValuePair.Value)
                     {
-                        allExecuted &= true;
                         continue;
                     }
 
@@ -81,38 +79,38 @@ namespace Unity.ClusterDisplay.Tests
 
             foreach (var rpcMethod in rpcMethods)
             {
-                if (propagatedRPCs.ContainsKey(rpcMethod.Name) || executedRPCs.ContainsKey(rpcMethod.Name))
+                if (m_PropagatedRPCs.ContainsKey(rpcMethod.Name) || m_ExecutedRPCs.ContainsKey(rpcMethod.Name))
                 {
                     throw new System.InvalidOperationException($"Cannot register multiple RPCs with the same method name: \"{rpcMethod.Name}\".");
                 }
 
-                propagatedRPCs.Add(rpcMethod.Name, false);
-                executedRPCs.Add(rpcMethod.Name, false);
+                m_PropagatedRPCs.Add(rpcMethod.Name, false);
+                m_ExecutedRPCs.Add(rpcMethod.Name, false);
             }
         }
 
         public void RecordPropagation()
         {
             var method = FindClusterRPCMethod();
-            if (!propagatedRPCs.ContainsKey(method.Name))
+            if (!m_PropagatedRPCs.ContainsKey(method.Name))
             {
                 throw new System.NullReferenceException($"Cannot record propagation of RPC: \"{method.Name}\", it was not registered.");
             }
 
             UnityEngine.Debug.Log($"RPC: \"{method.Name}\" was propagated.");
-            propagatedRPCs[method.Name] = true;
+            m_PropagatedRPCs[method.Name] = true;
         }
 
         public void RecordExecution()
         {
             var method = FindClusterRPCMethod();
-            if (!executedRPCs.ContainsKey(method.Name))
+            if (!m_ExecutedRPCs.ContainsKey(method.Name))
             {
                 throw new System.NullReferenceException($"Cannot record execution of RPC: \"{method.Name}\", it was not registered.");
             }
 
             UnityEngine.Debug.Log($"RPC: \"{method.Name}\" was executed.");
-            executedRPCs[method.Name] = true;
+            m_ExecutedRPCs[method.Name] = true;
         }
 
         static MethodBase FindClusterRPCMethod()

@@ -20,20 +20,15 @@ namespace Unity.ClusterDisplay
         }
 
         const string ILPostProcessLogFolderPath = "./Temp/ClusterDisplay/Logs/";
-        const string ILPostProcessLogFileName = "ClusterDisplay-ILPostProcessingLog.txt";
-        
-        static SharedMutex mutex = new SharedMutex("LogWriterMutex");
 
         static void ILPPWrite(string msg)
         {
-            mutex.Lock();
-
             try
             {
                 if (!Directory.Exists(ILPostProcessLogFolderPath))
                     Directory.CreateDirectory(ILPostProcessLogFolderPath);
 
-                string logPath = $"{ILPostProcessLogFolderPath}{ILPostProcessLogFileName}";
+                string logPath = $"{ILPostProcessLogFolderPath}{ilPostProcessorContextAssemblyName}.txt";
 
                 var fileStream = new FileStream(logPath, FileMode.OpenOrCreate,
                     FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -49,8 +44,6 @@ namespace Unity.ClusterDisplay
             }
 
             catch {}
-
-            mutex.Release();
         }
 
         static void ILPPLog(string msg) =>

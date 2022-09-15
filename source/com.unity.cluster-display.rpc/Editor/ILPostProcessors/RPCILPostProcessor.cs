@@ -19,54 +19,36 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             for (int moduleIndex = 0; moduleIndex < compiledAssemblyDef.Modules.Count; moduleIndex++)
             {
-                int typeCount = compiledAssemblyDef.Modules[moduleIndex].Types.Count;
-
-                int workerCount = Environment.ProcessorCount < typeCount ? Environment.ProcessorCount : typeCount;
-                int typeCountPerWorker = typeCount / workerCount;
-                int remainder = typeCount % workerCount;
-
-                Parallel.For(0, workerCount, workerId =>
+                Parallel.ForEach(compiledAssemblyDef.Modules[moduleIndex].Types, type =>
                 {
-                    int start = typeCountPerWorker * workerId;
-                    int end = typeCountPerWorker * (workerId + 1);
-                    if (workerId == Environment.ProcessorCount - 1)
-                        end += remainder;
+                    if (type == null)
+                        return;
 
-                    // LogWriter.Log($"Worker: {workerId}, Start: {start}, End: {end}, Type Count: {typeCount}");
-
-                    var types = compiledAssemblyDef.Modules[moduleIndex].Types;
-                    for (int typeIndex = start; typeIndex < end; typeIndex++)
+                    var methods = type.Methods;
+                    for (int methodIndex = 0; methodIndex < methods.Count; methodIndex++)
                     {
-                        var type = types[typeIndex];
-                        if (type == null)
+                        var method = methods[methodIndex];
+                        if (method == null)
                             continue;
 
-                        var methods = type.Methods;
-                        for (int methodIndex = 0; methodIndex < methods.Count; methodIndex++)
+                        var customAttributes = method.CustomAttributes;
+                        for (int caIndex = 0; caIndex < customAttributes.Count; caIndex++)
                         {
-                            var method = methods[methodIndex];
-                            if (method == null)
-                                continue;
+                            var customAttribute = customAttributes[caIndex];
 
-                            var customAttributes = method.CustomAttributes;
-                            for (int caIndex = 0; caIndex < customAttributes.Count; caIndex++)
+                            if (customAttribute.AttributeType.FullName != attributeFullName)
                             {
-                                var customAttribute = customAttributes[caIndex];
-
-                                if (customAttribute.AttributeType.FullName != attributeFullName)
-                                {
+                                continue;
+                                // If the custom attribute does not match, then check it's base type as this attribute may be an
+                                // obsolete version of the RPC attribute that derrives from the current one.
+                                /* This was commented out since it was causing problems in latest version of ILPP.
+                                var attributeType = customAttribute.AttributeType.Resolve();
+                                if (attributeType.BaseType.FullName != attributeFullName)
                                     continue;
-                                    // If the custom attribute does not match, then check it's base type as this attribute may be an
-                                    // obsolete version of the RPC attribute that derrives from the current one.
-                                    /* This was commented out since it was causing problems in latest version of ILPP.
-                                    var attributeType = customAttribute.AttributeType.Resolve();
-                                    if (attributeType.BaseType.FullName != attributeFullName)
-                                        continue;
-                                    */
-                                }
-
-                                queuedMethodDefs.Enqueue(method);
+                                */
                             }
+
+                            queuedMethodDefs.Enqueue(method);
                         }
                     }
                 });

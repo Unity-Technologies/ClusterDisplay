@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 
 namespace Unity.ClusterDisplay
@@ -17,14 +17,12 @@ namespace Unity.ClusterDisplay
             {
                 if (mutex == null)
                     mutex = Mutex.OpenExisting(mutexName);
-
-                while (!mutex.WaitOne()) {}
+                mutex.WaitOne();
             }
 
             catch
             {
                 mutex = new Mutex(true, mutexName, out var isOwned);
-                while (!isOwned && !mutex.WaitOne()) {}
             }
         }
 
@@ -33,6 +31,7 @@ namespace Unity.ClusterDisplay
 
         public void Dispose()
         {
+            mutex.ReleaseMutex();
             mutex.Close();
             mutex.Dispose();
             mutex = null;

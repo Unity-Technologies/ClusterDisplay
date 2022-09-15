@@ -8,51 +8,8 @@ Cluster Display has a multicast UDP general networking library with the followin
 
 # RPCs (Remote Procedure Calls)
 [RPCs](https://en.wikipedia.org/wiki/Remote_procedure_call) are a common networking pattern for propgating network events and for Cluster Display we use them extensively. In Cluster Display's networking implementation you can flag a method to be an RPC using two different approaches:
-- Cluster Display Inspector UI.
+- Cluster Display Inspector UI **(Only available in com.unity.cluster-dislay.helpers)**
 - **[ClusterRPC]** C# attribute.
-
-## Cluster Display Inspector UI
-To improve prototyping experience, you can flag a C# method or property as an RPC in the cluster display UI:
-
-![Cluster Display UI](./images/cluster-display-ui.png)
-
-The UI will automatically find all properties and methods within the type inheritance tree that can be flagged as an RPC:
-
-![Cluster Display UI](./images/cluster-display-ui-propertiesandmethods.png)
-
-Expanding the methods list will show you all flagged and unflagged compatible methods:
-
-![Cluster Display UI](./images/cluster-display-ui-method-list.png)
-
-If we open the dropdown for that method we get the following:
-
-![Cluster Display Method Invocation](./images/cluster-display-ui-method-invocation.png)
-
-You can call/invoke RPC methods from the editor while cluster display is running:
-
-![Cluster Display Method Invocation](./images/cluster-display-ui-invocation-example.gif)
-
-## Inspector Generation
-In order to display the cluster display UI on almost all component inspectors, we generate code automatically in the user space:
-
-![Generated Inspectors Location](./images/generated-inspectors-location.png)
-
-This generated source code contains the necessary stubs to extend components that cannot easily be extended. We use Rosyln source generators to perform this task.
-
-![Generated Inspector Code](./images/generated-inspectors-code.png)
-
-How this works and why:
-- Built in component inspectors are not easy to extend as many of them have complex inspectors.
-- By generating these stubs, the internal GUI logic instantiates an instance of the built in inspector and wraps it's methods with our extension inspector.
-- This code needs to be generated in Assets/ allowing certain [CustomEditor] decorated classes to be picked up first when Unity internally attempts to find the first Editor for a class.
-This approach is not perfect and we are exploring other options on how to improve this.
-
-### How to Generate Them
-When you add a new package to the project or change Unity versions, you may need to re-generate them via:
-
-![Regenerating Inspectors](./images/generated-inspectors-regenerate.png)
-
-Furthermore, if you remove a package or change to a Unity version where a deprecated type has been removed, you may get some compile time errors complaining about missing types in **GeneratedInspectors.cs**. Therefore, you will need to delete this file, and regenerate them.
 
 # IL Post Processing
 In order to intercept method an properties calls for propagation to repeater nodes, we inject IL into your compiled assembly after your assembly is compiled. Generally the following is injected:
@@ -68,24 +25,26 @@ It's important to note that some assemblies **are** IL post processable, and som
 
 Only assemblies in **`{Project Path}/Library/ScriptAssemblies`** folder are IL post processable. Therefore, if you want to propgate events associated with a non IL post processable assembly, you will need to use [wrappers](#Wrappers).
 
-## Wrappers
-As mentioned in the [IL Post Processing](#il-post-processing) section, methods from non IL post processable assemblies need to be wrapped by a compatible method in order to properly propagate those events. For example, we cannot use **Transform.position** as a RPC directly since it lives in the UnityEngine.CoreModule assembly. Instead, we can use a wrapper to intercept our calls to **Transform.position**.
+## Debugging IL Post Processing
+IL post processing occurs in a completely separate process. IL post processing logging for cluster display is located here:
 
-You can wrap methods using the cluster display UI via:
+**{Project Path}\Temp\ClusterDisplay\Logs\ClusterDisplay-ILPostProcessingLog.txt**
 
-![Cluster Display Method Invocation](./images/cluster-display-ui-wrapper-new.png)
+### Inspecting Assemblies
+One way to verify whether an assembly was properly IL post processed is to inspect it using [ILSpy](https://github.com/icsharpcode/ILSpy). With this tool, you can open compiled C# DLLs and inspect the IL. There are some key signatures to identify whether an assembly was properly post processed:
+* The assembly contains the **Unity.ClusterDisplay.Generated** namespace.
+    * The **Unity.ClusterDisplay.Generated** namespace contains a single RPCIL class with the following methods:
+      * **ExecuteQueuedRPC**
+      * **OnTryCallInstance**
+      * **OnTryStaticCallInstance**
+    * Each of the methods should contain IL code that switches on a hash and executes the target RPC directly.
+* Each method designated as an RPC should have some injected IL code that intercepts the method call and arguments.
 
-Once the wrapper is compiled, we can create a new wrapper instance:
+Here is an example of a method flagged as an RPC:
+![Execution Stage Timings](./images/ilspy-0.png)
 
-![Cluster Display Method Invocation](./images/cluster-display-ui-wrapper-create.png)
-
-Here is information about the wrapper instance:
-
-![Cluster Display Method Invocation](./images/cluster-display-ui-wrapper-new-instance.png)
-
-Now when you manipulate and invoke the RPC, it's invoking through the wrapper:
-
-![Cluster Display Method Invocation](./images/cluster-display-ui-wrapper-invocation-example.gif)
+Here is an example of the generated RPCIL class:
+![Execution Stage Timings](./images/ilspy-1.png)
 
 # **[ClusterRPC]** Attribute
 The ClusterRPC attribute is a handy way of flagging a method as an RPC, and you can declaring it above or before your method declaration:
@@ -128,7 +87,7 @@ Cluster Display's networking library will automatically determine if your target
 All [C# primitive types](!https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types) can be used as RPC parameters.
 ```
 [ClusterRPC]
-public void TestMethod (float valueA, int valueB) {}s
+public void TestMethod (float valueA, int valueB) {}
 ```
 ### Boolean Method Arguments
 C# `Boolean` types are supported. However, in managed memory they are considered as 1 byte. Whereas when they are marshalled by `Marshal` they are implicitly converted into 4 bytes. Therefore `bool` arguments are communicated as 4 bytes to to the repater nodes. If you really need `bool` arguments to be communicated as 1 bytes you can wrap it in a struct and setup the struct in the following way: [Struct Boolean Field Members](network-events#struct-boolean-field-members)

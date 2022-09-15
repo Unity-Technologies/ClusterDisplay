@@ -163,7 +163,7 @@ namespace Unity.ClusterDisplay
             }
 
             // Determine the whether we already have an instance of the generated type.
-            RPCInterfaceRegistry instance = m_ImplementationInstances.FirstOrDefault(i => i.GetType().Assembly == assembly);
+            RPCInterfaceRegistry instance = m_ImplementationInstances.FirstOrDefault(i => i.GetType().Assembly.FullName == assembly.FullName);
             if (instance == null)
             {
                 // Create the instance if it did not exist.

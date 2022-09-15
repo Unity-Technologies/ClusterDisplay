@@ -81,8 +81,6 @@ namespace Unity.ClusterDisplay.RPC
         public static Assembly GetAssembly(ushort rpcId) =>
             m_TargetAssemblies[m_AssemblyIndexLookUp[rpcId] - 1];
 
-        [SerializeField][HideInInspector] IDManager m_IDManager = new IDManager();
-
         // The RPC stubs file is a binary file where we store the serialized RPCs. This needs to be stored
         // as a file so it can be read by the ILPostProcessor which is a different process entirely.
         public const string k_RPCStubsFileName = "RPCStubs.bin";
@@ -90,8 +88,6 @@ namespace Unity.ClusterDisplay.RPC
         // We store this stubs file in resources so that it's included in the build as well.
         public readonly string k_RPCStubsResourcesPath = $"Assets/Resources/ClusterDisplay/{k_RPCStubsFileName}";
         public const string k_RPCStagedPath = "./Temp/ClusterDisplay/RPCStaged.bin";
-
-        [SerializeField][HideInInspector] byte[] m_RPCStubBytes;
 
         public delegate void OnTriggerRecompileDelegate();
 
@@ -266,7 +262,6 @@ namespace Unity.ClusterDisplay.RPC
             if (!m_TargetAssemblies.Contains(rpcMethodInfo.methodInfo.Module.Assembly))
             {
                 m_TargetAssemblies.Add(rpcMethodInfo.methodInfo.Module.Assembly);
-                m_TargetAssemblies.Sort(new AssemblyOrder()); // Everytime we add an assembly, we need to sort so we have assembly order parity between editor instances.
             }
             
             ClusterDebug.Log($"Registering new RPC: (Name: {rpcMethodInfo.methodInfo.Name}, RPC ID: {rpcMethodInfo.rpcId}, RPC Execution Stage: {rpcMethodInfo.rpcExecutionStage}).");
@@ -295,7 +290,6 @@ namespace Unity.ClusterDisplay.RPC
         {
             m_RPCs[rpcMethodInfo.rpcId] = null;
             m_MethodUniqueIdToRPCId.Remove(rpcMethodInfo.rpcHash);
-            m_IDManager.PushUnutilizedId(rpcMethodInfo.rpcId);
 
             if (WrapperUtils.IsWrapper(rpcMethodInfo.methodInfo.DeclaringType))
             {
@@ -317,7 +311,6 @@ namespace Unity.ClusterDisplay.RPC
         void UnregisterRPCOnDeserialize (ushort rpcId)
         {
             m_RPCs[rpcId] = default(RPCMethodInfo);
-            m_IDManager.PushUnutilizedId(rpcId);
         }
 
         public void Foreach (System.Action<RPCMethodInfo> callback)
@@ -477,7 +470,6 @@ namespace Unity.ClusterDisplay.RPC
         {
             m_RPCs = new RPCMethodInfo?[MaxRPCCount];
             m_MethodUniqueIdToRPCId.Clear();
-            m_IDManager.Clear();
 
             #if UNITY_EDITOR
             SetDirtyAndRecompile();
@@ -501,7 +493,7 @@ namespace Unity.ClusterDisplay.RPC
             if (!RPCSerializer.SerializeRPCs(
                 list.ToArray(), 
                 stagedMethods.Values.ToArray(), 
-                out m_RPCStubBytes, 
+                out var m_RPCStubBytes, 
                 out var stagedRPCBytes))
                 return;
 
@@ -810,6 +802,8 @@ namespace Unity.ClusterDisplay.RPC
 
         void AssociateRPCIdsWithAssemblies ()
         {
+            m_TargetAssemblies.Sort(new AssemblyOrder()); // Everytime we add an assembly, we need to sort so we have assembly order parity between editor instances.
+
             for (int rpcId = 0; rpcId <= m_LargestRPCId; rpcId++)
             {
                 var rpc = m_RPCs[rpcId];
@@ -817,6 +811,8 @@ namespace Unity.ClusterDisplay.RPC
                     continue;
 
                 var rpcMethodInfo = rpc.Value;
+                if (rpcId == 52)
+                    Debug.Log("TEST");
 
                 if (!RPCInterfaceRegistry.TryCreateImplementationInstance(rpcMethodInfo.methodInfo.Module.Assembly, out var assemblyIndex))
                     continue;
@@ -841,6 +837,8 @@ namespace Unity.ClusterDisplay.RPC
 
             DeserializeStagedMethods(
                 serializedStagedMethods);
+
+            AssociateRPCIdsWithAssemblies();
 
             if (RPCCount == 0)
             {

@@ -199,6 +199,9 @@ namespace Unity.ClusterDisplay.RPC
 
             ClusterDebug.Log($"(Frame: {Frame}): Processing RPC: (ID: {rpcRequest.rpcId}, RPC Execution Stage: {rpcRequest.rpcExecutionStage}, Pipe ID: {rpcRequest.pipeId}, Parameters Payload Size: {rpcRequest.parametersPayloadSize} Starting Buffer Position: {startingBufferPos}, Bytes Processed: {bufferPos})");
 
+            if (rpcRequest.rpcId == 52)
+                UnityEngine.Debug.Log("TEST");
+
             // Determine whether we've associated an assembly with an RPC id and store the assembly index to later use when we invoke the RPC.
             if (!RPCRegistry.TryGetAssemblyIndex(rpcRequest.rpcId, out rpcRequest.assemblyIndex))
             {

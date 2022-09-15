@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -18,8 +19,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     /// </summary>
     internal class AssemblyILPostProcessor : ILPostProcessor
     {
-        static readonly Dictionary<string, string> cachedAssemblyPath = new Dictionary<string, string>();
-        static readonly object cachedAssemblyPathLock = new object();
+        readonly Dictionary<string, string> m_CachedAssemblyPaths = new Dictionary<string, string>();
+        readonly object cachedAssemblyPathLock = new object();
         
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
@@ -27,38 +28,40 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// </summary>
         internal sealed class AssemblyResolver : BaseAssemblyResolver
         {
-            DefaultAssemblyResolver _defaultResolver;
-            public AssemblyResolver()
-            {
-                _defaultResolver = new DefaultAssemblyResolver();
-            }
-
+            readonly Dictionary<string, string> m_CachedAssemblyPaths = new Dictionary<string, string>(); // Reference to parent instance.
             readonly Dictionary<string, AssemblyDefinition> cachedAssemblyDefinitions = new Dictionary<string, AssemblyDefinition>();
+
+            public AssemblyResolver(Dictionary<string, string> cachedAssemblyPath) => m_CachedAssemblyPaths = cachedAssemblyPath;
 
             public override AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
             {
-                if (cachedAssemblyDefinitions.TryGetValue(name.Name, out var assemblyDefinition))
+                AssemblyDefinition assemblyDefinition = null;
+                if (cachedAssemblyDefinitions.TryGetValue(name.Name, out assemblyDefinition))
                     return assemblyDefinition;
 
                 try
                 {
                     string assemblyLocation = null;
-                    lock(cachedAssemblyPathLock)
+                    lock (m_CachedAssemblyPaths)
                     {
-                        if (!cachedAssemblyPath.TryGetValue(name.Name, out assemblyLocation))
-                            throw new Exception($"There is no known path for assembly: \"{name.Name}");
+                        if (!m_CachedAssemblyPaths.TryGetValue(name.Name, out assemblyLocation))
+                        {
+                            throw new System.ArgumentOutOfRangeException($"There is no known path for assembly: \"{name.Name}");
+                        }
                     }
                     
                     parameters.AssemblyResolver = this;
                     parameters.SymbolStream = CreatePdbStreamFor(assemblyLocation);
 
-                    assemblyDefinition = AssemblyDefinition.ReadAssembly(new MemoryStream(File.ReadAllBytes(assemblyLocation)), parameters);
+                    assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyLocation, parameters);
                     cachedAssemblyDefinitions.Add(name.Name, assemblyDefinition);
-                    return assemblyDefinition;
 
+                    CodeGenDebug.Log($"Successfully read referenced assembly: \"{name.Name}\" at path: \"{assemblyLocation}\".");
+
+                    return assemblyDefinition;
                 }
                 
-                catch (AssemblyResolutionException ex)
+                catch (Exception ex)
                 {
                     CodeGenDebug.LogException(ex);
                     return null;
@@ -90,7 +93,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// <param name="compiledAssembly"></param>
         /// <param name="assemblyDef"></param>
         /// <returns></returns>
-        public static bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
+        public bool TryGetAssemblyDefinitionFor(ICompiledAssembly compiledAssembly, out AssemblyDefinition assemblyDef)
         {
             if (compiledAssembly.References.Length > 0)
             {
@@ -102,20 +105,22 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                     lock(cachedAssemblyPathLock)
                     {
-                        if (cachedAssemblyPath.ContainsKey(referenceName))
+                        if (m_CachedAssemblyPaths.ContainsKey(referenceName))
                             continue;
 
-                        cachedAssemblyPath.Add(referenceName, referencePath);
+                        m_CachedAssemblyPaths.Add(referenceName, referencePath);
+                        CodeGenDebug.Log($"Caching assembly reference {referenceName} at path: \"{referencePath}\".");
                     }
                     
-                    referencesMsg = $"{referencesMsg}\n\t{referencePath}";
+                    referencesMsg += $"\n\t{referencePath}";
                 }
+
                 CodeGenDebug.Log(referencesMsg);
             }
-            
+
             var readerParameters = new ReaderParameters
             {
-                AssemblyResolver = new AssemblyResolver(),
+                AssemblyResolver = new AssemblyResolver(m_CachedAssemblyPaths),
                 SymbolStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PdbData.ToArray()),
                 SymbolReaderProvider = new PortablePdbReaderProvider(),
                 ReflectionImporterProvider = new PostProcessorReflectionImporterProvider(),
@@ -127,6 +132,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             try
             {
                 assemblyDef = AssemblyDefinition.ReadAssembly(peStream, readerParameters);
+                CodeGenDebug.Log($"Successfully acquired assembly definition for target assembly.");
                 return true;
             }
 
@@ -150,6 +156,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         }
 
         public override ILPostProcessor GetInstance() => this;
+
+
         /// <summary>
         /// This is where ILPostProcessing starts for a specific assembly. NOTE: This may be executed multiple times asynchronously per assembly.
         /// </summary>
@@ -159,7 +167,6 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             CodeGenDebug.BeginILPostProcessing(compiledAssembly.Name);
             CodeGenDebug.Log($"Polling assembly.");
-            
 
             // Get the Cecil AssemblyDefinition for the assembly.
             AssemblyDefinition compiledAssemblyDef;
@@ -177,7 +184,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 CodeGenDebug.Log($"Starting post process on assembly.");
                 if (!postProcessor.Execute(compiledAssemblyDef))
                     goto ignoreAssembly;
-                ;
+
                 pe = new MemoryStream();
                 pdb = new MemoryStream();
 
@@ -199,14 +206,17 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
 
             CodeGenDebug.Log($"Finished assembly.");
+            // done = true;
             return new ILPostProcessResult(new InMemoryAssembly(pe.ToArray(), pdb.ToArray()));
 
             ignoreAssembly:
-            return null;
+            // done = true;
+            return new ILPostProcessResult(compiledAssembly.InMemoryAssembly);
 
             failure:
             CodeGenDebug.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
-            return null;
+            // done = true;
+            return new ILPostProcessResult(compiledAssembly.InMemoryAssembly);
         }
 
         public override bool WillProcess(ICompiledAssembly compiledAssembly) => true;
