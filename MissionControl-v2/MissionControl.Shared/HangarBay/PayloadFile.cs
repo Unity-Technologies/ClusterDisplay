@@ -1,12 +1,13 @@
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
-    /// Information about a Payload's file.
+    /// Information about a <see cref="Payload"/>'s file.
     /// </summary>
     public class PayloadFile: IEquatable<PayloadFile>
     {
         /// <summary>
-        /// Path of the file relative to root of the folder where the asset files will be stored.
+        /// Path of the file relative to root of the folder in which all the files are stored in preparation for the
+        /// launch.
         /// </summary>
         public string Path { get; set; } = "";
 
@@ -21,7 +22,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         public long CompressedSize { get; set; }
 
         /// <summary>
-        /// Number of bytes taken by the file content.
+        /// Number of bytes of the decompressed file blob.
         /// </summary>
         public long Size { get; set; }
 

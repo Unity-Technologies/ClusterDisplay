@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// </summary>
         /// <param name="logger">Object used to send logging messages.</param>
         /// <param name="storage">Folder in which we will store fetched payloads.</param>
-        /// <param name="fileBlobCache">Object that contains the keep up to date with referenced file blobs.</param>
+        /// <param name="fileBlobCache">Object that to keep up to date with referenced file blobs.</param>
         public PayloadsManager(ILogger logger, string storage, IFileBlobCache fileBlobCache)
         {
             m_Logger = logger;
@@ -31,9 +31,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Function called by <see cref="PayloadsManager"/> when we are asked for a new Payload.
         /// </summary>
-        /// <remarks>Func Guid is the <see cref="Payload"/>'s identifier while the object is a cookie received by
-        /// GetPayload and passed to this method.  Returns a <see cref="Task"/> that is to be completed when fetch is
-        /// completed.
+        /// <remarks>Func <see cref="Guid"/> is the <see cref="Payload"/>'s identifier while the <see cref="object"/>
+        /// is a cookie received by <see cref="GetPayload"/> and passed to this method.  Returns a <see cref="Task"/>
+        /// that has for result the fetched <see cref="Payload"/>.
         /// </remarks>
         public Func<Guid, object?, Task<Payload>> FetchFileCallback { get; set; } =
             (_, _) => Task.FromResult(new Payload());

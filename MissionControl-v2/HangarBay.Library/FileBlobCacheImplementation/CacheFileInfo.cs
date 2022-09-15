@@ -21,12 +21,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         public long CompressedSize { get; set; }
 
         /// <summary>
-        /// Size (in bytes) of the uncompressed size.
+        /// Size (in bytes) of the uncompressed file.
         /// </summary>
         public long Size { get; set; }
 
         /// <summary>
-        /// Last time the file was used
+        /// Last time the file was used.
         /// </summary>
         public DateTime LastAccess { get; set; } = DateTime.MinValue;
 
@@ -55,13 +55,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         public Task? FetchTask { get; set; }
 
         /// <summary>
-        /// Tasks currently copying the file (to a LaunchPad folder)
+        /// Tasks currently copying the file (to LaunchPad folders)
         /// </summary>
         [JsonIgnore]
         public List<Task> CopyTasks { get; } = new();
 
         /// <summary>
-        /// <see cref="FetchTask"/> and <see cref="CopyTasks"/>.
+        /// All <see cref="Task"/>s using this <see cref="CacheFileInfo"/> (<see cref="FetchTask"/> and
+        /// <see cref="CopyTasks"/>).
         /// </summary>
         [JsonIgnore]
         public IEnumerable<Task> AllTasks => FetchTask != null ? CopyTasks.Append(FetchTask) : CopyTasks;

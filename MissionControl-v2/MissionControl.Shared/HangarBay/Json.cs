@@ -7,7 +7,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     {
         static Json()
         {
-            k_SerializerOptions = new();
             AddToSerializerOptions(k_SerializerOptions);
         }
 
@@ -19,6 +18,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
             options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         }
 
-        static readonly JsonSerializerOptions k_SerializerOptions;
+        static readonly JsonSerializerOptions k_SerializerOptions = new();
     }
 }

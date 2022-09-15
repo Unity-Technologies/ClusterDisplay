@@ -90,6 +90,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <returns>List of reasons why it was rejected (or an empty list if changes was done with success).</returns>
         public async Task<IEnumerable<string>> SetCurrent(Config newConfig)
         {
+            // Wait for any other setting of the config currently going on to be completed before continuing.
             TaskCompletionSource? setCurrentCompleteTcs = null;
             while (setCurrentCompleteTcs == null)
             {
@@ -210,7 +211,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         }
 
         /// <summary>
-        /// Event fire to anybody that want to validate a new configuration (and potentially reject it before it gets
+        /// Event fired to anybody that want to validate a new configuration (and potentially reject it before it gets
         /// applied).
         /// </summary>
         public event Action<ConfigChangeSurvey>? ValidateNew;

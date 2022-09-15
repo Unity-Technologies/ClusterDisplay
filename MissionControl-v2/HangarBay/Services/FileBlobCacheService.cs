@@ -48,6 +48,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// </summary>
         /// <param name="logger">Object used to send logging messages.</param>
         /// <param name="storage">Folder in which we will store fetched payloads.</param>
+        /// <remarks>I admit, this method might look like it does not belong in here on first sight, but it allows on
+        /// keeping m_Cache private and under the control this class which is a good thing...</remarks>
         public PayloadsManager NewPayloadsManager(ILogger logger, string storage)
         {
             return new PayloadsManager(logger, storage, m_Cache);

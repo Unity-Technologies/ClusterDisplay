@@ -12,8 +12,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     {
         /// <summary>
         /// Store the fingerprints of all the files in given folder and create a new
-        /// <see cref="FolderContentFingerprints"/>
-        /// from it.
+        /// <see cref="FolderContentFingerprints"/> from it.
         /// </summary>
         /// <param name="path">Path to the folder from which to build the <see cref="FolderContentFingerprints"/>.
         /// </param>
@@ -40,7 +39,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Load a <see cref="FolderContentFingerprints"/> that was previously saved with the <see cref="Save"/> method.
+        /// Load a <see cref="FolderContentFingerprints"/> that was previously saved with the <see cref="SaveTo"/> method.
         /// </summary>
         /// <param name="path">Path of the file to load.</param>
         /// <returns>Loaded <see cref="FolderContentFingerprints"/>.</returns>
@@ -126,7 +125,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         else
                         {
                             // The list of files we want to prepare does not contain that file, so we can probably
-                            // allow a few zombies around...
+                            // tolerate a few zombies...
                             logger.LogWarning($"Failed to delete {filePath}");
                         }
                     }
@@ -166,8 +165,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Fingerprints of a file.
         /// </summary>
-        /// <remarks>For now it only contains one property, but created this struct to make future modifications easier
-        /// if ever we need additional information to better detect file changes.</remarks>
         struct Entry: IEquatable<Entry>
         {
             /// <summary>
@@ -206,8 +203,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Small wrapper to make serialization / deserialization more future proof (in case we want to serialize
-        /// something else in the future).
+        /// Small wrapper to make serialization / deserialization more future proof (so that the serialized json looks
+        /// like {"Entries":[...]} and not a top level array to which we can't add any properties in the future).
         /// </summary>
         class SerializeWrapper
         {

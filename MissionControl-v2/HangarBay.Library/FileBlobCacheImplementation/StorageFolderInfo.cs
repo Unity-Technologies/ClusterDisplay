@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     {
         /// <summary>
         /// Path of where to store the files as provided to the user (so that he can see the path the way he
-        /// provided it).
+        /// provided it when making queries to the HangarBay).
         /// </summary>
         public string UserPath { get; set; } = "";
 
@@ -28,13 +28,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         public FileInfoLinkedList InCache { get; set;  } = new();
 
         /// <summary>
-        /// Files that are currently the folder but not referenced by anyone.  They are kept in cast some other
+        /// Files that are currently the folder but not referenced by anyone.  They are kept in case some other
         /// payload need them but they will be the first ones to go if some free space is needed.
         /// </summary>
         public FileInfoLinkedList Unreferenced { get; set; } = new();
 
         /// <summary>
-        /// Files currently in use (either being fetched or copied to a LaunchPad folder).
+        /// Files currently in use (either being fetched from MissionControl or copied to a LaunchPad folder).
         /// </summary>
         public FileInfoLinkedList InUse { get; set; } = new();
 
@@ -44,7 +44,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         public List<Guid> Zombies { get; set; } = new();
 
         /// <summary>
-        /// Size (in bytes) of all the file <see cref="CacheFileInfo"/> in our different lists.
+        /// Size (in bytes) of compressed data of all the <see cref="CacheFileInfo"/> in our different lists.
         /// </summary>
         [JsonIgnore]
         public long FileInfoSize => InCache.CompressedSize + Unreferenced.CompressedSize + InUse.CompressedSize;
@@ -178,6 +178,24 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             InCache.RemoveFirst();
 
             DeleteFile(logger, toRemove.Id);
+        }
+
+        /// <summary>
+        /// Returns the path to the file that stores the metadata for a storage folder.
+        /// </summary>
+        /// <param name="storageFolderEffectivePath"><see cref="FullPath"/> of the <see cref="StorageFolderInfo"/>.
+        /// </param>
+        public static string GetMetadataFilePath(string storageFolderFullPath)
+        {
+            return Path.Combine(storageFolderFullPath, "metadata.json");
+        }
+
+        /// <summary>
+        /// Returns the path to the file that stores the metadata of this storage folder.
+        /// </summary>
+        public string GetMetadataFilePath()
+        {
+            return GetMetadataFilePath(FullPath);
         }
     }
 }

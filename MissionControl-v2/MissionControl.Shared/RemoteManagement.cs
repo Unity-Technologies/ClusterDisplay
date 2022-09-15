@@ -5,7 +5,8 @@ using System.Text;
 namespace Unity.ClusterDisplay.MissionControl
 {
     /// <summary>
-    /// Helper functions to help implementing MissionControl remote management capabilities.
+    /// Helper functions to help implementing remote management capabilities of the different mission control
+    /// processes.
     /// </summary>
     public class RemoteManagement
     {
@@ -13,14 +14,14 @@ namespace Unity.ClusterDisplay.MissionControl
         /// Callback called before starting to copy files for an upgrade.
         /// </summary>
         /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that will be
-        /// copied to the installation path (second <see cref="string"/> parameter of the delegate).</remarks>
+        /// copied to the installation path (delegate's second <see cref="string"/> parameter).</remarks>
         public Action<string, string> PreUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>
         /// Callback called after copy of files for an upgrade.
         /// </summary>
         /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that have been
-        /// copied to the installation path (second <see cref="string"/> parameter of the delegate).</remarks>
+        /// copied to the installation path (delegate's second <see cref="string"/> parameter).</remarks>
         public Action<string, string> PostUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>
@@ -98,8 +99,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// Starts the specified process supporting <see cref="RemoteManagement"/> and configure it to wait for this
         /// process to be terminated before actually starting.
         /// </summary>
-        /// <param name="startInfo">Startup information as it would be used with
-        /// <see cref="Process.Start(ProcessStartInfo)"/>.</param>
+        /// <param name="startInfo">Startup information as used by <see cref="Process.Start(ProcessStartInfo)"/>.
+        /// </param>
         /// <param name="maxWaitSeconds">Maximum number of seconds the other process will wait for this process to exit
         /// before killing it.  This process will wait twice that amount for it to give some feedback.</param>
         /// <remarks><paramref name="startInfo"/> will be modified.</remarks>
@@ -114,7 +115,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
             if (!semaphore.WaitOne(TimeSpan.FromSeconds(maxWaitSeconds * 2)))
             {
-                throw new TimeoutException($"The other process did not give any feedback within {maxWaitSeconds} seconds.");
+                throw new TimeoutException($"The other process did not give any feedback within {maxWaitSeconds * 2} seconds.");
             }
         }
 
@@ -217,12 +218,13 @@ namespace Unity.ClusterDisplay.MissionControl
             // Implementation remarks: Since the following sequence of event is possible:
             // 1. This process (B) take a long time to start
             // 2. Process asking us to start in wait mode (A) has time to exit
-            // 3. Another unrelated process (C) start with the same process id as (A)
+            // 3. Another unrelated process (C) start with the same process id as A
             // 4. This start to wait on C instead of A since A is finished and C start with the same identifier before
             //    we had the time to do anything.
-            // To avoid the above, process A will be we signal it we are ready to start waiting before exiting.
+            // To avoid the above, process A will be waiting we signal it we are ready before exiting.
 
-            // Get the process (so we will be ok if another process start with the same process identifier)
+            // Get the process object from the process identifier (so we will be ok if another process start with the
+            // same process identifier)
             try
             {
                 using var toWaitOn = Process.GetProcessById(processId);
@@ -268,7 +270,7 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Upgrade the installation in the given folder from the binaries in the folder of this assembly.
         /// </summary>
-        /// <param name="toFolder">Process identifier.</param>
+        /// <param name="toFolder">Folder in which to put the upgraded files.</param>
         /// <returns>Success</returns>
         void HandleUpgrade(string toFolder)
         {
@@ -338,7 +340,7 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
         /// <summary>
-        /// Copy files from <paramref name="sourceDir"/> to <paramref name="destinationDir"/>.
+        /// Recursively copy files from <paramref name="sourceDir"/> to <paramref name="destinationDir"/>.
         /// </summary>
         /// <param name="sourceDir">Path to the directory containing the files to copy.</param>
         /// <param name="destinationDir">Path to directory to which to copy the files.</param>

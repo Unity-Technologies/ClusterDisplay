@@ -1,7 +1,7 @@
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
-    /// <see cref="Command"/> asking the HangarBay to restart.
+    /// <see cref="Command"/> asking the HangarBay to upgrade.
     /// </summary>
     public class UpgradeCommand: Command, IEquatable<UpgradeCommand>
     {

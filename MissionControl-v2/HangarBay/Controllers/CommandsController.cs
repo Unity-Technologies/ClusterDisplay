@@ -143,7 +143,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                         catch (Exception)
                         {
                             return Conflict($"There was an error deleting some of the files in {path} followed by an " +
-                                $"error validating those files.");
+                                $"error validating if those files could be tolerated.");
                         }
                     }
                     return null; // We deleted everything (or everything we could), nothing more we can clean...
@@ -182,13 +182,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             foreach (var payloadFile in incomingPayload.Files)
             {
                 // We assume that any file already existing must be equivalent to what we want to get, otherwise
-                // EnsurePathIsClean should have removed it or failed.
+                // EnsurePathIsClean should have removed it or failed (and this method shouldn't have been called).
                 string filePath = Path.Combine(path, payloadFile.Path);
                 if (!System.IO.File.Exists(filePath))
                 {
                     try
                     {
-                        copyTasks.Add(m_FileBlobCacheService.CopyFileTo(payloadFile.FileBlob, filePath, fileBlobsSource));
+                        copyTasks.Add(
+                            m_FileBlobCacheService.CopyFileTo(payloadFile.FileBlob, filePath, fileBlobsSource));
                     }
                     catch (Exception e)
                     {
@@ -203,7 +204,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         }
 
         /// <summary>
-        /// Execute a <see cref="PrepareCommand"/>.
+        /// Execute a <see cref="ShutdownCommand"/>.
         /// </summary>
         Task<IActionResult> OnShutdown()
         {

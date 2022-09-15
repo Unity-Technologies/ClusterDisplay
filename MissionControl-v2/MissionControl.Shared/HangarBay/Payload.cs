@@ -1,7 +1,7 @@
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>
-    /// Information about a Payload
+    /// Information about a set of files to be use to prepare a LaunchPad.
     /// </summary>
     public class Payload: IEquatable<Payload>
     {
@@ -11,11 +11,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         public IEnumerable<PayloadFile> Files { get; set; } = Enumerable.Empty<PayloadFile>();
 
         /// <summary>
-        /// Merge the content (files) of the given <see cref="Payload"/>s into a new one.  Files present in multiple
-        /// payloads will kept once.
+        /// Merge the content (list of files) of the given <see cref="Payload"/>s into a new one.  Files present in 
+        /// multiple payloads will kept once.
         /// </summary>
-        /// <param name="payloads">From where to take the files to merge in this <see cref="Payload"/>.</param>
-        /// <exception cref="ArgumentException">If two blobs are to be put into the same file.</exception>
+        /// <param name="payloads"><see cref="Payload"/>s to merge together.</param>
+        /// <exception cref="ArgumentException">If two different blobs are to be put into the same file.</exception>
         public static Payload Merge(IEnumerable<Payload> payloads)
         {
             Dictionary<string, PayloadFile> files = new Dictionary<string, PayloadFile>();

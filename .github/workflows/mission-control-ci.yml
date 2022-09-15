@@ -17,7 +17,7 @@ env:
   projectpath: 'MissionControl-v2/MissionControl.sln'
 
 jobs:
-  build:
+  test:
 
     runs-on: windows-latest
 

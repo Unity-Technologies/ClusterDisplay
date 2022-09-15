@@ -1,0 +1,214 @@
+openapi: 3.0.3
+info:
+  title: Mission Control - HangarBay API
+  description: |-
+    This is the API to control a Mission Control's Hangar Bay.  Since one of the requirements is to be able to avoid having to run an update on each individual computer part of the Mission Control manually and to be able to run older Cluster Display executables, we decided to go toward a minimalist Hangar Bay that does the strict minimum and keep the logic that has the most chances to change to the actual Mission Control.  The most reliable update is the update we do not need to do!  Still, there is a planned mechanism for updates, but if everything goes according to plan, updates should be really rare.
+    
+    Hangar Bay can be seen as a caching system that keep a given amount of files locally, fetch the missing ones from mission control and can assemble given group of files into a provided folder to be used by Launch Pads.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8100/api/v1
+paths:
+  /status:
+    get:
+      summary: Gets status of the HangarBay.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /config:
+    get:
+      summary: Gets the configuration of the HangarBay.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+    put:
+      summary: Sets the configuration of the HangarBay.
+      responses:
+        '200':
+          description: Success
+        '202':
+          description: Changes accepted but not all applied immediately (changes to the endpoints requires a power cycle (restart) of the Hangar Bay).
+        '400':
+          description: Error in the request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /commands:
+    post:
+      summary: Sends a command to the HangarBay.
+      description: Sends a command to the HangarBay and wait for it to be completed to return the correct response.
+      requestBody:
+        description: The command
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Prepare'
+                - $ref: '#/components/schemas/Shutdown'
+                - $ref: '#/components/schemas/Restart'
+                - $ref: '#/components/schemas/Upgrade'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.  Content of the response depends on the command.
+        '202':
+          description: Command accepted but not yet completed.
+        '400':
+          description: Invalid command received (regardless of the current state of the HangarBay).
+          content:
+            text/plain:
+              schema:
+                type: string
+        '409':
+          description: Command is not acceptable in the current state of the HangarBay.
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    StorageFolder:
+      type: object
+      description: Folder into which HangarBay's storing files (used as a cache to avoid constantly fetching from MissionControl).
+      properties:
+        path:
+          type: string
+          description: Path to the folder that will be managed by the Hangar Bay and in which it will store its cached files.
+          example: c:\HangarBayStorage
+        maximumSize:
+          type: integer
+          description: Maximum number of bytes to be used by files in the StorageFolder.
+    Config:
+      type: object
+      description: HangarBay's configuration.  This data is also the content of the config.json file used to store the configuration of the service.
+      properties:
+        controlEndPoint:
+          type: array
+          description: End points to which to listen for REST commands (most likely coming from LaunchPads or MissionControl).
+          items:
+            type: string
+            example: 123.45.67.89:8100
+        storageFolders:
+          type: array
+          description: List of folders of where we store files (used as a cache to avoid constantly fetching from MissionControl).
+          items:
+            $ref: '#/components/schemas/StorageFolder'
+      required:
+        - controlEndPoint
+        - storageFolders
+    StorageFolderStatus:
+      type: object
+      description: Status of a StorageFolder
+      properties:
+        path:
+          type: string
+          description: Path to the folder.
+          example: c:\HangarBayStorage
+        currentSize:
+          type: integer
+          description: Current size in bytes of all the files in the folder.
+        zombiesSize:
+          type: integer
+          description: Current size in bytes of all the zombies in the folder (file that couldn't be deleted).
+        maximumSize:
+          type: integer
+          description: Maximum number of bytes to be used by files in the StorageFolder.
+    Status:
+      type: object
+      description: HangarBay's status.
+      properties:
+        version:
+          type: string
+          description: Version number of the running HangarBay executable.
+        startTime:
+          type: string
+          description: When did the HangarBay was started.
+        pendingRestart:
+          type: boolean
+          description: Has some operations been done on the HangarBay that requires a restart?
+        storageFolders:
+          type: array
+          description: Status of the different storage folders.
+          items:
+            $ref: '#/components/schemas/StorageFolderStatus'
+    Prepare:
+      type: object
+      description: Command asking the HangarBay to prepare a folder with the given list of payloads.
+      properties:
+        type:
+          type: string
+          enum: [prepare]
+          default: prepare
+        payloadIds:
+          type: array
+          description: Identifiers of the payloads to prepare into folder.
+          items:
+            type: string
+            format: uuid
+        payloadSource:
+          type: string
+          description: URI from where to download payloads if they are not already available in the cache.
+          example: http://mission-control-server:8000
+        path:
+          type: string
+          description: Path to a folder to fill with the payloads (will remove unnecessary files and copy the ones from payloadIds).
+      required:
+        - type
+        - payloadIds
+        - path
+    Shutdown:
+      type: object
+      description: Command asking the HangarBay to shutdown.  Use with care as the only way to restart it is to do some manual interventions on the computer running it, designed to be sued as part of automated testing.
+      properties:
+        type:
+          type: string
+          enum: [shutdown]
+          default: shutdown
+      required:
+        - type
+    Restart:
+      type: object
+      description: Command asking the HangarBay to restart.
+      properties:
+        type:
+          type: string
+          enum: [restart]
+          default: restart
+        timeoutSec:
+          type: integer
+          description: Maximum amount of time to wait for this process to exit before forcing it (killing the process).
+          default: 60
+          example: 120
+      required:
+        - type
+    Upgrade:
+      type: object
+      description: Command asking the HangarBay to upgrade.
+      properties:
+        type:
+          type: string
+          enum: [upgrade]
+          default: upgrade
+        NewVersionUrl:
+          type: string
+          description: URL to the zip file to download that contains the new version.
+          example: http://mission-control-server:8000/hangarbay.zip
+        timeoutSec:
+          type: integer
+          description: Maximum amount of time to wait for this process to exit before forcing it (killing the process).
+          default: 60
+          example: 120
+      required:
+        - type
+        - newVersionZip

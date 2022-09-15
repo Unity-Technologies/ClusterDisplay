@@ -1,5 +1,8 @@
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
+    /// <summary>
+    /// HangarBay's status.
+    /// </summary>
     public class Status: IEquatable<Status>
     {
         /// <summary>
