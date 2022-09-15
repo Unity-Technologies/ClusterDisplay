@@ -186,5 +186,49 @@ namespace Unity.ClusterDisplay
 
             return (matchedMethod = foundMethod) != null;
         }
+
+        public static bool TryGetMethodWithDedicatedAttribute<AttributeType>(out MethodInfo methodInfo)
+            where AttributeType : DedicatedAttribute =>
+            TryGetMethodWithDedicatedAttribute(typeof(AttributeType), out methodInfo);
+
+        public static bool TryGetMethodWithDedicatedAttribute (System.Type attributeType, out MethodInfo methodInfo)
+        {
+            if (attributeType == null)
+            {
+                ClusterDebug.LogError("Cannot get method with null attribute!");
+                methodInfo = null;
+                return false;
+            }
+
+            if (cachedMethodsWithDedicatedAttributes.TryGetValue(attributeType, out methodInfo))
+                return true;
+
+            #if UNITY_EDITOR
+
+            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType).ToArray();
+
+            #else
+
+            if (!TryGetAllMethodsWithAttribute(attributeType, out var methods))
+                return false;
+
+            #endif
+
+            if (methods.Length == 0)
+                return false;
+
+            if (methods.Length > 1)
+            {
+                ClusterDebug.LogError($"There is more than one method with attribute: \"{attributeType.Name}\", this dedicated attribute should only be applied to one method.");
+                return false;
+            }
+
+            methodInfo = methods.FirstOrDefault();
+            if (methodInfo == null)
+                return false;
+
+            cachedMethodsWithDedicatedAttributes.Add(attributeType, methodInfo);
+            return true;
+        }
     }
 }

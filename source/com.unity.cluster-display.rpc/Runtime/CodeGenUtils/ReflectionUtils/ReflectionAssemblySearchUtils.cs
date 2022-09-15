@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay
             if (defaultAssembly == null)
             {
                 if (logError)
-                    CodeGenDebug.LogError($"Unable to find assembly with name: \"{DefaultUserAssemblyName}\".");
+                    ClusterDebug.LogError($"Unable to find assembly with name: \"{DefaultUserAssemblyName}\".");
                 return false;
             }
 
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay
             if (outAssembly == null)
             {
                 if (logError)
-                    CodeGenDebug.LogError($"Unable to find assembly with name: \"{assemblyName}\".");
+                    ClusterDebug.LogError($"Unable to find assembly with name: \"{assemblyName}\".");
                 return false;
             }
 
