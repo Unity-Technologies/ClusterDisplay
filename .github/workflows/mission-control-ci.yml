@@ -4,11 +4,11 @@ on:
   push:
     branches: [ "dev" ]
     paths:
-      - MissionControl-v2/**
+      - 'MissionControl-v2/**'
   pull_request:
     branches: [ "dev" ]
     paths:
-      - MissionControl-v2/**
+      - 'MissionControl-v2/**'
 
 env:
   projectpath: 'MissionControl-v2/MissionControl.sln'
