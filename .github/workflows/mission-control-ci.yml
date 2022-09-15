@@ -2,11 +2,14 @@ name: Mission Control
 
 on:
   push:
-    branches: [ "dev" ]
+    branches:
+      - 'dev'
     paths:
       - 'MissionControl-v2/**'
+
   pull_request:
-    branches: [ "dev" ]
+    branches:
+      - 'dev'
     paths:
       - 'MissionControl-v2/**'
 
