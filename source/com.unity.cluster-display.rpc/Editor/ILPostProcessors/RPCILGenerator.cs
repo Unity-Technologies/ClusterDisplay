@@ -12,6 +12,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             public const string GeneratedRPCILNamespace = "Unity.ClusterDisplay.Generated";
             public const string GeneratedRPCILTypeName = "RPCIL";
 
+            RPCILPostProcessor rpcILPostProcessor;
             AssemblyDefinition compiledAssemblyDef;
             ModuleDefinition moduleDef;
             ILProcessor ilProcessor;
@@ -19,8 +20,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             Instruction firstInstruction, lastInstruction, lastSwitchJmpInstruction;
             TypeReference generatedRPCILTypeRef;
 
-            public RPCILGenerator (TypeReference generatedRPCILTypeRef)
+            public RPCILGenerator (RPCILPostProcessor rpcILPostProcessor, TypeReference generatedRPCILTypeRef)
             {
+                this.rpcILPostProcessor = rpcILPostProcessor;
                 this.compiledAssemblyDef = generatedRPCILTypeRef.Module.Assembly;
                 this.moduleDef = generatedRPCILTypeRef.Module;
                 this.generatedRPCILTypeRef = generatedRPCILTypeRef;
@@ -28,7 +30,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             public bool TrySetup (Type methodAttributeMarker)
             {
-                CodeGenDebug.Log($"Setting up {nameof(RPCILGenerator)}.");
+                rpcILPostProcessor.logger.Log($"Setting up {nameof(RPCILGenerator)}.");
 
                 if (!GetRPCInstanceRegistryMethodImplementation(
                     compiledAssemblyDef,
@@ -48,13 +50,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 Type markerAttribute, 
                 out ILProcessor il)
             {
-                if (!CecilUtils.TryImport(assemblyDef.MainModule, markerAttribute, out var onTryCallMarkerAttributeTypeRef))
+                if (!rpcILPostProcessor.cecilUtils.TryImport(assemblyDef.MainModule, markerAttribute, out var onTryCallMarkerAttributeTypeRef))
                 {
                     il = null;
                     return false;
                 }
 
-                if (!TryFindMethodReferenceWithAttributeInModule(
+                if (!rpcILPostProcessor.TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
                     generatedRPCILTypeRef.Resolve(), 
                     onTryCallMarkerAttributeTypeRef, 
@@ -74,7 +76,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 RPCExecutionStage rpcExecutionStage,
                 out MethodReference methodRef)
             {
-                if (!CecilUtils.TryImport(moduleDef, typeof(RPCInterfaceRegistry), out var rpcInterfaceRegistryRef))
+                if (!rpcILPostProcessor.cecilUtils.TryImport(moduleDef, typeof(RPCInterfaceRegistry), out var rpcInterfaceRegistryRef))
                 {
                     methodRef = null;
                     return false;
@@ -114,13 +116,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         return false;
                 }
 
-                if (!CecilUtils.TryImport(moduleDef, type, out var typeRef))
+                if (!rpcILPostProcessor.cecilUtils.TryImport(moduleDef, type, out var typeRef))
                 {
                     methodRef = null;
                     return false;
                 }
 
-                if (!TryFindMethodReferenceWithAttributeInModule(
+                if (!rpcILPostProcessor.TryFindMethodReferenceWithAttributeInModule(
                     rpcInterfaceRegistryRef.Module,
                     rpcInterfaceRegistryRef.Resolve(),
                     typeRef,
@@ -138,22 +140,22 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 var instructionToJmpTo = ilProcessor.Body.Instructions[ilProcessor.Body.Instructions.Count - 2];
                 var newInstruction = Instruction.Create(OpCodes.Br, instructionToJmpTo);
                 ilProcessor.InsertAfter(lastSwitchJmpInstruction, newInstruction);
-                CodeGenDebug.Log($"Inserting last switch statement: \"{lastSwitchJmpInstruction.ToString()}");
+                rpcILPostProcessor.logger.Log($"Inserting last switch statement: \"{lastSwitchJmpInstruction.ToString()}");
             }
 
             public bool TryAppendInstanceRPCExecution (MethodDefinition targetMethodDef, string rpcHash)
             {
-                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
+                var importedTargetMethodRef = rpcILPostProcessor.cecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
                 Instruction firstInstructionOfSwitchCaseImpl = null;
 
                 bool success =
-                    TryInjectInstanceRPCExecution(
+                    rpcILPostProcessor.TryInjectInstanceRPCExecution(
                         generatedRPCILTypeRef.Module,
                         ilProcessor,
                         beforeInstruction: lastInstruction,
                         executionTarget: importedTargetMethodRef,
                         firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl) &&
-                    TryInjectSwitchCaseForRPC(
+                    rpcILPostProcessor.TryInjectSwitchCaseForRPC(
                         ilProcessor,
                         valueToPushForBeq: rpcHash,
                         jmpToInstruction: firstInstructionOfSwitchCaseImpl,
@@ -167,30 +169,30 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
 
                 unableToInjectIL:
-                CodeGenDebug.LogError($"Failure occurred while attempting to append instance method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
+                rpcILPostProcessor.logger.LogError($"Failure occurred while attempting to append instance method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
                 ilProcessor.Body.Instructions.Clear();
                 return false;
             }
 
             public bool TryAppendStaticRPCExecution (MethodDefinition targetMethodDef, string rpcHash)
             {
-                var importedTargetMethodRef = CecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
+                var importedTargetMethodRef = rpcILPostProcessor.cecilUtils.Import(generatedRPCILTypeRef.Module, targetMethodDef);
                 Instruction firstInstructionOfSwitchCaseImpl = null;
 
                 bool success =
-                    TryInjectStaticRPCExecution(
+                    rpcILPostProcessor.TryInjectStaticRPCExecution(
                         generatedRPCILTypeRef.Module,
                         ilProcessor,
                         beforeInstruction: lastInstruction,
                         targetMethodRef: importedTargetMethodRef,
                         firstInstructionOfInjection: out firstInstructionOfSwitchCaseImpl) &&
-                    TryInjectSwitchCaseForRPC(
+                    rpcILPostProcessor.TryInjectSwitchCaseForRPC(
                         ilProcessor,
                         valueToPushForBeq: rpcHash,
                         jmpToInstruction: firstInstructionOfSwitchCaseImpl,
                         afterInstruction: ref lastSwitchJmpInstruction);
 
-                CodeGenDebug.Log($"Appended: \"{lastSwitchJmpInstruction.ToString()}");
+                rpcILPostProcessor.logger.Log($"Appended: \"{lastSwitchJmpInstruction.ToString()}");
 
                 if (!success)
                 {
@@ -200,7 +202,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
 
                 unableToInjectIL:
-                CodeGenDebug.LogError($"Failure occurred while attempting to append static method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
+                rpcILPostProcessor.logger.LogError($"Failure occurred while attempting to append static method execution to method: \"{ilProcessor.Body.Method.Name}\" declared in type: \"{ilProcessor.Body.Method.DeclaringType.Name}\".");
                 ilProcessor.Body.Instructions.Clear();
                 return false;
             }

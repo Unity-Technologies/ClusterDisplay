@@ -203,7 +203,7 @@ namespace Unity.ClusterDisplay.RPC
                 UnityEngine.Debug.Log("TEST");
 
             // Determine whether we've associated an assembly with an RPC id and store the assembly index to later use when we invoke the RPC.
-            if (!RPCRegistry.TryGetAssemblyIndex(rpcRequest.rpcId, out rpcRequest.assemblyIndex))
+            if (!RPCAssemblyRegistry.TryGetAssemblyIndex(rpcRequest.rpcId, out rpcRequest.assemblyIndex))
             {
                 ClusterDebug.LogError($"(Frame: {Frame}): There is no assembly registered for RPC with ID: {rpcRequest.rpcId}");
                 return false;

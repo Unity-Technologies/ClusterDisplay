@@ -10,13 +10,16 @@ using buint = System.UInt32;
 
 namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
-    internal static class CecilUtils
+    internal class CecilUtils
     {
-        public static string ComputeMethodHash(MethodReference methodRef)
+        CodeGenDebug logger;
+        public CecilUtils (CodeGenDebug logger) => this.logger = logger;
+
+        public string ComputeMethodHash(MethodReference methodRef)
         {
             using (var sha1 = SHA1Managed.Create())
             {
-                string methodSignature = CecilUtils.MethodRefToSignature(methodRef);
+                string methodSignature = MethodRefToSignature(methodRef);
                 
                 var methodSignatureBytes = System.Text.Encoding.ASCII.GetBytes(methodSignature);
                 var hashBytes = sha1.ComputeHash(methodSignatureBytes);
@@ -26,7 +29,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static string GenericTypeToSignature (GenericParameter typeDef)
+        public string GenericTypeToSignature (GenericParameter typeDef)
         {
             string genericTypeSignature = TypeDefToSignature(typeDef.GenericParameters[0]);
             for (int i = 1; i < typeDef.GenericParameters.Count; i++)
@@ -34,7 +37,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return $"{ParseGenericType(typeDef)}<{genericTypeSignature}>";
         }
         
-        public static string GenericTypeToSignature (TypeReference typeDef)
+        public string GenericTypeToSignature (TypeReference typeDef)
         {
             string genericTypeSignature = TypeDefToSignature(typeDef.GenericParameters[0]);
             for (int i = 1; i < typeDef.GenericParameters.Count; i++)
@@ -42,19 +45,19 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return $"{ParseGenericType(typeDef)}<{genericTypeSignature}>";
         }
         
-        public static string ParseGenericType(GenericParameter typeDef) =>
+        public string ParseGenericType(GenericParameter typeDef) =>
             typeDef.FullName.Substring(0, typeDef.FullName.Length - 2);
 
-        public static string ParseGenericType(TypeReference typeDef) =>
+        public string ParseGenericType(TypeReference typeDef) =>
             typeDef.FullName.Substring(0, typeDef.FullName.Length - 2);
         
-        public static string TypeDefToSignature(GenericParameter typeDef) =>
+        public string TypeDefToSignature(GenericParameter typeDef) =>
             $"{(typeDef.HasGenericParameters ? GenericTypeToSignature(typeDef) : typeDef.FullName)}";
         
-        public static string TypeDefToSignature(TypeReference typeDef) =>
+        public string TypeDefToSignature(TypeReference typeDef) =>
             $"{(typeDef.HasGenericParameters ? GenericTypeToSignature(typeDef) : typeDef.FullName)}";
 
-        public static string MethodParametersToSignature(MethodDefinition methodDef)
+        public string MethodParametersToSignature(MethodDefinition methodDef)
         {
             if (methodDef.Parameters.Count == 0)
                 return "";
@@ -66,7 +69,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return parameterSignatures;
         }
 
-        public static string GenericMethodToSignature(MethodReference methodRef)
+        public string GenericMethodToSignature(MethodReference methodRef)
         {
             string genericTypeSignature = TypeDefToSignature(methodRef.GenericParameters[0]);
             for (int i = 1; i < methodRef.GenericParameters.Count; i++)
@@ -74,16 +77,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return $"{methodRef.Name}<{genericTypeSignature}>";
         }
 
-        public static string MethodNameSignature(MethodReference methodRef) =>
+        public string MethodNameSignature(MethodReference methodRef) =>
             $"{TypeDefToSignature(methodRef.DeclaringType)}.{(methodRef.HasGenericParameters ? GenericMethodToSignature(methodRef) : methodRef.Name)}";
 
-        public static string MethodParametersSignature(MethodReference methodRef) =>
+        public string MethodParametersSignature(MethodReference methodRef) =>
             $"{(methodRef.Parameters.Count > 0 ? $" {MethodParametersToSignature(methodRef.Resolve())}" : "")}";
 
-        public static string MethodRefToSignature(MethodReference methodRef) =>
+        public string MethodRefToSignature(MethodReference methodRef) =>
             $"{TypeDefToSignature(methodRef.ReturnType)} {MethodNameSignature(methodRef)}{MethodParametersSignature(methodRef)}";
         
-        public static bool MethodDefinitionMatchesMethod(MethodDefinition methodDef, ConstructorInfo methodInfo)
+        public bool MethodDefinitionMatchesMethod(MethodDefinition methodDef, ConstructorInfo methodInfo)
         {
             if (methodDef.Name != methodInfo.Name)
                 return false;
@@ -111,7 +114,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         }
 
 
-        public static bool MethodDefinitionMatchesMethod(MethodDefinition methodDef, MethodInfo methodInfo)
+        public bool MethodDefinitionMatchesMethod(MethodDefinition methodDef, MethodInfo methodInfo)
         {
             if (methodDef.Name != methodInfo.Name)
                 return false;
@@ -138,33 +141,33 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return allMatch;
         }
 
-        public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, MethodInfo methodInfo, out MethodDefinition methodDef)
+        public bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, MethodInfo methodInfo, out MethodDefinition methodDef)
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, methodInfo));
 
             if (methodDef == null)
             {
-                CodeGenDebug.LogError($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                logger.LogError($"Unable to find {nameof(MethodDefinition)} for method: \"{methodInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
                 return false;
             }
 
             return true;
         }
 
-        public static bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, ConstructorInfo constructorInfo, out MethodDefinition methodDef)
+        public bool TryFindMatchingMethodDefinition (TypeDefinition typeDef, ConstructorInfo constructorInfo, out MethodDefinition methodDef)
         {
             methodDef = typeDef.Methods.FirstOrDefault(methodDefinition => MethodDefinitionMatchesMethod(methodDefinition, constructorInfo));
 
             if (methodDef == null)
             {
-                CodeGenDebug.LogError($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
+                logger.LogError($"Unable to find {nameof(MethodDefinition)} for constructor: \"{constructorInfo.Name}\" in type: \"{typeDef.Namespace}.{typeDef.Name}\".");
                 return false;
             }
 
             return true;
         }
 
-        static bool RecursivelyTryFindNestedType (TypeDefinition typeDef, Type type, out TypeDefinition nestedTypeDef)
+        bool RecursivelyTryFindNestedType (TypeDefinition typeDef, Type type, out TypeDefinition nestedTypeDef)
         {
             for (int nti = 0; nti < typeDef.NestedTypes.Count; nti++)
             {
@@ -186,7 +189,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return false;
         }
 
-        static bool FindNestedType (ModuleDefinition moduleToSearch, Type type, out TypeDefinition nestedTypeDef)
+        bool FindNestedType (ModuleDefinition moduleToSearch, Type type, out TypeDefinition nestedTypeDef)
         {
             for (int ti = 0; ti < moduleToSearch.Types.Count; ti++)
             {
@@ -199,7 +202,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return false;
         }
 
-        public static bool TryImport (ModuleDefinition moduleToImportInto, Type type, out TypeReference importedTypeRef)
+        public bool TryImport (ModuleDefinition moduleToImportInto, Type type, out TypeReference importedTypeRef)
         {
             if (moduleToImportInto.Name != type.Module.Name)
             {
@@ -226,12 +229,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     return true;
             }
 
-            CodeGenDebug.LogError($"Unable to find type definition to import for type: \"{type.Name}\".");
+            logger.LogError($"Unable to find type definition to import for type: \"{type.Name}\".");
             importedTypeRef = null;
             return false;
         }
 
-        public static bool TryImport (ModuleDefinition moduleToImportInto, ConstructorInfo methodInfo, out MethodReference importedMethodRef)
+        public bool TryImport (ModuleDefinition moduleToImportInto, ConstructorInfo methodInfo, out MethodReference importedMethodRef)
         {
             if (moduleToImportInto.Name != methodInfo.Module.Name)
             {
@@ -241,14 +244,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             if (!TryImport(moduleToImportInto, methodInfo.DeclaringType, out var typeDef))
             {
-                CodeGenDebug.LogError($"Unable to import method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\", cannot find declaring type reference.");
+                logger.LogError($"Unable to import method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\", cannot find declaring type reference.");
                 importedMethodRef = null;
                 return false;
             }
 
             if (!TryFindMatchingMethodDefinition(typeDef.Resolve(), methodInfo, out var matchingMethodDef))
             {
-                CodeGenDebug.LogError($"Unable to find matching method definition for method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\" to import.");
+                logger.LogError($"Unable to find matching method definition for method: \"{methodInfo.Name}\" declared in: \"{methodInfo.DeclaringType.Name}\" to import.");
                 importedMethodRef = null;
                 return false;
             }
@@ -257,18 +260,18 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return (importedMethodRef = matchingMethodDef) != null;
         }
 
-        public static bool TryImport (ModuleDefinition moduleToImportInto, MethodInfo methodToImport, out MethodReference importedMethodRef)
+        public bool TryImport (ModuleDefinition moduleToImportInto, MethodInfo methodToImport, out MethodReference importedMethodRef)
         {
             if (methodToImport == null)
             {
-                CodeGenDebug.LogError("NULL module.");
+                logger.LogError("NULL module.");
                 importedMethodRef = null;
                 return false;
             }
             
             if (moduleToImportInto == null)
             {
-                CodeGenDebug.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", the module were attempting to import into is null.");
+                logger.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", the module were attempting to import into is null.");
                 importedMethodRef = null;
                 return false;
             }
@@ -281,14 +284,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
             if (!TryImport(moduleToImportInto, methodToImport.DeclaringType, out var typeDef))
             {
-                CodeGenDebug.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", cannot find declaring type reference.");
+                logger.LogError($"Unable to import method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\", cannot find declaring type reference.");
                 importedMethodRef = null;
                 return false;
             }
 
             if (!TryFindMatchingMethodDefinition(typeDef.Resolve(), methodToImport, out var matchingMethodDef))
             {
-                CodeGenDebug.LogError($"Unable to find matching method definition for method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\" to import.");
+                logger.LogError($"Unable to find matching method definition for method: \"{methodToImport.Name}\" declared in: \"{methodToImport.DeclaringType.Name}\" to import.");
                 importedMethodRef = null;
                 return false;
             }
@@ -297,35 +300,35 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        public static TypeReference Import (ModuleDefinition moduleToImportInto, TypeReference typeToImport)
+        public TypeReference Import (ModuleDefinition moduleToImportInto, TypeReference typeToImport)
         {
             if (moduleToImportInto.Name != typeToImport.Module.Name)
                 return moduleToImportInto.ImportReference(typeToImport);
             return typeToImport;
         }
 
-        public static TypeReference Import (ModuleDefinition moduleToImportInto, TypeDefinition typeToImport)
+        public TypeReference Import (ModuleDefinition moduleToImportInto, TypeDefinition typeToImport)
         {
             if (moduleToImportInto.Name != typeToImport.Module.Name)
                 return moduleToImportInto.ImportReference(typeToImport);
             return typeToImport;
         }
 
-        public static MethodReference Import (ModuleDefinition moduleToImportInto, MethodReference methodToImport)
+        public MethodReference Import (ModuleDefinition moduleToImportInto, MethodReference methodToImport)
         {
             if (moduleToImportInto.Name != methodToImport.Module.Name)
                 return moduleToImportInto.ImportReference(methodToImport);
             return methodToImport;
         }
 
-        public static MethodReference Import (ModuleDefinition moduleToImportInto, MethodDefinition methodToImport)
+        public MethodReference Import (ModuleDefinition moduleToImportInto, MethodDefinition methodToImport)
         {
             if (moduleToImportInto.Name != methodToImport.Module.Name)
                 return moduleToImportInto.ImportReference(methodToImport);
             return methodToImport;
         }
 
-        public static void InsertCallAfter (ILProcessor il, ref Instruction afterInstruction, MethodReference methodRef)
+        public void InsertCallAfter (ILProcessor il, ref Instruction afterInstruction, MethodReference methodRef)
         {
             Instruction instruction = null;
             var methodDef = methodRef.Resolve();
@@ -338,7 +341,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertCallBefore (ILProcessor il, Instruction beforeInstruction, MethodReference methodRef)
+        public Instruction InsertCallBefore (ILProcessor il, Instruction beforeInstruction, MethodReference methodRef)
         {
             Instruction instruction = null;
             var methodDef = methodRef.Resolve();
@@ -351,141 +354,141 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return instruction;
         }
 
-        public static void IsertPushLocalVariableAfter (ILProcessor il, ref Instruction afterInstruction, VariableDefinition variableDef)
+        public void IsertPushLocalVariableAfter (ILProcessor il, ref Instruction afterInstruction, VariableDefinition variableDef)
         {
             var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction IsertPushLocalVariableBefore (ILProcessor il, Instruction beforeInstruction, VariableDefinition variableDef)
+        public Instruction IsertPushLocalVariableBefore (ILProcessor il, Instruction beforeInstruction, VariableDefinition variableDef)
         {
             var instruction = Instruction.Create(OpCodes.Ldloca, variableDef);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertPushParameterToStackAfter (ILProcessor il, ref Instruction afterInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
+        public void InsertPushParameterToStackAfter (ILProcessor il, ref Instruction afterInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
         {
             var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertPushParameterToStackBefore (ILProcessor il, Instruction beforeInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
+        public Instruction InsertPushParameterToStackBefore (ILProcessor il, Instruction beforeInstruction, ParameterDefinition parameterDef, bool isStaticCaller, bool byReference)
         {
             var instruction = PushParameterToStack(parameterDef, isStaticCaller, byReference);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertPushBufferUIntAfter (ILProcessor il, ref Instruction afterInstruction, buint integer)
+        public void InsertPushBufferUIntAfter (ILProcessor il, ref Instruction afterInstruction, buint integer)
         {
             var instruction = PushBUint(integer);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertPushBufferUIntBefore (ILProcessor il, Instruction beforeInstruction, buint integer)
+        public Instruction InsertPushBufferUIntBefore (ILProcessor il, Instruction beforeInstruction, buint integer)
         {
             var instruction = PushBUint(integer);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertPushIntAfter (ILProcessor il, ref Instruction afterInstruction, int integer)
+        public void InsertPushIntAfter (ILProcessor il, ref Instruction afterInstruction, int integer)
         {
             var instruction = PushInt((int)integer);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertPushIntBefore (ILProcessor il, Instruction beforeInstruction, int integer)
+        public Instruction InsertPushIntBefore (ILProcessor il, Instruction beforeInstruction, int integer)
         {
             var instruction = PushInt((int)integer);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertPushStringAfter (ILProcessor il, ref Instruction afterInstruction, string str)
+        public void InsertPushStringAfter (ILProcessor il, ref Instruction afterInstruction, string str)
         {
             var instruction = Instruction.Create(OpCodes.Ldstr, str);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertPushStringBefore (ILProcessor il, Instruction beforeInstruction, string str)
+        public Instruction InsertPushStringBefore (ILProcessor il, Instruction beforeInstruction, string str)
         {
             var instruction = Instruction.Create(OpCodes.Ldstr, str);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertPushThisAfter (ILProcessor il, ref Instruction afterInstruction)
+        public void InsertPushThisAfter (ILProcessor il, ref Instruction afterInstruction)
         {
             var instruction = Instruction.Create(OpCodes.Ldarg_0);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertPushThisBefore (ILProcessor il, Instruction beforeInstruction)
+        public Instruction InsertPushThisBefore (ILProcessor il, Instruction beforeInstruction)
         {
             var instruction = Instruction.Create(OpCodes.Ldarg_0);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, int operand)
+        public void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, int operand)
         {
             var instruction = Instruction.Create(opCode, operand);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, int operand)
+        public Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, int operand)
         {
             var instruction = Instruction.Create(opCode);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, Instruction operand)
+        public void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode, Instruction operand)
         {
             var instruction = Instruction.Create(opCode, operand);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, Instruction operand)
+        public Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode, Instruction operand)
         {
             var instruction = Instruction.Create(opCode);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode)
+        public void InsertAfter (ILProcessor il, ref Instruction afterInstruction, OpCode opCode)
         {
             var instruction = Instruction.Create(opCode);
             il.InsertAfter(afterInstruction, instruction);
             afterInstruction = instruction;
         }
 
-        public static Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode)
+        public Instruction InsertBefore (ILProcessor il, Instruction beforeInstruction, OpCode opCode)
         {
             var instruction = Instruction.Create(opCode);
             il.InsertBefore(beforeInstruction, instruction);
             return instruction;
         }
 
-        public static bool MethodIsCoroutine (MethodDefinition methodDef)
+        public bool MethodIsCoroutine (MethodDefinition methodDef)
         {
-            if (!CecilUtils.TryImport(methodDef.Module, typeof(System.Collections.IEnumerator), out var typeRef))
+            if (!TryImport(methodDef.Module, typeof(System.Collections.IEnumerator), out var typeRef))
                 return false;
 
             return methodDef.ReturnType.MetadataToken == typeRef.MetadataToken;
         }
 
-        public static bool TryPushMethodRef<DelegateMarker> (AssemblyDefinition compiledAssemblyDef, MethodReference methodRef, ILProcessor constructorILProcessor)
+        public bool TryPushMethodRef<DelegateMarker> (AssemblyDefinition compiledAssemblyDef, MethodReference methodRef, ILProcessor constructorILProcessor)
             where DelegateMarker : Attribute
         {
             constructorILProcessor.Emit(OpCodes.Ldnull);
@@ -507,7 +510,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        public static bool TryDetermineSizeOfPrimitive (TypeDefinition typeDef, ref buint size)
+        public bool TryDetermineSizeOfPrimitive (TypeDefinition typeDef, ref buint size)
         {
             switch (typeDef.Name)
             {
@@ -566,12 +569,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     return true;
                 
                 default:
-                    CodeGenDebug.LogError($"Unable to determine size of assumed primitive type: \"{typeDef.Name}\".");
+                    logger.LogError($"Unable to determine size of assumed primitive type: \"{typeDef.Name}\".");
                     return false;
             }
         }
 
-        public static bool TryDetermineSizeOfStruct (TypeDefinition typeDefinition, ref buint size)
+        public bool TryDetermineSizeOfStruct (TypeDefinition typeDefinition, ref buint size)
         {
             if (!typeDefinition.IsAutoLayout && typeDefinition.ClassSize != -1) // Is this struct using [StructLayout] with an explicit byte size.
             {
@@ -591,7 +594,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return allValid;
         }
 
-        public static bool TryDetermineSizeOfField(FieldDefinition fieldDef, ref buint size)
+        public bool TryDetermineSizeOfField(FieldDefinition fieldDef, ref buint size)
         {
             if (fieldDef.HasMarshalInfo)
             {
@@ -619,7 +622,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         return true;
                     
                     default:
-                        CodeGenDebug.LogError($"Unsupported unmanaged type: \"{fieldDef.MarshalInfo.NativeType}\" declared for primitive type: \"{fieldDef.FieldType.Name}\".");
+                        logger.LogError($"Unsupported unmanaged type: \"{fieldDef.MarshalInfo.NativeType}\" declared for primitive type: \"{fieldDef.FieldType.Name}\".");
                         return false;
                 }
             }
@@ -627,7 +630,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return TryDetermineSizeOfValueType(fieldDef.FieldType, ref size);
         }
 
-        public static bool TryDetermineSizeOfValueType (TypeReference typeRef, ref buint size)
+        public bool TryDetermineSizeOfValueType (TypeReference typeRef, ref buint size)
         {
             var typeDef = typeRef.Resolve();
             if (typeDef == null)
@@ -648,7 +651,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             throw new Exception($"Unable to determine size of supposed value type: \"{typeRef.FullName}\".");
         }
 
-        public static Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
+        public Instruction PushParameterToStack (ParameterDefinition parameterDefinition, bool isStaticCaller, bool byReference)
         {
             if (byReference)
                 return Instruction.Create(OpCodes.Ldarga, parameterDefinition);
@@ -683,7 +686,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static void ForeachMethodDef (TypeDefinition declaringTypeDef, Func<MethodDefinition, bool> callback)
+        public void ForeachMethodDef (TypeDefinition declaringTypeDef, Func<MethodDefinition, bool> callback)
         {
             Parallel.ForEach(declaringTypeDef.Methods, (methodDef, loopState) =>
             {
@@ -692,7 +695,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             });
         }
 
-        public static void ForeachNestedType (TypeDefinition containerTypeDef, Func<TypeDefinition, bool> callback)
+        public void ForeachNestedType (TypeDefinition containerTypeDef, Func<TypeDefinition, bool> callback)
         {
             Parallel.ForEach(containerTypeDef.NestedTypes, (typeDef, loopState) =>
             {
@@ -701,7 +704,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             });
         }
 
-        public static void ForeachTypeDef (ModuleDefinition moduleDef, Func<TypeDefinition, bool> callback)
+        public void ForeachTypeDef (ModuleDefinition moduleDef, Func<TypeDefinition, bool> callback)
         {
             Parallel.ForEach(moduleDef.Types, (typeDef, loopState) =>
             {
@@ -710,7 +713,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             });
         }
 
-        public static bool TryFindTypeDefByName (ModuleDefinition moduleDef, string typeName, out TypeDefinition matchingTypeDef)
+        public bool TryFindTypeDefByName (ModuleDefinition moduleDef, string typeName, out TypeDefinition matchingTypeDef)
         {
             TypeDefinition foundTypeDef = null;
             ForeachTypeDef(moduleDef, (typeDef) =>
@@ -725,7 +728,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return (matchingTypeDef = foundTypeDef) != null;
         }
 
-        public static bool TryFindTypeDefByNamespaceAndName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
+        public bool TryFindTypeDefByNamespaceAndName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
         {
             TypeDefinition foundTypeDef = null;
             ForeachTypeDef(moduleDef, (typeDef) =>
@@ -743,7 +746,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return (matchingTypeDef = foundTypeDef) != null;
         }
 
-        public static bool TryGetTypeDefByName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
+        public bool TryGetTypeDefByName (ModuleDefinition moduleDef, string namespaceStr, string typeName, out TypeDefinition matchingTypeDef)
         {
             if (typeName == typeof(void).Name)
             {
@@ -781,7 +784,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return TryFindTypeDefByNamespaceAndName(moduleDef, namespaceStr, typeName, out matchingTypeDef);
             return TryFindTypeDefByName(moduleDef, typeName, out matchingTypeDef);
         }
-        public static bool TryFindMatchingMethodInTypeDef (
+        public bool TryFindMatchingMethodInTypeDef (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
             ref RPCStub rpcStub, 
@@ -831,7 +834,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return (outMethodDef = methodDef) != null;
         }
 
-        public static bool TryGetMethodReference (
+        public bool TryGetMethodReference (
             ModuleDefinition moduleDef,
             TypeDefinition typeDef, 
             ref RPCStub rpcStub, 
@@ -839,7 +842,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         {
             if (!TryFindMatchingMethodInTypeDef(moduleDef, typeDef, ref rpcStub, out var methodDef))
             {
-                CodeGenDebug.LogError($"Unable to find method reference for serialized RPC: \"{rpcStub.methodStub.methodName}\" declared in: \"{typeDef.FullName}\".");
+                logger.LogError($"Unable to find method reference for serialized RPC: \"{rpcStub.methodStub.methodName}\" declared in: \"{typeDef.FullName}\".");
                 methodRef = null;
                 return false;
             }
@@ -848,7 +851,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return true;
         }
 
-        public static bool TryFindNestedTypeWithAttribute<T> (ModuleDefinition moduleDef, Type type, out TypeReference typeRef, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
+        public bool TryFindNestedTypeWithAttribute<T> (ModuleDefinition moduleDef, Type type, out TypeReference typeRef, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
         {
             var nestedTypes = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
             var typeDef = nestedTypes.FirstOrDefault(nestedType => nestedType.GetCustomAttribute<T>() != null);
@@ -856,38 +859,38 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (typeDef == null)
             {
                 typeRef = null;
-                CodeGenDebug.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                logger.LogError($"Unable to find nested type with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
                 return false;
             }
 
             return TryImport(moduleDef, typeDef, out typeRef);
         }
 
-        public static bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
+        public bool TryFindMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
         {
             var attributeType = typeof(T);
             var methods = type.GetMethods(bindingFlags);
             var found = (methodInfo = methods.FirstOrDefault(method => method.GetCustomAttribute<T>() != null)) != null;
 
             if (!found)
-                CodeGenDebug.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                logger.LogError($"Unable to find method info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return found;
         }
 
-        public static bool TryFindFieldWithAttribute<T> (System.Type type, out FieldInfo fieldInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
+        public bool TryFindFieldWithAttribute<T> (System.Type type, out FieldInfo fieldInfo, BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static) where T : Attribute
         {
             var attributeType = typeof(T);
             var fields = type.GetFields(bindingFlags);
             var found = (fieldInfo = fields.FirstOrDefault(field => field.GetCustomAttribute<T>() != null)) != null;
 
             if (!found)
-                CodeGenDebug.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                logger.LogError($"Unable to find field info with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return found;
         }
 
-        public static bool TryFindPropertyGetMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
+        public bool TryFindPropertyGetMethodWithAttribute<T> (System.Type type, out MethodInfo methodInfo) where T : Attribute
         {
             methodInfo = null;
             var attributeType = typeof(T);
@@ -896,12 +899,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 .FirstOrDefault();
 
             if (propertyInfo == null || (methodInfo = propertyInfo.GetGetMethod()) == null)
-                CodeGenDebug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
+                logger.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{type.FullName}\".");
 
             return methodInfo != null;
         }
 
-        public static bool TryFindFieldDefinitionWithAttribute<T> (TypeDefinition typeDef, out FieldDefinition fieldDefinition) where T : Attribute
+        public bool TryFindFieldDefinitionWithAttribute<T> (TypeDefinition typeDef, out FieldDefinition fieldDefinition) where T : Attribute
         {
             fieldDefinition = null;
 
@@ -913,12 +916,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 .FirstOrDefault()) != null;
 
             if (!found)
-                CodeGenDebug.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
+                logger.LogError($"Unable to find property getter with attribute: \"{typeof(T).FullName}\" in type: \"{typeDef.FullName}\".");
 
             return found;
         }
 
-        public static bool TryFindParameterWithAttribute<T> (
+        public bool TryFindParameterWithAttribute<T> (
             MethodDefinition methodDefinition, 
             out ParameterDefinition parameterDef)
         {
@@ -938,12 +941,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             bool found = parameterDef != null;
 
             if (!found)
-                CodeGenDebug.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
+                logger.LogError($"Unable to find parameter with attribute: \"{typeof(T).FullName}\" in method: \"{methodDefinition.Name}\" in type: \"{methodDefinition.DeclaringType.FullName}\".");
 
             return found;
         }
 
-        public static bool TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<T> (CustomAttribute customAttribute, out int customAttributeArgumentIndex)
+        public bool TryFindIndexOfCustomAttributeConstructorArgumentWithAttribute<T> (CustomAttribute customAttribute, out int customAttributeArgumentIndex)
         {
             if (!TryImport(customAttribute.AttributeType.Module, typeof(T), out var customAttributeArgumentAttributeType))
             {
@@ -963,19 +966,19 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 return true;
             }
 
-            CodeGenDebug.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
+            logger.LogError($"Unable to find index of custom attribute constructor argument with attribute: \"{typeof(T).FullName}\".");
             customAttributeArgumentIndex = -1;
             return false;
         }
 
-        public static bool ParameterIsString (ModuleDefinition moduleDefinition, ParameterDefinition parameterDef)
+        public bool ParameterIsString (ModuleDefinition moduleDefinition, ParameterDefinition parameterDef)
         {
             return 
                 parameterDef.ParameterType.Namespace == moduleDefinition.TypeSystem.String.Namespace && 
                 parameterDef.ParameterType.Name == moduleDefinition.TypeSystem.String.Name;
         }
 
-        public static Instruction PushBUint (buint value)
+        public Instruction PushBUint (buint value)
         {
             switch (value)
             {
@@ -1005,7 +1008,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static Instruction PushInt (int value)
+        public Instruction PushInt (int value)
         {
             switch (value)
             {
@@ -1033,7 +1036,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             }
         }
 
-        public static void AddCustomAttributeToParameter<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
+        public void AddCustomAttributeToParameter<Attribute> (AssemblyDefinition compiledAssemblyDef, ParameterDefinition parameterDef)
         {
             var constructorMethodInfo = typeof(Attribute).GetConstructors()[0];
             if (!TryImport(compiledAssemblyDef.MainModule, constructorMethodInfo, out var constructorMethodRef))
@@ -1041,7 +1044,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             parameterDef.CustomAttributes.Add(new CustomAttribute(constructorMethodRef));
         }
 
-        public static CustomAttribute AddCustomAttributeToMethod<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
+        public CustomAttribute AddCustomAttributeToMethod<Attribute> (ModuleDefinition moduleDef, MethodDefinition methoDef)
         {
             var constructorMethodInfo = typeof(Attribute).GetConstructors()[0];
             if (!TryImport(moduleDef, constructorMethodInfo, out var constructorMethodRef))

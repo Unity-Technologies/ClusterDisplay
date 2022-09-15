@@ -8,12 +8,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     {
         sealed class QueuedRPCILGenerator
         {
+            RPCILPostProcessor rpcILPostProcessor;
             ILProcessor ilProcessor;
             Instruction lastSwitchCaseInstruction;
             TypeReference generatedRPCILTypeRef;
 
-            public QueuedRPCILGenerator (TypeReference generatedRPCILTypeRef)
+            public QueuedRPCILGenerator (RPCILPostProcessor rpcILPostProcessor, TypeReference generatedRPCILTypeRef)
             {
+                this.rpcILPostProcessor = rpcILPostProcessor;
                 this.generatedRPCILTypeRef = generatedRPCILTypeRef;
             }
 
@@ -39,7 +41,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 var targetMethodDef = targetMethod.Resolve();
                 if (targetMethodDef.IsStatic)
                 {
-                     if (!TryInjectStaticRPCExecution(
+                     if (!rpcILPostProcessor.TryInjectStaticRPCExecution(
                         generatedRPCILTypeRef.Module,
                         ilProcessor,
                         beforeInstruction: lastInstruction,
@@ -48,7 +50,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                         return false;
                 }
 
-                else if (!TryInjectInstanceRPCExecution(
+                else if (!rpcILPostProcessor.TryInjectInstanceRPCExecution(
                     generatedRPCILTypeRef.Module,
                     ilProcessor,
                     beforeInstruction: lastInstruction,
@@ -56,7 +58,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     firstInstructionOfInjection: out firstInstructionOfCaseImpl))
                     return false;
                 
-                if (!TryInjectSwitchCaseForRPC(
+                if (!rpcILPostProcessor.TryInjectSwitchCaseForRPC(
                     ilProcessor,
                     valueToPushForBeq: rpcHash,
                     jmpToInstruction: firstInstructionOfCaseImpl,
@@ -75,13 +77,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     return true;
                 }
 
-                if (!CecilUtils.TryImport(generatedRPCILTypeRef.Module, typeof(RPCInterfaceRegistry.ExecuteQueuedRPC), out var executeQueuedRPCAttributeTypeRef))
+                if (!rpcILPostProcessor.cecilUtils.TryImport(generatedRPCILTypeRef.Module, typeof(RPCInterfaceRegistry.OnTryCallQueuedInstanceImplementationAttribute), out var executeQueuedRPCAttributeTypeRef))
                 {
                     ilProcessor = null;
                     return false;
                 }
 
-                if (!TryFindMethodReferenceWithAttributeInModule(
+                if (!rpcILPostProcessor.TryFindMethodReferenceWithAttributeInModule(
                     generatedRPCILTypeRef.Module,
                     generatedRPCILTypeRef.Resolve(),
                     executeQueuedRPCAttributeTypeRef,

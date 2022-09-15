@@ -49,25 +49,6 @@ namespace Unity.ClusterDisplay.RPC
                 Selection.objects = new[] { instance };
             }
 
-            void ListRegisteredAssemblies ()
-            {
-                var rpcRegistery = target as RPCRegistry;
-                if (RPCRegistry.m_TargetAssemblies != null && RPCRegistry.m_TargetAssemblies.Count > 0)
-                {
-                    EditorGUILayout.LabelField("Registered Post Processable Assemblies", EditorStyles.boldLabel);
-                    registeredAssemblyListScrollPosition = EditorGUILayout.BeginScrollView(registeredAssemblyListScrollPosition, GUILayout.Height(150));
-
-                    for (int i = 0; i < RPCRegistry.m_TargetAssemblies.Count; i++)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-                        EditorGUILayout.LabelField(RPCRegistry.m_TargetAssemblies[i].GetName().Name);
-                        EditorGUILayout.EndHorizontal();
-                    }
-
-                    EditorGUILayout.EndScrollView();
-                }
-            }
-
             void ListRegisteredMethods ()
             {
                 var rpcRegistry = target as RPCRegistry;
@@ -142,7 +123,6 @@ namespace Unity.ClusterDisplay.RPC
                     rpcRegistry.Clear();
 
                 ListRegisteredMethods();
-                ListRegisteredAssemblies();
             }
         }
 

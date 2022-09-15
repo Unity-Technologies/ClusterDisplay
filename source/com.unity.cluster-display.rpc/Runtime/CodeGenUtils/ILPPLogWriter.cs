@@ -10,25 +10,26 @@ namespace Unity.ClusterDisplay
     internal class CodeGenDebug
     {
         #if UNITY_EDITOR
-        static bool IsILPostProcessRunner = false;
+        bool IsILPostProcessRunner = false;
 
-        static string ilPostProcessorContextAssemblyName;
-        public static void BeginILPostProcessing(string assemblyName)
+        string logName;
+
+        public CodeGenDebug (string logName, bool isILPPRunner)
         {
-            IsILPostProcessRunner = true;
-            ilPostProcessorContextAssemblyName = assemblyName;
+            IsILPostProcessRunner = isILPPRunner;
+            this.logName = logName;
         }
 
         const string ILPostProcessLogFolderPath = "./Temp/ClusterDisplay/Logs/";
 
-        static void ILPPWrite(string msg)
+        void ILPPWrite(string msg)
         {
             try
             {
                 if (!Directory.Exists(ILPostProcessLogFolderPath))
                     Directory.CreateDirectory(ILPostProcessLogFolderPath);
 
-                string logPath = $"{ILPostProcessLogFolderPath}{ilPostProcessorContextAssemblyName}.txt";
+                string logPath = $"{ILPostProcessLogFolderPath}{logName}.txt";
 
                 var fileStream = new FileStream(logPath, FileMode.OpenOrCreate,
                     FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -46,32 +47,32 @@ namespace Unity.ClusterDisplay
             catch {}
         }
 
-        static void ILPPLog(string msg) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Log: {msg}");
+        void ILPPLog(string msg) =>
+            ILPPWrite($"ILPP {logName} Log: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Log: {msg}");
 
-        static void ILPPLogWarning(string msg) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Warning: {msg}");
+        void ILPPLogWarning(string msg) =>
+            ILPPWrite($"ILPP {logName} Warning: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Warning: {msg}");
 
-        static void ILPPLogError(string msg) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Error: {msg}");
+        void ILPPLogError(string msg) =>
+            ILPPWrite($"ILPP {logName} Error: {msg}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Error: {msg}");
 
-        static void ILPPLogException(Exception exception, StackFrame stackFrame) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackFrame.ToString()}");
+        void ILPPLogException(Exception exception, StackFrame stackFrame) =>
+            ILPPWrite($"ILPP {logName} Exception: {exception.Message}\n{stackFrame.ToString()}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackFrame.ToString()}");
         
-        static void ILPPLogException(Exception exception, string stackTrace) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackTrace}");
+        void ILPPLogException(Exception exception, string stackTrace) =>
+            ILPPWrite($"ILPP {logName} Exception: {exception.Message}\n{stackTrace}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}\n{stackTrace}");
 
-        static void ILPPLogException(Exception exception) =>
-            ILPPWrite($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}");
+        void ILPPLogException(Exception exception) =>
+            ILPPWrite($"ILPP {logName} Exception: {exception.Message}");
             // Console.WriteLine($"ILPP {ilPostProcessorContextAssemblyName} Exception: {exception.Message}");
         #endif
 
-        public static void Log(string msg)
+        public void Log(string msg)
         {
             #if UNITY_EDITOR
             if (IsILPostProcessRunner)
@@ -84,7 +85,7 @@ namespace Unity.ClusterDisplay
             Debug.Log(msg);
         }
 
-        public static void LogWarning(string msg)
+        public void LogWarning(string msg)
         {
             #if UNITY_EDITOR
             if (IsILPostProcessRunner)
@@ -97,7 +98,7 @@ namespace Unity.ClusterDisplay
             Debug.LogWarning(msg);
         }
 
-        public static void LogError(string msg)
+        public void LogError(string msg)
         {
             #if UNITY_EDITOR
             if (IsILPostProcessRunner)
@@ -110,7 +111,7 @@ namespace Unity.ClusterDisplay
             Debug.LogError(msg);
         }
 
-        public static void LogException(Exception exception)
+        public void LogException(Exception exception)
         {
             #if UNITY_EDITOR
             if (IsILPostProcessRunner)

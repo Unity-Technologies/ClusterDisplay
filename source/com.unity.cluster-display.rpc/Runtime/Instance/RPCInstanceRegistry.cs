@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Unity.ClusterDisplay.RPC;
-
+using UnityEngine;
 using buint = System.UInt32;
+
+using onTryCallInstanceFuncAlias = System.Func<string, ushort, System.UInt32, System.UInt32, bool>;
+using onTryCallStaticFuncAlias = System.Func<string, System.UInt32, System.UInt32, bool>;
+using onTryCallQueuedInstanceFuncAlias = System.Func<string, ushort, System.UInt32, System.UInt32, bool>;
 
 namespace Unity.ClusterDisplay
 {
@@ -69,11 +74,11 @@ namespace Unity.ClusterDisplay
         /// <param name="parametersPayloadSize">The total byte count of all of the RPC's argument values.</param>
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
-        [OnTryCallDelegateMarker] protected delegate bool ExecuteRPCDelegate(
+        [OnTryCallInstanceDelegateAttribute] protected delegate bool OnTryCallInstanceDelegate(
             string rpcId, 
             ushort pipeId, 
             buint parametersPayloadSize, 
-            ref buint rpcBufferParameterPosition);
+            buint rpcBufferParameterPosition);
 
         /// <summary>
         /// This delegate declaration is used by the generated RPCIL type derrived from this class and it's 
@@ -83,10 +88,10 @@ namespace Unity.ClusterDisplay
         /// <param name="parametersPayloadSize">The total byte count of all of the RPC's argument values.</param>
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
-        [OnTryStaticCallDelegateMarker] protected delegate bool ExecuteStaticRPCDelegate(
+        [OnTryCallStaticDelegateAttribute] protected delegate bool OnTryCallStaticDelegate(
             string rpcId, 
             buint parametersPayloadSize, 
-            ref buint rpcBufferParameterPosition);
+            buint rpcBufferParameterPosition);
 
         /// <summary>
         /// This delegate declaration is used by the generated RPCIL type derrived from this class and it's 
@@ -97,7 +102,7 @@ namespace Unity.ClusterDisplay
         /// <param name="parametersPayloadSize">The total byte count of all of the RPC's argument values.</param>
         /// <param name="rpcBufferParameterPosition">The position at which the RPC's arguments begin in the RPC buffer.</param>
         /// <returns></returns>
-        [ExecuteQueuedRPCDelegateMarker] protected delegate bool ExecuteQueuedRPCDelegate(
+        [OnTryCallQueuedInstanceDelegateAttribute] protected delegate bool OnTryCallQueuedInstanceDelegate(
             string rpcId, 
             ushort pipeId, 
             buint parametersPayloadSize, 
@@ -117,21 +122,43 @@ namespace Unity.ClusterDisplay
         /// Queue for invoking RPCs AFTER any MonoBehaviour.LateUpdate occurs in a frame.
         static readonly Queue<QueuedRPCCall> afterLateUpdateRPCQueue = new Queue<QueuedRPCCall>();
 
-        /// This delegates represents the implementation to immediately execute instance RPC 
-        /// invocations delcared in an instance of the generated RPCIL type, one per assembly.
-        protected readonly static List<ExecuteRPCDelegate> m_OnTryCallInstanceDelegate = new List<ExecuteRPCDelegate>();
+        struct ImplementationInstance
+        {
+            /// There is one instance of a the generated RPC invocation type that implements RPCInterfaceRegistry per 
+            /// assembly, and we store those instances in this list. See the diagram above at the top of this source file.
+            readonly public RPCInterfaceRegistry instance;
 
-        /// This delegates represents the implementation to immediately execute static RPC 
-        /// invocations delcared in an instance of the generated RPCIL type, one per assembly.
-        protected readonly static List<ExecuteStaticRPCDelegate> m_OnTryStaticCallInstanceDelegate = new List<ExecuteStaticRPCDelegate>();
+            ///  Useful for debugging.
+            readonly public Assembly assembly;
 
-        /// This delegates represents the implementation to execute queued RPC invocations
-        /// delcared in an instance of the generated RPCIL type, one per assembly. 
-        protected readonly static List<ExecuteQueuedRPCDelegate> m_ExecuteQueuedRPCDelegate = new List<ExecuteQueuedRPCDelegate>();
+            /// This delegates represents the implementation to immediately execute instance RPC 
+            /// invocations delcared in an instance of the generated RPCIL type, one per assembly.
+            readonly public onTryCallInstanceFuncAlias onTryCallInstance;
 
-        /// There is one instance of a the generated RPC invocation type that implements RPCInterfaceRegistry per 
-        /// assembly, and we store those instances in this list. See the diagram above at the top of this source file.
-        readonly static List<RPCInterfaceRegistry> m_ImplementationInstances = new List<RPCInterfaceRegistry>();
+            /// This delegates represents the implementation to immediately execute static RPC 
+            /// invocations delcared in an instance of the generated RPCIL type, one per assembly.
+            readonly public onTryCallStaticFuncAlias onTryCallStatic;
+
+            /// This delegates represents the implementation to execute queued RPC invocations
+            /// delcared in an instance of the generated RPCIL type, one per assembly. 
+            readonly public onTryCallQueuedInstanceFuncAlias onTryCallQueuedInstance;
+
+            public ImplementationInstance (
+                RPCInterfaceRegistry newInstance,
+                Assembly fromAssembly,
+                OnTryCallInstanceDelegate onTryCallInstanceDel,
+                OnTryCallStaticDelegate onTryCallStaticDel,
+                OnTryCallQueuedInstanceDelegate onTryCallQueuedInstanceDel)
+            {
+                instance = newInstance;
+                assembly = fromAssembly;
+                onTryCallInstance = onTryCallInstanceDel.Invoke;
+                onTryCallStatic = onTryCallStaticDel.Invoke;
+                onTryCallQueuedInstance = onTryCallQueuedInstanceDel.Invoke;
+            }
+        }
+
+        readonly static List<ImplementationInstance> m_ImplementationInstances = new List<ImplementationInstance>();
 
         /// <summary>
         /// Determine whether an assembly has a generated RPC invocation type.
@@ -163,47 +190,41 @@ namespace Unity.ClusterDisplay
             }
 
             // Determine the whether we already have an instance of the generated type.
-            RPCInterfaceRegistry instance = m_ImplementationInstances.FirstOrDefault(i => i.GetType().Assembly.FullName == assembly.FullName);
+            var instance = m_ImplementationInstances.FirstOrDefault(i =>
+                i.instance != null && i.instance.GetType().Assembly.FullName == assembly.FullName).instance;
+
             if (instance == null)
             {
-                // Create the instance if it did not exist.
-                instance = Activator.CreateInstance(rpcILType) as RPCInterfaceRegistry;
-
                 // The derrived generate type adds itself to the m_ImplementationInstances in it's base constructor. That's
                 // why its not happening here. Inspect the generated RPC invocation type for more info.
-
-                ClusterDebug.Log($"Created instance of type: \"{rpcILType.FullName}\" in assembly: \"{assembly.GetName().Name}\".");
+                instance = Activator.CreateInstance(rpcILType) as RPCInterfaceRegistry;
             }
 
             // The base constructor of RPCIL defined below adds the instance of RPCIL before we get to the following line:
-            assemblyIndex = (ushort)m_ImplementationInstances.IndexOf(instance);
+            assemblyIndex = (ushort)m_ImplementationInstances.FindIndex(i => i.instance == instance);
             ClusterDebug.Log($"Retrieved instance of type: \"{rpcILType.FullName}\" in assembly: \"{assembly.GetName().Name}\" at index: {assemblyIndex}");
             return true;
         }
 
-        // public class AssemblyOrder : IComparer<RPCInterfaceRegistry>
-        // {
-        //     public int Compare(RPCInterfaceRegistry x, RPCInterfaceRegistry y) => 
-        //         x.GetType().Assembly.Location.CompareTo(y.GetType().Assembly.Location);
-        // }
-
         // When we create an instance of the generated RPCIL type, it's base constructor is
         // called to register the delegates to our static list of delegates per assembly.
         [RPCInterfaceRegistryConstuctorMarker] protected RPCInterfaceRegistry (
-            ExecuteRPCDelegate OnTryCallInstance,
-            ExecuteStaticRPCDelegate OnTryStaticCallInstance,
-            ExecuteQueuedRPCDelegate executeQueuedRPC)
+            OnTryCallInstanceDelegate onTryCallInstance,
+            OnTryCallStaticDelegate onTryCallStatic,
+            OnTryCallQueuedInstanceDelegate onTryCallQueuedInstance)
         {
             var instanceType = new System.Diagnostics.StackTrace().GetFrame(1).GetMethod().DeclaringType;
-            ClusterDebug.Log($"Registering instance of: \"{instanceType.Name}\" in assembly: \"{instanceType.Assembly.GetName().Name}\".");
-
-            m_ImplementationInstances.Add(this);
-            // m_ImplementationInstances.Sort(new AssemblyOrder());
 
             // Register the IL injected methods for RPC argument conversion and execution. 
-            m_OnTryCallInstanceDelegate.Add(OnTryCallInstance);
-            m_OnTryStaticCallInstanceDelegate.Add(OnTryStaticCallInstance);
-            m_ExecuteQueuedRPCDelegate.Add(executeQueuedRPC);
+            m_ImplementationInstances.Add(new ImplementationInstance(
+                this,
+                GetType().Assembly,
+                onTryCallInstance,
+                onTryCallStatic,
+                onTryCallQueuedInstance
+            ));
+
+            ClusterDebug.Log($"Registering instance of: \"{instanceType.Name}\" in assembly: \"{instanceType.Assembly.GetName().Name}\".");
         }
 
         static void DelegateNotRegisteredError () =>
@@ -225,32 +246,43 @@ namespace Unity.ClusterDisplay
             buint parametersPayloadSize, 
             ref buint rpcsBufferPosition)
         {
+            bool success = false;
             // Making sure nothing is broken, as this library matures we could probably wrap these in a validation scripting define.
-            if (m_OnTryCallInstanceDelegate == null || m_OnTryCallInstanceDelegate[assemblyIndex] == null)
+            if (m_ImplementationInstances == null || assemblyIndex >= m_ImplementationInstances.Count)
             {
                 DelegateNotRegisteredError();
-                return false;
+                goto done;
             }
             
             if (!RPCRegistry.RPCIdToRPCHash(rpcId, out var rpcHash))
-                return false;
+                goto done;
 
             // Call the IL injected method that implements the byte conversion of the RPC's arguments then subsequently invoke the RPC.
             try
             {
-                return m_OnTryCallInstanceDelegate[assemblyIndex](
-                    rpcHash, 
-                    pipeId, 
-                    parametersPayloadSize, 
-                    ref rpcsBufferPosition);
+                success = m_ImplementationInstances[assemblyIndex].onTryCallInstance(
+                    rpcHash,
+                    pipeId,
+                    parametersPayloadSize,
+                    rpcsBufferPosition);
             }
 
             catch (System.Exception exception)
             {
                 ClusterDebug.LogError($"The following exception occurred while attempting to execute a instance RPC: (Assembly Index: {assemblyIndex}, RPC ID: {rpcId}, Pipe ID: {pipeId}, RPC ExecutionStage: {RPCExecutionStage.ImmediatelyOnArrival}, RPC Buffer Starting Position: {rpcsBufferPosition}, Parameter Payload Size: {parametersPayloadSize})");
                 ClusterDebug.LogException(exception);
-                return false;
+                goto done;
             }
+
+            done:
+
+            if (!success)
+            {
+                ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): Unable to call execute instance RPC: {rpcId}");
+            }
+
+            rpcsBufferPosition += parametersPayloadSize;
+            return success;
         }
 
         internal static bool TryCallStatic(
@@ -259,66 +291,73 @@ namespace Unity.ClusterDisplay
             buint parametersPayloadSize,
             ref buint rpcsBufferPosition)
         {
-            if (m_OnTryStaticCallInstanceDelegate == null || m_OnTryStaticCallInstanceDelegate[assemblyIndex] == null)
+            bool success = false;
+            if (m_ImplementationInstances == null || assemblyIndex >= m_ImplementationInstances.Count)
             {
                 DelegateNotRegisteredError();
-                return false;
+                goto done;
             }
             
             if (!RPCRegistry.RPCIdToRPCHash(rpcId, out var rpcHash))
-                return false;
+                goto done;
 
             try
             {
-                if(!m_OnTryStaticCallInstanceDelegate[assemblyIndex](
+                success = m_ImplementationInstances[assemblyIndex].onTryCallStatic(
                     rpcHash,
                     parametersPayloadSize,
-                    ref rpcsBufferPosition))
-                {
-                    ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): No method available to execute RPC: {rpcId}");
-                    return false;
-                }
-
-                return true;
+                    rpcsBufferPosition);
             }
 
             catch (System.Exception exception)
             {
                 ClusterDebug.LogError($"The following exception occurred while attempting to execute a static RPC: (Assembly Index: {assemblyIndex}, RPC ID: {rpcId}, RPC ExecutionStage: {RPCExecutionStage.ImmediatelyOnArrival}, RPC Buffer Starting Position: {rpcsBufferPosition}, Parameter Payload Size: {parametersPayloadSize})");
                 ClusterDebug.LogException(exception);
-                return false;
+                goto done;
             }
+
+            done:
+
+            if (!success)
+            {
+                ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): Unable to call execute static RPC: {rpcId}");
+            }
+
+            rpcsBufferPosition += parametersPayloadSize;
+            return success;
         }
 
         static void LogPreExceptionMessageForQueuedRPC (QueuedRPCCall queuedRPCCall) =>
             ClusterDebug.LogError($"The following exception occurred while attempting to execute instance RPC: (Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Pipe ID: {queuedRPCCall.rpcRequest.pipeId}, RPC ExecutionStage: {queuedRPCCall.rpcRequest.rpcExecutionStage}, RPC Buffer Starting Position: {queuedRPCCall.rpcsBufferParametersStartPosition}, Parameter Payload Size: {queuedRPCCall.rpcRequest.parametersPayloadSize})");
 
-        static void LogCall(QueuedRPCCall queuedRPCCall)
-        {
-            var assembly = RPCRegistry.GetAssembly(queuedRPCCall.rpcRequest.rpcId);
-            ClusterDebug.Log($"Calling method: (RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}, Assembly: \"{assembly.GetName().Name}\").");
-        }
+        static void LogCall(QueuedRPCCall queuedRPCCall) =>
+            ClusterDebug.Log($"Calling method: (RPC ID: {queuedRPCCall.rpcRequest.rpcId}, Assembly Index: {queuedRPCCall.rpcRequest.assemblyIndex}");
 
         static void LogMissingMethod (QueuedRPCCall queuedRPCCall) =>
             ClusterDebug.LogError($"(Frame: {(ClusterDisplayState.TryGetFrameId(out var frame) ? frame : 0)}): No method available to execute RPC: {queuedRPCCall.rpcRequest.rpcId}");
 
         static void ExecuteQueued (QueuedRPCCall queuedRPCCall)
         {
-            if (m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex] == null)
+            if (m_ImplementationInstances[queuedRPCCall.rpcRequest.assemblyIndex].onTryCallQueuedInstance == null)
                 return;
 
             if (!RPCRegistry.RPCIdToRPCHash(queuedRPCCall.rpcRequest.rpcId, out var rpcHash))
                 return;
+
+            if (queuedRPCCall.rpcRequest.rpcId == 52)
+                Debug.Log("TEST");
             
             LogCall(queuedRPCCall);
 
             try
             {
-                if (!m_ExecuteQueuedRPCDelegate[queuedRPCCall.rpcRequest.assemblyIndex](
-                    rpcHash, 
-                    queuedRPCCall.rpcRequest.pipeId, 
-                    queuedRPCCall.rpcRequest.parametersPayloadSize, 
-                    queuedRPCCall.rpcsBufferParametersStartPosition))
+                bool result = m_ImplementationInstances[queuedRPCCall.rpcRequest.assemblyIndex].onTryCallQueuedInstance(
+                    rpcHash,
+                    queuedRPCCall.rpcRequest.pipeId,
+                    queuedRPCCall.rpcRequest.parametersPayloadSize,
+                    queuedRPCCall.rpcsBufferParametersStartPosition);
+
+                if (!result)
                 {
                     LogMissingMethod(queuedRPCCall);
                 }
@@ -336,7 +375,7 @@ namespace Unity.ClusterDisplay
             if (beforeFixedUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 beforeFixedUpdateRPCQueue.Clear();
@@ -354,7 +393,7 @@ namespace Unity.ClusterDisplay
             if (afterFixedUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 afterFixedUpdateRPCQueue.Clear();
@@ -372,7 +411,7 @@ namespace Unity.ClusterDisplay
             if (beforeUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 beforeUpdateRPCQueue.Clear();
@@ -390,7 +429,7 @@ namespace Unity.ClusterDisplay
             if (afterUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 afterUpdateRPCQueue.Clear();
@@ -408,7 +447,7 @@ namespace Unity.ClusterDisplay
             if (beforeLateUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 beforeLateUpdateRPCQueue.Clear();
@@ -426,7 +465,7 @@ namespace Unity.ClusterDisplay
             while (afterLateUpdateRPCQueue.Count == 0)
                 return;
 
-            if (m_ExecuteQueuedRPCDelegate == null)
+            if (m_ImplementationInstances.Count == 0)
             {
                 DelegateNotRegisteredError();
                 afterLateUpdateRPCQueue.Clear();

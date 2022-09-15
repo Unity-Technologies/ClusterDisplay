@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
@@ -199,7 +199,7 @@ namespace Unity.ClusterDisplay
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogException(exception);
+                ClusterDebug.LogException(exception);
             }
         }
 
@@ -223,7 +223,7 @@ namespace Unity.ClusterDisplay
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogException(exception);
+                ClusterDebug.LogException(exception);
             }
         }
 

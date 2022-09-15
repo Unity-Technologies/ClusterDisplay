@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
         {
             if (methodInfo.IsAbstract)
             {
-                CodeGenDebug.LogError($"Instance method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Namespace}.{methodInfo.DeclaringType.Name}\" is unsupported because the type is abstract.");
+                ClusterDebug.LogError($"Instance method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Namespace}.{methodInfo.DeclaringType.Name}\" is unsupported because the type is abstract.");
                 return false;
             }
 
@@ -103,63 +103,11 @@ namespace Unity.ClusterDisplay
             return methods.ToArray();
         }
 
-        public static bool TryGetMethodWithDedicatedAttribute<AttributeType>(out MethodInfo methodInfo)
-            where AttributeType : DedicatedAttribute =>
-            TryGetMethodWithDedicatedAttribute(typeof(AttributeType), out methodInfo);
-
-        public static bool TryGetMethodWithDedicatedAttribute (System.Type attributeType, out MethodInfo methodInfo)
-        {
-            if (attributeType == null)
-            {
-                CodeGenDebug.LogError("Cannot get method with null attribute!");
-                methodInfo = null;
-                return false;
-            }
-
-            if (cachedMethodsWithDedicatedAttributes.TryGetValue(attributeType, out methodInfo))
-                return true;
-
-            #if UNITY_EDITOR
-
-            var methods = UnityEditor.TypeCache.GetMethodsWithAttribute(attributeType).ToArray();
-
-            #else
-
-            if (!TryGetAllMethodsWithAttribute(attributeType, out var methods))
-                return false;
-
-            #endif
-
-            if (methods.Length == 0)
-                return false;
-
-            if (methods.Length > 1)
-            {
-                CodeGenDebug.LogError($"There is more than one method with attribute: \"{attributeType.Name}\", this dedicated attribute should only be applied to one method.");
-                return false;
-            }
-
-            methodInfo = methods.FirstOrDefault();
-            if (methodInfo == null)
-                return false;
-
-            cachedMethodsWithDedicatedAttributes.Add(attributeType, methodInfo);
-            return true;
-        }
-
         public static bool TryGetAllMethodsWithAttribute<AttributeType>(
             out MethodInfo[] methodInfos,
             BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
             where AttributeType : Attribute =>
             TryGetAllMethodsWithAttribute(typeof(AttributeType), out methodInfos);
-
-        static void WriteMethods (MethodInfo[] methodInfos, string fileName)
-        {
-            var output = $"{methodInfos[0].DeclaringType.Assembly.GetName().Name}.{methodInfos[0].DeclaringType.FullName}.{methodInfos[0].Name}";
-            for (int i = 1; i < methodInfos.Length; i++)
-                output = $"{output},\n{methodInfos[i].DeclaringType.Assembly.GetName().Name}.{methodInfos[i].DeclaringType.FullName}.{methodInfos[i].Name}";
-            System.IO.File.WriteAllText(fileName, output);
-        }
 
         static MethodInfo[] SortMethods (IEnumerable<MethodInfo> list) =>
             list

@@ -11,6 +11,12 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 {
     internal partial class RPCILPostProcessor
     {
+        public RPCILPostProcessor (CecilUtils cecilUtils, CodeGenDebug logger)
+        {
+            this.cecilUtils = cecilUtils;
+            this.logger = logger;
+        }
+
         IEnumerable<MethodReference> GetMethodsWithRPCAttribute (AssemblyDefinition compiledAssemblyDef, out string rpcMethodAttributeFullName)
         {
             var rpcMethodCustomAttributeType = typeof(ClusterRPC);
@@ -124,14 +130,14 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             MethodInfo appendRPCMethodInfo = null;
             if (!modifiedTargetMethodDef.IsStatic)
             {
-                if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+                if (!cecilUtils.TryFindMethodWithAttribute<RPCBufferIO.RPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                     return false;
             }
 
-            else if (!CecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
+            else if (!cecilUtils.TryFindMethodWithAttribute<RPCBufferIO.StaticRPCCallMarker>(rpcEmitterType, out appendRPCMethodInfo))
                 return false;
 
-            if (!CecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
+            if (!cecilUtils.TryImport(targetMethodRef.Module, appendRPCMethodInfo, out var appendRPCCMethodRef))
                 return false;
 
             if (!TryGetCachedGetIsEmitterMarkerMethod(out var getIsEmitterMethod))
@@ -144,11 +150,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 out var hasDynamicallySizedRPCParameters))
                 return false;
 
-            if (!CecilUtils.TryImport(targetMethodRef.Module, getIsEmitterMethod, out var getIsEmitterMethodRef))
+            if (!cecilUtils.TryImport(targetMethodRef.Module, getIsEmitterMethod, out var getIsEmitterMethodRef))
                 return false;
 
-            var afterInstruction = CecilUtils.InsertCallBefore(il, beforeInstruction, getIsEmitterMethodRef);
-            CecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
+            var afterInstruction = cecilUtils.InsertCallBefore(il, beforeInstruction, getIsEmitterMethodRef);
+            cecilUtils.InsertAfter(il, ref afterInstruction, OpCodes.Brfalse, beforeInstruction);
 
             return !hasDynamicallySizedRPCParameters ?
 
@@ -179,8 +185,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             RPCExecutionStage rpcExecutionStage,
             ref string explicitRPCHash)
         {
-            CodeGenDebug.Log($"Attempting to post process method: \"{targetMethodRef.Name}\" declared in: \"{targetMethodRef.DeclaringType.Name}\" with execution stage: {rpcExecutionStage}");
-            var rpcHash = CecilUtils.ComputeMethodHash(targetMethodRef);
+            logger.Log($"Attempting to post process method: \"{targetMethodRef.Name}\" declared in: \"{targetMethodRef.DeclaringType.Name}\" with execution stage: {rpcExecutionStage}");
+            var rpcHash = cecilUtils.ComputeMethodHash(targetMethodRef);
             if (!string.IsNullOrEmpty(explicitRPCHash))
                 rpcHash = explicitRPCHash;
             else explicitRPCHash = rpcHash;
@@ -240,9 +246,9 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                 // If the declaring assembly name does not match our compiled one, then ignore it as the RPC is probably in another assembly.
                 if (rpc.methodStub.declaringAssemblyName == compiledAssemblyDef.Name.Name)
                 {
-                    if (!CecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.methodStub.declaringTypeNamespace, rpc.methodStub.declaringTypeName, out var declaringTypeDef))
+                    if (!cecilUtils.TryGetTypeDefByName(compiledAssemblyDef.MainModule, rpc.methodStub.declaringTypeNamespace, rpc.methodStub.declaringTypeName, out var declaringTypeDef))
                     {
-                        CodeGenDebug.LogError($"Unable to find serialized method: \"{rpc.methodStub.methodName}\", the declaring type: \"{rpc.methodStub.declaringTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
+                        logger.LogError($"Unable to find serialized method: \"{rpc.methodStub.methodName}\", the declaring type: \"{rpc.methodStub.declaringTypeName}\" does not exist in the compiled assembly: \"{compiledAssemblyDef.Name}\".");
                         continue;
                     }
                     
@@ -255,7 +261,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             rpc,
                             rpc.methodStub.methodName,
                             out targetMethodRef) &&
-                        !CecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, declaringTypeDef, ref rpc, out targetMethodRef);
+                        !cecilUtils.TryGetMethodReference(compiledAssemblyDef.MainModule, declaringTypeDef, ref rpc, out targetMethodRef);
 
                     if (unableToFindAnyMethod)
                         continue;
@@ -291,9 +297,10 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
         bool PostProcessSerializedRPCs (AssemblyDefinition compiledAssemblyDef)
         {
-            CodeGenDebug.Log($"Polling serialized RPCs for assembly.");
+            logger.Log($"Polling serialized RPCs for assembly.");
+            RPCSerializer rpcSerializer = new RPCSerializer(logger);
             if (cachedSerializedRPCS == null)
-                RPCSerializer.ReadAllRPCs(
+                rpcSerializer.ReadAllRPCs(
                     RPCRegistry.k_RPCStubsFileName, 
                     RPCRegistry.k_RPCStagedPath, 
                     out cachedSerializedRPCS, 
@@ -303,7 +310,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             if (cachedSerializedRPCS == null || cachedSerializedRPCS.Length == 0)
                 return false;
 
-            CodeGenDebug.Log($"Found {cachedSerializedRPCS.Length} serialized RPCs.");
+            logger.Log($"Found {cachedSerializedRPCS.Length} serialized RPCs.");
             return PostProcessDeserializedRPCs(compiledAssemblyDef, cachedSerializedRPCS.ToArray());
         }
 
@@ -321,7 +328,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             customAttribute = GetClusterRPCAttribute(methodRef);
             if (customAttribute != null)
                 return true;
-            return (customAttribute = CecilUtils.AddCustomAttributeToMethod<ClusterRPC>(methodRef.Module, methodRef.Resolve())) == null;
+            return (customAttribute = cecilUtils.AddCustomAttributeToMethod<ClusterRPC>(methodRef.Module, methodRef.Resolve())) == null;
         }
 
         bool TryGetRPCHashFromClusterRPCAttribute(CustomAttribute customAttribute, out string rpcHash)
@@ -337,7 +344,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             var msg = $"Methods with {nameof(ClusterRPC)} attribute:";
             foreach (var methodRef in methodRefs)
                 msg = $"{msg}\n\t{methodRef.DeclaringType.Name}.{methodRef.Name}";
-            CodeGenDebug.Log(msg);
+            logger.Log(msg);
             
             bool modified = false;
             foreach (var methodRef in methodRefs)
@@ -354,7 +361,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
 
                 if (methodDef.IsAbstract)
                 {
-                    CodeGenDebug.LogError($"Instance method: \"{methodDef.Name}\" declared in type: \"{methodDef.DeclaringType.Namespace}.{methodDef.DeclaringType.Name}\" is unsupported because the type is abstract.");
+                    logger.LogError($"Instance method: \"{methodDef.Name}\" declared in type: \"{methodDef.DeclaringType.Namespace}.{methodDef.DeclaringType.Name}\" is unsupported because the type is abstract.");
                     continue;
                 }
                 

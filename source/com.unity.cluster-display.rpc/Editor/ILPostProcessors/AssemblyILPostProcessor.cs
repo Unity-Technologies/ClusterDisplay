@@ -21,6 +21,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
     {
         readonly Dictionary<string, string> m_CachedAssemblyPaths = new Dictionary<string, string>();
         readonly object cachedAssemblyPathLock = new object();
+        public CecilUtils cecilUtils;
+        CodeGenDebug logger;
         
         /// <summary>
         /// This class builds a path to the assembly location, loads the DLL bytes and
@@ -28,10 +30,16 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// </summary>
         internal sealed class AssemblyResolver : BaseAssemblyResolver
         {
+            readonly CodeGenDebug logger;
+
             readonly Dictionary<string, string> m_CachedAssemblyPaths = new Dictionary<string, string>(); // Reference to parent instance.
             readonly Dictionary<string, AssemblyDefinition> cachedAssemblyDefinitions = new Dictionary<string, AssemblyDefinition>();
 
-            public AssemblyResolver(Dictionary<string, string> cachedAssemblyPath) => m_CachedAssemblyPaths = cachedAssemblyPath;
+            public AssemblyResolver(CodeGenDebug logger, Dictionary<string, string> cachedAssemblyPaths)
+            {
+                this.m_CachedAssemblyPaths = cachedAssemblyPaths;
+                this.logger = logger;
+            }
 
             public override AssemblyDefinition Resolve(AssemblyNameReference name, ReaderParameters parameters)
             {
@@ -53,17 +61,18 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     parameters.AssemblyResolver = this;
                     parameters.SymbolStream = CreatePdbStreamFor(assemblyLocation);
 
-                    assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyLocation, parameters);
+                    var bytes = File.ReadAllBytes(assemblyLocation);
+                    assemblyDefinition = AssemblyDefinition.ReadAssembly(new MemoryStream(bytes), parameters);
                     cachedAssemblyDefinitions.Add(name.Name, assemblyDefinition);
 
-                    CodeGenDebug.Log($"Successfully read referenced assembly: \"{name.Name}\" at path: \"{assemblyLocation}\".");
+                    logger.Log($"Successfully read referenced assembly: \"{name.Name}\" at path: \"{assemblyLocation}\".");
 
                     return assemblyDefinition;
                 }
                 
                 catch (Exception ex)
                 {
-                    CodeGenDebug.LogException(ex);
+                    logger.LogException(ex);
                     return null;
                 }
             }
@@ -109,18 +118,18 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                             continue;
 
                         m_CachedAssemblyPaths.Add(referenceName, referencePath);
-                        CodeGenDebug.Log($"Caching assembly reference {referenceName} at path: \"{referencePath}\".");
+                        logger.Log($"Caching assembly reference {referenceName} at path: \"{referencePath}\".");
                     }
                     
                     referencesMsg += $"\n\t{referencePath}";
                 }
 
-                CodeGenDebug.Log(referencesMsg);
+                logger.Log(referencesMsg);
             }
 
             var readerParameters = new ReaderParameters
             {
-                AssemblyResolver = new AssemblyResolver(m_CachedAssemblyPaths),
+                AssemblyResolver = new AssemblyResolver(logger, m_CachedAssemblyPaths),
                 SymbolStream = new MemoryStream(compiledAssembly.InMemoryAssembly.PdbData.ToArray()),
                 SymbolReaderProvider = new PortablePdbReaderProvider(),
                 ReflectionImporterProvider = new PostProcessorReflectionImporterProvider(),
@@ -132,13 +141,13 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             try
             {
                 assemblyDef = AssemblyDefinition.ReadAssembly(peStream, readerParameters);
-                CodeGenDebug.Log($"Successfully acquired assembly definition for target assembly.");
+                logger.Log($"Successfully acquired assembly definition for target assembly.");
                 return true;
             }
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogException(exception);
+                logger.LogException(exception);
                 assemblyDef = null;
                 return false;
             }
@@ -165,8 +174,8 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
         /// <returns></returns>
         public override ILPostProcessResult Process(ICompiledAssembly compiledAssembly)
         {
-            CodeGenDebug.BeginILPostProcessing(compiledAssembly.Name);
-            CodeGenDebug.Log($"Polling assembly.");
+            logger = new CodeGenDebug(compiledAssembly.Name, true);
+            logger.Log($"Polling assembly.");
 
             // Get the Cecil AssemblyDefinition for the assembly.
             AssemblyDefinition compiledAssemblyDef;
@@ -178,10 +187,11 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             try
             {
                 // Now we manipulate the assembly's IL.
-                RPCILPostProcessor postProcessor = new RPCILPostProcessor();
+                cecilUtils = new CecilUtils(logger);
+                RPCILPostProcessor postProcessor = new RPCILPostProcessor(cecilUtils, logger);
                 
                 // Returns false if the assembly was not modfiied.
-                CodeGenDebug.Log($"Starting post process on assembly.");
+                logger.Log($"Starting post process on assembly.");
                 if (!postProcessor.Execute(compiledAssemblyDef))
                     goto ignoreAssembly;
 
@@ -195,17 +205,17 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
                     WriteSymbols = true,
                 };
 
-                CodeGenDebug.Log($"Attempting to write modified assembly to disk.");
+                logger.Log($"Attempting to write modified assembly to disk.");
                 compiledAssemblyDef.Write(pe, writerParameters);
             }
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogException(exception);
+                logger.LogException(exception);
                 goto failure;
             }
 
-            CodeGenDebug.Log($"Finished assembly.");
+            logger.Log($"Finished assembly.");
             // done = true;
             return new ILPostProcessResult(new InMemoryAssembly(pe.ToArray(), pdb.ToArray()));
 
@@ -214,7 +224,7 @@ namespace Unity.ClusterDisplay.RPC.ILPostProcessing
             return new ILPostProcessResult(compiledAssembly.InMemoryAssembly);
 
             failure:
-            CodeGenDebug.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
+            logger.LogError($"Failure occurred while attempting to post process assembly: \"{compiledAssembly.Name}\".");
             // done = true;
             return new ILPostProcessResult(compiledAssembly.InMemoryAssembly);
         }

@@ -1,13 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Unity.ClusterDisplay.RPC
 {
-    internal static class RPCSerializer
+    internal class RPCSerializer
     {
+        CodeGenDebug logger;
+        public RPCSerializer (CodeGenDebug logger) => this.logger = logger;
+
         // Nested address are formatted in the following way: {root type namespace}.{root type}/{nested type}/{nested nested type}/{nested nested nested type}
         public static bool TryParseNestedAddressIfAvailable (string addressStr, out string rootTypeNamespace, out string[] nestedTypeNames)
         {
@@ -44,16 +48,16 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryDeserializeType (string assemblyStr, string namespaceStr, string typeStr, out System.Type type)
+        public bool TryDeserializeType (string assemblyStr, string namespaceStr, string typeStr, out System.Type type)
         {
             type = null;
             if (string.IsNullOrEmpty(assemblyStr) || string.IsNullOrEmpty(typeStr))
             {
-                CodeGenDebug.LogError("Unable to deserialize type, either the assembly or type string is null or invalid!");
+                logger.LogError("Unable to deserialize type, either the assembly or type string is null or invalid!");
                 return false;
             }
 
-            if (!ReflectionUtils.TryGetAssemblyByName(assemblyStr, out var assembly))
+            if (!TryGetAssemblyByName(assemblyStr, out var assembly))
                 return false;
 
             if (!string.IsNullOrEmpty(namespaceStr))
@@ -67,7 +71,7 @@ namespace Unity.ClusterDisplay.RPC
 
                     if (containerTypes[0] == null)
                     {
-                        CodeGenDebug.LogError($"Unable to find nested type: \"{typeStr}\", cannot find the root type: \"{nestedTypeNames[0]}\" in our nested type hierarchy: \"{namespaceStr}\".");
+                        logger.LogError($"Unable to find nested type: \"{typeStr}\", cannot find the root type: \"{nestedTypeNames[0]}\" in our nested type hierarchy: \"{namespaceStr}\".");
                         return false;
                     }
 
@@ -84,7 +88,7 @@ namespace Unity.ClusterDisplay.RPC
 
                         if (containerTypes[i] == null)
                         {
-                            CodeGenDebug.LogError($"Unable to find nested type: \"{typeStr}\", cannot find container type: \"{nestedTypeNames[i]} from nested type hierarchy: \"{namespaceStr}\".");
+                            logger.LogError($"Unable to find nested type: \"{typeStr}\", cannot find container type: \"{nestedTypeNames[i]} from nested type hierarchy: \"{namespaceStr}\".");
                             return false;
                         }
                     }
@@ -100,19 +104,19 @@ namespace Unity.ClusterDisplay.RPC
         }
 
         static Dictionary<System.Type, MethodInfo[]> cachedTypeMethodInfos = new Dictionary<System.Type, MethodInfo[]>();
-        public static bool TryDeserializeMethodInfo (RPMethodStub methodStub, out MethodInfo outMethodInfo)
+        public bool TryDeserializeMethodInfo (RPMethodStub methodStub, out MethodInfo outMethodInfo)
         {
             outMethodInfo = null;
 
             if (!TryDeserializeType(methodStub.declaringAssemblyName, methodStub.declaringTypeNamespace, methodStub.declaringTypeName, out var declaringType))
             {
-                CodeGenDebug.LogError($"Unable to find serialized method's declaring type: \"{methodStub.declaringTypeName}\" in assembly: \"{methodStub.declaringAssemblyName}\".");
+                logger.LogError($"Unable to find serialized method's declaring type: \"{methodStub.declaringTypeName}\" in assembly: \"{methodStub.declaringAssemblyName}\".");
                 return false;
             }
 
             if (!TryDeserializeType(methodStub.declaringReturnTypeAssemblyName, methodStub.returnTypeNamespace, methodStub.returnTypeName, out var returnType))
             {
-                CodeGenDebug.LogError($"Unable to find serialized method's return type: \"{methodStub.returnTypeName}\" in assembly: \"{methodStub.declaringReturnTypeAssemblyName}\".");
+                logger.LogError($"Unable to find serialized method's return type: \"{methodStub.returnTypeName}\" in assembly: \"{methodStub.declaringReturnTypeAssemblyName}\".");
                 return false;
             }
 
@@ -124,7 +128,7 @@ namespace Unity.ClusterDisplay.RPC
                     var parameterString = methodStub[i];
                     if (!TryDeserializeType(parameterString.declaringParameterTypeAssemblyName, parameterString.parameterTypeNamespace, parameterString.parameterTypeName, out var parameterType))
                     {
-                        CodeGenDebug.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
+                        logger.LogError($"Unable to find serialize method's parameter type: \"{parameterString.parameterTypeName}\" in assembly: \"{parameterString.declaringParameterTypeAssemblyName}\".");
                         return false;
                     }
 
@@ -175,13 +179,13 @@ namespace Unity.ClusterDisplay.RPC
 
             if (matchingMethod == null)
             {
-                CodeGenDebug.LogError($"Unable to deserialize method: \"{methodStub.methodName}\", declared in type: \"{methodStub.declaringTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
+                logger.LogError($"Unable to deserialize method: \"{methodStub.methodName}\", declared in type: \"{methodStub.declaringTypeName}\", if the method has renamed, you can use the {nameof(ClusterRPC)} attribute with the formarlySerializedAs parameter to insure that the method is deserialized properly.");
                 return false;
             }
 
             if (!matchingMethod.IsPublic)
             {
-                CodeGenDebug.LogError($"Unable to use method deserialized method: \"{matchingMethod.Name}\" declared in type: \"{(string.IsNullOrEmpty(matchingMethod.DeclaringType.Namespace) ? matchingMethod.DeclaringType.Name  : $"{matchingMethod.DeclaringType.Namespace}.{matchingMethod.DeclaringType.Name}")}\", the method must be public.");
+                logger.LogError($"Unable to use method deserialized method: \"{matchingMethod.Name}\" declared in type: \"{(string.IsNullOrEmpty(matchingMethod.DeclaringType.Namespace) ? matchingMethod.DeclaringType.Name  : $"{matchingMethod.DeclaringType.Namespace}.{matchingMethod.DeclaringType.Name}")}\", the method must be public.");
                 return false;
             }
 
@@ -189,13 +193,13 @@ namespace Unity.ClusterDisplay.RPC
             return true;
         }
 
-        public static bool TryDeserializeMethodInfo (RPCStub rpcStub, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
+        public bool TryDeserializeMethodInfo (RPCStub rpcStub, out RPCExecutionStage rpcExecutionStage, out MethodInfo outMethodInfo)
         {
             rpcExecutionStage = (RPCExecutionStage)rpcStub.rpcExecutionStage;
             return TryDeserializeMethodInfo(rpcStub.methodStub, out outMethodInfo);
         }
 
-        static void MakeFileWriteable(string path)
+        void MakeFileWriteable(string path)
         {
             if (!File.Exists(path))
                 return;
@@ -203,7 +207,7 @@ namespace Unity.ClusterDisplay.RPC
             var attributes = File.GetAttributes(path);
             if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
             {
-                CodeGenDebug.Log($"Making file: \"{path}\" writeable");
+                logger.Log($"Making file: \"{path}\" writeable");
                 File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
             }
         }
@@ -237,7 +241,7 @@ namespace Unity.ClusterDisplay.RPC
             }
         }
 
-        public static bool SerializeRPCs (
+        public bool SerializeRPCs (
             RPCStub[] rpcs, 
             RPMethodStub[] stagedRPCs, 
             out byte[] rpcBytes,
@@ -254,27 +258,27 @@ namespace Unity.ClusterDisplay.RPC
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to serialize RPC stubs, the following exception occurred.");
-                CodeGenDebug.LogException(exception);
+                logger.LogError($"Unable to serialize RPC stubs, the following exception occurred.");
+                logger.LogException(exception);
                 return false;
             }
 
             return true;
         }
 
-        static void Read<T> (string path, out T[] data, bool logMissingFile) where T : struct
+        void Read<T> (string path, out T[] data, bool logMissingFile) where T : struct
         {
             data = new T[0];
             if (string.IsNullOrEmpty(path))
             {
-                CodeGenDebug.LogError("Unable to read RPC stubs, the path is invalid.");
+                logger.LogError("Unable to read RPC stubs, the path is invalid.");
                 return;
             }
 
             if (!File.Exists(path))
             {
                 if (logMissingFile)
-                    CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
+                    logger.LogError($"Unable to read RPC stubs from path: \"{path}\", the file does not exist.");
                 return;
             }
 
@@ -289,12 +293,12 @@ namespace Unity.ClusterDisplay.RPC
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
-                CodeGenDebug.LogException(exception);
+                logger.LogError($"Unable to read RPC stubs from path: \"{path}\", the following exception occurred.");
+                logger.LogException(exception);
             }
         }
 
-        public static void ReadAllRPCs (
+        public void ReadAllRPCs (
             string rpcsPath,
             string stagedRPCsPath, 
             out RPCStub[] rpcs, 
@@ -305,13 +309,13 @@ namespace Unity.ClusterDisplay.RPC
             Read(stagedRPCsPath, out stagedRPCs, logMissingFile);
         }
 
-        public unsafe static void BytesToRPCs<T> (
+        public unsafe void BytesToRPCs<T> (
             byte[] bytes, 
             out T[] rpcs) where T : struct
         {
             if (bytes == null || bytes.Length == 0)
             {
-                CodeGenDebug.LogError("Unable to parse RPCs from bytes, the byte array is NULL!");
+                logger.LogError("Unable to parse RPCs from bytes, the byte array is NULL!");
                 rpcs = new T[0];
                 return;
             }
@@ -337,20 +341,20 @@ namespace Unity.ClusterDisplay.RPC
 
             catch (System.Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to parse RPC stubs from bytes, the following exception occurred.");
-                CodeGenDebug.LogException(exception);
+                logger.LogError($"Unable to parse RPC stubs from bytes, the following exception occurred.");
+                logger.LogException(exception);
                 rpcs = new T[0];
             }
         }
 
-        static bool Write(string path, byte[] bytes)
+        bool Write(string path, byte[] bytes)
         {
             if (bytes == null || bytes.Length == 0)
                 return true;
             
             if (string.IsNullOrEmpty(path))
             {
-                CodeGenDebug.LogError("Unable to write serialized RPCs, the path is invalid.");
+                logger.LogError("Unable to write serialized RPCs, the path is invalid.");
                 return false;
             }
             
@@ -365,20 +369,43 @@ namespace Unity.ClusterDisplay.RPC
                 
             } catch (Exception exception)
             {
-                CodeGenDebug.LogError($"Unable to write serialized RPCs to path: \"{path}\", the following exception occurred.");
-                CodeGenDebug.LogException(exception);
+                logger.LogError($"Unable to write serialized RPCs to path: \"{path}\", the following exception occurred.");
+                logger.LogException(exception);
                 return false;
             }
 
             return true;
         }
 
-        public static bool WriteSerializedRPCs (
+        public bool WriteSerializedRPCs (
             string rpcsPath,
             string stagedRPCsPath, 
             byte[] rpcBytes,
             byte[] stagedRPCBytes) =>
                 Write(rpcsPath, rpcBytes) &&
                 Write(stagedRPCsPath, stagedRPCBytes);
+
+        readonly static Dictionary<string, Assembly> cachedAssemblies = new Dictionary<string, Assembly>();
+        public bool TryGetAssemblyByName (string assemblyName, out Assembly outAssembly, bool logError = true)
+        {
+            bool somethingIsCached = cachedAssemblies.TryGetValue(assemblyName, out outAssembly);
+            if (somethingIsCached && outAssembly != null)
+                return true;
+
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            outAssembly = assemblies.FirstOrDefault(assembly => assembly.GetName().Name == assemblyName);
+            if (outAssembly == null)
+            {
+                if (logError)
+                    logger.LogError($"Unable to find assembly with name: \"{assemblyName}\".");
+                return false;
+            }
+
+            if (!somethingIsCached)
+                cachedAssemblies.Add(assemblyName, outAssembly);
+            else cachedAssemblies[assemblyName] = outAssembly;
+            return true;
+        }
     }
 }

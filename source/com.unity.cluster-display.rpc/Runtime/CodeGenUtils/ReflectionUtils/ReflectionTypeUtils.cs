@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using Unity.Collections;
 
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay
                 ushort elementArgumentDepth = structureDepth;
                 if (!RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, type.GetElementType(), ref elementArgumentDepth))
                 {
-                    CodeGenDebug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
+                    ClusterDebug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
                     goto dynamicallySizedMemberTypeFailure;
                 }
             }
@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay
                 {
                     if (type.GetGenericTypeDefinition() != NativeArrayType)
                     {
-                        CodeGenDebug.LogError($"Only the type: \"{NativeArrayType.Name}\" is supported as a RPC method parameter from: \"{NativeArrayType.Namespace}\" namespace.");
+                        ClusterDebug.LogError($"Only the type: \"{NativeArrayType.Name}\" is supported as a RPC method parameter from: \"{NativeArrayType.Namespace}\" namespace.");
                         goto dynamicallySizedMemberTypeFailure;
                     }
                 }
@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay
                 ushort genericLenericArgumentDepth = structureDepth;
                 if (!RecursivelyDetermineIfTypeIsCompatibleRPCParameter(methodInfo, parameterInfo, type.GenericTypeArguments[0], ref genericLenericArgumentDepth))
                 {
-                    CodeGenDebug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
+                    ClusterDebug.LogError($"Generic type argument: \"{type.GenericTypeArguments[0].Name}\" cannot be used as an RPC parameter.");
                     goto dynamicallySizedMemberTypeFailure;
                 }
 
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay
 
             else if (!type.IsValueType)
             {
-                CodeGenDebug.LogError($"Parameter: \"{parameterInfo.Name}\" is a reference type. Only primitive, strings, arrays, native arrays and structs are RPC compatible.");
+                ClusterDebug.LogError($"Parameter: \"{parameterInfo.Name}\" is a reference type. Only primitive, strings, arrays, native arrays and structs are RPC compatible.");
                 goto dynamicallySizedMemberTypeFailure;
             }
 
@@ -91,7 +91,7 @@ namespace Unity.ClusterDisplay
             return true;
 
             dynamicallySizedMemberTypeFailure:
-            CodeGenDebug.LogError($"Method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Name}\" cannot be used as an RPC, the parameter: \"{parameterInfo.Name}\" is type: \"{parameterInfo.ParameterType.Name}\" which contains dynamically allocated type: \"{type.Name}\" somehwere in it's member hierarchy.");
+            ClusterDebug.LogError($"Method: \"{methodInfo.Name}\" declared in type: \"{methodInfo.DeclaringType.Name}\" cannot be used as an RPC, the parameter: \"{parameterInfo.Name}\" is type: \"{parameterInfo.ParameterType.Name}\" which contains dynamically allocated type: \"{type.Name}\" somehwere in it's member hierarchy.");
             return false;
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Unity.ClusterDisplay
 {
@@ -6,11 +6,11 @@ namespace Unity.ClusterDisplay
     {
         public class RPCInterfaceRegistryConstuctorMarker : Attribute {}
 
-        public class OnTryCallMarker : Attribute {}
-        public class OnTryStaticCallMarker : Attribute {}
+        public class OnTryCallInstanceImplementationAttribute : Attribute {}
+        public class OnTryCallStaticImplementationAttribute : Attribute {}
 
-        public class OnTryCallDelegateMarker : Attribute {}
-        public class OnTryStaticCallDelegateMarker : Attribute {}
+        public class OnTryCallInstanceDelegateAttribute : Attribute {}
+        public class OnTryCallStaticDelegateAttribute : Attribute {}
 
         public class OnTryCallDelegateFieldMarker : Attribute {}
         public class OnTryStaticCallDelegateFieldMarker : Attribute {}
@@ -28,8 +28,8 @@ namespace Unity.ClusterDisplay
         public class QueueBeforeLateUpdateRPCMarker : Attribute {}
         public class QueueAfterLateUpdateRPCMarker : Attribute {}
 
-        public class ExecuteQueuedRPC : Attribute { };
-        public class ExecuteQueuedRPCDelegateMarker : Attribute { };
+        public class OnTryCallQueuedInstanceImplementationAttribute : Attribute { };
+        public class OnTryCallQueuedInstanceDelegateAttribute : Attribute { };
         public class ExecuteQueuedRPCFieldDelegateMarker : Attribute { };
     }
 }

@@ -81,14 +81,14 @@ namespace Unity.ClusterDisplay.RPC
         public static unsafe void AppendRPCStringParameterValue(string value)
         {
             int strSize = value.Length;
-            if (rpcBufferSize + Marshal.SizeOf<buint>() + strSize >= rpcBuffer.Length)
-            {
-                throw new System.Exception("RPC Buffer is full.");
-            }
+            var byteCount = (buint)strSize * 2 /* UTF-16 2 Bytes */;
+
+            if (!CheckBoundsBeforeWrite((buint)(Marshal.SizeOf<buint>() + byteCount)))
+                return;
 
             CopyCountToRPCBuffer((buint)strSize);
-            var byteCount = (buint)strSize * 2 /* UTF-16 2 Bytes */;
-            ClusterDebug.Log($"Byte Count:\"{Encoding.Unicode.GetBytes(value).Length}\".");
+            // ClusterDebug.Log($"Byte Count:\"{Encoding.Unicode.GetBytes(value).Length}\".");
+
             fixed (char* ptr = value)
             {
                 Encoding.Unicode.GetBytes(
@@ -101,6 +101,17 @@ namespace Unity.ClusterDisplay.RPC
             rpcBufferSize += byteCount;
         }
 
+        static bool CheckBoundsBeforeWrite (buint putByteCount)
+        {
+            if (rpcBufferSize + putByteCount >= rpcBuffer.Length)
+            {
+                ClusterDebug.LogError($"Unable to write to RPC buffer, the buffer is full\n\tCurrent byte count: {rpcBufferSize},\n\tPut byte count: {putByteCount},\n\tMax byte count: {rpcBuffer.Length})");
+                return false;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Verify that we can fit the value type into the RPC buffer.
         /// </summary>
@@ -111,13 +122,7 @@ namespace Unity.ClusterDisplay.RPC
         static bool CanWriteValueTypeToRPCBuffer<T> (T value, out buint structSize)
         {
             structSize = (buint)Marshal.SizeOf<T>(value);
-            if (rpcBufferSize + structSize >= rpcBuffer.Length)
-            {
-                ClusterDebug.LogError("RPC Buffer is full.");
-                return false;
-            }
-
-            return true;
+            return CheckBoundsBeforeWrite(structSize);
         }
 
         /// <summary>
@@ -137,13 +142,7 @@ namespace Unity.ClusterDisplay.RPC
                 return false;
             }
 
-            if (rpcBufferSize + Marshal.SizeOf<buint>() + arrayByteCount >= rpcBuffer.Length)
-            {
-                ClusterDebug.LogError($"Unable to write parameter buffer of size: {arrayByteCount} to RPC Buffer because it's full.");
-                return false;
-            }
-
-            return true;
+            return CheckBoundsBeforeWrite((buint)(Marshal.SizeOf<buint>() + arrayByteCount));
         }
 
         /// <summary>
