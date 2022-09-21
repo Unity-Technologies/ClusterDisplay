@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0083b5391966279458f0759d3145339b, type: 3}
+  m_Name: KeyerResources
+  m_EditorClassIdentifier: 
+  Shaders:
+    Blit: {fileID: 4800000, guid: 3af83e67597967c47aa38489b8e6e6cd, type: 3}
+    Plot: {fileID: 4800000, guid: dc60d6876bce2b04ba5ce34e84264941, type: 3}
+    ExpectationMaximization: {fileID: 7200000, guid: 048ebde4fb6d0734099bab696c45f5f2, type: 3}
+    KeyExtract: {fileID: 7200000, guid: e648d6503c79a7d42a707603643b23ca, type: 3}
+    ColorDifference: {fileID: 7200000, guid: 67a3bd21771d1d049b026408dd6f06b4, type: 3}
+    Despill: {fileID: 7200000, guid: dfa9b8d63ecfeba4ba575dd6339b4890, type: 3}
+    Crop: {fileID: 7200000, guid: 31301cd18f210e14ca5bfcd63a9b53b9, type: 3}
+    Blur: {fileID: 7200000, guid: 9016779dd104a5a4eb742cc4db3ee19f, type: 3}
+    Clip: {fileID: 7200000, guid: fbc1a7bbd56701345a597f21466f9cf8, type: 3}
+    BlendMax: {fileID: 7200000, guid: 8e150dbfc5274f14f9315fe29794bdab, type: 3}
+    Combine: {fileID: 7200000, guid: 4d4a7fdc9f612df45be54888d371dd01, type: 3}
+    GarbageMask: {fileID: 7200000, guid: 2be63100f1de8f54b8c3f6067d5d581f, type: 3}
+  KernelIds:
+    ExpectationMaximization:
+      ResetColorBins: 0
+      UpdateColorBins: 1
+      ResetSelectedColorBins: 2
+      SelectColorBins: 3
+      InitializeCovariances: 4
+      ProcessCovariances: 5
+      UpdateIndirectArguments: 6
+      UpdateWeightsAndCentroids: 7
+      ReduceSumsAndCentroids: 8
+      UpdateCovariances: 9
+      ReduceCovariances: 10
+      NormalizeCentroidsAndCovariances: 11
+    KeyExtract:
+      Filter: 0
+      Reduce: 1
+    Rendering:
+      ColorDifference: 0
+      Despill: 0
+      Crop: 0
+      BlurHorizontal: 0
+      BlurVertical: 1
+      Clip: 0
+      BlendMax: 0
+      Combine: 0
+      GarbageMask: 0
+      GarbageMaskLinear: 1

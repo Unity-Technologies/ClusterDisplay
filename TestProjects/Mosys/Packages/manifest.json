@@ -10,7 +10,7 @@
     "com.unity.ide.vscode": "1.2.5",
     "com.unity.keyer": "https://github.com/Unity-Technologies/VirtualProduction.git?path=/Packages/com.unity.keyer",
     "com.unity.live-capture": "https://github.com/Unity-Technologies/VirtualProduction.git?path=/Packages/com.unity.live-capture",
-    "com.unity.live-capture.mosys": "file:../../../../com.unity.live-capture.mosys/Packages/com.unity.live-capture.mosys",
+    "com.unity.live-capture.mosys": "https://github.com/Unity-Technologies/com.unity.live-capture.mosys.git?path=/Packages/com.unity.live-capture.mosys#wen/runtime-fixes",
     "com.unity.media.blackmagic": "https://github.com/Unity-Technologies/VirtualProduction.git?path=/Packages/com.unity.media.blackmagic",
     "com.unity.render-pipelines.high-definition": "14.0.3",
     "com.unity.test-framework": "1.1.31",
