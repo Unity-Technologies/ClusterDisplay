@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Utils
 {
     /// <summary>
-    /// Script to enable a Companion App connection in a standalone player.
+    /// Script to enable a Live Capture connection in a standalone player.
     /// </summary>
     /// <remarks>
     /// When running as part of a cluster, this script will only execute on the emitter.
@@ -49,7 +49,6 @@ namespace Unity.ClusterDisplay.Utils
                 m_Connection = m_ConnectionManager.CreateConnection(m_ConnectionType);
             }
 
-            Debug.Log($"Connection: {m_Connection}");
             // In the editor, StartServer() is automatically called when entering play mode.
 #if !UNITY_EDITOR
             m_StartMethod?.Invoke(m_Connection, null);
@@ -81,8 +80,8 @@ namespace Unity.ClusterDisplay.Utils
         {
             OnDisable();
             m_ConnectionType = Type.GetType(m_ConnectionTypeName);
-            m_StartMethod = m_ConnectionType?.GetMethod("StartServer");
-            m_StopMethod = m_ConnectionType?.GetMethod("StopServer");
+            m_StartMethod = m_ConnectionType?.GetMethod("StartServer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            m_StopMethod = m_ConnectionType?.GetMethod("StopServer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             Debug.Log($"Connection type: {m_ConnectionType?.Name}, {m_StartMethod?.Name}, {m_StopMethod?.Name}");
         }
     }
