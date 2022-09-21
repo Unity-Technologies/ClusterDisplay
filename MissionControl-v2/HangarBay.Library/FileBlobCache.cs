@@ -173,40 +173,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 string effectivePath = GetEffectiveStoragePath(config.Path);
                 if (m_StorageFolders.ContainsKey(effectivePath))
                 {
-                    throw new ArgumentException(nameof(config),
-                        $"{nameof(FileBlobCache)} already contain a StorageFolder with the path {effectivePath}.");
+                    throw new ArgumentException($"{nameof(FileBlobCache)} already contain a StorageFolder with the " +
+                        $"path {effectivePath}.", nameof(config));
                 }
 
-                // Testing for the folder being already added using m_StorageFolders.ContainsKey, however it is not
-                // bullet proof as there could be some symbolic links involved or different case on a case insensitive
-                // file system.  Detect it by creating a file in the folder.
+                // Testing for the folder being already added has been done using m_StorageFolders.ContainsKey, however 
+                // it is not bullet proof as there could be some symbolic links involved or different case on a case 
+                // insensitive file system.  So let's make a more exhaustive test.
                 if (Directory.Exists(effectivePath))
                 {
-                    string testFilename = Guid.NewGuid().ToString();
-                    string testPath = Path.Combine(effectivePath, testFilename);
-                    try
+                    string pathToTheSameFolder = FileHelpers.GetPathToTheSameFolder(effectivePath,
+                        m_StorageFolders.Values.Select(sf => sf.FullPath));
+                    if (pathToTheSameFolder.Length > 0)
                     {
-                        File.WriteAllText(testPath, testFilename);
-                        foreach (var storageFolder in m_StorageFolders.Values)
-                        {
-                            if (File.Exists(Path.Combine(storageFolder.FullPath, testFilename)))
-                            {
-                                throw new ArgumentException(nameof(config),
-                                    $"{nameof(FileBlobCache)} already contain a StorageFolder with the path " +
-                                    $"{storageFolder.FullPath} that is the equivalent to {config.Path}.");
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            File.Delete(testPath);
-                        }
-                        catch (Exception)
-                        {
-                            // ignored
-                        }
+                        throw new ArgumentException($"{nameof(FileBlobCache)} already contain a StorageFolder with " +
+                            $"the path {pathToTheSameFolder} that is the equivalent to {config.Path}.", nameof(config));
                     }
                 }
 
@@ -235,8 +216,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         var files = Directory.GetFiles(effectivePath);
                         if (files.Length > 0)
                         {
-                            throw new ArgumentException(nameof(config),
-                                $"{effectivePath} is a new StorageFolder but it already contains files.");
+                            throw new ArgumentException($"{effectivePath} is a new StorageFolder but it already " +
+                                $"contains files.", nameof(config));
                         }
                     }
                     else
@@ -271,8 +252,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 string effectivePath = GetEffectiveStoragePath(config.Path);
                 if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
                 {
-                    throw new ArgumentException(nameof(config),
-                        $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {config.Path}.");
+                    throw new ArgumentException($"{nameof(FileBlobCache)} does not contain a StorageFolder with the " +
+                        $"path {config.Path}.", nameof(config));
                 }
 
                 storageFolderInfo.MaximumSize = config.MaximumSize;
@@ -324,8 +305,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 {
                     if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
                     {
-                        throw new ArgumentException(nameof(path),
-                            $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {path}.");
+                        throw new ArgumentException($"{nameof(FileBlobCache)} does not contain a StorageFolder with " +
+                            $"the path {path}.", nameof(path));
                     }
 
                     storageFolderInfo.MaximumSize = 0;
@@ -375,8 +356,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 {
                     if (!m_StorageFolders.TryGetValue(effectivePath, out var storageFolderInfo))
                     {
-                        throw new ArgumentException(nameof(path),
-                            $"{nameof(FileBlobCache)} does not contain a StorageFolder with the path {path}.");
+                        throw new ArgumentException($"{nameof(FileBlobCache)} does not contain a StorageFolder with " +
+                            $"the path {path}.", nameof(path));
                     }
 
                     if (storageFolderInfo.InUse.First == null)
@@ -449,8 +430,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 if (!m_Files.TryGetValue(fileBlobId, out var fileInfo) || fileInfo.ReferenceCount == 0)
                 {
-                    throw new ArgumentException(nameof(fileBlobId),
-                        $"Cannot find any information about fileBlobId of {fileBlobId}");
+                    throw new ArgumentException($"Cannot find any information about fileBlobId of {fileBlobId}",
+                        nameof(fileBlobId));
                 }
 
                 if (fileInfo.StorageFolder == null)
@@ -470,13 +451,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     storageFolder.NeedSaving = true;
 
                     // Fetch the file
-                    var fetchTask = Task.Run(async () =>
-                        {
-                            var cachePath = storageFolder.GetPath(fileBlobId);
-                            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-                            await FetchFileCallback(fileBlobId, cachePath, cookie);
-                        }
-                    );
+                    var cachePath = storageFolder.GetPath(fileBlobId);
+                    Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+                    // Remarks: We might be tempted to do:
+                    // var fetchTask = FetchFileCallback( ... )
+                    // and skip the Task.Run(...) (to simplify and potentially optimize).
+                    // However doing so would means that we execute FetchFileCallback from this thread, while m_Lock
+                    // is locked.  So if FetchFileCallback does "too much processing" then the file blob cache would
+                    // stay locked longer than it should.  We also cannot release the lock earlier as we need to update
+                    // fileInfo.FetchTask.
+                    var fetchTask = Task.Run(() => FetchFileCallback(fileBlobId, cachePath, cookie));
                     fileInfo.FetchTask = fetchTask;
 
                     Monitor.Exit(m_Lock);
@@ -515,7 +499,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 }
                 else
                 {
-                    // Possible we want to copy what another thread started to fetch, wait until it is done fetching
+                    // Possible we want to copy what another thread started to fetch.  If that is the case then that
+                    // other thread will have set fileInfo.FetchTask, so wait until it clears it (indicating the file
+                    // is fully fetched and can be used to copy from).
                     while (fileInfo.FetchTask != null)
                     {
                         var waitTask = fileInfo.FetchTask;
@@ -544,7 +530,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     fileInfo.NodeInList = fileInfo.StorageFolder.InUse.AddLast(fileInfo);
                     fileInfo.StorageFolder.NeedSaving = true;
                 }
-                var copyTask = Task.Run(async () => await CopyFileCallback(fileInfo.StorageFolder.GetPath(fileBlobId), toPath, cookie));
+                // Remarks: We might be tempted to do:
+                // var copyTask = CopyFileCallback( ... )
+                // and skip the Task.Run(...) (to simplify and potentially optimize).
+                // However doing so would means that we execute CopyFileCallback from this thread, while m_Lock is
+                // locked.  So if CopyFileCallback does "too much processing" then the file blob cache would stay
+                // locked longer than it should.  We also cannot release the lock earlier as we need to update
+                // fileInfo.CopyTasks.
+                var copyTask = Task.Run(() => CopyFileCallback(fileInfo.StorageFolder.GetPath(fileBlobId), toPath, cookie));
                 fileInfo.CopyTasks.Add(copyTask);
 
                 // Copy it
@@ -669,7 +662,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <param name="fileInfoList">List of <see cref="CacheFileInfo"/> to find in the global list.</param>
         /// <returns>The <see cref="FileInfoLinkedList"/> to which <see cref="CacheFileInfo"/> from
         /// <paramref name="fileInfoList"/> are now referencing through <see cref="CacheFileInfo.NodeInList"/>.</returns>
-        (FileInfoLinkedList, FileInfoLinkedList) FindMatchingFiles(StorageFolderInfo storageFolder, FileInfoLinkedList fileInfoList)
+        (FileInfoLinkedList inCache, FileInfoLinkedList unreferenced) FindMatchingFiles(StorageFolderInfo storageFolder,
+            FileInfoLinkedList fileInfoList)
         {
             // Split the files in two groups -> referenced and unreferenced.
             var inCache = new List<CacheFileInfo>();
