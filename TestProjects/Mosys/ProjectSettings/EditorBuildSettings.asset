@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/TrackingOnly.unity
+    path: Assets/Scenes/MoSysTracking.unity
     guid: da43b4765fcefa04caef045b741b8b95
   m_configObjects: {}
