@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
@@ -165,7 +166,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Fingerprints of a file.
         /// </summary>
-        struct Entry : IEquatable<Entry>
+        readonly struct Entry : IEquatable<Entry>
         {
             /// <summary>
             /// Constructor
@@ -179,14 +180,27 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             }
 
             /// <summary>
+            /// Constructor setting fields of the struct.
+            /// </summary>
+            /// <param name="lastWriteTime"><see cref="LastWriteTime"/>.</param>
+            /// <param name="blobId"><see cref="BlobId"/>.</param>
+            /// <remarks>Used by Json desrialization.</remarks>
+            [JsonConstructor]
+            public Entry(DateTime lastWriteTime, Guid blobId)
+            {
+                LastWriteTime = lastWriteTime;
+                BlobId = blobId;
+            }
+
+            /// <summary>
             /// When was the last time the file written to.
             /// </summary>
-            public DateTime LastWriteTime { get; set; } = DateTime.MinValue;
+            public DateTime LastWriteTime { get; } = DateTime.MinValue;
 
             /// <summary>
             /// FileBlobId representing the content of the file.
             /// </summary>
-            public Guid BlobId { get; set; } = Guid.Empty;
+            public Guid BlobId { get; } = Guid.Empty;
 
             public bool Equals(Entry other)
             {
