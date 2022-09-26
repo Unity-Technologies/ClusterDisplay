@@ -2,8 +2,12 @@ using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
-    class FileBlobCacheStub : IFileBlobCache
+    class FileBlobCacheStub : FileBlobCache
     {
+        public FileBlobCacheStub() : base(new LoggerStub())
+        {
+        }
+
         public class Entry
         {
             public Guid Id { get; set; }
@@ -37,7 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
-        public void IncreaseUsageCount(Guid fileBlobId, long compressedSize, long size)
+        public override void IncreaseUsageCount(Guid fileBlobId, long compressedSize, long size)
         {
             --FakeIncreaseUsageCountErrorIn;
             if (FakeIncreaseUsageCountErrorIn == 0)
@@ -47,7 +51,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Entries.Add(new IncreaseEntry() { Id = fileBlobId, CompressedSize = compressedSize, Size = size });
         }
 
-        public void DecreaseUsageCount(Guid fileBlobId)
+        public override void DecreaseUsageCount(Guid fileBlobId)
         {
             Entries.Add(new DecreaseEntry() { Id = fileBlobId });
         }

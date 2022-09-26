@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <param name="logger">Object used to send logging messages.</param>
         /// <param name="storage">Folder in which we will store fetched payloads.</param>
         /// <param name="fileBlobCache">Object that to keep up to date with referenced file blobs.</param>
-        public PayloadsManager(ILogger logger, string storage, IFileBlobCache fileBlobCache)
+        public PayloadsManager(ILogger logger, string storage, FileBlobCache fileBlobCache)
         {
             m_Logger = logger;
             var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -141,6 +141,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 }
                 catch (AggregateException ae)
                 {
+                    // We "re-throw" the inner exception of AggregateException generated from the Task infrastructure
+                    // so that PayloadsManager.GetPayload can throw the same exception as what was thrown in
+                    // FetchFileCallback (otherwise we would have a double AggregateException that does not get
+                    // automagically unwrapped by await).
                     ExceptionDispatchInfo.Capture(ae.InnerException!).Throw();
 
                     // Should never reach this code as the above should throw...  To avoid warnings with code analysis
@@ -194,7 +198,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Object that contains the keep up to date with referenced file blobs.
         /// </summary>
-        IFileBlobCache m_FileBlobCache;
+        FileBlobCache m_FileBlobCache;
 
         /// <summary>
         /// Object to lock to synchronize access to m_Payloads.

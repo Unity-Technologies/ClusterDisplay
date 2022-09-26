@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     /// <summary>
     /// Main class responsible for managing the files in the different storage folders.
     /// </summary>
-    public class FileBlobCache: IFileBlobCache
+    public class FileBlobCache
     {
         /// <summary>
         /// Constructor
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <param name="size">Number of bytes taken by the file blob content.</param>
         /// <exception cref="ArgumentException">If value of <paramref name="compressedSize"/> or <paramref name="size"/>
         /// does not match value of previous calls with the same <paramref name="fileBlobId"/>.</exception>
-        public void IncreaseUsageCount(Guid fileBlobId, long compressedSize, long size)
+        public virtual void IncreaseUsageCount(Guid fileBlobId, long compressedSize, long size)
         {
             lock (m_Lock)
             {
@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 }
                 else
                 {
-                    // We don't have this file in any of our storage folders so far, so let's prepare an entry that is 
+                    // We don't have this file in any of our storage folders so far, so let's prepare an entry that is
                     // not yet associated to any storage folder.
                     fileInfo = new CacheFileInfo();
                     fileInfo.Id = fileBlobId;
@@ -98,7 +98,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Decrease use count of the file with the given file blob identifier.
         /// </summary>
         /// <param name="fileBlobId">File blob identifier.</param>
-        public void DecreaseUsageCount(Guid fileBlobId)
+        public virtual void DecreaseUsageCount(Guid fileBlobId)
         {
             DecreaseUsageCount(fileBlobId, false);
         }
@@ -162,7 +162,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Adds a storage folder to the cache manager (and add any files it would contains to the "in-memory" indexes).
         /// </summary>
         /// <param name="config">Information about the storage folder.</param>
-        /// <remarks>Payloads potentially referencing those files need to be added before calling this method or 
+        /// <remarks>Payloads potentially referencing those files need to be added before calling this method or
         /// otherwise the last used time of the file will be cleared (since the file will not be referenced).</remarks>
         /// <exception cref="ArgumentException">If asking to add a storage folder we already have or this is a new
         /// storage folder and it is not empty.</exception>
@@ -177,8 +177,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         $"path {effectivePath}.", nameof(config));
                 }
 
-                // Testing for the folder being already added has been done using m_StorageFolders.ContainsKey, however 
-                // it is not bullet proof as there could be some symbolic links involved or different case on a case 
+                // Testing for the folder being already added has been done using m_StorageFolders.ContainsKey, however
+                // it is not bullet proof as there could be some symbolic links involved or different case on a case
                 // insensitive file system.  So let's make a more exhaustive test.
                 if (Directory.Exists(effectivePath))
                 {
@@ -625,7 +625,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 storageFolder.DeleteFile(m_Logger, zombieId);
             }
 
-            // Now let's try to connect loaded FileInfo with the ones we already have in m_Files.  Since there is no 
+            // Now let's try to connect loaded FileInfo with the ones we already have in m_Files.  Since there is no
             // guarantee reference and unreferenced files are the same then when saved, let's regroup them in a single
             // list and re-split them.
             FileInfoLinkedList toFindMatchFor = new();

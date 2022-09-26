@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -47,15 +46,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         {
             FolderContentFingerprints ret = new ();
 
-            using (var loadStream = File.Open(path, FileMode.Open))
+            using var loadStream = File.Open(path, FileMode.Open);
+            var deserialized = JsonSerializer.Deserialize<SerializeWrapper>(loadStream);
+            if (deserialized == null)
             {
-                var deserialized = JsonSerializer.Deserialize<SerializeWrapper>(loadStream);
-                if (deserialized == null)
-                {
-                    throw new NullReferenceException("Deserialize returned null");
-                }
-                ret.m_Entries = deserialized.Entries;
+                throw new NullReferenceException("Deserialize returned null");
             }
+            ret.m_Entries = deserialized.Entries;
 
             return ret;
         }
@@ -73,7 +70,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         }
 
         /// <summary>
-        /// Prepare the given folder to receive the specified payload.  This method will remove any new file or file 
+        /// Prepare the given folder to receive the specified payload.  This method will remove any new file or file
         /// that changed since the fingerprints were taken or that contains a different blob then the one from the
         /// provided payload.
         /// </summary>
@@ -114,20 +111,18 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         }
                         File.Delete(filePath);
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         if (payloadFiles.ContainsKey(searchKey))
                         {
                             // The payload we will want to copy need that file, so we have to remove the file...
-                            logger.LogError($"Failed to delete {filePath}");
+                            logger.LogError("Failed to delete {FilePath}", filePath);
                             throw;
                         }
-                        else
-                        {
-                            // The list of files we want to prepare does not contain that file, so we can probably
-                            // tolerate a few zombies...
-                            logger.LogWarning($"Failed to delete {filePath}");
-                        }
+
+                        // The list of files we want to prepare does not contain that file, so we can probably tolerate
+                        // a few zombies...
+                        logger.LogWarning("Failed to delete {FilePath}", filePath);
                     }
                 }
             }
@@ -155,26 +150,23 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                     potentiallyEmptyFolders = parentFolders;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                logger.LogWarning("Error cleaning empty folders, will continue as negative consequences are probably " +
-                    $"not too bad: {e}");
+                logger.LogWarning(e, "Error cleaning empty folders, will continue as negative consequences are probably " +
+                    "not too bad");
             }
         }
 
         /// <summary>
+        /// Private constructor
+        /// </summary>
+        FolderContentFingerprints() { }
+
+        /// <summary>
         /// Fingerprints of a file.
         /// </summary>
-        struct Entry: IEquatable<Entry>
+        struct Entry : IEquatable<Entry>
         {
-            /// <summary>
-            /// Default empty constructor
-            /// </summary>
-            public Entry()
-            {
-                LastWriteTime = DateTime.MinValue;
-            }
-
             /// <summary>
             /// Constructor
             /// </summary>
@@ -189,7 +181,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             /// <summary>
             /// When was the last time the file written to.
             /// </summary>
-            public DateTime LastWriteTime { get; set; }
+            public DateTime LastWriteTime { get; set; } = DateTime.MinValue;
 
             /// <summary>
             /// FileBlobId representing the content of the file.
@@ -218,8 +210,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <returns>Full path to every file in the folder.</returns>
         static string[] GetAllFilesIn(string path)
         {
-            var enumOptions = new EnumerationOptions();
-            enumOptions.RecurseSubdirectories = true;
+            var enumOptions = new EnumerationOptions {RecurseSubdirectories = true};
             return Directory.GetFiles(path, "*", enumOptions);
         }
 
