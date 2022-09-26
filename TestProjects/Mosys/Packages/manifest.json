@@ -2,6 +2,7 @@
   "dependencies": {
     "com.unity.cluster-display": "file:../../../source/com.unity.cluster-display",
     "com.unity.cluster-display.graphics": "file:../../../source/com.unity.cluster-display.graphics",
+    "com.unity.cluster-display.mission-control": "file:../../../MissionControl/com.unity.cluster-display.mission-control",
     "com.unity.collab-proxy": "1.17.2",
     "com.unity.ide.rider": "3.0.15",
     "com.unity.ide.visualstudio": "2.0.16",
