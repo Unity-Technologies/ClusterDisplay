@@ -1377,10 +1377,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             fileBlobCache.AddStorageFolder(folderAConfig);
             fileBlobCache.DecreaseUsageCount(fileBlob3);
             fileBlobCache.AddStorageFolder(folderBConfig);
+#pragma warning disable CA2017 // Parameter count mismatch
             m_LoggerMock.VerifyLog(l => l.LogWarning("*found in both*",
                 fileBlob2, folderBConfig.Path, folderAConfig.Path, folderBConfig.Path));
             m_LoggerMock.VerifyLog(l => l.LogWarning("*found in both*",
                 fileBlob3, folderBConfig.Path, folderAConfig.Path, folderBConfig.Path));
+#pragma warning restore CA2017 // Parameter count mismatch
 
             var copyTasks = new List<Task>();
             copyTasks.Add( fileBlobCache.CopyFileToAsync(fileBlob1, "C:\\Temp\\Blob1") );
@@ -1522,7 +1524,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 fileBlobCache.IncreaseUsageCount(fileBlob4, 400, 10000);
                 await fileBlobCache.CopyFileToAsync(fileBlob4, "C:\\Temp\\Blob4");
             }
+#pragma warning disable CA2017 // Parameter count mismatch
             m_LoggerMock.VerifyLog(l => l.LogWarning("*will be added to zombies", fileBlob2, folder1000Config.Path));
+#pragma warning restore CA2017 // Parameter count mismatch
 
             CompareStatus(fileBlobCache, new[] {
                 new StorageFolderStatus() { Path = folder1000Config.Path, CurrentSize = 912, UnreferencedSize = 0,
