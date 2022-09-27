@@ -82,7 +82,6 @@ namespace Unity.ClusterDisplay.Graphics
     }
 
     [PopupItem("Tiled")]
-    [CreateAssetMenu(fileName = "TiledProjection", menuName = "Cluster Display/Tiled Projection")]
     sealed class TiledProjection : ProjectionPolicy
     {
         [SerializeField]
@@ -124,7 +123,7 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
-        public override void OnDisable()
+        public void OnDisable()
         {
             m_BlitCommands.Clear();
             GraphicsUtil.DeallocateIfNeeded(ref m_TileRenderTargets);
@@ -248,7 +247,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void OnDrawGizmos()
+        public void OnDrawGizmos()
         {
 #if UNITY_EDITOR
             m_Gizmo.Draw();

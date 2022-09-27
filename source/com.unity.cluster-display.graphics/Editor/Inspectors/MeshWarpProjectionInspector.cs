@@ -1,7 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
@@ -11,6 +11,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     {
         static class Contents
         {
+            public static readonly GUIContent InvalidMeshIcon =
+                EditorGUIUtility.TrIconContent("console.warnicon.sml", "No mesh target selected");
+
+            public static readonly GUIContent InvalidResolutionIcon =
+                EditorGUIUtility.TrIconContent("console.warnicon.sml", "Invalid resolution");
+
             public static readonly GUIStyle ButtonToggleStyle = "Button";
             public static readonly GUIContent IsDebug = EditorGUIUtility.TrTextContent("Debug Mode",
                 "Preview meshes in Editor.");
@@ -33,11 +39,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 "The position, specified locally, from which to render the outer frustum cubemap.");
             public static readonly GUIContent CubemapSize = EditorGUIUtility.TrTextContent("Cubemap Size",
                 "Size of the cubemap in pixels");
+            public const string UndoCreateSurface = "Create projection surface";
         }
 
         SerializedProperty m_IsDebugProp;
         SerializedProperty m_NodeIndexProp;
-        SerializedProperty m_MeshesProp;
+        SerializedProperty m_SurfacesProp;
         SerializedProperty m_OuterViewPositionProp;
         SerializedProperty m_CubemapSizeProp;
         SerializedProperty m_BackgroundColorProp;
@@ -45,17 +52,99 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_RenderInnerOuterProp;
         SerializedProperty m_OuterFrustumModeProp;
 
+        ReorderableList m_SurfacesList;
+
+        MeshWarpProjection m_Projection;
+        readonly List<GameObject> m_SelectedRenderers = new();
+
         void OnEnable()
         {
+            m_Projection = (MeshWarpProjection) target;
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
             m_NodeIndexProp = serializedObject.FindProperty("m_NodeIndexOverride");
-            m_MeshesProp = serializedObject.FindProperty("m_Meshes");
+            m_SurfacesProp = serializedObject.FindProperty("m_ProjectionSurfaces");
             m_OuterViewPositionProp = serializedObject.FindProperty("m_OuterViewPosition");
             m_CubemapSizeProp = serializedObject.FindProperty("m_OuterFrustumCubemapSize");
             m_BackgroundColorProp = serializedObject.FindProperty("m_BackgroundColor");
             m_StaticCubemapProp = serializedObject.FindProperty("m_StaticCubemap");
             m_RenderInnerOuterProp = serializedObject.FindProperty("m_RenderInnerOuterFrustum");
             m_OuterFrustumModeProp = serializedObject.FindProperty("m_OuterFrustumMode");
+
+            m_SurfacesList = new ReorderableList(serializedObject, m_SurfacesProp)
+            {
+                drawHeaderCallback = rect =>
+                    EditorGUI.LabelField(rect, Labels.GetGUIContent(Labels.Field.ProjectionSurfaces)),
+                onAddCallback = OnAddSurface,
+                drawElementCallback = DrawElement,
+                elementHeightCallback = index => (EditorGUIUtility.singleLineHeight + 2) * 2 + 2
+            };
+        }
+
+        void DrawElement(Rect rect, int index, bool isactive, bool isfocused)
+        {
+            var lineHeight = EditorGUIUtility.singleLineHeight + 2;
+            var element = m_SurfacesProp.GetArrayElementAtIndex(index);
+            var position = rect;
+            position.width -= 18;
+            position.y += 2;
+            position.height = lineHeight;
+            var meshProp = element.FindPropertyRelative("m_MeshRenderer");
+            var resolutionProp = element.FindPropertyRelative("m_ScreenResolution");
+            EditorGUI.PropertyField(position, meshProp);
+            if (meshProp.objectReferenceValue == null)
+            {
+                var iconPosition = position;
+                iconPosition.x = rect.xMax - 16;
+                iconPosition.width = 16;
+                EditorGUI.LabelField(iconPosition, Contents.InvalidMeshIcon);
+            }
+            position.y += lineHeight + 2;
+            if (!resolutionProp.vector2IntValue.IsValidResolution())
+            {
+                var iconPosition = position;
+                iconPosition.x = rect.xMax - 16;
+                iconPosition.width = 16;
+                EditorGUI.LabelField(iconPosition, Contents.InvalidResolutionIcon);
+            }
+            EditorGUI.PropertyField(position, resolutionProp);
+        }
+
+        void OnAddSurface(ReorderableList list)
+        {
+            Undo.RegisterCompleteObjectUndo(m_Projection, Contents.UndoCreateSurface);
+            m_Projection.AddSurface();
+        }
+
+        public override void OnSceneGUI()
+        {
+            // Draw outlines around the projection surfaces (only works during the Repaint event).
+            if (Event.current.type != EventType.Repaint) return;
+
+            m_SelectedRenderers.Clear();
+            if (m_SurfacesList.selectedIndices.Count == 0)
+            {
+                foreach (var surface in m_Projection.ProjectionSurfaces)
+                {
+                    if (surface.MeshRenderer != null)
+                    {
+                        m_SelectedRenderers.Add(surface.MeshRenderer.gameObject);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var index in m_SurfacesList.selectedIndices)
+                {
+                    if (index < 0 || index >= m_Projection.ProjectionSurfaces.Count) break;
+
+                    var renderer = m_Projection.ProjectionSurfaces[index].MeshRenderer;
+                    if (renderer != null)
+                    {
+                        m_SelectedRenderers.Add(renderer.gameObject);
+                    }
+                }
+            }
+            Handles.DrawOutline(m_SelectedRenderers, Color.green);
         }
 
         public override void OnInspectorGUI()
@@ -102,7 +191,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 }
             }
 
-            EditorGUILayout.PropertyField(m_MeshesProp);
+
+            // EditorGUILayout.PropertyField(m_SurfacesProp);
+            m_SurfacesList.DoLayoutList();
 
             serializedObject.ApplyModifiedProperties();
         }

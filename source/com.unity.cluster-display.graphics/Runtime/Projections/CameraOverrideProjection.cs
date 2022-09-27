@@ -4,7 +4,6 @@ using UnityEngine;
 namespace Unity.ClusterDisplay.Graphics
 {
     [PopupItem("Camera Override")]
-    [CreateAssetMenu(fileName = "CameraOverride", menuName = "Cluster Display/Camera Override Projection")]
     public class CameraOverrideProjection : ProjectionPolicy
     {
         [Flags]
@@ -108,7 +107,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
         }
 
-        public override void OnDisable()
+        public void OnDisable()
         {
             GraphicsUtil.DeallocateIfNeeded(ref m_RenderTarget);
         }

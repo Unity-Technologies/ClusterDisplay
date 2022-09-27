@@ -2,7 +2,8 @@
     "name": "Unity.ClusterDisplay.Runtime",
     "rootNamespace": "",
     "references": [
-        "GUID:e0cd26848372d4e5c891c569017e11f1"
+        "GUID:e0cd26848372d4e5c891c569017e11f1",
+        "GUID:95419eedfe2e6c74dab3e84fcd6aa25c"
     ],
     "includePlatforms": [
         "Editor",
@@ -14,6 +15,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.live-capture",
+            "expression": "2.0",
+            "define": "LIVE_CAPTURE_2_0_OR_NEWER"
+        }
+    ],
     "noEngineReferences": false
 }

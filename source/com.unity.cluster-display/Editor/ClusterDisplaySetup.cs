@@ -62,6 +62,7 @@ namespace Unity.ClusterDisplay
             }
 
             var clusterDisplayGo = new GameObject("ClusterDisplay");
+            Undo.RegisterCreatedObjectUndo(clusterDisplayGo, "Setup Cluster Display");
             for (int ti = 0; ti < types.Length; ti++)
             {
                 Debug.Assert(!types[ti].IsAssignableFrom(typeof(Component)), $"The type: \"{types[ti]}\" does not derrive from \"{nameof(Component)}\".");

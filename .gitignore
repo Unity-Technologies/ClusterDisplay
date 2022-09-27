@@ -1,9 +1,10 @@
-./*.sln
+*.sln
 *.swp
 *.csproj
 .DS_Store
 .idea/
 .vscode
+.vs/
 bin/
 obj/
 .multitool
@@ -21,6 +22,11 @@ bee.exe
 # Exceptions for actual .net projects
 !MissionControl/**/*.sln
 !MissionControl/**/*.csproj
+
+# MissionControl-v2 specific to ignore
+!MissionControl-v2/**/*.sln
+!MissionControl-v2/**/*.csproj
+MissionControl-v2/Playground/*
 
 # Our graphics tests generate reference images on the fly.
 TestProjects/GraphicsTestsURP/Assets/ActualImages
@@ -42,6 +48,3 @@ upm-ci~/
 .bin/
 .download/
 .Editor/
-SourceGenerators/bin
-SourceGenerators/obj
-SourceGenerators/.vs

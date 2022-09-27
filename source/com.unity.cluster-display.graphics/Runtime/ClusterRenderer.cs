@@ -112,10 +112,6 @@ namespace Unity.ClusterDisplay.Graphics
         void OnDrawGizmos()
         {
             Gizmos.DrawIcon(transform.position, k_IconName);
-            if (m_ProjectionPolicy != null && Selection.Contains(gameObject))
-            {
-                m_ProjectionPolicy.OnDrawGizmos();
-            }
         }
 #endif
 
@@ -125,6 +121,17 @@ namespace Unity.ClusterDisplay.Graphics
         void OnValidate()
         {
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
+        }
+
+        void Reset()
+        {
+            foreach (var projectionPolicy in GetComponents<ProjectionPolicy>())
+            {
+                if (projectionPolicy != m_ProjectionPolicy)
+                {
+                    DestroyImmediate(projectionPolicy);
+                }
+            }
         }
 
         void OnEnable()
@@ -139,10 +146,6 @@ namespace Unity.ClusterDisplay.Graphics
             SceneView.RepaintAll();
 #endif
             Enabled.Invoke();
-            if (m_ProjectionPolicy)
-            {
-                m_ProjectionPolicy.OnEnable();
-            }
         }
 
         void Update()
@@ -161,15 +164,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
-            if (m_ProjectionPolicy)
-            {
-                m_ProjectionPolicy.OnDisable();
-            }
         }
 
         void OnPresent(PresentArgs args)
         {
-            if (m_ProjectionPolicy != null)
+            if (m_ProjectionPolicy != null && m_ProjectionPolicy.enabled)
             {
                 m_ProjectionPolicy.Present(args);
             }
@@ -179,8 +178,8 @@ namespace Unity.ClusterDisplay.Graphics
         {
             // It may be possible that a subsystem update occurs after de-registration with the new update-loop being used next frame.
             if (TryGetInstance(out var clusterRenderer) && clusterRenderer.isActiveAndEnabled &&
-                ClusterCameraManager.Instance.ActiveCamera is Camera activeCamera &&
-                clusterRenderer.m_ProjectionPolicy is ProjectionPolicy projectionPolicy)
+                ClusterCameraManager.Instance.ActiveCamera is { } activeCamera &&
+                clusterRenderer.m_ProjectionPolicy is { } projectionPolicy)
             {
                 projectionPolicy.UpdateCluster(clusterRenderer.m_Settings, activeCamera);
             }

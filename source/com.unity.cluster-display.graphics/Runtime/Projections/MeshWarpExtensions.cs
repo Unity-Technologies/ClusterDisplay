@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -94,26 +95,42 @@ namespace Unity.ClusterDisplay.Graphics
         /// <param name="worldToCamera">Matrix that transforms from world to camera space.</param>
         /// <param name="zNear">The near clipping plane.</param>
         /// <param name="zFar">The far clipping plane value.</param>
-        /// <returns>A symmetric perspective projection that can view all the vertices.</returns>
-        /// <remarks>The result is undefined if any vertices are behind the camera.</remarks>
+        /// <returns>An asymmetric perspective projection that can view all the vertices.</returns>
+        /// <remarks>
+        /// The result is undefined if any vertices are behind the camera. Assumes that the camera
+        /// axis is contained within the frustum planes.
+        /// </remarks>
         static Matrix4x4 GetBoundingProjection(this Span<Vector3> vertices, Matrix4x4 worldToCamera,
             float zNear, float zFar)
         {
             float maxSlopeX = 0;
             float maxSlopeY = 0;
+            float minSlopeX = 0;
+            float minSlopeY = 0;
+
             foreach (var t in vertices)
             {
                 var p = worldToCamera.MultiplyPoint(t);
-                var slopeX = Mathf.Abs(p.x / p.z);
+                var slopeX = p.x / -p.z;
                 maxSlopeX = Math.Max(maxSlopeX, slopeX);
+                minSlopeX = Math.Min(minSlopeX, slopeX);
 
-                var slopeY = Mathf.Abs(p.y / p.z);
+                var slopeY = p.y / -p.z;
                 maxSlopeY = Math.Max(maxSlopeY, slopeY);
+                minSlopeY = Math.Min(minSlopeY, slopeY);
             }
 
-            var aspect = maxSlopeX / maxSlopeY;
-            var fieldOfView = Mathf.Atan(maxSlopeY) * 2 * Mathf.Rad2Deg;
-            return Matrix4x4.Perspective(fieldOfView, aspect, zNear, zFar);
+            var frustumPlanes = new FrustumPlanes
+            {
+                zNear = zNear,
+                zFar = zFar,
+                left = minSlopeX * zNear,
+                right = maxSlopeX * zNear,
+                top = maxSlopeY * zNear,
+                bottom = minSlopeY * zNear
+            };
+
+            return Matrix4x4.Frustum(frustumPlanes);
         }
 
         /// <summary>
@@ -150,14 +167,13 @@ namespace Unity.ClusterDisplay.Graphics
             var transform = camera.transform;
             var position = transform.position;
             // TODO: we can compute "up" more intelligently to minimize the FOV that we need to render.
-            var up = transform.up;
 
             var lookDir = bounds.center - position;
-            var rotation = Quaternion.LookRotation(lookDir, up);
+            var rotation = Quaternion.LookRotation(lookDir, transform.up);
 
             // We need to account for the fact that worldToCamera follows the OpenGL convention,
             // which is right-handed and -Z forward, while Unity's transforms are left-handed and +Z forward.
-            var scale = camera.transform.localScale;
+            var scale = transform.localScale;
             scale.z = -scale.z;
             var worldToCamera = Matrix4x4.TRS(position, rotation, scale).inverse;
             Span<Vector3> corners = stackalloc Vector3[8];
@@ -224,5 +240,8 @@ namespace Unity.ClusterDisplay.Graphics
             // Enable code below to dump the cubemap to disk and make debugging easier
             // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsValidResolution(this Vector2Int resolution) => resolution.x > 0 && resolution.y > 0;
     }
 }
