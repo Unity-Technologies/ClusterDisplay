@@ -53,17 +53,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// Build a <see cref="Status"/> from the current state.
         /// </summary>
         /// <returns>The built <see cref="Status"/>.</returns>
-        public Status Build()
-        {
-            var ret = new Status()
+        public Status Build() => new Status()
             {
                 Version = m_HangarBayVersion,
                 StartTime = m_StartTime,
                 PendingRestart = m_PendingRestart,
                 StorageFolders = m_FileBlobCacheService.GetStorageFolderStatus()
             };
-            return ret;
-        }
 
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
         readonly ILogger<StatusService> m_Logger;
