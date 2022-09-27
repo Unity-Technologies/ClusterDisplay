@@ -281,7 +281,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         const string k_HttpListenerEndpoint = "http://localhost:8000/";
         HttpListener m_HttpListener = new();
 
-        object m_Lock = new object();
+        readonly object m_Lock = new object();
         Dictionary<Guid, FileInfo> m_Files = new();
         Dictionary<Guid, PayloadInfo> m_Payloads = new();
     }

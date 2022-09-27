@@ -6,7 +6,7 @@ namespace Unity.ClusterDisplay.MissionControl
     /// <summary>
     /// Helper that will terminate this process if master process is gone.
     /// </summary>
-    public static class MasterProcessWatcher
+    public static class MasterProcessWatchdog
     {
         /// <summary>
         /// Setup watching of master process (only if the command line parameters specifying it is present).

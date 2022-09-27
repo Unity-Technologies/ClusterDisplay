@@ -188,26 +188,26 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Object to use for logging
         /// </summary>
-        ILogger m_Logger;
+        readonly ILogger m_Logger;
 
         /// <summary>
         /// Full path to the folder from which we load and to which we save fetched payloads.
         /// </summary>
-        string m_StoragePath;
+        readonly string m_StoragePath;
 
         /// <summary>
         /// Object that contains the keep up to date with referenced file blobs.
         /// </summary>
-        FileBlobCache m_FileBlobCache;
+        readonly FileBlobCache m_FileBlobCache;
 
         /// <summary>
         /// Object to lock to synchronize access to m_Payloads.
         /// </summary>
-        object m_Lock = new();
+        readonly object m_Lock = new();
 
         /// <summary>
         /// Dictionary of all the <see cref="Payload"/> we know about.
         /// </summary>
-        Dictionary<Guid, Task<Payload>> m_Payloads = new();
+        readonly Dictionary<Guid, Task<Payload>> m_Payloads = new();
     }
 }

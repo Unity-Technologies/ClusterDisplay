@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             m_Cache.PersistStorageFolderStates();
 
             m_ConfigService.ValidateNew += ValidateNewConfig;
-            m_ConfigService.Changed += Configchanged;
+            m_ConfigService.Changed += ConfigChanged;
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// Callback responsible for validating a new configuration.
         /// </summary>
         /// <param name="configChange">Information about the configuration change.</param>
-        void ValidateNewConfig(ConfigService.ConfigChangeSurvey configChange)
+        static void ValidateNewConfig(ConfigService.ConfigChangeSurvey configChange)
         {
             if (!configChange.Proposed.StorageFolders.Any())
             {
@@ -114,7 +114,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Callback responsible to update our configuration when the configuration changes.
         /// </summary>
-        Task Configchanged()
+        Task ConfigChanged()
         {
             return UpdateCacheConfiguration();
         }

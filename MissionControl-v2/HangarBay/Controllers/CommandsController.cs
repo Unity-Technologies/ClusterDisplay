@@ -244,7 +244,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
             string thisProcessFullPath = Process.GetCurrentProcess().MainModule!.FileName!;
             string thisProcessDirectory = Path.GetDirectoryName(thisProcessFullPath)!;
             string thisProcessFilename = Path.GetFileName(thisProcessFullPath);
-            string setupDirectory = Path.GetFullPath(Path.Combine(thisProcessDirectory, "..", "install"));
+            string setupDirectory = Path.GetFullPath(Path.Combine(thisProcessDirectory, "..", k_InstallSubfolder));
 
             // Clean destination folder
             try
@@ -303,6 +303,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         }
 
         static readonly char[] k_PathTrimEndChar = new[] { '/', '\\' };
+        const string k_InstallSubfolder = "install";
 
         readonly ILogger<CommandsController> m_Logger;
         readonly IHostApplicationLifetime m_ApplicationLifetime;

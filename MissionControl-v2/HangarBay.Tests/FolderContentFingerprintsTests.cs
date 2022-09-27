@@ -1,21 +1,14 @@
 using Microsoft.Extensions.Logging;
+using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
     public class FolderContentFingerprintsTests
     {
-        [SetUp]
-        public void SetUp()
-        {
-
-        }
-
         [TearDown]
         public void TearDown()
         {
-            Assert.That(m_LoggerStub.Messages, Is.Empty);
-
             foreach (string folder in m_StorageFolders)
             {
                 try
@@ -27,8 +20,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     // ignored
                 }
             }
-        }
 
+            m_LoggerMock.VerifyNoOtherCalls();
+        }
+        
         [Test]
         public void CleanupNewFiles()
         {
@@ -37,11 +32,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var timestamps = FolderContentFingerprints.BuildFrom(folder, folderPayload);
 
             CreateFiles(folder, new[] {"File3", "Folder1/File4", "Folder1/FolderA/FileA3","Folder1/FolderB/Folder$/File"});
-            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerMock.Object);
 
             Assert.That(TestFolderFiles(folder, k_FolderLayout1), Is.True);
         }
-
+        
         [Test]
         public void CleanupModifiedFiles()
         {
@@ -52,13 +47,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             TouchFiles(folder, new[] { "File2", "Folder1/File2", "Folder1/FolderA/FileA2", "Folder1/FolderB/FileB2",
                 "Folder2/File1", "Folder2/File2", "Folder2/File3","Folder2/FolderA/FileA1", "Folder2/FolderA/FileA2",
                 "Folder2/FolderB/FileB1", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"});
-            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerMock.Object);
             Assert.That(Directory.Exists(Path.Combine(folder, "Folder2")), Is.False);
 
             Assert.That(TestFolderFiles(folder, new[]{ "File1", "Folder1/File1", "Folder1/File3", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder1/FolderB/FileB3",}), Is.True);
         }
-
+        
         [Test]
         public void CleanupDifferentBlobFiles()
         {
@@ -68,14 +63,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder2/File1", "Folder2/FolderA/FileA1", "Folder2/FolderB/FileB1" });
-            timestamps.PrepareForPayload(folder, payload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, payload, m_LoggerMock.Object);
 
             Assert.That(TestFolderFiles(folder, new[]{ "File2", "Folder1/File2", "Folder1/File3",
                 "Folder1/FolderA/FileA2", "Folder1/FolderB/FileB2", "Folder1/FolderB/FileB3", "Folder2/File2",
                 "Folder2/File3", "Folder2/FolderA/FileA2", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"}),
                 Is.True);
         }
-
+        
         [Test]
         public void CleanupUnnecessaryFiles()
         {
@@ -86,17 +81,17 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var newPayload = RemoveFilesFromPayload(folderPayload, new[] { "Folder1/File3", "Folder1/FolderB/FileB3",
                 "Folder2/File3", "Folder2/FolderB/FileB3" });
 
-            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerMock.Object);
             Assert.That(TestFolderFiles(folder, k_FolderLayout1));
 
-            timestamps.PrepareForPayload(folder, newPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, newPayload, m_LoggerMock.Object);
             Assert.That(TestFolderFiles(folder, new[]{ "File1", "File2", "Folder1/File1", "Folder1/File2",
                 "Folder1/FolderA/FileA1", "Folder1/FolderA/FileA2", "Folder1/FolderB/FileB1", "Folder1/FolderB/FileB2",
                 "Folder2/File1", "Folder2/File2", "Folder2/FolderA/FileA1", "Folder2/FolderA/FileA2",
                 "Folder2/FolderB/FileB1", "Folder2/FolderB/FileB2"}),
                 Is.True);
         }
-
+        
         [Test]
         public void CleanupEverything()
         {
@@ -105,12 +100,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var timestamps = FolderContentFingerprints.BuildFrom(folder, folderPayload);
 
             TouchFiles(folder, k_FolderLayout1);
-            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerMock.Object);
 
             Assert.That(Directory.Exists(folder), Is.True);
             Assert.That(Directory.EnumerateFileSystemEntries(folder).Any(), Is.False);
         }
-
+        
         [Test]
         public void CleanupModifiedFilesFromLoadedFingerprints()
         {
@@ -125,13 +120,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             TouchFiles(folder, new[] { "File2", "Folder1/File2", "Folder1/FolderA/FileA2", "Folder1/FolderB/FileB2",
                 "Folder2/File1", "Folder2/File2", "Folder2/File3","Folder2/FolderA/FileA1", "Folder2/FolderA/FileA2",
                 "Folder2/FolderB/FileB1", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"});
-            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, folderPayload, m_LoggerMock.Object);
             Assert.That(Directory.Exists(Path.Combine(folder, "Folder2")), Is.False);
 
             Assert.That(TestFolderFiles(folder, new[]{ "File1", "Folder1/File1", "Folder1/File3", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder1/FolderB/FileB3",}), Is.True);
         }
-
+        
         [Test]
         public void CleanupDifferentBlobFilesFromLoadedFingerprints()
         {
@@ -145,14 +140,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder2/File1", "Folder2/FolderA/FileA1", "Folder2/FolderB/FileB1" });
-            timestamps.PrepareForPayload(folder, payload, m_LoggerStub);
+            timestamps.PrepareForPayload(folder, payload, m_LoggerMock.Object);
 
             Assert.That(TestFolderFiles(folder, new[]{ "File2", "Folder1/File2", "Folder1/File3",
                 "Folder1/FolderA/FileA2", "Folder1/FolderB/FileB2", "Folder1/FolderB/FileB3", "Folder2/File2",
                 "Folder2/File3", "Folder2/FolderA/FileA2", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"}),
                 Is.True);
         }
-
+        
         [Test]
         public void CleanupWithFileInUseNotInFuturePayload()
         {
@@ -160,18 +155,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var folderPayload = CreateFiles(folder, k_FolderLayout1);
             var timestamps = FolderContentFingerprints.BuildFrom(folder, folderPayload);
 
-            using var fileInUse = File.Open(Path.Combine(folder, "Folder2/FolderA/FileA1"), FileMode.Open);
+            var filePath = Path.Combine(folder, "Folder2/FolderA/FileA1");
+            using var fileInUse = File.Open(filePath, FileMode.Open);
 
-            timestamps.PrepareForPayload(folder, new Payload(), m_LoggerStub);
-            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("FileA1"), Is.True);
-            m_LoggerStub.Messages.Clear();
+            timestamps.PrepareForPayload(folder, new Payload(), m_LoggerMock.Object);
+            m_LoggerMock.VerifyLog(l => l.LogWarning("Failed to delete*", Path.GetFullPath(filePath)));
 
             // Remarks, everything else should be gone
             Assert.That(TestFolderFiles(folder, new[]{ "Folder2/FolderA/FileA1" }), Is.True);
         }
-
+        
         [Test]
         public void CleanupWithFileInUseInFuturePayload()
         {
@@ -179,18 +172,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var folderPayload = CreateFiles(folder, k_FolderLayout1);
             var timestamps = FolderContentFingerprints.BuildFrom(folder, folderPayload);
 
-            using var fileInUse = File.Open(Path.Combine(folder, "Folder2/FolderA/FileA1"), FileMode.Open);
+            var filePath = Path.Combine(folder, "Folder2/FolderA/FileA1");
+            using var fileInUse = File.Open(filePath, FileMode.Open);
 
             var futurePayload = new Payload();
             TouchFiles(folder, new[] { "Folder2/FolderA/FileA1" });
             futurePayload.Files = folderPayload.Files.Where(pf => pf.Path == "Folder2/FolderA/FileA1");
 
-            Assert.That(() => timestamps.PrepareForPayload(folder, futurePayload, m_LoggerStub),
+            Assert.That(() => timestamps.PrepareForPayload(folder, futurePayload, m_LoggerMock.Object),
                         Throws.TypeOf<IOException>());
-            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Error));
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("FileA1"), Is.True);
-            m_LoggerStub.Messages.Clear();
+            m_LoggerMock.VerifyLog(l => l.LogError(It.IsAny<IOException>(), "Failed to delete*", Path.GetFullPath(filePath)));
         }
 
         static readonly string[] k_FolderLayout1 = new[] {
@@ -292,6 +283,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         }
 
         List<string> m_StorageFolders = new();
-        LoggerStub m_LoggerStub = new();
+        Mock<ILogger> m_LoggerMock = new();
     }
 }

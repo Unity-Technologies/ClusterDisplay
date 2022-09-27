@@ -55,11 +55,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <returns>The built <see cref="Status"/>.</returns>
         public Status Build()
         {
-            var ret = new Status();
-            ret.Version = m_HangarBayVersion;
-            ret.StartTime = m_StartTime;
-            ret.PendingRestart = m_PendingRestart;
-            ret.StorageFolders = m_FileBlobCacheService.GetStorageFolderStatus();
+            var ret = new Status()
+            {
+                Version = m_HangarBayVersion,
+                StartTime = m_StartTime,
+                PendingRestart = m_PendingRestart,
+                StorageFolders = m_FileBlobCacheService.GetStorageFolderStatus()
+            };
             return ret;
         }
 

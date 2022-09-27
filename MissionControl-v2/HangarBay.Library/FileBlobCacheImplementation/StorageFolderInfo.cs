@@ -183,11 +183,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Returns the path to the file that stores the metadata for a storage folder.
         /// </summary>
-        /// <param name="storageFolderEffectivePath"><see cref="FullPath"/> of the <see cref="StorageFolderInfo"/>.
+        /// <param name="storageFolderFullPath"><see cref="FullPath"/> of the <see cref="StorageFolderInfo"/>.
         /// </param>
         public static string GetMetadataFilePath(string storageFolderFullPath)
         {
-            return Path.Combine(storageFolderFullPath, "metadata.json");
+            return Path.Combine(storageFolderFullPath, k_MetadataJson);
         }
 
         /// <summary>
@@ -197,5 +197,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         {
             return GetMetadataFilePath(FullPath);
         }
+
+        const string k_MetadataJson = "metadata.json";
     }
 }

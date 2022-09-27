@@ -112,12 +112,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                         }
                         File.Delete(filePath);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         if (payloadFiles.ContainsKey(searchKey))
                         {
                             // The payload we will want to copy need that file, so we have to remove the file...
-                            logger.LogError("Failed to delete {FilePath}", filePath);
+                            logger.LogError(e, "Failed to delete {FilePath}", filePath);
                             throw;
                         }
 

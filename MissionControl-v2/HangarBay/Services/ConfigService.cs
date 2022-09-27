@@ -284,7 +284,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <param name="newConfig">Information about the new configuration</param>
         /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some
         /// parts are not really owned by any actual services (like control endpoints).</remarks>
-        void ValidateNewConfig(ConfigChangeSurvey newConfig)
+        static void ValidateNewConfig(ConfigChangeSurvey newConfig)
         {
             foreach (var endpoint in newConfig.Proposed.ControlEndPoints)
             {
@@ -371,7 +371,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Where the configuration was from and where to save it.
         /// </summary>
-        string m_PersistPath;
+        readonly string m_PersistPath;
 
         /// <summary>
         /// <see cref="Config.ControlEndPoints"/> at startup.
@@ -381,7 +381,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Used to synchronize access to the member variables below.
         /// </summary>
-        object m_Lock = new object();
+        readonly object m_Lock = new object();
 
         /// <summary>
         /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurrent

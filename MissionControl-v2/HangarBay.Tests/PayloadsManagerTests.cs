@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
@@ -7,16 +8,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
     public class PayloadsManagerTests
     {
         [SetUp]
-        public void SetUp()
+        public void Setup()
         {
-
+            m_FileBlobCacheMock = new(MockBehavior.Strict, m_LoggerMock.Object);
         }
 
         [TearDown]
         public void TearDown()
         {
-            Assert.That(m_LoggerStub.Messages, Is.Empty);
-
             foreach (string folder in m_StorageFolders)
             {
                 try
@@ -28,13 +27,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     // ignored
                 }
             }
-        }
 
+            m_LoggerMock.VerifyNoOtherCalls();
+        }
+        
         [Test]
         public async Task FillSaveAndLoad()
         {
+            Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -69,31 +71,37 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 throw new ArgumentException($"Unknown {nameof(payloadId)}");
             };
 
+            // Get Payload1
+            var sequence = new MockSequence();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28, 56));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+
             var resultingPayload1 = await payloadsManager.GetPayload(payload1Id, someCookie);
             Assert.That(resultingPayload1, Is.SameAs(payload1));
             Assert.That(fetchCallCount, Is.EqualTo(1));
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new[] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 }
-            }), Is.True);
-            m_FileBlobCacheStub.Clear();
+            m_FileBlobCacheMock.Reset();
+
+            // Get Payload2
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile2,    28, 56));
 
             var resultingPayload2 = await payloadsManager.GetPayload(payload2Id, someCookie);
             Assert.That(resultingPayload2, Is.SameAs(payload2));
             Assert.That(fetchCallCount, Is.EqualTo(2));
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new[] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile2,    CompressedSize = 28, Size = 56 }
-            }), Is.True);
-            m_FileBlobCacheStub.Clear();
-
+            m_FileBlobCacheMock.Reset();
+            
             // Reload
-            var payloadsManagerNew = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            m_FileBlobCacheMock.Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+            m_FileBlobCacheMock.Setup(c => c.IncreaseUsageCount(uniqueFile1,    28, 56));
+            m_FileBlobCacheMock.Setup(c => c.IncreaseUsageCount(uniqueFile2,    28, 56));
+
+            var payloadsManagerNew = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
             payloadsManagerNew.FetchFileCallback = payloadsManager.FetchFileCallback;
-            // We cannot compare entries in details since reload order is "random"
-            Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(5));
-            m_FileBlobCacheStub.Clear();
+            m_FileBlobCacheMock.Verify(c => c.IncreaseUsageCount(repeatedFileId, 42, 84), Times.Exactly(3));
+            m_FileBlobCacheMock.Verify(c => c.IncreaseUsageCount(uniqueFile1,    28, 56), Times.Once());
+            m_FileBlobCacheMock.Verify(c => c.IncreaseUsageCount(uniqueFile2,    28, 56), Times.Once());
+            m_FileBlobCacheMock.Reset();
 
             resultingPayload1 = await payloadsManagerNew.GetPayload(payload1Id, someCookie);
             Assert.That(resultingPayload1, Is.Not.SameAs(payload1)); // Since it got reloaded from json
@@ -104,11 +112,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCallCount, Is.EqualTo(2)); // Should not fetch again, everything was reloaded
         }
 
+        public class FakeException: Exception
+        {
+        }
+        
         [Test]
         public async Task LoadErrors()
         {
+            Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -129,66 +142,55 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 throw new ArgumentException($"Unknown {nameof(payloadId)}");
             };
 
+            void PrepareMockForSequence()
+            {
+                var sequence = new MockSequence();
+                m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+                m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28, 56));
+                m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+            }
+
+            PrepareMockForSequence();
             var resultingPayload1 = await payloadsManager.GetPayload(payloadId);
             Assert.That(resultingPayload1, Is.SameAs(payload));
             Assert.That(fetchCallCount, Is.EqualTo(1));
-            Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(3));
-            m_FileBlobCacheStub.Entries.Clear();
+            m_FileBlobCacheMock.Reset();
 
             // Add an unrelated json file in the folder and try to load
             string unrelatedFilePath = Path.Combine(storageFolder, "Unrelated.json");
             await File.WriteAllTextAsync(unrelatedFilePath, "{}");
 
-            Assert.That(m_LoggerStub.Messages, Is.Empty);
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
-            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("Unexpected filename"), Is.True);
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("Unrelated.json"), Is.True);
-            m_LoggerStub.Messages.Clear();
-            Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(3)); // The bad file was skipped but we did continue loading
-            m_FileBlobCacheStub.Entries.Clear();
+            PrepareMockForSequence();
+            _ = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            m_LoggerMock.VerifyLog(l => l.LogWarning("Unexpected filename*", "Unrelated"));
+            m_FileBlobCacheMock.Reset();
             File.Delete(unrelatedFilePath);
 
             // Add a .json file with non json content in it and try to load
-            string badPayloadFilename = $"{Guid.NewGuid()}.json";
+            string badPayloadFilenameWoExt = Guid.NewGuid().ToString();
+            string badPayloadFilename = badPayloadFilenameWoExt + ".json";
             string badPayloadPath = Path.Combine(storageFolder, badPayloadFilename);
             await File.WriteAllTextAsync(badPayloadPath, "This is not a json");
 
-            Assert.That(m_LoggerStub.Messages, Is.Empty);
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
-            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("Failed loading back"), Is.True);
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains(badPayloadFilename), Is.True);
-            m_LoggerStub.Messages.Clear();
-            Assert.That(m_FileBlobCacheStub.Entries.Count, Is.EqualTo(3)); // The bad file was skipped but we did continue loading
-            m_FileBlobCacheStub.Entries.Clear();
+            PrepareMockForSequence();
+            _ = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            m_LoggerMock.VerifyLog(l => l.LogWarning("Failed loading back*", badPayloadFilenameWoExt));
+            m_FileBlobCacheMock.Reset();
             File.Delete(badPayloadPath);
 
             // Fake a loading problem (that would be cause by conflicting sizes for example) when loading back assets.
-            m_FileBlobCacheStub.FakeIncreaseUsageCountErrorIn = 3;
-
-            Assert.That(m_LoggerStub.Messages, Is.Empty);
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
-            _ = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
-            Assert.That(m_LoggerStub.Messages.Count, Is.EqualTo(1));
-            Assert.That(m_LoggerStub.Messages[0].Level, Is.EqualTo(LogLevel.Warning));
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains("processing files of"), Is.True);
-            Assert.That(m_LoggerStub.Messages[0].Content.Contains($"{payloadId}.json"), Is.True);
-            m_LoggerStub.Messages.Clear();
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new FileBlobCacheStub.Entry[] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
-                new FileBlobCacheStub.DecreaseEntry() { Id = uniqueFile1 },
-                new FileBlobCacheStub.DecreaseEntry() { Id = repeatedFileId }
-            }), Is.True);
-            m_FileBlobCacheStub.Entries.Clear();
+            var sequence = new MockSequence();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28, 56));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84)).Throws<FakeException>();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.DecreaseUsageCount(uniqueFile1           ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.DecreaseUsageCount(repeatedFileId        ));
+            _ = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            m_LoggerMock.VerifyLog(l => l.LogWarning("There was a problem processing files of*", payloadId.ToString()));
+            m_FileBlobCacheMock.Reset();
             File.Delete(badPayloadPath);
         }
-
+        
         class TestException: Exception
         {
         }
@@ -196,8 +198,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         [Test]
         public async Task FetchFailures()
         {
+            Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
 
             var somePayloadId = Guid.NewGuid();
 
@@ -216,38 +219,37 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 new PayloadFile() {Path="repeat/someFile", FileBlob = repeatedFileId, CompressedSize = 42, Size = 84},
                 new PayloadFile() {Path="somethingElse",   FileBlob = uniqueFile2,    CompressedSize = 280, Size = 560}
             };
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
             payloadsManager.FetchFileCallback = (_, _) => Task.FromResult(payload);
 
-            m_FileBlobCacheStub.FakeIncreaseUsageCountErrorIn = 4;
-            Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<FileBlobCacheStub.FakeException>());
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new FileBlobCacheStub.Entry[] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.DecreaseEntry() { Id = repeatedFileId },
-                new FileBlobCacheStub.DecreaseEntry() { Id = uniqueFile1 },
-                new FileBlobCacheStub.DecreaseEntry() { Id = repeatedFileId }
-            }), Is.True);
-            m_FileBlobCacheStub.Entries.Clear();
+            var sequence = new MockSequence();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28,  56 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile2,    280, 560)).Throws<FakeException>();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.DecreaseUsageCount(repeatedFileId          ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.DecreaseUsageCount(uniqueFile1             ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.DecreaseUsageCount(repeatedFileId          ));
+
+            Assert.That(() => payloadsManager.GetPayload(somePayloadId), Throws.TypeOf<FakeException>());
+            m_FileBlobCacheMock.Reset();
 
             // Ok, let's try one list time, this time we wont throw a wrench in the machine and it should work!
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28,  56 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile2,    280, 560));
+
             var fetchedPayload = await payloadsManager.GetPayload(somePayloadId);
             Assert.That(fetchedPayload, Is.SameAs(payload));
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new [] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile2,    CompressedSize = 280, Size = 560 },
-            }), Is.True);
-            m_FileBlobCacheStub.Entries.Clear();
+            m_FileBlobCacheMock.Reset();
         }
-
+        
         [Test]
         public async Task LongFetch()
         {
+            Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -270,6 +272,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 return payload;
             };
 
+            var sequence = new MockSequence();
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile1,    28,  56 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(repeatedFileId, 42,  84 ));
+            m_FileBlobCacheMock.InSequence(sequence).Setup(c => c.IncreaseUsageCount(uniqueFile2,    280, 560));
+
             var getRequest1Task = payloadsManager.GetPayload(payloadId);
             var getRequest2Task = payloadsManager.GetPayload(payloadId);
 
@@ -285,20 +293,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCount, Is.EqualTo(1));
             Assert.That(resultFromGet1, Is.SameAs(payload));
             Assert.That(resultFromGet2, Is.SameAs(payload));
-            Assert.That(m_FileBlobCacheStub.CompareEntries(new [] {
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile1,    CompressedSize = 28, Size = 56 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = repeatedFileId, CompressedSize = 42, Size = 84 },
-                new FileBlobCacheStub.IncreaseEntry() { Id = uniqueFile2,    CompressedSize = 280, Size = 560 },
-            }), Is.True);
-            m_FileBlobCacheStub.Entries.Clear();
+            m_FileBlobCacheMock.Reset();
         }
-
+        
         [Test]
         public async Task LongFailingFetch()
         {
+            Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerStub, storageFolder, m_FileBlobCacheStub);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
 
             TaskCompletionSource fetchTcs = new();
             int fetchCount = 0;
@@ -321,14 +324,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             Assert.That(async () => await getRequest1Task, Throws.TypeOf<TestException>());
             Assert.That(async () => await getRequest2Task, Throws.TypeOf<TestException>());
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
 
             // However we should be able to try again once everything is failed
             payloadsManager.FetchFileCallback = (_, _) => Task.FromResult(new Payload());
 
             var result = await payloadsManager.GetPayload(payloadId);
             Assert.That(result.Files, Is.Empty);
-            Assert.That(m_FileBlobCacheStub.Entries, Is.Empty);
         }
 
         string GetNewStorageFolder()
@@ -344,7 +345,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         }
 
         List<string> m_StorageFolders = new();
-        LoggerStub m_LoggerStub = new();
-        FileBlobCacheStub m_FileBlobCacheStub = new FileBlobCacheStub();
+        Mock<ILogger> m_LoggerMock = new();
+        Mock<FileBlobCache>? m_FileBlobCacheMock;
     }
 }

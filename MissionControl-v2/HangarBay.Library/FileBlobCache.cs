@@ -772,22 +772,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <summary>
         /// Object to use for logging
         /// </summary>
-        ILogger m_Logger;
+        readonly ILogger m_Logger;
 
         /// <summary>
         /// Internal object used to lock access to member variables of this class
         /// </summary>
-        object m_Lock = new();
+        readonly object m_Lock = new();
 
         /// <summary>
         /// All the files managed by the <see cref="FileBlobCache"/>.
         /// </summary>
         /// <remarks>Including referenced files not yet present in any cache.</remarks>
-        Dictionary<Guid, CacheFileInfo> m_Files = new();
+        readonly Dictionary<Guid, CacheFileInfo> m_Files = new();
 
         /// <summary>
         /// The folders in which we are storing files.
         /// </summary>
-        Dictionary<string, StorageFolderInfo> m_StorageFolders = new();
+        readonly Dictionary<string, StorageFolderInfo> m_StorageFolders = new();
     }
 }

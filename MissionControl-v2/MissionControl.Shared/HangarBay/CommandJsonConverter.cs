@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
     {
         public override bool CanConvert(Type type)
         {
-            return type.IsAssignableFrom(typeof(Command));
+            return typeof(Command).IsAssignableFrom(type);
         }
 
         public override Command? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
