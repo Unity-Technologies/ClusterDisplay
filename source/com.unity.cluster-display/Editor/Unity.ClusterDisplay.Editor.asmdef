@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "GUID:0861eaad4777b824986b7d153336925a",
-        "GUID:1aca65411c9f6674b9a3fa0045bd8bc4"
+        "GUID:1aca65411c9f6674b9a3fa0045bd8bc4",
+        "GUID:95419eedfe2e6c74dab3e84fcd6aa25c"
     ],
     "includePlatforms": [
         "Editor"
@@ -19,6 +20,11 @@
             "name": "com.unity.cluster-display.mission-control",
             "expression": "0",
             "define": "CLUSTER_DISPLAY_HAS_MISSION_CONTROL"
+        },
+        {
+            "name": "com.unity.live-capture",
+            "expression": "2.0",
+            "define": "LIVE_CAPTURE_2_0_OR_NEWER"
         }
     ],
     "noEngineReferences": false
