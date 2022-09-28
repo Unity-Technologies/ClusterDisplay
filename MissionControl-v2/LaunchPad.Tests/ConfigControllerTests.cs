@@ -1,8 +1,8 @@
 using System;
-using System.Net;
 using System.Net.NetworkInformation;
+using System.Net;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 {
     public class ConfigControllerTests
     {
@@ -25,16 +25,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         }
 
         [Test]
-        public async Task SetStorageFolders()
+        public async Task SetClusterNetworkNic()
         {
             await m_ProcessHelper.Start(GetTestTempFolder());
 
             var newConfig = await m_ProcessHelper.GetConfig();
-            var storageFolder0 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-            var storageFolder1 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 20L * 1024 * 1024 * 1024 };
-            newConfig.StorageFolders = new[] { storageFolder0, storageFolder1 };
+
+            // Test with name
+            var clusterNetwork = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(n => n.OperationalStatus == OperationalStatus.Up)
+                    .OrderBy(n => n.Speed)
+                    .FirstOrDefault();
+            Assert.That(clusterNetwork, Is.Not.Null);
+            newConfig.ClusterNetworkNic = clusterNetwork!.Name;
 
             var httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
@@ -42,67 +45,83 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             // Check the update was well received
             var updatedConfig = await m_ProcessHelper.GetConfig();
-            Assert.That(newConfig.StorageFolders, Is.EqualTo(updatedConfig.StorageFolders));
+            Assert.That(updatedConfig.ClusterNetworkNic, Is.EqualTo(newConfig.ClusterNetworkNic));
 
-            // Check that the status is updated
-            var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            var folderStatus0 = status!.StorageFolders.FirstOrDefault(fs => fs.Path == storageFolder0.Path);
-            Assert.That(folderStatus0, Is.EqualTo(new StorageFolderStatus() {
-                Path = storageFolder0.Path, MaximumSize = storageFolder0.MaximumSize }));
-            var folderStatus1 = status.StorageFolders.FirstOrDefault(fs => fs.Path == storageFolder1.Path);
-            Assert.That(folderStatus1, Is.EqualTo(new StorageFolderStatus() {
-                Path = storageFolder1.Path, MaximumSize = storageFolder1.MaximumSize }));
+            // Test with NIC ip
+            foreach (var unicastAddress in clusterNetwork.GetIPProperties().UnicastAddresses)
+            {
+                if (unicastAddress.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    newConfig.ClusterNetworkNic = unicastAddress.Address.ToString();
+                    break;
+                }
+            }
+            httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            // Check the update was well received
+            updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(updatedConfig.ClusterNetworkNic, Is.EqualTo(newConfig.ClusterNetworkNic));
         }
 
         [Test]
-        public async Task SetBadConfig()
+        public async Task SetBadClusterNetworkNic()
         {
             await m_ProcessHelper.Start(GetTestTempFolder());
 
-            // Try setting no storage folder at all
+            var originalConfig = await m_ProcessHelper.GetConfig();
+
+            // Test with a fictive NIC name
             var newConfig = await m_ProcessHelper.GetConfig();
-            string originalPath = newConfig.StorageFolders.First().Path;
-            newConfig.StorageFolders = new StorageFolderConfig[] { };
+            newConfig.ClusterNetworkNic = "Fictive NIC Name";
 
             var httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            string[] errorMessages = await m_ProcessHelper.GetErrorDetails(httpRet.Content);
-            Assert.That(errorMessages.Length, Is.EqualTo(1));
-            Assert.That(errorMessages[0].Contains("one storage"), Is.True);
 
-            // Validate config still intact
-            var currentConfig = await m_ProcessHelper.GetConfig();
-            Assert.That(currentConfig.StorageFolders, Is.Not.Empty);
-            var currentStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(currentStatus, Is.Not.Null);
-            Assert.That(currentStatus!.StorageFolders, Is.Not.Empty);
+            // Check config remained unchanged
+            var updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(updatedConfig, Is.EqualTo(originalConfig));
 
-            // Try adding a valid path and an invalid one (none should be considered because of the invalid one).
-            newConfig.StorageFolders = new StorageFolderConfig[] { };
-            var storageFolder0 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-            var storageFolder1 =
-                new StorageFolderConfig() { Path = "something://this is not a valid path", MaximumSize = 20L * 1024 * 1024 * 1024 };
-            newConfig.StorageFolders = new[] { storageFolder0, storageFolder1 };
-
+            // Test with a fictive NIC ip
+            newConfig.ClusterNetworkNic = "172.217.13.110"; // Google.com, no one should have their local IP set to Google's IP :)
             httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            errorMessages = await m_ProcessHelper.GetErrorDetails(httpRet.Content);
-            Assert.That(errorMessages.Length, Is.EqualTo(1));
-            Assert.That(errorMessages[0].Contains("Can't access or create"), Is.True);
-            Assert.That(errorMessages[0].Contains("this is not a valid path"), Is.True);
 
-            // Validate config still intact
-            currentConfig = await m_ProcessHelper.GetConfig();
-            Assert.That(currentConfig.StorageFolders.Count, Is.EqualTo(1));
-            Assert.That(currentConfig.StorageFolders.First().Path, Is.EqualTo(originalPath));
-            currentStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(currentStatus, Is.Not.Null);
-            Assert.That(currentStatus!.StorageFolders.Count, Is.EqualTo(1));
-            Assert.That(currentStatus.StorageFolders.First().Path, Is.EqualTo(originalPath));
+            // Check the update was well received
+            updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(updatedConfig, Is.EqualTo(originalConfig));
+        }
+
+        [Test]
+        public async Task SetHangarBayEndPoint()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            // Test with name
+            var newConfig = await m_ProcessHelper.GetConfig();
+            newConfig.HangarBayEndPoint = "http://localhost:8000";
+
+            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+            // Check the update was well received
+            var updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(updatedConfig.HangarBayEndPoint, Is.EqualTo(newConfig.HangarBayEndPoint));
+
+            // Test settings it to something obviously invalid
+            var beforeBadConfig = await m_ProcessHelper.GetConfig();
+            newConfig.HangarBayEndPoint = "This is obviously invalid!";
+            httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            // Check config is still intact
+            updatedConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(updatedConfig, Is.EqualTo(beforeBadConfig));
         }
 
         [Test]
@@ -123,7 +142,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(status!.PendingRestart, Is.False);
 
             // Now do a real change
-            newConfig.ControlEndPoints = new[] { "http://127.0.0.1:8200", "http://0.0.0.0:8300" };
+            newConfig.ControlEndPoints = new[] { "http://localhost:8100", "http://127.0.0.1:8200", "http://0.0.0.0:8300" };
 
             httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
@@ -232,11 +251,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var newConfig = await m_ProcessHelper.GetConfig();
             newConfig.ControlEndPoints = new[] { newConfig.ControlEndPoints.First(), "http://127.0.0.1:8200",
                 "http://0.0.0.0:8300" };
-            var storageFolder0 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-            var storageFolder1 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 20L * 1024 * 1024 * 1024 };
-            newConfig.StorageFolders = new[] { storageFolder0, storageFolder1 };
+            newConfig.HangarBayEndPoint = "http://my.new.hangarbay:8100";
 
             var httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
@@ -265,104 +280,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             await m_ProcessHelper.Start(hangarBayFolder);
 
             var newConfig = await m_ProcessHelper.GetConfig();
-            var storageFolder0 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-            var storageFolder1 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 20L * 1024 * 1024 * 1024 };
-            newConfig.StorageFolders = new[] { storageFolder0, storageFolder1 };
+            newConfig.HangarBayEndPoint = "http://my.new.hangarbay:8100";
 
             var httpRet = await m_ProcessHelper.PutConfig(newConfig);
             Assert.That(httpRet, Is.Not.Null);
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
             var updatedConfig = await m_ProcessHelper.GetConfig();
-            Assert.That(newConfig.StorageFolders, Is.EqualTo(updatedConfig.StorageFolders));
+            Assert.That(newConfig.HangarBayEndPoint, Is.EqualTo(updatedConfig.HangarBayEndPoint));
 
             m_ProcessHelper.Stop();
 
             // Now let's start it back, it should have saved the config
             await m_ProcessHelper.Start(hangarBayFolder);
             updatedConfig = await m_ProcessHelper.GetConfig();
-            Assert.That(newConfig.StorageFolders, Is.EqualTo(updatedConfig.StorageFolders));
-        }
-
-        [Test]
-        public async Task ConcurrentChanges()
-        {
-            await m_ProcessHelper.Start(GetTestTempFolder());
-
-            // Initial config
-            var newConfig = await m_ProcessHelper.GetConfig();
-            var storageFolder0 =
-                new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-            newConfig.StorageFolders = new[] { storageFolder0 };
-
-            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
-            Assert.That(httpRet, Is.Not.Null);
-            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-
-            // Start a mission control stub so that we can request some files and have that request block so that we can
-            // test concurrent setting of config.
-            var missionControlStub = new MissionControlStub();
-            missionControlStub.Start();
-            try
-            {
-                var payload1 = Guid.NewGuid();
-                var fileBlob1 = Guid.NewGuid();
-                missionControlStub.AddFile(payload1, "file1.txt", fileBlob1, "File1 content");
-
-                var fetchFileCheckpoint = new MissionControlStubCheckpoint();
-                missionControlStub.AddFileCheckpoint(fileBlob1, fetchFileCheckpoint);
-
-                var prepareCommand = new PrepareCommand()
-                {
-                    Path = Path.Combine(GetTestTempFolder(), "PrepareInto"),
-                    PayloadIds = new[] { payload1 },
-                    PayloadSource = MissionControlStub.HttpListenerEndpoint
-                };
-                var asyncPrepare = m_ProcessHelper.PostCommand(prepareCommand);
-                await fetchFileCheckpoint.WaitingOnCheckpoint;
-
-                // Now that we have a blocked prepare, some things could block setting config, but we should still be
-                // able to change endpoints.
-                newConfig.ControlEndPoints = newConfig.ControlEndPoints.Append("http://0.0.0.0:8300");
-                httpRet = await m_ProcessHelper.PutConfig(newConfig);
-                Assert.That(httpRet, Is.Not.Null);
-                Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
-
-                // However trying to remove the storage folder used by the blocked prepare should block.
-                var storageFolder1 =
-                    new StorageFolderConfig() { Path = GetTestTempFolder(), MaximumSize = 10L * 1024 * 1024 * 1024 };
-                newConfig.StorageFolders = new[] { storageFolder1 };
-                var blockPutConfig1 = m_ProcessHelper.PutConfig(newConfig);
-
-                // And changing endpoints should now block because we want to keep things in order.
-                newConfig.ControlEndPoints = newConfig.ControlEndPoints.Append("http://[::]:8400");
-                var blockPutConfig2 = m_ProcessHelper.PutConfig(newConfig);
-
-                // Wait a little bit to be sure our diagnostic of blocking is good
-                await Task.Delay(100);
-
-                Assert.That(asyncPrepare.IsCompleted, Is.False);
-                Assert.That(blockPutConfig1.IsCompleted, Is.False);
-                Assert.That(blockPutConfig2.IsCompleted, Is.False);
-
-                // Unblock everything
-                fetchFileCheckpoint.UnblockCheckpoint();
-
-                // Wait for things to complete
-                await asyncPrepare;
-                await blockPutConfig1;
-                await blockPutConfig2;
-
-                // Get the effective finale configuration
-                var effectiveConfig = await m_ProcessHelper.GetConfig();
-                Assert.That(effectiveConfig, Is.EqualTo(newConfig));
-            }
-            finally
-            {
-                missionControlStub.Stop();
-            }
+            Assert.That(newConfig.HangarBayEndPoint, Is.EqualTo(updatedConfig.HangarBayEndPoint));
         }
 
         string GetTestTempFolder()
@@ -372,7 +304,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             return folderPath;
         }
 
-        HangarBayProcessHelper m_ProcessHelper = new();
+        LaunchPadProcessHelper m_ProcessHelper = new();
         List<string> m_TestTempFolders = new();
     }
 }

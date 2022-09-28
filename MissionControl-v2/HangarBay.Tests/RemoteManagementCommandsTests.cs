@@ -1,23 +1,13 @@
-using System;
-using System.Collections.Generic;
+
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
     public class RemoteManagementCommandsTests
     {
-        [SetUp]
-        public void SetUp()
-        {
-        }
-
         [TearDown]
         public void TearDown()
         {
@@ -29,7 +19,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     Directory.Delete(folder, true);
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
             }
         }
 
@@ -57,18 +50,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     newStatus = await m_ProcessHelper.GetStatus();
                     if (newStatus != null)
                     {
-                        if (newStatus.StartTime > originalStatus.StartTime)
+                        if (newStatus.StartTime > originalStatus!.StartTime)
                         {
                             break;
                         }
                     }
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
                 await Task.Delay(25);
             }
 
             Assert.That(newStatus, Is.Not.Null);
-            Assert.That(newStatus.StartTime > originalStatus.StartTime);
+            Assert.That(newStatus!.StartTime > originalStatus!.StartTime);
 
             // Restart again (exercise the code cleaning old remote management command line arguments).
             originalStatus = newStatus;
@@ -92,12 +88,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                         }
                     }
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
                 await Task.Delay(25);
             }
 
             Assert.That(newStatus, Is.Not.Null);
-            Assert.That(newStatus.StartTime > originalStatus.StartTime);
+            Assert.That(newStatus!.StartTime > originalStatus.StartTime);
         }
 
         [Test]
@@ -145,18 +144,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                         newStatus = await m_ProcessHelper.GetStatus();
                         if (newStatus != null)
                         {
-                            if (newStatus.StartTime > originalStatus.StartTime)
+                            if (newStatus.StartTime > originalStatus!.StartTime)
                             {
                                 break;
                             }
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                        // ignored
+                    }
                     await Task.Delay(25);
                 }
 
                 Assert.That(newStatus, Is.Not.Null);
-                Assert.That(newStatus.StartTime > originalStatus.StartTime);                      // Or otherwise the status is still from the same instance
+                Assert.That(newStatus!.StartTime > originalStatus!.StartTime);                    // Or otherwise the status is still from the same instance
                 Assert.That(stopwatch.Elapsed, Is.LessThanOrEqualTo(TimeSpan.FromSeconds(15)));   // Or otherwise we timed out waiting for the kill
                 Assert.That(stopwatch.Elapsed, Is.GreaterThanOrEqualTo(TimeSpan.FromSeconds(2))); // Or otherwise it finished before the kill
 
@@ -186,7 +188,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             ZipFile.ExtractToDirectory(hangarBayZipFile, hangarBayRunFolder);
             // File to detect if old files have been deleted
             string markerFilePath = Path.Combine(hangarBayRunFolder, "marker.txt");
-            File.WriteAllText(markerFilePath, "Marker");
+            await File.WriteAllTextAsync(markerFilePath, "Marker");
             // Artificially change .exe time in the past to detect it was replaced
             var pastHangarBayFileTime = DateTime.Now - TimeSpan.FromDays(1);
             string hangerBayExePath = Path.Combine(hangarBayRunFolder, "HangarBay.exe");
@@ -197,8 +199,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // prompted for a firewall permission since we are running from different folder each time.
             var newConfig = new Config();
             newConfig.ControlEndPoints = new[] { "http://127.0.0.1:8100" };
-            File.WriteAllText(Path.Combine(workFolder, "config.json"),
-                              System.Text.Json.JsonSerializer.Serialize(newConfig, Json.SerializerOptions));
+            await File.WriteAllTextAsync(Path.Combine(workFolder, "config.json"),
+            System.Text.Json.JsonSerializer.Serialize(newConfig, Json.SerializerOptions));
 
             await m_ProcessHelper.Start(workFolder, hangarBayRunFolder);
 
@@ -206,7 +208,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(originalStatus, Is.Not.Null);
 
             var missionControlStub = new MissionControlStub();
-            missionControlStub.FallbackHandler = (string uri, HttpMethod _, HttpListenerResponse response) =>
+            missionControlStub.FallbackHandler = (uri, _, response) =>
             {
                 if (uri == newVersionZipFilename)
                 {
@@ -232,7 +234,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
             Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
-            // The upgrade command sends the accepted answer and then proceed with the restart, so we might have to wait 
+            // The upgrade command sends the accepted answer and then proceed with the restart, so we might have to wait
             // a little bit until the restart actually happens.
             var stopwatch = Stopwatch.StartNew();
             Status? newStatus = null;
@@ -243,18 +245,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     newStatus = await m_ProcessHelper.GetStatus();
                     if (newStatus != null)
                     {
-                        if (newStatus.StartTime > originalStatus.StartTime)
+                        if (newStatus.StartTime > originalStatus!.StartTime)
                         {
                             break;
                         }
                     }
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
                 await Task.Delay(25);
             }
 
             Assert.That(newStatus, Is.Not.Null);
-            Assert.That(newStatus.StartTime > originalStatus.StartTime);
+            Assert.That(newStatus!.StartTime > originalStatus!.StartTime);
 
             // Verify that an update was really done
             // 1. Folder with installation files gone

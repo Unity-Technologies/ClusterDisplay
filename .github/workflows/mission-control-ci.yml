@@ -32,4 +32,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore ${{ env.projectpath }}
     - name: Test
-      run: dotnet test --no-build --verbosity normal ${{ env.projectpath }}
+      run: dotnet test -m:1 --no-build --verbosity normal ${{ env.projectpath }}

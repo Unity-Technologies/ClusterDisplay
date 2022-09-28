@@ -295,8 +295,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <summary>
         /// Returns a string from the command line arguments used to launch this process.
         /// </summary>
-        /// <returns></returns>
-        string GetCurrentProcessArguments()
+        static string GetCurrentProcessArguments()
         {
             var arguments = RemoteManagement.FilterCommandLineArguments(Environment.GetCommandLineArgs()).Skip(1);
             return RemoteManagement.AssembleCommandLineArguments(arguments);

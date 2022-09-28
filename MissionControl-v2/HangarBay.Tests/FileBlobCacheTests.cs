@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
+// ReSharper disable StructuredMessageTemplateProblem
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
@@ -982,7 +983,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // And now we should be able to complete fileBlob2
             await fileBlobCache.CopyFileToAsync(fileBlob2, "C:\\Temp\\Blob2");
         }
-        
+
         [Test]
         public async Task UseUnreferenced()
         {
@@ -1040,7 +1041,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCount, Is.EqualTo(1));
             Assert.That(copyCount, Is.EqualTo(2));
         }
-        
+
         [Test]
         public async Task DecreaseUsageOfInUse()
         {
@@ -1186,7 +1187,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCount, Is.EqualTo(3));
             Assert.That(copyCount, Is.EqualTo(6));
         }
-        
+
         [Test]
         public async Task SaveAndLoadStorageFolderWhileInUse()
         {
@@ -1286,7 +1287,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCount, Is.EqualTo(3));
             Assert.That(copyCount, Is.EqualTo(6));
         }
-        
+
         [Test]
         public async Task FileInTwoStoragesOnReload()
         {

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
+// ReSharper disable StructuredMessageTemplateProblem
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
@@ -23,7 +24,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             m_LoggerMock.VerifyNoOtherCalls();
         }
-        
+
         [Test]
         public void CleanupNewFiles()
         {
@@ -36,7 +37,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             Assert.That(TestFolderFiles(folder, k_FolderLayout1), Is.True);
         }
-        
+
         [Test]
         public void CleanupModifiedFiles()
         {
@@ -53,7 +54,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(TestFolderFiles(folder, new[]{ "File1", "Folder1/File1", "Folder1/File3", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder1/FolderB/FileB3",}), Is.True);
         }
-        
+
         [Test]
         public void CleanupDifferentBlobFiles()
         {
@@ -70,7 +71,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 "Folder2/File3", "Folder2/FolderA/FileA2", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"}),
                 Is.True);
         }
-        
+
         [Test]
         public void CleanupUnnecessaryFiles()
         {
@@ -91,7 +92,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 "Folder2/FolderB/FileB1", "Folder2/FolderB/FileB2"}),
                 Is.True);
         }
-        
+
         [Test]
         public void CleanupEverything()
         {
@@ -105,7 +106,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(Directory.Exists(folder), Is.True);
             Assert.That(Directory.EnumerateFileSystemEntries(folder).Any(), Is.False);
         }
-        
+
         [Test]
         public void CleanupModifiedFilesFromLoadedFingerprints()
         {
@@ -126,7 +127,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(TestFolderFiles(folder, new[]{ "File1", "Folder1/File1", "Folder1/File3", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder1/FolderB/FileB3",}), Is.True);
         }
-        
+
         [Test]
         public void CleanupDifferentBlobFilesFromLoadedFingerprints()
         {
@@ -147,7 +148,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 "Folder2/File3", "Folder2/FolderA/FileA2", "Folder2/FolderB/FileB2", "Folder2/FolderB/FileB3"}),
                 Is.True);
         }
-        
+
         [Test]
         public void CleanupWithFileInUseNotInFuturePayload()
         {
@@ -164,7 +165,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Remarks, everything else should be gone
             Assert.That(TestFolderFiles(folder, new[]{ "Folder2/FolderA/FileA1" }), Is.True);
         }
-        
+
         [Test]
         public void CleanupWithFileInUseInFuturePayload()
         {

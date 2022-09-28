@@ -1,44 +1,48 @@
-using System;
 using System.Diagnostics;
-using System.Net;
 using System.Net.Http.Json;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 {
-    class HangarBayProcessHelper : IDisposable
+    class LaunchPadProcessHelper : IDisposable
     {
-        public async Task Start(string path, string fromPath = "")
+        public async Task Start(string path, string fromPath = "", TimeSpan blockingCallMax = default)
         {
             if (string.IsNullOrEmpty(fromPath))
             {
                 fromPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-                fromPath = fromPath.Replace("HangarBay.Tests", "HangarBay");
+                fromPath = fromPath.Replace("LaunchPad.Tests", "LaunchPad");
             }
 
             Assert.That(m_Process, Is.Null);
+            m_LaunchFolder = Path.Combine(path, "launchFolder");
             var startInfo = new ProcessStartInfo()
             {
-                FileName = Path.Combine(fromPath, "HangarBay.exe"),
+                FileName = Path.Combine(fromPath, "LaunchPad.exe"),
                 Arguments = $"--masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{path}/config.json\" " +
-                    $"-p \"{path}/payloads\"",
+                    $"-l \"{m_LaunchFolder}\"",
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Minimized,
                 WorkingDirectory = fromPath
             };
+            if (blockingCallMax != default)
+            {
+                startInfo.Arguments += $" --blockingCallMaxSec {(int)blockingCallMax.TotalSeconds}";
+            }
             m_Process = Process.Start(startInfo);
             Assert.That(m_Process, Is.Not.Null);
 
             m_HttpClient = new();
-            m_HttpClient.BaseAddress = new Uri("http://127.0.0.1:8100/api/v1/");
+            m_HttpClient.BaseAddress = new Uri("http://127.0.0.1:8200/api/v1/");
             Stopwatch startDeadline = Stopwatch.StartNew();
             while (startDeadline.Elapsed < k_ConnectionTimeout)
             {
                 Assert.That(m_Process!.HasExited, Is.False);
                 try
                 {
-                    var status = await m_HttpClient.GetFromJsonAsync<Status>("status");
+                    var status = await m_HttpClient.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
                     if (status != null)
                     {
                         break;
@@ -92,6 +96,26 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             return m_HttpClient!.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
         }
 
+        public async Task<Status?> GetStatus(ulong minStatusNumber)
+        {
+            Assert.That(m_HttpClient, Is.Not.Null);
+
+            // Convert lastChanged to a string using JsonSerializer to be sure we get the same value
+            var response = await m_HttpClient!.GetAsync($"status?minStatusNumber={minStatusNumber}");
+            response.EnsureSuccessStatusCode();
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                return null;
+            }
+            return JsonSerializer.Deserialize<Status>(await response.Content.ReadAsStreamAsync(), Json.SerializerOptions);
+        }
+
+        public Task<Health?> GetHealth()
+        {
+            Assert.That(m_HttpClient, Is.Not.Null);
+            return m_HttpClient!.GetFromJsonAsync<Health>("health", Json.SerializerOptions);
+        }
+
         public Task<HttpResponseMessage> PostCommand<T>(T command) where T: Command
         {
             Assert.That(m_HttpClient, Is.Not.Null);
@@ -114,9 +138,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
+        public string LaunchFolder => m_LaunchFolder;
+
         static readonly TimeSpan k_ConnectionTimeout = TimeSpan.FromSeconds(30);
 
         Process? m_Process;
         HttpClient? m_HttpClient;
+        string m_LaunchFolder = "";
     }
 }
