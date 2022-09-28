@@ -15,7 +15,8 @@ namespace Unity.ClusterDisplay
         Time = 1,
         Input = 2,
         Random = 3,
-        CustomEvents = 4
+        CustomEvents = 4,
+        InputSystem = 5
     }
 
     static class NetworkingHelpers

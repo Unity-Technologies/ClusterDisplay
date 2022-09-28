@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "GUID:e0cd26848372d4e5c891c569017e11f1",
-        "GUID:95419eedfe2e6c74dab3e84fcd6aa25c"
+        "GUID:95419eedfe2e6c74dab3e84fcd6aa25c",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [
         "Editor",
@@ -20,6 +21,11 @@
             "name": "com.unity.live-capture",
             "expression": "2.0",
             "define": "LIVE_CAPTURE_2_0_OR_NEWER"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.3",
+            "define": "INPUT_SYSTEM_1_3_OR_NEWER"
         }
     ],
     "noEngineReferences": false
