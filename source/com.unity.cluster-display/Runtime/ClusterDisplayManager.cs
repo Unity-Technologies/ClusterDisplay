@@ -1,4 +1,4 @@
-using Unity.ClusterDisplay.Utils;
+﻿using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay

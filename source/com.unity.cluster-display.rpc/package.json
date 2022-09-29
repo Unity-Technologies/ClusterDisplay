@@ -1,0 +1,16 @@
+{
+  "name": "com.unity.cluster-display.rpc",
+  "displayName": "Cluster Display RPC",
+  "version": "0.0.4-preview",
+  "unity": "2020.1",
+  "keywords": [
+    "cluster rendering",
+    "distributed rendering",
+    "cluster"
+  ],
+  "description": "Allows making builds that run on multiple machines and simulate the same scene in-sync with each other. The result is displayed on a cluster of displays. This feature enables you to deploy your Unity environment to complex multi-screen environments like a video wall, a CAVE, a Dome or any custom layout of multiple displays.",
+  "dependencies": {
+    "com.unity.cluster-display" : "0.0.4-preview",
+    "com.unity.nuget.mono-cecil": "1.10.1"
+  }
+}
