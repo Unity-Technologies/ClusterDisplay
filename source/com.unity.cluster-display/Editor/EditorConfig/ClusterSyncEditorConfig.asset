@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: ClusterSyncEditorConfig
   m_EditorClassIdentifier: 
   m_EditorInstanceIsEmitter: 0
-  m_EditorInstanceEmitterCmdLine: -emitterNode 0 1 224.0.1.0:25691,25692
-  m_EditorInstanceRepeaterCmdLine: -node 1 224.0.1.0:25692,25691
+  m_EditorInstanceEmitterCmdLine: -emitterNode 0 1 224.0.1.0:25690
+  m_EditorInstanceRepeaterCmdLine: -node 1 224.0.1.0:25690
   m_IgnoreEditorCmdLine: 0
   m_UseTargetFramerate: 0
   m_TargetFrameRate: 0

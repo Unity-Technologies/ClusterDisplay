@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay
 
         [CommandLineParser.IsEmitterField]
         [SerializeField] public bool m_EditorInstanceIsEmitter;
-        
+
         [CommandLineParser.EmitterCommandLineInjectionField]
         [SerializeField] public string m_EditorInstanceEmitterCmdLine;
 
@@ -37,8 +37,8 @@ namespace Unity.ClusterDisplay
         public ClusterSyncEditorConfig (bool editorInstanceIsEmitter)
         {
             m_EditorInstanceIsEmitter = editorInstanceIsEmitter;
-            m_EditorInstanceEmitterCmdLine = "-emitterNode 0 1 224.0.1.0:25691,25692";
-            m_EditorInstanceRepeaterCmdLine = "-node 1 224.0.1.0:25692,25691";
+            m_EditorInstanceEmitterCmdLine = "-emitterNode 0 1 224.0.1.0:25690";
+            m_EditorInstanceRepeaterCmdLine = "-node 1 224.0.1.0:25690";
 
             m_IgnoreEditorCmdLine = false;
             m_UseTargetFramerate = false;
