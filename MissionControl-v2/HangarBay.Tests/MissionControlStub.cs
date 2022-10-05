@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
     /// </summary>
     class MissionControlStub
     {
-        public static string HttpListenerEndpoint => "http://localhost:8000/";
+        public static string HttpListenerEndpoint => k_HttpListenerEndpoint;
 
         public MissionControlStub()
         {

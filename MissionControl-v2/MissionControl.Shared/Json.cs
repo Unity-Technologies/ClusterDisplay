@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay
+namespace Unity.ClusterDisplay.MissionControl
 {
     public static class Json
     {

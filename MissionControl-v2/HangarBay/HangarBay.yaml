@@ -98,7 +98,7 @@ components:
           description: End points to which to listen for REST commands (most likely coming from LaunchPads or MissionControl).
           items:
             type: string
-            example: 123.45.67.89:8100
+            example: ["http://0.0.0.0:8100"]
         storageFolders:
           type: array
           description: List of folders of where we store files (used as a cache to avoid constantly fetching from MissionControl).

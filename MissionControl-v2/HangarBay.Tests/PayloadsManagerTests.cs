@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
+// ReSharper disable StructuredMessageTemplateProblem
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
@@ -30,13 +31,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             m_LoggerMock.VerifyNoOtherCalls();
         }
-        
+
         [Test]
         public async Task FillSaveAndLoad()
         {
             Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock!.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -90,7 +91,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(resultingPayload2, Is.SameAs(payload2));
             Assert.That(fetchCallCount, Is.EqualTo(2));
             m_FileBlobCacheMock.Reset();
-            
+
             // Reload
             m_FileBlobCacheMock.Setup(c => c.IncreaseUsageCount(repeatedFileId, 42, 84));
             m_FileBlobCacheMock.Setup(c => c.IncreaseUsageCount(uniqueFile1,    28, 56));
@@ -112,16 +113,16 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchCallCount, Is.EqualTo(2)); // Should not fetch again, everything was reloaded
         }
 
-        public class FakeException: Exception
+        class FakeException: Exception
         {
         }
-        
+
         [Test]
         public async Task LoadErrors()
         {
             Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock!.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -190,7 +191,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             m_FileBlobCacheMock.Reset();
             File.Delete(badPayloadPath);
         }
-        
+
         class TestException: Exception
         {
         }
@@ -200,7 +201,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock!.Object);
 
             var somePayloadId = Guid.NewGuid();
 
@@ -243,13 +244,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(fetchedPayload, Is.SameAs(payload));
             m_FileBlobCacheMock.Reset();
         }
-        
+
         [Test]
         public async Task LongFetch()
         {
             Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock!.Object);
 
             Guid repeatedFileId = Guid.NewGuid();
             Guid uniqueFile1 = Guid.NewGuid();
@@ -295,13 +296,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             Assert.That(resultFromGet2, Is.SameAs(payload));
             m_FileBlobCacheMock.Reset();
         }
-        
+
         [Test]
         public async Task LongFailingFetch()
         {
             Assert.That(m_FileBlobCacheMock, Is.Not.Null);
             var storageFolder = GetNewStorageFolder();
-            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock.Object);
+            var payloadsManager = new PayloadsManager(m_LoggerMock.Object, storageFolder, m_FileBlobCacheMock!.Object);
 
             TaskCompletionSource fetchTcs = new();
             int fetchCount = 0;

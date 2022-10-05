@@ -1,17 +1,15 @@
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
 {
     public static class ConfigServiceExtension
     {
         public static void AddConfigService(this IServiceCollection services)
         {
             services.AddSingleton<ConfigService>();
-            // We need this Lazy access to the service to solve circular dependencies between ConfigService and
-            // StatusService.
-            services.AddTransient(provider => new Lazy<ConfigService>(provider.GetServiceGuaranteed<ConfigService>));
         }
     }
 
@@ -21,7 +19,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
     public class ConfigService
     {
         public ConfigService(IConfiguration configuration, ILogger<ConfigService> logger,
-                             Lazy<StatusService> statusService)
+                             StatusService statusService)
         {
             m_Logger = logger;
             m_StatusService = statusService;
@@ -147,7 +145,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 {
                     m_Logger.LogError(e, "Exception informing about an accepted configuration change, sate of some " +
                                       "services might be out of sync and a restart of the HangarBay should be done");
-                    m_StatusService.Value.SignalPendingRestart();
+                    m_StatusService.SignalPendingRestart();
                 }
 
                 // And save and return
@@ -249,12 +247,19 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
 
             if (!configLoaded)
             {
+                m_Config = new();
                 m_Config.ControlEndPoints = new[] { k_DefaultEndpoint };
-                var folderConfig = new StorageFolderConfig();
-                folderConfig.Path = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Unity", "Mission Control Cache");
-                folderConfig.MaximumSize = new DriveInfo(folderConfig.Path).AvailableFreeSpace / 2;
-                m_Config.StorageFolders = new[] { folderConfig };
+                // Try to guess the default "cluster network".  Most likely not the right one and it will have to be
+                // changed, but let's try one...
+                var clusterNetwork = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(n => n.OperationalStatus == OperationalStatus.Up && !n.Name.ToLower().Contains("vpn") &&
+                        n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    .MaxBy(n => n.Speed);
+                if (clusterNetwork != null)
+                {
+                    m_Config.ClusterNetworkNic = clusterNetwork.Name;
+                }
+
                 Directory.CreateDirectory(Path.GetDirectoryName(m_PersistPath)!);
                 Save();
             }
@@ -304,7 +309,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         {
             if (!m_Config.ControlEndPoints.SequenceEqual(m_InitialEndPoints))
             {
-                m_StatusService.Value.SignalPendingRestart();
+                m_StatusService.SignalPendingRestart();
             }
             return Task.CompletedTask;
         }
@@ -312,15 +317,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Default endpoint
         /// </summary>
-        const string k_DefaultEndpoint = "http://0.0.0.0:8100";
+        const string k_DefaultEndpoint = "http://0.0.0.0:8200";
 
         readonly ILogger<ConfigService> m_Logger;
-        readonly Lazy<StatusService> m_StatusService;
+        readonly StatusService m_StatusService;
 
         /// <summary>
         /// Where the configuration was from and where to save it.
         /// </summary>
-        readonly string m_PersistPath;
+        string m_PersistPath;
 
         /// <summary>
         /// <see cref="Config.ControlEndPoints"/> at startup.
@@ -330,7 +335,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Used to synchronize access to the member variables below.
         /// </summary>
-        readonly object m_Lock = new object();
+        readonly object m_Lock = new();
 
         /// <summary>
         /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurrent

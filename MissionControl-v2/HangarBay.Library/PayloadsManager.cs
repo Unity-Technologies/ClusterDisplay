@@ -7,7 +7,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
 {
     /// <summary>
     /// Class responsible for managing a list of <see cref="Payload"/> and managing usage count of associated
-    /// <see cref="IFileBlobCache"/> FileBlobs.
+    /// <see cref="FileBlobCache"/> FileBlobs.
     /// </summary>
     public class PayloadsManager
     {
