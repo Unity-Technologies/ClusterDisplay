@@ -22,7 +22,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Controllers
         [HttpPut]
         public async Task<IActionResult> Put(Config config)
         {
-            var ret = await m_Config.SetCurrent(config);
+            var ret = await m_Config.SetCurrentAsync(config);
             if (ret.Any())
             {
                 return BadRequest(ret);

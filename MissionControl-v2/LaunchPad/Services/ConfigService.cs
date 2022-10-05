@@ -52,7 +52,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             {
                 if (File.Exists(configPath))
                 {
-                    using var loadStream = File.Open(configPath, FileMode.Open);
+                    using var loadStream = File.OpenRead(configPath);
                     var config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     return config.ControlEndPoints.ToArray();
                 }
@@ -84,7 +84,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// </summary>
         /// <param name="newConfig">New configuration</param>
         /// <returns>List of reasons why it was rejected (or an empty list if changes was done with success).</returns>
-        public async Task<IEnumerable<string>> SetCurrent(Config newConfig)
+        public async Task<IEnumerable<string>> SetCurrentAsync(Config newConfig)
         {
             // Wait for any other setting of the config currently going on to be completed before continuing.
             TaskCompletionSource? setCurrentCompleteTcs = null;
@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 {
                     if (m_ExecutingSetCurrent == null)
                     {
-                        setCurrentCompleteTcs = new();
+                        setCurrentCompleteTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
                         m_ExecutingSetCurrent = setCurrentCompleteTcs.Task;
                     }
                     else
@@ -227,7 +227,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             {
                 if (File.Exists(m_PersistPath))
                 {
-                    using (var loadStream = File.Open(m_PersistPath, FileMode.Open))
+                    using (var loadStream = File.OpenRead(m_PersistPath))
                     {
                         m_Config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     }
@@ -248,6 +248,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             if (!configLoaded)
             {
                 m_Config = new();
+                m_Config.Identifier = Guid.NewGuid();
                 m_Config.ControlEndPoints = new[] { k_DefaultEndpoint };
                 // Try to guess the default "cluster network".  Most likely not the right one and it will have to be
                 // changed, but let's try one...
@@ -287,8 +288,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// <param name="newConfig">Information about the new configuration</param>
         /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some
         /// parts are not really owned by any actual services (like control endpoints).</remarks>
-        static void ValidateNewConfig(ConfigChangeSurvey newConfig)
+        void ValidateNewConfig(ConfigChangeSurvey newConfig)
         {
+            if (newConfig.Proposed.Identifier != m_Config.Identifier)
+            {
+                newConfig.Reject("LaunchPad identifier cannot be changed.");
+                return;
+            }
+
             foreach (var endpoint in newConfig.Proposed.ControlEndPoints)
             {
                 var validationMessage = EndPointHelpers.ValidateLocal(endpoint);
@@ -338,7 +345,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         readonly object m_Lock = new();
 
         /// <summary>
-        /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurrent
+        /// Task representing the currently executing <see cref="SetCurrentAsync(Config)"/>, used to serialize concurrent
         /// calls to the method.
         /// </summary>
         Task? m_ExecutingSetCurrent;

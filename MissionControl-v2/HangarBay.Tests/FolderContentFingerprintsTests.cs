@@ -1,12 +1,19 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
+using Unity.ClusterDisplay.MissionControl.MissionControl;
 // ReSharper disable StructuredMessageTemplateProblem
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
     public class FolderContentFingerprintsTests
     {
+        [SetUp]
+        public void Setup()
+        {
+            m_LoggerMock.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -62,7 +69,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var payload = CreateFiles(folder, k_FolderLayout1);
             var timestamps = FolderContentFingerprints.BuildFrom(folder, payload);
 
-            ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
+            payload = ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder2/File1", "Folder2/FolderA/FileA1", "Folder2/FolderB/FileB1" });
             timestamps.PrepareForPayload(folder, payload, m_LoggerMock.Object);
 
@@ -139,7 +146,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             timestamps.SaveTo(fingerprintsFile);
             timestamps = FolderContentFingerprints.LoadFrom(fingerprintsFile);
 
-            ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
+            payload = ChangeExpectedBlobIds(payload, new[] { "File1", "Folder1/File1", "Folder1/FolderA/FileA1",
                 "Folder1/FolderB/FileB1", "Folder2/File1", "Folder2/FolderA/FileA1", "Folder2/FolderB/FileB1" });
             timestamps.PrepareForPayload(folder, payload, m_LoggerMock.Object);
 
@@ -176,9 +183,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var filePath = Path.Combine(folder, "Folder2/FolderA/FileA1");
             using var fileInUse = File.Open(filePath, FileMode.Open);
 
-            var futurePayload = new Payload();
             TouchFiles(folder, new[] { "Folder2/FolderA/FileA1" });
-            futurePayload.Files = folderPayload.Files.Where(pf => pf.Path == "Folder2/FolderA/FileA1");
+            var futurePayload = new Payload(folderPayload.Files.Where(pf => pf.Path == "Folder2/FolderA/FileA1"));
 
             Assert.That(() => timestamps.PrepareForPayload(folder, futurePayload, m_LoggerMock.Object),
                         Throws.TypeOf<IOException>());
@@ -225,9 +231,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     Directory.CreateDirectory(directories);
                 }
                 File.WriteAllText(fullPath, "Some content");
-                payloadFiles.Add(new PayloadFile() { Path = filePath, FileBlob = Guid.NewGuid() });
+                payloadFiles.Add(new PayloadFile(filePath, Guid.NewGuid(), 0, 0));
             }
-            return new Payload() { Files = payloadFiles };
+            return new Payload(payloadFiles);
         }
 
         static bool TestFolderFiles(string folder, IEnumerable<string> filePaths)
@@ -260,14 +266,22 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
-        static void ChangeExpectedBlobIds(Payload payload, IEnumerable<string> filePaths)
+        static Payload ChangeExpectedBlobIds(Payload payload, IEnumerable<string> filePaths)
         {
-            foreach (var currentFile in filePaths)
+            List<PayloadFile> newFiles = new();
+            foreach (var currentPayload in payload.Files)
             {
-                var payloadFile = payload.Files.FirstOrDefault(pf => pf.Path == currentFile);
-                Assert.That(payloadFile, Is.Not.Null);
-                payloadFile!.FileBlob = Guid.NewGuid();
+                if (filePaths.Contains(currentPayload.Path))
+                {
+                    newFiles.Add(new(currentPayload.Path, Guid.NewGuid(), currentPayload.CompressedSize,
+                        currentPayload.Size));
+                }
+                else
+                {
+                    newFiles.Add(currentPayload);
+                }
             }
+            return new Payload(newFiles);
         }
 
         static Payload RemoveFilesFromPayload(Payload payload, IEnumerable<string> filePaths)
@@ -280,7 +294,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     newList.Add(file);
                 }
             }
-            return new Payload() { Files = newList };
+            return new Payload(newList);
         }
 
         List<string> m_StorageFolders = new();

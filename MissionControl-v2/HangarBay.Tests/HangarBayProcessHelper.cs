@@ -38,7 +38,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 Assert.That(m_Process!.HasExited, Is.False);
                 try
                 {
-                    var status = await m_HttpClient.GetFromJsonAsync<Status>("status");
+                    var status = await m_HttpClient.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
                     if (status != null)
                     {
                         break;

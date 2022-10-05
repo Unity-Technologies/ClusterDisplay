@@ -1,14 +1,34 @@
-namespace Unity.ClusterDisplay.MissionControl.HangarBay
+using System.Text.Json.Serialization;
+
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     /// <summary>
     /// Information about a set of files to be use to prepare a LaunchPad.
     /// </summary>
-    public class Payload: IEquatable<Payload>
+    public class Payload : IEquatable<Payload>
     {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public Payload()
+        {
+            Files = Enumerable.Empty<PayloadFile>();
+        }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="files">List of files composing the Payload</param>
+        [JsonConstructor]
+        public Payload(IEnumerable<PayloadFile> files)
+        {
+            Files = files;
+        }
+
         /// <summary>
         /// List of files composing the Payload
         /// </summary>
-        public IEnumerable<PayloadFile> Files { get; set; } = Enumerable.Empty<PayloadFile>();
+        public IEnumerable<PayloadFile> Files { get; }
 
         /// <summary>
         /// Merge the content (list of files) of the given <see cref="Payload"/>s into a new one.  Files present in 
@@ -44,9 +64,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
                 }
             }
 
-            var ret = new Payload();
-            ret.Files = files.Values;
-            return ret;
+            return new Payload(files.Values);
         }
 
         public bool Equals(Payload? other)

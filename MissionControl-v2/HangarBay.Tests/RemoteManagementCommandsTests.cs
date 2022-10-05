@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl =
-                new Uri(new Uri(MissionControlStub.HttpListenerEndpoint), newVersionZipFilename).ToString();
+                new Uri(MissionControlStub.HttpListenerEndpoint, newVersionZipFilename).ToString();
             var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
             Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 

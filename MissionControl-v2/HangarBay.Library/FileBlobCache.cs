@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
     /// <summary>
     /// Main class responsible for managing the files in the different storage folders.
     /// </summary>
+    // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global -> Used by unit test mocks
     public class FileBlobCache
     {
         /// <summary>
@@ -197,7 +198,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 if (File.Exists(storageFolderMetadataJson))
                 {
                     StorageFolderInfo? deserialized;
-                    using (var loadStream = File.Open(storageFolderMetadataJson, FileMode.Open))
+                    using (var loadStream = File.OpenRead(storageFolderMetadataJson))
                     {
                         deserialized = JsonSerializer.Deserialize<StorageFolderInfo>(loadStream);
                     }
@@ -401,7 +402,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             {
                 try
                 {
-                    using FileStream serializeStream = File.Create(disconnectedStorageFolder.GetMetadataFilePath());
+                    await using FileStream serializeStream = File.Create(disconnectedStorageFolder.GetMetadataFilePath());
                     await JsonSerializer.SerializeAsync(serializeStream, disconnectedStorageFolder);
                 }
                 catch (Exception e)

@@ -17,6 +17,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         public Config() { }
 
         /// <summary>
+        /// Uniquely identify this LaunchPad.
+        /// </summary>
+        /// <remarks>This identifier is created when first started and shall never change.</remarks>
+        public Guid Identifier { get; set; } = Guid.Empty;
+
+        /// <summary>
         /// End points to which to listen for REST commands (most likely coming from MissionControl).
         /// </summary>
         public IEnumerable<string> ControlEndPoints { get; set; } = Enumerable.Empty<string>();
@@ -40,7 +46,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
                 return false;
             }
 
-            return ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
+            return Identifier == other.Identifier &&
+                ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 ClusterNetworkNic == other.ClusterNetworkNic && HangarBayEndPoint == other.HangarBayEndPoint;
         }
     }

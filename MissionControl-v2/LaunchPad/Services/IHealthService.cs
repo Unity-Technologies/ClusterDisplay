@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
     /// </summary>
     class DummyHealthService: IHealthService
     {
-        public DummyHealthService(ILogger<HealthServiceWindows> logger)
+        public DummyHealthService(ILogger<DummyHealthService> logger)
         {
             m_Logger = logger;
         }
@@ -50,6 +50,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         }
 
         readonly ILogger m_Logger;
-        bool m_GenerateErrorOnce = false;
+        bool m_GenerateErrorOnce;
     }
 }

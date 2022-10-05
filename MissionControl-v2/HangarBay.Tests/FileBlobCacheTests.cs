@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -9,6 +10,12 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
     public class FileBlobCacheTests
     {
+        [SetUp]
+        public void Setup()
+        {
+            m_LoggerMock.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -514,6 +521,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 aliasPath = folderConfig.Path.ToLower();
+                Assert.That(aliasPath, Is.Not.EqualTo(folderConfig.Path));
             }
             else
             {
@@ -1519,7 +1527,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             // Lock a file so that it cannot be deleted
             Guid fileBlob4 = Guid.NewGuid();
             // ReSharper disable once UseAwaitUsing
-            using (_ = File.Open(fetchedFiles[1], FileMode.Open))
+            using (_ = File.OpenRead(fetchedFiles[1]))
             {
                 // Ask for some content that will trigger cache eviction -> delete -> causing a zombie from the locked file.
                 fileBlobCache.IncreaseUsageCount(fileBlob4, 400, 10000);

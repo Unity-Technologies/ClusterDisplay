@@ -14,8 +14,9 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public static void AddToSerializerOptions(JsonSerializerOptions options)
         {
-            options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+            options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         }
 
         static readonly JsonSerializerOptions k_SerializerOptions = new();

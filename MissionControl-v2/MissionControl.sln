@@ -14,11 +14,22 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HangarBay.Tests", "HangarBa
 		{CDB43A32-FA48-4047-83A8-BFBCF23B94F1} = {CDB43A32-FA48-4047-83A8-BFBCF23B94F1}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchPad", "LaunchPad\LaunchPad.csproj", "{D66C19B5-B219-4D75-A217-223761C3519B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LaunchPad", "LaunchPad\LaunchPad.csproj", "{D66C19B5-B219-4D75-A217-223761C3519B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LaunchPad.Tests", "LaunchPad.Tests\LaunchPad.Tests.csproj", "{8BFFC958-F71E-489C-B99D-E89C76E5C25B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LaunchPad.Tests", "LaunchPad.Tests\LaunchPad.Tests.csproj", "{8BFFC958-F71E-489C-B99D-E89C76E5C25B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{D66C19B5-B219-4D75-A217-223761C3519B} = {D66C19B5-B219-4D75-A217-223761C3519B}
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.Shared.Tests", "MissionControl.Shared.Tests\MissionControl.Shared.Tests.csproj", "{E6C727A3-684A-4BD3-9BB1-5A806AD234FB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.Library", "MissionControl.Library\MissionControl.Library.csproj", "{56F74C93-405F-48FE-8CDF-172925B1C044}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl", "MissionControl\MissionControl.csproj", "{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionControl.Tests", "MissionControl.Tests\MissionControl.Tests.csproj", "{E8BD5CB8-83F3-43D2-804E-F261E894D901}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4} = {B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}
 	EndProjectSection
 EndProject
 Global
@@ -51,6 +62,22 @@ Global
 		{8BFFC958-F71E-489C-B99D-E89C76E5C25B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8BFFC958-F71E-489C-B99D-E89C76E5C25B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8BFFC958-F71E-489C-B99D-E89C76E5C25B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6C727A3-684A-4BD3-9BB1-5A806AD234FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6C727A3-684A-4BD3-9BB1-5A806AD234FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6C727A3-684A-4BD3-9BB1-5A806AD234FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6C727A3-684A-4BD3-9BB1-5A806AD234FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56F74C93-405F-48FE-8CDF-172925B1C044}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56F74C93-405F-48FE-8CDF-172925B1C044}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56F74C93-405F-48FE-8CDF-172925B1C044}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56F74C93-405F-48FE-8CDF-172925B1C044}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8BD5CB8-83F3-43D2-804E-F261E894D901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8BD5CB8-83F3-43D2-804E-F261E894D901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8BD5CB8-83F3-43D2-804E-F261E894D901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8BD5CB8-83F3-43D2-804E-F261E894D901}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

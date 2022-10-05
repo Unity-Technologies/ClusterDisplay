@@ -24,7 +24,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// <summary>
         /// URI of where to download payloads if they are not already available in the HangarBay.
         /// </summary>
-        public string PayloadSource { get; set; } = "";
+        public Uri? PayloadSource { get; set; }
+
+        /// <summary>
+        /// Some data (opaque to all parts of MissionControl, only to be used by the launch and pre-launch executables)
+        /// to be passed using the LAUNCHABLE_DATA environment variable both during launch and pre-launch.  This is the
+        /// same hard-coded data for all nodes of the cluster, useful for configuring some options decided at the moment
+        /// of producing the launch catalog.
+        /// </summary>
+        public dynamic? LaunchableData { get; set; }
 
         /// <summary>
         /// Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during
@@ -53,9 +61,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
                 return false;
             }
 
-            return PayloadIds.SequenceEqual(other.PayloadIds) && PayloadSource == other.PayloadSource &&
+            if ((PayloadSource == null) != (other.PayloadSource == null))
+            {
+                return false;
+            }
+
+            return PayloadIds.SequenceEqual(other.PayloadIds) &&
+                (PayloadSource == null || PayloadSource.Equals(other.PayloadSource)) &&
+                SerializeDynamic(LaunchableData) == SerializeDynamic(other.LaunchableData) &&
                 SerializeDynamic(LaunchData) == SerializeDynamic(other.LaunchData) &&
-                PreLaunchPath == other.PreLaunchPath && LaunchPath == other.LaunchPath;
+                PreLaunchPath == other.PreLaunchPath &&
+                LaunchPath == other.LaunchPath;
         }
 
         static string SerializeDynamic(dynamic toSerialize)

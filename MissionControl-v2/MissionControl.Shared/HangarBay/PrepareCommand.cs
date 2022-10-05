@@ -21,7 +21,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// <summary>
         /// URI of where to download payloads if they are not already available in the cache.
         /// </summary>
-        public string PayloadSource { get; set; } = "";
+        public Uri? PayloadSource { get; set; }
 
         /// <summary>
         /// Path to a folder to fill with the payloads (will remove unnecessary files and copy the ones from payloadIds).
@@ -35,7 +35,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
                 return false;
             }
 
-            return PayloadIds.SequenceEqual(other.PayloadIds) && PayloadSource == other.PayloadSource &&
+            if ((PayloadSource == null) != (other.PayloadSource == null))
+            {
+                return false;
+            }
+
+            return PayloadIds.SequenceEqual(other.PayloadIds) &&
+                (PayloadSource == null || PayloadSource.Equals(other.PayloadSource)) &&
                 Path == other.Path;
         }
     }

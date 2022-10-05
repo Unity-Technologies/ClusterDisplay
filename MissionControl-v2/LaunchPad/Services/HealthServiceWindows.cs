@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 result = PdhApi.PdhAddCounter(m_CpuQuery, k_CpuCounterName, IntPtr.Zero, out m_CpuCounter);
                 if (result == PdhApi.ERROR_SUCCESS)
                 {
-                    Task.Run(UpdateCpuUsage);
+                    Task.Run(UpdateCpuUsageAsync);
                 }
                 else
                 {
@@ -51,7 +51,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             if (MemoryStatusApi.GlobalMemoryStatusEx(statEx))
             {
                 ret.MemoryUsage = (long)(statEx.ullTotalPhys - statEx.ullAvailPhys);
-                ret.MemoryAvailable = (long)statEx.ullTotalPhys;
+                ret.MemoryInstalled = (long)statEx.ullTotalPhys;
             }
 
             return ret;
@@ -95,13 +95,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             /// <summary>
             /// A safe wrapper around a PDH query handle
             /// </summary>
+            // ReSharper disable once ClassNeverInstantiated.Local -> Instantiated by a native call
             public class QueryHandle : SafeHandleZeroOrMinusOneIsInvalid
             {
                 public QueryHandle() : base(true) {}
 
                 protected override bool ReleaseHandle()
                 {
-                    return PdhApi.PdhCloseQuery(handle) == 0;
+                    return PdhCloseQuery(handle) == 0;
                 }
             }
 
@@ -273,7 +274,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             }
         }
 
-        async Task UpdateCpuUsage()
+        async Task UpdateCpuUsageAsync()
         {
             while (!m_ApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {

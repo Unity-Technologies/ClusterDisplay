@@ -25,21 +25,21 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             m_ConfigService = configService;
             m_Cache = new(logger);
 
-            m_Cache.FetchFileCallback += FetchFileCallback;
+            m_Cache.FetchFileCallback += FetchFileCallbackAsync;
             m_Cache.CopyFileCallback += CopyFileCallback;
 
             applicationLifetime.ApplicationStopping.Register(() => {
                 m_Cache.PersistStorageFolderStates();
             });
 
-            _ = PeriodicPersistStorageFoldersState(applicationLifetime.ApplicationStopping);
-
             // Load current list of storage folders and save any changes done while loading
-            UpdateCacheConfiguration().Wait();
+            UpdateCacheConfigurationAsync().Wait();
             m_Cache.PersistStorageFolderStates();
 
             m_ConfigService.ValidateNew += ValidateNewConfig;
-            m_ConfigService.Changed += ConfigChanged;
+            m_ConfigService.Changed += ConfigChangedAsync;
+
+            _ = PeriodicPersistStorageFoldersStateAsync(applicationLifetime.ApplicationStopping);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// </exception>
         /// <exception cref="InvalidOperationException">If no free space can be found to store the file in cache.
         /// </exception>
-        public Task CopyFileTo(Guid fileBlobId, string toPath, string blobSource)
+        public Task CopyFileToAsync(Guid fileBlobId, string toPath, Uri blobSource)
         {
             return m_Cache.CopyFileToAsync(fileBlobId, toPath, blobSource);
         }
@@ -114,15 +114,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Callback responsible to update our configuration when the configuration changes.
         /// </summary>
-        Task ConfigChanged()
+        Task ConfigChangedAsync()
         {
-            return UpdateCacheConfiguration();
+            return UpdateCacheConfigurationAsync();
         }
 
         /// <summary>
         /// Update <see cref="m_Cache"/> configurations based on <see cref="ConfigService"/>'s current state.
         /// </summary>
-        async Task UpdateCacheConfiguration()
+        async Task UpdateCacheConfigurationAsync()
         {
             var currentStorageFolders = m_Cache.GetStorageFolderStatus();
             var newConfig = m_ConfigService.Current;
@@ -132,7 +132,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             // potential conflicts between files that would be present in folders to be removed and new folders.
             foreach (var oldFolder in currentStorageFolders)
             {
-                var newFolderConfig = newConfig.StorageFolders.Where(sf => sf.Path == oldFolder.Path).FirstOrDefault();
+                var newFolderConfig = newConfig.StorageFolders.FirstOrDefault(sf => sf.Path == oldFolder.Path);
                 if (newFolderConfig != null)
                 {
                     m_Cache.UpdateStorageFolder(newFolderConfig);
@@ -146,7 +146,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             // Now let's add the new folders
             foreach (var newFolder in newConfig.StorageFolders)
             {
-                var newFolderConfig = currentStorageFolders.Where(sf => sf.Path == newFolder.Path).FirstOrDefault();
+                var newFolderConfig = currentStorageFolders.FirstOrDefault(sf => sf.Path == newFolder.Path);
                 if (newFolderConfig == null)
                 {
                     m_Cache.AddStorageFolder(newFolder);
@@ -162,17 +162,18 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <param name="cookie">Cookie received by <see cref="FileBlobCache.CopyFileToAsync"/> -> URI from where to
         /// download the file blob.</param>
         /// <returns><see cref="Task"/> that is to be completed when fetch is completed.</returns>
-        async Task FetchFileCallback(Guid fileBlob, string fetchPath, object? cookie)
+        async Task FetchFileCallbackAsync(Guid fileBlob, string fetchPath, object? cookie)
         {
             Debug.Assert(cookie != null); // CopyFileTo always passes a cookie
-            string blobSource = (string)cookie;
+            var blobSource = (Uri)cookie;
 
-            var response = await m_HttpClient.GetAsync(new Uri(new Uri(blobSource), $"api/v1/fileBlobs/{fileBlob}"));
+            // Remark: We use HttpCompletionOption.ResponseHeadersRead so that we do not double buffer the complete file
+            // (which could be multiple gigabytes) in memory.
+            using var response = await m_HttpClient.GetAsync(
+                new Uri(blobSource, $"api/v1/fileBlobs/{fileBlob}"), HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
-            using (var fileStream = new FileStream(fetchPath, FileMode.CreateNew))
-            {
-                await response.Content.CopyToAsync(fileStream);
-            }
+            await using var fileStream = new FileStream(fetchPath, FileMode.CreateNew);
+            await response.Content.CopyToAsync(fileStream);
         }
 
         /// <summary>
@@ -180,8 +181,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// </summary>
         /// <param name="fromPath">Path to the file to copy.</param>
         /// <param name="toPath">Path to the destination.</param>
+        /// <param name="cookie">Cookie received by <see cref="FileBlobCache.CopyFileToAsync"/> (ot used by this
+        /// method).</param>
         /// <returns><see cref="Task"/> that is to be completed when copy is finished.</returns>
-        Task CopyFileCallback(string fromPath, string toPath, object? _)
+        static Task CopyFileCallback(string fromPath, string toPath, object? cookie)
         {
             return Decompressor.Do(fromPath, toPath);
         }
@@ -202,10 +205,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 return Task.Run(async () => {
                     Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
-                    using (var decompressor = new Decompressor(fromPath, toPath))
-                    {
-                        await decompressor.m_Decompressor.CopyToAsync(decompressor.m_OutputFileStream);
-                    }
+                    using var decompressor = new Decompressor(fromPath, toPath);
+                    await decompressor.m_Decompressor.CopyToAsync(decompressor.m_OutputFileStream);
                 });
             }
 
@@ -213,6 +214,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 m_CompressedFileStream = File.OpenRead(fromPath);
                 m_OutputFileStream = File.OpenWrite(toPath);
+                m_OutputFileStream.SetLength(0);
                 m_Decompressor = new GZipStream(m_CompressedFileStream, CompressionMode.Decompress);
             }
 
@@ -232,7 +234,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// Task being executed periodically in the background to persist the current state of storage folders.
         /// </summary>
         /// <param name="cancellationToken">Indicate that we should stop saving.</param>
-        async Task PeriodicPersistStorageFoldersState(CancellationToken cancellationToken)
+        async Task PeriodicPersistStorageFoldersStateAsync(CancellationToken cancellationToken)
         {
             var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
             while (await timer.WaitForNextTickAsync(cancellationToken))
@@ -241,7 +243,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             }
         }
 
-        readonly ILogger<FileBlobCacheService> m_Logger;
+        // ReSharper disable once NotAccessedField.Local
+        readonly ILogger m_Logger;
         readonly HttpClient m_HttpClient;
         readonly ConfigService m_ConfigService;
 

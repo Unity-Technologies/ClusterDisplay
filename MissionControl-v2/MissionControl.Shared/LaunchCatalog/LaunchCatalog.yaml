@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: Launch Catalog
+  description: Defines the list of things that can be launched in this folder.  Does not really contain a server, paths, ...  as the main goal is more to describe the data model.
+  version: 1.0.0
+paths:
+  /dummy:
+    get:
+      summary: Placeholder
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Catalog'
+components:
+  schemas:
+    Payload:
+      type: object
+      description: Information about files to be used by a Launchable.
+      properties:
+        name:
+          type: string
+          description: Name of this Payload.
+        files:
+          type: array
+          description: List of files that form this Payload.
+          items:
+            $ref: '#/components/schemas/PayloadFile'
+      required:
+        - name
+        - files
+    PayloadFile:
+      type: object
+      description: Information about a file in a payload.
+      properties:
+        path:
+          type: string
+          description: Path of the file relative to the file containing this information.
+          example: SpaceshipDemo_Data/sharedassets3.assets
+        md5:
+          type: string
+          description: Md5 checksum of the file.
+          example: bc527343c7ffc103111f3a694b004e2f
+      required:
+        - path
+        - md5
+    RangeConstraint:
+      type: object
+      description: Give the range value for integer or float LaunchParameter.
+      properties:
+        type:
+          type: string
+          enum: [range]
+          default: range
+        min:
+          type: number
+          description: Minimum value allowed (no minimum value if attribute is omitted).
+        minExclusive:
+          type: boolean
+          description: Is the allowed range defined with > (true) or >= (false).
+          default: false
+        max:
+          type: number
+          description: Maximum value allowed (no maximum value if attribute is omitted).
+        maxExclusive:
+          type: boolean
+          description: Is the allowed range defined with < (true) or <= (false).
+          default: false
+    RegularExpressionConstraint:
+      type: object
+      description: Give the regular expression to validate a string LaunchParameter.
+      properties:
+        type:
+          type: string
+          enum: [regularExpression]
+          default: regularExpression
+        regularExpression:
+          type: string
+          description: Regular expression
+    ListConstraint:
+      type: object
+      description: Gives the list of allowed string values for a LaunchParameter.
+      properties:
+        type:
+          type: string
+          enum: [list]
+          default: list
+        choices:
+          type: array
+          description: List of allowed values
+          items:
+            type: string
+    LaunchParameter:
+      type: object
+      description: Parameter to customize launching behavior of a Launchable
+      properties:
+        name:
+          type: string
+          description: Name of the parameter as displayed to the user.
+          example: UDP cluster port
+        group:
+          type: string
+          description: Name of the group (when displaying the parameter to allow to see or set its value) this parameter is a part of.  Nested groups can be expressed by separating them with a slash (/).
+        id:
+          type: string
+          description: Identifier of the parameter that will be used to produce the information passed through the LAUNCH_DATA environment variable (must be unique among all LaunchParameters of a launchable).
+          example: udpClusterPort
+        description:
+          type: string
+          description: Detailed description of the parameter (that could for example be displayed in a tooltip).
+          example: UDP port number used for communication between emitter and repeater nodes.
+        type:
+          type: string
+          description: Type of the value of the LaunchParameter.
+          enum: [integer, float, string]
+        constraint: 
+          oneOf:
+            - $ref: '#/components/schemas/RangeConstraint'
+            - $ref: '#/components/schemas/RegularExpressionConstraint'
+            - $ref: '#/components/schemas/ListConstraint'
+        defaultValue:
+          oneOf:
+            - type: integer
+            - type: number
+            - type: string
+          description: Default value of the property (type of this property must match the type property).
+      required:
+        - name
+        - id
+        - type
+        - defaultValue
+    Launchable:
+      type: object
+      description: An entry of the catalog describing something that can be launched.
+      properties:
+        name:
+          type: string
+          description: Some descriptive name identifying the launchable to the user (must be unique within the catalog).
+          example: Render node
+        type:
+          type: string
+          description: Identifier of this type of Launchable (to find compatible nodes).
+        payloads:
+          type: array
+          description: Name of Payloads forming the list of all the files needed by this Launchable.
+          items:
+            type: string
+        data:
+          type: object
+          description: Some data (opaque to all parts of MissionControl, only to be used by the launch and pre-launch executables) to be passed using the LAUNCHABLE_DATA environment variable both during launch and pre-launch.  This is the same hard-coded data for all nodes of the cluster, useful for configuring some options decided at the moment of producing the file containing this information.  Because of OS limitations the amount of data in this object should be kept reasonable (current limitation seem to be around 8192 characters).
+        globalParameters:
+          type: array
+          description: Parameters allowing to customize execution (passed in the LAUNCH_DATA environment variable for both pre-launch and launch).  Value will be the same for every launchpad executing this Launchable.
+          items:
+            $ref: '#/components/schemas/LaunchParameter'
+        launchComplexParameters:
+          type: array
+          description: Parameters allowing to customize execution (passed in the LAUNCH_DATA environment variable for both pre-launch and launch).  Value will be the same for all launchpads of a launch complex.
+          items:
+            $ref: '#/components/schemas/LaunchParameter'
+        launchPadParameters:
+          type: array
+          description: Parameters allowing to customize execution (passed in the LAUNCH_DATA environment variable for both pre-launch and launch).  Value will can be different for each launchpad.
+          items:
+            $ref: '#/components/schemas/LaunchParameter'
+        preLaunchPath:
+          type: string
+          description: Path (relative to the location where all payloads files are stored) to an optional executable to execute before launch.  This executable is responsible to ensure that any external dependencies are installed and ready to use.
+        launchPath:
+          type: string
+          description: Path (relative to the location where all payloads files are stored) to the executable to launch to start the process of this Launchable.
+      required:
+        - type
+        - payloads
+        - launchPath
+    Catalog:
+      type: object
+      description: Root of the LaunchCatalog.json that describe something that can be launched with MissionControl.
+      properties:
+        payloads:
+          type: array
+          description: List of all the payloads shared by the different launchables.
+          items:
+            $ref: '#/components/schemas/Payload'
+        launchables:
+          type: array
+          description: List of all the things that can be launched on different launchpads of mission control.
+          items:
+            $ref: '#/components/schemas/Launchable'

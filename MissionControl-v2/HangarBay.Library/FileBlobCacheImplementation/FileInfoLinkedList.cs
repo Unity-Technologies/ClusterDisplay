@@ -81,8 +81,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         public LinkedListNode<CacheFileInfo>? Find(CacheFileInfo value) => m_Storage.Find(value);
         public LinkedListNode<CacheFileInfo>? FindLast(CacheFileInfo value) => m_Storage.FindLast(value);
         public LinkedList<CacheFileInfo>.Enumerator GetEnumerator() => m_Storage.GetEnumerator();
-        public virtual void GetObjectData(SerializationInfo info, StreamingContext context) => m_Storage.GetObjectData(info, context);
-        public virtual void OnDeserialization(object? sender) => m_Storage.OnDeserialization(sender);
+        public void GetObjectData(SerializationInfo info, StreamingContext context) => m_Storage.GetObjectData(info, context);
+        public void OnDeserialization(object? sender) => m_Storage.OnDeserialization(sender);
         public void Remove(LinkedListNode<CacheFileInfo> node)
         {
             m_Storage.Remove(node);

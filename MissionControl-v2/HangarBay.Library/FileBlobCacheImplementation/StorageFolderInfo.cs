@@ -47,6 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Size (in bytes) of compressed data of all the <see cref="CacheFileInfo"/> in our different lists.
         /// </summary>
         [JsonIgnore]
+        // ReSharper disable once MemberCanBePrivate.Global -> Could be private but conceptually makes sense to be public
         public long FileInfoSize => InCache.CompressedSize + Unreferenced.CompressedSize + InUse.CompressedSize;
 
         /// <summary>

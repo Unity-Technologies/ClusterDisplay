@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
         [SetUp]
         public void SetUp()
         {
-            // Prepare a zip file from the compiled launch pad exe.
+            // Prepare a zip file from the compiled launchpad exe.
             m_TestFolder = GetTestTempFolder();
             Directory.CreateDirectory(m_TestFolder);
             var launchPadOriginals = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
@@ -86,13 +86,75 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             await m_ProcessHelper.Start(m_TestFolder, m_RunFolder);
 
             var originalStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(originalStatus, Is.Not.Null);
-            Assert.That(originalStatus!.State, Is.EqualTo(State.Idle));
+            Assert.That(originalStatus.State, Is.EqualTo(State.Idle));
 
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
-            var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
-            Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Accepted);
+
+            await CheckUpgraded(originalStatus);
+        }
+
+        [Test]
+        public async Task UpgradeWhileOver()
+        {
+            await m_ProcessHelper.Start(m_TestFolder, m_RunFolder);
+
+            var originalStatus = await m_ProcessHelper.GetStatus();
+            Assert.That(originalStatus.State, Is.EqualTo(State.Idle));
+
+            Guid payloadId = Guid.NewGuid();
+            m_HangarBayStub.AddFile(payloadId, "launch.ps1",
+                "$pid | Out-File \"pid.txt\"    \n" +
+                "while ( $true )                \n" +
+                "{                              \n" +
+                "    Start-Sleep -Seconds 60    \n" +
+                "}");
+
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadIds = new [] { payloadId };
+            prepareCommand.LaunchPath = "launch.ps1";
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
+
+            // Launch the payload
+            LaunchCommand launchCommand = new();
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+
+            // Wait for the process to be launched and get its pid
+            string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
+            var waitLaunched = Stopwatch.StartNew();
+            Process? launchedProcess = null;
+            while (waitLaunched.Elapsed < TimeSpan.FromSeconds(15) && launchedProcess == null)
+            {
+                try
+                {
+                    var pidText = await File.ReadAllTextAsync(processIdFilename);
+                    launchedProcess = Process.GetProcessById(Convert.ToInt32(pidText));
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+            Assert.That(launchedProcess, Is.Not.Null);
+            Assert.That(launchedProcess!.HasExited, Is.False);
+
+            // Check the launchpad contains the expected files
+            var preparedFiles = Directory.GetFiles(m_ProcessHelper.LaunchFolder);
+            Assert.That(preparedFiles, Is.Not.Null);
+
+            // Kill that process
+            launchedProcess.Kill();
+            Assert.That(launchedProcess.HasExited, Is.True);
+
+            // Wait for the LaunchPad to detect the process was killed and change its state to over
+            await m_ProcessHelper.WaitForState(State.Over);
+
+            // Do the upgrade
+            var upgradeCommand = new UpgradeCommand();
+            upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Accepted);
 
             await CheckUpgraded(originalStatus);
         }
@@ -108,22 +170,18 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "nodepad.exe";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             // Wait for ready to launch
-            await WaitForReadyToLaunch();
+            await m_ProcessHelper.WaitForState(State.WaitingForLaunch);
             var originalStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(originalStatus, Is.Not.Null);
 
             // Upgrade
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
-            var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
-            Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Accepted);
 
-            await CheckUpgraded(originalStatus!);
+            await CheckUpgraded(originalStatus);
         }
 
         [Test]
@@ -139,25 +197,21 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "nodepad.exe";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             // Wait for the launchpad to be "waiting for payload, so when payloadCheckpoint has been reached.
             await payloadCheckpoint.WaitingOnCheckpoint;
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.State, Is.EqualTo(State.GettingPayload));
+            Assert.That(status.State, Is.EqualTo(State.GettingPayload));
 
             // Try to upgrade, should fail because not in the right state
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
-            var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
-            Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Conflict);
 
             // Unblock the launchpad by completing getting of the payload
             payloadCheckpoint.UnblockCheckpoint();
-            await WaitForReadyToLaunch();
+            await m_ProcessHelper.WaitForState(State.WaitingForLaunch);
         }
 
         [Test]
@@ -177,9 +231,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.PreLaunchPath = "prelaunch.ps1";
             prepareCommand.LaunchPath = "nodepad.exe";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             // Wait for the launchpad to be executing prelaunch
             string prelauchStartedPath = Path.Combine(m_ProcessHelper.LaunchFolder, "StartedPrelaunch.txt");
@@ -190,18 +242,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             }
             Assert.That(File.Exists(prelauchStartedPath), Is.True);
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.State, Is.EqualTo(State.PreLaunch));
+            Assert.That(status.State, Is.EqualTo(State.PreLaunch));
 
             // Try to upgrade, should fail because not in the right state
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
-            var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
-            Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Conflict);
 
             // Unblock the launchpad by completing prelaunch
             await File.WriteAllTextAsync(Path.Combine(m_ProcessHelper.LaunchFolder, "ConcludePrelaunch.txt"), "Something");
-            await WaitForReadyToLaunch();
+            await m_ProcessHelper.WaitForState(State.WaitingForLaunch);
         }
 
         [Test]
@@ -220,14 +270,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "launch.ps1";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             LaunchCommand launchCommand = new();
-            postCommandRet = await m_ProcessHelper.PostCommand(launchCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.Accepted));
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.Accepted));
 
             // Wait for the process to be launched and get its pid
             string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
@@ -249,14 +296,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(launchedProcess!.HasExited, Is.False);
 
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.State, Is.EqualTo(State.Launched));
+            Assert.That(status.State, Is.EqualTo(State.Launched));
 
             // Try to upgrade, should fail because not in the right state
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl = m_NewVersionVersionUrl;
-            var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
-            Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await m_ProcessHelper.PostCommand(upgradeCommand, HttpStatusCode.Conflict);
         }
 
         string GetTestTempFolder()
@@ -271,18 +316,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             // The upgrade command sends the accepted answer and then proceed with the restart, so we might have to wait
             // a little bit until the restart actually happens.
             var stopwatch = Stopwatch.StartNew();
-            Status? newStatus = null;
+            Status newStatus = new Status();
             while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
             {
                 try
                 {
                     newStatus = await m_ProcessHelper.GetStatus();
-                    if (newStatus != null)
+                    if (newStatus.StartTime > originalStatus.StartTime)
                     {
-                        if (newStatus.StartTime > originalStatus.StartTime)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
                 catch
@@ -292,8 +334,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
                 await Task.Delay(25);
             }
 
-            Assert.That(newStatus, Is.Not.Null);
-            Assert.That(newStatus!.StartTime > originalStatus.StartTime);
+            Assert.That(newStatus.StartTime > originalStatus.StartTime);
 
             // Verify that an update was really done
             // 1. Folder with installation files gone
@@ -302,19 +343,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(File.Exists(m_MarkerFilePath), Is.False);
             // 3. New files copied
             Assert.That(File.GetLastWriteTime(m_LaunchPadExePath), Is.Not.EqualTo(m_PastLaunchPadFileTime));
-        }
-
-        async Task WaitForReadyToLaunch()
-        {
-            var waitReadyToLaunch = Stopwatch.StartNew();
-            var originalStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(originalStatus, Is.Not.Null);
-            while (waitReadyToLaunch.Elapsed < TimeSpan.FromSeconds(15) && originalStatus!.State != State.WaitingForLaunch)
-            {
-                originalStatus = await m_ProcessHelper.GetStatus();
-                Assert.That(originalStatus, Is.Not.Null);
-            }
-            Assert.That(originalStatus!.State, Is.EqualTo(State.WaitingForLaunch));
         }
 
         string m_TestFolder = "";

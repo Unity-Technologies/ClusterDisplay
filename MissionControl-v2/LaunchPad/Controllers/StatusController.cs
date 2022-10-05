@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Controllers
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery]ulong minStatusNumber)
         {
-            var futureStatus = m_StatusService.GetStatusAfter(minStatusNumber);
+            var futureStatus = m_StatusService.GetStatusAfterAsync(minStatusNumber);
             if (futureStatus.IsCompleted)
             {
                 return Ok(futureStatus.Result);
@@ -26,15 +26,20 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Controllers
             // to stay blocked for too long as some middleware (like some component of Azure WebApp) don't like http
             // calls that take too long to give a response...
             double maxSec = Convert.ToDouble(m_Configuration["blockingCallMaxSec"]);
-            await Task.WhenAny(futureStatus, Task.Delay(TimeSpan.FromSeconds(maxSec)));
+            var maxWaitTask = Task.Delay(TimeSpan.FromSeconds(maxSec));
+            var completedTask = await Task.WhenAny(futureStatus, maxWaitTask);
 
-            if (futureStatus.IsCompleted)
+            if (futureStatus.IsCompletedSuccessfully)
             {
                 return Ok(futureStatus.Result);
             }
-            else
+            else if (completedTask == maxWaitTask || futureStatus.IsCanceled)
             {
                 return NoContent();
+            }
+            else
+            {
+                return BadRequest();
             }
         }
 

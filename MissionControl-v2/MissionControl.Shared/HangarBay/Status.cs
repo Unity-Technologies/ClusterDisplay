@@ -1,3 +1,4 @@
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
 namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     /// <summary>

@@ -1,7 +1,5 @@
 using System;
 using System.Net;
-using System.Net.Http;
-using System.Text.Json;
 
 namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 {
@@ -39,8 +37,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             await m_ProcessHelper.Start(GetTestTempFolder());
 
             var initialStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(initialStatus, Is.Not.Null);
-            Assert.That(initialStatus!.State, Is.EqualTo(State.Idle));
+            Assert.That(initialStatus.State, Is.EqualTo(State.Idle));
 
             var blockedStatusTask = m_ProcessHelper.GetStatus(initialStatus.StatusNumber + 1);
             Assert.That(blockedStatusTask, Is.Not.Null);
@@ -83,9 +80,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "notepad.exe";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             await Task.WhenAny(blockedStatusTask, Task.Delay(TimeSpan.FromSeconds(30)));
             Assert.That(blockedStatusTask.IsCompleted, Is.True);
@@ -100,8 +95,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             await m_ProcessHelper.Start(GetTestTempFolder());
 
             var initialStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(initialStatus, Is.Not.Null);
-            Assert.That(initialStatus!.State, Is.EqualTo(State.Idle));
+            Assert.That(initialStatus.State, Is.EqualTo(State.Idle));
 
             var blockedStatusTask = m_ProcessHelper.GetStatus(initialStatus.StatusNumber + 1);
             Assert.That(blockedStatusTask, Is.Not.Null);
@@ -120,8 +114,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             await m_ProcessHelper.Start(GetTestTempFolder(), blockingCallMax: TimeSpan.FromSeconds(5));
 
             var initialStatus = await m_ProcessHelper.GetStatus();
-            Assert.That(initialStatus, Is.Not.Null);
-            Assert.That(initialStatus!.State, Is.EqualTo(State.Idle));
+            Assert.That(initialStatus.State, Is.EqualTo(State.Idle));
 
             var blockedStatusTask = m_ProcessHelper.GetStatus(initialStatus.StatusNumber + 1);
             Assert.That(blockedStatusTask, Is.Not.Null);

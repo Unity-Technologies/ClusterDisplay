@@ -27,13 +27,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// Payload is launched (and still in the air (process running) otherwise state would have been changed to
         /// idle).
         /// </summary>
-        Launched
+        Launched,
+        /// <summary>
+        /// Mission is finished (either with success or failure).
+        /// </summary>
+        Over
     }
 
     /// <summary>
     /// Status of the LaunchPad (changes once in a while).
     /// </summary>
-    public class Status
+    public class Status: IStatus
     {
         /// <summary>
         /// Version number of the running LaunchPad executable.
