@@ -122,7 +122,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             catch (Exception e)
             {
                 newConfig.Reject($"{newConfig.Proposed.HangarBayEndPoint}: does not appear to " +
-                        $"be a valid uri to contact the HangarBay: {e}");
+                        $"be a valid URI to contact the HangarBay: {e}");
             }
         }
 
@@ -333,7 +333,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                     return new ConflictObjectResult("Launchpad state must be WaitForLaunch or Idle to execute the restart command.");
                 }
 
-                string fullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+                var fullPath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (fullPath == null)
+                {
+                    throw new NullReferenceException("Failed getting current process path.");
+                }
                 string startupFolder = Path.GetDirectoryName(fullPath)!;
                 string filename = Path.GetFileName(fullPath);
                 var arguments = RemoteManagement.FilterCommandLineArguments(Environment.GetCommandLineArgs()).Skip(1);
@@ -369,7 +373,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                     return new ConflictObjectResult("Launchpad state must be WaitForLaunch or Idle to execute the upgrade command.");
                 }
 
-                string thisProcessFullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+                var thisProcessFullPath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (thisProcessFullPath == null)
+                {
+                    throw new NullReferenceException("Failed getting current process path.");
+                }
                 string thisProcessDirectory = Path.GetDirectoryName(thisProcessFullPath)!;
                 string thisProcessFilename = Path.GetFileName(thisProcessFullPath);
                 string setupDirectory = Path.GetFullPath(Path.Combine(thisProcessDirectory, "..", k_InstallSubfolder));

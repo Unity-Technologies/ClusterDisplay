@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             }
             else
             {
-                throw new NotImplementedException("So far this is only implemented for Windows");
+                services.AddSingleton<IHealthService, DummyHealthService>();
             }
         }
     }
@@ -26,5 +26,30 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// Fetch the current health report of the system.
         /// </summary>
         Health Fetch();
+    }
+
+    /// <summary>
+    /// Placeholder <see cref="IHealthService"/> implementation to avoid problems when running on platforms for which
+    /// we do not have a <see cref="IHealthService"/> implementation yet.
+    /// </summary>
+    class DummyHealthService: IHealthService
+    {
+        public DummyHealthService(ILogger<HealthServiceWindows> logger)
+        {
+            m_Logger = logger;
+        }
+
+        public Health Fetch()
+        {
+            if (!m_GenerateErrorOnce)
+            {
+                m_Logger.LogError("Missing IHealthService implementation for current platform");
+                m_GenerateErrorOnce = true;
+            }
+            return new Health();
+        }
+
+        readonly ILogger m_Logger;
+        bool m_GenerateErrorOnce = false;
     }
 }

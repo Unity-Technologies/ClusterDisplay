@@ -254,9 +254,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 var clusterNetwork = NetworkInterface.GetAllNetworkInterfaces()
                     .Where(n => n.OperationalStatus == OperationalStatus.Up && !n.Name.ToLower().Contains("vpn") &&
                         n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                    .OrderBy(n => n.Speed)
-                    .Reverse()
-                    .FirstOrDefault();
+                    .MaxBy(n => n.Speed);
                 if (clusterNetwork != null)
                 {
                     m_Config.ClusterNetworkNic = clusterNetwork.Name;

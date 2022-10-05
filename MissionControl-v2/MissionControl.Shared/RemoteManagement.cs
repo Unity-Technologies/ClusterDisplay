@@ -274,7 +274,11 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <returns>Success</returns>
         void HandleUpgrade(string toFolder)
         {
-            string thisProcessFullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            var thisProcessFullPath = Process.GetCurrentProcess().MainModule?.FileName;
+            if (thisProcessFullPath == null)
+            {
+                throw new NullReferenceException("Failed getting current process path.");
+            }
             string thisProcessDirectory = Path.GetDirectoryName(thisProcessFullPath)!;
             string thisProcessFilename = Path.GetFileName(thisProcessFullPath);
 

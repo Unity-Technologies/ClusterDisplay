@@ -218,7 +218,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="command">The command to execute</param>
         Task<IActionResult> OnRestart(RestartCommand command)
         {
-            string fullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            var fullPath = Process.GetCurrentProcess().MainModule?.FileName;
+            if (fullPath == null)
+            {
+                throw new NullReferenceException("Failed getting current process path.");
+            }
             string startupFolder = Path.GetDirectoryName(fullPath)!;
             string filename = Path.GetFileName(fullPath);
 
@@ -241,7 +245,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="command">The command to execute.</param>
         async Task<IActionResult> OnUpgrade(UpgradeCommand command)
         {
-            string thisProcessFullPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            var thisProcessFullPath = Process.GetCurrentProcess().MainModule?.FileName;
+            if (thisProcessFullPath == null)
+            {
+                throw new NullReferenceException("Failed getting current process path.");
+            }
             string thisProcessDirectory = Path.GetDirectoryName(thisProcessFullPath)!;
             string thisProcessFilename = Path.GetFileName(thisProcessFullPath);
             string setupDirectory = Path.GetFullPath(Path.Combine(thisProcessDirectory, "..", k_InstallSubfolder));

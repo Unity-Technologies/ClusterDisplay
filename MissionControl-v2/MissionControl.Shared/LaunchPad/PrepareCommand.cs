@@ -30,6 +30,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during
         /// launch and pre-launch.
         /// </summary>
+        /// <remarks>Because of OS limitations the amount of data in this object should be kept reasonable (current
+        /// limitation seem to be around 8192 characters).</remarks>
         public dynamic? LaunchData { get; set; }
 
         /// <summary>

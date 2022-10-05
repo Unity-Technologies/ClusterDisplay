@@ -179,7 +179,7 @@ components:
           example: http://mission-control-server:8000
         launchData:
           type: object
-          description: Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during launch and pre-launch.
+          description: Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during launch and pre-launch.  Because of OS limitations the amount of data in this object should be kept reasonable (current limitation seem to be around 8192 characters).
         preLaunchPath:
           type: string
           description: Path (relative to the toLaunch folder) to an optional executable to execute before launch.  This executable is responsible to ensure that any external dependencies are installed and ready to use.
