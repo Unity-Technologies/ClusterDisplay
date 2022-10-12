@@ -1,19 +1,15 @@
+#if ENABLE_INPUT_SYSTEM
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if INPUT_SYSTEM_1_3_OR_NEWER
 using System.IO;
 using Unity.Collections;
-using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-#endif
 using Unity.ClusterDisplay;
 
 public class InputSystemReplicator : MonoBehaviour
 {
-#if INPUT_SYSTEM_1_3_OR_NEWER
-
     const int k_CaptureMemoryDefaultSize = 512;
     const int k_CaptureMemoryMaxSize = 1024;
 
@@ -41,7 +37,6 @@ public class InputSystemReplicator : MonoBehaviour
 
     bool OnLoadInputData(NativeArray<byte> stateData)
     {
-        Debug.Log($"received input data {stateData.Length}");
         if (stateData.Length == 0) return true;
 
         m_MemoryStream.Write(stateData.AsReadOnlySpan());
@@ -50,10 +45,7 @@ public class InputSystemReplicator : MonoBehaviour
         m_EventTrace.ReadFrom(m_MemoryStream);
 
         m_ReplayController?.Dispose();
-        m_ReplayController = m_EventTrace.Replay();
-        m_ReplayController
-            .OnEvent(_ => Debug.Log("Playback event"))
-            .PlayAllEvents();
+        m_ReplayController = m_EventTrace.Replay().PlayAllEvents();
 
         m_MemoryStream.SetLength(0);
         return true;
@@ -63,7 +55,7 @@ public class InputSystemReplicator : MonoBehaviour
     {
         if (writeableBuffer.Length < m_MemoryStream.Length)
         {
-            Debug.Log($"memory stream {m_MemoryStream.Length} to large for buffer {writeableBuffer.Length}. Retrying...");
+            ClusterDebug.LogWarning($"memory stream {m_MemoryStream.Length} to large for buffer {writeableBuffer.Length}. Retrying...");
             return -1;
         }
 
@@ -78,15 +70,12 @@ public class InputSystemReplicator : MonoBehaviour
         m_ReplayController?.Dispose();
     }
 
-    // Start is called before the first frame update
-    void Start() { }
-
     void OnDestroy()
     {
         m_EventTrace.Dispose();
     }
 
-    void LateUpdate()
+    void Update()
     {
         if (ClusterDisplayState.GetNodeRole() is NodeRole.Emitter)
         {
@@ -99,5 +88,5 @@ public class InputSystemReplicator : MonoBehaviour
 
         m_EventTrace.Clear();
     }
-#endif
 }
+#endif
