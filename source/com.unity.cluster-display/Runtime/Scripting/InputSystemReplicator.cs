@@ -19,6 +19,9 @@ namespace Unity.ClusterDisplay.Scripting
     /// To ensure perfect synchronization, the player must be executed with the "-delayRepeaters" argument.
     /// This is because the input events arrive on the repeaters one frame after they are processed on the
     /// emitter.
+    ///
+    /// Note: It is currently not possible to test this locally (multiple nodes on the same desktop). This
+    /// script doesn't seem to work when the repeater node's window does not have focus. To be investigated.
     /// </remarks>
     public class InputSystemReplicator : MonoBehaviour
     {
