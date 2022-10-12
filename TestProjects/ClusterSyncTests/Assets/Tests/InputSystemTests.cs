@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Unity.ClusterDisplay;
+using Unity.ClusterDisplay.Scripting;
 using Unity.ClusterDisplay.Tests;
 using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
@@ -12,7 +13,6 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-using UnityEngine.InputSystem.Utilities;
 
 public class InputSystemTests : InputTestFixture
 {
