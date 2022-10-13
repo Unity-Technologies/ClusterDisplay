@@ -70,12 +70,11 @@ namespace Unity.ClusterDisplay.Scripting
         {
             if (writeableBuffer.Length < m_MemoryStream.Length)
             {
-                ClusterDebug.LogWarning($"memory stream {m_MemoryStream.Length} to large for buffer {writeableBuffer.Length}. Retrying...");
+                // Ask for a larger buffer
                 return -1;
             }
 
             int bytesRead = m_MemoryStream.Read(writeableBuffer.AsSpan());
-            Debug.Log($"sending input data {bytesRead}");
             return bytesRead;
         }
 
@@ -96,7 +95,6 @@ namespace Unity.ClusterDisplay.Scripting
             {
                 m_MemoryStream.SetLength(0);
                 m_EventTrace.WriteTo(m_MemoryStream);
-                Debug.Log($"captured: {m_EventTrace.totalEventSizeInBytes}, in-stream {m_MemoryStream.Length}");
                 m_MemoryStream.Flush();
                 m_MemoryStream.Position = 0;
             }
