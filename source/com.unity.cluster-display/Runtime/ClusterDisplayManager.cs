@@ -6,14 +6,16 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
+#if NET_4_6
 using Microsoft.Win32;
+#endif
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
     [DisallowMultipleComponent]
-    [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
+    [DefaultExecutionOrder(-1)] // Make sure ClusterDisplay logic initializes early
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
         [SerializeField]
@@ -61,13 +63,15 @@ namespace Unity.ClusterDisplay
                 NodeID = 255
             };
 
+#if NET_4_6
             using var clusterKey = Registry.LocalMachine.OpenSubKey("Software\\Unity Technologies\\ClusterDisplay", true);
             if (clusterKey != null)
             {
-                clusterParams.NodeID = (byte)clusterKey.GetValue("NodeID");
+                clusterParams.NodeID = (byte)(int)clusterKey.GetValue("NodeID");
             }
             else
             {
+#endif
                 var retries = 0;
                 var nodeIdFilePath = Path.Combine(Path.GetTempPath(), Application.productName + ".node");
                 while (clusterParams.NodeID == 255 && retries < 10)
@@ -99,8 +103,9 @@ namespace Unity.ClusterDisplay
                     File.Delete(nodeIdFilePath);
                 };
 
-                ClusterDebug.Log($"Auto-assigning node ID {clusterParams.NodeID}");
+#if NET_4_6
             }
+#endif
 
             if (clusterParams.NodeID == 255)
             {
@@ -108,6 +113,8 @@ namespace Unity.ClusterDisplay
                 clusterParams.ClusterLogicSpecified = false;
             }
 
+
+            ClusterDebug.Log($"Auto-assigning node ID {clusterParams.NodeID}");
             // First one to start up gets to be the emitter - node 0
             clusterParams.EmitterSpecified = clusterParams.NodeID == 0;
             clusterParams.RepeaterCount = clusterParams.EmitterSpecified ? 1 : 0;
