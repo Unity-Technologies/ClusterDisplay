@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay
     public class ClusterDisplayManager : SingletonMonoBehaviour<ClusterDisplayManager>
     {
         [SerializeField]
-        bool m_IgnoreCommandLine;
+        bool m_UseMinimalCommandLine;
 
         static ClusterSync GetOrCreateClusterSyncInstance()
         {
@@ -49,10 +49,20 @@ namespace Unity.ClusterDisplay
                 DontDestroyOnLoad(gameObject);
         }
 
-        void OnEnable() => GetOrCreateClusterSyncInstance().EnableClusterDisplay(m_IgnoreCommandLine ? DetectSettings() : ClusterParams.FromCommandLine());
+        void OnEnable() => GetOrCreateClusterSyncInstance().EnableClusterDisplay(m_UseMinimalCommandLine ? DetectSettings() : ClusterParams.FromCommandLine());
 
         static ClusterParams DetectSettings()
         {
+            var commandLineArgs = Environment.GetCommandLineArgs();
+            var repeaterCountIdx = Array.IndexOf(commandLineArgs, "-repeaters");
+            int? repeaterCount =
+                repeaterCountIdx > 0 && commandLineArgs.Length > repeaterCountIdx + 1 &&
+                int.TryParse(commandLineArgs[repeaterCountIdx + 1], out var repeaterCountArg)
+                    ? repeaterCountArg
+                    : null;
+
+            ClusterDebug.Log($"Trying to assign ids for {repeaterCount} repeaters");
+
             var clusterParams = new ClusterParams
             {
                 Port = 25690,
@@ -60,18 +70,26 @@ namespace Unity.ClusterDisplay
                 ClusterLogicSpecified = true,
                 CommunicationTimeout = TimeSpan.FromSeconds(5),
                 HandshakeTimeout = TimeSpan.FromSeconds(10),
-                NodeID = 255
+                NodeID = 255    // placeholder
             };
 
 #if NET_4_6
+            // Get the node info from the Win32 registry. Use the Set-NodeProperty.ps1 script (look for it in the
+            // repo root) to set these values.
             using var clusterKey = Registry.LocalMachine.OpenSubKey("Software\\Unity Technologies\\ClusterDisplay", true);
             if (clusterKey != null)
             {
                 clusterParams.NodeID = (byte)(int)clusterKey.GetValue("NodeID");
+                clusterParams.RepeaterCount = repeaterCount ?? (int)clusterKey.GetValue("RepeaterCount");
+                clusterParams.MulticastAddress = (string)clusterKey.GetValue("MulticastAddress");
+                clusterParams.Port = (int)clusterKey.GetValue("MulticastPort");
+                clusterParams.AdapterName = (string)clusterKey.GetValue("AdapterName");
             }
             else
             {
 #endif
+                // If we're running several nodes on the same machine, use a single-access file to keep track
+                // of node ids in use.
                 var retries = 0;
                 var nodeIdFilePath = Path.Combine(Path.GetTempPath(), Application.productName + ".node");
                 while (clusterParams.NodeID == 255 && retries < 10)
@@ -98,6 +116,8 @@ namespace Unity.ClusterDisplay
                     }
                 }
 
+                clusterParams.RepeaterCount = repeaterCount ?? 1;
+
                 Application.quitting += () =>
                 {
                     File.Delete(nodeIdFilePath);
@@ -114,10 +134,9 @@ namespace Unity.ClusterDisplay
             }
 
 
-            ClusterDebug.Log($"Auto-assigning node ID {clusterParams.NodeID}");
+            ClusterDebug.Log($"Auto-assigning node ID {clusterParams.NodeID} (repeaters: {clusterParams.RepeaterCount})");
             // First one to start up gets to be the emitter - node 0
             clusterParams.EmitterSpecified = clusterParams.NodeID == 0;
-            clusterParams.RepeaterCount = clusterParams.EmitterSpecified ? 1 : 0;
 
             return clusterParams;
         }
