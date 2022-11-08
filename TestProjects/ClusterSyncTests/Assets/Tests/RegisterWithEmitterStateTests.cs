@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.RepeaterStateMachine;
-using Unity.Collections;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -20,9 +18,12 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
                 using var receivedMessage =
-                    emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout);
-                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
 
                 emitterAgent.SendMessage(MessageType.RepeaterRegistered,
                     GetRepeaterRegistered(receivedMessage, true));
@@ -41,9 +42,12 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
                 using var receivedMessage =
-                    emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout);
-                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
 
                 emitterAgent.SendMessage(MessageType.RepeaterRegistered,
                     GetRepeaterRegistered(receivedMessage, false));
@@ -61,21 +65,24 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
                 using (var receivedMessage =
-                       emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout))
+                       emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout))
                 {
-                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
                 }
 
                 using (var receivedMessage =
-                       emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout))
+                       emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout))
                 {
-                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
                 }
 
                 using var lastReceivedMessage =
-                    emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout);
-                Assert.That(IsValidRegisteringWithEmitter(lastReceivedMessage, testNode), Is.True);
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(lastReceivedMessage, localTestNode), Is.True);
 
                 emitterAgent.SendMessage(MessageType.RepeaterRegistered,
                     GetRepeaterRegistered(lastReceivedMessage, true));
@@ -94,9 +101,12 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
                 using var receivedMessage =
-                    emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout);
-                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
 
                 int waitingReceivedMessagesCountBefore = emitterAgent.ReceivedMessagesCount;
 
@@ -135,13 +145,14 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
-                using (var receivedMessage =
-                       emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout))
-                {
-                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
-                }
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
 
-                int waitingReceivedMessagesCountBefore = emitterAgent.ReceivedMessagesCount;
+                using (var receivedMessage =
+                       emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout))
+                {
+                    Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
+                }
 
                 // Fake lost RepeaterRegistered and FrameData for FrameIndex 0 by simply not sending them and
                 // jumping immediately to sending the FrameData for FrameIndex 1.
@@ -156,7 +167,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void Timeout()
         {
-            using var testNode = CreateNode(TimeSpan.FromMilliseconds(250), out var emitterAgent);
+            using var testNode = CreateNode(TimeSpan.FromMilliseconds(250), out var _);
             var testState = new RegisterWithEmitterState(testNode);
 
             Assert.Throws<TimeoutException>(() => testState.DoFrame());
@@ -170,9 +181,12 @@ namespace Unity.ClusterDisplay.Tests
 
             var emitterTask = Task.Run(() =>
             {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
                 using var receivedMessage =
-                    emitterAgent.TryConsumeNextReceivedMessage(testNode.Config.CommunicationTimeout);
-                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, testNode), Is.True);
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
 
                 // Response as accepted but with the wrong node id and ip.
                 var message = GetRepeaterRegistered(receivedMessage, true);
@@ -192,7 +206,31 @@ namespace Unity.ClusterDisplay.Tests
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 
-        RepeaterNode CreateNode(TimeSpan handshakeTime, out TestUdpAgent emitterAgent)
+        [Test]
+        public void QuitWhileWaitingForAcknowledgment()
+        {
+            using var testNode = CreateNode(m_MaxTestTime, out var emitterAgent);
+            var testState = new RegisterWithEmitterState(testNode);
+
+            var emitterTask = Task.Run(() =>
+            {
+                // ReSharper disable once AccessToDisposedClosure -> We wait task completes before disposing so it is ok
+                var localTestNode = testNode;
+
+                using var receivedMessage =
+                    emitterAgent.TryConsumeNextReceivedMessage(localTestNode.Config.CommunicationTimeout);
+                Assert.That(IsValidRegisteringWithEmitter(receivedMessage, localTestNode), Is.True);
+
+                emitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
+            });
+
+            var nextState = testState.DoFrame();
+            Assert.That(testNode.QuitReceived, Is.True);
+            Assert.That(nextState, Is.Null);
+            Assert.DoesNotThrow(emitterTask.Wait);
+        }
+
+        RepeaterNodeWithoutQuit CreateNode(TimeSpan handshakeTime, out TestUdpAgent emitterAgent)
         {
             var nodeConfig = new ClusterNodeConfig()
             {
@@ -203,7 +241,7 @@ namespace Unity.ClusterDisplay.Tests
 
             var udpAgentNetwork = new TestUdpAgentNetwork();
             emitterAgent = new TestUdpAgent(udpAgentNetwork, EmitterNode.ReceiveMessageTypes.ToArray());
-            return new RepeaterNode(nodeConfig,
+            return new RepeaterNodeWithoutQuit(nodeConfig,
                 new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
         }
 
@@ -213,8 +251,8 @@ namespace Unity.ClusterDisplay.Tests
             {
                 return false;
             }
-            var receivedRegisteringWithEmitter = receivedMessage as ReceivedMessage<RegisteringWithEmitter>;
-            return receivedRegisteringWithEmitter != null &&
+
+            return receivedMessage is ReceivedMessage<RegisteringWithEmitter> receivedRegisteringWithEmitter &&
                 receivedRegisteringWithEmitter.Payload.NodeId == m_NodeId &&
                 receivedRegisteringWithEmitter.Payload.IPAddressBytes == BitConverter.ToUInt32(clusterNode.UdpAgent.AdapterAddress.GetAddressBytes());
         }
@@ -229,6 +267,20 @@ namespace Unity.ClusterDisplay.Tests
                 IPAddressBytes = receivedRegisteringMessage.Payload.IPAddressBytes,
                 Accepted = accepted
             };
+        }
+
+        class RepeaterNodeWithoutQuit: RepeaterNode
+        {
+            public RepeaterNodeWithoutQuit(ClusterNodeConfig config, IUdpAgent udpAgent)
+                : base(config, udpAgent)
+            {
+            }
+
+            public bool QuitReceived { get; private set; }
+            public override void Quit()
+            {
+                QuitReceived = true;
+            }
         }
 
         byte m_NodeId = 42;

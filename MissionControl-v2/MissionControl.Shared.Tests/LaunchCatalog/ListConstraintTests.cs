@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     public class ListConstraintTests
     {
@@ -26,6 +26,37 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             var deserialized = JsonSerializer.Deserialize<Constraint>(serializedConstraint, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        public void CloneDefault()
+        {
+            ListConstraint toClone = new();
+            Constraint cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        public void CloneFull()
+        {
+            ListConstraint toClone = new();
+            toClone.Choices = new [] {"Quarante deux", "Vingt huit"};
+            Constraint cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        public void Validate()
+        {
+            ListConstraint constraint = new();
+            constraint.Choices = new [] {"Quarante deux", "Vingt huit"};
+            Assert.That(constraint.Validate("Quarante deux"), Is.True);
+            Assert.That(constraint.Validate("quarante deux"), Is.False);
+            Assert.That(constraint.Validate("Patate"), Is.False);
+            Assert.That(constraint.Validate(""), Is.False);
+            Assert.That(constraint.Validate("Vingt huit"), Is.True);
         }
     }
 }

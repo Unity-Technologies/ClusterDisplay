@@ -1,16 +1,18 @@
+using System.Diagnostics;
 using System.Net;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 using LaunchPadCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.Command;
 using LaunchPadPrepareCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.PrepareCommand;
 using LaunchPadLaunchCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.LaunchCommand;
 using LaunchPadAbortCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.AbortCommand;
 using LaunchPadState = Unity.ClusterDisplay.MissionControl.LaunchPad.State;
-using System.Diagnostics;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchManagerTests
     {
@@ -93,7 +95,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
                 HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                     PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                        LaunchPadState.WaitingForLaunch, () => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+                        LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
 
                 launchPadStub.CommandHandler = ProcessPrepareCommand;
 
@@ -160,7 +162,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             launchPadStub.CommandHandler = (launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                    LaunchPadState.Over, () => {
+                    LaunchPadState.Over, _ => {
                         launchPadStub.CommandHandler = null;
                     });
 
@@ -200,7 +202,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepare1Command(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad1Stub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPad1Stub.CommandHandler = ProcessLaunch1Command; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPad1Stub.CommandHandler = ProcessLaunch1Command; });
 
             launchPad1Stub.CommandHandler = ProcessPrepare1Command;
 
@@ -216,7 +218,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepare2Command(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad2Stub.Id,
-                    LaunchPadState.Over, () => { launchPad2Stub.CommandHandler = ProcessLaunch2Command; });
+                    LaunchPadState.Over, _ => { launchPad2Stub.CommandHandler = ProcessLaunch2Command; });
 
             launchPad2Stub.CommandHandler = ProcessPrepare2Command;
 
@@ -281,7 +283,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
 
             launchPadStub.CommandHandler = ProcessPrepareCommand;
 
@@ -326,7 +328,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
 
             launchPadStub.CommandHandler = ProcessPrepareCommand;
 
@@ -512,7 +514,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                    LaunchPadState.GettingPayload, () =>
+                    LaunchPadState.GettingPayload, _ =>
                 {
                     launchPadStub.CommandHandler = ProcessLaunchCommand;
                     gettingPayloadTask.TrySetResult();
@@ -559,7 +561,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         [Test]
         public async Task UndefinedStatus()
         {
-            var playground = PreparePlayground(2 /*launchpads*/, 5 /*launchpad timeout sec*/);
+            var playground = PreparePlayground(2 /*launchpads*/, launchPadFeedbackTimeoutSec: 5);
             playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
 
             var launchPad1Stub = playground.LaunchPadStubs.ElementAt(0);
@@ -578,7 +580,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad1Stub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
 
             launchPad1Stub.CommandHandler = ProcessPrepareCommand;
 
@@ -587,7 +589,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand2(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad2Stub.Id,
-                    LaunchPadState.GettingPayload, () =>
+                    LaunchPadState.GettingPayload, _ =>
                 {
                     launchPad2Stub.CommandHandler = null;
                     launchPad2GettingPayload.TrySetResult();
@@ -657,7 +659,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand1(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad1Stub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
 
             launchPad1Stub.CommandHandler = ProcessPrepareCommand1;
 
@@ -666,7 +668,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand2(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad2Stub.Id,
-                    LaunchPadState.PreLaunch, () =>
+                    LaunchPadState.PreLaunch, _ =>
                 {
                     launchPad2Stub.CommandHandler = null;
                     launchPad2ReachedPreLaunch.TrySetResult();
@@ -733,7 +735,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand1(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad1Stub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPad1Stub.CommandHandler = ProcessLaunchCommand1; });
 
             HttpStatusCode AbortCommand1(LaunchPadCommand launchPadCommand) =>
                 TypeCommandHandler<LaunchPadAbortCommand>(launchPadCommand, launchPad1Stub.Id, LaunchPadState.Idle, () =>
@@ -762,7 +764,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand2(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPad2Stub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPad2Stub.CommandHandler = ProcessLaunchCommand2; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPad2Stub.CommandHandler = ProcessLaunchCommand2; });
 
             launchPad2Stub.CommandHandler = ProcessPrepareCommand2;
 
@@ -799,7 +801,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
                 PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
-                    LaunchPadState.WaitingForLaunch, () => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
 
             launchPadStub.CommandHandler = ProcessPrepareCommand;
 
@@ -841,6 +843,979 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             }
         }
 
+        [Test]
+        public async Task Land()
+        {
+            var playground = PreparePlayground(1, landingTimeSec: 2.5f);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+
+            // Prepare launchpad
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Initiate landing
+            bool landingRequested = false;
+            _ = m_Manager.LandAsync(() =>
+            {
+                landingRequested = true;
+                lock (m_LaunchPadsStatusLock)
+                {
+                    m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.Over;
+                    m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
+                }
+            });
+
+            // Wait for the launchpad to land (and so, the mission to complete)
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(m_LaunchTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(m_LaunchTask)); // Otherwise timeout
+            Assert.That(landingRequested, Is.True);
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task LandNotResponding()
+        {
+            var playground = PreparePlayground(1, landingTimeSec: 2.5f);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+
+            // Prepare stat transitions of the launchpad
+            TaskCompletionSource abortReceivedByLaunchPad = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            HttpStatusCode ProcessAbortCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadAbortCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Over, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    abortReceivedByLaunchPad.TrySetResult();
+                });
+
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = ProcessAbortCommand;
+                    processLaunched.TrySetResult();
+                });
+
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Initiate landing
+            bool landingRequested = false;
+            var landingTimer = Stopwatch.StartNew();
+            var landTask = m_Manager.LandAsync(() =>
+            {
+                landingRequested = true;
+                // But do nothing, this way abort will be called
+            });
+
+            // Wait for the launchpad to land (and so, the mission to complete)
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(m_LaunchTask, timeoutTask);
+            landingTimer.Stop();
+            Assert.That(finishedTask, Is.SameAs(m_LaunchTask)); // Otherwise timeout
+            Assert.That(landingRequested, Is.True);
+            finishedTask = await Task.WhenAny(landTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(landTask)); // Otherwise the landing task is stuck?
+            Assert.That(landingTimer.Elapsed, Is.GreaterThan(TimeSpan.FromSeconds(2.25))); // Otherwise we haven't waited long enough to send abort command
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task LandAndRelaunch()
+        {
+            var playground = PreparePlayground(1, landingTimeSec: 2.5f);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+
+            // Prepare launchpad
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, _ => { launchPadStub.CommandHandler = ProcessLaunchCommand; });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Initiate landing of the first launch
+            bool landingRequested = false;
+            var landingTask = m_Manager.LandAsync(() =>
+            {
+                landingRequested = true;
+                lock (m_LaunchPadsStatusLock)
+                {
+                    m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.Over;
+                    m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
+                }
+            });
+
+            // Wait for the launchpad to land (and so, the mission to complete)
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(m_LaunchTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(m_LaunchTask)); // Otherwise timeout
+            Assert.That(landingRequested, Is.True);
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_Manager.Conclude(m_LaunchPadsStatus);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(0));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(0));
+
+            // Relaunch (while we know landingTask is still waiting for landing timeout)
+            Assert.That(landingTask.IsCompleted, Is.False);
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.Idle;
+                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            // Landing task should still be running (waiting for timeout of landing of the first launch)
+            Assert.That(landingTask.IsCompleted, Is.False);
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for the landing task to conclude its waiting
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(landingTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(landingTask)); // Otherwise timeout
+
+            // Wait an additional delay for a potential ripple effect of a potential bug to have the time to execute.
+            await Task.Delay(250);
+
+            // State of the second launch shouldn't be impacted in any way
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task LaunchParameters()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float,
+                    DefaultValue = 42.28f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 42 }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Something" }
+            };
+
+            var launchConfiguration = playground.LaunchConfiguration;
+            launchConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "GlobalParam", Value = 42.28f }
+            };
+            var launchComplexConfiguration = launchConfiguration.LaunchComplexes.First();
+            launchComplexConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchComplexParam", Value = 42 }
+            };
+            var launchPadConfiguration = launchComplexConfiguration.LaunchPads.First();
+            launchPadConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchPadParam", Value = "Something" }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.Launched.IsCompleted, Is.True);
+
+            // LaunchPad launched, but the launch task from LaunchAsync should still be running
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(3));
+            Assert.That((float)launchData["GlobalParam"]!, Is.EqualTo(42.28f));
+            Assert.That((int)launchData["LaunchComplexParam"]!, Is.EqualTo(42));
+            Assert.That((string)launchData["LaunchPadParam"]!, Is.EqualTo("Something"));
+        }
+
+        [Test]
+        public async Task LaunchParametersSkipMissingFromLaunchable()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float,
+                    DefaultValue = 42.28f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 42 }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Something" }
+            };
+
+            var launchConfiguration = playground.LaunchConfiguration;
+            launchConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "GlobalParam", Value = 42.28f },
+                new LaunchParameterValue() { Id = "GlobalParamMissing", Value = 12.34f }
+            };
+            var launchComplexConfiguration = launchConfiguration.LaunchComplexes.First();
+            launchComplexConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchComplexParam", Value = 42 },
+                new LaunchParameterValue() { Id = "LaunchComplexParamMissing", Value = 1234 },
+            };
+            var launchPadConfiguration = launchComplexConfiguration.LaunchPads.First();
+            launchPadConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchPadParam", Value = "Something" },
+                new LaunchParameterValue() { Id = "LaunchPadParamMissing", Value = "Something is missing" }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.Launched.IsCompleted, Is.True);
+
+            // LaunchPad launched, but the launch task from LaunchAsync should still be running
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(3));
+            Assert.That((float)launchData["GlobalParam"]!, Is.EqualTo(42.28f));
+            Assert.That((int)launchData["LaunchComplexParam"]!, Is.EqualTo(42));
+            Assert.That((string)launchData["LaunchPadParam"]!, Is.EqualTo("Something"));
+
+            // Check generated error messages
+            m_LoggerMock.VerifyLog(l => l.LogError("No parameter with the identifier {Id} can be found in the " +
+                "asset's list of {Section} parameters", "GlobalParamMissing", "global"));
+            m_LoggerMock.VerifyLog(l => l.LogError("No parameter with the identifier {Id} can be found in the " +
+                "asset's list of {Section} parameters", "LaunchComplexParamMissing", "launch complex"));
+            m_LoggerMock.VerifyLog(l => l.LogError("No parameter with the identifier {Id} can be found in the " +
+                "asset's list of {Section} parameters", "LaunchPadParamMissing", "launch pad"));
+        }
+
+        [Test]
+        public async Task LaunchParametersSkipDuplicate()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "ParamId", Type = LaunchParameterType.Float, DefaultValue = 42.28f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "ParamId", Type = LaunchParameterType.Integer, DefaultValue = 42 }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "ParamId", Type = LaunchParameterType.String, DefaultValue = "Something" }
+            };
+
+            var launchConfiguration = playground.LaunchConfiguration;
+            launchConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "ParamId", Value = 42.28f }
+            };
+            var launchComplexConfiguration = launchConfiguration.LaunchComplexes.First();
+            launchComplexConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "ParamId", Value = 42 }
+            };
+            var launchPadConfiguration = launchComplexConfiguration.LaunchPads.First();
+            launchPadConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "ParamId", Value = "Something" }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.Launched.IsCompleted, Is.True);
+
+            // LaunchPad launched, but the launch task from LaunchAsync should still be running
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(1));
+            Assert.That((float)launchData["ParamId"]!, Is.EqualTo(42.28f));
+
+            // Check generated error messages
+            m_LoggerMock.VerifyLog(l => l.LogError("Failed to add {Section} {Id} parameter to the merged list.  Was " +
+                "it also present in a parent?", "launch complex", "ParamId"));
+            m_LoggerMock.VerifyLog(l => l.LogError("Failed to add {Section} {Id} parameter to the merged list.  Was " +
+                "it also present in a parent?", "launch pad", "ParamId"));
+        }
+
+        [Test]
+        public async Task LaunchParametersSkipNotRespectedConstraints()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            var constraint2842 = new RangeConstraint() { Min = 28, Max = 42 };
+            var constraintList = new ListConstraint() { Choices = new[] { "A", "B", "C" } };
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam1", Type = LaunchParameterType.Float,
+                    DefaultValue = 35.0f, Constraint = constraint2842 },
+                new LaunchParameter() { Id = "GlobalParam2", Type = LaunchParameterType.Float,
+                    DefaultValue = 35.35f,Constraint = constraint2842 }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam1", Type = LaunchParameterType.Integer,
+                    DefaultValue = 42, Constraint = constraint2842 },
+                new LaunchParameter() { Id = "LaunchComplexParam2", Type = LaunchParameterType.Integer,
+                    DefaultValue = 28, Constraint = constraint2842 }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam1", Type = LaunchParameterType.String,
+                    DefaultValue = "B", Constraint = constraintList },
+                new LaunchParameter() { Id = "LaunchPadParam2", Type = LaunchParameterType.String,
+                    DefaultValue = "C", Constraint = constraintList }
+            };
+
+            var launchConfiguration = playground.LaunchConfiguration;
+            launchConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "GlobalParam1", Value = 42.0f },
+                new LaunchParameterValue() { Id = "GlobalParam2", Value = 42.00001f }
+            };
+            var launchComplexConfiguration = launchConfiguration.LaunchComplexes.First();
+            launchComplexConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchComplexParam1", Value = 42 },
+                new LaunchParameterValue() { Id = "LaunchComplexParam2", Value = 43 },
+            };
+            var launchPadConfiguration = launchComplexConfiguration.LaunchPads.First();
+            launchPadConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchPadParam1", Value = "A" },
+                new LaunchParameterValue() { Id = "LaunchPadParam2", Value = "Z" }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.Launched.IsCompleted, Is.True);
+
+            // LaunchPad launched, but the launch task from LaunchAsync should still be running
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(6));
+            Assert.That((float)launchData["GlobalParam1"]!, Is.EqualTo(42.0f));
+            Assert.That((float)launchData["GlobalParam2"]!, Is.EqualTo(35.35f));
+            Assert.That((int)launchData["LaunchComplexParam1"]!, Is.EqualTo(42));
+            Assert.That((int)launchData["LaunchComplexParam2"]!, Is.EqualTo(28));
+            Assert.That((string)launchData["LaunchPadParam1"]!, Is.EqualTo("A"));
+            Assert.That((string)launchData["LaunchPadParam2"]!, Is.EqualTo("C"));
+
+            // Check generated error messages
+            m_LoggerMock.VerifyLog(l => l.LogError("Parameter {Id} with a value of {Value} does not respect " +
+                "constraints, will use default value instead", "GlobalParam2", 42.00001f));
+            m_LoggerMock.VerifyLog(l => l.LogError("Parameter {Id} with a value of {Value} does not respect " +
+                "constraints, will use default value instead", "LaunchComplexParam2", 43));
+            m_LoggerMock.VerifyLog(l => l.LogError("Parameter {Id} with a value of {Value} does not respect " +
+                "constraints, will use default value instead", "LaunchPadParam2", "Z"));
+        }
+
+        [Test]
+        public async Task LaunchParametersWithReview()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float, DefaultValue = 35.0f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 28, ToBeRevisedByCapcom = true }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Else", ToBeRevisedByCapcom = true }
+            };
+
+            var launchConfiguration = playground.LaunchConfiguration;
+            launchConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "GlobalParam", Value = 42.28f }
+            };
+            var launchComplexConfiguration = launchConfiguration.LaunchComplexes.First();
+            launchComplexConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchComplexParam", Value = 42 }
+            };
+            var launchPadConfiguration = launchComplexConfiguration.LaunchPads.First();
+            launchPadConfiguration.Parameters = new[] {
+                new LaunchParameterValue() { Id = "LaunchPadParam", Value = "Something" }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait a little bit in case the review mechanism does not wait we can catch it.
+            await Task.Delay(250);
+            Assert.That(processLaunched.Task.IsCompleted, Is.False);
+
+            // Validate we got the right list of parameters to review
+            List<LaunchParameterForReview> reviewList;
+            var waitForToReviewTime = Stopwatch.StartNew();
+            do
+            {
+                reviewList = m_Manager.GetLaunchParametersForReview();
+                if (!reviewList.Any())
+                {
+                    await Task.Delay(25);
+                }
+            } while (!reviewList.Any() && waitForToReviewTime.Elapsed < TimeSpan.FromSeconds(5));
+            Assert.That(reviewList.Count, Is.EqualTo(2));
+
+            // Review LaunchComplexParam
+            var launchComplexParamForReview = reviewList.First(lpfr => lpfr.Value.Id == "LaunchComplexParam");
+            Assert.That(launchComplexParamForReview.LaunchPadId, Is.EqualTo(launchPadStub.Id));
+            Assert.That(launchComplexParamForReview.Value.Value, Is.EqualTo(42));
+            launchComplexParamForReview.Value.Value = 28;
+            launchComplexParamForReview.Ready = true;
+            m_Manager.UpdateLaunchParameterForReview(launchComplexParamForReview);
+
+            // Wait a little bit in case the review mechanism wouldn't wait for the second parameter to be reviewed.
+            await Task.Delay(250);
+            Assert.That(processLaunched.Task.IsCompleted, Is.False);
+
+            // While at it, let's try a few bad updates
+            var badUpdate = new LaunchParameterForReview(Guid.NewGuid());
+            badUpdate.LaunchPadId = launchComplexParamForReview.LaunchPadId;
+            badUpdate.Value = launchComplexParamForReview.Value.DeepClone();
+            badUpdate.Value.Value = 424242;
+            badUpdate.Ready = true;
+            Assert.That(() => m_Manager.UpdateLaunchParameterForReview(badUpdate), Throws.TypeOf<KeyNotFoundException>());
+
+            badUpdate = launchComplexParamForReview.DeepClone();
+            badUpdate.LaunchPadId = Guid.NewGuid();
+            badUpdate.Value.Value = 424242;
+            Assert.That(() => m_Manager.UpdateLaunchParameterForReview(badUpdate), Throws.TypeOf<ArgumentException>());
+
+            badUpdate = launchComplexParamForReview.DeepClone();
+            badUpdate.Value.Id = "ChangedId";
+            badUpdate.Value.Value = 424242;
+            Assert.That(() => m_Manager.UpdateLaunchParameterForReview(badUpdate), Throws.TypeOf<ArgumentException>());
+
+            // Now finish with the review of LaunchComplexParam
+            var launchPadParamForReview = reviewList.First(lpfr => lpfr.Value.Id == "LaunchPadParam");
+            Assert.That(launchPadParamForReview.LaunchPadId, Is.EqualTo(launchPadStub.Id));
+            Assert.That(launchPadParamForReview.Value.Value, Is.EqualTo("Something"));
+            launchPadParamForReview.Value.Value = "Else";
+            launchPadParamForReview.Ready = true;
+            m_Manager.UpdateLaunchParameterForReview(launchPadParamForReview);
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            Assert.That(m_Manager.Launched.IsCompleted, Is.True);
+
+            // LaunchPad launched, but the launch task from LaunchAsync should still be running
+            Assert.That(m_LaunchTask.IsCompleted, Is.False);
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(3));
+            Assert.That((float)launchData["GlobalParam"]!, Is.EqualTo(42.28f));
+            Assert.That((int)launchData["LaunchComplexParam"]!, Is.EqualTo(28));
+            Assert.That((string)launchData["LaunchPadParam"]!, Is.EqualTo("Else"));
+
+            // List of parameters to review should have been cleared
+            Assert.That(m_Manager.GetLaunchParametersForReview(), Is.Empty);
+        }
+
+        [Test]
+        public async Task StopLaunchWhileWaitingForReview()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float, DefaultValue = 35.0f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 28, ToBeRevisedByCapcom = true }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Else", ToBeRevisedByCapcom = true }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, _ =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for parameters to be reviewed
+            List<LaunchParameterForReview> reviewList;
+            var waitForToReviewTime = Stopwatch.StartNew();
+            do
+            {
+                reviewList = m_Manager.GetLaunchParametersForReview();
+                if (!reviewList.Any())
+                {
+                    await Task.Delay(25);
+                }
+            } while (!reviewList.Any() && waitForToReviewTime.Elapsed < TimeSpan.FromSeconds(5));
+            Assert.That(reviewList.Count, Is.EqualTo(2));
+
+            // Stop the launch
+            m_Manager.Stop();
+
+            // Wait for the launch to be over
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(m_LaunchTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(m_LaunchTask)); // Otherwise timeout
+
+            // List of parameters to be reviewed should have been cleared
+            Assert.That(m_Manager.GetLaunchParametersForReview().Any(), Is.False);
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task LandWhileWaitingForReview()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float, DefaultValue = 35.0f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 28, ToBeRevisedByCapcom = true }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Else", ToBeRevisedByCapcom = true }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, _ =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Wait for parameters to be reviewed
+            List<LaunchParameterForReview> reviewList;
+            var waitForToReviewTime = Stopwatch.StartNew();
+            do
+            {
+                reviewList = m_Manager.GetLaunchParametersForReview();
+                if (!reviewList.Any())
+                {
+                    await Task.Delay(25);
+                }
+            } while (!reviewList.Any() && waitForToReviewTime.Elapsed < TimeSpan.FromSeconds(5));
+            Assert.That(reviewList.Count, Is.EqualTo(2));
+
+            // Ask for landing (even if we are not really launched)
+            var landTask = m_Manager.LandAsync(() => {});
+
+            // Wait for the launch to be over
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(m_LaunchTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(m_LaunchTask)); // Otherwise timeout
+            Assert.That(landTask.IsCompleted, Is.True);
+
+            // List of parameters to be reviewed should have been cleared
+            Assert.That(m_Manager.GetLaunchParametersForReview().Any(), Is.False);
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(0));
+        }
+
+        [Test]
+        public async Task LaunchParametersAddMissingValues()
+        {
+            var playground = PreparePlayground(1);
+            playground.PrepareLaunchPadsStatus(m_LaunchPadsStatus);
+
+            var launchPadStub = playground.LaunchPadStubs.First();
+            var launchAsset = playground.LaunchedAsset;
+            var launchable = launchAsset.Launchables.First();
+
+            launchable.GlobalParameters = new[] {
+                new LaunchParameter() { Id = "GlobalParam", Type = LaunchParameterType.Float,
+                    DefaultValue = 42.28f }
+            };
+            launchable.LaunchComplexParameters = new[] {
+                new LaunchParameter() { Id = "LaunchComplexParam", Type = LaunchParameterType.Integer,
+                    DefaultValue = 42, ToBeRevisedByCapcom = true }
+            };
+            launchable.LaunchPadParameters = new[] {
+                new LaunchParameter() { Id = "LaunchPadParam", Type = LaunchParameterType.String,
+                    DefaultValue = "Something", ToBeRevisedByCapcom = true }
+            };
+
+            // Prepare launchpad stub
+            TaskCompletionSource processLaunched = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            HttpStatusCode ProcessLaunchCommand(LaunchPadCommand launchPadCommand) =>
+                TypeCommandHandler<LaunchPadLaunchCommand>(launchPadCommand, launchPadStub.Id, LaunchPadState.Launched, () =>
+                {
+                    launchPadStub.CommandHandler = null;
+                    processLaunched.TrySetResult();
+                });
+
+            JsonNode? launchData = null;
+            HttpStatusCode ProcessPrepareCommand(LaunchPadCommand launchPadCommand) =>
+                PrepareCommandHandler(launchPadCommand, launchAsset.Launchables.First(), launchPadStub.Id,
+                    LaunchPadState.WaitingForLaunch, prepareCommand =>
+                    {
+                        launchPadStub.CommandHandler = ProcessLaunchCommand;
+                        launchData = prepareCommand.LaunchData;
+                    });
+
+            launchPadStub.CommandHandler = ProcessPrepareCommand;
+
+            lock (m_LaunchPadsStatusLock)
+            {
+                m_LaunchTask = m_Manager!.LaunchAsync(playground.Manifest);
+            }
+
+            Assert.That(m_Manager.LaunchPadsCount, Is.EqualTo(1));
+            Assert.That(m_Manager.RunningLaunchPads, Is.EqualTo(1));
+
+            // Validate we got the right list of parameters to review
+            List<LaunchParameterForReview> reviewList;
+            var waitForToReviewTime = Stopwatch.StartNew();
+            do
+            {
+                reviewList = m_Manager.GetLaunchParametersForReview();
+                if (!reviewList.Any())
+                {
+                    await Task.Delay(25);
+                }
+            } while (!reviewList.Any() && waitForToReviewTime.Elapsed < TimeSpan.FromSeconds(5));
+            Assert.That(reviewList.Count, Is.EqualTo(2));
+
+            // Review LaunchComplexParam
+            var launchComplexParamForReview = reviewList.First(lpfr => lpfr.Value.Id == "LaunchComplexParam");
+            Assert.That(launchComplexParamForReview.LaunchPadId, Is.EqualTo(launchPadStub.Id));
+            Assert.That(launchComplexParamForReview.Value.Value, Is.EqualTo(42));
+
+            var launchPadParamForReview = reviewList.First(lpfr => lpfr.Value.Id == "LaunchPadParam");
+            Assert.That(launchPadParamForReview.LaunchPadId, Is.EqualTo(launchPadStub.Id));
+            Assert.That(launchPadParamForReview.Value.Value, Is.EqualTo("Something"));
+
+            // Complete the review
+            launchComplexParamForReview.Ready = true;
+            m_Manager.UpdateLaunchParameterForReview(launchComplexParamForReview);
+            launchPadParamForReview.Ready = true;
+            m_Manager.UpdateLaunchParameterForReview(launchPadParamForReview);
+
+            // Wait for the LaunchPad to be requested to launch
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(processLaunched.Task, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(processLaunched.Task)); // Otherwise timeout
+
+            // Verify the launch data that was received by the prepare command
+            Assert.That(launchData, Is.TypeOf<JsonObject>());
+            Assert.That(((JsonObject)launchData!).Count, Is.EqualTo(3));
+            Assert.That((float)launchData["GlobalParam"]!, Is.EqualTo(42.28f));
+            Assert.That((int)launchData["LaunchComplexParam"]!, Is.EqualTo(42));
+            Assert.That((string)launchData["LaunchPadParam"]!, Is.EqualTo("Something"));
+        }
+
         class Playground
         {
             public List<LaunchPadStub> LaunchPadStubs { get; set; } = new();
@@ -859,7 +1834,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             public LaunchManager.LaunchManifest Manifest { get; set; } = new();
         }
 
-        Playground PreparePlayground(int nbrLaunchPads, float launchPadFeedbackTimeoutSec = 30)
+        Playground PreparePlayground(int nbrLaunchPads, float launchPadFeedbackTimeoutSec = 30,
+            float landingTimeSec = 0)
         {
             Playground ret = new();
 
@@ -879,7 +1855,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                         Type = "ClusterNode",
                         PreLaunchPath = "PreLaunch.ps1",
                         LaunchPath = "Launch.exe",
-                        Payloads = new[] { Guid.NewGuid() }
+                        Payloads = new[] { Guid.NewGuid() },
+                        LandingTimeSec = landingTimeSec
                     }
                 }
             };
@@ -944,11 +1921,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         }
 
         HttpStatusCode PrepareCommandHandler(LaunchPadCommand launchPadCommand, Launchable launchable, Guid launchPadId,
-            LaunchPadState newState, Action then)
+            LaunchPadState newState, Action<LaunchPadPrepareCommand> then)
         {
             if (launchPadCommand is LaunchPadPrepareCommand prepareCommand &&
                 prepareCommand.PayloadIds.SequenceEqual(launchable.Payloads) &&
-                prepareCommand.PayloadSource != null && prepareCommand.PayloadSource.Equals(m_MissionControlEndPoint) &&
+                prepareCommand.MissionControlEntry != null && prepareCommand.MissionControlEntry.Equals(m_MissionControlEndPoint) &&
                 prepareCommand.PreLaunchPath == launchable.PreLaunchPath &&
                 prepareCommand.LaunchPath == launchable.LaunchPath)
             {
@@ -957,7 +1934,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                     m_LaunchPadsStatus[launchPadId].State = newState;
                     m_LaunchPadsStatus[launchPadId].SignalChanges(m_LaunchPadsStatus);
                 }
-                then();
+                then(prepareCommand);
                 return HttpStatusCode.OK;
             }
             else

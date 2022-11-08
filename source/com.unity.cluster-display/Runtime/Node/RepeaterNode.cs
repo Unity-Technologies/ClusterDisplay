@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using Unity.ClusterDisplay.RepeaterStateMachine;
+#if !UNITY_EDITOR
+using UnityEngine;
+#endif
 
 namespace Unity.ClusterDisplay
 {
@@ -27,9 +30,21 @@ namespace Unity.ClusterDisplay
         public static IReadOnlyCollection<MessageType> ReceiveMessageTypes => s_ReceiveMessageTypes;
 
         /// <summary>
+        /// Overridable method called to trigger quit of the application / game
+        /// </summary>
+        public virtual void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        /// <summary>
         /// <see cref="MessageType"/> that the UdpClient must process upon reception.
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RepeaterRegistered,
-            MessageType.FrameData, MessageType.EmitterWaitingToStartFrame};
+            MessageType.FrameData, MessageType.EmitterWaitingToStartFrame, MessageType.PropagateQuit};
     }
 }

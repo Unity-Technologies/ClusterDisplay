@@ -9,6 +9,8 @@ builder.WebHost.ConfigureAppConfiguration(configure => {
     var argMapping = new Dictionary<string, string>();
     argMapping["-c"] = "configPath";
     argMapping["--configPath"] = "configPath";
+    argMapping["-a"] = "capcomFolder";
+    argMapping["--capcomFolder"] = "capcomFolder";
     argMapping["-t"] = "testService";
     argMapping["--testService"] = "testService";
     configure.AddCommandLine(Environment.GetCommandLineArgs(), argMapping);
@@ -34,6 +36,7 @@ builder.Services.AddLaunchConfigurationService();
 builder.Services.AddMissionsService();
 builder.Services.AddMissionCommandsService();
 builder.Services.AddLaunchService();
+builder.Services.AddCapcomUplinkService();
 
 // Add the service to work with the automated tests
 bool hasTestService = !string.IsNullOrEmpty(builder.Configuration["testService"]) &&

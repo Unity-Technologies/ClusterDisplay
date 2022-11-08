@@ -26,7 +26,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_Logger = logger;
             m_ComplexesService = complexesService;
 
-            incrementalCollectionService.Register("launchPadsStatus", m_Collection, GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register("launchPadsStatus", RegisterForChangesInCollection,
+                GetIncrementalUpdatesAsync);
 
             // Remarks: I admit, it looks strange to lock in the constructor, but created LaunchStatusUpdaters might
             // start to update the collection as soon as updated.  So let's avoid any chance of problems...
@@ -72,6 +73,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 }
                 m_Collection.Clear();
                 m_Updaters.Clear();
+            }
+        }
+
+        /// <summary>
+        /// <see cref="IncrementalCollectionCatalogService"/>'s callback to register callback to detect changes in the
+        /// collection.
+        /// </summary>
+        /// <param name="toRegister">The callback to register</param>
+        void RegisterForChangesInCollection(Action<IReadOnlyIncrementalCollection> toRegister)
+        {
+            using (m_Lock.LockAsync().Result)
+            {
+                m_Collection.SomethingChanged += toRegister;
             }
         }
 
@@ -265,7 +279,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                         // There was a problem getting the launchpad status
                         m_Owner.UpdateLaunchPadStatus(m_LaunchPadId, e.ToString());
                         // Sleep to avoid a loop hammering the system (local and / or remote) for a persistent problem.
-                        await Task.Delay(TimeSpan.FromSeconds(30), m_CancellationTokenSource.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(1), m_CancellationTokenSource.Token);
+                        // Reset minStatusNumber to 0 (in case the LaunchPad restarted as opposed to just lost connection)
+                        minStatusNumber = 0;
                         continue;
                     }
 

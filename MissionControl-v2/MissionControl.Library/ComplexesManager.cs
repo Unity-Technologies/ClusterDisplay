@@ -50,46 +50,45 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 }
             }
 
-            using (var writeLock = await GetWriteLockAsync())
+            using var writeLock = await GetWriteLockAsync();
+
+            // Before doing the modification, each complex added should be unique and point to a resource that is not
+            // already present in the list...
+            foreach (var currentComplex in writeLock.Collection.Values)
             {
-                // Before doing the modification, each complex added should be unique and point to a resource that is
-                // not already present in the list...
-                foreach (var currentComplex in writeLock.Collection.Values)
+                if (currentComplex.Id == complex.Id)
                 {
-                    if (currentComplex.Id == complex.Id)
-                    {
-                        continue;
-                    }
-
-                    if (identifierSet.Contains(currentComplex.HangarBay.Identifier))
-                    {
-                        throw new ArgumentException($"Identifier {currentComplex.HangarBay.Identifier} is already " +
-                            $"used by another {nameof(LaunchComplex)}.");
-                    }
-                    if (endpointSet.Contains(currentComplex.HangarBay.Endpoint))
-                    {
-                        throw new ArgumentException($"Endpoint {currentComplex.HangarBay.Endpoint} is already used " +
-                            $"by another {nameof(LaunchComplex)}.");
-                    }
-
-                    foreach (var launchpad in currentComplex.LaunchPads)
-                    {
-                        if (identifierSet.Contains(launchpad.Identifier))
-                        {
-                            throw new ArgumentException($"Identifier {launchpad.Identifier} is already used by " +
-                                $"another {nameof(LaunchComplex)}.");
-                        }
-                        if (endpointSet.Contains(launchpad.Endpoint))
-                        {
-                            throw new ArgumentException($"Endpoint {launchpad.Endpoint} is already used by another " +
-                                $"{nameof(LaunchComplex)}.");
-                        }
-                    }
+                    continue;
                 }
 
-                // Now that we know everything is ok let's do the modifications
-                writeLock.Collection[complex.Id] = complex;
+                if (identifierSet.Contains(currentComplex.HangarBay.Identifier))
+                {
+                    throw new ArgumentException($"Identifier {currentComplex.HangarBay.Identifier} is already " +
+                        $"used by another {nameof(LaunchComplex)}.");
+                }
+                if (endpointSet.Contains(currentComplex.HangarBay.Endpoint))
+                {
+                    throw new ArgumentException($"Endpoint {currentComplex.HangarBay.Endpoint} is already used " +
+                        $"by another {nameof(LaunchComplex)}.");
+                }
+
+                foreach (var launchpad in currentComplex.LaunchPads)
+                {
+                    if (identifierSet.Contains(launchpad.Identifier))
+                    {
+                        throw new ArgumentException($"Identifier {launchpad.Identifier} is already used by " +
+                            $"another {nameof(LaunchComplex)}.");
+                    }
+                    if (endpointSet.Contains(launchpad.Endpoint))
+                    {
+                        throw new ArgumentException($"Endpoint {launchpad.Endpoint} is already used by another " +
+                            $"{nameof(LaunchComplex)}.");
+                    }
+                }
             }
+
+            // Now that we know everything is ok let's do the modifications
+            writeLock.Collection[complex.Id] = complex;
         }
 
         /// <summary>
@@ -103,10 +102,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         {
             // First get the asset and remove it from the "known list" so that we do not have to keep m_Lock locked for
             // the whole removal process and so that it appear to be gone ASAP from the outside.
-            using (var writeLock = await GetWriteLockAsync())
-            {
-                return writeLock.Collection.Remove(identifier);
-            }
+            using var writeLock = await GetWriteLockAsync();
+            return writeLock.Collection.Remove(identifier);
         }
     }
 }

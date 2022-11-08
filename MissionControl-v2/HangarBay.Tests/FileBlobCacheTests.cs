@@ -5,7 +5,7 @@ using Moq;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 // ReSharper disable StructuredMessageTemplateProblem
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class FileBlobCacheTests
     {

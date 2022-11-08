@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     class MissionControlStubCheckpoint
     {

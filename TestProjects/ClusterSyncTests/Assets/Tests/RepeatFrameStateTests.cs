@@ -394,6 +394,43 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(m_EmitterAgent.ReceivedMessagesCount, Is.Zero);
         }
 
+        [Test]
+        public void QuitWhileWaitingFrameSync()
+        {
+            using var testState = new RepeatFrameState(m_Node);
+
+            var propagateQuitTask = Task.Run(() => {
+                m_EmitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
+            });
+
+            var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.Null);
+            Assert.That(m_Node.QuitReceived, Is.True);
+            Assert.DoesNotThrow(propagateQuitTask.Wait);
+        }
+
+        [Test]
+        public void QuitWhileWaitingFrameData()
+        {
+            using var testState = new RepeatFrameState(m_Node);
+            long testDeadline = StopwatchUtils.TimestampIn(m_MaxTestTime);
+
+            var propagateQuitTask = Task.Run(() => {
+                using var receivedMessage =
+                    m_EmitterAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(testDeadline));
+                TestRepeaterWaitingToStartFrame(receivedMessage, 0);
+
+                SendEmitterWaitingToStartFrame(new NodeIdBitVector(), 0);
+
+                m_EmitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
+            });
+
+            var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.Null);
+            Assert.That(m_Node.QuitReceived, Is.True);
+            Assert.DoesNotThrow(propagateQuitTask.Wait);
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -407,7 +444,7 @@ namespace Unity.ClusterDisplay.Tests
                 CommunicationTimeout = m_MaxTestTime
             };
 
-            m_Node = new RepeaterNode(nodeConfig,
+            m_Node = new RepeaterNodeWithoutQuit(nodeConfig,
                 new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
 
             RepeaterStateReader.RegisterOnLoadDataDelegate(k_DataBlockTypeId, HandleReceivedData);
@@ -434,7 +471,7 @@ namespace Unity.ClusterDisplay.Tests
             newNodeConfig.CommunicationTimeout = communicationTimeout;
             IUdpAgent repeaterUdpAgent = m_Node.UdpAgent;
             m_Node.Dispose();
-            m_Node = new RepeaterNode(newNodeConfig, repeaterUdpAgent);
+            m_Node = new RepeaterNodeWithoutQuit(newNodeConfig, repeaterUdpAgent);
         }
 
         byte[] SendFrameData(ulong frameIndex, int dataLength)
@@ -522,11 +559,25 @@ namespace Unity.ClusterDisplay.Tests
             return (task, frameData);
         }
 
+        class RepeaterNodeWithoutQuit: RepeaterNode
+        {
+            public RepeaterNodeWithoutQuit(ClusterNodeConfig config, IUdpAgent udpAgent)
+                : base(config, udpAgent)
+            {
+            }
+
+            public bool QuitReceived { get; private set; }
+            public override void Quit()
+            {
+                QuitReceived = true;
+            }
+        }
+
         const byte k_NodeId = 42;
         const int k_DataBlockTypeId = 28;
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);
-        RepeaterNode m_Node;
+        RepeaterNodeWithoutQuit m_Node;
         TestUdpAgent m_EmitterAgent;
         List<byte[]> m_ReceivedData = new ();
     }

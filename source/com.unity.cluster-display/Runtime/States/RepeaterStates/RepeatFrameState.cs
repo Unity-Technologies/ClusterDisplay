@@ -28,12 +28,12 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             // moderation fixed the problem but since packet lost should be something really rare anyway and we prefer
             // to reduce constraint on hardware / driver / system configuration, we decided to simply turn off the
             // feature for now.
-            bool orderedReception;
 #if CLUSTER_DISPLAY_ORDER_PRESERVING_NETWORK
-            orderedReception = true;
+            bool orderedReception = true;
 #else
-            orderedReception = false;
+            bool orderedReception = false;
 #endif
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalse
             m_FrameDataAssembler = new(node.UdpAgent, orderedReception, firstFrameData);
         }
 
@@ -47,18 +47,28 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
         protected override NodeState DoFrameImplementation()
         {
+            var udpAgent = Node.UdpAgent;
+
             // Why do we set the deadline for everything we do at CommunicationTimeout + 1 second?  So that if another
             // repeater is the one causing problem, the emitter will timeout after CommunicationTimeout and continue and
             // this way we will be able to continue correctly (assuming network based synchronization).
             long doFrameDeadline = StopwatchUtils.TimestampIn(Node.Config.CommunicationTimeout + TimeSpan.FromSeconds(1));
 
             // We do not need to inform the emitter that we are ready to start the next frame on the first frame.
-            ReceivedMessage<FrameData> receivedFrameData = null;
+            ReceivedMessageBase receivedMessage = null;
             if (m_EmitterExpectingNotificationOnStart)
             {
                 using (s_MarkerNetworkSynchronization.Auto())
                 {
-                    receivedFrameData = PerformNetworkSynchronization(doFrameDeadline);
+                    receivedMessage = PerformNetworkSynchronization(doFrameDeadline);
+                    if (receivedMessage is {Type: MessageType.PropagateQuit})
+                    {
+                        // Process request to quit
+                        udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
+                            {NodeId = Node.Config.NodeId});
+                        Node.Quit();
+                        return null;
+                    }
                 }
             }
 
@@ -66,30 +76,36 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             {
                 // Get the FrameData to use for the frame we are about to start
                 m_FrameDataAssembler.WillNeedFrame(Node.FrameIndex);
-                var udpAgent = Node.UdpAgent;
-                while (receivedFrameData == null && Stopwatch.GetTimestamp() <= doFrameDeadline)
+                while (receivedMessage == null && Stopwatch.GetTimestamp() <= doFrameDeadline)
                 {
-                    var receivedMessage =
-                        udpAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(doFrameDeadline));
+                    receivedMessage = udpAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(doFrameDeadline));
                     if (receivedMessage == null)
                     {
                         continue;
                     }
 
-                    if (receivedMessage.Type == MessageType.FrameData)
+                    switch (receivedMessage.Type)
                     {
-                        receivedFrameData = (ReceivedMessage<FrameData>)receivedMessage;
-                    }
-                    else
-                    {
-                        // Other type of messages, don't really know what they are but let's simply ignore them, they
-                        // have no impact on us at the moment...
-                        receivedMessage.Dispose();
+                        case MessageType.FrameData:
+                            // This is the message we want, nothing special to do
+                            break;
+                        case MessageType.PropagateQuit:
+                            // Process request to quit
+                            udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
+                                {NodeId = Node.Config.NodeId});
+                            Node.Quit();
+                            return null;
+                        default:
+                            // Other type of messages, don't really know what they are but let's simply ignore them, they
+                            // have no impact on us at the moment...
+                            receivedMessage.Dispose();
+                            receivedMessage = null;
+                            continue;
                     }
                 }
 
                 // Final validation / preparation of the received frame data
-                if (receivedFrameData == null)
+                if (receivedMessage == null)
                 {
                     // The only this can happen is if we timed out waiting for the FrameData...
                     throw new TimeoutException($"Repeater failed to receive FrameData for frame " +
@@ -97,17 +113,17 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                 }
             }
 
-            using var receivedFrameDataDisposer = receivedFrameData;
-            if (receivedFrameData.Payload.FrameIndex != Node.FrameIndex)
+            using var receivedFrameDataDisposer = (ReceivedMessage<FrameData>)receivedMessage;
+            if (receivedFrameDataDisposer.Payload.FrameIndex != Node.FrameIndex)
             {
                 throw new InvalidDataException($"Unexpected FrameData FrameIndex, was expecting " +
-                    $"{Node.FrameIndex} but we got {receivedFrameData.Payload.FrameIndex}.");
+                    $"{Node.FrameIndex} but we got {receivedFrameDataDisposer.Payload.FrameIndex}.");
             }
 
             using (s_MarkerApplyingState.Auto())
             {
                 // Push it to the game state
-                RepeaterStateReader.RestoreEmitterFrameData(receivedFrameData.ExtraData.AsNativeArray());
+                RepeaterStateReader.RestoreEmitterFrameData(receivedFrameDataDisposer.ExtraData.AsNativeArray());
             }
 
             // RepeatFrameState never switch to another state...
@@ -120,9 +136,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         /// Perform network based synchronization
         /// </summary>
         /// <param name="deadlineTick">Limit of when to wait for successful network synchronization.</param>
-        /// <returns><see cref="ReceivedMessage{TM}"/> that made us realize that we lost a
+        /// <returns><see cref="ReceivedMessageBase"/> that made us realize that we lost a
         /// <see cref="EmitterWaitingToStartFrame"/> and that needs to be processed.</returns>
-        ReceivedMessage<FrameData> PerformNetworkSynchronization(long deadlineTick)
+        ReceivedMessageBase PerformNetworkSynchronization(long deadlineTick)
         {
             var udpAgent = Node.UdpAgent;
             var nodeId = Node.Config.NodeId;
@@ -195,6 +211,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         }
                         // ... and let's simply ignore old FrameIndex.  A packet that was lost on the network?
                         break;
+                    case MessageType.PropagateQuit:
+                        return receivedMessage;
                     default:
                         // Some other message, just discard it.
                         receivedMessage.Dispose();

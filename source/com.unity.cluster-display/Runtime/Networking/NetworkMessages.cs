@@ -72,6 +72,8 @@ namespace Unity.ClusterDisplay
         RetransmitFrameData,
         RepeaterWaitingToStartFrame,
         EmitterWaitingToStartFrame,
+        PropagateQuit,
+        QuitReceived
     }
 
     /// <summary>
@@ -109,7 +111,7 @@ namespace Unity.ClusterDisplay
     /// <summary>
     /// Message sent by repeaters when they start up to announce their presence to an emitter.
     /// </summary>
-    /// <remarks>This message should will be sent repetitively every X ms (not too often, something over 100 ms sounds
+    /// <remarks>This message should be sent repetitively every X ms (not too often, something over 100 ms sounds
     /// reasonable) by a starting repeater until it receives a <see cref="RepeaterRegistered"/> from the emitter.</remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [MessageType(MessageType.RegisteringWithEmitter)]
@@ -290,5 +292,33 @@ namespace Unity.ClusterDisplay
             };
             return storage.IsSet(nodeId & 0b11_1111);
         }
+    }
+
+    /// <summary>
+    /// Message sent by the emitter to inform repeaters that we have been requested to quit.
+    /// </summary>
+    /// <remarks>This message should be sent repetitively every X ms (not too often, something over 100 ms sounds
+    /// reasonable) by the emitter requesting to quit until it is forcefully terminated or all repeated have signaled
+    /// they received it and are quitting.
+    /// <br/><br/>There isn't really any property in this message at the moment, but let's still have it to be symetric
+    /// with the other messages.</remarks>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.PropagateQuit)]
+    struct PropagateQuit
+    {
+    }
+
+    /// <summary>
+    /// Message sent by repeaters to inform the emitter that it received the <see cref="PropagateQuit"/> message was
+    /// received and is quitting.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.QuitReceived)]
+    struct QuitReceived
+    {
+        /// <summary>
+        /// NodeId of the repeater node sending the message.
+        /// </summary>
+        public byte NodeId;
     }
 }

@@ -36,14 +36,14 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             ReceivedMessage<FrameData> repeatFrameStateFirstFrameData = null;
 
             bool hasReceivedRepeaterRegistered = false;
-            bool firstRegistringWithEmitter = true;
+            bool firstRegisteringWithEmitter = true;
             do
             {
                 // Broadcast to a listening emitter that we are here!
                 udpAgent.SendMessage(MessageType.RegisteringWithEmitter, registerMessage);
-                if (firstRegistringWithEmitter)
+                if (firstRegisteringWithEmitter)
                 {
-                    firstRegistringWithEmitter = false;
+                    firstRegisteringWithEmitter = false;
                 }
                 else
                 {
@@ -88,6 +88,11 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                                 repeatFrameStateFirstFrameData = receivedFrameData.TransferToNewInstance();
                                 retransmitRegistrationInterval = s_ShortRetransmitRegistrationInterval;
                                 break;
+                            case MessageType.PropagateQuit:
+                                udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
+                                    {NodeId = Node.Config.NodeId});
+                                Node.Quit();
+                                return null;
                         }
                     }
                 } while (!hasReceivedRepeaterRegistered && stopWaitingForRepeaterRegistered > Stopwatch.GetTimestamp());

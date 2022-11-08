@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 {
     public static class IncrementalCollectionServiceExtension
@@ -12,8 +10,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
     /// <summary>
     /// Service into which every <see cref="IncrementalCollection{T}"/> that want to be exposed through the
-    /// <see cref="ClusterDisplay.MissionControl.MissionControl.Controllers.IncrementalCollectionsUpdateController"/>
-    /// must register.
+    /// <see cref="Controllers.IncrementalCollectionsUpdateController"/> must register.
     /// </summary>
     public class IncrementalCollectionCatalogService
     {
@@ -26,8 +23,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// Register an <see cref="IncrementalCollection{T}"/> to provide incremental updates from a version.
         /// </summary>
         /// <param name="name">Name of the <see cref="IncrementalCollection{T}"/>.</param>
-        /// <param name="collection">The <see cref="IncrementalCollection{T}"/> (as an interface without generics).
-        /// </param>
+        /// <param name="register">Callback called to register the specified handler to
+        /// <see cref="IncrementalCollection{T}.SomethingChanged"/>.</param>
         /// <param name="callback">Callback that should produce a <see cref="IncrementalCollectionUpdate{T}"/> that
         /// contains the incremental update from the specified version (the <see cref="ulong"/> parameter) to the
         /// current state.  It should return null if no update is currently available.</param>
@@ -35,13 +32,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// with that <paramref name="name"/>.</exception>
         /// <remarks>There is current no unregister method.  Could probably be done but we currently don't need it so
         /// let's keep the code as simple as possible.</remarks>
-        public void Register(string name, IReadOnlyIncrementalCollection collection, Func<ulong, Task<object?>> callback)
+        public void Register(string name, Action<Action<IReadOnlyIncrementalCollection>> register,
+            Func<ulong, Task<object?>> callback)
         {
             lock (m_Lock)
             {
                 if (!m_Registry.ContainsKey(name))
                 {
-                    CollectionData newData = new(collection, callback);
+                    CollectionData newData = new(register, callback);
                     m_Registry.Add(name, newData);
                 }
                 else
@@ -74,7 +72,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 // Get the task that will get signaled when something changes.  Important, get it before asking for the
                 // incremental update or otherwise we could end up waiting for nothing because of a race condition
                 // between the waiting task and having an empty update or not.
-                Task waitTask = collectionData.GetSomethingChangedTask();
+                Task waitTask = collectionData.SomethingChangedTask;
 
                 object? ret = await collectionData.Callback(versionNumber);
                 if (ret != null)
@@ -94,31 +92,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             /// <summary>
             /// Constructor
             /// </summary>
-            /// <param name="collection">The <see cref="IncrementalCollection{T}"/> (as an interface without generics).
-            /// </param>
+            /// <param name="register">Callback called to register the specified handler to
+            /// <see cref="IncrementalCollection{T}.SomethingChanged"/>.</param>
             /// <param name="callback">Callback that should produce a <see cref="IncrementalCollectionUpdate{T}"/> that
             /// contains the incremental update from the specified version (the <see cref="ulong"/> parameter) to the
             /// current state.  It should return null if no update is currently available.</param>
-            public CollectionData(IReadOnlyIncrementalCollection collection, Func<ulong, Task<object?>> callback)
+            public CollectionData(Action<Action<IReadOnlyIncrementalCollection>> register,
+                Func<ulong, Task<object?>> callback)
             {
                 Callback = callback;
-                m_Collection = collection;
-
-                m_Collection.SomethingChanged += SomethingChangedInCollection;
+                register(SomethingChangedInCollection);
             }
 
             /// <summary>
-            /// Returns a task that will complete when something changes in the collection we are monitoring.
+            /// <see cref="Task"/> that will completes when something changes in the collection we are monitoring.
             /// </summary>
-            /// <returns></returns>
-            public Task GetSomethingChangedTask()
-            {
-                lock (m_Lock)
-                {
-                    m_SomethingChangedTaskCompletionSource ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
-                    return m_SomethingChangedTaskCompletionSource.Task;
-                }
-            }
+            public Task SomethingChangedTask => m_SomethingChangedCv.SignaledTask;
 
             /// <summary>
             /// Callback that should produce a <see cref="IncrementalCollectionUpdate{T}"/> that contains the
@@ -128,33 +117,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             public Func<ulong, Task<object?>> Callback { get; }
 
             /// <summary>
-            /// Callback called when something changes in <see cref="m_Collection"/>.
+            /// Callback called when something changes in the collection.
             /// </summary>
             /// <param name="changed">The collection that changed.</param>
             void SomethingChangedInCollection(IReadOnlyIncrementalCollection changed)
             {
-                Debug.Assert(ReferenceEquals(m_Collection, changed));
-                lock (m_Lock)
-                {
-                    m_SomethingChangedTaskCompletionSource?.TrySetResult();
-                    m_SomethingChangedTaskCompletionSource = null;
-                }
+                m_SomethingChangedCv.Signal();
             }
 
             /// <summary>
-            /// The <see cref="IncrementalCollection{T}"/> (as an interface without generics).
+            /// Condition variable that get signaled when something changes in the collection.
             /// </summary>
-            IReadOnlyIncrementalCollection m_Collection;
-
-            /// <summary>
-            /// Object used to synchronize access to the member variables below.
-            /// </summary>
-            readonly object m_Lock = new();
-
-            /// <summary>
-            /// Stores information about every registered <see cref="IncrementalCollection{T}"/>.
-            /// </summary>
-            TaskCompletionSource? m_SomethingChangedTaskCompletionSource;
+            AsyncConditionVariable m_SomethingChangedCv = new();
         }
 
         // ReSharper disable once NotAccessedField.Local

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AssemblyRun": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Playgrounds\\CD-170\\Spinning Cube\\QuadroSyncTests_Data\\Managed\\Unity.ClusterDisplay.MissionControl.Capcom.dll\" Unity.ClusterDisplay.MissionControl.Capcom.TestCapcomClass TestMethod ArgA ArgB"
+    }
+  }
+}

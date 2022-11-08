@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     class MissionControlProcessHelper : IDisposable
     {
@@ -38,7 +38,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             var startInfo = new ProcessStartInfo()
             {
                 FileName = Path.Combine(exePath, "MissionControl.exe"),
-                Arguments = $"--masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{m_ConfigPath}/config.json\" -t true",
+                Arguments = $"--masterPid {Process.GetCurrentProcess().Id.ToString()} -c \"{m_ConfigPath}/config.json\" " +
+                    $"-a {m_ConfigPath}/capcom -t true",
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Minimized,
                 WorkingDirectory = exePath
@@ -75,10 +76,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             // Send a shutdown command
             var stopwatch = Stopwatch.StartNew();
-            var shutdownTask = PostCommandWithStatusCode<ShutdownCommand>(new());
-            if (shutdownTask.Wait(k_ConnectionTimeout - stopwatch.Elapsed))
+            try
             {
-                Assert.That(shutdownTask.Result, Is.EqualTo(HttpStatusCode.Accepted));
+                var shutdownTask = PostCommandWithStatusCode<ShutdownCommand>(new());
+                if (shutdownTask.Wait(k_ConnectionTimeout - stopwatch.Elapsed))
+                {
+                    Assert.That(shutdownTask.Result, Is.EqualTo(HttpStatusCode.Accepted));
+                }
+            }
+            catch (Exception)
+            {
+                // Unlikely be maybe possible, the process might had the time to exit (or close connections) before
+                // completing sending the response.  So let's just skip the exception and continue waiting for the
+                // process to exit.
             }
             int waitMilliseconds = Math.Max((int)(k_ConnectionTimeout - stopwatch.Elapsed).TotalMilliseconds, 0);
             bool waitRet = m_Process!.WaitForExit(waitMilliseconds);
@@ -388,6 +398,40 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         public async Task<HttpStatusCode> DeleteSavedMissionWithStatusCode(Guid id)
         {
             var ret = await HttpClient.DeleteAsync($"missions/{id}");
+            return ret.StatusCode;
+        }
+
+        public async Task<LaunchParameterForReview[]> GetLaunchParametersForReview()
+        {
+            var ret = await HttpClient.GetFromJsonAsync<LaunchParameterForReview[]>(
+                $"currentMission/launchParametersForReview", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<LaunchParameterForReview> GetLaunchParameterForReview(Guid id)
+        {
+            var ret = await HttpClient.GetFromJsonAsync<LaunchParameterForReview>(
+                $"currentMission/launchParametersForReview/{id}", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<HttpStatusCode> GetLaunchParameterForReviewStatusCode(Guid id)
+        {
+            var ret = await HttpClient.GetAsync($"currentMission/launchParametersForReview/{id}");
+            return ret.StatusCode;
+        }
+
+        public async Task PutReviewedLaunchParameter(LaunchParameterForReview reviewed)
+        {
+            var ret = await HttpClient.PutAsJsonAsync($"currentMission/launchParametersForReview", reviewed);
+            Assert.That(ret.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        public async Task<HttpStatusCode> PutReviewedLaunchParameterStatusCode(LaunchParameterForReview reviewed)
+        {
+            var ret = await HttpClient.PutAsJsonAsync($"currentMission/launchParametersForReview", reviewed);
             return ret.StatusCode;
         }
 

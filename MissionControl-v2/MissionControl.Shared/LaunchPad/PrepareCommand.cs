@@ -1,5 +1,5 @@
 using System;
-using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
@@ -22,9 +22,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         public IEnumerable<Guid> PayloadIds { get; set; } = Enumerable.Empty<Guid>();
 
         /// <summary>
-        /// URI of where to download payloads if they are not already available in the HangarBay.
+        /// URI to the mission control asking to prepare a launch.
         /// </summary>
-        public Uri? PayloadSource { get; set; }
+        /// <remarks>It will be used to download the payloads and to set the MISSIONCONTROL_ENTRY environment variable
+        /// that can be used by payloads to monitor Mission Control.<br/><br/>
+        /// Cannot use auto property because we want to store the normalized uri so that this is the one that
+        /// gets serialized to json.</remarks>
+        public Uri? MissionControlEntry {
+            get => m_MissionControlEntry;
+            set => m_MissionControlEntry = value != null ? new Uri(value.ToString()) : null;
+        }
+        Uri? m_MissionControlEntry;
 
         /// <summary>
         /// Some data (opaque to all parts of MissionControl, only to be used by the launch and pre-launch executables)
@@ -32,7 +40,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// same hard-coded data for all nodes of the cluster, useful for configuring some options decided at the moment
         /// of producing the launch catalog.
         /// </summary>
-        public dynamic? LaunchableData { get; set; }
+        public JsonNode? LaunchableData { get; set; }
 
         /// <summary>
         /// Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during
@@ -40,18 +48,20 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// </summary>
         /// <remarks>Because of OS limitations the amount of data in this object should be kept reasonable (current
         /// limitation seem to be around 8192 characters).</remarks>
-        public dynamic? LaunchData { get; set; }
+        public JsonNode? LaunchData { get; set; }
 
         /// <summary>
         /// Path (relative to where prepared payload is stored) to an optional executable to execute before launch.
         /// This executable is responsible to ensure that any external dependencies are installed and ready to use.
         /// </summary>
+        /// <remarks>Can be an executable, a ps1 or an assemblyrun:// url.</remarks>
         public string PreLaunchPath { get; set; } = "";
 
         /// <summary>
         /// Path (relative to where prepared payload is stored) to the executable to launch when the LaunchPad receives
         /// the Launch command.
         /// </summary>
+        /// <remarks>Can be an executable, a ps1 or an assemblyrun:// url.</remarks>
         public string LaunchPath { get; set; } = "";
 
         public bool Equals(PrepareCommand? other)
@@ -61,29 +71,22 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
                 return false;
             }
 
-            if ((PayloadSource == null) != (other.PayloadSource == null))
+            if ((MissionControlEntry == null) != (other.MissionControlEntry == null))
             {
                 return false;
             }
 
             return PayloadIds.SequenceEqual(other.PayloadIds) &&
-                (PayloadSource == null || PayloadSource.Equals(other.PayloadSource)) &&
-                SerializeDynamic(LaunchableData) == SerializeDynamic(other.LaunchableData) &&
-                SerializeDynamic(LaunchData) == SerializeDynamic(other.LaunchData) &&
+                (MissionControlEntry == null || MissionControlEntry.Equals(other.MissionControlEntry)) &&
+                SerializeJsonNode(LaunchableData) == SerializeJsonNode(other.LaunchableData) &&
+                SerializeJsonNode(LaunchData) == SerializeJsonNode(other.LaunchData) &&
                 PreLaunchPath == other.PreLaunchPath &&
                 LaunchPath == other.LaunchPath;
         }
 
-        static string SerializeDynamic(dynamic toSerialize)
+        static string SerializeJsonNode(JsonNode? toSerialize)
         {
-            if (!Object.ReferenceEquals(toSerialize, null))
-            {
-                return JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
-            }
-            else
-            {
-                return "";
-            }
+            return toSerialize != null ? toSerialize.ToJsonString() : "";
         }
     }
 }

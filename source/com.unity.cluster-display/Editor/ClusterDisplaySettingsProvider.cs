@@ -43,8 +43,12 @@ namespace Unity.ClusterDisplay.Editor
                     var parameters = new VisualElement();
                     rootElement.Add(parameters);
                     parameters.Add(new PropertyField(settings.FindProperty("m_ClusterParams")));
-                    rootElement.Bind(settings);
 
+                    var missionControl = new VisualElement();
+                    rootElement.Add(missionControl);
+                    missionControl.Add(new PropertyField(settings.FindProperty("m_MissionControlSettings")));
+
+                    rootElement.Bind(settings);
                     parentElement.Add(rootElement);
                 },
                 keywords = SettingsProvider.GetSearchKeywordsFromGUIContentProperties<Contents>()

@@ -10,7 +10,7 @@ using HangarBayCommand = Unity.ClusterDisplay.MissionControl.HangarBay.Command;
 using HangarBayShutdownCommand = Unity.ClusterDisplay.MissionControl.HangarBay.ShutdownCommand;
 using HangarBayStorageFolderConfig = Unity.ClusterDisplay.MissionControl.HangarBay.StorageFolderConfig;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     class HangarBayProcessHelper : IDisposable
     {
@@ -72,10 +72,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             // Send a shutdown command
             var stopwatch = Stopwatch.StartNew();
-            var shutdownTask = PostCommandWithStatusCode(new HangarBayShutdownCommand());
-            if (shutdownTask.Wait(k_ConnectionTimeout - stopwatch.Elapsed))
+            try
             {
-                Assert.That(shutdownTask.Result, Is.EqualTo(HttpStatusCode.Accepted));
+                var shutdownTask = PostCommandWithStatusCode(new HangarBayShutdownCommand());
+                if (shutdownTask.Wait(k_ConnectionTimeout - stopwatch.Elapsed))
+                {
+                    Assert.That(shutdownTask.Result, Is.EqualTo(HttpStatusCode.Accepted));
+                }
+            }
+            catch (Exception)
+            {
+                // Unlikely be maybe possible, the process might had the time to exit (or close connections) before
+                // completing sending the response.  So let's just skip the exception and continue waiting for the
+                // process to exit.
             }
             int waitMilliseconds = Math.Max((int)(k_ConnectionTimeout - stopwatch.Elapsed).TotalMilliseconds, 0);
             bool waitRet = m_Process!.WaitForExit(waitMilliseconds);

@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class ConfigControllerTests
     {

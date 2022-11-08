@@ -1,6 +1,7 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     public class LaunchableTests
     {
@@ -23,14 +24,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             launchableB.Type = "clusterNode";
             Assert.That(launchableA, Is.EqualTo(launchableB));
 
-            launchableA.Data = new { StringProperty = "StringValue", NumberProperty = 42 };
+            launchableA.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42 }".Replace('\'', '\"'));
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
             launchableB.Data = launchableA.Data;
             launchableA.Data = null;
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
-            launchableA.Data = new { OtherStringProperty = "OtherStringValue", OtherNumberProperty = 28 };
+            launchableA.Data = JsonNode.Parse("{'OtherStringProperty': 'OtherStringValue', 'OtherNumberProperty': 28 }".Replace('\'', '\"'));
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
-            launchableA.Data = new { StringProperty = "StringValue", NumberProperty = 42.0 };
+            launchableA.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42 }".Replace('\'', '\"'));
             Assert.That(launchableA, Is.EqualTo(launchableB));
 
             launchableA.GlobalParameters = new[] { new LaunchParameter() { Name = "Global parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
@@ -63,6 +64,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             launchableB.LaunchPath = "QuadroSyncTests.exe";
             Assert.That(launchableA, Is.EqualTo(launchableB));
 
+            launchableA.LandingTimeSec = 2.0f;
+            launchableB.LandingTimeSec = 2.5f;
+            Assert.That(launchableA, Is.Not.EqualTo(launchableB));
+            launchableB.LandingTimeSec = 2.0f;
+            Assert.That(launchableA, Is.EqualTo(launchableB));
+
             launchableA.Payloads = new[] { "Payload1", "Payload2" };
             launchableB.Payloads = new[] { "Payload3" };
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
@@ -86,12 +93,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             Launchable toSerialize = new();
             toSerialize.Name = "Cluster Node";
             toSerialize.Type = "clusterNode";
-            toSerialize.Data = new { StringProperty = "StringValue", NumberProperty = 42 };
+            toSerialize.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42 }".Replace('\'', '\"'));
             toSerialize.GlobalParameters = new[] { new LaunchParameter() { Name = "Global parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toSerialize.LaunchComplexParameters = new[] { new LaunchParameter() { Name = "Launch complex parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toSerialize.LaunchPadParameters = new[] { new LaunchParameter() { Name = "Launchpad parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toSerialize.PreLaunchPath = "prelaunch.ps1";
             toSerialize.LaunchPath = "QuadroSyncTests.exe";
+            toSerialize.LandingTimeSec = 2.5f;
             toSerialize.Payloads = new[] { "Payload1", "Payload2" };
             var serializedParameter = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<Launchable>(serializedParameter, Json.SerializerOptions);
@@ -105,12 +113,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             Launchable toCopy = new();
             toCopy.Name = "Cluster Node";
             toCopy.Type = "clusterNode";
-            toCopy.Data = new { StringProperty = "StringValue", NumberProperty = 42 };
+            toCopy.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42 }".Replace('\'', '\"'));
             toCopy.GlobalParameters = new[] { new LaunchParameter() { Name = "Global parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toCopy.LaunchComplexParameters = new[] { new LaunchParameter() { Name = "Launch complex parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toCopy.LaunchPadParameters = new[] { new LaunchParameter() { Name = "Launchpad parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toCopy.PreLaunchPath = "prelaunch.ps1";
             toCopy.LaunchPath = "QuadroSyncTests.exe";
+            toCopy.LandingTimeSec = 2.5f;
             toCopy.Payloads = new[] { "Payload1", "Payload2" };
 
             Launchable copied = new();

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class HangarBayTests
     {
@@ -62,6 +62,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             toClone.Endpoint = new("http://1.2.3.6:8100");
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        [TestCase("http://127.0.0.1:8000")]
+        [TestCase("http://127.0.0.1:8000/")]
+        public void Endpoint(string uri)
+        {
+            HangarBay hangarBay = new();
+            hangarBay.Endpoint = new Uri(uri);
+            Assert.That(hangarBay.Endpoint.ToString(), Is.EqualTo("http://127.0.0.1:8000/"));
+            Assert.That(JsonSerializer.Serialize(hangarBay.Endpoint), Is.EqualTo("\"http://127.0.0.1:8000/\""));
         }
     }
 }

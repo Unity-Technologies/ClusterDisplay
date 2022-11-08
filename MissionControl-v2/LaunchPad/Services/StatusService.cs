@@ -125,8 +125,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         return ret;
                     }
 
-                    m_StatusCompletionSource ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                    somethingChangedTask = m_StatusCompletionSource.Task;
+                    somethingChangedTask = m_StatusCv.SignaledTask;
                 }
 
                 await somethingChangedTask;
@@ -140,8 +139,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         {
             m_Status.LastChanged = DateTime.Now;
             ++m_Status.StatusNumber;
-            m_StatusCompletionSource?.SetResult();
-            m_StatusCompletionSource = null;
+            m_StatusCv.Signal();
         }
 
         /// <summary>
@@ -149,10 +147,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// </summary>
         void ApplicationShutdown()
         {
-            lock (m_Lock)
-            {
-                m_StatusCompletionSource?.TrySetCanceled();
-            }
+            m_StatusCv.Cancel();
         }
 
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
@@ -171,8 +166,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         readonly Status m_Status = new();
 
         /// <summary>
-        /// <see cref="Task"/> that gets completed every time m_Status is updated.
+        /// Condition variable to signal when m_Status changes.
         /// </summary>
-        TaskCompletionSource? m_StatusCompletionSource;
+        AsyncConditionVariable m_StatusCv = new();
     }
 }

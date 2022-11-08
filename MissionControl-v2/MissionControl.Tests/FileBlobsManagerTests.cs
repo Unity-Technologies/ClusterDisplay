@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
 
-using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class FileBlobsManagerTests
     {

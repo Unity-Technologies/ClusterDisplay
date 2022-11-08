@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Net;
-using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchStopMissionControllerTests
     {
@@ -66,8 +66,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             await m_ProcessHelper.WaitForState(State.Idle);
             Assert.That(process.HasExited, Is.True);
 
-            // While at it, try to double stop, it should fail
-            await m_ProcessHelper.PostCommand(new StopMissionCommand(), HttpStatusCode.Conflict);
+            // While at it, try to double stop, it should return an immediate success (nothing to stop)
+            await m_ProcessHelper.PostCommand(new StopMissionCommand());
         }
 
         [Test]
@@ -196,14 +196,59 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             await m_ProcessHelper.WaitForState(State.Idle);
         }
 
+        [Test]
+        public async Task Land()
+        {
+            await PrepareMissionControl(1, k_LandCatalog, k_LandCatalogFilesContent);
+
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+
+            var launchPadProcessHelper = m_LaunchPadsProcessHelper.First();
+            var launchedProcess = await GetLaunchedProcess(launchPadProcessHelper);
+
+            // Initiate landing
+            Assert.That(launchedProcess.HasExited, Is.False);
+            var landedPath = Path.Combine(launchPadProcessHelper.LaunchFolder, "landed.txt");
+            Assert.That(File.Exists(landedPath), Is.False);
+            await m_ProcessHelper.PostCommand(new StopMissionCommand(), HttpStatusCode.Accepted);
+
+            // Wait for the payload to land (graceful shutdown)
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var launchedProcessCompletedTask = launchedProcess.WaitForExitAsync();
+            var awaitTask = await Task.WhenAny(launchedProcessCompletedTask, timeoutTask);
+            Assert.That(awaitTask, Is.SameAs(launchedProcessCompletedTask)); // Or else timed out
+            Assert.That(File.Exists(landedPath), Is.True);
+
+            // Process not running anymore, but internal state of MissionControl might not be updated yet, wait for the
+            // state to be idle ready to restart.
+            await m_ProcessHelper.WaitForState(State.Idle);
+
+            // While at it validate we can re-launch
+            ClearPreviousLaunchPidTxt(launchPadProcessHelper);
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+            launchedProcess = await GetLaunchedProcess(launchPadProcessHelper);
+            Assert.That(launchedProcess.HasExited, Is.False);
+            Assert.That(File.Exists(landedPath), Is.False);
+        }
+
+        static void ClearPreviousLaunchPidTxt(LaunchPadProcessHelper launchpadProcessHelper)
+        {
+            var pidTxtPath = Path.Combine(launchpadProcessHelper.LaunchFolder, "pid.txt");
+            if (File.Exists(pidTxtPath))
+            {
+                File.Delete(pidTxtPath);
+            }
+        }
+
         static async Task<Process> GetLaunchedProcess(LaunchPadProcessHelper launchpadProcessHelper)
         {
+            var pidTxtPath = Path.Combine(launchpadProcessHelper.LaunchFolder, "pid.txt");
+
             var elapsedTime = Stopwatch.StartNew();
             while (elapsedTime.Elapsed < TimeSpan.FromSeconds(15))
             {
                 try
                 {
-                    var pidTxtPath = Path.Combine(launchpadProcessHelper.LaunchFolder, "pid.txt");
                     var pidString = await File.ReadAllTextAsync(pidTxtPath);
                     int pid = Convert.ToInt32(pidString);
                     return Process.GetProcessById(pid);
@@ -326,14 +371,45 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             { "prelaunch.ps1", MemoryStreamFromString("exit 1") }
         };
 
-        static MemoryStream MemoryStreamFromString(string toConvert)
+        static readonly LaunchCatalog.Catalog k_LandCatalog = new()
         {
-            MemoryStream ret = new();
-            StreamWriter streamWriter = new (ret);
-            streamWriter.Write(toConvert);
-            streamWriter.Flush();
-            return ret;
-        }
+            Payloads = new[] {
+                new LaunchCatalog.Payload()
+                {
+                    Name = "Payload",
+                    Files = new []
+                    {
+                        new LaunchCatalog.PayloadFile() { Path = "launch.ps1" }
+                    }
+                }
+            },
+            Launchables = new[] {
+                new LaunchCatalog.Launchable()
+                {
+                    Name = "Cluster Node",
+                    Type = "clusterNode",
+                    Payloads = new [] { "Payload" },
+                    LaunchPath = "launch.ps1",
+                    LandingTimeSec = 2.5f
+                }
+            }
+        };
+        static readonly Dictionary<string, MemoryStream> k_LandCatalogFilesContent = new() {
+            { "launch.ps1", MemoryStreamFromString(
+                "$missionControlUri = $env:MISSIONCONTROL_ENTRY             \n" +
+                "$pid | Out-File \"pid.txt\"                                \n" +
+                "$proceedWithLanding = $false                               \n" +
+                "while (-not $proceedWithLanding)                           \n" +
+                "{                                                          \n" +
+                "    $uplink = Invoke-RestMethod -Uri \"$($missionControlUri)api/v1/capcomUplink\"\n" +
+                "    $proceedWithLanding = $uplink.proceedWithLanding       \n" +
+                "    if (-not $proceedWithLanding)                          \n" +
+                "    {                                                      \n" +
+                "        Start-Sleep -Milliseconds 5                        \n" +
+                "    }                                                      \n" +
+                "}                                                          \n" +
+                "Out-File \"landed.txt\" -InputObject \"Over\"") }
+        };
 
         string GetTestTempFolder()
         {

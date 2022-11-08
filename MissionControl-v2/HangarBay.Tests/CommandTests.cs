@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class CommandTests
     {
@@ -26,6 +26,17 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        [TestCase("http://127.0.0.1:8000")]
+        [TestCase("http://127.0.0.1:8000/")]
+        public void PreparePayloadSource(string uri)
+        {
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadSource = new Uri(uri);
+            Assert.That(prepareCommand.PayloadSource.ToString(), Is.EqualTo("http://127.0.0.1:8000/"));
+            Assert.That(JsonSerializer.Serialize(prepareCommand.PayloadSource), Is.EqualTo("\"http://127.0.0.1:8000/\""));
         }
 
         [Test]

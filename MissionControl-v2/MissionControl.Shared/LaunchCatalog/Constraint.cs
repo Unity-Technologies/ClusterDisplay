@@ -33,10 +33,21 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         public ConstraintType Type { get; protected set; }
 
         /// <summary>
+        /// Validates that the given value respect the constraints.
+        /// </summary>
+        /// <param name="value">The value to test.</param>
+        public abstract bool Validate(object value);
+
+        /// <summary>
         /// Compares with a <see cref="Constraint"/> of the same type (already validated by the caller of the method).
         /// </summary>
         /// <param name="other">The other <see cref="Constraint"/> of the same type.</param>
         protected abstract bool EqualsOfSameType(Constraint other);
+
+        /// <summary>
+        /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
+        /// </summary>
+        public abstract Constraint DeepClone();
 
         public bool Equals(Constraint? other)
         {

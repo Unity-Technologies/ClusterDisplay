@@ -18,6 +18,20 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// </summary>
         public IEnumerable<string> Choices { get; set; } = Enumerable.Empty<string>();
 
+        /// <inheritdoc/>
+        public override bool Validate(object value)
+        {
+            return Choices.Contains(value);
+        }
+
+        /// <inheritdoc/>
+        public override Constraint DeepClone()
+        {
+            ListConstraint ret = new();
+            ret.Choices = Choices.ToList();
+            return ret;
+        }
+
         public bool Equals(ListConstraint? other)
         {
             return other != null && 

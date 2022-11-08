@@ -130,6 +130,36 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(roundTrip.WaitingOn3, Is.EqualTo(testStruct.WaitingOn3));
         }
 
+        [Test]
+        public void PropagateQuit()
+        {
+            int sizeOfStruct = Marshal.SizeOf<PropagateQuit>();
+            Assert.That(sizeOfStruct, Is.EqualTo(1)); // It is empty but it looks like size is a minimum of 1
+
+            var testStruct = new PropagateQuit();
+
+            var byteArray = ToByteArray(testStruct, sizeOfStruct);
+            var roundTrip = FromByteArray<PropagateQuit>(byteArray);
+
+            Assert.That(roundTrip, Is.Not.Null);
+            Assert.That(roundTrip, Is.TypeOf<PropagateQuit>());
+        }
+
+        [Test]
+        public void QuitReceived()
+        {
+            int sizeOfStruct = Marshal.SizeOf<QuitReceived>();
+            Assert.That(sizeOfStruct, Is.EqualTo(1));
+
+            var testStruct = new QuitReceived();
+            testStruct.NodeId = 42;
+
+            var byteArray = ToByteArray(testStruct, sizeOfStruct);
+            var roundTrip = FromByteArray<QuitReceived>(byteArray);
+
+            Assert.That(roundTrip.NodeId, Is.EqualTo(testStruct.NodeId));
+        }
+
         static byte[] ToByteArray<T>(T toSerialize, int expectedSize) where T: unmanaged
         {
             var ret = new byte[expectedSize];

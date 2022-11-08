@@ -1,8 +1,9 @@
+using Unity.ClusterDisplay.MissionControl;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    class ClusterDisplaySettings : ScriptableObject
+    public class ClusterDisplaySettings : ScriptableObject
     {
         const string k_AssetName = "ClusterDisplaySettings";
 
@@ -12,9 +13,14 @@ namespace Unity.ClusterDisplay
         [SerializeField]
         ClusterParams m_ClusterParams;
 
+        [SerializeField]
+        MissionControlSettings m_MissionControlSettings = new();
+
         public bool EnableOnPlay => m_EnableOnPlay;
 
         public ClusterParams ClusterParams => m_ClusterParams;
+
+        public MissionControlSettings MissionControlSettings => m_MissionControlSettings;
 
         public static ClusterDisplaySettings CurrentSettings
         {

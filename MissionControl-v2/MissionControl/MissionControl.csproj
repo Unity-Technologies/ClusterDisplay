@@ -5,11 +5,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Unity.ClusterDisplay.MissionControl.MissionControl</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MissionControl.Library\MissionControl.Library.csproj" />
     <ProjectReference Include="..\MissionControl.Shared\MissionControl.Shared.csproj" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;..\AssemblyRun\bin\$(Configuration)\net6.0\*&quot; &quot;bin\$(Configuration)\net6.0&quot; /YD" />
+  </Target>
 
 </Project>

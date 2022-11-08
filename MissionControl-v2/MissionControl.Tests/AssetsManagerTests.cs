@@ -4,9 +4,9 @@ using Moq;
 using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
 
-using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class AssetsManagerTests
     {
@@ -657,6 +657,162 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             }
 
             Assert.That(theSequenceCompleted);
+        }
+
+        static IEnumerable<LaunchParameter> GetLaunchParameters(LaunchCatalog.Launchable from, string propertyName)
+        {
+            var propertyInfo = from.GetType().GetProperty(propertyName);
+            Assert.That(propertyInfo, Is.Not.Null);
+            var ret = propertyInfo!.GetValue(from);
+            Assert.That(ret, Is.Not.Null);
+            return (IEnumerable<LaunchParameter>)ret!;
+        }
+
+        static void SetLaunchParameters(LaunchCatalog.Launchable of, string propertyName, IEnumerable<LaunchParameter> value)
+        {
+            var propertyInfo = of.GetType().GetProperty(propertyName);
+            Assert.That(propertyInfo, Is.Not.Null);
+            propertyInfo!.SetValue(of, value);
+        }
+
+        [Test]
+        [TestCase(nameof(Launchable.GlobalParameters))]
+        [TestCase(nameof(Launchable.LaunchComplexParameters))]
+        [TestCase(nameof(Launchable.LaunchPadParameters))]
+        public void LaunchableMissingParameterDefaultValue(string propertyName)
+        {
+            Assert.That(m_FileBlobsManagerMock, Is.Not.Null);
+            var assetsManager = new AssetsManager(m_LoggerMock.Object, m_PayloadsManagerMock!.Object,
+                m_FileBlobsManagerMock!.Object);
+
+            Catalog launchCatalog = new()
+            {
+                Launchables = new[] {
+                    new LaunchCatalog.Launchable()
+                    {
+                        Name = "Launchable",
+                        Type = "clusterNode"
+                    }
+                }
+            };
+            var launchable = launchCatalog.Launchables.First();
+
+            Mock<IAssetSource> assetSourceMock = new(MockBehavior.Strict);
+            assetSourceMock.Setup(a => a.GetCatalogAsync()).ReturnsAsync(launchCatalog);
+
+            SetLaunchParameters(launchable, propertyName, new[] {
+                new LaunchParameter() { Id = "MyId" }
+            });
+            AssetPost newAsset = new() { Name = "TestName", Description = "TestDescription" };
+            Assert.That(async () => { await assetsManager.AddAssetAsync(newAsset, assetSourceMock.Object); },
+                Throws.TypeOf<CatalogException>().With.Message.EqualTo($"Parameter MyId does not have a default value."));
+        }
+
+        [Test]
+        [TestCase(nameof(Launchable.GlobalParameters))]
+        [TestCase(nameof(Launchable.LaunchComplexParameters))]
+        [TestCase(nameof(Launchable.LaunchPadParameters))]
+        public void LaunchableIntraDuplicateParameterId(string propertyName)
+        {
+            Assert.That(m_FileBlobsManagerMock, Is.Not.Null);
+            var assetsManager = new AssetsManager(m_LoggerMock.Object, m_PayloadsManagerMock!.Object,
+                m_FileBlobsManagerMock!.Object);
+
+            Catalog launchCatalog = new()
+            {
+                Launchables = new[] {
+                    new LaunchCatalog.Launchable()
+                    {
+                        Name = "Launchable",
+                        Type = "clusterNode"
+                    }
+                }
+            };
+            var launchable = launchCatalog.Launchables.First();
+
+            Mock<IAssetSource> assetSourceMock = new(MockBehavior.Strict);
+            assetSourceMock.Setup(a => a.GetCatalogAsync()).ReturnsAsync(launchCatalog);
+
+            SetLaunchParameters(launchable, propertyName, new[] {
+                new LaunchParameter() { Id = "Id0", DefaultValue = 0 }, new LaunchParameter() { Id = "Id0", DefaultValue = 0 }
+            });
+            AssetPost newAsset = new() { Name = "TestName", Description = "TestDescription" };
+            Assert.That(async () => { await assetsManager.AddAssetAsync(newAsset, assetSourceMock.Object); },
+                Throws.TypeOf<CatalogException>().With.Message.EqualTo($"Multiple parameters of {launchable.Name} " +
+                    $"have the identifier Id0."));
+        }
+
+        [Test]
+        [TestCase(nameof(Launchable.GlobalParameters), nameof(Launchable.LaunchComplexParameters))]
+        [TestCase(nameof(Launchable.GlobalParameters), nameof(Launchable.LaunchPadParameters))]
+        [TestCase(nameof(Launchable.LaunchComplexParameters), nameof(Launchable.LaunchPadParameters))]
+        public void LaunchableInterDuplicateParameterId(string property1Name, string property2Name)
+        {
+            Assert.That(m_FileBlobsManagerMock, Is.Not.Null);
+            var assetsManager = new AssetsManager(m_LoggerMock.Object, m_PayloadsManagerMock!.Object,
+                m_FileBlobsManagerMock!.Object);
+
+            Catalog launchCatalog = new()
+            {
+                Launchables = new[] {
+                    new LaunchCatalog.Launchable()
+                    {
+                        Name = "Launchable",
+                        Type = "clusterNode",
+                        GlobalParameters = new[] { new LaunchParameter() {Id = "GlobalId", DefaultValue = 42} },
+                        LaunchComplexParameters = new[] { new LaunchParameter() {Id = "LaunchComplexId", DefaultValue = 28} },
+                        LaunchPadParameters = new[] { new LaunchParameter() {Id = "LaunchPadId", DefaultValue = "Something"} }
+                    }
+                }
+            };
+            var launchable = launchCatalog.Launchables.First();
+
+            Mock<IAssetSource> assetSourceMock = new(MockBehavior.Strict);
+            assetSourceMock.Setup(a => a.GetCatalogAsync()).ReturnsAsync(launchCatalog);
+
+            SetLaunchParameters(launchable, property1Name,
+                GetLaunchParameters(launchable, property1Name).Append(new LaunchParameter() { Id = "Duplicate", DefaultValue = 100}));
+            SetLaunchParameters(launchable, property2Name,
+                GetLaunchParameters(launchable, property2Name).Append(new LaunchParameter() { Id = "Duplicate", DefaultValue = 200}));
+            AssetPost newAsset = new() { Name = "TestName", Description = "TestDescription" };
+            Assert.That(async () => { await assetsManager.AddAssetAsync(newAsset, assetSourceMock.Object); },
+                Throws.TypeOf<CatalogException>().With.Message.EqualTo($"Multiple parameters of {launchable.Name} " +
+                    $"have the identifier Duplicate."));
+        }
+
+        [Test]
+        [TestCase(nameof(Launchable.GlobalParameters))]
+        [TestCase(nameof(Launchable.LaunchComplexParameters))]
+        [TestCase(nameof(Launchable.LaunchPadParameters))]
+        public void LaunchableParameterDefaultValueDoesNotRespectConstraints(string propertyName)
+        {
+            Assert.That(m_FileBlobsManagerMock, Is.Not.Null);
+            var assetsManager = new AssetsManager(m_LoggerMock.Object, m_PayloadsManagerMock!.Object,
+                m_FileBlobsManagerMock!.Object);
+
+            Catalog launchCatalog = new()
+            {
+                Launchables = new[] {
+                    new LaunchCatalog.Launchable()
+                    {
+                        Name = "Launchable",
+                        Type = "clusterNode"
+                    }
+                }
+            };
+            var launchable = launchCatalog.Launchables.First();
+
+            Mock<IAssetSource> assetSourceMock = new(MockBehavior.Strict);
+            assetSourceMock.Setup(a => a.GetCatalogAsync()).ReturnsAsync(launchCatalog);
+
+            SetLaunchParameters(launchable, propertyName, new[] {
+                new LaunchParameter() { Id = "MyId", DefaultValue = "Missing",
+                    Constraint = new ListConstraint() { Choices = new [] { "Not", "In", "List" } } }
+            });
+            AssetPost newAsset = new() { Name = "TestName", Description = "TestDescription" };
+            Assert.That(async () => { await assetsManager.AddAssetAsync(newAsset, assetSourceMock.Object); },
+                Throws.TypeOf<CatalogException>().With.Message.EqualTo($"Parameter MyId default value Missing does " +
+                    $"respect the parameter's constraints."));
         }
 
         [Test]

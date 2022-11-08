@@ -17,6 +17,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         {
         }
 
+        protected override void OnObjectChanged(ObservableObject obj)
+        {
+            var newStatus = (Status)obj;
+            if (newStatus.State != m_LastKnownState)
+            {
+                m_LastKnownState = newStatus.State;
+                newStatus.EnteredStateTime = DateTime.Now;
+            }
+            base.OnObjectChanged(obj);
+        }
+
         static Status CreateNewStatus(ILogger logger)
         {
             Status ret = new();
@@ -34,5 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             }
             return ret;
         }
+
+        State m_LastKnownState = State.Idle;
     }
 }

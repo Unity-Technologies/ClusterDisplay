@@ -2,8 +2,21 @@ using System;
 using System.Net;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
+    public static class LaunchPadsHealthControllerTestsExtension
+    {
+        /// <summary>
+        /// Small helper to make comparison of LaunchPadHealth more reliable.
+        /// </summary>
+        public static LaunchPadHealth WithoutUpdateTime(this LaunchPadHealth from)
+        {
+            var ret = from.DeepClone();
+            ret.UpdateTime = DateTime.MinValue;
+            return ret;
+        }
+    }
+
     public class LaunchPadsHealthControllerTests
     {
         [SetUp]
@@ -100,12 +113,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             Assert.That(a2HealthDefinedTask.Result!.IsDefined, Is.True);
             Assert.That(b1HealthDefinedTask.Result!.IsDefined, Is.True);
 
-            Assert.That(await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadA1Id),
-                Is.EqualTo(a1HealthDefinedTask.Result!));
-            Assert.That(await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadA2Id),
-                Is.EqualTo(a2HealthDefinedTask.Result!));
-            Assert.That(await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadB1Id),
-                Is.EqualTo(b1HealthDefinedTask.Result!));
+            Assert.That((await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadA1Id)).WithoutUpdateTime(),
+                Is.EqualTo(a1HealthDefinedTask.Result!.WithoutUpdateTime()));
+            Assert.That((await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadA2Id)).WithoutUpdateTime(),
+                Is.EqualTo(a2HealthDefinedTask.Result!.WithoutUpdateTime()));
+            Assert.That((await m_ProcessHelper.GetLaunchPadHealth(k_LaunchPadB1Id)).WithoutUpdateTime(),
+                Is.EqualTo(b1HealthDefinedTask.Result!.WithoutUpdateTime()));
             Assert.That(await m_ProcessHelper.GetLaunchPadHealthWithStatusCode(Guid.NewGuid()),
                 Is.EqualTo(HttpStatusCode.NotFound));
 
@@ -119,7 +132,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                     Assert.That(launchPadIds.Add(health.Id), Is.True);
                     Assert.That(m_LaunchPadsHealth.ContainsKey(health.Id), Is.True);
                     var healthFromCollection = m_LaunchPadsHealth[health.Id];
-                    Assert.That(health, Is.EqualTo(healthFromCollection));
+                    Assert.That(health.WithoutUpdateTime(),
+                        Is.EqualTo(healthFromCollection.WithoutUpdateTime()));
                 }
             }
         }

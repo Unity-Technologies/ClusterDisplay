@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     public class PayloadFileTests
     {
@@ -45,6 +45,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             var deserialized = JsonSerializer.Deserialize<PayloadFile>(serializedParameter, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        public void ConvertToForwardSlash()
+        {
+            PayloadFile payloadFile = new();
+            payloadFile.Path = "folder/filename";
+            Assert.That(payloadFile.Path, Is.EqualTo("folder/filename"));
+            payloadFile.Path = "folder\\filename";
+            Assert.That(payloadFile.Path, Is.EqualTo("folder/filename"));
         }
     }
 }

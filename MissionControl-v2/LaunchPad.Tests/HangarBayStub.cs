@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     class HangarBayStubCheckpoint
     {
@@ -60,6 +60,20 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
                 }
 
                 payloadInfo.Files.Add(new FileInfo() { Path = path, Content = content });
+            }
+        }
+
+        public void AddFileToCopy(Guid payloadId, string path, string fromPath)
+        {
+            lock (m_Lock)
+            {
+                if (!m_Payloads.TryGetValue(payloadId, out var payloadInfo))
+                {
+                    payloadInfo = new();
+                    m_Payloads.Add(payloadId, payloadInfo);
+                }
+
+                payloadInfo.Files.Add(new FileInfo() { Path = path, CopyFromPath = fromPath });
             }
         }
 
@@ -159,7 +173,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
                     foreach (var file in payloadInfo.Files)
                     {
                         var filePath = Path.Combine(prepareCmd.Path, file.Path);
-                        File.WriteAllText(filePath, file.Content);
+                        if (!string.IsNullOrEmpty(file.Content))
+                        {
+                            File.WriteAllText(filePath, file.Content);
+                        }
+                        else
+                        {
+                            Assert.That(file.CopyFromPath, Is.Not.EqualTo(""));
+                            File.Copy(file.CopyFromPath, filePath);
+                        }
                     }
 
                     // Call checkpoints
@@ -182,6 +204,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
         {
             public string Path { get; init; } = "";
             public string Content { get; init; } = "";
+            public string CopyFromPath { get; init; } = "";
         }
 
         class PayloadInfo

@@ -181,9 +181,9 @@ components:
           items:
             type: string
             format: uuid
-        payloadSource:
+        missionControlEntry:
           type: string
-          description: URI of where to download payloads if they are not already available in the HangarBay.
+          description: URI to the mission control asking to prepare a launch.  It will be used to download the payloads and to set the MISSIONCONTROL_ENTRY environment variable that can be used by payloads to monitor Mission Control.
           example: http://mission-control-server:8000
         launchableData:
           type: object

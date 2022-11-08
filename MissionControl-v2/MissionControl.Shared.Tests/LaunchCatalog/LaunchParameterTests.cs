@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     public class LaunchParameterTests
     {
@@ -83,6 +83,18 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             Assert.That(parameterA, Is.Not.EqualTo(parameterB));
             parameterA.DefaultValue = 28.0f;
             Assert.That(parameterA, Is.EqualTo(parameterB));
+
+            parameterA.ToBeRevisedByCapcom = true;
+            parameterB.ToBeRevisedByCapcom = false;
+            Assert.That(parameterA, Is.Not.EqualTo(parameterB));
+            parameterB.ToBeRevisedByCapcom = true;
+            Assert.That(parameterA, Is.EqualTo(parameterB));
+
+            parameterA.Hidden = true;
+            parameterB.Hidden = false;
+            Assert.That(parameterA, Is.Not.EqualTo(parameterB));
+            parameterB.Hidden = true;
+            Assert.That(parameterA, Is.EqualTo(parameterB));
         }
 
         [Test]
@@ -106,10 +118,57 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             toSerialize.Type = LaunchParameterType.Integer;
             toSerialize.Constraint = new RangeConstraint() { Min = 0, Max = ushort.MaxValue };
             toSerialize.DefaultValue = 25690;
+            toSerialize.ToBeRevisedByCapcom = true;
+            toSerialize.Hidden = true;
             var serializedParameter = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<LaunchParameter>(serializedParameter, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        public void CloneDefault()
+        {
+            LaunchParameter toClone = new();
+            LaunchParameter cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        public void CloneFull()
+        {
+            LaunchParameter toClone = new();
+            toClone.Name = "UDP port";
+            toClone.Group = "Networking";
+            toClone.Id = "udpPort";
+            toClone.Description = "UDP port number used for communication between emitter and repeater nodes.";
+            toClone.Type = LaunchParameterType.Integer;
+            toClone.Constraint = new RangeConstraint() { Min = 0, Max = ushort.MaxValue };
+            toClone.DefaultValue = 25690;
+            toClone.ToBeRevisedByCapcom = true;
+            toClone.Hidden = true;
+            LaunchParameter cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        public void BooleanDefaultValueBad()
+        {
+            LaunchParameter launchParameter = new();
+            launchParameter.Type = LaunchParameterType.Boolean;
+            Assert.Throws<FormatException>(() => launchParameter.DefaultValue = "Quarante deux" );
+            Assert.Throws<FormatException>(() => launchParameter.DefaultValue = "vrai" );
+            Assert.Throws<InvalidCastException>(() => launchParameter.DefaultValue = Guid.NewGuid() );
+            Assert.Throws<InvalidCastException>(() => launchParameter.DefaultValue = TimeSpan.FromSeconds(42) );
+            Assert.Throws<InvalidCastException>(
+                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"boolean\", \"defaultValue\":{\"property\":42}}",
+                    Json.SerializerOptions));
+            Assert.Throws<JsonException>(
+                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"integer\", \"defaultValue\":\"Quarante deux\"}",
+                    Json.SerializerOptions));
+            Assert.That(launchParameter.DefaultValue, Is.Null);
         }
 
         [Test]
@@ -146,19 +205,34 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
         [Test]
         public void StringDefaultValueBad()
         {
-            LaunchParameter launchParameter = new();
-            launchParameter.Type = LaunchParameterType.String;
-            // Anything can be converted to string, so setting DefaultValue will always work...
-            // However a json can have the wrong type!
+            // A lot of things can be converted to string...
+            var launchParameter = JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":42}",
+                Json.SerializerOptions)!;
+            Assert.That(launchParameter.DefaultValue, Is.EqualTo("42"));
+            launchParameter = JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":true}",
+                Json.SerializerOptions)!;
+            Assert.That(launchParameter.DefaultValue, Is.EqualTo("True"));
+            launchParameter = JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":false}",
+                Json.SerializerOptions)!;
+            Assert.That(launchParameter.DefaultValue, Is.EqualTo("False"));
+
+            // We have to be really nasty to get it to fail
             Assert.Throws<InvalidCastException>(
-                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":42}",
+                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":{\"propert\":\"of an object\"}",
                     Json.SerializerOptions));
             Assert.Throws<InvalidCastException>(
-                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":true}",
+                () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"string\", \"defaultValue\":[1,2,3]}",
                     Json.SerializerOptions));
         }
 
         [Test]
+        [TestCase(LaunchParameterType.Boolean, 42,              true)]
+        [TestCase(LaunchParameterType.Boolean, 42.28,           true)]
+        [TestCase(LaunchParameterType.Boolean, 0,               false)]
+        [TestCase(LaunchParameterType.Boolean, true,            true)]
+        [TestCase(LaunchParameterType.Boolean, false,           false)]
+        [TestCase(LaunchParameterType.Boolean, "true",          true)]
+        [TestCase(LaunchParameterType.Boolean, "false",         false)]
         [TestCase(LaunchParameterType.Integer, 42.0,            42)]
         [TestCase(LaunchParameterType.Integer, 42.0f,           42)]
         [TestCase(LaunchParameterType.Integer, 42,              42)]

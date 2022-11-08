@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(ShutdownCommand? other)
         {
-            return other != null && other.GetType() == typeof(ShutdownCommand);
+            return other != null;
         }
     }
 }

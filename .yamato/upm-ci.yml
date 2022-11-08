@@ -18,18 +18,21 @@ test_platforms:
   - *win
 
 all_test_projects:
-  - path: TestProjects/GraphicsTestsHDRP
-    name: HDRPTest
-    gfx: true
-  - path: TestProjects/GraphicsTestsURP
-    name: URPTest
-    gfx: true
-  - path: TestProjects/ClusterSyncTests
-    name: CoreSync
-    gfx: false
-  - path: TestProjects/RPCTests
-    name: RPCTests
-    gfx: false
+  - path : TestProjects/GraphicsTestsHDRP
+    name : HDRPTest
+    gfx : true
+  - path : TestProjects/GraphicsTestsURP
+    name : URPTest
+    gfx : true
+  - path : TestProjects/ClusterSyncTests
+    name : CoreSync
+    gfx : false
+  - path : TestProjects/MissionControlTests
+    name : MissionControlTests
+    gfx : false
+  - path : TestProjects/RPCTests
+    name : RPCTests
+    gfx : false
 ---
 
 {% for project in all_test_projects -%}

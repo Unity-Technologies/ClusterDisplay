@@ -1,0 +1,10 @@
+# see http://editorconfig.org/ for docs on this file
+
+root = true
+
+[*]
+# help with sharing files across os's (i.e. network share or through local vm)
+end_of_line = crlf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true

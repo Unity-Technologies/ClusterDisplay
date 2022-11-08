@@ -7,4 +7,12 @@
     <RootNamespace>Unity.ClusterDisplay.MissionControl</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\source\com.unity.cluster-display\Runtime\MissionControl\Shared\IIncrementalCollectionObject.cs" Link="IIncrementalCollectionObject.cs" />
+    <Compile Include="..\..\source\com.unity.cluster-display\Runtime\MissionControl\Shared\IncrementalCollection.cs" Link="IncrementalCollection.cs" />
+    <Compile Include="..\..\source\com.unity.cluster-display\Runtime\MissionControl\Shared\IncrementalCollectionObjectData.cs" Link="IncrementalCollectionObjectData.cs" />
+    <Compile Include="..\..\source\com.unity.cluster-display\Runtime\MissionControl\Shared\IncrementalCollectionUpdate.cs" Link="IncrementalCollectionUpdate.cs" />
+    <Compile Include="..\..\source\com.unity.cluster-display\Runtime\MissionControl\Shared\IReadOnlyIncrementalCollection.cs" Link="IReadOnlyIncrementalCollection.cs" />
+  </ItemGroup>
+
 </Project>

@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay
                 GfxPluginQuadroSyncInitializationState.MissingDevice => "Failed to get the ID3D[11|12]Device",
                 GfxPluginQuadroSyncInitializationState.MissingSwapChain => "Failed to get the IDXGISwapChain",
                 GfxPluginQuadroSyncInitializationState.SwapChainOrBarrierGenericFailure => "Error during setup of swap chain or barrier",
-                GfxPluginQuadroSyncInitializationState.NoSwapGroupDetected => "No swap group detect (is the hardware present?)",
+                GfxPluginQuadroSyncInitializationState.NoSwapGroupDetected => "No swap group detected (is the hardware present?)",
                 GfxPluginQuadroSyncInitializationState.QuerySwapGroupFailed => "Failed to query information about swap groups",
                 GfxPluginQuadroSyncInitializationState.FailedToJoinSwapGroup => "Failed to join swap group",
                 GfxPluginQuadroSyncInitializationState.SwapGroupMismatch => "Mismatch between swap group identifier and available swap groups",

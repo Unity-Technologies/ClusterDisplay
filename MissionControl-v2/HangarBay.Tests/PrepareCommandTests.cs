@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class PrepareCommandTests
     {

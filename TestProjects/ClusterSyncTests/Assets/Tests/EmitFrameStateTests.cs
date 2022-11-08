@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
+using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -315,6 +316,29 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
+        class TestQuitMarker: IClusterSyncShouldQuit
+        {
+
+        }
+
+        [Test]
+        public void TransitionToPropagateQuitState()
+        {
+            using var testState = new EmitFrameState(m_Node);
+
+            try
+            {
+                TestQuitMarker quitMarker = new();
+                ServiceLocator.Provide<IClusterSyncShouldQuit>(quitMarker);
+                var nextState = testState.DoFrame();
+                Assert.That(nextState, Is.TypeOf<PropagateQuitState>());
+            }
+            finally
+            {
+                ServiceLocator.Withdraw<IClusterSyncShouldQuit>();
+            }
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -442,7 +466,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         const byte k_NodeId = 42;
-        static byte[] k_RepeaterNodeId = new byte[] {5, 105, 205};
+        static readonly byte[] k_RepeaterNodeId = new byte[] {5, 105, 205};
         const int k_DataBlockTypeId = 28;
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);

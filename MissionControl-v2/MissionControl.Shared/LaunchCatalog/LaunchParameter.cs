@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 
 namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
@@ -8,6 +7,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
     /// </summary>
     public enum LaunchParameterType
     {
+        Boolean,
         Integer,
         Float,
         String
@@ -30,8 +30,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         public string Group { get; set; } = "";
 
         /// <summary>
-        /// Identifier of the parameter that will be used to produce the information passed through the LAUNCH_DATA
-        /// environment variable (must be unique among all <see cref="LaunchParameter"/>s of a
+        /// Case sensitive identifier of the parameter that will be used to produce the information passed through the
+        /// LAUNCH_DATA environment variable (must be unique among all <see cref="LaunchParameter"/>s of a
         /// <see cref="LaunchableBase"/>).
         /// </summary>
         public string Id { get; set; } = "";
@@ -81,6 +81,37 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             set => m_DefaultValue = ConvertValueToType(Type, value);
         }
 
+        /// <summary>
+        /// Does the value of this parameter need to be revised by capcom before proceeding to launch?
+        /// </summary>
+        public bool ToBeRevisedByCapcom { get; set; }
+
+        /// <summary>
+        /// Indicate that the parameter is not to be displayed to the user.
+        /// </summary>
+        /// <remarks>Especially useful when combined with <see cref="ToBeRevisedByCapcom"/> to have some parameters
+        /// computed automatically by capcom (as a consequence of many other parameters in different launchpads for
+        /// example).</remarks>
+        public bool Hidden { get; set; }
+
+        /// <summary>
+        /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
+        /// </summary>
+        public LaunchParameter DeepClone()
+        {
+            LaunchParameter ret = new();
+            ret.Name = Name;
+            ret.Group = Group;
+            ret.Id = Id;
+            ret.Description = Description;
+            ret.Type = Type;
+            ret.Constraint = Constraint?.DeepClone();
+            ret.DefaultValue = DefaultValue;
+            ret.ToBeRevisedByCapcom = ToBeRevisedByCapcom;
+            ret.Hidden = Hidden;
+            return ret;
+        }
+
         public bool Equals(LaunchParameter? other)
         {
             if (other == null || (Constraint == null) != (other.Constraint == null))
@@ -94,7 +125,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 other.Description == Description &&
                 Equals(other.m_Type, m_Type) &&
                 (other.Constraint == null || other.Constraint.Equals(Constraint)) &&
-                Equals(other.m_DefaultValue, m_DefaultValue);
+                Equals(other.m_DefaultValue, m_DefaultValue) &&
+                other.ToBeRevisedByCapcom == ToBeRevisedByCapcom &&
+                other.Hidden == Hidden;
         }
 
         /// <summary>
@@ -117,6 +150,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 
             switch (type.Value)
             {
+                case LaunchParameterType.Boolean:
+                    return ConvertToBoolean(value);
                 case LaunchParameterType.Integer:
                     return ConvertToInt32(value);
                 case LaunchParameterType.Float:
@@ -126,6 +161,31 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 default:
                     throw new ArgumentException("Unsupported enum constant", nameof(type));
             }
+        }
+
+        /// <summary>
+        /// Convert the provided value to a <see cref="bool"/>.
+        /// </summary>
+        /// <param name="value">The value</param>
+        /// <remarks>All numbers are converted to true, except 0.  True or False strings are also accepted (case
+        /// insensitive).</remarks>
+        /// <exception cref="FormatException"><paramref name="value"/> is not in an appropriate format.</exception>
+        /// <exception cref="InvalidCastException"><paramref name="value"/> Cannot be converted to <see cref="bool"/>.
+        /// </exception>
+        static bool ConvertToBoolean(object value)
+        {
+            if (value is JsonElement jsonValue)
+            {
+                return jsonValue.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Number => Convert.ToBoolean(jsonValue.GetDecimal()),
+                    JsonValueKind.String => Convert.ToBoolean(jsonValue.GetString()),
+                    _ => throw new InvalidCastException($"Cannot convert {jsonValue} to {typeof(bool)}.")
+                };
+            }
+            return Convert.ToBoolean(value);
         }
 
         /// <summary>
@@ -178,7 +238,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 {
                     return intValue;
                 }
-                throw new InvalidCastException($"Cannot convert {jsonValue.ToString()} to {typeof(int)}.");
+                throw new InvalidCastException($"Cannot convert {jsonValue} to {typeof(int)}.");
             }
             return Convert.ToInt32(value);
         }
@@ -200,7 +260,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 {
                     return floatValue;
                 }
-                throw new InvalidCastException($"Cannot convert {jsonValue.ToString()} to {typeof(float)}.");
+                throw new InvalidCastException($"Cannot convert {jsonValue} to {typeof(float)}.");
             }
             float ret = Convert.ToSingle(value);
             if (!float.IsNormal(ret))
@@ -214,20 +274,21 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// Convert the provided value to a <see cref="string"/>.
         /// </summary>
         /// <param name="value">The value</param>
-        /// <exception cref="FormatException"><paramref name="value"/> is not in an appropriate format.</exception>
-        /// <exception cref="InvalidCastException"><paramref name="value"/> Cannot be converted to <see cref="float"/>.
+        /// <exception cref="InvalidCastException"><paramref name="value"/> Cannot be converted to <see cref="string"/>.
         /// </exception>
-        /// <exception cref="OverflowException"><paramref name="value"/> represent a value that is too large (or small)
-        /// to fit in a <see cref="float"/>.</exception>
+        /// <exception cref="NullReferenceException">There was an error converting <paramref name="value"/> to a string.
+        /// </exception>
         static string ConvertToString(object value)
         {
             if (value is JsonElement jsonValue)
             {
-                if (jsonValue.ValueKind == JsonValueKind.String)
+                return jsonValue.ValueKind switch
                 {
-                    return jsonValue.GetString()!;
-                }
-                throw new InvalidCastException($"Cannot convert {jsonValue.ToString()} to {typeof(string)}.");
+                    JsonValueKind.String => jsonValue.GetString()!,
+                    JsonValueKind.Number => Convert.ToString(jsonValue.GetDecimal()),
+                    JsonValueKind.True or JsonValueKind.False => Convert.ToString(jsonValue.GetBoolean()),
+                    _ => throw new InvalidCastException($"Cannot convert {jsonValue} to {typeof(string)}.")
+                };
             }
             var convertedString = Convert.ToString(value);
             if (convertedString == null)

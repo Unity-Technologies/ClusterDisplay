@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class PayloadsManagerTests
     {

@@ -2,7 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public static class Helpers
     {
@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         /// <param name="filesLength">Length of the files referenced by the catalog.  Files not in this dictionary have
         /// to be in <paramref name="filesContent"/>.</param>
         /// <param name="filesContent">Content of the files referenced by the catalog.  Files not in this dictionary
-        /// have to be in <paramref name="filesContent"/>.</param>
+        /// have to be in <paramref name="filesLength"/>.</param>
         /// <returns>The folder in which the asset was created.</returns>
         public static async Task<string> CreateAsset(string folder, LaunchCatalog.Catalog catalog,
             Dictionary<string, int> filesLength, Dictionary<string, MemoryStream>? filesContent = null)
@@ -86,14 +86,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         /// <paramref name="processHelper"/>.</param>
         /// <param name="catalog">Catalog of the asset.</param>
         /// <param name="filesLength">Size of the files in <paramref name="catalog"/>.</param>
+        /// <param name="filesContent">Content of the files referenced by the catalog.  Files not in this dictionary
+        /// have to be in <paramref name="filesLength"/>.</param>
         /// <param name="name">Name of the <see cref="Asset"/>.</param>
         /// <param name="description">Description of the <see cref="Asset"/>.</param>
         /// <returns>Identifier of the created <see cref="Asset"/>.</returns>
         internal static async Task<Guid> PostAsset(MissionControlProcessHelper processHelper, string tempFolder,
-            LaunchCatalog.Catalog catalog, Dictionary<string, int> filesLength, string name = "My new asset",
+            LaunchCatalog.Catalog catalog, Dictionary<string, int> filesLength,
+            Dictionary<string, MemoryStream>? filesContent = null, string name = "My new asset",
             string description = "My new asset description")
         {
-            string assetUrl = await CreateAsset(tempFolder, catalog, filesLength);
+            string assetUrl = await CreateAsset(tempFolder, catalog, filesLength, filesContent);
             AssetPost assetPost = new()
             {
                 Name = name,
@@ -176,6 +179,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             stream.Position = 0;
             Assert.That(bytesHash.Length, Is.EqualTo(16));
             return new Guid(bytesHash);
+        }
+
+        /// <summary>
+        /// Create a memory stream from the give string.
+        /// </summary>
+        /// <param name="toConvert">The string</param>
+        public static MemoryStream MemoryStreamFromString(string toConvert)
+        {
+            MemoryStream ret = new();
+            StreamWriter streamWriter = new (ret);
+            streamWriter.Write(toConvert);
+            streamWriter.Flush();
+            return ret;
         }
     }
 }

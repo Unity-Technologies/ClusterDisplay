@@ -17,12 +17,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Http endpoint of the HangarBay.
         /// </summary>
-        public Uri Endpoint { get; set; } = new("http://0.0.0.0");
+        /// <remarks>Cannot use auto property because we want to store the normalized uri so that this is the one that
+        /// gets serialized to json.</remarks>
+        public Uri Endpoint {
+            get => m_Endpoint;
+            set => m_Endpoint = new Uri(value.ToString());
+        }
+        Uri m_Endpoint = new Uri("http://0.0.0.0/");
 
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public HangarBay DeepClone()
         {
             HangarBay ret = new();

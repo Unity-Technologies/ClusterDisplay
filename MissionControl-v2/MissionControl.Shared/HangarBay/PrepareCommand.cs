@@ -21,7 +21,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
         /// <summary>
         /// URI of where to download payloads if they are not already available in the cache.
         /// </summary>
-        public Uri? PayloadSource { get; set; }
+        /// <remarks>Cannot use auto property because we want to store the normalized uri so that this is the one that
+        /// gets serialized to json.</remarks>
+        public Uri? PayloadSource {
+            get => m_PayloadSource;
+            set => m_PayloadSource = value != null ? new Uri(value.ToString()) : null;
+        }
+        Uri? m_PayloadSource;
 
         /// <summary>
         /// Path to a folder to fill with the payloads (will remove unnecessary files and copy the ones from payloadIds).

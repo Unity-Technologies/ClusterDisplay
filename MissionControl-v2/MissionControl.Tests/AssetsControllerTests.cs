@@ -3,9 +3,9 @@ using System.Net;
 using System.Text.Json;
 using NeoSmart.StreamCompare;
 
-using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class AssetsControllerTests
     {
@@ -438,7 +438,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             var finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            var collectionUpdate = Helpers.GetCollectionUpdate<Asset>(blockingGetTask.Result, k_AssetsCollectionName);
+            var collectionUpdate = GetCollectionUpdate<Asset>(blockingGetTask.Result, k_AssetsCollectionName);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(2));
@@ -456,7 +456,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            collectionUpdate = Helpers.GetCollectionUpdate<Asset>(blockingGetTask.Result, k_AssetsCollectionName);
+            collectionUpdate = GetCollectionUpdate<Asset>(blockingGetTask.Result, k_AssetsCollectionName);
             Assert.That(collectionUpdate.UpdatedObjects, Is.Empty);
             Assert.That(collectionUpdate.RemovedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(3));

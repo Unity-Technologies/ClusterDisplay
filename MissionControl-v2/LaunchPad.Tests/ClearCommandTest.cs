@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     public class ClearCommandTest
     {
