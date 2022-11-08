@@ -5,7 +5,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// <summary>
     /// Information about a <see cref="Payload"/>'s file.
     /// </summary>
-    /// <remarks></remarks>
     public class PayloadFile : IEquatable<PayloadFile>
     {
         /// <summary>

@@ -1681,7 +1681,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             int file1FirstChunkSize = file1Content.Length / 2;
             await file1Streams.WriteStream.WriteAsync(file1Content, 0, file1FirstChunkSize); // Only write the first half
             var file1Md5 = ComputeMd5Guid(file1Content);
-            _ = manager.AddFileBlobAsync(file1Streams.ReadStream, file1Content.Length, file1Md5);
+            var longAddFileBlobTask = manager.AddFileBlobAsync(file1Streams.ReadStream, file1Content.Length, file1Md5);
 
             string file2ContentString = "This is a different content";
             await using var file2Content = CreateStreamFromString(file2ContentString);
@@ -1696,9 +1696,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             if (completeFile)
             {
-                await file1Streams.WriteStream.WriteAsync(file1Content, file1FirstChunkSize, file1Content.Length - file1FirstChunkSize);
+                await file1Streams.WriteStream.WriteAsync(file1Content, file1FirstChunkSize,
+                    file1Content.Length - file1FirstChunkSize);
             }
             file1Streams.WriteStream.Close();
+
+            // We need to wait for the file to be completely added or otherwise the new FileBlobsManager we create a few
+            // lines below could try to delete a file that is still in use by the previous manager that is completing
+            // its add.
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var awaitTask = await Task.WhenAny(longAddFileBlobTask, timeoutTask);
+            Assert.That(awaitTask, Is.SameAs(longAddFileBlobTask)); // Or else await timed out -> AddFileBlobAsync is stuck
 
             // Create a new manager and add storage folder back
             manager = new FileBlobsManager(m_LoggerMock.Object);
