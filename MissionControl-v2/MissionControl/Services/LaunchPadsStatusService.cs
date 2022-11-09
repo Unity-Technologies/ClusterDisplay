@@ -289,7 +289,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         }
 
         readonly ILogger m_Logger;
-        readonly HttpClient m_HttpClient = new();
+        readonly HttpClient m_HttpClient = new() { Timeout = TimeSpan.FromMinutes(10) };
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable -> Makes sense to keep since we are
         // registered for events from it...
         readonly ComplexesService m_ComplexesService;

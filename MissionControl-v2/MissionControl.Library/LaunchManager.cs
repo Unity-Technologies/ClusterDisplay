@@ -313,6 +313,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                     if (m_Supervisors.Count == 0)
                     {
                         m_Logger.LogError("No launchpad succeeded in preparing for launch, launch failed");
+                        m_LaunchSignal?.SetResult();
                         return;
                     }
                 }

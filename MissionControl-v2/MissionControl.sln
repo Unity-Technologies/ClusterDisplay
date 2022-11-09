@@ -27,9 +27,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.Library", "M
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl", "MissionControl\MissionControl.csproj", "{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionControl.Tests", "MissionControl.Tests\MissionControl.Tests.csproj", "{E8BD5CB8-83F3-43D2-804E-F261E894D901}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.Tests", "MissionControl.Tests\MissionControl.Tests.csproj", "{E8BD5CB8-83F3-43D2-804E-F261E894D901}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4} = {B39F709A-FA5B-4A3A-9ADD-5819F1E7B3B4}
+		{CDB43A32-FA48-4047-83A8-BFBCF23B94F1} = {CDB43A32-FA48-4047-83A8-BFBCF23B94F1}
+		{D66C19B5-B219-4D75-A217-223761C3519B} = {D66C19B5-B219-4D75-A217-223761C3519B}
 	EndProjectSection
 EndProject
 Global

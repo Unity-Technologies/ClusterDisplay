@@ -216,11 +216,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         throw new NullReferenceException("Failed to launch the process.");
                     }
 
-                    m_LaunchedProcess.WaitForExitAsync().ContinueWith(_ => {
+                    m_ProcessOverTask = m_LaunchedProcess.WaitForExitAsync().ContinueWith(_ => {
                         lock (m_Lock)
                         {
                             m_LaunchedProcess = null;
-                            m_StatusService.State = State.Over;
+                            m_ProcessOverTask = null;
+                            if (!m_ProcessingAbort) // We do not want to cycle states for nothing, if we are aborting 
+                            {                       // then the state is about to be changed to idle...
+                                m_StatusService.State = State.Over;
+                            }
                         }
                     });
 
@@ -249,33 +253,47 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         // ReSharper disable once UnusedParameter.Local
         async Task<IActionResult> AbortAsync(AbortCommand command)
         {
-            Task? toWaitOn = null;
-            lock (m_Lock)
+            try
             {
-                if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
-                {
-                    Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle or State.Over);
-                    m_StatusService.State = State.Idle;
-                }
-                else
-                {
-                    m_PreparingTaskTcs?.Cancel();
-                    toWaitOn = m_PreparingTask;
-                    if (toWaitOn == null)
-                    {
-                        m_StatusService.State = State.Idle;
-                    }
-                    m_LaunchedProcess?.Kill();
-                }
-            }
-
-            if (toWaitOn != null)
-            {
-                await toWaitOn;
+                Task? toWaitOn = null;
                 lock (m_Lock)
                 {
-                    m_StatusService.State = State.Idle;
+                    m_ProcessingAbort = true;
+
+                    if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
+                    {
+                        Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle or State.Over);
+                        m_StatusService.State = State.Idle;
+                    }
+                    else
+                    {
+                        m_PreparingTaskTcs?.Cancel();
+                        toWaitOn = m_PreparingTask ?? m_ProcessOverTask;
+                        if (toWaitOn == null)
+                        {
+                            m_StatusService.State = State.Idle;
+                        }
+                        m_LaunchedProcess?.Kill();
+                    }
                 }
+
+                if (toWaitOn != null)
+                {
+                    await toWaitOn;
+                    lock (m_Lock)
+                    {
+                        m_StatusService.State = State.Idle;
+                        m_ProcessingAbort = false;
+                    }
+                }
+            }
+            catch
+            {
+                lock (m_Lock)
+                {
+                    m_ProcessingAbort = false;
+                }
+                throw;
             }
             return new OkResult();
         }
@@ -608,6 +626,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 m_PreparingTaskTcs?.Cancel();
                 toWaitOn = m_PreparingTask;
                 m_LaunchedProcess?.Kill();
+                m_ProcessOverTask = null;
             }
             if (toWaitOn != null)
             {
@@ -655,5 +674,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// Currently launched process
         /// </summary>
         Process? m_LaunchedProcess;
+
+        /// <summary>
+        /// Task executed after the process is over change the state to over
+        /// </summary>
+        Task? m_ProcessOverTask;
+
+        /// <summary>
+        /// Are we currently processing a abort message?
+        /// </summary>
+        bool m_ProcessingAbort;
     }
 }

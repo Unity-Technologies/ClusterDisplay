@@ -178,6 +178,10 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             // And so launchpad idle
             await m_ProcessHelper.WaitForState(State.Idle);
+
+            await Task.Delay(100);
+            var status = await m_ProcessHelper.GetStatus();
+            Assert.That(status.State, Is.EqualTo(State.Idle));
         }
 
         [Test]

@@ -71,6 +71,39 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         }
 
         [Test]
+        public async Task LaunchNonIdle()
+        {
+            await PrepareMissionControl(1, k_LaunchCatalog, k_LaunchCatalogFilesContent);
+
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+
+            var launchedProcess = await GetLaunchedProcess(m_LaunchPadsProcessHelper.First());
+
+            // Kill mission control (not stop, otherwise it will stop the launch pad, we want the launchpad to stay
+            // running).
+            string missionControlPath = m_ProcessHelper.ConfigPath;
+            m_ProcessHelper.Kill();
+
+            await Task.Delay(100); // So that we let the time to launchedProcess to die if it has to...
+            Assert.That(launchedProcess.HasExited, Is.False);
+
+            // Start it back
+            await m_ProcessHelper.Start(missionControlPath);
+
+            await Task.Delay(100); // So that we let the time to launchedProcess to die if it has to...
+            Assert.That(launchedProcess.HasExited, Is.False);
+
+            // Launch the mission
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+
+            // Wait for everything to successfully launch
+            await m_ProcessHelper.WaitForState(State.Launched);
+
+            // But the old process should have been killed
+            Assert.That(launchedProcess.HasExited, Is.True);
+        }
+
+        [Test]
         public async Task InvalidLaunchPadFeedbackTimeoutSec()
         {
             var config = await m_ProcessHelper.GetConfig();
@@ -137,6 +170,30 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             var status = await m_ProcessHelper.GetStatus();
             Assert.That(status.State, Is.EqualTo(State.Idle));
+        }
+
+        [Test]
+        public async Task FailPreparingLaunchPad()
+        {
+            await PrepareMissionControl(1, k_FailPreLaunchCatalog, k_FailPreLaunchCatalogFilesContent);
+
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            bool isOver = false;
+            while (stopwatch.Elapsed < TimeSpan.FromSeconds(10) && !isOver)
+            {
+                var launchpadStatuses = await m_ProcessHelper.GetLaunchPadsStatus();
+                Assert.That(launchpadStatuses.Count, Is.EqualTo(1));
+                if (launchpadStatuses[0].IsDefined &&
+                    launchpadStatuses[0].State == ClusterDisplay.MissionControl.LaunchPad.State.Over)
+                {
+                    isOver = true;
+                }
+            }
+            Assert.That(isOver, Is.True);
+
+            await m_ProcessHelper.WaitForState(State.Idle);
         }
 
         static async Task<Process> GetLaunchedProcess(LaunchPadProcessHelper launchpadProcessHelper)
@@ -222,7 +279,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                     Name = "Cluster Node",
                     Type = "clusterNode",
                     Payloads = new [] { "Payload" },
-                    LaunchPath = "Launch.ps1"
+                    LaunchPath = "launch.ps1"
                 }
             }
         };
@@ -233,6 +290,40 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 "{                              \n" +
                 "    Start-Sleep -Seconds 60    \n" +
                 "}") }
+        };
+
+        static readonly LaunchCatalog.Catalog k_FailPreLaunchCatalog = new()
+        {
+            Payloads = new[] {
+                new LaunchCatalog.Payload()
+                {
+                    Name = "Payload",
+                    Files = new []
+                    {
+                        new LaunchCatalog.PayloadFile() { Path = "prelaunch.ps1" },
+                        new LaunchCatalog.PayloadFile() { Path = "launch.ps1" }
+                    }
+                }
+            },
+            Launchables = new[] {
+                new LaunchCatalog.Launchable()
+                {
+                    Name = "Cluster Node",
+                    Type = "clusterNode",
+                    Payloads = new [] { "Payload" },
+                    PreLaunchPath = "prelaunch.ps1",
+                    LaunchPath = "launch.ps1"
+                }
+            }
+        };
+        static readonly Dictionary<string, MemoryStream> k_FailPreLaunchCatalogFilesContent = new() {
+            { "launch.ps1", MemoryStreamFromString(
+                "$pid | Out-File \"pid.txt\"    \n" +
+                "while ( $true )                \n" +
+                "{                              \n" +
+                "    Start-Sleep -Seconds 60    \n" +
+                "}") },
+            { "prelaunch.ps1", MemoryStreamFromString("exit 1") }
         };
 
         static MemoryStream MemoryStreamFromString(string toConvert)

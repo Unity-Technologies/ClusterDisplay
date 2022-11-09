@@ -90,6 +90,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             m_Process = null;
         }
 
+        public void Kill()
+        {
+            if (m_Process != null)
+            {
+                m_Process.Kill();
+                m_Process = null;
+            }
+        }
+
+        public string ConfigPath => m_ConfigPath != null ? m_ConfigPath : string.Empty;
+
         public HttpClient HttpClient => m_HttpClient!;
 
         public Task<Config> GetConfig()
