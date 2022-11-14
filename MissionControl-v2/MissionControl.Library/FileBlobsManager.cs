@@ -134,6 +134,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             string effectivePath = GetEffectiveStoragePath(path);
             try
             {
+                // The general approach for this code is:
+                // 1. Lock
+                // 2. Get all the files in the folder to remove
+                // 3. If there is nothing to be moved then we are done
+                // 4. Unlock
+                // 5. Move files (from 2) that can be moved
+                // Let's try again (in case there are new files or some files were not ready to be moved).
                 for (; ; )
                 {
                     // Get the list of files to move
@@ -167,7 +174,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                     }
 
                     // Move them
-                    await TryToMoveFilesAsync(filesToMove);
+                    await MoveFilesAsync(filesToMove);
                 }
             }
             finally
@@ -246,7 +253,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                     }
 
                     // Move them
-                    await TryToMoveFilesAsync(filesToMove);
+                    await MoveFilesAsync(filesToMove);
                 }
             }
             finally
@@ -536,13 +543,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 int storageFolderIndex = 0;
                 foreach (var info in m_StorageFolders.Values)
                 {
-                    var status = new StorageFolderStatus();
-                    storageFolders[storageFolderIndex++] = status;
-
-                    status.Path = info.UserPath;
-                    status.CurrentSize = info.Size;
-                    status.ZombiesSize = info.ZombiesSize;
-                    status.MaximumSize = info.MaximumSize;
+                    storageFolders[storageFolderIndex++] = new()
+                    {
+                        Path = info.UserPath,
+                        CurrentSize = info.Size,
+                        ZombiesSize = info.ZombiesSize,
+                        MaximumSize = info.MaximumSize
+                    };
                 }
                 return storageFolders;
             }
@@ -564,7 +571,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                         {
                             using FileStream serializeStream = File.Create(storageFolder.GetMetadataFilePath());
                             JsonSerializer.Serialize(serializeStream, storageFolder, Json.SerializerOptions);
-                            storageFolder.Saved();
+                            storageFolder.SetSaved();
                         }
                         catch (Exception e)
                         {
@@ -702,7 +709,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 using var compressedStream = File.OpenRead(fileBlob.Path);
                 using GZipStream decompressStream = new(compressedStream, CompressionMode.Decompress);
 
-                // Just go through everything and count bytes we are able to read
+                // Just go through everything and count bytes we are able to read.  This is not only to validate the 
+                // actual uncompressed size matches but also validate that we can really uncompress everything and the 
+                // file is valid.
                 Span<byte> buffer = stackalloc byte[1024 * 1024];
                 long fileSize = 0;
                 for (; ; )
@@ -766,8 +775,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         }
 
         /// <summary>
-        /// Wrapper to make reading content of a compressed <see cref="FileBlobInfo"/> easy.
+        /// Information about a <see cref="FileBlobInfo"/> that might be a duplicate of another new file blob.
         /// </summary>
+        /// <remarks>This class as for main objective to store different state information about the 
+        /// <see cref="FileBlobInfo"/> when trying to compare it to the new potential file blob.</remarks>
         class DuplicateCandidate : IDisposable
         {
             public DuplicateCandidate(FileBlobInfo fileBlob)
@@ -817,7 +828,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 int readBytes = await m_DecompressedStream.ReadAsync(readInto, cancellationToken).ConfigureAwait(false);
                 if (readBytes > 0)
                 {
-                    m_ReadBuffer.DataAdded(readBytes);
+                    m_ReadBuffer.GrowCurrentData(readBytes);
                     TotalReadBytes += readBytes;
                 }
                 else
@@ -930,7 +941,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                         // End reached
                         break;
                     }
-                    fileContentReadBuffer.DataAdded(readFromFileContentTask.Result);
+                    fileContentReadBuffer.GrowCurrentData(readFromFileContentTask.Result);
                     int commonReadBytes = fileContentReadBuffer.CurrentDataLength;
                     foreach (var candidate in duplicateCandidates)
                     {
@@ -1094,7 +1105,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <param name="filesToMove">List of files to try to move</param>
         /// <exception cref="StorageFolderFullException">If we ran out of space while trying to perform the move.</exception>
         /// <remarks>Some move might not be feasible right now and need to be retried when the file will be ready.</remarks>
-        async Task TryToMoveFilesAsync(IEnumerable<FileBlobInfo> filesToMove)
+        async Task MoveFilesAsync(IEnumerable<FileBlobInfo> filesToMove)
         {
             // Move the files
             List<Task> nonReadyFilesTasks = new();

@@ -44,10 +44,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
         /// <summary>
         /// Indicates that the first <paramref name="length"/> bytes of <see cref="RemainingBuffer"/> have been
-        /// filled with new data.
+        /// filled with new data (and so, <see cref="CurrentData"/> is <paramref name="length"/> bytes larger than it
+        /// was).
         /// </summary>
         /// <param name="length">Length of the new data.</param>
-        public void DataAdded(int length)
+        public void GrowCurrentData(int length)
         {
             if (m_First + m_Length + length > m_Storage.Length)
             {

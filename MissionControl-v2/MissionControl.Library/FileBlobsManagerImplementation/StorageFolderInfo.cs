@@ -87,7 +87,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <summary>
         /// Indicate the <see cref="StorageFolderInfo"/> has been saved (sets NeedSaving to false).
         /// </summary>
-        public void Saved()
+        public void SetSaved()
         {
             NeedSaving = false;
         }
