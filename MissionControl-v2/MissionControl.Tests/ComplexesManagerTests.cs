@@ -24,16 +24,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexA);
-            manager.Put(k_ComplexB);
+            await manager.PutAsync(k_ComplexA);
+            await manager.PutAsync(k_ComplexB);
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
                 Assert.That(locked.Value.Count, Is.EqualTo(2));
             }
 
-            manager.Remove(k_ComplexA.Id);
-            Assert.That(manager.Remove(Guid.NewGuid()), Is.False);
+            await manager.RemoveAsync(k_ComplexA.Id);
+            Assert.That(await manager.RemoveAsync(Guid.NewGuid()), Is.False);
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexA);
+            await manager.PutAsync(k_ComplexA);
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             var complexAClone = k_ComplexA.DeepClone();
             Assert.That(complexAClone, Is.Not.SameAs(k_ComplexA));
             complexAClone.Name = "Improved A";
-            manager.Put(complexAClone);
+            await manager.PutAsync(complexAClone);
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexA);
+            await manager.PutAsync(k_ComplexA);
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             var complexAClone = k_ComplexA.DeepClone();
             complexAClone.HangarBay.Identifier = Guid.NewGuid();
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
 
             using (var locked = await manager.GetLockedReadOnlyAsync())
             {
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             ComplexesManager manager = new(m_LoggerMock.Object);
 
             var complexAClone = k_ComplexA.DeepClone();
-            manager.Put(complexAClone);
+            await manager.PutAsync(complexAClone);
 
             complexAClone.HangarBay.Identifier = Guid.NewGuid();
             Assert.Throws<InvalidOperationException>(() => complexAClone.SignalChanges());
@@ -110,11 +110,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             var complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.First().Endpoint = complexAClone.HangarBay.Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
 
             complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.ElementAt(0).Endpoint = complexAClone.LaunchPads.ElementAt(1).Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
         }
 
         [Test]
@@ -124,51 +124,51 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             var complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.First().Identifier = complexAClone.Id;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
 
             complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.ElementAt(0).Identifier = complexAClone.LaunchPads.ElementAt(1).Identifier;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
         }
 
         [Test]
-        public void DetectsExternalEndpointConflicts()
+        public async Task DetectsExternalEndpointConflicts()
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexB);
+            await manager.PutAsync(k_ComplexB);
 
             var complexAClone = k_ComplexA.DeepClone();
             complexAClone.HangarBay.Endpoint = k_ComplexB.HangarBay.Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
             complexAClone.HangarBay.Endpoint = k_ComplexB.LaunchPads.First().Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
 
             complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.First().Endpoint = k_ComplexB.HangarBay.Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
             complexAClone.LaunchPads.First().Endpoint = k_ComplexB.LaunchPads.First().Endpoint;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
         }
 
         [Test]
-        public void DetectsExternalIdentifierConflicts()
+        public async Task DetectsExternalIdentifierConflicts()
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexB);
+            await manager.PutAsync(k_ComplexB);
 
             var complexAClone = k_ComplexA.DeepClone();
             complexAClone.HangarBay.Identifier = k_ComplexB.HangarBay.Identifier;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
             complexAClone.HangarBay.Identifier = k_ComplexB.LaunchPads.First().Identifier;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
 
             complexAClone = k_ComplexA.DeepClone();
             complexAClone.LaunchPads.First().Identifier = k_ComplexB.HangarBay.Identifier;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
             complexAClone.LaunchPads.First().Identifier = k_ComplexB.LaunchPads.First().Identifier;
-            Assert.Throws<ArgumentException>(() => manager.Put(complexAClone));
+            Assert.That(async () => await manager.PutAsync(complexAClone), Throws.TypeOf<ArgumentException>());
         }
 
         [Test]
@@ -176,8 +176,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             ComplexesManager manager = new(m_LoggerMock.Object);
 
-            manager.Put(k_ComplexA);
-            manager.Put(k_ComplexB);
+            await manager.PutAsync(k_ComplexA);
+            await manager.PutAsync(k_ComplexB);
 
             MemoryStream memoryStream = new();
             await manager.SaveAsync(memoryStream);

@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                         }
                     }
 
-                    lockedComplexes.Value.OnSomethingChanged += LaunchComplexesChanged;
+                    lockedComplexes.Value.SomethingChanged += LaunchComplexesChanged;
                 }
             }
         }

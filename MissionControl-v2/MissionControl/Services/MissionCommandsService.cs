@@ -95,7 +95,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                     if (!missionLock.Value.Equals(missionDetails.LaunchConfiguration))
                     {
                         missionLock.Value.DeepCopy(missionDetails.LaunchConfiguration);
-                        missionLock.Value.ObjectChanged();
+                        missionLock.Value.SignalChanges();
                     }
                 }
                 // TODO: Copy parameters (when support for parameters will be added)

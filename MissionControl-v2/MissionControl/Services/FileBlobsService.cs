@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             if (!storageFoldersStatus.SequenceEqual(lockedStatus.Value.StorageFolders))
             {
                 lockedStatus.Value.StorageFolders = storageFoldersStatus;
-                lockedStatus.Value.ObjectChanged();
+                lockedStatus.Value.SignalChanges();
             }
         }
 

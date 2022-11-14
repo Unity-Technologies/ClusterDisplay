@@ -20,6 +20,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             m_CatalogPath = Path.Combine(m_AssetRoot, "LaunchCatalog.json");
         }
 
+        /// <inheritdoc/>
         public async Task<Catalog> GetCatalogAsync()
         {
             await using var loadStream = File.OpenRead(m_CatalogPath);
@@ -31,6 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             return catalog;
         }
 
+        /// <inheritdoc/>
         public Task<AssetSourceOpenedFile> GetFileContentAsync(string path)
         {
             string toOpenPath = Path.Combine(m_AssetRoot, path);

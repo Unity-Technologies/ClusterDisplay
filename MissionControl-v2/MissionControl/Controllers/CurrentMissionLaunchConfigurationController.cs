@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
                         lockedLaunchConfiguration.Value.DeepCopy(configuration);
                         if (!lockedLaunchConfiguration.Value.Equals(previousValue))
                         {
-                            lockedLaunchConfiguration.Value.ObjectChanged();
+                            lockedLaunchConfiguration.Value.SignalChanges();
                         }
                     }
                 }

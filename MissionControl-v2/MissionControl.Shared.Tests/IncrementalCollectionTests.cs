@@ -77,9 +77,9 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
         {
             public EventsMonitor(IncrementalCollection<TestObject> collection)
             {
-                collection.OnObjectAdded += o => Added.Add(o);
-                collection.OnObjectRemoved += o => Removed.Add(o);
-                collection.OnObjectUpdated += o => Updated.Add(o);
+                collection.ObjectAdded += o => Added.Add(o);
+                collection.ObjectRemoved += o => Removed.Add(o);
+                collection.ObjectUpdated += o => Updated.Add(o);
             }
 
             // ReSharper disable once MemberCanBePrivate.Local -> To be symmetric with Removed

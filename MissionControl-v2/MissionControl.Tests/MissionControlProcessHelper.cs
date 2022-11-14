@@ -452,7 +452,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 {
                     break;
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
             var status = await GetStatus();
             Assert.That(status.State, Is.EqualTo(state));

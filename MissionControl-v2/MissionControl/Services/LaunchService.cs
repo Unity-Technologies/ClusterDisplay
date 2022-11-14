@@ -91,7 +91,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 }
 
                 lockedStatus.Value.State = State.Preparing;
-                lockedStatus.Value.ObjectChanged();
+                lockedStatus.Value.SignalChanges();
 
                 _ = MonitorMission(launchTask);
 
@@ -149,7 +149,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 {
                     using var lockedStatus = await m_StatusService.LockAsync();
                     lockedStatus.Value.State = newState;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                     statusState = newState;
                 }
 
@@ -166,7 +166,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             {
                 Debug.Assert(lockedStatus.Value.State == statusState);
                 lockedStatus.Value.State = State.Idle;
-                lockedStatus.Value.ObjectChanged();
+                lockedStatus.Value.SignalChanges();
             }
         }
 

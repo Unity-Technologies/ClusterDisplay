@@ -82,8 +82,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
                 // Register to be informed of launchpad status changes.
                 m_LaunchPadsStatusValidation = manifest.LaunchPadsStatus;
-                m_LaunchPadsStatusValidation.OnObjectUpdated += LaunchPadStatusUpdate;
-                m_LaunchPadsStatusValidation.OnObjectRemoved += LaunchPadStatusRemoved;
+                m_LaunchPadsStatusValidation.ObjectUpdated += LaunchPadStatusUpdate;
+                m_LaunchPadsStatusValidation.ObjectRemoved += LaunchPadStatusRemoved;
 
                 // Start the work on each of the launchpads.
                 foreach (var complexConfiguration in manifest.LaunchConfiguration.LaunchComplexes)
@@ -262,8 +262,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 if (m_LaunchPadsStatusValidation != null)
                 {
                     Debug.Assert(launchPadsStatus == m_LaunchPadsStatusValidation);
-                    launchPadsStatus.OnObjectUpdated -= LaunchPadStatusUpdate;
-                    launchPadsStatus.OnObjectRemoved -= LaunchPadStatusRemoved;
+                    launchPadsStatus.ObjectUpdated -= LaunchPadStatusUpdate;
+                    launchPadsStatus.ObjectRemoved -= LaunchPadStatusRemoved;
                     m_LaunchPadsStatusValidation = null;
                 }
 

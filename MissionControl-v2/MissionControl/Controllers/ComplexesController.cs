@@ -57,7 +57,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
                             $"currently {lockedStatus.Value.State}).");
                     }
 
-                    m_ComplexesService.Manager.Put(complex);
+                    await m_ComplexesService.Manager.PutAsync(complex);
                 }
 
                 await m_ComplexesService.SaveAsync();
@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
                         $"currently {lockedStatus.Value.State}).");
                 }
 
-                if (!m_ComplexesService.Manager.Remove(id))
+                if (!await m_ComplexesService.Manager.RemoveAsync(id))
                 {
                     return NotFound($"No launch complex with the identifier of {id} can be found");
                 }

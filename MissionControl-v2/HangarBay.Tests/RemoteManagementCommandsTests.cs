@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);
@@ -92,7 +92,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     {
                         // ignored
                     }
-                    await Task.Delay(25);
+                    await Task.Delay(25); // Wait a little bit so that the situation can change
                 }
 
                 Assert.That(newStatus, Is.Not.Null);
@@ -255,7 +255,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);

@@ -27,11 +27,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_ConfigService.Changed += ConfigChangedAsync;
             using (var lockedAssets = m_AssetsService.Manager.GetLockedReadOnlyAsync().Result)
             {
-                lockedAssets.Value.OnObjectRemoved += AssetRemoved;
+                lockedAssets.Value.ObjectRemoved += AssetRemoved;
             }
             using (var lockedLaunchConfiguration = m_CurrentMissionLaunchConfigurationService.LockAsync().Result)
             {
-                lockedLaunchConfiguration.Value.OnObjectChanged += LaunchConfigurationChanged;
+                lockedLaunchConfiguration.Value.ObjectChanged += LaunchConfigurationChanged;
             }
         }
 
@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                             break;
                         }
 
-                        await Task.Delay(25);
+                        await Task.Delay(25); // Wait a little bit so that the situation can change
                     }
                 }
             }

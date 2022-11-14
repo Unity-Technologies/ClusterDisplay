@@ -86,15 +86,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
                     var savedState = lockedStatus.Value.State;
                     lockedStatus.Value.State = command.State;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
 
                     while (File.Exists(command.ControlFile))
                     {
-                        await Task.Delay(25);
+                        await Task.Delay(25); // Wait a little bit so that the situation can change
                     }
 
                     lockedStatus.Value.State = savedState;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 });
 
                 await locked.Task;
@@ -106,7 +106,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 {
                     savedState = lockedStatus.Value.State;
                     lockedStatus.Value.State = command.State;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 }
 
                 // Start a task monitoring the state to restore it when the specified file is gone...
@@ -114,12 +114,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 {
                     while (File.Exists(command.ControlFile))
                     {
-                        await Task.Delay(25);
+                        await Task.Delay(25); // Wait a little bit so that the situation can change
                     }
 
                     using var lockedStatus = await m_StatusService.LockAsync();
                     lockedStatus.Value.State = savedState;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 });
             }
 

@@ -20,25 +20,25 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <remarks>This event is called when add is completed (last thing before the method that added the object
         /// returns).</remarks>
-        public event Action<T>? OnObjectAdded;
+        public event Action<T>? ObjectAdded;
 
         /// <summary>
         /// Event called to inform that an object has been removed from the collection.
         /// </summary>
         /// <remarks>This event is called when remove is completed (last thing before the method that removed the object
         /// returns).</remarks>
-        public event Action<T>? OnObjectRemoved;
+        public event Action<T>? ObjectRemoved;
 
         /// <summary>
         /// Event called to inform that the specified object has been modified.
         /// </summary>
-        public event Action<T>? OnObjectUpdated;
+        public event Action<T>? ObjectUpdated;
 
         /// <summary>
-        /// Event called to inform that something in the collection changed (merge of <see cref="OnObjectAdded"/>,
-        /// <see cref="OnObjectRemoved"/> and <see cref="OnObjectUpdated"/> without any generic parameter).
+        /// Event called to inform that something in the collection changed (merge of <see cref="ObjectAdded"/>,
+        /// <see cref="ObjectRemoved"/> and <see cref="ObjectUpdated"/> without any generic parameter).
         /// </summary>
-        public event Action<IReadOnlyIncrementalCollection>? OnSomethingChanged;
+        public event Action<IReadOnlyIncrementalCollection>? SomethingChanged;
 
         /// <summary>
         /// Add a <typeparamref name="T"/> to the collection (similar to
@@ -64,8 +64,8 @@ namespace Unity.ClusterDisplay.MissionControl
             obj.ChangeObserver = this;
             m_VersionNumber = newVersionNumber;
 
-            OnObjectAdded?.Invoke(obj);
-            OnSomethingChanged?.Invoke(this);
+            ObjectAdded?.Invoke(obj);
+            SomethingChanged?.Invoke(this);
         }
 
         public T this[Guid key]
@@ -93,13 +93,13 @@ namespace Unity.ClusterDisplay.MissionControl
 
                 if (added)
                 {
-                    OnObjectAdded?.Invoke(value);
+                    ObjectAdded?.Invoke(value);
                 }
                 else
                 {
-                    OnObjectUpdated?.Invoke(value);
+                    ObjectUpdated?.Invoke(value);
                 }
-                OnSomethingChanged?.Invoke(this);
+                SomethingChanged?.Invoke(this);
             }
         }
 
@@ -143,9 +143,9 @@ namespace Unity.ClusterDisplay.MissionControl
 
             foreach (var removedObject in oldDictionary.Values)
             {
-                OnObjectRemoved?.Invoke(removedObject);
+                ObjectRemoved?.Invoke(removedObject);
             }
-            OnSomethingChanged?.Invoke(this);
+            SomethingChanged?.Invoke(this);
         }
 
         public bool ContainsKey(Guid key)
@@ -176,8 +176,8 @@ namespace Unity.ClusterDisplay.MissionControl
                 m_Dictionary[key] = removedMarker;
                 m_VersionNumber = newVersionNumber;
 
-                OnObjectRemoved?.Invoke(removedObject);
-                OnSomethingChanged?.Invoke(this);
+                ObjectRemoved?.Invoke(removedObject);
+                SomethingChanged?.Invoke(this);
 
                 return true;
             }
@@ -299,20 +299,20 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 if (added)
                 {
-                    OnObjectAdded?.Invoke(obj);
+                    ObjectAdded?.Invoke(obj);
                 }
                 else
                 {
-                    OnObjectUpdated?.Invoke(obj);
+                    ObjectUpdated?.Invoke(obj);
                 }
             }
             foreach (T obj in removedObjects)
             {
-                OnObjectRemoved?.Invoke(obj);
+                ObjectRemoved?.Invoke(obj);
             }
             if (updatedObjects.Any() || removedObjects.Any())
             {
-                OnSomethingChanged?.Invoke(this);
+                SomethingChanged?.Invoke(this);
             }
         }
 
@@ -423,8 +423,8 @@ namespace Unity.ClusterDisplay.MissionControl
             // IncrementalCollectionRemovedMarker should never change, so this delegate should never be called so obj
             // should always be a T.
             Debug.Assert(obj is T);
-            OnObjectUpdated?.Invoke((T)obj);
-            OnSomethingChanged?.Invoke(this);
+            ObjectUpdated?.Invoke((T)obj);
+            SomethingChanged?.Invoke(this);
         }
         #endregion
 

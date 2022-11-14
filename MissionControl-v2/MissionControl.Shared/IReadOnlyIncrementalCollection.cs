@@ -9,11 +9,11 @@ namespace Unity.ClusterDisplay.MissionControl
     {
         /// <summary>
         /// Event called to inform that something in the collection changed (merge of
-        /// <see cref="IReadOnlyIncrementalCollection{T}.OnObjectAdded"/>,
-        /// <see cref="IReadOnlyIncrementalCollection{T}.OnObjectRemoved"/> and
-        /// <see cref="IReadOnlyIncrementalCollection{T}.OnObjectUpdated"/> without any generic parameter).
+        /// <see cref="IReadOnlyIncrementalCollection{T}.ObjectAdded"/>,
+        /// <see cref="IReadOnlyIncrementalCollection{T}.ObjectRemoved"/> and
+        /// <see cref="IReadOnlyIncrementalCollection{T}.ObjectUpdated"/> without any generic parameter).
         /// </summary>
-        public event Action<IReadOnlyIncrementalCollection>? OnSomethingChanged;
+        public event Action<IReadOnlyIncrementalCollection>? SomethingChanged;
     }
 
     /// <summary>
@@ -30,19 +30,19 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <remarks>This event is called when add is completed (last thing before the method that added the object
         /// returns).</remarks>
-        public event Action<T>? OnObjectAdded;
+        public event Action<T>? ObjectAdded;
 
         /// <summary>
         /// Event called to inform that an object has been removed from the collection.
         /// </summary>
         /// <remarks>This event is called when remove is completed (last thing before the method that removed the object
         /// returns).</remarks>
-        public event Action<T>? OnObjectRemoved;
+        public event Action<T>? ObjectRemoved;
 
         /// <summary>
         /// Event called to inform that the specified object has been modified.
         /// </summary>
-        public event Action<T>? OnObjectUpdated;
+        public event Action<T>? ObjectUpdated;
 
         /// <summary>
         /// Compute what changed since the reference version number.

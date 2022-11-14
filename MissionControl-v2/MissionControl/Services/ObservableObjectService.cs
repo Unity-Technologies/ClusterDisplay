@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         {
             var applicationLifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
             m_ObservableObject = observableObject;
-            m_ObservableObject.OnObjectChanged += OnObjectChanged;
+            m_ObservableObject.ObjectChanged += OnObjectChanged;
 
             serviceProvider.GetService<ObservableObjectCatalogService>()!.AddObservableObject(this);
 

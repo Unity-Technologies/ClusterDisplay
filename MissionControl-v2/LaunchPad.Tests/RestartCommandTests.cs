@@ -267,7 +267,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);

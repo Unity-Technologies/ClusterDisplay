@@ -43,14 +43,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         public dynamic? LaunchData { get; set; }
 
         /// <summary>
-        /// Path (relative to the toLaunch folder) to an optional executable to execute before launch.  This executable
-        /// is responsible to ensure that any external dependencies are installed and ready to use.
+        /// Path (relative to where prepared payload is stored) to an optional executable to execute before launch.
+        /// This executable is responsible to ensure that any external dependencies are installed and ready to use.
         /// </summary>
         public string PreLaunchPath { get; set; } = "";
 
         /// <summary>
-        /// Path (relative to the toLaunch folder) to the executable to launch when the LaunchPad receives the Launch
-        /// command.
+        /// Path (relative to where prepared payload is stored) to the executable to launch when the LaunchPad receives
+        /// the Launch command.
         /// </summary>
         public string LaunchPath { get; set; } = "";
 

@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     /// <summary>
     /// Class of the object responsible for managing <see cref="Asset"/>s. (and everything they references).
     /// </summary>
-    public class AssetsManager
+    public class AssetsManager: IncrementalCollectionManager<Asset>
     {
         /// <summary>
         /// Constructor
@@ -22,12 +22,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <param name="payloadsManager">Object responsible for managing <see cref="Payload"/>s.</param>
         /// <param name="fileBlobsManager">Object responsible for managing file blobs.</param>
         public AssetsManager(ILogger logger, PayloadsManager payloadsManager, FileBlobsManager fileBlobsManager)
+            : base(logger)
         {
-            m_Logger = logger;
             m_PayloadsManager = payloadsManager;
             m_FileBlobsManager = fileBlobsManager;
-
-            m_Assets.OnSomethingChanged += AssetsCollectionModified;
         }
 
         /// <summary>
@@ -53,11 +51,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             }
 
             Dictionary<string, Task<FileBlobInfo>> fileBlobsTask = new();
-            List<Task<FileBlobInfo>> fileBlobsTaskList = new();
             Dictionary<Guid, FileBlobInfo> uniqueFileBlobs = new();
             Dictionary<string, Guid> payloads = new();
             List<Guid> payloadsList = new();
-            CancellationTokenSource addFileBlobsCancelTokenSource = new();
+            TaskGroup taskGroup = new();
 
             try
             {
@@ -71,18 +68,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                             continue;
                         }
 
-                        var addFileBlobTask = AddFileBlobAsync(assetSource, file, addFileBlobsCancelTokenSource);
+                        var addFileBlobTask = AddFileBlobAsync(assetSource, file, taskGroup.CancellationToken);
                         fileBlobsTask.Add(file.Path, addFileBlobTask);
-                        fileBlobsTaskList.Add(addFileBlobTask);
+                        taskGroup.Add(addFileBlobTask);
                     }
                 }
 
                 // Wait for all the file blobs to be added
-                await Task.WhenAll(fileBlobsTaskList);
+                await Task.WhenAll(taskGroup.ToWaitOn);
                 Dictionary<string, FileBlobInfo> fileBlobs = new();
                 foreach (var fileBlobTaskPair in fileBlobsTask)
                 {
-                    var fileBlobInfo = await fileBlobTaskPair.Value;
+                    var fileBlobInfo = fileBlobTaskPair.Value.Result;
                     fileBlobs[fileBlobTaskPair.Key] = fileBlobInfo;
                     uniqueFileBlobs[fileBlobInfo.Id] = fileBlobInfo;
                 }
@@ -139,18 +136,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 newAsset.Launchables = launchables;
                 newAsset.StorageSize = uniqueFileBlobs.Values.Sum(fbi => fbi.CompressedSize);
 
-                using (await m_Lock.LockAsync())
+                using (var writeLock = await GetWriteLockAsync())
                 {
-                    try
-                    {
-                        Debug.Assert(!m_AssetsModificationAllowed);
-                        m_AssetsModificationAllowed = true;
-                        m_Assets.Add(newAsset);
-                    }
-                    finally
-                    {
-                        m_AssetsModificationAllowed = false;
-                    }
+                    writeLock.Collection.Add(newAsset);
                 }
 
                 // Done
@@ -168,16 +156,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             }
             finally
             {
-                addFileBlobsCancelTokenSource.Cancel();
+                taskGroup.ForceCancel();
 
                 // Remarks: We always DecreaseFileBlobReferenceAsync on files we added, even when we succeed.
                 // m_PayloadsManager.AddPayloadAsync will have increased reference count on the files it uses.
-                fileBlobsTaskList.Reverse();
-                foreach (var fileBlobTask in fileBlobsTaskList)
+                var toDecreaseTasks = taskGroup.Tasks.Reverse();
+                foreach (var task in toDecreaseTasks)
                 {
-                    await Task.WhenAny(fileBlobTask); // WaitAny to avoid throwing if there is an exception
-                    if (fileBlobTask.IsCompletedSuccessfully)
+                    await Task.WhenAny(task); // WaitAny to avoid throwing if there is an exception
+                    if (task.IsCompletedSuccessfully)
                     {
+                        var fileBlobTask = (Task<FileBlobInfo>)task;
                         await m_FileBlobsManager.DecreaseFileBlobReferenceAsync((await fileBlobTask).Id);
                     }
                 }
@@ -196,24 +185,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             // First get the asset and remove it from the "known list" so that we do not have to keep m_Lock locked for
             // the whole removal process and so that it appear to be gone ASAP from the outside.
             Asset? asset;
-            using (await m_Lock.LockAsync())
+            using (var writeLock = await GetWriteLockAsync())
             {
-                if (!m_Assets.TryGetValue(assetIdentifier, out asset))
+                if (!writeLock.Collection.TryGetValue(assetIdentifier, out asset))
                 {
                     return false;
                 }
 
-                try
-                {
-                    Debug.Assert(!m_AssetsModificationAllowed);
-                    m_AssetsModificationAllowed = true;
-                    bool removed = m_Assets.Remove(assetIdentifier);
-                    Debug.Assert(removed);
-                }
-                finally
-                {
-                    m_AssetsModificationAllowed = false;
-                }
+                bool removed = writeLock.Collection.Remove(assetIdentifier);
+                Debug.Assert(removed);
             }
 
             // Remove the payloads, removing the payloads should cascade in removing the files.
@@ -234,142 +214,30 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         }
 
         /// <summary>
-        /// Save the state of the <see cref="AssetsManager"/> to the given <see cref="Stream"/>.
-        /// </summary>
-        /// <param name="saveTo"><see cref="Stream"/> to save to.</param>
-        public async Task SaveAsync(Stream saveTo)
-        {
-            await using MemoryStream inMemorySerialized = new();
-
-            using (await m_Lock.LockAsync())
-            {
-                await JsonSerializer.SerializeAsync(inMemorySerialized, m_Assets.Values, Json.SerializerOptions);
-            }
-            inMemorySerialized.Position = 0;
-
-            await inMemorySerialized.CopyToAsync(saveTo);
-        }
-
-        /// <summary>
-        /// Loads the state of the <see cref="AssetsManager"/> from the given <see cref="Stream"/>.
-        /// </summary>
-        /// <param name="loadFrom"><see cref="Stream"/> to load from.</param>
-        /// <exception cref="InvalidOperationException">If trying to load into a non empty manager.</exception>
-        public void Load(Stream loadFrom)
-        {
-            var assets = JsonSerializer.Deserialize<Asset[]>(loadFrom, Json.SerializerOptions);
-            if (assets == null)
-            {
-                throw new NullReferenceException("Parsing asset array resulted in a null object.");
-            }
-
-            // Prepare an incremental update (this is the fastest way to add everything as a single transaction into
-            // m_Assets).
-            IncrementalCollectionUpdate<Asset> incrementalUpdate = new();
-            incrementalUpdate.UpdatedObjects = assets;
-
-            using (m_Lock.Lock())
-            {
-                if (m_Assets.Count > 0)
-                {
-                    throw new InvalidOperationException($"Can only call Load on an empty {nameof(AssetsManager)}.");
-                }
-
-                try
-                {
-                    Debug.Assert(!m_AssetsModificationAllowed);
-                    m_AssetsModificationAllowed = true;
-                    m_Assets.ApplyDelta(incrementalUpdate);
-                }
-                finally
-                {
-                    m_AssetsModificationAllowed = false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Returns a <see cref="AsyncLockedObject{T}"/> giving access to a
-        /// <see cref="IReadOnlyIncrementalCollection{T}"/> that must be disposed ASAP (as it keeps the
-        /// <see cref="IncrementalCollection{T}"/> locked for other threads).
-        /// </summary>
-        public async Task<AsyncLockedObject<IReadOnlyIncrementalCollection<Asset>>> GetLockedReadOnlyAsync()
-        {
-            return new AsyncLockedObject<IReadOnlyIncrementalCollection<Asset>>(m_Assets,
-                await m_Lock.LockAsync());
-        }
-
-        /// <summary>
         /// Call the <see cref="FileBlobsManager"/> to add a file blob from the specified file.
         /// </summary>
         /// <param name="assetSource">From where to take the file.</param>
         /// <param name="file">The file to add</param>
-        /// <param name="addFileBlobsCancelTokenSource"><see cref="CancellationTokenSource"/> to cancel the task we
-        /// call but we also signal it if a add fail so that all other start add stop as soon as possible.</param>
-        /// <returns></returns>
+        /// <param name="addFileBlobsCancelToken"><see cref="CancellationToken"/> to cancel the work.</param>
         async Task<FileBlobInfo> AddFileBlobAsync(IAssetSource assetSource, LaunchCatalog.PayloadFile file,
-            CancellationTokenSource addFileBlobsCancelTokenSource)
+            CancellationToken addFileBlobsCancelToken)
         {
-            try
+            Guid fileBlobId;
+            using (var openedFile = await assetSource.GetFileContentAsync(file.Path))
             {
-                Guid fileBlobId;
-                using (var openedFile = await assetSource.GetFileContentAsync(file.Path))
-                {
-                    byte[] md5Bytes = Convert.FromHexString(file.Md5);
-                    var md5 = new Guid(md5Bytes);
-                    fileBlobId = await m_FileBlobsManager.AddFileBlobAsync(openedFile.Stream,
-                        openedFile.Length, md5, addFileBlobsCancelTokenSource.Token);
-                }
-
-                using (var lockedFile = await m_FileBlobsManager.LockFileBlob(fileBlobId))
-                {
-                    return new(lockedFile.Id, lockedFile.Md5, lockedFile.CompressedSize, lockedFile.Size);
-                }
+                byte[] md5Bytes = Convert.FromHexString(file.Md5);
+                var md5 = new Guid(md5Bytes);
+                fileBlobId = await m_FileBlobsManager.AddFileBlobAsync(openedFile.Stream, openedFile.Length, md5,
+                    addFileBlobsCancelToken);
             }
-            catch (Exception)
+
+            using (var lockedFile = await m_FileBlobsManager.LockFileBlob(fileBlobId))
             {
-                // Cancel any other FileBlob if one has an error (since the whole partial asset will be aborted and
-                // nothing of it kept).
-                addFileBlobsCancelTokenSource.Cancel();
-                throw;
+                return new(lockedFile.Id, lockedFile.Md5, lockedFile.CompressedSize, lockedFile.Size);
             }
         }
 
-        /// <summary>
-        /// Watchdog to detect if the collection would be modified when not supposed to.
-        /// </summary>
-        /// <remarks>This is not meant to prevent problems, this is meant to reduce chances it goes unnoticed.</remarks>
-        void AssetsCollectionModified(IReadOnlyIncrementalCollection _)
-        {
-            if (!m_Lock.IsLocked)
-            {
-                throw new InvalidOperationException($"Modifying {nameof(IncrementalCollection<Asset>)} while " +
-                    $"the collection is not locked.");
-            }
-            if (!m_AssetsModificationAllowed)
-            {
-                throw new InvalidOperationException($"Looks likes {nameof(IncrementalCollection<Asset>)} from the " +
-                    $"{nameof(IReadOnlyIncrementalCollection<Asset>)}.");
-            }
-        }
-
-        readonly ILogger m_Logger;
         readonly PayloadsManager m_PayloadsManager;
         readonly FileBlobsManager m_FileBlobsManager;
-
-        /// <summary>
-        /// Object used to synchronize access to the member variables below.
-        /// </summary>
-        readonly AsyncLock m_Lock = new();
-
-        /// <summary>
-        /// Assets collection
-        /// </summary>
-        readonly IncrementalCollection<Asset> m_Assets = new();
-
-        /// <summary>
-        /// Assuming <see cref="m_Lock"/> is locked by the current thread, is the current thread allowed to modify it?
-        /// </summary>
-        bool m_AssetsModificationAllowed;
     }
 }

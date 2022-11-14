@@ -104,7 +104,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 Callback = callback;
                 m_Collection = collection;
 
-                m_Collection.OnSomethingChanged += SomethingChangedInCollection;
+                m_Collection.SomethingChanged += SomethingChangedInCollection;
             }
 
             /// <summary>

@@ -32,14 +32,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             m_ConfigService = configService;
 
             var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            m_LaunchPath = Path.GetFullPath(configuration["launchFolder"], assemblyFolder!);
+            m_LaunchRoot = Path.GetFullPath(configuration["launchFolder"], assemblyFolder!);
             try
             {
-                Directory.CreateDirectory(m_LaunchPath);
+                Directory.CreateDirectory(m_LaunchRoot);
             }
             catch (Exception e)
             {
-                m_Logger.LogCritical(e, "Failed to ensure {LaunchFolder} exists", m_LaunchPath);
+                m_Logger.LogCritical(e, "Failed to ensure {LaunchFolder} exists", m_LaunchRoot);
             }
             m_HttpClient = httpClient;
 
@@ -204,8 +204,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
 
                 // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, ignition... and lift off!!!!
                 ProcessStartInfo processStartInfo = new();
-                processStartInfo.WorkingDirectory = m_LaunchPath;
-                processStartInfo.FileName = Path.Combine(m_LaunchPath, m_PreparedParameters.LaunchPath);
+                processStartInfo.WorkingDirectory = m_LaunchRoot;
+                processStartInfo.FileName = Path.Combine(m_LaunchRoot, m_PreparedParameters.LaunchPath);
                 PrepareEnvironmentVariables(processStartInfo, m_PreparedParameters);
                 InvokePowershell(processStartInfo);
                 try
@@ -318,14 +318,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
 
                 try
                 {
-                    Directory.Delete(m_LaunchPath, true);
-                    Directory.CreateDirectory(m_LaunchPath);
+                    Directory.Delete(m_LaunchRoot, true);
+                    Directory.CreateDirectory(m_LaunchRoot);
                 }
                 catch (Exception e)
                 {
                     // We cleared the best that we can, at worst if there is a real critical file missing we will get
                     // an error while preparing the launchpad next time.
-                    m_Logger.LogWarning(e, "Failed to clear some files from {LaunchPath}", m_LaunchPath);
+                    m_Logger.LogWarning(e, "Failed to clear some files from {LaunchPath}", m_LaunchRoot);
                 }
             }
             return new OkResult();
@@ -479,7 +479,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             HangarBay.PrepareCommand prepareLaunchPadCommand = new();
             prepareLaunchPadCommand.PayloadIds = prepareCommand.PayloadIds;
             prepareLaunchPadCommand.PayloadSource = prepareCommand.PayloadSource;
-            prepareLaunchPadCommand.Path = m_LaunchPath;
+            prepareLaunchPadCommand.Path = m_LaunchRoot;
             Uri uri = new(new Uri(m_ConfigService.Current.HangarBayEndPoint), "api/v1/commands");
             try
             {
@@ -511,7 +511,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             m_StatusService.State = State.PreLaunch;
 
             ProcessStartInfo processStartInfo = new();
-            processStartInfo.WorkingDirectory = m_LaunchPath;
+            processStartInfo.WorkingDirectory = m_LaunchRoot;
             processStartInfo.FileName = prepareCommand.PreLaunchPath;
             PrepareEnvironmentVariables(processStartInfo, prepareCommand);
             InvokePowershell(processStartInfo);
@@ -645,7 +645,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// <summary>
         /// Folder in which payloads are prepared for launch.
         /// </summary>
-        readonly string m_LaunchPath;
+        readonly string m_LaunchRoot;
 
         /// <summary>
         /// Used to synchronize access to member variables of this class.

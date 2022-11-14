@@ -155,7 +155,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                     if (!lockedStatus.Value.PendingRestart)
                     {
                         lockedStatus.Value.PendingRestart = true;
-                        lockedStatus.Value.ObjectChanged();
+                        lockedStatus.Value.SignalChanges();
                     }
                 }
 
@@ -319,7 +319,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 if (!lockedStatus.Value.PendingRestart)
                 {
                     lockedStatus.Value.PendingRestart = true;
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 }
             }
             return Task.CompletedTask;

@@ -80,7 +80,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             int changesCounter = 0;
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
             {
-                lockedList.Value.OnSomethingChanged += _ => changesCounter++;
+                lockedList.Value.SomethingChanged += _ => changesCounter++;
             }
 
             // Add a new mission

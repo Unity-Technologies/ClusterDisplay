@@ -76,7 +76,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
                 using (var lockedStatus = await m_StatusService.LockAsync())
                 {
                     lockedStatus.Value.StorageFolders = m_FileBlobsService.Manager.GetStorageFolderStatus();
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 }
 
                 await m_AssetsService.SaveAsync();
@@ -128,7 +128,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
                 using (var lockedStatus = await m_StatusService.LockAsync())
                 {
                     lockedStatus.Value.StorageFolders = m_FileBlobsService.Manager.GetStorageFolderStatus();
-                    lockedStatus.Value.ObjectChanged();
+                    lockedStatus.Value.SignalChanges();
                 }
             }
 
