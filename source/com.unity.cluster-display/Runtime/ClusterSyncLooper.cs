@@ -6,7 +6,7 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay
 {
-    static class ClusterSyncLooper
+    public static class ClusterSyncLooper
     {
         /// <summary>
         ///  Delegate to execute callbacks before we enter the while loop.

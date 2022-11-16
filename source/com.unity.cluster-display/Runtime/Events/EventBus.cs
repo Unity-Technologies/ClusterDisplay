@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay
     /// <see cref="RepeaterStateReader.RegisterOnLoadDataDelegate"/>.
     /// </remarks>
     /// <typeparam name="TEvent">Type of the events managed by this bus.</typeparam>
-    class EventBus<TEvent> : IDisposable where TEvent : unmanaged
+    public class EventBus<TEvent> : IDisposable where TEvent : unmanaged
     {
         /// <summary>
         /// Delegate for receiving a contiguous array of event objects.

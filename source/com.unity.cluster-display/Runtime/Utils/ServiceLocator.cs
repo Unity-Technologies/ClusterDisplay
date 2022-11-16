@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Utils
     /// Tip: use an interface as the type argument to maximally decouple the service implementation
     /// from the service consumers.
     /// </remarks>
-    static class ServiceLocator
+    public static class ServiceLocator
     {
         /// <summary>
         /// Gets the service provider for type <typeparamref name="T"/>.
