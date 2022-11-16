@@ -36,7 +36,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             await manager.StoreAsync(toStore);
             var timeAfterStore = DateTime.Now;
 
-            var fromManager = await manager.GetAsync(toStore.Identifier);
+            var fromManager = await manager.GetDetailsAsync(toStore.Identifier);
             Assert.That(fromManager, Is.Not.SameAs(toStore));
             Assert.That(fromManager, Is.EqualTo(toStore));
 
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             await manager.StoreAsync(toStore);
             timeAfterStore = DateTime.Now;
 
-            fromManager = await manager.GetAsync(toStore.Identifier);
+            fromManager = await manager.GetDetailsAsync(toStore.Identifier);
             Assert.That(fromManager, Is.Not.SameAs(toStore));
             Assert.That(fromManager, Is.EqualTo(toStore));
 
@@ -125,9 +125,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             };
             await manager.StoreAsync(toStore2);
 
-            var fromManager = await manager.GetAsync(toStore1.Identifier);
+            var fromManager = await manager.GetDetailsAsync(toStore1.Identifier);
             Assert.That(fromManager, Is.EqualTo(toStore1));
-            fromManager = await manager.GetAsync(toStore2.Identifier);
+            fromManager = await manager.GetDetailsAsync(toStore2.Identifier);
             Assert.That(fromManager, Is.EqualTo(toStore2));
 
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
@@ -139,8 +139,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             // Remove toStore1
             Assert.That(await manager.DeleteAsync(toStore1.Identifier), Is.True);
 
-            Assert.ThrowsAsync<KeyNotFoundException>(() => manager.GetAsync(toStore1.Identifier));
-            fromManager = await manager.GetAsync(toStore2.Identifier);
+            Assert.ThrowsAsync<KeyNotFoundException>(() => manager.GetDetailsAsync(toStore1.Identifier));
+            fromManager = await manager.GetDetailsAsync(toStore2.Identifier);
             Assert.That(fromManager, Is.EqualTo(toStore2));
 
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
@@ -152,8 +152,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             // Remove something not in the manager, shouldn't change anything
             Assert.That(await manager.DeleteAsync(Guid.NewGuid()), Is.False);
 
-            Assert.ThrowsAsync<KeyNotFoundException>(() => manager.GetAsync(toStore1.Identifier));
-            fromManager = await manager.GetAsync(toStore2.Identifier);
+            Assert.ThrowsAsync<KeyNotFoundException>(() => manager.GetDetailsAsync(toStore1.Identifier));
+            fromManager = await manager.GetDetailsAsync(toStore2.Identifier);
             Assert.That(fromManager, Is.EqualTo(toStore2));
 
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
@@ -202,8 +202,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             saveStream.Position = 0;
             manager.Load(saveStream);
 
-            Assert.That(await manager.GetAsync(toStore1.Identifier), Is.EqualTo(toStore1));
-            Assert.That(await manager.GetAsync(toStore2.Identifier), Is.EqualTo(toStore2));
+            Assert.That(await manager.GetDetailsAsync(toStore1.Identifier), Is.EqualTo(toStore1));
+            Assert.That(await manager.GetDetailsAsync(toStore2.Identifier), Is.EqualTo(toStore2));
 
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
             {

@@ -11,8 +11,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     }
 
     /// <summary>
-    /// Class of the object responsible for managing <see cref="Asset"/>s. (and everything they references).
+    /// Class of the object responsible for managing <see cref="Asset"/>s (and everything they references).
     /// </summary>
+    /// <remarks><see cref="Asset"/> for a family portrait of <see cref="Asset"/> and every related classes.</remarks>
     public class AssetsManager: IncrementalCollectionManager<Asset>
     {
         /// <summary>

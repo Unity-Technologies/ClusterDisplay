@@ -5,9 +5,18 @@ namespace Unity.ClusterDisplay.MissionControl
     /// <summary>
     /// Class representing a locked <typeparamref name="T"/>.
     /// </summary>
-    /// <remarks>The <see cref="Value"/> property will contain the <typeparamref name="T"/> for as long as this object
-    /// hasn't been disposed of and other callers without the lock will not be able to access it either.  So this object
-    /// should be disposed of as soon as possible.</remarks>
+    /// <remarks>This class does not perform any locking by itself, however it will give access to a locked object and
+    /// keep it locked for as long as it is not disposed of.  Normal work-flow for using this object is:
+    /// <list type="number">
+    /// <item>Lock an object and create an <see cref="IDisposable"/> that will unlock it when disposed of.</item>
+    /// <item>Create a <see cref="AsyncLockedObject{T}"/> passing the locked object and the <see cref="IDisposable"/>
+    /// created in step 1 to the constructor.</item>
+    /// <item>Return the <see cref="AsyncLockedObject{T}"/> to someone that will use the <see cref="Value"/> property to
+    /// access the locked object.</item>
+    /// <item>When done of the locked object, the user will dispose of the <see cref="AsyncLockedObject{T}"/> which will
+    /// also unlock the object (by disposing of the <see cref="IDisposable"/> received in the constructor).</item>
+    /// </list>
+    /// </remarks>
     /// <typeparam name="T"><see cref="ObservableObject"/> we are making accessible.</typeparam>
     public class AsyncLockedObject<T> : IDisposable where T : class
     {

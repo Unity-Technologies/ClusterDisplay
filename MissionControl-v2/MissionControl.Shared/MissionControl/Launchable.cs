@@ -3,7 +3,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// <summary>
     /// Represent something that can be launched on a launchpad.
     /// </summary>
-    /// <remarks>Splitting of this class in <see cref="Launchable"/> and <see cref="LaunchCatalog.LaunchableBase"/>
+    /// <remarks><see cref="Asset"/> for a family portrait of <see cref="Launchable"/> and its relation to an
+    /// <see cref="Asset"/>.</remarks>
+    /// <br/><br/>Splitting of this class in <see cref="Launchable"/> and <see cref="LaunchCatalog.LaunchableBase"/>
     /// is more about avoiding copy / paste and ensuring everything that should be the same is the same than true
     /// polymorphism: code should normally deal with <see cref="Launchable"/> or <see cref="LaunchCatalog.Launchable"/>,
     /// not <see cref="LaunchCatalog.LaunchableBase"/>.</remarks>

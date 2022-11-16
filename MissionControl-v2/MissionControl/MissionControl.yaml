@@ -364,7 +364,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AssetGet'
+                  $ref: '#/components/schemas/Asset'
     post:
       tags:
         - assets
@@ -1095,6 +1095,7 @@ components:
         - $ref: '#/components/schemas/LiveCaptureCameraTracker'
     AssetBase:
       type: object
+      description: 
       properties:
         name:
           type: string
@@ -1117,9 +1118,9 @@ components:
           description: URL to a folder that contains a LaunchCatalog.json listing all the payloads and their files.
       required:
         - path
-    AssetGet:
+    Asset:
       type: object
-      description: Description of an asset (something that can be launched).
+      description: A set of files, with customizable parameters, that can be launched inside mission control.  This set of files  was produced by some tool and has added to MissionControl list of assets.  Each of theses assets can then be  selected and configured to be launched.
       allOf: 
         - $ref: '#/components/schemas/AssetBase'
         - $ref: '#/components/schemas/IncrementalCollectionObject'

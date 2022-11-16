@@ -5,6 +5,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// <summary>
     /// Information about a set of files to be use to prepare a LaunchPad.
     /// </summary>
+    /// <remarks><see cref="Asset"/> for a family portrait of <see cref="Payload"/> and its relation to an
+    /// <see cref="Asset"/>.</remarks>
     public class Payload : IEquatable<Payload>
     {
         /// <summary>

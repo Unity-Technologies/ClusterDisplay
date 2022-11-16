@@ -7,8 +7,10 @@ using Microsoft.Extensions.Logging;
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 {
     /// <summary>
-    /// Object responsible for managing a set of payloads.
+    /// Object acting as the storage of all the <see cref="Payload"/>s and performing modifications to that list.
     /// </summary>
+    /// <remarks><see cref="Asset"/> for a family portrait of <see cref="Payload"/> and its relation to an
+    /// <see cref="Asset"/>.</remarks>
     // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global -> Virtual methods used by mock in unit tests
     public class PayloadsManager
     {
@@ -30,7 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         }
 
         /// <summary>
-        /// Adds a <see cref="Payload"/> to the manager.
+        /// Adds a <see cref="Payload"/> to the list of <see cref="Payload"/>s.
         /// </summary>
         /// <param name="payloadIdentifier"><see cref="Payload"/>'s identifier.</param>
         /// <param name="payload">Definition of the <see cref="Payload"/> to add to the manager.</param>
@@ -38,6 +40,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// managed list of <see cref="Payload"/>s.</exception>
         /// <exception cref="KeyNotFoundException">If trying to reference a file blob that is not in the
         /// <see cref="FileBlobsManager"/>.</exception>
+        /// <remarks>This will update referenced file blobs in the <see cref="FileBlobsManager"/>.</remarks>
         public virtual async Task AddPayloadAsync(Guid payloadIdentifier, Payload payload)
         {
             List<PayloadFile> listOfFilesAdded = new();
@@ -111,10 +114,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         }
 
         /// <summary>
-        /// Remove the <see cref="Payload"/> with the given identifier from the manager.
+        /// Remove the <see cref="Payload"/> with the given identifier from the list of <see cref="Payload"/>s.
         /// </summary>
         /// <param name="payloadIdentifier"><see cref="Payload"/>'s identifier.</param>
         /// <exception cref="KeyNotFoundException">If not payload with the given identifier can be found.</exception>
+        /// <remarks>This will update referenced file blobs in the <see cref="FileBlobsManager"/>, deleting unreferenced 
+        /// file blobs.</remarks>
         public virtual async Task RemovePayloadAsync(Guid payloadIdentifier)
         {
             // Remove dictionary entry

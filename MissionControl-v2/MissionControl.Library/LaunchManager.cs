@@ -151,7 +151,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                     return;
                 }
 
-                SetRunningLaunchPads(m_Supervisors.Count());
+                RunningLaunchPads = m_Supervisors.Count();
             }
 
             await ContinueLaunchAsync();
@@ -210,6 +210,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 lock (m_Lock)
                 {
                     return m_RunningLaunchPads;
+                }
+            }
+            private set
+            {
+                Debug.Assert(Monitor.IsEntered(m_Lock)); // Caller should already have it locked
+
+                if (value == m_RunningLaunchPads)
+                {
+                    return;
+                }
+
+                m_RunningLaunchPads = value;
+                if (m_RunningLaunchPadsChanged != null)
+                {
+                    m_RunningLaunchPadsChanged.TrySetResult();
+                    m_RunningLaunchPadsChanged = null;
                 }
             }
         }
@@ -274,12 +290,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 }
 
                 m_LaunchPadsCount = 0;
-                m_RunningLaunchPads = 0;
-                if (m_RunningLaunchPadsChanged != null)
-                {
-                    m_RunningLaunchPadsChanged.TrySetResult();
-                    m_RunningLaunchPadsChanged = null;
-                }
+                RunningLaunchPads = 0;
             }
         }
 
@@ -308,7 +319,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                             m_Supervisors.Remove(supervisor.Key);
                         }
                     }
-                    SetRunningLaunchPads(m_Supervisors.Count);
+                    RunningLaunchPads = m_Supervisors.Count;
 
                     if (m_Supervisors.Count == 0)
                     {
@@ -331,7 +342,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                         {
                             lock (m_Lock)
                             {
-                                SetRunningLaunchPads(m_RunningLaunchPads - 1);
+                                --RunningLaunchPads;
                             }
                         }));
                     }
@@ -372,28 +383,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         {
             Debug.Assert(false, "LaunchPadStatus was removed from the collection while managing a launch, this is not " +
                 "supposed to happen, launch complexes should be locked while mission control state is not idle.");
-        }
-
-        /// <summary>
-        /// Sets the number of running launchpads.
-        /// </summary>
-        /// <param name="value">New value</param>
-        /// <remarks>Caller should have locked <see cref="m_Lock"/> before calling this method.</remarks>
-        void SetRunningLaunchPads(int value)
-        {
-            Debug.Assert(Monitor.IsEntered(m_Lock));
-
-            if (value == m_RunningLaunchPads)
-            {
-                return;
-            }
-
-            m_RunningLaunchPads = value;
-            if (m_RunningLaunchPadsChanged != null)
-            {
-                m_RunningLaunchPadsChanged.TrySetResult();
-                m_RunningLaunchPadsChanged = null;
-            }
         }
 
         /// <summary>
@@ -555,7 +544,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             public Task DoneTask => m_Step3Done.Task;
 
             /// <summary>
-            /// Returns if the supervisor & launchpad are done doing their work.
+            /// Returns if the supervisor and launchpad are done doing their work.
             /// </summary>
             public bool IsDone
             {

@@ -62,7 +62,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// Indicate that the <paramref name="length"/> first bytes of <see cref="CurrentData"/> have been consumed.
         /// </summary>
         /// <param name="length">Length of the consumed data.</param>
-        public void DataConsumed(int length)
+        public void IndicateDataConsumed(int length)
         {
             if (length > m_Length)
             {

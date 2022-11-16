@@ -75,11 +75,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     /// <summary>
     /// Object acting as the storage of all the saved missions and keeping a list of <see cref="SavedMissionSummary"/>.
     /// </summary>
-    public class MissionsManager
+    public class MissionsManager: IncrementalCollectionManager<SavedMissionSummary>
     {
-        public MissionsManager(ILogger logger)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="logger">Object used to send logging messages.</param>
+        public MissionsManager(ILogger logger): base (logger)
         {
-            m_Logger = logger;
         }
 
         /// <summary>
@@ -90,29 +93,20 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// already present in the manager.</remarks>
         public async Task StoreAsync(MissionDetails mission)
         {
-            using (await m_Lock.LockAsync())
+            using (var writeLock = await GetWriteLockAsync())
             {
                 // Update the storage
-                if (m_Storage.TryGetValue(mission.Identifier, out var previousSavedMission) &&
+                if (m_DetailsStorage.TryGetValue(mission.Identifier, out var previousSavedMission) &&
                     mission.Equals(previousSavedMission))
                 {
                     // Nothing changed...
                     return;
                 }
-                m_Storage[mission.Identifier] = mission.DeepClone();
+                m_DetailsStorage[mission.Identifier] = mission.DeepClone();
 
                 // Update the external facing inventory catalog
                 var missionSummary = mission.NewSummary(DateTime.Now);
-                try
-                {
-                    Debug.Assert(!m_CatalogModificationAllowed);
-                    m_CatalogModificationAllowed = true;
-                    m_Catalog[mission.Identifier] = missionSummary;
-                }
-                finally
-                {
-                    m_CatalogModificationAllowed = false;
-                }
+                writeLock.Collection[mission.Identifier] = missionSummary;
             }
         }
 
@@ -121,11 +115,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// </summary>
         /// <param name="identifier">Saved mission identifier (used when calling the <see cref="SaveAsync"/> method).</param>
         /// <exception cref="KeyNotFoundException">If no saved mission with that identifier is found.</exception>
-        public async Task<MissionDetails> GetAsync(Guid identifier)
+        public async Task<MissionDetails> GetDetailsAsync(Guid identifier)
         {
-            using (await m_Lock.LockAsync())
+            using (await GetLockedReadOnlyAsync())
             {
-                return m_Storage[identifier].DeepClone();
+                return m_DetailsStorage[identifier].DeepClone();
             }
         }
 
@@ -137,25 +131,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// </returns>
         public async Task<bool> DeleteAsync(Guid identifier)
         {
-            using (await m_Lock.LockAsync())
+            using (var writeLock = await GetWriteLockAsync())
             {
-                if (m_Storage.Remove(identifier))
+                if (m_DetailsStorage.Remove(identifier))
                 {
-                    try
-                    {
-                        Debug.Assert(!m_CatalogModificationAllowed);
-                        m_CatalogModificationAllowed = true;
-                        m_Catalog.Remove(identifier);
-                    }
-                    finally
-                    {
-                        m_CatalogModificationAllowed = false;
-                    }
+                    writeLock.Collection.Remove(identifier);
                     return true;
                 }
                 else
                 {
-                    Debug.Assert(!m_Catalog.ContainsKey(identifier));
+                    Debug.Assert(!writeLock.Collection.ContainsKey(identifier));
                     return false;
                 }
             }
@@ -165,17 +150,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// Save the state of the <see cref="MissionsManager"/> to the given <see cref="Stream"/>.
         /// </summary>
         /// <param name="saveTo"><see cref="Stream"/> to save to.</param>
-        public async Task SaveAsync(Stream saveTo)
+        public new async Task SaveAsync(Stream saveTo)
         {
             await using MemoryStream inMemorySerialized = new();
 
-            using (await m_Lock.LockAsync())
+            using (var readlock = await GetLockedReadOnlyAsync())
             {
                 SerializeData toSave = new();
-                toSave.Details = m_Storage.Values.ToList();
+                toSave.Details = m_DetailsStorage.Values.ToList();
                 foreach (var details in toSave.Details)
                 {
-                    toSave.DetailsComplement.Add(new (m_Catalog[details.Identifier]));
+                    toSave.DetailsComplement.Add(new (readlock.Value[details.Identifier]));
                 }
                 await JsonSerializer.SerializeAsync(inMemorySerialized, toSave, Json.SerializerOptions);
             }
@@ -189,7 +174,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// </summary>
         /// <param name="loadFrom"><see cref="Stream"/> to load from.</param>
         /// <exception cref="InvalidOperationException">If trying to load into a non empty manager.</exception>
-        public void Load(Stream loadFrom)
+        public new void Load(Stream loadFrom)
         {
             var saved = JsonSerializer.Deserialize<SerializeData>(loadFrom, Json.SerializerOptions);
             if (saved == null)
@@ -201,9 +186,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 throw new ArgumentException("Received data to load from is invalid: Details.Count != DetailsComplement.Count");
             }
 
-            using (m_Lock.Lock())
+            using (var writeLock = GetWriteLockAsync().Result)
             {
-                if (m_Storage.Any())
+                if (m_DetailsStorage.Any())
                 {
                     throw new InvalidOperationException($"Can only call Load on an empty {nameof(MissionsManager)}.");
                 }
@@ -213,7 +198,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 {
                     var missionDetails = saved.Details[savedIndex];
                     var complement = saved.DetailsComplement[savedIndex];
-                    m_Storage[missionDetails.Identifier] = missionDetails;
+                    m_DetailsStorage[missionDetails.Identifier] = missionDetails;
 
                     SavedMissionSummary missionSummary = missionDetails.NewSummary(complement.SaveTime);
                     catalogUpdateList.Add(missionSummary);
@@ -223,29 +208,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 // m_Collection).
                 IncrementalCollectionUpdate<SavedMissionSummary> incrementalUpdate = new();
                 incrementalUpdate.UpdatedObjects = catalogUpdateList;
-
-                try
-                {
-                    Debug.Assert(!m_CatalogModificationAllowed);
-                    m_CatalogModificationAllowed = true;
-                    m_Catalog.ApplyDelta(incrementalUpdate);
-                }
-                finally
-                {
-                    m_CatalogModificationAllowed = false;
-                }
+                writeLock.Collection.ApplyDelta(incrementalUpdate);
             }
-        }
-
-        /// <summary>
-        /// Returns a <see cref="AsyncLockedObject{T}"/> giving access to a
-        /// <see cref="IReadOnlyIncrementalCollection{T}"/> that must be disposed ASAP (as it keeps the
-        /// <see cref="IncrementalCollection{T}"/> locked for other threads).
-        /// </summary>
-        public async Task<AsyncLockedObject<IReadOnlyIncrementalCollection<SavedMissionSummary>>> GetLockedReadOnlyAsync()
-        {
-            return new AsyncLockedObject<IReadOnlyIncrementalCollection<SavedMissionSummary>>(m_Catalog,
-                await m_Lock.LockAsync());
         }
 
         /// <summary>
@@ -256,9 +220,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// critical sections of the code.</remarks>
         public async Task<bool> IsAssetInUseAsync(Guid assetId)
         {
-            using (await m_Lock.LockAsync())
+            using (await GetLockedReadOnlyAsync())
             {
-                foreach (var mission in m_Storage.Values)
+                foreach (var mission in m_DetailsStorage.Values)
                 {
                     if (mission.LaunchConfiguration.AssetId == assetId)
                     {
@@ -297,27 +261,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             public List<MissionDetailsComplement> DetailsComplement { get; set; } = new();
         }
 
-        // ReSharper disable once NotAccessedField.Local
-        readonly ILogger m_Logger;
-
-        /// <summary>
-        /// Object used to synchronize access to the object below.
-        /// </summary>
-        readonly AsyncLock m_Lock = new();
-
         /// <summary>
         /// Storage of all the missions managed by the <see cref="MissionsManager"/>.
         /// </summary>
-        readonly Dictionary<Guid, MissionDetails> m_Storage = new();
-
-        /// <summary>
-        /// Catalog of all the missions managed by the <see cref="MissionsManager"/>.
-        /// </summary>
-        readonly IncrementalCollection<SavedMissionSummary> m_Catalog = new();
-
-        /// <summary>
-        /// Assuming <see cref="m_Lock"/> is locked by the current thread, is the current thread allowed to modify it?
-        /// </summary>
-        bool m_CatalogModificationAllowed;
+        readonly Dictionary<Guid, MissionDetails> m_DetailsStorage = new();
     }
 }

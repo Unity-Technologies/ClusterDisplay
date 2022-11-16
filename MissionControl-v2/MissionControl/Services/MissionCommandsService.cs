@@ -83,7 +83,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 MissionDetails missionDetails;
                 try
                 {
-                    missionDetails = await m_MissionsService.Manager.GetAsync(command.Identifier);
+                    missionDetails = await m_MissionsService.Manager.GetDetailsAsync(command.Identifier);
                 }
                 catch (KeyNotFoundException)
                 {

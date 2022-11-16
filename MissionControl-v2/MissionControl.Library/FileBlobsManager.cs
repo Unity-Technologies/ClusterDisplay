@@ -28,6 +28,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     /// <summary>
     /// Class responsible for managing all the file blobs of a MissionControl process.
     /// </summary>
+    /// <remarks><see cref="Asset"/> for a family portrait of file blobs and its relation to an <see cref="Asset"/>.
+    /// </remarks>
     // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global -> Used by mocking in unit tests
     public class FileBlobsManager
     {
@@ -843,7 +845,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             /// <param name="bytes">Number of bytes to consume from the start of <see cref="CurrentData"/>.</param>
             public void DataConsumed(int bytes)
             {
-                m_ReadBuffer.DataConsumed(bytes);
+                m_ReadBuffer.IndicateDataConsumed(bytes);
             }
 
             public void Dispose()
@@ -989,7 +991,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                     candidatesToRemove.Clear();
 
                     // Move content after the consumed part
-                    fileContentReadBuffer.DataConsumed(commonReadBytes);
+                    fileContentReadBuffer.IndicateDataConsumed(commonReadBytes);
                     foreach (var candidate in duplicateCandidates)
                     {
                         candidate.DataConsumed(commonReadBytes);
