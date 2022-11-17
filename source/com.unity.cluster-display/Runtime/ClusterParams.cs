@@ -2,7 +2,7 @@ using System;
 
 namespace Unity.ClusterDisplay
 {
-    struct ClusterParams
+    public struct ClusterParams
     {
         public bool         ClusterLogicSpecified;
         public bool         EmitterSpecified;
