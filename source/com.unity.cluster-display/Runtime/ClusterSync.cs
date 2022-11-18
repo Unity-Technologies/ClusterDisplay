@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay
     ///
     /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
-    partial class ClusterSync
+    public partial class ClusterSync
     {
         const string k_DefaultName = "DefaultClusterSync";
         public string InstanceName { get; }
@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay
 
         internal ClusterNode LocalNode { get; private set; }
 
-        public NetworkStatistics CurrentNetworkStats => LocalNode.UdpAgent.Stats;
+        internal NetworkStatistics CurrentNetworkStats => LocalNode.UdpAgent.Stats;
 
         /// <summary>
         /// Get the Node ID if cluster logic is enabled.

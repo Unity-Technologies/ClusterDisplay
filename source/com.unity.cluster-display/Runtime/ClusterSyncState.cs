@@ -47,7 +47,7 @@ namespace Unity.ClusterDisplay
         string GetDiagnostics();
     }
 
-    partial class ClusterSync : IClusterSyncState
+    public partial class ClusterSync : IClusterSyncState
     {
         public NodeRole NodeRole { get; private set; }
         public bool EmitterIsHeadless { get; private set; }
