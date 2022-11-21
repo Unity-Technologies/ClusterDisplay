@@ -99,7 +99,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             }
         }
 
-        public string ConfigPath => m_ConfigPath != null ? m_ConfigPath : string.Empty;
+        public string ConfigPath => m_ConfigPath ?? string.Empty;
 
         public HttpClient HttpClient => m_HttpClient!;
 

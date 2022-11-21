@@ -34,12 +34,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(ForceStateCommand? other)
         {
-            if (other == null || other.GetType() != typeof(ForceStateCommand))
-            {
-                return false;
-            }
-
-            return State == other.State &&
+            return other != null &&
+                State == other.State &&
                 KeepLocked == other.KeepLocked &&
                 ControlFile == other.ControlFile;
         }

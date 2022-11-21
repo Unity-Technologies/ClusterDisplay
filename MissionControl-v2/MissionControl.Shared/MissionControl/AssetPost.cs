@@ -4,18 +4,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// <summary>
     /// Definition of an asset to create.
     /// </summary>
-    public class AssetPost: IAssetBase
+    public class AssetPost: AssetBase
     {
-        /// <summary>
-        /// Short descriptive name of the asset.
-        /// </summary>
-        public string Name { get; set; } = "";
-
-        /// <summary>
-        /// Detailed description of the asset.
-        /// </summary>
-        public string Description { get; set; } = "";
-
         /// <summary>
         /// URL to a folder that contains a LaunchCatalog.json listing all the payloads and their files.
         /// </summary>

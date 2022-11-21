@@ -10,7 +10,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     /// </summary>
     /// <remarks>Not present yet in the class but it will eventually also contain the list of runtime parameters (and
     /// their values) and the list of panels.</remarks>
-    public class MissionDetails: ISavedMissionSummary, IEquatable<MissionDetails>
+    public class MissionDetails: IEquatable<MissionDetails>
     {
         /// <summary>
         /// Mission details identifier
@@ -18,14 +18,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         public Guid Identifier { get; set; }
 
         /// <summary>
-        /// Short description of the saved mission.
+        /// Describes a saved mission (so that it can be identified by a human).
         /// </summary>
-        public string Name { get; set; } = "";
-
-        /// <summary>
-        /// Detailed description of the saved mission.
-        /// </summary>
-        public string Description { get; set; } = "";
+        public SavedMissionDescription Description { get; set; } = new();
 
         /// <summary>
         /// Launch configuration of the mission
@@ -39,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         public SavedMissionSummary NewSummary(DateTime saveTime)
         {
             SavedMissionSummary ret = new(Identifier);
-            ret.CopySavedMissionSummaryProperties(this);
+            ret.Description.DeepCopyFrom(Description);
             ret.SaveTime = saveTime;
             ret.AssetId = LaunchConfiguration.AssetId;
             return ret;
@@ -53,21 +48,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         {
             MissionDetails ret = new();
             ret.Identifier = Identifier;
-            ret.CopySavedMissionSummaryProperties(this);
+            ret.Description.DeepCopyFrom(Description);
             ret.LaunchConfiguration = LaunchConfiguration.DeepClone();
             return ret;
         }
 
         public bool Equals(MissionDetails? other)
         {
-            if (other == null || other.GetType() != typeof(MissionDetails))
-            {
-                return false;
-            }
-
-            return Identifier == other.Identifier &&
-                Name == other.Name &&
-                Description == other.Description &&
+            return other != null &&
+                Identifier == other.Identifier &&
+                Description.Equals(other.Description) &&
                 LaunchConfiguration.Equals(other.LaunchConfiguration);
         }
     }
@@ -93,21 +83,20 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// already present in the manager.</remarks>
         public async Task StoreAsync(MissionDetails mission)
         {
-            using (var writeLock = await GetWriteLockAsync())
-            {
-                // Update the storage
-                if (m_DetailsStorage.TryGetValue(mission.Identifier, out var previousSavedMission) &&
-                    mission.Equals(previousSavedMission))
-                {
-                    // Nothing changed...
-                    return;
-                }
-                m_DetailsStorage[mission.Identifier] = mission.DeepClone();
+            using var writeLock = await GetWriteLockAsync();
 
-                // Update the external facing inventory catalog
-                var missionSummary = mission.NewSummary(DateTime.Now);
-                writeLock.Collection[mission.Identifier] = missionSummary;
+            // Update the storage
+            if (m_DetailsStorage.TryGetValue(mission.Identifier, out var previousSavedMission) &&
+                mission.Equals(previousSavedMission))
+            {
+                // Nothing changed...
+                return;
             }
+            m_DetailsStorage[mission.Identifier] = mission.DeepClone();
+
+            // Update the external facing inventory catalog
+            var missionSummary = mission.NewSummary(DateTime.Now);
+            writeLock.Collection[mission.Identifier] = missionSummary;
         }
 
         /// <summary>
@@ -131,18 +120,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// </returns>
         public async Task<bool> DeleteAsync(Guid identifier)
         {
-            using (var writeLock = await GetWriteLockAsync())
+            using var writeLock = await GetWriteLockAsync();
+            if (m_DetailsStorage.Remove(identifier))
             {
-                if (m_DetailsStorage.Remove(identifier))
-                {
-                    writeLock.Collection.Remove(identifier);
-                    return true;
-                }
-                else
-                {
-                    Debug.Assert(!writeLock.Collection.ContainsKey(identifier));
-                    return false;
-                }
+                writeLock.Collection.Remove(identifier);
+                return true;
+            }
+            else
+            {
+                Debug.Assert(!writeLock.Collection.ContainsKey(identifier));
+                return false;
             }
         }
 
@@ -154,13 +141,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         {
             await using MemoryStream inMemorySerialized = new();
 
-            using (var readlock = await GetLockedReadOnlyAsync())
+            using (var readLock = await GetLockedReadOnlyAsync())
             {
                 SerializeData toSave = new();
                 toSave.Details = m_DetailsStorage.Values.ToList();
                 foreach (var details in toSave.Details)
                 {
-                    toSave.DetailsComplement.Add(new (readlock.Value[details.Identifier]));
+                    toSave.DetailsComplement.Add(new (readLock.Value[details.Identifier]));
                 }
                 await JsonSerializer.SerializeAsync(inMemorySerialized, toSave, Json.SerializerOptions);
             }
@@ -186,30 +173,28 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 throw new ArgumentException("Received data to load from is invalid: Details.Count != DetailsComplement.Count");
             }
 
-            using (var writeLock = GetWriteLockAsync().Result)
+            using var writeLock = GetWriteLockAsync().Result;
+            if (m_DetailsStorage.Any())
             {
-                if (m_DetailsStorage.Any())
-                {
-                    throw new InvalidOperationException($"Can only call Load on an empty {nameof(MissionsManager)}.");
-                }
-
-                List<SavedMissionSummary> catalogUpdateList = new(saved.Details.Count);
-                for (int savedIndex = 0; savedIndex < saved.Details.Count; ++savedIndex)
-                {
-                    var missionDetails = saved.Details[savedIndex];
-                    var complement = saved.DetailsComplement[savedIndex];
-                    m_DetailsStorage[missionDetails.Identifier] = missionDetails;
-
-                    SavedMissionSummary missionSummary = missionDetails.NewSummary(complement.SaveTime);
-                    catalogUpdateList.Add(missionSummary);
-                }
-
-                // Prepare an incremental update (this is the fastest way to add everything as a single transaction into
-                // m_Collection).
-                IncrementalCollectionUpdate<SavedMissionSummary> incrementalUpdate = new();
-                incrementalUpdate.UpdatedObjects = catalogUpdateList;
-                writeLock.Collection.ApplyDelta(incrementalUpdate);
+                throw new InvalidOperationException($"Can only call Load on an empty {nameof(MissionsManager)}.");
             }
+
+            List<SavedMissionSummary> catalogUpdateList = new(saved.Details.Count);
+            for (int savedIndex = 0; savedIndex < saved.Details.Count; ++savedIndex)
+            {
+                var missionDetails = saved.Details[savedIndex];
+                var complement = saved.DetailsComplement[savedIndex];
+                m_DetailsStorage[missionDetails.Identifier] = missionDetails;
+
+                SavedMissionSummary missionSummary = missionDetails.NewSummary(complement.SaveTime);
+                catalogUpdateList.Add(missionSummary);
+            }
+
+            // Prepare an incremental update (this is the fastest way to add everything as a single transaction into
+            // m_Collection).
+            IncrementalCollectionUpdate<SavedMissionSummary> incrementalUpdate = new() {
+                UpdatedObjects = catalogUpdateList };
+            writeLock.Collection.ApplyDelta(incrementalUpdate);
         }
 
         /// <summary>

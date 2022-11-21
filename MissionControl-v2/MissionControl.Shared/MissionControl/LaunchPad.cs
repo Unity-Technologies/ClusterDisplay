@@ -45,12 +45,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(LaunchPad? other)
         {
-            if (other == null || other.GetType() != typeof(LaunchPad))
-            {
-                return false;
-            }
-
-            return Identifier == other.Identifier &&
+            return other != null &&
+                Identifier == other.Identifier &&
                 Name == other.Name &&
                 Endpoint == other.Endpoint &&
                 SuitableFor.SequenceEqual(other.SuitableFor);

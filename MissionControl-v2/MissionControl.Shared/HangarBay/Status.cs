@@ -28,13 +28,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public bool Equals(Status? other)
         {
-            if (other == null || other.GetType() != typeof(Status))
-            {
-                return false;
-            }
-
-            return Version == other.Version && StartTime == other.StartTime &&
-                PendingRestart == other.PendingRestart && StorageFolders.SequenceEqual(other.StorageFolders);
+            return other != null &&
+                Version == other.Version &&
+                StartTime == other.StartTime &&
+                PendingRestart == other.PendingRestart &&
+                StorageFolders.SequenceEqual(other.StorageFolders);
         }
     }
 }

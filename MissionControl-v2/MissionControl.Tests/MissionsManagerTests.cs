@@ -28,8 +28,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             MissionDetails toStore = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore",
-                Description = "Description of toStore",
+                Description = new() {
+                    Name = "toStore",
+                    Details = "Saved mission details",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             var timeBeforeStore = DateTime.Now;
@@ -43,15 +45,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
             {
                 var summary = lockedList.Value[toStore.Identifier];
-                Assert.That(summary.Name, Is.EqualTo(toStore.Name));
-                Assert.That(summary.Description, Is.EqualTo(toStore.Description));
+                Assert.That(summary.Description.Name, Is.EqualTo(toStore.Description.Name));
+                Assert.That(summary.Description.Details, Is.EqualTo(toStore.Description.Details));
                 Assert.That(summary.SaveTime, Is.InRange(timeBeforeStore, timeAfterStore));
                 Assert.That(summary.AssetId, Is.EqualTo(toStore.LaunchConfiguration.AssetId));
             }
 
             // Update it
-            toStore.Name += " updated";
-            toStore.Description += " updated";
+            toStore.Description.Name += " updated";
+            toStore.Description.Details += " updated";
             toStore.LaunchConfiguration.AssetId = Guid.NewGuid();
 
             timeBeforeStore = DateTime.Now;
@@ -65,8 +67,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             using (var lockedList = await manager.GetLockedReadOnlyAsync())
             {
                 var summary = lockedList.Value[toStore.Identifier];
-                Assert.That(summary.Name, Is.EqualTo(toStore.Name));
-                Assert.That(summary.Description, Is.EqualTo(toStore.Description));
+                Assert.That(summary.Description.Name, Is.EqualTo(toStore.Description.Name));
+                Assert.That(summary.Description.Details, Is.EqualTo(toStore.Description.Details));
                 Assert.That(summary.SaveTime, Is.InRange(timeBeforeStore, timeAfterStore));
                 Assert.That(summary.AssetId, Is.EqualTo(toStore.LaunchConfiguration.AssetId));
             }
@@ -87,8 +89,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             MissionDetails toStore = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore",
-                Description = "Description of toStore",
+                Description = new() {
+                    Name = "toStore",
+                    Details = "Details of toStore",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             Assert.That(changesCounter, Is.EqualTo(0));
@@ -111,16 +115,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             MissionDetails toStore1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 1",
-                Description = "Description of toStore 1",
+                Description = new()
+                {
+                    Name = "toStore 1",
+                    Details = "Details of toStore 1",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore1);
             MissionDetails toStore2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 2",
-                Description = "Description of toStore 2",
+                Description = new()
+                {
+                    Name = "toStore 2",
+                    Details = "Details of toStore 2",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore2);
@@ -172,16 +182,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             MissionDetails toStore1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 1",
-                Description = "Description of toStore 1",
+                Description = new()
+                {
+                    Name = "toStore 1",
+                    Details = "Details of toStore 1",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore1);
             MissionDetails toStore2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 2",
-                Description = "Description of toStore 2",
+                Description = new()
+                {
+                    Name = "toStore 2",
+                    Details = "Details of toStore 2",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore2);
@@ -226,16 +242,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             MissionDetails toStore1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 1",
-                Description = "Description of toStore 1",
+                Description = new()
+                {
+                    Name = "toStore 1",
+                    Details = "Details of toStore 1",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore1);
             MissionDetails toStore2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "toStore 2",
-                Description = "Description of toStore 2",
+                Description = new()
+                {
+                    Name = "toStore 2",
+                    Details = "Details of toStore 2",
+                },
                 LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
             };
             await manager.StoreAsync(toStore2);

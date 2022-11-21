@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             Status ret = new();
             lock (m_Lock)
             {
-                ret.CopyFrom(m_Status);
+                ret.DeepCopyFrom(m_Status);
             }
             return ret;
         }
@@ -121,7 +121,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 {
                     if (m_Status.StatusNumber >= minStatusNumber)
                     {
-                        ret.CopyFrom(m_Status);
+                        ret.DeepCopyFrom(m_Status);
                         return ret;
                     }
 

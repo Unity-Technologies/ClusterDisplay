@@ -19,11 +19,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 
         public bool Equals(PayloadFile? other)
         {
-            if (other == null || other.GetType() != typeof(PayloadFile))
-            {
-                return false;
-            }
-            return Path == other.Path && Md5 == other.Md5;
+            return other != null &&
+                Path == other.Path &&
+                Md5 == other.Md5;
         }
     }
 }

@@ -29,11 +29,6 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public bool Equals(Config other)
         {
-            if (other.GetType() != typeof(Config))
-            {
-                return false;
-            }
-
             return Identifier == other.Identifier &&
                 ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 StorageFolders.SequenceEqual(other.StorageFolders);

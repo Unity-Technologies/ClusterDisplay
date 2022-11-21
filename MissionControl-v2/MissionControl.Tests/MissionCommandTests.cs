@@ -18,16 +18,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             commandB.Identifier = commandA.Identifier;
             Assert.That(commandA, Is.EqualTo(commandB));
 
-            commandA.Name = "A name";
-            commandB.Name = "Another name";
+            commandA.Description.Name = "A name";
+            commandB.Description.Name = "Another name";
             Assert.That(commandA, Is.Not.EqualTo(commandB));
-            commandB.Name = "A name";
+            commandB.Description.Name = "A name";
             Assert.That(commandA, Is.EqualTo(commandB));
 
-            commandA.Description = "A description";
-            commandB.Description = "Another description";
+            commandA.Description.Details = "Some details";
+            commandB.Description.Details = "Another set of details";
             Assert.That(commandA, Is.Not.EqualTo(commandB));
-            commandB.Description = "A description";
+            commandB.Description.Details = "Some details";
             Assert.That(commandA, Is.EqualTo(commandB));
         }
 
@@ -36,8 +36,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             SaveMissionCommand toSerialize = new();
             toSerialize.Identifier = Guid.NewGuid();
-            toSerialize.Name = "Some name";
-            toSerialize.Description = "Some description";
+            toSerialize.Description.Name = "Some name";
+            toSerialize.Description.Details = "Some details";
             var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<SaveMissionCommand>(serializedCommand, Json.SerializerOptions);
             Assert.That(deserialized, Is.EqualTo(toSerialize));

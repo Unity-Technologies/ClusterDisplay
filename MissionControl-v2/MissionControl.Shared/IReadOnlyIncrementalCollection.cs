@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.MissionControl
     public interface IReadOnlyIncrementalCollection<T>
         : IReadOnlyDictionary<Guid, T>
         , IReadOnlyIncrementalCollection
-        where T : IncrementalCollectionObject
+        where T : IIncrementalCollectionObject
     {
         /// <summary>
         /// Event called to inform that an object has been added to the collection.

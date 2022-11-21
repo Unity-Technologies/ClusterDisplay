@@ -33,12 +33,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(HangarBay? other)
         {
-            if (other == null || other.GetType() != typeof(HangarBay))
-            {
-                return false;
-            }
-
-            return Identifier == other.Identifier &&
+            return other != null &&
+                Identifier == other.Identifier &&
                 Endpoint == other.Endpoint;
         }
     }

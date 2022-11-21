@@ -20,7 +20,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// <summary>
         /// Returns a task that will provide the update of the object to be sent over REST.
         /// </summary>
-        /// <param name="minVersionNumber">Minimum value of <see cref="VersionNumber"/> to return a value.</param>
+        /// <param name="minVersionNumber">Minimum value of <see cref="ObservableObjectService{T}"/>'s VersionNumber
+        /// property required to return a value.</param>
         /// <param name="cancellationToken">Token that when signal cancels the returned <see cref="Task"/>.</param>
         public abstract Task<ObservableObjectUpdate> GetValueFromVersionAsync(ulong minVersionNumber,
             CancellationToken cancellationToken);

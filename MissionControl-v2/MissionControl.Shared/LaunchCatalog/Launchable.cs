@@ -20,20 +20,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// Create a shallow copy of from.
         /// </summary>
         /// <param name="from">To copy from.</param>
-        public void ShallowCopy(Launchable from)
+        public void ShallowCopyFrom(Launchable from)
         {
-            base.ShallowCopy(from);
+            base.ShallowCopyFrom(from);
             Payloads = from.Payloads;
         }
 
         public bool Equals(Launchable? other)
         {
-            if (other == null || other.GetType() != typeof(Launchable))
-            {
-                return false;
-            }
-
-            return ArePropertiesEqual(other) &&
+            return other != null &&
+                ArePropertiesEqual(other) &&
                 Payloads.SequenceEqual(other.Payloads);
         }
     }

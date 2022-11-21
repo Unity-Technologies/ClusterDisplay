@@ -5,23 +5,24 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// <summary>
     /// An entry in the catalog of saved missions.
     /// </summary>
-    public class SavedMissionSummary: IncrementalCollectionObject, ISavedMissionSummary, IEquatable<SavedMissionSummary>
+    public class SavedMissionSummary: IIncrementalCollectionObject, IEquatable<SavedMissionSummary>
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="id">Identifier of the object</param>
-        public SavedMissionSummary(Guid id) :base(id) { }
+        public SavedMissionSummary(Guid id)
+        {
+            Id = id;
+        }
+
+        /// <inheritdoc/>
+        public Guid Id { get; }
 
         /// <summary>
-        /// Short description of the saved mission.
+        /// Describes a saved mission (so that it can be identified by a human).
         /// </summary>
-        public string Name { get; set; } = "";
-
-        /// <summary>
-        /// Detailed description of the saved mission.
-        /// </summary>
-        public string Description { get; set; } = "";
+        public SavedMissionDescription Description { get; set; } = new();
 
         /// <summary>
         /// When was the mission saved.
@@ -33,31 +34,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// </summary>
         public Guid AssetId { get; set; }
 
-        public override IncrementalCollectionObject NewOfTypeWithId()
+        /// <inheritdoc/>
+        public void DeepCopyFrom(IIncrementalCollectionObject fromObject)
         {
-            return new SavedMissionSummary(Id);
+            var from = (SavedMissionSummary)fromObject;
+            Description.DeepCopyFrom(from.Description);
+            SaveTime = from.SaveTime;
+            AssetId = from.AssetId;
         }
 
         public bool Equals(SavedMissionSummary? other)
         {
-            if (other == null || other.GetType() != typeof(SavedMissionSummary))
-            {
-                return false;
-            }
-
-            return base.Equals(other) &&
-                Name == other.Name &&
-                Description == other.Description &&
+            return other != null &&
+                Id == other.Id &&
+                Description.Equals(other.Description) &&
                 SaveTime == other.SaveTime &&
                 AssetId == other.AssetId;
-        }
-
-        protected override void DeepCopyImp(IncrementalCollectionObject fromObject)
-        {
-            var from = (SavedMissionSummary)fromObject;
-            this.CopySavedMissionSummaryProperties(from);
-            SaveTime = from.SaveTime;
-            AssetId = from.AssetId;
         }
     }
 }

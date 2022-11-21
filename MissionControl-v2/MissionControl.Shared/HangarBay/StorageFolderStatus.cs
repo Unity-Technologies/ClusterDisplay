@@ -33,13 +33,11 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public bool Equals(StorageFolderStatus? other)
         {
-            if (other == null || other.GetType() != typeof(StorageFolderStatus))
-            {
-                return false;
-            }
-
-            return Path == other.Path && CurrentSize == other.CurrentSize &&
-                UnreferencedSize == other.UnreferencedSize && ZombiesSize == other.ZombiesSize &&
+            return other != null &&
+                Path == other.Path &&
+                CurrentSize == other.CurrentSize &&
+                UnreferencedSize == other.UnreferencedSize &&
+                ZombiesSize == other.ZombiesSize &&
                 MaximumSize == other.MaximumSize;
         }
     }

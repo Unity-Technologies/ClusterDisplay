@@ -10,13 +10,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         /// Gets the <see cref="IncrementalCollectionUpdate{T}"/> from the collections returned by
         /// incrementalCollectionsUpdate REST method.
         /// </summary>
-        /// <typeparam name="T"><see cref="IncrementalCollectionObject"/> of <paramref name="collectionName"/>.</typeparam>
+        /// <typeparam name="T"><see cref="IIncrementalCollectionObject"/> of <paramref name="collectionName"/>.</typeparam>
         /// <param name="collectionsUpdate">All the incremental collections updates returned by
         /// incrementalCollectionsUpdate REST method.</param>
         /// <param name="collectionName">Name of the collection to get the <see cref="IncrementalCollectionUpdate{T}"/>
         /// for.</param>
         public static IncrementalCollectionUpdate<T> GetCollectionUpdate<T>(
-            Dictionary<string, JsonElement> collectionsUpdate, string collectionName) where T: IncrementalCollectionObject
+            Dictionary<string, JsonElement> collectionsUpdate, string collectionName) where T: IIncrementalCollectionObject
         {
             Assert.That(collectionsUpdate.ContainsKey(collectionName), Is.True);
             var assetsUpdate =

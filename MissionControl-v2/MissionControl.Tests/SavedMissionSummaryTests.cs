@@ -14,16 +14,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             summaryB = new(theId);
             Assert.That(summaryA, Is.EqualTo(summaryB));
 
-            summaryA.Name = "My first mission";
-            summaryB.Name = "My second mission";
+            summaryA.Description.Name = "My first mission";
+            summaryB.Description.Name = "My second mission";
             Assert.That(summaryA, Is.Not.EqualTo(summaryB));
-            summaryB.Name = "My first mission";
+            summaryB.Description.Name = "My first mission";
             Assert.That(summaryA, Is.EqualTo(summaryB));
 
-            summaryA.Description = "This is what I've done in my first mission";
-            summaryB.Description = "This is what I've done in my second mission";
+            summaryA.Description.Details = "This is what I've done in my first mission";
+            summaryB.Description.Details = "This is what I've done in my second mission";
             Assert.That(summaryA, Is.Not.EqualTo(summaryB));
-            summaryB.Description = "This is what I've done in my first mission";
+            summaryB.Description.Details = "This is what I've done in my first mission";
             Assert.That(summaryA, Is.EqualTo(summaryB));
 
             summaryA.SaveTime = DateTime.Now;
@@ -53,8 +53,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         public void SerializeFull()
         {
             SavedMissionSummary toSerialize = new(Guid.NewGuid());
-            toSerialize.Name = "Mission name";
-            toSerialize.Description = "Mission description";
+            toSerialize.Description.Name = "Mission name";
+            toSerialize.Description.Details = "Mission description";
             toSerialize.SaveTime = DateTime.Now;
             toSerialize.AssetId = Guid.NewGuid();
             var serializedParameter = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
@@ -75,8 +75,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         public void DeepCloneFull()
         {
             SavedMissionSummary toClone = new(Guid.NewGuid());
-            toClone.Name = "Mission name";
-            toClone.Description = "Mission description";
+            toClone.Description.Name = "Mission name";
+            toClone.Description.Details = "Mission description";
             toClone.SaveTime = DateTime.Now;
             toClone.AssetId = Guid.NewGuid();
             var cloned = toClone.DeepClone();

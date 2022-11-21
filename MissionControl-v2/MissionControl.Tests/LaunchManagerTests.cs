@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                     foreach (var status in m_LaunchPadsStatus.Values)
                     {
                         status.State = LaunchPadState.Over;
-                        status.SignalChanges();
+                        status.SignalChanges(m_LaunchPadsStatus);
                     }
                 }
                 if (m_LaunchTask != null)
@@ -538,16 +538,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 m_LaunchPadsStatus[launchPadStub.Id].IsDefined = false;
                 m_LaunchPadsStatus[launchPadStub.Id].UpdateError = "Testing undefined state";
                 m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.Over;
-                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             lock (m_LaunchPadsStatusLock)
             {
-                m_LaunchPadsStatus[launchPadStub.Id].DeepCopy(savedStatus);
+                m_LaunchPadsStatus[launchPadStub.Id].DeepCopyFrom(savedStatus);
                 m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.WaitingForLaunch;
-                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             // Verify we can continue the launch
@@ -615,7 +615,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             {
                 m_LaunchPadsStatus[launchPad2Stub.Id].IsDefined = false;
                 m_LaunchPadsStatus[launchPad2Stub.Id].UpdateError = "Testing undefined state";
-                m_LaunchPadsStatus[launchPad2Stub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPad2Stub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             // Launchpad 1 shouldn't be launched yet as it is still waiting for launchpad 2
@@ -695,7 +695,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             lock (m_LaunchPadsStatusLock)
             {
                 m_LaunchPadsStatus[launchPad2Stub.Id].State = LaunchPadState.GettingPayload;
-                m_LaunchPadsStatus[launchPad2Stub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPad2Stub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             // The above state change should have triggered the LaunchManager to stop waiting for launchpad 2 and
@@ -747,7 +747,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             lock (m_LaunchPadsStatusLock)
             {
                 m_LaunchPadsStatus[launchPad1Stub.Id].State = LaunchPadState.Launched;
-                m_LaunchPadsStatus[launchPad1Stub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPad1Stub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             // Node 2 will be in idle start so it can start "normally"
@@ -823,7 +823,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             lock (m_LaunchPadsStatusLock)
             {
                 m_LaunchPadsStatus[launchPadStub.Id].State = LaunchPadState.Over;
-                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges();
+                m_LaunchPadsStatus[launchPadStub.Id].SignalChanges(m_LaunchPadsStatus);
             }
 
             // So now the launch should finish
@@ -932,7 +932,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 lock (m_LaunchPadsStatusLock)
                 {
                     m_LaunchPadsStatus[launchPadId].State = newState;
-                    m_LaunchPadsStatus[launchPadId].SignalChanges();
+                    m_LaunchPadsStatus[launchPadId].SignalChanges(m_LaunchPadsStatus);
                 }
                 then();
                 return HttpStatusCode.OK;
@@ -955,7 +955,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 lock (m_LaunchPadsStatusLock)
                 {
                     m_LaunchPadsStatus[launchPadId].State = newState;
-                    m_LaunchPadsStatus[launchPadId].SignalChanges();
+                    m_LaunchPadsStatus[launchPadId].SignalChanges(m_LaunchPadsStatus);
                 }
                 then();
                 return HttpStatusCode.OK;

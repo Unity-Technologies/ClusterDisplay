@@ -1,17 +1,22 @@
-using Unity.ClusterDisplay.MissionControl.LaunchPad;
-
 namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     /// <summary>
     /// Health diagnostic of a LaunchPad and its surrounding (changes periodically).
     /// </summary>
-    public class LaunchPadHealth: IncrementalCollectionObject, IEquatable<LaunchPadHealth>, IHealth
+    public class LaunchPadHealth: ClusterDisplay.MissionControl.LaunchPad.Health, IIncrementalCollectionObject,
+        IEquatable<LaunchPadHealth>
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="id">Identifier of the object</param>
-        public LaunchPadHealth(Guid id) :base(id) { }
+        public LaunchPadHealth(Guid id)
+        {
+            Id = id;
+        }
+
+        /// <inheritdoc/>
+        public Guid Id { get; }
 
         /// <summary>
         /// Is the status information contained in this object valid?
@@ -29,49 +34,24 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// </summary>
         public DateTime UpdateTime { get; set; }
 
-        /// <summary>
-        /// Total CPU usage of the system (from 0.0f to 1.0f).
-        /// </summary>
-        public float CpuUtilization { get; set; }
-
-        /// <summary>
-        /// Number of bytes of memory currently being used on the launchpad's computer.
-        /// </summary>
-        public long MemoryUsage { get; set; }
-
-        /// <summary>
-        /// Number of bytes of physical memory installed on the launchpad's computer.
-        /// </summary>
-        public long MemoryInstalled { get; set; }
-
-        public override IncrementalCollectionObject NewOfTypeWithId()
+        /// <inheritdoc/>
+        public void DeepCopyFrom(IIncrementalCollectionObject fromObject)
         {
-            return new LaunchPadHealth(Id);
+            var from = (LaunchPadHealth)fromObject;
+            base.DeepCopyFrom(from);
+            IsDefined = from.IsDefined;
+            UpdateError = from.UpdateError;
+            UpdateTime = from.UpdateTime;
         }
 
         public bool Equals(LaunchPadHealth? other)
         {
-            if (other == null || other.GetType() != typeof(LaunchPadHealth))
-            {
-                return false;
-            }
-
-            return base.Equals(other) &&
+            return other != null &&
+                base.Equals(other) &&
+                Id == other.Id &&
                 IsDefined == other.IsDefined &&
                 UpdateError == other.UpdateError &&
-                UpdateTime == other.UpdateTime &&
-                CpuUtilization == other.CpuUtilization &&
-                MemoryUsage == other.MemoryUsage &&
-                MemoryInstalled == other.MemoryInstalled;
-        }
-
-        protected override void DeepCopyImp(IncrementalCollectionObject fromObject)
-        {
-            var from = (LaunchPadHealth)fromObject;
-            IsDefined = from.IsDefined;
-            UpdateError = from.UpdateError;
-            UpdateTime = from.UpdateTime;
-            this.CopyIHealthProperties(from);
+                UpdateTime == other.UpdateTime;
         }
     }
 }

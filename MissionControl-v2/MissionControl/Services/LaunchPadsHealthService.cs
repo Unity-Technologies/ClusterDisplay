@@ -101,7 +101,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                                     throw new NullReferenceException("Unexpected null Health");
                                 }
                                 healthWithTime.IsDefined = true;
-                                healthWithTime.CopyIHealthProperties(t.Result);
+                                healthWithTime.DeepCopyFrom(t.Result);
                                 return healthWithTime;
                             }, thisUpdateCancelSource.Token);
                             healthFetch.Add(launchPad.Identifier,complementTask);

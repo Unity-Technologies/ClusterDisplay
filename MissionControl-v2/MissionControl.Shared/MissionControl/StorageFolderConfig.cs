@@ -17,12 +17,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(StorageFolderConfig? other)
         {
-            if (other == null || other.GetType() != typeof(StorageFolderConfig))
-            {
-                return false;
-            }
-
-            return Path == other.Path && MaximumSize == other.MaximumSize;
+            return other != null &&
+                Path == other.Path &&
+                MaximumSize == other.MaximumSize;
         }
     }
 }

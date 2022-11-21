@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 
         public bool Equals(ListConstraint? other)
         {
-            return other != null && other.GetType() == typeof(ListConstraint) &&
+            return other != null && 
                 Choices.SequenceEqual(other.Choices);
         }
 

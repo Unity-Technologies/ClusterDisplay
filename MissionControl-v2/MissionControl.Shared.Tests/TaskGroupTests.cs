@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl.Tests
 {
@@ -17,7 +13,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task1Func() {
                 await Task.Delay(50, taskGroup.CancellationToken);
                 task1Completed = true;
-            };
+            }
             var task1 = Task1Func();
             taskGroup.Add(task1);
 
@@ -25,7 +21,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task2Func() {
                 await Task.Delay(100, taskGroup.CancellationToken);
                 task2Completed = true;
-            };
+            }
             var task2 = Task2Func();
             taskGroup.Add(task2);
 
@@ -47,7 +43,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task1Func() {
                 await Task.Delay(50, taskGroup.CancellationToken);
                 task1Completed = true;
-            };
+            }
             var task1 = Task1Func();
             taskGroup.Add(task1);
 
@@ -58,7 +54,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 #pragma warning disable CS0162 // Unreachable code detected
                 task2Completed = true;
 #pragma warning restore CS0162 // Unreachable code detected
-            };
+            }
             var task2 = Task2Func();
             taskGroup.Add(task2);
 
@@ -66,7 +62,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task3Func() {
                 await Task.Delay(5000, taskGroup.CancellationToken);
                 task3Completed = true;
-            };
+            }
             var task3 = Task3Func();
             taskGroup.Add(task3);
 
@@ -90,7 +86,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task1Func() {
                 await Task.Delay(50, taskGroup.CancellationToken);
                 task1Completed = true;
-            };
+            }
             var task1 = Task1Func();
             taskGroup.Add(task1);
 
@@ -98,12 +94,12 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             async Task Task2Func() {
                 await Task.Delay(5000, taskGroup.CancellationToken);
                 task2Completed = true;
-            };
+            }
             var task2 = Task2Func();
             taskGroup.Add(task2);
 
             await task1;
-            taskGroup.ForceCancel();
+            taskGroup.Cancel();
 
             Assert.That(async () => await Task.WhenAll(taskGroup.ToWaitOn), Throws.TypeOf<TaskCanceledException>());
             Assert.That(task1.IsCompleted, Is.True);

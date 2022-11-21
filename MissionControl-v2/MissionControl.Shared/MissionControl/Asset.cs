@@ -34,25 +34,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
     /// of mission control and speed up sending of data to the hangar bays working for the launchpads the file blobs
     /// are stored as compressed files (gzip).
     /// </remarks>
-    public class Asset: IncrementalCollectionObject, IAssetBase
+    public class Asset: AssetBase, IIncrementalCollectionObject
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="id">Identifier of the object.</param>
-        public Asset(Guid id): base(id)
+        public Asset(Guid id)
         {
+            Id = id;
         }
 
-        /// <summary>
-        /// Short descriptive name of the asset.
-        /// </summary>
-        public string Name { get; set; } = "";
-
-        /// <summary>
-        /// Detailed description of the asset.
-        /// </summary>
-        public string Description { get; set; } = "";
+        /// <inheritdoc/>
+        public Guid Id { get; }
 
         /// <summary>
         /// <see cref="Launchable"/>s as found in LaunchCatalog.yaml (but with payload ids as GUID as opposed to
@@ -67,16 +61,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// </remarks>
         public long StorageSize { get; set; }
 
-        public override IncrementalCollectionObject NewOfTypeWithId()
-        {
-            return new Asset(Id);
-        }
-
-        protected override void DeepCopyImp(IncrementalCollectionObject fromObject)
+        /// <inheritdoc/>
+        public void DeepCopyFrom(IIncrementalCollectionObject fromObject)
         {
             var from = (Asset)fromObject;
-            Name = from.Name;
-            Description = from.Description;
+            base.DeepCopyFrom(from);
             // Cloning Launchables could imply a whole set of new methods to clone launchables and everything it
             // references.  However we shouldn't need to create / modify assets that often and it quite light in term of
             // processing, so let's go with the lazy serialize / deserialize trick.

@@ -1,6 +1,4 @@
-using System;
 using System.Net;
-
 using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
@@ -42,8 +40,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "Saved mission",
-                Description = "Saved mission description"
+                Description = new() {
+                    Name = "Saved mission",
+                    Details = "Saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand);
 
@@ -74,8 +74,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "First saved mission",
-                Description = "First saved mission description"
+                Description = new() {
+                    Name = "First saved mission",
+                    Details = "First saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand1);
 
@@ -91,8 +93,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "Second saved mission",
-                Description = "Second saved mission description"
+                Description = new() {
+                    Name = "Second saved mission",
+                    Details = "Second saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand2);
 
@@ -133,8 +137,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "First saved mission",
-                Description = "First saved mission description"
+                Description = new() {
+                    Name = "First saved mission",
+                    Details = "First saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand1);
 
@@ -142,7 +148,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             var finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            var collectionUpdate = Helpers.GetCollectionUpdate<Asset>(blockingGetTask.Result, k_MissionsCollectionName);
+            var collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result, k_MissionsCollectionName);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(2));
@@ -166,8 +172,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "Second saved mission",
-                Description = "Second saved mission description"
+                Description = new()
+                {
+                    Name = "Second saved mission",
+                    Details = "Second saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand2);
 
@@ -175,7 +184,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            collectionUpdate = Helpers.GetCollectionUpdate<Asset>(blockingGetTask.Result, k_MissionsCollectionName);
+            collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result, k_MissionsCollectionName);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(3));
@@ -198,8 +207,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand1 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "First saved mission",
-                Description = "First saved mission description"
+                Description = new() {
+                    Name = "First saved mission",
+                    Details = "First saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand1);
 
@@ -215,8 +226,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand2 = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "Second saved mission",
-                Description = "Second saved mission description"
+                Description = new() {
+                    Name = "Second saved mission",
+                    Details = "Second saved mission details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand2);
 

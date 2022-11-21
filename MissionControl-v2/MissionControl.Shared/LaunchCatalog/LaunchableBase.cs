@@ -6,9 +6,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
     /// <summary>
     /// Base class for Launchables in the launch catalog or as used in mission control's REST interface.
     /// </summary>
-    /// <remarks>Creation of this class is more about avoiding copy / paste and ensuring everything that should be the
-    /// same is the same than true polymorphism: code should normally deal with <see cref="Launchable"/> or
-    /// <see cref="MissionControl.Launchable"/>, not <see cref="LaunchableBase"/>.</remarks>
     public class LaunchableBase
     {
         /// <summary>
@@ -70,7 +67,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// Create a shallow copy of from.
         /// </summary>
         /// <param name="from">To copy from.</param>
-        public void ShallowCopy(LaunchableBase from)
+        public void ShallowCopyFrom(LaunchableBase from)
         {
             Name = from.Name;
             Type = from.Type;

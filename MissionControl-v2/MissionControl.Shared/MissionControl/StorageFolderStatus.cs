@@ -40,12 +40,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(StorageFolderStatus? other)
         {
-            if (other == null || other.GetType() != typeof(StorageFolderStatus))
-            {
-                return false;
-            }
-
-            return Path == other.Path &&
+            return other != null &&
+                Path == other.Path &&
                 CurrentSize == other.CurrentSize &&
                 ZombiesSize == other.ZombiesSize &&
                 MaximumSize == other.MaximumSize;

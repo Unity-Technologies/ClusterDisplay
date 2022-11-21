@@ -43,12 +43,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(LaunchConfiguration? other)
         {
-            if (other == null || other.GetType() != typeof(LaunchConfiguration))
-            {
-                return false;
-            }
-
-            return AssetId == other.AssetId &&
+            return other != null &&
+                AssetId == other.AssetId &&
                 LaunchComplexes.SequenceEqual(other.LaunchComplexes);
         }
     }

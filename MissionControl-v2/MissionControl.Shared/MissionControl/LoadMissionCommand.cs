@@ -22,12 +22,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(LoadMissionCommand? other)
         {
-            if (other == null || other.GetType() != typeof(LoadMissionCommand))
-            {
-                return false;
-            }
-
-            return Identifier == other.Identifier;
+            return other != null &&
+                Identifier == other.Identifier;
         }
     }
 }

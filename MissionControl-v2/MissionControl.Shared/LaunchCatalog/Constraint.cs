@@ -33,20 +33,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         public ConstraintType Type { get; protected set; }
 
         /// <summary>
-        /// Method to be implemented by specializing classes to compare with a <see cref="Constraint"/> of the same
-        /// type (already validated by the caller of the method).
+        /// Compares with a <see cref="Constraint"/> of the same type (already validated by the caller of the method).
         /// </summary>
         /// <param name="other">The other <see cref="Constraint"/> of the same type.</param>
         protected abstract bool EqualsOfSameType(Constraint other);
 
         public bool Equals(Constraint? other)
         {
-            if (other == null || other.GetType() != GetType() || other.Type != Type)
-            {
-                return false;
-            }
-
-            return other.EqualsOfSameType(this);
+            return other != null &&
+                other.Type == Type &&
+                other.EqualsOfSameType(this);
         }
     }
 }

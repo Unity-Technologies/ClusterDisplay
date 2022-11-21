@@ -133,8 +133,8 @@ paths:
           schema:
             type: string
             enum:
-              - status
               - currentMission/launchConfiguration
+              - status
           description: Name of the single object to wait on for an update.  The N at the end of the parameter name is to be replaced by an integer from 0 to N.  name0 is to be used for the name of the first collection, name1 the second, name2 the third, ...
         - in: query
           name: fromVersionN
@@ -364,7 +364,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Asset'
+                  $ref: '#/components/schemas/AssetGet'
     post:
       tags:
         - assets
@@ -785,7 +785,7 @@ components:
           example: ["http://0.0.0.0:8000"]
         launchPadsEntry:
           type: string
-          description: Base address that will be used by the launchpads to reach back the mission control controlling them (like to get payloads and file blobs).  Must be one of the elements in controlEndPoint.
+          description: Base address that will be used by the launchpads to reach back the mission control controlling them (like to get payloads and file blobs).
         storageFolders:
           type: array
           description: List of folders of where we store files of assets managed by MissionControl.
@@ -839,6 +839,7 @@ components:
           description: Version number of the next update to ask to get changes after what was just received.
     Status:
       type: object
+      description: Status of Mission Control.
       properties:
         version:
           type: string
@@ -1095,7 +1096,6 @@ components:
         - $ref: '#/components/schemas/LiveCaptureCameraTracker'
     AssetBase:
       type: object
-      description: 
       properties:
         name:
           type: string
@@ -1118,9 +1118,9 @@ components:
           description: URL to a folder that contains a LaunchCatalog.json listing all the payloads and their files.
       required:
         - path
-    Asset:
+    AssetGet:
       type: object
-      description: A set of files, with customizable parameters, that can be launched inside mission control.  This set of files  was produced by some tool and has added to MissionControl list of assets.  Each of theses assets can then be  selected and configured to be launched.
+      description: Description of an asset (something that can be launched).
       allOf: 
         - $ref: '#/components/schemas/AssetBase'
         - $ref: '#/components/schemas/IncrementalCollectionObject'
@@ -1164,18 +1164,26 @@ components:
           description: List of files composing the Payload
           items:
             $ref: '#/components/schemas/PayloadFile'
+    SavedMissionDescription:
+      type: object
+      description: Describes a saved mission (so that it can be identified by a human).
+      properties:
+        name:
+          type: string
+          description: Short description of the saved mission.
+        details:
+          type: string
+          description: Details about the saved mission.
+      required:
+        - name
     SavedMissionSummary:
       type: object
       description: An entry in the catalog of saved missions.
       allOf:
         - $ref: '#/components/schemas/IncrementalCollectionObject'
       properties:
-        name:
-          type: string
-          description: Short description of the saved mission.
         description:
-          type: string
-          description: Detailed description of the saved mission.
+          $ref: '#/components/schemas/SavedMissionDescription'
         saveTime:
           type: string
           format: date-time
@@ -1277,12 +1285,8 @@ components:
           type: string
           format: uuid
           description: Identify the saved mission to override with this one.  Omit to save as a new mission.
-        name:
-          type: string
-          description: Short description of the mission to save.  No validation is done on the name and two different missions can have the same name.
         description:
-          type: string
-          description: Detailed description of the mission to save.
+          $ref: '#/components/schemas/SavedMissionDescription'
       required:
         - type
         - name

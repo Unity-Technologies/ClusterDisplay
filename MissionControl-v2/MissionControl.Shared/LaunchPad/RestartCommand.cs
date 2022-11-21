@@ -20,12 +20,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 
         public bool Equals(RestartCommand? other)
         {
-            if (other == null || other.GetType() != typeof(RestartCommand))
-            {
-                return false;
-            }
-
-            return TimeoutSec == other.TimeoutSec;
+            return other != null &&
+                TimeoutSec == other.TimeoutSec;
         }
     }
 }

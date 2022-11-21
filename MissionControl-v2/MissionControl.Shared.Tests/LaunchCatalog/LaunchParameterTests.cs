@@ -135,7 +135,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             LaunchParameter launchParameter = new();
             launchParameter.Type = LaunchParameterType.Float;
             Assert.Throws<FormatException>(() => launchParameter.DefaultValue = "Quarante deux" );
-            Assert.Throws<OverflowException>(() => launchParameter.DefaultValue = double.MaxValue );
+            Assert.Throws<InvalidCastException>(() => launchParameter.DefaultValue = double.MaxValue );
+            Assert.Throws<InvalidCastException>(() => launchParameter.DefaultValue = float.NaN );
             Assert.That(launchParameter.DefaultValue, Is.Null);
             Assert.Throws<JsonException>(
                 () => JsonSerializer.Deserialize<LaunchParameter>("{\"type\":\"float\", \"defaultValue\":\"Quarante deux\"}",

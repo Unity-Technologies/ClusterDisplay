@@ -21,28 +21,50 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             collection.Add(ret);
             return ret;
         }
+
+        public static ulong FirstVersionNumberOf(
+            this IncrementalCollection<IncrementalCollectionTests.TestObject> testCollection,
+            IncrementalCollectionTests.TestObject obj)
+        {
+            var internalDataMethodInfo = testCollection.GetType().GetMethod("GetInternalObjectData", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(internalDataMethodInfo, Is.Not.Null);
+            object? internalData = internalDataMethodInfo!.Invoke(testCollection, new object[] { obj.Id });
+            Assert.That(internalData, Is.Not.Null);
+            var propInfo = internalData!.GetType().GetProperty("FirstVersionNumber");
+            Assert.That(propInfo, Is.Not.Null);
+            return (ulong)propInfo!.GetValue(internalData)!;
+        }
+
+        public static ulong VersionNumberOf(
+            this IncrementalCollection<IncrementalCollectionTests.TestObject> testCollection,
+            IncrementalCollectionTests.TestObject obj)
+        {
+            var internalDataMethodInfo = testCollection.GetType().GetMethod("GetInternalObjectData", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.That(internalDataMethodInfo, Is.Not.Null);
+            object? internalData = internalDataMethodInfo!.Invoke(testCollection, new object[] { obj.Id });
+            Assert.That(internalData, Is.Not.Null);
+            var propInfo = internalData!.GetType().GetProperty("VersionNumber");
+            Assert.That(propInfo, Is.Not.Null);
+            return (ulong)propInfo!.GetValue(internalData)!;
+        }
     }
 
     public class IncrementalCollectionTests
     {
-        public class TestObject: IncrementalCollectionObject
+        public class TestObject: IIncrementalCollectionObject
         {
-            public TestObject(Guid id): base(id)
+            public TestObject(Guid id)
             {
-                var propInfo = GetType().GetProperty("FirstVersionNumber", BindingFlags.NonPublic | BindingFlags.Instance);
-                Assert.That(propInfo, Is.Not.Null);
-                m_FirstVersionNumber = propInfo!;
-
-                propInfo = GetType().GetProperty("VersionNumber", BindingFlags.NonPublic | BindingFlags.Instance);
-                Assert.That(propInfo, Is.Not.Null);
-                m_VersionNumber = propInfo!;
+                Id = id;
             }
+
+            public Guid Id { get; }
 
             public int Property { get; set; }
 
             public override bool Equals(object? obj)
             {
-                if (!base.Equals(obj))
+                if (obj == null || obj.GetType() != GetType())
                 {
                     return false;
                 }
@@ -52,25 +74,14 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             public override int GetHashCode()
             {
-                return base.GetHashCode();
+                return Id.GetHashCode();
             }
 
-            public override IncrementalCollectionObject NewOfTypeWithId()
-            {
-                return new TestObject(Id);
-            }
-
-            protected override void DeepCopyImp(IncrementalCollectionObject fromAbstract)
+            public void DeepCopyFrom(IIncrementalCollectionObject fromAbstract)
             {
                 var from = (TestObject)fromAbstract;
                 Property = from.Property;
             }
-
-            public ulong FirstVersionNumberAccess => (ulong)m_FirstVersionNumber.GetValue(this)!;
-            public ulong VersionNumberAccess => (ulong)m_VersionNumber.GetValue(this)!;
-
-            PropertyInfo m_FirstVersionNumber;
-            PropertyInfo m_VersionNumber;
         }
 
         class EventsMonitor
@@ -109,7 +120,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Simple add
             TestObject object1A = new(Guid.NewGuid()) { Property = 42 };
             testCollection.Add(object1A);
-            ulong initialFirstVersionNumber = object1A.FirstVersionNumberAccess;
+            ulong initialFirstVersionNumber = testCollection.FirstVersionNumberOf(object1A);
             eventsMonitor.CheckReferences(new[]{ object1A }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(1));
 
@@ -121,7 +132,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Change something on the object, should trigger an update on the array
             object1A.Property *= 2;
-            object1A.SignalChanges();
+            object1A.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1A });
             Assert.That(testCollection.VersionNumber, Is.EqualTo(2));
 
@@ -131,7 +142,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             Assert.That(testCollection.VersionNumber, Is.EqualTo(3));
             // And add back
             testCollection.Add(object1A);
-            Assert.That(object1A.FirstVersionNumberAccess, Is.EqualTo(initialFirstVersionNumber));
+            Assert.That(testCollection.FirstVersionNumberOf(object1A), Is.EqualTo(initialFirstVersionNumber));
             eventsMonitor.CheckReferences(new[]{ object1A }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(4));
         }
@@ -145,26 +156,26 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Simple add
             TestObject object1A = new(Guid.NewGuid()) { Property = 42 };
             testCollection[object1A.Id] = object1A;
-            ulong initialFirstVersionNumber = object1A.FirstVersionNumberAccess;
+            ulong initialFirstVersionNumber = testCollection.FirstVersionNumberOf(object1A);
             eventsMonitor.CheckReferences(new[]{ object1A }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(1));
 
             // Replace
             TestObject object1B = new(object1A.Id) { Property = 28 };
             testCollection[object1A.Id] = object1B;
-            Assert.That(object1B.FirstVersionNumberAccess, Is.EqualTo(initialFirstVersionNumber));
+            Assert.That(testCollection.FirstVersionNumberOf(object1B), Is.EqualTo(initialFirstVersionNumber));
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1B });
             Assert.That(testCollection.VersionNumber, Is.EqualTo(2));
 
             // Change something on the object, should trigger an update on the array
             object1B.Property *= 2;
-            object1B.SignalChanges();
+            object1B.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1B });
             Assert.That(testCollection.VersionNumber, Is.EqualTo(3));
 
-            // Verify that object1a callbacks are disconnected from the array by changing it.
+            // Verify that trying to signal changes on object1a does nothing...
             object1A.Property *= 2;
-            object1A.SignalChanges();
+            object1A.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(3));
 
@@ -176,7 +187,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Check object1b is still correctly connected to IncrementalCollection
             object1B.Property *= 2;
-            object1B.SignalChanges();
+            object1B.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1B });
             Assert.That(testCollection.VersionNumber, Is.EqualTo(4));
 
@@ -186,7 +197,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             Assert.That(testCollection.VersionNumber, Is.EqualTo(5));
             // And add back (still through the indexer).
             testCollection[object1B.Id] = object1B;
-            Assert.That(object1B.FirstVersionNumberAccess, Is.EqualTo(initialFirstVersionNumber));
+            Assert.That(testCollection.FirstVersionNumberOf(object1B), Is.EqualTo(initialFirstVersionNumber));
             eventsMonitor.CheckReferences(new[]{ object1B }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(6));
         }
@@ -200,7 +211,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Simple add
             TestObject object1A = new(Guid.NewGuid()) { Property = 42 };
             testCollection.Add(object1A.Id, object1A);
-            ulong initialFirstVersionNumber = object1A.FirstVersionNumberAccess;
+            ulong initialFirstVersionNumber = testCollection.FirstVersionNumberOf(object1A);
             eventsMonitor.CheckReferences(new[]{ object1A }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(1));
 
@@ -212,7 +223,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Change something on the object, should trigger an update on the array
             object1A.Property *= 2;
-            object1A.SignalChanges();
+            object1A.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1A });
             Assert.That(testCollection.VersionNumber, Is.EqualTo(2));
 
@@ -231,7 +242,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             Assert.That(testCollection.VersionNumber, Is.EqualTo(4));
             // And add back
             testCollection.Add(object1A.Id, object1A);
-            Assert.That(object1A.FirstVersionNumberAccess, Is.EqualTo(initialFirstVersionNumber));
+            Assert.That(testCollection.FirstVersionNumberOf(object1A), Is.EqualTo(initialFirstVersionNumber));
             eventsMonitor.CheckReferences(new[]{ object1A }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(5));
         }
@@ -244,13 +255,13 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             TestObject object1 = new(Guid.NewGuid()) { Property = 42 };
             testCollection.Add(object1);
-            ulong object1InitialFirstVersionNumber = object1.FirstVersionNumberAccess;
+            ulong object1InitialFirstVersionNumber = testCollection.FirstVersionNumberOf(object1);
             TestObject object2 = new(Guid.NewGuid()) { Property = 28 };
             testCollection.Add(object2);
-            ulong object2InitialFirstVersionNumber = object2.FirstVersionNumberAccess;
+            ulong object2InitialFirstVersionNumber = testCollection.FirstVersionNumberOf(object2);
             TestObject object3 = new(Guid.NewGuid()) { Property = 1234 };
             testCollection.Add(object3);
-            ulong object3InitialFirstVersionNumber = object3.FirstVersionNumberAccess;
+            ulong object3InitialFirstVersionNumber = testCollection.FirstVersionNumberOf(object3);
             eventsMonitor.CheckReferences(new[]{ object1, object2, object3 }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(3));
 
@@ -276,12 +287,12 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             testCollection.Add(object3);
             eventsMonitor.CheckReferences(new[]{ object1, object2, object3 }, Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(8));
-            Assert.That(object1.FirstVersionNumberAccess, Is.EqualTo(object1InitialFirstVersionNumber));
-            Assert.That(object1.VersionNumberAccess, Is.EqualTo(6));
-            Assert.That(object2.FirstVersionNumberAccess, Is.EqualTo(object2InitialFirstVersionNumber));
-            Assert.That(object2.VersionNumberAccess, Is.EqualTo(7));
-            Assert.That(object3.FirstVersionNumberAccess, Is.EqualTo(object3InitialFirstVersionNumber));
-            Assert.That(object3.VersionNumberAccess, Is.EqualTo(8));
+            Assert.That(testCollection.FirstVersionNumberOf(object1), Is.EqualTo(object1InitialFirstVersionNumber));
+            Assert.That(testCollection.VersionNumberOf(object1), Is.EqualTo(6));
+            Assert.That(testCollection.FirstVersionNumberOf(object2), Is.EqualTo(object2InitialFirstVersionNumber));
+            Assert.That(testCollection.VersionNumberOf(object2), Is.EqualTo(7));
+            Assert.That(testCollection.FirstVersionNumberOf(object3), Is.EqualTo(object3InitialFirstVersionNumber));
+            Assert.That(testCollection.VersionNumberOf(object3), Is.EqualTo(8));
         }
 
         [Test]
@@ -354,7 +365,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Changing an object of the collection should affect the collection
             object1.Property *= 2;
-            object1.SignalChanges();
+            object1.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), new[]{ object1 });
 
             // Remove it object from the collection
@@ -365,7 +376,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Changing the removed object shouldn't affect the collection anymore
             var versionNumberBefore = testCollection.VersionNumber;
             object1.Property *= 2;
-            object1.SignalChanges();
+            object1.SignalChanges(testCollection);
             eventsMonitor.CheckReferences(Array.Empty<TestObject>(), Array.Empty<TestObject>(), Array.Empty<TestObject>());
             Assert.That(testCollection.VersionNumber, Is.EqualTo(versionNumberBefore));
 
@@ -411,7 +422,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
 
             // Get delta (with just 1)
             var update = collectionSrc.GetDeltaSince(0);
@@ -427,8 +438,8 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             List<TestObject> newObjects = new();
             newObjects.Add(objectFromDst);
             Assert.That(objectFromDst, Is.EqualTo(newObject1));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(1));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(1));
             Assert.That(objectFromDst, Is.Not.SameAs(newObject1));
 
             collectionDstEventsMonitor.CheckReferences(newObjects, Array.Empty<TestObject>(), Array.Empty<TestObject>());
@@ -453,21 +464,21 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Object from before changes should still be the same
             objectFromDst = collectionDst[newObject1.Id];
             Assert.That(objectFromDst, Is.EqualTo(newObject1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(1));
 
             // Test new objects
             newObjects.Clear();
             objectFromDst = collectionDst[newObject2.Id];
             newObjects.Add(objectFromDst);
             Assert.That(objectFromDst, Is.EqualTo(newObject2));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(2));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(2));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(2));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(2));
             Assert.That(objectFromDst, Is.Not.SameAs(newObject2));
             objectFromDst = collectionDst[newObject3.Id];
             newObjects.Add(objectFromDst);
             Assert.That(objectFromDst, Is.EqualTo(newObject3));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(2));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(2));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(2));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(2));
             Assert.That(objectFromDst, Is.Not.SameAs(newObject3));
 
             collectionDstEventsMonitor.CheckReferences(newObjects, Array.Empty<TestObject>(), Array.Empty<TestObject>());
@@ -482,10 +493,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject2.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -497,7 +508,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Change object 1
             newObject1.Property = 28;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
 
             // Get delta
             update = collectionSrc.GetDeltaSince(update.NextUpdate);
@@ -515,12 +526,12 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             var objectFromDst = collectionDst[newObject1.Id];
             Assert.That(objectFromDst, Is.EqualTo(newObject1));
             Assert.That(objectFromDst, Is.SameAs(object1FromDstBeforeChange));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(2));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(2));
             objectFromDst = collectionDst[newObject2.Id];
             Assert.True( objectFromDst.Equals( newObject2 ) );
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(1));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(1));
         }
 
         [Test]
@@ -532,10 +543,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject1.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -547,10 +558,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Change object 1 (twice)
             newObject1.Property = 28;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
 
             newObject1.Property = 2828;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
 
             // Get delta
             update = collectionSrc.GetDeltaSince(update.NextUpdate);
@@ -566,12 +577,12 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Test objects
             var objectFromDst = collectionDst[newObject1.Id];
             Assert.That(objectFromDst, Is.EqualTo(newObject1));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(2));
+            Assert.That(collectionDst.FirstVersionNumberOf(objectFromDst), Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(2));
             objectFromDst = collectionDst[newObject2.Id];
             Assert.That(objectFromDst, Is.EqualTo(newObject2));
-            Assert.That(objectFromDst.FirstVersionNumberAccess, Is.EqualTo(1));
-            Assert.That(objectFromDst.VersionNumberAccess, Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(1));
+            Assert.That(collectionDst.VersionNumberOf(objectFromDst), Is.EqualTo(1));
         }
 
         [Test]
@@ -583,10 +594,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject2.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -625,10 +636,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject2.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -640,7 +651,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             // Change object 1
             newObject1.Property = 28;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
 
             // Remove object 1
             collectionSrc.Remove(newObject1.Id);
@@ -671,10 +682,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject2.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -687,11 +698,11 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Add object 3 and 4
             var newObject3 = collectionSrc.AddNewObject();
             newObject3.Property = 424242;
-            newObject3.SignalChanges();
+            newObject3.SignalChanges(collectionSrc);
 
             var newObject4 = collectionSrc.AddNewObject();
             newObject4.Property = 42424242;
-            newObject4.SignalChanges();
+            newObject4.SignalChanges(collectionSrc);
 
             // Remove object 3
             collectionSrc.Remove(newObject3.Id);
@@ -726,8 +737,8 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             var newObject2 = collectionSrc.AddNewObject();
             newObject1.Property = 28;
             newObject2.Property = 42;
-            newObject1.SignalChanges();
-            newObject2.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
+            newObject2.SignalChanges(collectionSrc);
 
             var update = collectionSrc.GetDeltaSince(0);
             collectionDst1.ApplyDelta(update);
@@ -757,7 +768,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Add a new object with the same id as newObject2
             var newObject2Take2 = collectionSrc.AddNewObject(newObject2.Id);
             newObject2Take2.Property = 4242;
-            newObject2Take2.SignalChanges();
+            newObject2Take2.SignalChanges(collectionSrc);
             Assert.That(collectionSrc.Count, Is.EqualTo(2));
 
             update = collectionSrc.GetDeltaSince(update.NextUpdate);
@@ -791,10 +802,10 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
 
             var newObject1 = collectionSrc.AddNewObject();
             newObject1.Property = 42;
-            newObject1.SignalChanges();
+            newObject1.SignalChanges(collectionSrc);
             var newObject2 = collectionSrc.AddNewObject();
             newObject2.Property = 4242;
-            newObject2.SignalChanges();
+            newObject2.SignalChanges(collectionSrc);
 
             // Get delta
             var update = collectionSrc.GetDeltaSince(0);
@@ -807,7 +818,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // Add another object
             var newObject3 = collectionSrc.AddNewObject();
             newObject3.Property = 424242;
-            newObject3.SignalChanges();
+            newObject3.SignalChanges(collectionSrc);
 
             // Clear everything
             collectionSrc.Clear();
@@ -815,7 +826,7 @@ namespace Unity.ClusterDisplay.MissionControl.Tests
             // And add a fourth object
             var newObject4 = collectionSrc.AddNewObject();
             newObject4.Property = 42424242;
-            newObject4.SignalChanges();
+            newObject4.SignalChanges(collectionSrc);
 
             // Get delta
             update = collectionSrc.GetDeltaSince(update.NextUpdate);

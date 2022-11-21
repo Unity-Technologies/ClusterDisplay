@@ -60,12 +60,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(PayloadFile? other)
         {
-            if (other == null || other.GetType() != typeof(PayloadFile))
-            {
-                return false;
-            }
-
-            return Path == other.Path && FileBlob == other.FileBlob && CompressedSize == other.CompressedSize &&
+            return other != null &&
+                Path == other.Path &&
+                FileBlob == other.FileBlob &&
+                CompressedSize == other.CompressedSize &&
                 Size == other.Size;
         }
     }

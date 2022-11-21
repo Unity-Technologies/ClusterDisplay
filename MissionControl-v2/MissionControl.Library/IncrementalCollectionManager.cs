@@ -1,24 +1,20 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 {
     /// <summary>
-    /// Base class for manager that are simply managing access to an <see cref="IncrementalCollection"/>.
+    /// Base class for manager that are simply managing access to an <see cref="IncrementalCollection{T}"/>.
     /// </summary>
-    public class IncrementalCollectionManager<T> where T : IncrementalCollectionObject
+    public class IncrementalCollectionManager<T> where T : IIncrementalCollectionObject
     {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="logger">Object used to send logging messages.</param>
-        public IncrementalCollectionManager(ILogger logger)
+        protected IncrementalCollectionManager(ILogger logger)
         {
             m_Logger = logger;
 
@@ -59,8 +55,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
             // Prepare an incremental update (this is the fastest way to add everything as a single transaction into
             // m_Collection).
-            IncrementalCollectionUpdate<T> incrementalUpdate = new();
-            incrementalUpdate.UpdatedObjects = objects;
+            IncrementalCollectionUpdate<T> incrementalUpdate = new() { UpdatedObjects = objects };
 
             using (m_Lock.Lock())
             {
@@ -111,7 +106,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         protected ILogger Logger => m_Logger;
 
         /// <summary>
-        /// Small object giving a write access to the managed <see cref="IncrementalCollection"/> and the objects it
+        /// Small object giving a write access to the managed <see cref="IncrementalCollection{T}"/> and the objects it
         /// contains.
         /// </summary>
         /// <remarks>It keeps the <see cref="IncrementalCollectionManager{T}"/> locked, so dispose as soon as you do not
@@ -197,7 +192,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         readonly IncrementalCollection<T> m_Collection = new();
 
         /// <summary>
-        /// Are we currently modifying m_Collection?  The main goal of this variable is to detect external code that 
+        /// Are we currently modifying m_Collection?  The main goal of this variable is to detect external code that
         /// would be modifying objects that we are supposed to be the only ones to modify.
         /// </summary>
         bool m_CollectionModificationInProgress;

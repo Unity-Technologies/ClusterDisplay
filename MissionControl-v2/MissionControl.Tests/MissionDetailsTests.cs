@@ -18,16 +18,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             detailsB.Identifier = detailsA.Identifier;
             Assert.That(detailsA, Is.EqualTo(detailsB));
 
-            detailsA.Name = "My first mission";
-            detailsB.Name = "My second mission";
+            detailsA.Description.Name = "My first mission";
+            detailsB.Description.Name = "My second mission";
             Assert.That(detailsA, Is.Not.EqualTo(detailsB));
-            detailsB.Name = "My first mission";
+            detailsB.Description.Name = "My first mission";
             Assert.That(detailsA, Is.EqualTo(detailsB));
 
-            detailsA.Description = "This is what I've done in my first mission";
-            detailsB.Description = "This is what I've done in my second mission";
+            detailsA.Description.Details = "This is what I've done in my first mission";
+            detailsB.Description.Details = "This is what I've done in my second mission";
             Assert.That(detailsA, Is.Not.EqualTo(detailsB));
-            detailsB.Description = "This is what I've done in my first mission";
+            detailsB.Description.Details = "This is what I've done in my first mission";
             Assert.That(detailsA, Is.EqualTo(detailsB));
 
             detailsA.LaunchConfiguration = new LaunchConfiguration() { AssetId = Guid.NewGuid() };
@@ -52,8 +52,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             MissionDetails toSerialize = new();
             toSerialize.Identifier = Guid.NewGuid();
-            toSerialize.Name = "Mission name";
-            toSerialize.Description = "Mission description";
+            toSerialize.Description.Name = "Mission name";
+            toSerialize.Description.Details = "Mission description";
             toSerialize.LaunchConfiguration = new LaunchConfiguration() { AssetId = Guid.NewGuid() };
             var serializedParameter = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<MissionDetails>(serializedParameter, Json.SerializerOptions);
@@ -74,8 +74,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             MissionDetails toClone = new();
             toClone.Identifier = Guid.NewGuid();
-            toClone.Name = "Mission name";
-            toClone.Description = "Mission description";
+            toClone.Description.Name = "Mission name";
+            toClone.Description.Details = "Mission description";
             toClone.LaunchConfiguration = new LaunchConfiguration() { AssetId = Guid.NewGuid() };
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));

@@ -96,7 +96,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             await manager.PutAsync(complexAClone);
 
             complexAClone.HangarBay.Identifier = Guid.NewGuid();
-            Assert.Throws<InvalidOperationException>(() => complexAClone.SignalChanges());
+            using (var lockedCollection = await manager.GetLockedReadOnlyAsync())
+            {
+                var hackedCollection = (IncrementalCollection<LaunchComplex>)lockedCollection.Value;
+                Assert.Throws<InvalidOperationException>(() => complexAClone.SignalChanges(hackedCollection));
+            }
 
             using var locked = await manager.GetLockedReadOnlyAsync();
             var collection = (IncrementalCollection<LaunchComplex>)locked.Value;

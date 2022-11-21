@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -38,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Force canceling the tasks (even if none of the tasks have failed).
         /// </summary>
-        public void ForceCancel()
+        public void Cancel()
         {
             m_CancellationTokenSource.Cancel();
         }

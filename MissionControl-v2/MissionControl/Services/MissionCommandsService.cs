@@ -49,14 +49,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
         async Task<(HttpStatusCode code, string errorMessage)> ExecuteAsync(SaveMissionCommand command)
         {
-            if (string.IsNullOrEmpty(command.Name))
+            if (string.IsNullOrEmpty(command.Description.Name))
             {
-                return (HttpStatusCode.BadRequest, "Saved mission name is mandatory");
+                return (HttpStatusCode.BadRequest, "Saved mission's name is mandatory");
             }
 
             MissionDetails toSave = new();
             toSave.Identifier = command.Identifier == Guid.Empty ? Guid.NewGuid() : command.Identifier;
-            toSave.CopySavedMissionSummaryProperties(command);
+            toSave.Description.DeepCopyFrom(command.Description);
             using (var missionLock = await m_CurrentMissionLaunchConfiguration.LockAsync())
             {
                 toSave.LaunchConfiguration = missionLock.Value.DeepClone();

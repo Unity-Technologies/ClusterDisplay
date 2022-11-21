@@ -41,11 +41,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 
         public bool Equals(Config other)
         {
-            if (other.GetType() != typeof(Config))
-            {
-                return false;
-            }
-
             return Identifier == other.Identifier &&
                 ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 ClusterNetworkNic == other.ClusterNetworkNic && HangarBayEndPoint == other.HangarBayEndPoint;

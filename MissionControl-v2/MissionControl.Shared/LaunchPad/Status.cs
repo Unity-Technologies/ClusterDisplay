@@ -8,7 +8,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
     public enum State
     {
         /// <summary>
-        /// Nothing is going on on the LaunchPad, could be use for new a launch.
+        /// Nothing is going on the LaunchPad, could be use for new a launch.
         /// </summary>
         Idle,
         /// <summary>
@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
     /// <summary>
     /// Status of the LaunchPad (changes once in a while).
     /// </summary>
-    public class Status: IStatus
+    public class Status: IEquatable<Status>
     {
         /// <summary>
         /// Version number of the running LaunchPad executable.
@@ -73,7 +73,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         /// Fill this <see cref="Status"/> from another one.
         /// </summary>
         /// <param name="from">To fill from.</param>
-        public void CopyFrom(Status from)
+        public void DeepCopyFrom(Status from)
         {
             Version = from.Version;
             StartTime = from.StartTime;
@@ -81,6 +81,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
             PendingRestart = from.PendingRestart;
             LastChanged = from.LastChanged;
             StatusNumber = from.StatusNumber;
+        }
+
+        public bool Equals(Status? other)
+        {
+            return other != null &&
+                Version == other.Version &&
+                StartTime == other.StartTime &&
+                State == other.State &&
+                PendingRestart == other.PendingRestart &&
+                LastChanged == other.LastChanged;
         }
     }
 }

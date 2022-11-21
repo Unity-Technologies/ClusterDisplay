@@ -12,8 +12,7 @@ namespace Unity.ClusterDisplay.MissionControl
         : IReadOnlyIncrementalCollection<T>
         , IDictionary<Guid, T>
         , IDictionary
-        , IIncrementalCollectionObjectChangeObserver
-        where T : IncrementalCollectionObject
+        where T : IIncrementalCollectionObject
     {
         /// <summary>
         /// Event called to inform that an object has been added to the collection.
@@ -48,20 +47,20 @@ namespace Unity.ClusterDisplay.MissionControl
         public void Add(T obj)
         {
             ulong newVersionNumber = m_VersionNumber + 1;
-            ulong newFirstVersionNumber = newVersionNumber;
 
-            m_TDictionary.Add(obj.Id, obj);
-            if (m_Dictionary.TryGetValue(obj.Id, out var previousValue))
+            m_PublicCollection.Add(obj.Id, obj);
+            if (m_InternalCollection.TryGetValue(obj.Id, out var objectData))
             {
-                Debug.Assert(previousValue is IncrementalCollectionRemovedMarker);
-                Debug.Assert(previousValue.ChangeObserver == this);
-                previousValue.ChangeObserver = null;
-                newFirstVersionNumber = previousValue.FirstVersionNumber;
+                Debug.Assert(objectData.Object == null);
             }
-            m_Dictionary[obj.Id] = obj;
-            obj.FirstVersionNumber = newFirstVersionNumber;
-            obj.VersionNumber = newVersionNumber;
-            obj.ChangeObserver = this;
+            else
+            {
+                objectData = new() { FirstVersionNumber = newVersionNumber };
+                m_InternalCollection[obj.Id] = objectData;
+            }
+            objectData.Object = obj;
+            m_PublicCollection[obj.Id] = obj;
+            objectData.VersionNumber = newVersionNumber;
             m_VersionNumber = newVersionNumber;
 
             ObjectAdded?.Invoke(obj);
@@ -70,25 +69,24 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public T this[Guid key]
         {
-            get => m_TDictionary[key];
+            get => m_PublicCollection[key];
             set
             {
                 ValidateKeyMatchesValue(key, value);
                 ulong newVersionNumber = m_VersionNumber + 1;
-                ulong newFirstVersionNumber = newVersionNumber;
                 bool added = true;
-                if (m_Dictionary.TryGetValue(key, out var previousValue))
+                if (m_InternalCollection.TryGetValue(key, out var objectData))
                 {
-                    newFirstVersionNumber = previousValue.FirstVersionNumber;
-                    Debug.Assert(previousValue.ChangeObserver == this);
-                    previousValue.ChangeObserver = null;
-                    added = previousValue is IncrementalCollectionRemovedMarker;
+                    added = objectData.Object == null;
                 }
-                value.FirstVersionNumber = newFirstVersionNumber;
-                value.VersionNumber = newVersionNumber;
-                value.ChangeObserver = this;
-                m_Dictionary[key] = value;
-                m_TDictionary[key] = value;
+                else
+                {
+                    objectData = new() { FirstVersionNumber = newVersionNumber };
+                    m_InternalCollection[key] = objectData;
+                }
+                objectData.Object = value;
+                m_PublicCollection[key] = value;
+                objectData.VersionNumber = newVersionNumber;
                 m_VersionNumber = newVersionNumber;
 
                 if (added)
@@ -103,11 +101,11 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
-        public ICollection<Guid> Keys => m_TDictionary.Keys;
+        public ICollection<Guid> Keys => m_PublicCollection.Keys;
 
-        public ICollection<T> Values => m_TDictionary.Values;
+        public ICollection<T> Values => m_PublicCollection.Values;
 
-        public int Count => m_TDictionary.Count;
+        public int Count => m_PublicCollection.Count;
 
         public bool IsReadOnly => false;
 
@@ -125,19 +123,15 @@ namespace Unity.ClusterDisplay.MissionControl
             }
 
             ulong newVersionNumber = m_VersionNumber + 1;
-            foreach (var pair in m_TDictionary)
+            foreach (var pair in m_PublicCollection)
             {
-                Debug.Assert(pair.Value.ChangeObserver == this);
-                pair.Value.ChangeObserver = null;
-                IncrementalCollectionRemovedMarker removedMarker = new(pair.Key);
-                removedMarker.FirstVersionNumber = pair.Value.FirstVersionNumber;
-                removedMarker.VersionNumber = newVersionNumber;
-                removedMarker.ChangeObserver = this;
-                m_Dictionary[pair.Key] = removedMarker;
+                var objectData = m_InternalCollection[pair.Key];
+                objectData.Object = default(T);
+                objectData.VersionNumber = newVersionNumber;
             }
 
-            var oldDictionary = m_TDictionary;
-            m_TDictionary = new();
+            var oldDictionary = m_PublicCollection;
+            m_PublicCollection = new();
 
             m_VersionNumber = newVersionNumber;
 
@@ -150,30 +144,25 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public bool ContainsKey(Guid key)
         {
-            return m_TDictionary.ContainsKey(key);
+            return m_PublicCollection.ContainsKey(key);
         }
 
         public IEnumerator<KeyValuePair<Guid, T>> GetEnumerator()
         {
-            return m_TDictionary.GetEnumerator();
+            return m_PublicCollection.GetEnumerator();
         }
 
         public bool Remove(Guid key)
         {
-            if (m_TDictionary.TryGetValue(key, out T? removedObject))
+            if (m_PublicCollection.TryGetValue(key, out T? removedObject))
             {
-                Debug.Assert(removedObject.ChangeObserver == this);
-                removedObject.ChangeObserver = null;
-
-                bool removed = m_TDictionary.Remove(key);
+                bool removed = m_PublicCollection.Remove(key);
                 Debug.Assert(removed);
 
                 ulong newVersionNumber = m_VersionNumber + 1;
-                IncrementalCollectionRemovedMarker removedMarker = new(key);
-                removedMarker.FirstVersionNumber = removedObject.FirstVersionNumber;
-                removedMarker.VersionNumber = newVersionNumber;
-                removedMarker.ChangeObserver = this;
-                m_Dictionary[key] = removedMarker;
+                var objectData = m_InternalCollection[key];
+                objectData.Object = default(T);
+                objectData.VersionNumber = newVersionNumber;
                 m_VersionNumber = newVersionNumber;
 
                 ObjectRemoved?.Invoke(removedObject);
@@ -186,7 +175,29 @@ namespace Unity.ClusterDisplay.MissionControl
 
         public bool TryGetValue(Guid key, [MaybeNullWhen(false)] out T value)
         {
-            return m_TDictionary.TryGetValue(key, out value);
+            return m_PublicCollection.TryGetValue(key, out value);
+        }
+
+        /// <summary>
+        /// Method to be called by anyone modifying properties of an object of the collection.
+        /// </summary>
+        /// <param name="obj">The modified object</param>
+        /// <remarks>To be called after the modifications have been done.
+        /// <br/><br/>Many changes on a single object can be batched before calling this method to signal them all in a
+        /// single call.</remarks>
+        public void SignalObjectChanged(T obj)
+        {
+            var objectData = m_InternalCollection[obj.Id];
+            if (!ReferenceEquals(objectData.Object, obj))
+            {
+                return;
+            }
+
+            ++m_VersionNumber;
+            objectData.VersionNumber = m_VersionNumber;
+
+            ObjectUpdated?.Invoke(obj);
+            SomethingChanged?.Invoke(this);
         }
 
         /// <summary>
@@ -197,36 +208,34 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Compute what changed since the reference version number.
         /// </summary>
-        /// <param name="sinceVersionNumber">Returns all the changes for which VersionNumber >= sinceVersionNumber</param>
+        /// <param name="sinceVersionNumber">Returns all the changes for which VersionNumber >= sinceVersionNumber
+        /// </param>
         public IncrementalCollectionUpdate<T> GetDeltaSince(UInt64 sinceVersionNumber)
         {
             var updatedObjects = new List<T>();
             var removedObjects = new List<Guid>();
-            foreach (IncrementalCollectionObject incrementalObject in m_Dictionary.Values)
+            foreach (var (key, objectData) in m_InternalCollection)
             {
-                if (incrementalObject.VersionNumber >= sinceVersionNumber)
+                if (objectData.VersionNumber >= sinceVersionNumber)
                 {
-                    if (incrementalObject is T updatedObject)
+                    if (objectData.Object != null)
                     {
-                        T clone = updatedObject.DeepClone();
+                        T clone = objectData.Object.DeepClone();
                         updatedObjects.Add(clone);
                     }
-                    else
+                    else if (objectData.FirstVersionNumber < sinceVersionNumber)
                     {
-                        Debug.Assert(incrementalObject is IncrementalCollectionRemovedMarker);
-                        var removedMarker = (IncrementalCollectionRemovedMarker)incrementalObject;
-                        if (removedMarker.FirstVersionNumber < sinceVersionNumber)
-                        {
-                            removedObjects.Add(incrementalObject.Id);
-                        }
+                        removedObjects.Add(key);
                     }
                 }
             }
 
-            var ret = new IncrementalCollectionUpdate<T>();
-            ret.UpdatedObjects = updatedObjects.AsEnumerable();
-            ret.RemovedObjects = removedObjects.AsEnumerable();
-            ret.NextUpdate = VersionNumber + 1;
+            IncrementalCollectionUpdate<T> ret = new()
+            {
+                UpdatedObjects = updatedObjects.AsEnumerable(),
+                RemovedObjects = removedObjects.AsEnumerable(),
+                NextUpdate = VersionNumber + 1
+            };
             return ret;
         }
 
@@ -244,48 +253,39 @@ namespace Unity.ClusterDisplay.MissionControl
             List<(T obj, bool added)> updatedObjects = new (update.UpdatedObjects.Count());
             foreach (T updatedObject in update.UpdatedObjects)
             {
-                if (m_Dictionary.TryGetValue(updatedObject.Id, out var previousObject) && previousObject is T previousT)
+                if (m_InternalCollection.TryGetValue(updatedObject.Id, out var objectData) &&
+                    objectData.Object != null)
                 {
-                    previousT.DeepCopy(updatedObject);
-                    previousT.VersionNumber = newVersionNumber;
-                    updatedObjects.Add((previousT, false));
+                    objectData.Object.DeepCopyFrom(updatedObject);
+                    updatedObjects.Add((objectData.Object, false));
                 }
                 else
                 {
-                    if (previousObject != null)
+                    if (objectData == null)
                     {
-                        Debug.Assert(previousObject is IncrementalCollectionRemovedMarker);
-                        Debug.Assert(previousObject.ChangeObserver == this);
-                        previousObject.ChangeObserver = null;
+                        objectData = new() { FirstVersionNumber = newVersionNumber };
+                        m_InternalCollection[updatedObject.Id] = objectData;
                     }
 
-                    T newObject = updatedObject.DeepClone();
-                    newObject.FirstVersionNumber = newVersionNumber;
-                    newObject.VersionNumber = newVersionNumber;
-                    newObject.ChangeObserver = this;
-                    m_Dictionary[updatedObject.Id] = newObject;
-                    m_TDictionary[updatedObject.Id] = newObject;
+                    objectData.Object = updatedObject.DeepClone();
+                    m_PublicCollection[updatedObject.Id] = objectData.Object;
+                    updatedObjects.Add((objectData.Object, true));
 
-                    updatedObjects.Add((newObject, true));
                 }
+                objectData.VersionNumber = newVersionNumber;
             }
 
             List<T> removedObjects = new (update.RemovedObjects.Count());
             foreach (Guid removedKey in update.RemovedObjects)
             {
-                if (m_TDictionary.TryGetValue(removedKey, out T? removedObject))
+                if (m_PublicCollection.TryGetValue(removedKey, out T? removedObject))
                 {
-                    Debug.Assert(removedObject.ChangeObserver == this);
-                    removedObject.ChangeObserver = null;
-
-                    bool removed = m_TDictionary.Remove(removedKey);
+                    bool removed = m_PublicCollection.Remove(removedKey);
                     Debug.Assert(removed);
 
-                    IncrementalCollectionRemovedMarker removedMarker = new(removedKey);
-                    removedMarker.FirstVersionNumber = removedObject.FirstVersionNumber;
-                    removedMarker.VersionNumber = newVersionNumber;
-                    removedMarker.ChangeObserver = this;
-                    m_Dictionary[removedKey] = removedMarker;
+                    var objectData = m_InternalCollection[removedKey];
+                    objectData.Object = default(T);
+                    objectData.VersionNumber = newVersionNumber;
 
                     removedObjects.Add(removedObject);
                 }
@@ -316,6 +316,15 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
+        /// <summary>
+        /// Method designed to be used by unit tests to get (and validate) some internal data...
+        /// </summary>
+        /// <param name="key">Object's identifier</param>
+        internal IncrementalCollectionObjectData<T> GetInternalObjectData(Guid key)
+        {
+            return m_InternalCollection[key];
+        }
+
         #region ICollection<KeyValuePair> implementation
         void ICollection<KeyValuePair<Guid, T>>.Add(KeyValuePair<Guid, T> item)
         {
@@ -324,7 +333,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         bool ICollection<KeyValuePair<Guid, T>>.Contains(KeyValuePair<Guid, T> item)
         {
-            if (m_TDictionary.TryGetValue(item.Key, out T? value))
+            if (m_PublicCollection.TryGetValue(item.Key, out T? value))
             {
                 return item.Value.Equals(value);
             }
@@ -333,7 +342,7 @@ namespace Unity.ClusterDisplay.MissionControl
 
         void ICollection<KeyValuePair<Guid, T>>.CopyTo(KeyValuePair<Guid, T>[] array, int arrayIndex)
         {
-            ((ICollection<KeyValuePair<Guid, T>>)m_TDictionary).CopyTo(array, arrayIndex);
+            ((ICollection<KeyValuePair<Guid, T>>)m_PublicCollection).CopyTo(array, arrayIndex);
         }
 
         bool ICollection<KeyValuePair<Guid, T>>.Remove(KeyValuePair<Guid, T> item)
@@ -349,14 +358,14 @@ namespace Unity.ClusterDisplay.MissionControl
         #region IEnumerable implementation
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)m_TDictionary).GetEnumerator();
+            return ((IEnumerable)m_PublicCollection).GetEnumerator();
         }
         #endregion
 
         #region IReadOnlyDictionary<Guid, T> implementation
-        IEnumerable<Guid> IReadOnlyDictionary<Guid, T>.Keys => ((IReadOnlyDictionary<Guid, T>)m_TDictionary).Keys;
+        IEnumerable<Guid> IReadOnlyDictionary<Guid, T>.Keys => ((IReadOnlyDictionary<Guid, T>)m_PublicCollection).Keys;
 
-        IEnumerable<T> IReadOnlyDictionary<Guid, T>.Values => ((IReadOnlyDictionary<Guid, T>)m_TDictionary).Values;
+        IEnumerable<T> IReadOnlyDictionary<Guid, T>.Values => ((IReadOnlyDictionary<Guid, T>)m_PublicCollection).Values;
         #endregion
 
         #region ICollection implementation
@@ -366,25 +375,25 @@ namespace Unity.ClusterDisplay.MissionControl
 
         void ICollection.CopyTo(Array array, int index)
         {
-            ((ICollection)m_TDictionary).CopyTo(array, index);
+            ((ICollection)m_PublicCollection).CopyTo(array, index);
         }
         #endregion
 
         #region IDictionary implementation
         bool IDictionary.IsFixedSize => false;
 
-        ICollection IDictionary.Keys => m_TDictionary.Keys;
+        ICollection IDictionary.Keys => m_PublicCollection.Keys;
 
-        ICollection IDictionary.Values => m_TDictionary.Values;
+        ICollection IDictionary.Values => m_PublicCollection.Values;
 
         IDictionaryEnumerator IDictionary.GetEnumerator()
         {
-            return ((IDictionary)m_TDictionary).GetEnumerator();
+            return ((IDictionary)m_PublicCollection).GetEnumerator();
         }
 
         object? IDictionary.this[object key]
         {
-            get => ((IDictionary)m_TDictionary)[key];
+            get => ((IDictionary)m_PublicCollection)[key];
             set
             {
                 ValidateKeyParam(key);
@@ -411,20 +420,6 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 Remove(guid);
             }
-        }
-        #endregion
-
-        #region IIncrementalCollectionObjectChangeObserver implementation
-        void IIncrementalCollectionObjectChangeObserver.ObjectChanged(IncrementalCollectionObject obj)
-        {
-            ++m_VersionNumber;
-            obj.VersionNumber = m_VersionNumber;
-
-            // IncrementalCollectionRemovedMarker should never change, so this delegate should never be called so obj
-            // should always be a T.
-            Debug.Assert(obj is T);
-            ObjectUpdated?.Invoke((T)obj);
-            SomethingChanged?.Invoke(this);
         }
         #endregion
 
@@ -475,15 +470,14 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
         /// <summary>
-        /// Main dictionary that contains all objects (and <see cref="IncrementalCollectionRemovedMarker"/> for
-        /// removed objects).
+        /// Main dictionary that contains all objects (even some historical information about deleted ones).
         /// </summary>
-        Dictionary<Guid, IncrementalCollectionObject> m_Dictionary = new();
+        Dictionary<Guid, IncrementalCollectionObjectData<T>> m_InternalCollection = new();
         /// <summary>
-        /// Main dictionary that contains all objects really present in the collection (no
-        /// <see cref="IncrementalCollectionRemovedMarker"/>).
+        /// Main dictionary that contains all objects really present in the collection from an external user point of
+        /// view (no information about old deleted objects).
         /// </summary>
-        Dictionary<Guid, T> m_TDictionary = new();
+        Dictionary<Guid, T> m_PublicCollection = new();
         /// <summary>
         /// Collections version number (matches highest version number of all the objects in the collection).
         /// </summary>

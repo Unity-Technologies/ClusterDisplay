@@ -71,12 +71,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(Payload? other)
         {
-            if (other == null || other.GetType() != typeof(Payload))
-            {
-                return false;
-            }
-
-            return Files.SequenceEqual(other.Files);
+            return other != null &&
+                Files.SequenceEqual(other.Files);
         }
     }
 }

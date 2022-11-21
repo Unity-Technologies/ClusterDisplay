@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 
         public bool Equals(PrepareCommand? other)
         {
-            if (other == null || other.GetType() != typeof(PrepareCommand))
+            if (other == null)
             {
                 return false;
             }

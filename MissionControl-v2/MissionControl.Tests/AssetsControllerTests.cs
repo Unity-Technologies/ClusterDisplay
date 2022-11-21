@@ -275,7 +275,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand = new()
             {
                 Identifier = Guid.NewGuid(),
-                Name = "Mission name"
+                Description = new() { Name = "Mission name" }
             };
             await m_ProcessHelper.PostCommand(saveCommand);
 

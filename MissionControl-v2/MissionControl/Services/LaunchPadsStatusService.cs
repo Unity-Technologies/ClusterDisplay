@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
-using Unity.ClusterDisplay.MissionControl.LaunchPad;
 
 using StatusFromLaunchPad = Unity.ClusterDisplay.MissionControl.LaunchPad.Status;
 
@@ -163,14 +162,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
                 LaunchPadStatus updatedStatus = new(launchPadId);
                 updatedStatus.IsDefined = true;
-                updatedStatus.CopyIStatusProperties(newStatus);
+                updatedStatus.DeepCopyFrom(newStatus);
                 if (updatedStatus.Equals(toUpdate))
                 {
                     return;
                 }
 
-                toUpdate.DeepCopy(updatedStatus);
-                toUpdate.SignalChanges();
+                toUpdate.DeepCopyFrom(updatedStatus);
+                toUpdate.SignalChanges(m_Collection);
             }
         }
 
@@ -198,8 +197,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 Debug.Assert(updatedStatus.IsDefined == false);
                 updatedStatus.UpdateError = errorDescription;
 
-                toUpdate.DeepCopy(updatedStatus);
-                toUpdate.SignalChanges();
+                toUpdate.DeepCopyFrom(updatedStatus);
+                toUpdate.SignalChanges(m_Collection);
             }
         }
 

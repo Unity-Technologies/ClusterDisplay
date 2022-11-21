@@ -88,14 +88,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 return false;
             }
 
-            return other.GetType() == typeof(LaunchParameter) &&
-                other.Name == Name &&
+            return other.Name == Name &&
                 other.Group == Group &&
                 other.Id == Id &&
                 other.Description == Description &&
-                Object.Equals(other.m_Type, m_Type) &&
+                Equals(other.m_Type, m_Type) &&
                 (other.Constraint == null || other.Constraint.Equals(Constraint)) &&
-                Object.Equals(other.m_DefaultValue, m_DefaultValue);
+                Equals(other.m_DefaultValue, m_DefaultValue);
         }
 
         /// <summary>
@@ -108,7 +107,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// <see cref="LaunchParameterType"/>.</exception>
         /// <exception cref="OverflowException"><paramref name="value"/> represent a value that is too large (or small)
         /// to fit in a <see cref="LaunchParameterType"/>.</exception>
-        object? ConvertValueToType(LaunchParameterType? type, object? value)
+        static object? ConvertValueToType(LaunchParameterType? type, object? value)
         {
             // Quick check, anything is acceptable if one of them is unknown.
             if (!type.HasValue || value == null)
@@ -145,11 +144,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         {
             if (value is float floatValue)
             {
-                int asAInt32 = (int)floatValue;
-                // ReSharper disable once CompareOfFloatsByEqualityOperator
-                if (asAInt32 == floatValue)
+                int roundedValue = (int)Math.Round(floatValue);
+                float distanceFromInt = floatValue - roundedValue;
+                // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
+                // say single have ~6-9 digits of precision, so we use 1.0E-6f as the threshold.
+                if (distanceFromInt <= 1.0E-6f)
                 {
-                    return asAInt32;
+                    return roundedValue;
                 }
                 else
                 {
@@ -158,11 +159,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             }
             if (value is double doubleValue)
             {
-                int asAInt32 = (int)doubleValue;
-                // ReSharper disable once CompareOfFloatsByEqualityOperator
-                if (asAInt32 == doubleValue)
+                int roundedValue = (int)Math.Round(doubleValue);
+                double distanceFromInt = doubleValue - roundedValue;
+                // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
+                // say single have ~15-17 digits of precision, so we use 1.0E-15f as the threshold.
+                if (distanceFromInt <= 1.0E-15f)
                 {
-                    return asAInt32;
+                    return roundedValue;
                 }
                 else
                 {
@@ -200,10 +203,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 throw new InvalidCastException($"Cannot convert {jsonValue.ToString()} to {typeof(float)}.");
             }
             float ret = Convert.ToSingle(value);
-            if (float.IsInfinity(ret))
-            {
-                throw new OverflowException($"Converting to {value} to {typeof(float)} leads to infinity and beyond...");
-            }
             if (!float.IsNormal(ret))
             {
                 throw new InvalidCastException($"Cannot convert {value} to {typeof(float)}.");

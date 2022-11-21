@@ -114,7 +114,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             toCopy.Payloads = new[] { "Payload1", "Payload2" };
 
             Launchable copied = new();
-            copied.ShallowCopy(toCopy);
+            copied.ShallowCopyFrom(toCopy);
 
             Assert.That(copied, Is.EqualTo(toCopy));
             Assert.That(copied.Data, Is.SameAs(toCopy.Data));

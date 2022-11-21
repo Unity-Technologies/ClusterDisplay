@@ -40,13 +40,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             SaveMissionCommand saveCommand = new()
             {
                 Identifier = Guid.NewGuid(),
-                Description = "Saved mission description"
+                Description = new() {
+                    Details = "Saved mission details"
+                }
             };
             var ret = await m_ProcessHelper.PostCommandWithStatusCode(saveCommand);
             Assert.That(ret, Is.EqualTo(HttpStatusCode.BadRequest));
 
             // This time give a name and it should work
-            saveCommand.Name = "Something";
+            saveCommand.Description.Name = "Something";
             await m_ProcessHelper.PostCommand(saveCommand);
 
             // In fact, we should be able to save multiple with the same name
@@ -73,8 +75,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             // Save it
             SaveMissionCommand saveCommand = new()
             {
-                Name = "Some name",
-                Description = "Some description"
+                Description = new() {
+                    Name = "Some name",
+                    Details = "Some details"
+                }
             };
             await m_ProcessHelper.PostCommand(saveCommand);
 
@@ -90,18 +94,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             // Specify the identifier to overwrite it
             saveCommand.Identifier = savedMissions[0].Id;
-            saveCommand.Name = "New name";
-            saveCommand.Description = "New description";
+            saveCommand.Description.Name = "New name";
+            saveCommand.Description.Details = "New details";
             await m_ProcessHelper.PostCommand(saveCommand);
 
             var savedMissionsTake2 = await m_ProcessHelper.GetSavedMissions();
             Assert.That(savedMissions.Count(), Is.EqualTo(2));
             Assert.That(savedMissionsTake2[0].Id, Is.EqualTo(savedMissions[0].Id));
-            Assert.That(savedMissionsTake2[0].Name, Is.EqualTo("New name"));
-            Assert.That(savedMissionsTake2[0].Description, Is.EqualTo("New description"));
+            Assert.That(savedMissionsTake2[0].Description.Name, Is.EqualTo("New name"));
+            Assert.That(savedMissionsTake2[0].Description.Details, Is.EqualTo("New details"));
             Assert.That(savedMissionsTake2[1].Id, Is.EqualTo(savedMissions[1].Id));
-            Assert.That(savedMissionsTake2[1].Name, Is.EqualTo("Some name"));
-            Assert.That(savedMissionsTake2[1].Description, Is.EqualTo("Some description"));
+            Assert.That(savedMissionsTake2[1].Description.Name, Is.EqualTo("Some name"));
+            Assert.That(savedMissionsTake2[1].Description.Details, Is.EqualTo("Some details"));
         }
 
         static readonly LaunchCatalog.Catalog k_SimpleLaunchCatalog = new()

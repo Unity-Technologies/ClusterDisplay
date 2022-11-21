@@ -857,7 +857,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             {
                 var collection = (IncrementalCollection<Asset>)lockedCollection.Value;
 
-                Assert.Throws<InvalidOperationException>(() => collection.Values.First().SignalChanges());
+                Assert.Throws<InvalidOperationException>(() => collection.Values.First().SignalChanges(collection));
                 Asset toAdd = new(Guid.NewGuid());
                 Assert.Throws<InvalidOperationException>(() => collection.Add(toAdd));
                 Assert.Throws<InvalidOperationException>(() => collection.Remove(toAdd.Id));
@@ -900,7 +900,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             void DoNothingAction() { }
             object[] constructorArgs = new object[] { id, md5, compressedSize, size, (Action) DoNothingAction };
-            FileBlobLock ret = (FileBlobLock)lockConstructor.Invoke(constructorArgs);
+            FileBlobLock ret = (FileBlobLock)lockConstructor!.Invoke(constructorArgs);
             return ret;
         }
 

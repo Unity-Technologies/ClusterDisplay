@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library

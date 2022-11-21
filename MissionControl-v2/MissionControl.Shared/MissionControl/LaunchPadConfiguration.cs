@@ -32,12 +32,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(LaunchPadConfiguration? other)
         {
-            if (other == null || other.GetType() != typeof(LaunchPadConfiguration))
-            {
-                return false;
-            }
-
-            return Identifier == other.Identifier &&
+            return other != null &&
+                Identifier == other.Identifier &&
                 LaunchableName == other.LaunchableName;
         }
     }

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Http;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Moq;

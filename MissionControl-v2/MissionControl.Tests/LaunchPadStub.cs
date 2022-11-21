@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             lock (m_Lock)
             {
-                m_Status.CopyIStatusProperties(status);
+                m_Status.DeepCopyFrom(status);
                 ++m_StatusVersionNumber;
                 m_StatusChanged?.TrySetResult();
                 m_StatusChanged = null;
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             lock (m_Lock)
             {
-                m_Health.CopyIHealthProperties(health);
+                m_Health.DeepCopyFrom(health);
             }
         }
 
@@ -187,14 +187,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 {
                     var command = JsonSerializer.Deserialize<LaunchPadCommand>(request.InputStream,
                         Json.SerializerOptions);
-                    if (command != null)
-                    {
-                        Respond(response, CommandHandler(command));
-                    }
-                    else
-                    {
-                        Respond(response, HttpStatusCode.BadRequest);
-                    }
+                    Respond(response, command != null ? CommandHandler(command) : HttpStatusCode.BadRequest);
                 }
                 else
                 {

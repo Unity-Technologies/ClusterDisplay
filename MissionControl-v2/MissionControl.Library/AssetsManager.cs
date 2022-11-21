@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
@@ -32,13 +31,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <summary>
         /// Add an asset (and all its content) to the list of assets managed by this object.
         /// </summary>
+        /// <param name="assetInformation">Information about the asset to add.</param>
         /// <param name="assetSource">Object responsible for providing us the different pieces of information about the
         /// <see cref="Asset"/>.</param>
-        /// <param name="asset">Information about the asset to add.</param>
         /// <returns>Identifier of the newly created <see cref="Asset"/>.</returns>
         /// <exception cref="CatalogException">There was a problem in the asset's LaunchCatalog.json.</exception>
         /// <exception cref="Exception">Any exception thrown by <paramref name="assetSource"/>.</exception>
-        public async Task<Guid> AddAssetAsync(IAssetBase asset, IAssetSource assetSource)
+        public async Task<Guid> AddAssetAsync(AssetBase assetInformation, IAssetSource assetSource)
         {
             var catalog = await assetSource.GetCatalogAsync();
             if (catalog.Launchables.Select(l => l.Name).Distinct().Count() < catalog.Launchables.Count())
@@ -110,12 +109,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
                 // And finally, let's update the collection of assets.
                 Asset newAsset = new(Guid.NewGuid());
-                newAsset.CopyAssetBaseProperties(asset);
+                newAsset.DeepCopyFrom(assetInformation);
                 List<Launchable> launchables = new();
                 foreach (var catalogLaunchable in catalog.Launchables)
                 {
                     Launchable launchable = new();
-                    launchable.ShallowCopy(catalogLaunchable);
+                    launchable.ShallowCopyFrom(catalogLaunchable);
 
                     List<Guid> payloadsIds = new();
                     foreach (var catalogPayload in catalogLaunchable.Payloads)
@@ -157,7 +156,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             }
             finally
             {
-                taskGroup.ForceCancel();
+                taskGroup.Cancel();
 
                 // Remarks: We always DecreaseFileBlobReferenceAsync on files we added, even when we succeed.
                 // m_PayloadsManager.AddPayloadAsync will have increased reference count on the files it uses.

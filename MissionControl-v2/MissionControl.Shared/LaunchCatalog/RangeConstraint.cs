@@ -91,22 +91,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// <returns></returns>
         static object? ConvertObjectToIntOrFloat(object? value)
         {
-            if (value is int or float or null)
+            return value switch
             {
-                return value;
-            }
-            if (value is double doubleValue)
-            {
-                return (float)doubleValue;
-            }
-            else if (value is JsonElement jsonValue)
-            {
-                return ConvertJsonElementToValueObject(jsonValue);
-            }
-            else
-            {
-                return Convert.ToInt32(value);
-            }
+                int or float or null => value,
+                double doubleValue => (float)doubleValue,
+                JsonElement jsonValue => ConvertJsonElementToValueObject(jsonValue),
+                _ => Convert.ToInt32(value)
+            };
         }
 
         /// <summary>

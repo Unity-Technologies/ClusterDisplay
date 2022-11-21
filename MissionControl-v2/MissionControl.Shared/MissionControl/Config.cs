@@ -40,11 +40,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public bool Equals(Config other)
         {
-            if (other.GetType() != typeof(Config))
-            {
-                return false;
-            }
-
             // ReSharper disable CompareOfFloatsByEqualityOperator
             return ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 LaunchPadsEntry.Equals(other.LaunchPadsEntry) &&
