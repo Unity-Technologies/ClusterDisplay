@@ -101,17 +101,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             Status ret = new();
             lock (m_Lock)
             {
-                ret.CopyFrom(m_Status);
+                ret.DeepCopyFrom(m_Status);
             }
             return ret;
         }
 
         /// <summary>
-        /// Returns a task that will provide the status updated after the given time.
+        /// Returns a task that will provide the status updated after the given version number.
         /// </summary>
         /// <param name="minStatusNumber">Minimum value of <see cref="Status.StatusNumber"/> to be returned (or wait
         /// until this value is reached).</param>
-        public async Task<Status> GetStatusAfter(ulong minStatusNumber)
+        public async Task<Status> GetStatusAfterAsync(ulong minStatusNumber)
         {
             Status ret = new();
             for (; ;)
@@ -121,11 +121,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 {
                     if (m_Status.StatusNumber >= minStatusNumber)
                     {
-                        ret.CopyFrom(m_Status);
+                        ret.DeepCopyFrom(m_Status);
                         return ret;
                     }
 
-                    m_StatusCompletionSource ??= new TaskCompletionSource();
+                    m_StatusCompletionSource ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                     somethingChangedTask = m_StatusCompletionSource.Task;
                 }
 

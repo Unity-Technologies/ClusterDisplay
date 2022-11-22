@@ -3,6 +3,7 @@ using System.IO.Compression;
 using Microsoft.AspNetCore.Mvc;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 using Unity.ClusterDisplay.MissionControl.HangarBay.Services;
+using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
 {
@@ -25,10 +26,10 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         {
             return command.Type switch
             {
-                CommandType.Prepare => OnPrepare((PrepareCommand)command),
+                CommandType.Prepare => OnPrepareAsync((PrepareCommand)command),
                 CommandType.Restart => OnRestart((RestartCommand)command),
                 CommandType.Shutdown => OnShutdown(),
-                CommandType.Upgrade => OnUpgrade((UpgradeCommand)command),
+                CommandType.Upgrade => OnUpgradeAsync((UpgradeCommand)command),
                 _ => Task.FromResult<IActionResult>(BadRequest("Unknown command type"))
             };
         }
@@ -37,11 +38,15 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// Execute a <see cref="PrepareCommand"/>.
         /// </summary>
         /// <param name="command">The command to execute</param>
-        async Task<IActionResult> OnPrepare(PrepareCommand command)
+        async Task<IActionResult> OnPrepareAsync(PrepareCommand command)
         {
             if (!Path.IsPathFullyQualified(command.Path))
             {
                 return BadRequest($"{command.Path} is not an absolute path.");
+            }
+            if (command.PayloadSource == null)
+            {
+                return BadRequest("payloadSource is mandatory.");
             }
 
             try
@@ -50,7 +55,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                 var payloadsTask = new List<Task<Payload>>();
                 foreach (var payloadId in command.PayloadIds)
                 {
-                    payloadsTask.Add(m_PayloadsService.GetPayload(payloadId, command.PayloadSource));
+                    payloadsTask.Add(m_PayloadsService.GetPayloadAsync(payloadId, command.PayloadSource));
                 }
                 await Task.WhenAll(payloadsTask);
                 IEnumerable<Payload> payloads = payloadsTask.Select(pt => pt.Result);
@@ -69,7 +74,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                 // Now the real work, prepare the folder
                 var result = EnsurePathIsClean(command.Path, mergedPayload);
                 if (result != null) return result;
-                result = await FillFolder(command.Path, mergedPayload, command.PayloadSource);
+                result = await FillFolderAsync(command.Path, mergedPayload, command.PayloadSource);
                 if (result != null) return result;
 
                 // And last step save it's state
@@ -176,7 +181,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// <param name="incomingPayload">Files to be copied in <paramref name="path"/>.</param>
         /// <param name="fileBlobsSource">Where to get missing file blobs from.</param>
         /// <returns>Error result or <c>null</c> if everything worked as expected.</returns>
-        async Task<IActionResult?> FillFolder(string path, Payload incomingPayload, string fileBlobsSource)
+        async Task<IActionResult?> FillFolderAsync(string path, Payload incomingPayload, Uri fileBlobsSource)
         {
             var copyTasks = new List<Task>();
             foreach (var payloadFile in incomingPayload.Files)
@@ -189,7 +194,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
                     try
                     {
                         copyTasks.Add(
-                            m_FileBlobCacheService.CopyFileTo(payloadFile.FileBlob, filePath, fileBlobsSource));
+                            m_FileBlobCacheService.CopyFileToAsync(payloadFile.FileBlob, filePath, fileBlobsSource));
                     }
                     catch (Exception e)
                     {
@@ -243,7 +248,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Controllers
         /// Execute a <see cref="UpgradeCommand"/>.
         /// </summary>
         /// <param name="command">The command to execute.</param>
-        async Task<IActionResult> OnUpgrade(UpgradeCommand command)
+        async Task<IActionResult> OnUpgradeAsync(UpgradeCommand command)
         {
             var thisProcessFullPath = Process.GetCurrentProcess().MainModule?.FileName;
             if (thisProcessFullPath == null)

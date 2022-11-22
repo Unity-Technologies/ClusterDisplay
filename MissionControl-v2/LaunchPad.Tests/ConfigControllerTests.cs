@@ -138,8 +138,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.PendingRestart, Is.False);
+            Assert.That(status.PendingRestart, Is.False);
 
             // Now do a real change
             newConfig.ControlEndPoints = new[] { "http://localhost:8100", "http://127.0.0.1:8200", "http://0.0.0.0:8300" };
@@ -154,8 +153,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             // Check that the status is updated
             status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.PendingRestart, Is.True);
+            Assert.That(status.PendingRestart, Is.True);
 
             // Restoring to the original shouldn't impact PendingRestart (as other stuff might have set the
             // PendingRestart flag).
@@ -164,8 +162,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(httpRet, Is.Not.Null);
             Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
             status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.PendingRestart, Is.True);
+            Assert.That(status.PendingRestart, Is.True);
         }
 
         [Test]
@@ -201,8 +198,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             // Check that there isn't a restart pending
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.PendingRestart, Is.False);
+            Assert.That(status.PendingRestart, Is.False);
         }
 
         [Test]
@@ -267,8 +263,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             // Check that the pending restart has been cleared
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            Assert.That(status!.PendingRestart, Is.False);
+            Assert.That(status.PendingRestart, Is.False);
         }
 
         [Test]
@@ -295,6 +290,20 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             await m_ProcessHelper.Start(hangarBayFolder);
             updatedConfig = await m_ProcessHelper.GetConfig();
             Assert.That(newConfig.HangarBayEndPoint, Is.EqualTo(updatedConfig.HangarBayEndPoint));
+        }
+
+        [Test]
+        public async Task Identifier()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            var newConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(newConfig.Identifier, Is.Not.EqualTo(Guid.Empty));
+
+            newConfig.Identifier = Guid.NewGuid();
+            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
 
         string GetTestTempFolder()

@@ -1,0 +1,1320 @@
+openapi: 3.0.3
+info:
+  title: Mission Control API
+  description: |-
+    This is the API to control a Mission Control.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+tags:
+  - name: general
+    description: General information / control about Mission Control and the systems it manages
+  - name: playground
+    description: Launch complexes and devices contributing to the mission
+  - name: assets
+    description: Control of assets
+  - name: missions
+    description: Control of missions
+paths:
+  /status:
+    get:
+      tags:
+        - general
+      summary: Status of Mission Control.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /launchPadsStatus:
+    get:
+      tags:
+        - general
+      summary: Status of the LaunchPads.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaunchPadStatus'
+  /launchPadsHealth:
+    get:
+      tags:
+        - general
+      summary: Health of the LaunchPads.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaunchPadHealth'
+  /config:
+    get:
+      tags:
+        - general
+      summary: Configuration of the MissionControl.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+    put:
+      tags:
+        - general
+      summary: Sets the configuration of MissionControl.
+      responses:
+        '200':
+          description: Success
+        '202':
+          description: Changes accepted but not all applied immediately (changes to the endpoints requires a restart of MissionControl).
+        '400':
+          description: Error in the request
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /incrementalCollectionsUpdate:
+    get:
+      tags:
+        - general
+      summary: Blocking call to get an update to one or many of the incremental collections.
+      parameters:
+        - in: query
+          name: nameN
+          schema:
+            type: string
+            enum:
+              - assets
+              - complexes
+              - currentMission/panels
+              - currentMission/parameters
+              - devices
+              - launchPadsHealth
+              - launchPadsStatus
+              - missions
+          description: Name of the collection to wait for an incremental update on.  The N at the end of the parameter name is to be replaced by an integer from 0 to N.  name0 is to be used for the name of the first collection, name1 the second, name2 the third, ...
+        - in: query
+          name: fromVersionN
+          schema:
+            type: integer
+            format: int64
+          description: Version number of the collection from which we want to get update.  The N at the end of the parameter is to be replaced by an integer from 0 to N matching the nameN parameter giving the name of the incremental collection.
+      responses:
+        '200':
+          description: Dictionnary where the key is the name of the incremental collection that was updated and the value is the incremental update.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/IncrementalCollectionUpdate'
+        '202':
+          description: No update since some time.  Caller should ask again if it still wants to receive updates to the requested incremental collection(s).
+  /objectsUpdate:
+    get:
+      tags:
+        - general
+      summary: Blocking call to get an update to one or many of objects (not part of incremental collections).
+      parameters:
+        - in: query
+          name: nameN
+          schema:
+            type: string
+            enum:
+              - currentMission/launchConfiguration
+              - status
+          description: Name of the single object to wait on for an update.  The N at the end of the parameter name is to be replaced by an integer from 0 to N.  name0 is to be used for the name of the first collection, name1 the second, name2 the third, ...
+        - in: query
+          name: fromVersionN
+          schema:
+            type: integer
+            format: int64
+          description: Version number of the single object for which we want to get update.  The N at the end of the parameter is to be replaced by an integer from 0 to N matching the nameN parameter giving the name of the single object.
+      responses:
+        '200':
+          description: Dictionnary where the key is the name of the single object that was updated and the value is the object update.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/ObjectsUpdate'
+        '202':
+          description: No update since some time.  Caller should ask again if it still wants to receive updates to the requested single object(s).
+        '400':
+          description: There was an error in the request.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /commands:
+    post:
+      tags:
+        - general
+      summary: Sends a command to MissionControl.
+      description: Sends a command to MissionControl and wait for it to be completed to return the correct response.
+      requestBody:
+        description: The command
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ShutdownCommand'
+                - $ref: '#/components/schemas/RestartCommand'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.  Content of the response depends on the command.
+        '202':
+          description: Command accepted but not yet completed.
+        '400':
+          description: Invalid command received (regardless of the current state of MissionControl).
+          content:
+            text/plain:
+              schema:
+                type: string
+        '409':
+          description: Command is not acceptable in the current state of MissionControl.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /complexes:
+    get:
+      tags:
+        - playground
+      summary: Gets the list of the LaunchComplexes.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaunchComplex'
+    put:
+      tags:
+        - playground
+      summary: Update or create a LaunchComplex.
+      description: Update or create a LaunchComplex based on its identifier.  Specify a new id to create a new LaunchComplex or an already existing one to update it.
+      requestBody:
+        description: New or updated LaunchComplex.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchComplex'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '409':
+          description: Current state of the server prevent the changes.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /complexes/{id}:
+    get:
+      tags:
+        - playground
+      summary: Get the requested LaunchComplex.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the LaunchComplex.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchComplex'
+        '404':
+          description: Cannot find a LaunchComplex with the specified identifier.
+    delete:
+      tags:
+        - playground
+      summary: Deletes the LaunchComplex with the specified identifier.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the LaunchComplex.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Cannot find a LaunchComplex with the specified identifier.
+        '409':
+          description: Current state of the server prevent the delete.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /devices:
+    get:
+      tags:
+        - playground
+      summary: Gets the list of the devices managed by MissionControl.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ADevice'
+    put:
+      tags:
+        - playground
+      summary: Update or create a Device.
+      description: Update or create a Device based on its identifier.  Specify a new id to create a new Device or an already existing one to update it.
+      requestBody:
+        description: New or updated Device.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '409':
+          description: Current state of the server prevent the changes.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /devices/{id}:
+    get:
+      tags:
+        - playground
+      summary: Get the requested Device.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the Device.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ADevice'
+        '404':
+          description: Cannot find a Device with the specified identifier.
+    delete:
+      tags:
+        - playground
+      summary: Deletes the Device with the specified identifier.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the Device.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Cannot find a Device with the specified identifier.
+        '409':
+          description: Current state of the server prevent the delete.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /assets:
+    get:
+      tags:
+        - assets
+      summary: List of assets.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetGet'
+    post:
+      tags:
+        - assets
+      summary: Creates a new asset.
+      requestBody:
+        description: The order
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AssetPost'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: Identifier of the created asset
+        '400':
+          description: Invalid command received (regardless of the current state of MissionControl).
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Failed to access / read at least one of the files of the asset to import.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '507':
+          description: Ouf of space
+          content:
+            text/plain:
+              schema:
+                type: string
+  /assets/{id}:
+    get:
+      tags:
+        - assets
+      summary: Information about an asset.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the asset.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetGet'
+        '404':
+          description: Asset with the provided identifier not found.
+    delete:
+      tags:
+        - assets
+      summary: Deletes an asset.
+      description: Deletes an asset from the MissionControl storage removing it from the list of assets and freeing up storage.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the asset.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Asset with the provided identifier not found.
+        '409':
+          description: Current state of the server prevent deleting an asset (in-use).
+          content:
+            text/plain:
+              schema:
+                type: string
+  /payloads/{id}:
+    get:
+      tags:
+        - assets
+      summary: Information about a payload.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the payload.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payload'
+        '404':
+          description: Payload with the provided identifier not found.
+  /fileBlobs/{id}:
+    get:
+      tags:
+        - assets
+      summary: Content of a payload file.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the FileBlob.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: FileBlob with the provided identifier not found.
+  /missions:
+    get:
+      tags:
+        - missions
+      summary: Gets the catalog of saved missions.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedMissionSummary'
+  /missions/{id}:
+    get:
+      tags:
+        - missions
+      summary: Get the requested saved mission summary.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the saved mission summary.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedMissionSummary'
+        '404':
+          description: Cannot find a SavedMissionSummary with the specified identifier.
+    delete:
+      tags:
+        - missions
+      summary: Deletes a saved mission.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the saved mission.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Saved mission with the provided identifier not found.
+  /currentMission/launchConfiguration:
+    get:
+      tags:
+        - missions
+      summary: Gets the launch configuration of the current mission.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchConfiguration'
+    put:
+      tags:
+        - missions
+      summary: Sets the launch configuration of the current mission.
+      description: Sets the launch configuration of the current mission.  Although all LaunchComplexes and LaunchPads referenced by the LaunchConfiguration should exist, this is not a hard requirement as the mapping gets resolved when preparing the launch skipping missing elements.  This is especially useful for loading a saved mission referencing LaunchComplexes or LaunchPads that have been deleted and are added back before the launch.
+      requestBody:
+        description: Launch configuration
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchConfiguration'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Invalid command received (see content for a description of what is bad).
+          content:
+            text/plain:
+              schema:
+                type: string          
+        '409':
+          description: Current state of the server prevents changing the launch configuration.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /currentMission/parameters:
+    get:
+      tags:
+        - missions
+      summary: Gets the current mission's parameters that can be controlled at runtime.
+      description: Gets the current mission's parameters that can be controlled at runtime (their value and some metadata describing how they can be modified).
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MissionParameter'
+  /currentMission/parameters/{id}:
+    get:
+      tags:
+        - missions
+      summary: Gets a mission runtime parameter's value.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameter'
+        '404':
+          description: Parameter with the provided identifier not found.
+    put:
+      tags:
+        - missions
+      summary: Sets a mission runtime parameter's value.
+      description: Sets a mission runtime parameter's.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the saved mission.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Launch configuration
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionParameter'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Parameter with the provided identifier not found.
+  /currentmission/panels:
+    get:
+      tags:
+        - missions
+      summary: Gets the list of the ControlPanel.
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ControlPanel'
+    put:
+      tags:
+        - missions
+      summary: Update or create a ControlPanel.
+      description: Update or create a ControlPanel based on its identifier.  Specify a new id to create a new ControlPanel or an already existing one to update it.
+      requestBody:
+        description: New or updated ControlPanel.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlPanel'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '409':
+          description: Current state of the server prevent the changes.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /currentmission/panels/{id}:
+    get:
+      tags:
+        - missions
+      summary: Get the requested ControlPanel.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the ControlPanel.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlPanel'
+        '404':
+          description: Cannot find a ControlPanel with the specified identifier.
+    delete:
+      tags:
+        - missions
+      summary: Deletes the ControlPanel with the specified identifier.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the ControlPanel.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Cannot find a ControlPanel with the specified identifier.
+  /currentMission/commands:
+    post:
+      tags:
+        - missions
+      summary: Sends a command affecting missions.
+      requestBody:
+        description: The command
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SaveMissionCommand'
+                - $ref: '#/components/schemas/LoadMissionCommand'
+                - $ref: '#/components/schemas/LaunchMissionCommand'
+                - $ref: '#/components/schemas/StopMissionCommand'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '202':
+          description: Command accepted (executing or waiting to be executed).
+        '400':
+          description: Invalid command received (regardless of the current state of MissionControl).
+          content:
+            text/plain:
+              schema:
+                type: string
+        '409':
+          description: Command cannot be executed in the current state of MissionControl.
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    StorageFolderConfig:
+      type: object
+      description: Folder into which launched assets are stored.
+      properties:
+        path:
+          type: string
+          description: Path to the folder.
+          example: c:\MissionControlStorage
+        maximumSize:
+          type: integer
+          description: Maximum number of bytes to be used by files in the StorageFolder.
+      required:
+        - path
+        - maximumSize
+    Config:
+      type: object
+      description: MissionControl's configuration.  It is also the content of the config.json file used to store the configuration of MissionControl.
+      properties:
+        controlEndPoint:
+          type: string
+          description: End point to which to listen for REST commands (most likely coming from MissionControl).
+          example: ["http://0.0.0.0:8000"]
+        launchPadsEntry:
+          type: string
+          description: Base address that will be used by the launchpads to reach back the mission control controlling them (like to get payloads and file blobs).
+        storageFolders:
+          type: array
+          description: List of folders of where we store files of assets managed by MissionControl.
+          items:
+            $ref: '#/components/schemas/StorageFolderConfig'
+        healthMonitoringIntervalSec:
+          type: number
+          format: float
+          description: Number of seconds between health probes of the monitored resources.
+          minimum: 0
+          default: 5
+        launchPadFeedbackTimeoutSec:
+          type: number
+          format: float
+          description: For how long (in seconds) are we waiting for feedback from launchpads before considering them gone?
+          minimum: 0
+          default: 30
+      required:
+        - storageFolders
+        - controlEndPoint
+    StorageFolderStatus:
+      type: object
+      description: Status of a StorageFolder
+      properties:
+        path:
+          type: string
+          description: Path to the folder.
+          example: c:\MissionControlStorage
+        currentSize:
+          type: integer
+          format: int64
+          description: Current size in bytes of all the files in the folder.
+        zombiesSize:
+          type: integer
+          format: int64
+          description: Size of files that shouldn't be in that folder and that couldn't be deleted.
+        maximumSize:
+          type: integer
+          format: int64
+          description: Maximum number of bytes to be used by files in the StorageFolder.
+    ObjectsUpdate:
+      type: object
+      description: Changes that have been done to an object since some version.
+      properties:
+        updated:
+          type: object
+          description: The updated object.
+        nextUpdate:
+          type: integer
+          format: uint64
+          description: Version number of the next update to ask to get changes after what was just received.
+    Status:
+      type: object
+      description: Status of Mission Control.
+      properties:
+        version:
+          type: string
+          description: Version number of the running MissionControl.
+        startTime:
+          type: string
+          format: date-time
+          description: When did the MissionControl service was started.
+        storageFolders:
+          type: array
+          description: Status of the different storage folders.
+          items:
+            $ref: '#/components/schemas/StorageFolderStatus'
+        pendingRestart:
+          type: boolean
+          description: Has some operations been done on the MissionControl that requires a restart?
+        state:
+          type: string
+          description: >
+            Status of MissionControl:
+             * `idle` - Nothing is going on, all operations are allowed.
+             * `preparing` - Preparing launch on the different launchpads.  The only allowed operation is the StopMissionCommand to stop the mission.
+             * `launched` - Launchpads have launched their payloads and everything is running.  The only allowed operation is the StopMissionCommand to stop the mission.
+             * `failure` - At least one of the launchpad failed to launch (or failed after launch).  The only allowed operation is the StopMissionCommand to stop the mission.
+          enum: [idle, preparing, launched, failure]
+    IncrementalCollectionObject:
+      type: object
+      description: Common properties for objects that are part of incremental collections.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifier of this object.
+    IncrementalCollectionUpdate:
+      type: object
+      description: Changes that have been done to a collection since some version.
+      properties:
+        updated:
+          type: array
+          description: List of objects that have been update (with their new update value).
+          items:
+            type: object
+        removed:
+          type: array
+          description: Identifier of the objects that have been removed from the collection.
+          items:
+            type: string
+            format: uuid
+        nextUpdate:
+          type: integer
+          format: uint64
+          description: Version number of the next update to ask to get changes from what was just received.
+    LaunchPadStatusEntry:
+      type: object
+      description: An entry in the status of a LaunchPad that depends on what it runs (dynamicEntries).
+      properties:
+        name:
+          type: string
+          description: Name (to be displayed to the user) of the status value.
+        value:
+          oneOf:
+            - type: integer
+            - type: number
+            - type: string
+    LaunchPadStatus:
+      type: object
+      description: Status of a LaunchPad (changes once in a while).
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject' 
+      properties:
+        isDefined:
+          type: boolean
+          description: Is the status information contained in this object valid?  If false, every other properties (except the ones from IncrementalCollectionObject and updateError should be ignored).
+        updateError:
+          type: string
+          description: Description of the error fetching a status update from the launchpad.
+        version:
+          type: string
+          description: Version number of the running LaunchPad executable.
+        startTime:
+          type: string
+          format: date-time
+          description: When did the LaunchPad was started.
+        state:
+          type: string
+          description: >
+            State of the LaunchPad:
+             * `idle` - Nothing is going on on the LaunchPad, could be use for new a launch.
+             * `gettingPayload` - Currently receiving a payload to launch from the HangarBay.
+             * `preLaunch` - Executing pre-launch executable to prepare the launchpad to the payload.
+             * `waitingForLaunch` - Everything is ready, waiting for launch signal (to have a coordinated launch on all LaunchPads).
+             * `launched` - Payload is launched (and still in the air (process running) otherwise state would have been changed to idle).
+          enum: [idle, gettingPayload, preLaunch, waitingForLaunch, launched]
+        pendingRestart:
+          type: boolean
+          description: Has some operations been done on the LaunchPad that requires a restart?
+        lastChanged:
+          type: string
+          format: date-time
+          description: When was the last time anything changed in the current status of the LaunchPad.
+        dynamicEntries:
+          type: array
+          description: Additional status information that depends on the Launchable type running.
+          items:
+            $ref: '#/components/schemas/LaunchPadStatusEntry'
+    LaunchPadHealth:
+      type: object
+      description: Health diagnostic of a LaunchPad and its surrounding (changes periodically).
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        isDefined:
+          type: boolean
+          description: Is the health information contained in this object valid?  If false, every other properties (except the ones from IncrementalCollectionObject and updateError should be ignored).
+        updateError:
+          type: string
+          description: Description of the error fetching a health diagnostic from the launchpad.
+        updateTime:
+          type: string
+          format: date-time
+          description: When was the last time health diagnostic was fetched from the launchpad.
+        cpuUtilization:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Total CPU usage of the system.
+        memoryUsage:
+          type: integer
+          description: Number of bytes of memory currently being used on the launchpad's computer.
+        memoryInstalled:
+          type: integer
+          description: Number of bytes of physical memory installed on the launchpad's computer.
+        dynamicEntries:
+          type: array
+          description: Additional health information that depends on the Launchable type running.
+          items:
+            $ref: '#/components/schemas/LaunchPadStatusEntry'
+    ShutdownCommand:
+      type: object
+      description: Command asking MissionControl to shutdown.  Use with care as the only way to restart it is to do some manual interventions on the computer running it, designed to be sued as part of automated testing.
+      properties:
+        type:
+          type: string
+          enum: [shutdown]
+          default: shutdown
+      required:
+        - type
+    RestartCommand:
+      type: object
+      description: Command asking MissionControl to restart.
+      properties:
+        type:
+          type: string
+          enum: [restart]
+          default: restart
+        timeoutSec:
+          type: integer
+          description: Maximum amount of time to wait for this process to exit before forcing it (killing the process).
+          default: 60
+          example: 120
+      required:
+        - type
+    LaunchableType:
+      type: string
+      enum:
+        - clusterNode
+    LaunchPad:
+      type: object
+      description: Information about a LaunchPad.
+      properties:
+        identifier:
+          type: string
+          format: uuid
+          description: Unique identifier of the LaunchPad.  Shall be the same as LaunchPad's configuration's identifier of the LaunchPad at the endpoint property.
+        name:
+          type: string
+          description: User displayed name identifying this LaunchPad.
+        endpoint:
+          type: string
+          description: Http endpoint of the LaunchPad.
+          example: http://123.45.67.89:8200
+        suitableFor:
+          type: array
+          description: Types of Launchables that this LaunchPad can deal with.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/LaunchableType'
+      required:
+        - identifier
+        - name
+        - endpoint
+    HangarBay:
+      type: object
+      description: Information about an HangarBay.
+      properties:
+        identifier:
+          type: string
+          format: uuid
+          description: Unique identifier of the HangarBay.  Shall be the same as HangarBay's configuration's identifier of the HangarBay at the endpoint property.
+        endpoint:
+          type: string
+          description: Http endpoint of the HangarBay.
+          example: http://123.45.67.89:8100
+      required:
+        - identifier
+        - endpoint
+    LaunchComplex:
+      type: object
+      description: Information about a LaunchComplex (generally a computer).
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        name:
+          type: string
+          description: User displayed name identifying this LaunchComplex.
+        launchPads:
+          type: array
+          description: LaunchPads forming this LaunchComplex.
+          items:
+            $ref: '#/components/schemas/LaunchPad'
+        hangarBay:
+          $ref: '#/components/schemas/HangarBay'
+      required:
+        - id
+        - name
+        - launchPads
+        - hangarBay
+    Device:
+      type: object
+      description: Information about some "external device" required for a mission.  Those devices are considered "external" in the sense that Mission Control does not totally manage them, it only list them and "assign" them to some launchpads.
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        name:
+          type: string
+          description: User displayed name identifying this Device.
+      required:
+        - id
+        - name
+    LiveCaptureCameraTracker:
+      type: object
+      description: "LiveCapture device to use for camera tracking (remarks: Properties not clearly defined for now, mostly a placeholder to show a device example)"
+      allOf:
+        - $ref: '#/components/schemas/Device'
+      properties:
+        type:
+          type: string
+          enum: [liveCaptureCameraTracker]
+          default: liveCaptureCameraTracker
+      required:
+        - type
+    ADevice:
+      anyOf:
+        - $ref: '#/components/schemas/LiveCaptureCameraTracker'
+    AssetBase:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Short descriptive name of the asset.
+          example: Spaceship with fix
+        description:
+          type: string
+          description: Detailed description of the asset.
+          example: Some human description and / or maybe a reference to its origin on some source control and some automated build system...
+      required:
+        - name
+    AssetPost:
+      type: object
+      description: Definition of an asset to create.
+      allOf: 
+        - $ref: '#/components/schemas/AssetBase'
+      properties:
+        url:
+          type: string
+          description: URL to a folder that contains a LaunchCatalog.json listing all the payloads and their files.
+      required:
+        - path
+    AssetGet:
+      type: object
+      description: Description of an asset (something that can be launched).
+      allOf: 
+        - $ref: '#/components/schemas/AssetBase'
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        launchables:
+          type: array
+          description: Launchables as found in LaunchCatalog.yaml (but with payload ids as GUID as opposed to arbitrary strings as in the launch catalog).
+          items:
+            type: object
+        storageSize:
+          type: number
+          description: Number of bytes used by all the files of this asset in the MissionControl storage.
+    PayloadFile:
+      type: object
+      description: Information about a Payload's file (a file composing a launch payload).
+      properties:
+        path:
+          type: string
+          description: Path of the file relative to root of the folder in which all the files are stored in preparation for the launch.
+          example: SpaceshipDemo_Data/sharedassets3.assets
+        fileBlobId:
+          type: string
+          format: uuid
+          description: Identifier of the FileBlob that contains the file bytes.  And omitted fileBlobId or a value of 00000000-0000-0000-0000-000000000000 indicates this is an empty folder that needs to be created.
+        compressedSize:
+          type: integer
+          description: Number of bytes of the compressed file blob.
+        size:
+          type: integer
+          description: Number of bytes of the decompressed file blob.
+      required:
+        - path
+        - compressedSize
+        - size
+    Payload:
+      type: object
+      description: Information about a set of files to be use to prepare a LaunchPad.
+      properties:
+        files:
+          type: array
+          description: List of files composing the Payload
+          items:
+            $ref: '#/components/schemas/PayloadFile'
+    SavedMissionDescription:
+      type: object
+      description: Describes a saved mission (so that it can be identified by a human).
+      properties:
+        name:
+          type: string
+          description: Short description of the saved mission.
+        details:
+          type: string
+          description: Details about the saved mission.
+      required:
+        - name
+    SavedMissionSummary:
+      type: object
+      description: An entry in the catalog of saved missions.
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        description:
+          $ref: '#/components/schemas/SavedMissionDescription'
+        saveTime:
+          type: string
+          format: date-time
+          description: When was the mission saved.
+        assetId:
+          type: string
+          format: uuid
+          description: Identifier of the mission's asset.
+    LaunchConfiguration:
+      type: object
+      description: Launch configuration of a MissionControl mission.
+      properties:
+        assetId:
+          type: string
+          format: uuid
+          description: Identifier of the Asset used by this mission.
+        parameters:
+          description: Assets launchables globalParameters value.
+          type: array
+          items:
+            $ref: '#/components/schemas/LaunchParameterValue'
+        devices:
+          description: Device's assignation -> TODO
+        launchComplexes:
+          type: array
+          description: Configuration of every LaunchComplex participating to the mission.
+          items:
+            $ref: '#/components/schemas/LaunchComplexConfiguration'
+      required:
+        - assetId
+    LaunchParameterValue:
+      type: object
+      description: Value of a launch parameter
+      properties:
+        id:
+          type: string
+          description: Identifier of the launch parameter (matches LaunchCatalog.json LaunchParameter.id)
+        value:
+          oneOf:
+            - type: integer
+            - type: number
+            - type: string
+      required:
+        - id
+        - value
+    LaunchComplexConfiguration:
+      type: object
+      description: Configuration of a LaunchComplex for a mission.
+      properties:
+        identifier:
+          type: string
+          format: uuid
+          description: LaunchComplex's identifier.
+        parameters:
+          description: Asset's launchables launchComplexParameters value for this launch complex.
+          type: array
+          items:
+            $ref: '#/components/schemas/LaunchParameterValue'
+        launchPads:
+          description: Configuration of every LaunchPad of this LaunchComplex participating to the mission.
+          type: array
+          items:
+            $ref: '#/components/schemas/LaunchPadConfiguration'
+    LaunchPadConfiguration:
+      type: object
+      description: Configuration of a LaunchPad for a mission.
+      properties:
+        identifier:
+          type: string
+          format: uuid
+          description: LaunchPad's identifier.
+        parameters:
+          description: Asset's launchables launchPadParameters value for this launchpad.
+          type: array
+          items:
+            $ref: '#/components/schemas/LaunchParameterValue'
+        launchableName:
+          type: string
+          description: Name of the launchable to launch on this launchpad.
+    MissionParameter:
+      type: object
+      description: Value of a runtime controllable parameter -> TODO
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+    ControlPanel:
+      type: object
+      description: Defines the layout of multiple MissionParameter to be used to control the value of the parameters (instead of a flat list of parameter / value).
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+    SaveMissionCommand:
+      type: object
+      description: Command indicating to mission control that it should save the current mission's definition.
+      properties:
+        type:
+          type: string
+          enum: [save]
+          default: save
+        identifier:
+          type: string
+          format: uuid
+          description: Identify the saved mission to override with this one.  Omit to save as a new mission.
+        description:
+          $ref: '#/components/schemas/SavedMissionDescription'
+      required:
+        - type
+        - name
+    LoadMissionCommand:
+      type: object
+      description: Command to load a saved mission as the current mission.
+      properties:
+        type:
+          type: string
+          enum: [load]
+          default: load
+        identifier:
+          type: string
+          format: uuid
+          description: Identifier of the saved mission to load.
+    LaunchMissionCommand:
+      type: object
+      description: Command to launch the current mission.
+      properties:
+        type:
+          type: string
+          enum: [launch]
+          default: launch
+    StopMissionCommand:
+      type: object
+      description: Command to stop the current mission.
+      properties:
+        type:
+          type: string
+          enum: [stop]
+          default: stop

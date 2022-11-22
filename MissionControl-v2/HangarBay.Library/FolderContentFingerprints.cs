@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
 {
@@ -47,7 +48,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         {
             FolderContentFingerprints ret = new ();
 
-            using var loadStream = File.Open(path, FileMode.Open);
+            using var loadStream = File.OpenRead(path);
             var deserialized = JsonSerializer.Deserialize<SerializeWrapper>(loadStream);
             if (deserialized == null)
             {
@@ -184,7 +185,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             /// </summary>
             /// <param name="lastWriteTime"><see cref="LastWriteTime"/>.</param>
             /// <param name="blobId"><see cref="BlobId"/>.</param>
-            /// <remarks>Used by Json desrialization.</remarks>
+            /// <remarks>Used by Json deserialization.</remarks>
             [JsonConstructor]
             public Entry(DateTime lastWriteTime, Guid blobId)
             {
@@ -195,11 +196,13 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
             /// <summary>
             /// When was the last time the file written to.
             /// </summary>
+            // ReSharper disable once MemberCanBePrivate.Local -> Could be private but conceptually makes sense to be public
             public DateTime LastWriteTime { get; } = DateTime.MinValue;
 
             /// <summary>
             /// FileBlobId representing the content of the file.
             /// </summary>
+            // ReSharper disable once MemberCanBePrivate.Local -> Could be private but conceptually makes sense to be public
             public Guid BlobId { get; } = Guid.Empty;
 
             public bool Equals(Entry other)

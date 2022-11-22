@@ -32,14 +32,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             m_ConfigService = configService;
 
             var assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            m_LaunchPath = Path.GetFullPath(configuration["launchFolder"], assemblyFolder!);
+            m_LaunchRoot = Path.GetFullPath(configuration["launchFolder"], assemblyFolder!);
             try
             {
-                Directory.CreateDirectory(m_LaunchPath);
+                Directory.CreateDirectory(m_LaunchRoot);
             }
             catch (Exception e)
             {
-                m_Logger.LogCritical(e, "Failed to ensure {LaunchFolder} exists", m_LaunchPath);
+                m_Logger.LogCritical(e, "Failed to ensure {LaunchFolder} exists", m_LaunchRoot);
             }
             m_HttpClient = httpClient;
 
@@ -55,9 +55,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// <returns>Result of the REST call to process a command.</returns>
         public Task<IActionResult> ProcessCommandAsync(Command command) => command switch
         {
-            PrepareCommand commandOfType => Prepare(commandOfType),
+            PrepareCommand commandOfType => PrepareAsync(commandOfType),
             LaunchCommand commandOfType => Task.FromResult(Launch(commandOfType)),
-            AbortCommand commandOfType => Abort(commandOfType),
+            AbortCommand commandOfType => AbortAsync(commandOfType),
             ClearCommand commandOfType => Task.FromResult(Clear(commandOfType)),
             ShutdownCommand commandOfType => Task.FromResult(Shutdown(commandOfType)),
             RestartCommand commandOfType => Task.FromResult(Restart(commandOfType)),
@@ -131,7 +131,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// </summary>
         /// <param name="command">Command parameters.</param>
         /// <returns>Result of the command</returns>
-        async Task<IActionResult> Prepare(PrepareCommand command)
+        async Task<IActionResult> PrepareAsync(PrepareCommand command)
         {
             if (!command.PayloadIds.Any())
             {
@@ -164,13 +164,13 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                     m_StatusService.State = State.GettingPayload;
                     m_PreparingTaskTcs = new();
                     m_PreparedParameters = null;
-                    m_PreparingTask = Task.Run(() => PrepareAsync(command));
+                    m_PreparingTask = Task.Run(() => PrepareLaunchAsync(command));
                 }
             }
             if (waitOnTask != null)
             {
                 await waitOnTask;
-                return await Prepare(command);
+                return await PrepareAsync(command);
             }
             return new AcceptedResult();
         }
@@ -204,8 +204,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
 
                 // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, ignition... and lift off!!!!
                 ProcessStartInfo processStartInfo = new();
-                processStartInfo.WorkingDirectory = m_LaunchPath;
-                processStartInfo.FileName = m_PreparedParameters.LaunchPath;
+                processStartInfo.WorkingDirectory = m_LaunchRoot;
+                processStartInfo.FileName = Path.Combine(m_LaunchRoot, m_PreparedParameters.LaunchPath);
                 PrepareEnvironmentVariables(processStartInfo, m_PreparedParameters);
                 InvokePowershell(processStartInfo);
                 try
@@ -216,11 +216,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         throw new NullReferenceException("Failed to launch the process.");
                     }
 
-                    m_LaunchedProcess.WaitForExitAsync().ContinueWith(_ => {
+                    m_ProcessOverTask = m_LaunchedProcess.WaitForExitAsync().ContinueWith(_ => {
                         lock (m_Lock)
                         {
                             m_LaunchedProcess = null;
-                            m_StatusService.State = State.Idle;
+                            m_ProcessOverTask = null;
+                            if (!m_ProcessingAbort) // We do not want to cycle states for nothing, if we are aborting 
+                            {                       // then the state is about to be changed to idle...
+                                m_StatusService.State = State.Over;
+                            }
                         }
                     });
 
@@ -229,8 +233,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 catch(Exception e)
                 {
                     m_Logger.LogError(e, "Launch of {Process} failed",m_PreparedParameters.LaunchPath);
-                    ClearStateToIdle();
-                    return new ConflictObjectResult($"Failed to launch {m_PreparedParameters.LaunchPath}: {e}");
+                    var errorString = $"Failed to launch {m_PreparedParameters.LaunchPath}: {e}";
+                    MarkMissionAsOver();
+                    return new BadRequestObjectResult(errorString);
                 }
                 finally
                 {
@@ -246,27 +251,49 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// <param name="command">Command parameters.</param>
         /// <returns>Result of the command</returns>
         // ReSharper disable once UnusedParameter.Local
-        async Task<IActionResult> Abort(AbortCommand command)
+        async Task<IActionResult> AbortAsync(AbortCommand command)
         {
-            Task? toWaitOn = null;
-            lock (m_Lock)
+            try
             {
-                if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
+                Task? toWaitOn = null;
+                lock (m_Lock)
                 {
-                    Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle);
-                    m_StatusService.State = State.Idle;
+                    m_ProcessingAbort = true;
+
+                    if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
+                    {
+                        Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle or State.Over);
+                        m_StatusService.State = State.Idle;
+                    }
+                    else
+                    {
+                        m_PreparingTaskTcs?.Cancel();
+                        toWaitOn = m_PreparingTask ?? m_ProcessOverTask;
+                        if (toWaitOn == null)
+                        {
+                            m_StatusService.State = State.Idle;
+                        }
+                        m_LaunchedProcess?.Kill();
+                    }
                 }
-                else
+
+                if (toWaitOn != null)
                 {
-                    m_PreparingTaskTcs?.Cancel();
-                    toWaitOn = m_PreparingTask;
-                    m_LaunchedProcess?.Kill();
+                    await toWaitOn;
+                    lock (m_Lock)
+                    {
+                        m_StatusService.State = State.Idle;
+                        m_ProcessingAbort = false;
+                    }
                 }
             }
-
-            if (toWaitOn != null)
+            catch
             {
-                await toWaitOn;
+                lock (m_Lock)
+                {
+                    m_ProcessingAbort = false;
+                }
+                throw;
             }
             return new OkResult();
         }
@@ -281,9 +308,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         {
             lock (m_Lock)
             {
-                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle)
+                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle and not State.Over)
                 {
-                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch or Idle to execute the clear command.");
+                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch, Idle or Over to execute the clear command.");
                 }
 
                 m_PreparedParameters = null;
@@ -291,14 +318,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
 
                 try
                 {
-                    Directory.Delete(m_LaunchPath, true);
-                    Directory.CreateDirectory(m_LaunchPath);
+                    Directory.Delete(m_LaunchRoot, true);
+                    Directory.CreateDirectory(m_LaunchRoot);
                 }
                 catch (Exception e)
                 {
                     // We cleared the best that we can, at worst if there is a real critical file missing we will get
-                    // an error while preparing the launch pad next time.
-                    m_Logger.LogWarning(e, "Failed to clear some files from {LaunchPath}", m_LaunchPath);
+                    // an error while preparing the launchpad next time.
+                    m_Logger.LogWarning(e, "Failed to clear some files from {LaunchPath}", m_LaunchRoot);
                 }
             }
             return new OkResult();
@@ -328,9 +355,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 // Remarks: We could be tempted to stop everything when we are in another state than WaitingForLaunch
                 // or Idle to allow the restart command in any state.  However doing so could cause problems if
                 // trying to restart during a long or stuck prelaunch sequence.
-                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle)
+                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle and not State.Over)
                 {
-                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch or Idle to execute the restart command.");
+                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch, Idle or Over to execute the restart command.");
                 }
 
                 var fullPath = Process.GetCurrentProcess().MainModule?.FileName;
@@ -368,9 +395,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 // Remarks: We could be tempted to stop everything when we are in another state than WaitingForLaunch
                 // or Idle to allow the restart command in any state.  However doing so could cause problems if
                 // trying to upgrade during a long or stuck prelaunch sequence.
-                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle)
+                if (m_StatusService.State is not State.WaitingForLaunch and not State.Idle and not State.Over)
                 {
-                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch or Idle to execute the upgrade command.");
+                    return new ConflictObjectResult("Launchpad state must be WaitForLaunch, Idle or Over to execute the upgrade command.");
                 }
 
                 var thisProcessFullPath = Process.GetCurrentProcess().MainModule?.FileName;
@@ -435,10 +462,10 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// Method of the task asynchronously performing launch.
         /// </summary>
         /// <param name="prepareCommand">What to prepare for launch.</param>
-        async Task PrepareAsync(PrepareCommand prepareCommand)
+        async Task PrepareLaunchAsync(PrepareCommand prepareCommand)
         {
-            _ = (await GetPayloads(prepareCommand)) &&
-                (await ExecutePreLaunch(prepareCommand)) &&
+            _ = (await GetPayloadsAsync(prepareCommand)) &&
+                (await ExecutePreLaunchAsync(prepareCommand)) &&
                 EnterWaitForLaunch(prepareCommand);
         }
 
@@ -447,12 +474,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// </summary>
         /// <param name="prepareCommand">What to prepare for launch.</param>
         /// <returns>True success, false failure (don't execute the next steps to prepare launch).</returns>
-        async Task<bool> GetPayloads(PrepareCommand prepareCommand)
+        async Task<bool> GetPayloadsAsync(PrepareCommand prepareCommand)
         {
             HangarBay.PrepareCommand prepareLaunchPadCommand = new();
             prepareLaunchPadCommand.PayloadIds = prepareCommand.PayloadIds;
             prepareLaunchPadCommand.PayloadSource = prepareCommand.PayloadSource;
-            prepareLaunchPadCommand.Path = m_LaunchPath;
+            prepareLaunchPadCommand.Path = m_LaunchRoot;
             Uri uri = new(new Uri(m_ConfigService.Current.HangarBayEndPoint), "api/v1/commands");
             try
             {
@@ -464,7 +491,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             catch (Exception e)
             {
                 m_Logger.LogError(e, "Failed to prepare launchpad files");
-                ClearStateToIdle();
+                MarkMissionAsOver();
                 return false;
             }
         }
@@ -474,7 +501,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// </summary>
         /// <param name="prepareCommand">What to prepare for launch.</param>
         /// <returns>True success, false failure (don't execute the next steps to prepare launch).</returns>
-        async Task<bool> ExecutePreLaunch(PrepareCommand prepareCommand)
+        async Task<bool> ExecutePreLaunchAsync(PrepareCommand prepareCommand)
         {
             if (prepareCommand.PreLaunchPath.Length <= 0)
             {
@@ -484,7 +511,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             m_StatusService.State = State.PreLaunch;
 
             ProcessStartInfo processStartInfo = new();
-            processStartInfo.WorkingDirectory = m_LaunchPath;
+            processStartInfo.WorkingDirectory = m_LaunchRoot;
             processStartInfo.FileName = prepareCommand.PreLaunchPath;
             PrepareEnvironmentVariables(processStartInfo, prepareCommand);
             InvokePowershell(processStartInfo);
@@ -503,7 +530,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         m_Logger.LogError("Prepare process ({PrepareProcess}) returned {ExitCode} (not 0)",
                                 prepareCommand.PreLaunchPath, process.ExitCode);
                     }
-                    ClearStateToIdle();
+                    MarkMissionAsOver();
                     return false;
                 }
 
@@ -513,7 +540,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             {
                 m_Logger.LogError(e, "Prepare process ({PrepareProcess}) failed to prepare launchpad files",
                     prepareCommand.PreLaunchPath);
-                ClearStateToIdle();
+                MarkMissionAsOver();
                 return false;
             }
         }
@@ -544,16 +571,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         }
 
         /// <summary>
-        /// Conclude preparation by returning current state to idle.
+        /// Mark the mission as over (with success or not).
         /// </summary>
-        void ClearStateToIdle()
+        void MarkMissionAsOver()
         {
             lock (m_Lock)
             {
                 m_PreparingTask = null;
                 m_PreparingTaskTcs = null;
                 m_PreparedParameters = null;
-                m_StatusService.State = State.Idle;
+                m_StatusService.State = State.Over;
             }
         }
 
@@ -599,6 +626,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 m_PreparingTaskTcs?.Cancel();
                 toWaitOn = m_PreparingTask;
                 m_LaunchedProcess?.Kill();
+                m_ProcessOverTask = null;
             }
             if (toWaitOn != null)
             {
@@ -617,7 +645,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// <summary>
         /// Folder in which payloads are prepared for launch.
         /// </summary>
-        readonly string m_LaunchPath;
+        readonly string m_LaunchRoot;
 
         /// <summary>
         /// Used to synchronize access to member variables of this class.
@@ -625,7 +653,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         readonly object m_Lock = new();
 
         /// <summary>
-        /// Task performing preparation of <see cref="Prepare"/>.
+        /// Task performing preparation of <see cref="PrepareAsync"/>.
         /// </summary>
         Task? m_PreparingTask;
         /// <summary>
@@ -646,5 +674,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// Currently launched process
         /// </summary>
         Process? m_LaunchedProcess;
+
+        /// <summary>
+        /// Task executed after the process is over change the state to over
+        /// </summary>
+        Task? m_ProcessOverTask;
+
+        /// <summary>
+        /// Are we currently processing a abort message?
+        /// </summary>
+        bool m_ProcessingAbort;
     }
 }

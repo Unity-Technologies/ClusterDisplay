@@ -63,10 +63,10 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             // Send a shutdown command
             var stopwatch = Stopwatch.StartNew();
-            var shutdownTask = PostCommand<ShutdownCommand>(new());
+            var shutdownTask = PostCommandWithStatusCode(new ShutdownCommand());
             if (shutdownTask.Wait(k_ConnectionTimeout - stopwatch.Elapsed))
             {
-                Assert.That(shutdownTask.Result.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+                Assert.That(shutdownTask.Result, Is.EqualTo(HttpStatusCode.Accepted));
             }
             int waitMilliseconds = Math.Max((int)(k_ConnectionTimeout - stopwatch.Elapsed).TotalMilliseconds, 0);
             bool waitRet = m_Process!.WaitForExit(waitMilliseconds);
@@ -90,10 +90,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             return m_HttpClient!.PutAsJsonAsync("config", config, Json.SerializerOptions);
         }
 
-        public Task<Status?> GetStatus()
+        public async Task<Status> GetStatus()
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient!.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
+            var ret = await m_HttpClient!.GetFromJsonAsync<Status>("status", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
         }
 
         public async Task<Status?> GetStatus(ulong minStatusNumber)
@@ -110,13 +112,29 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             return JsonSerializer.Deserialize<Status>(await response.Content.ReadAsStreamAsync(), Json.SerializerOptions);
         }
 
-        public Task<Health?> GetHealth()
+        public async Task<Health> GetHealth()
         {
             Assert.That(m_HttpClient, Is.Not.Null);
-            return m_HttpClient!.GetFromJsonAsync<Health>("health", Json.SerializerOptions);
+            var ret = await m_HttpClient!.GetFromJsonAsync<Health>("health", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
         }
 
-        public Task<HttpResponseMessage> PostCommand<T>(T command) where T: Command
+        public async Task PostCommand(Command command, HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            Assert.That(m_HttpClient, Is.Not.Null);
+            var ret = await m_HttpClient!.PostAsJsonAsync("commands", command, Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task<HttpStatusCode> PostCommandWithStatusCode(Command command)
+        {
+            Assert.That(m_HttpClient, Is.Not.Null);
+            var ret = await m_HttpClient!.PostAsJsonAsync("commands", command, Json.SerializerOptions);
+            return ret.StatusCode;
+        }
+
+        public Task<HttpResponseMessage> PostCommandWithResponse(Command command)
         {
             Assert.That(m_HttpClient, Is.Not.Null);
             return m_HttpClient!.PostAsJsonAsync("commands", command, Json.SerializerOptions);
@@ -136,6 +154,22 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             {
                 Stop();
             }
+        }
+
+        public async Task WaitForState(State state)
+        {
+            Stopwatch waitLaunched = Stopwatch.StartNew();
+            while (waitLaunched.Elapsed < TimeSpan.FromSeconds(15))
+            {
+                if ((await GetStatus()).State == state)
+                {
+                    break;
+                }
+                await Task.Delay(25); // Wait a little bit so that the situation can change
+            }
+            var status = await GetStatus();
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.State, Is.EqualTo(state));
         }
 
         public string LaunchFolder => m_LaunchFolder;

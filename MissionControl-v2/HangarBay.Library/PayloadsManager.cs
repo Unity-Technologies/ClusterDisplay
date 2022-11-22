@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
 {
@@ -32,8 +33,8 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// Function called by <see cref="PayloadsManager"/> when we are asked for a new Payload.
         /// </summary>
         /// <remarks>Func <see cref="Guid"/> is the <see cref="Payload"/>'s identifier while the <see cref="object"/>
-        /// is a cookie received by <see cref="GetPayload"/> and passed to this method.  Returns a <see cref="Task"/>
-        /// that has for result the fetched <see cref="Payload"/>.
+        /// is a cookie received by <see cref="GetPayloadAsync"/> and passed to this method.  Returns a 
+        /// <see cref="Task"/> that has for result the fetched <see cref="Payload"/>.
         /// </remarks>
         public Func<Guid, object?, Task<Payload>> FetchFileCallback { get; set; } =
             (_, _) => Task.FromResult(new Payload());
@@ -44,7 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
         /// <param name="payloadIdentifier"><see cref="Payload"/>'s identifier.</param>
         /// <param name="fetchCookie">Cookie passed to <see cref="FetchFileCallback"/> if we need to fetch the
         /// <see cref="Payload"/>.</param>
-        public Task<Payload> GetPayload(Guid payloadIdentifier, object? fetchCookie = null)
+        public Task<Payload> GetPayloadAsync(Guid payloadIdentifier, object? fetchCookie = null)
         {
             lock (m_Lock)
             {
@@ -84,7 +85,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Library
                 Payload payload;
                 try
                 {
-                    using var loadStream = File.Open(file, FileMode.Open);
+                    using var loadStream = File.OpenRead(file);
                     var deserialized = JsonSerializer.Deserialize<Payload>(loadStream);
                     payload = deserialized ?? throw new NullReferenceException("Deserialize returned null");
                 }

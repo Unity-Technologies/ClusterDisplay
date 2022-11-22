@@ -4,7 +4,7 @@ info:
   description: |-
     This is the API to control a Mission Control's Hangar Bay.  Since one of the requirements is to be able to avoid having to run an update on each individual computer part of the Mission Control manually and to be able to run older Cluster Display executables, we decided to go toward a minimalist Hangar Bay that does the strict minimum and keep the logic that has the most chances to change to the actual Mission Control.  The most reliable update is the update we do not need to do!  Still, there is a planned mechanism for updates, but if everything goes according to plan, updates should be really rare.
     
-    Hangar Bay can be seen as a caching system that keep a given amount of files locally, fetch the missing ones from mission control and can assemble given group of files into a provided folder to be used by Launch Pads.
+    Hangar Bay can be seen as a caching system that keep a given amount of files locally, fetch the missing ones from mission control and can assemble given group of files into a provided folder to be used by LaunchPads.
   version: 1.0.0
 servers:
   - url: http://localhost:8100/api/v1
@@ -54,10 +54,10 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: '#/components/schemas/Prepare'
-                - $ref: '#/components/schemas/Shutdown'
-                - $ref: '#/components/schemas/Restart'
-                - $ref: '#/components/schemas/Upgrade'
+                - $ref: '#/components/schemas/PrepareCommand'
+                - $ref: '#/components/schemas/ShutdownCommand'
+                - $ref: '#/components/schemas/RestartCommand'
+                - $ref: '#/components/schemas/UpgradeCommand'
         required: true
       responses:
         '200':
@@ -88,11 +88,17 @@ components:
           example: c:\HangarBayStorage
         maximumSize:
           type: integer
+          format: int64
           description: Maximum number of bytes to be used by files in the StorageFolder.
     Config:
       type: object
       description: HangarBay's configuration.  This data is also the content of the config.json file used to store the configuration of the service.
       properties:
+        identifier:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Uniquely identify this HangarBay.  This identifier is created when first started and shall never change.
         controlEndPoint:
           type: array
           description: End points to which to listen for REST commands (most likely coming from LaunchPads or MissionControl).
@@ -117,12 +123,15 @@ components:
           example: c:\HangarBayStorage
         currentSize:
           type: integer
+          format: int64
           description: Current size in bytes of all the files in the folder.
         zombiesSize:
           type: integer
+          format: int64
           description: Current size in bytes of all the zombies in the folder (file that couldn't be deleted).
         maximumSize:
           type: integer
+          format: int64
           description: Maximum number of bytes to be used by files in the StorageFolder.
     Status:
       type: object
@@ -133,6 +142,7 @@ components:
           description: Version number of the running HangarBay executable.
         startTime:
           type: string
+          format: date-time
           description: When did the HangarBay was started.
         pendingRestart:
           type: boolean
@@ -142,7 +152,7 @@ components:
           description: Status of the different storage folders.
           items:
             $ref: '#/components/schemas/StorageFolderStatus'
-    Prepare:
+    PrepareCommand:
       type: object
       description: Command asking the HangarBay to prepare a folder with the given list of payloads.
       properties:
@@ -167,7 +177,7 @@ components:
         - type
         - payloadIds
         - path
-    Shutdown:
+    ShutdownCommand:
       type: object
       description: Command asking the HangarBay to shutdown.  Use with care as the only way to restart it is to do some manual interventions on the computer running it, designed to be sued as part of automated testing.
       properties:
@@ -177,7 +187,7 @@ components:
           default: shutdown
       required:
         - type
-    Restart:
+    RestartCommand:
       type: object
       description: Command asking the HangarBay to restart.
       properties:
@@ -192,7 +202,7 @@ components:
           example: 120
       required:
         - type
-    Upgrade:
+    UpgradeCommand:
       type: object
       description: Command asking the HangarBay to upgrade.
       properties:

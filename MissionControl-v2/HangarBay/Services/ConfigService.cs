@@ -54,7 +54,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 if (File.Exists(configPath))
                 {
-                    using var loadStream = File.Open(configPath, FileMode.Open);
+                    using var loadStream = File.OpenRead(configPath);
                     var config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     return config.ControlEndPoints.ToArray();
                 }
@@ -97,7 +97,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
                 {
                     if (m_ExecutingSetCurrent == null)
                     {
-                        setCurrentCompleteTcs = new();
+                        setCurrentCompleteTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
                         m_ExecutingSetCurrent = setCurrentCompleteTcs.Task;
                     }
                     else
@@ -229,7 +229,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
             {
                 if (File.Exists(m_PersistPath))
                 {
-                    using (var loadStream = File.Open(m_PersistPath, FileMode.Open))
+                    using (var loadStream = File.OpenRead(m_PersistPath))
                     {
                         m_Config = JsonSerializer.Deserialize<Config>(loadStream, Json.SerializerOptions);
                     }
@@ -249,6 +249,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
 
             if (!configLoaded)
             {
+                m_Config.Identifier = Guid.NewGuid();
                 m_Config.ControlEndPoints = new[] { k_DefaultEndpoint };
                 var folderConfig = new StorageFolderConfig();
                 folderConfig.Path = Path.Combine(
@@ -282,8 +283,14 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <param name="newConfig">Information about the new configuration</param>
         /// <remarks>Normally we want every service to validate their "own part" of the configuration, however some
         /// parts are not really owned by any actual services (like control endpoints).</remarks>
-        static void ValidateNewConfig(ConfigChangeSurvey newConfig)
+        void ValidateNewConfig(ConfigChangeSurvey newConfig)
         {
+            if (newConfig.Proposed.Identifier != m_Config.Identifier)
+            {
+                newConfig.Reject("HangarBay identifier cannot be changed.");
+                return;
+            }
+
             foreach (var endpoint in newConfig.Proposed.ControlEndPoints)
             {
                 var validationMessage = EndPointHelpers.ValidateLocal(endpoint);
@@ -330,7 +337,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Services
         /// <summary>
         /// Used to synchronize access to the member variables below.
         /// </summary>
-        readonly object m_Lock = new object();
+        readonly object m_Lock = new();
 
         /// <summary>
         /// Task representing the currently executing <see cref="SetCurrent(Config)"/>, used to serialize concurrent

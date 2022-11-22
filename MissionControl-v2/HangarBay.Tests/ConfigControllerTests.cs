@@ -365,6 +365,20 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
+        [Test]
+        public async Task Identifier()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            var newConfig = await m_ProcessHelper.GetConfig();
+            Assert.That(newConfig.Identifier, Is.Not.EqualTo(Guid.Empty));
+
+            newConfig.Identifier = Guid.NewGuid();
+            var httpRet = await m_ProcessHelper.PutConfig(newConfig);
+            Assert.That(httpRet, Is.Not.Null);
+            Assert.That(httpRet.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
         string GetTestTempFolder()
         {
             var folderPath = Path.Combine(Path.GetTempPath(), "ConfigControllerTests_" + Guid.NewGuid().ToString());

@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);
@@ -92,7 +92,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     {
                         // ignored
                     }
-                    await Task.Delay(25);
+                    await Task.Delay(25); // Wait a little bit so that the situation can change
                 }
 
                 Assert.That(newStatus, Is.Not.Null);
@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
             var upgradeCommand = new UpgradeCommand();
             upgradeCommand.NewVersionUrl =
-                new Uri(new Uri(MissionControlStub.HttpListenerEndpoint), newVersionZipFilename).ToString();
+                new Uri(MissionControlStub.HttpListenerEndpoint, newVersionZipFilename).ToString();
             var upgradeResponse = await m_ProcessHelper.PostCommand(upgradeCommand);
             Assert.That(upgradeResponse.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
 
@@ -255,7 +255,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                 {
                     // ignored
                 }
-                await Task.Delay(25);
+                await Task.Delay(25); // Wait a little bit so that the situation can change
             }
 
             Assert.That(newStatus, Is.Not.Null);

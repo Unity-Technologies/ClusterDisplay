@@ -180,8 +180,8 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
         class FileInfo
         {
-            public string Path { get; set; } = "";
-            public string Content { get; set; } = "";
+            public string Path { get; init; } = "";
+            public string Content { get; init; } = "";
         }
 
         class PayloadInfo

@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Mission Control - LaunchPad API
   description: |-
-    This is the API to control a Mission Control Launch Pad.  Since one of the requirements is to be able to avoid having to run an update on each individual computer part of the Mission Control manually and to be able to run older Cluster Display executables, we decided to go toward a minimalist Launch Pad that does the strict minimum and delegate as much as possible to components it manages.  The most reliable update is the update we do not need to do!  Still, there is a planned mechanism for updates, but if everything goes according to plan, updates should be really rare.
+    This is the API to control a Mission Control LaunchPad.  Since one of the requirements is to be able to avoid having to run an update on each individual computer part of the Mission Control manually and to be able to run older Cluster Display executables, we decided to go toward a minimalist Launch Pad that does the strict minimum and delegate as much as possible to components it manages.  The most reliable update is the update we do not need to do!  Still, there is a planned mechanism for updates, but if everything goes according to plan, updates should be really rare.
   version: 1.0.0
 servers:
   - url: http://localhost:8200/api/v1
@@ -52,7 +52,7 @@ paths:
         '200':
           description: Success
         '202':
-          description: Changes accepted but not all applied immediately (changes to the endpoints requires a power cycle (restart) of the Launch Pad).
+          description: Changes accepted but not all applied immediately (changes to the endpoints requires a power cycle (restart) of the LaunchPad).
         '400':
           description: Error in the request
           content:
@@ -101,6 +101,11 @@ components:
       type: object
       description: LaunchPad's configuration.  This data will be passed to both pre-launch and launch executables by serializing this object to JSON and passing it using the LAUNCHPAD_CONFIG environment variable.  It is also the content of the config.json file used to store the configuration of the LaunchPad.  This configuration is where new launchpad parameters that do not change between launchables might be added in the future (for example the GPU index to use?).
       properties:
+        identifier:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Uniquely identify this LaunchPad.  This identifier is created when first started and shall never change.
         controlEndPoint:
           type: string
           description: End point to which to listen for REST commands (most likely coming from MissionControl).
@@ -124,6 +129,7 @@ components:
           description: Version number of the running LaunchPad executable.
         startTime:
           type: string
+          format: date-time
           description: When did the LaunchPad was started.        
         state:
           type: string
@@ -134,12 +140,14 @@ components:
              * `preLaunch` - Executing pre-launch executable to prepare the launchpad to the payload.
              * `waitingForLaunch` - Everything is ready, waiting for launch signal (to have a coordinated launch on all LaunchPads).
              * `launched` - Payload is launched (and still in the air (process running) otherwise state would have been changed to idle).
-          enum: [idle, gettingPayload, preLaunch, waitingForLaunch, launched]
+             * `over` - Mission is finished (either with success or failure).
+          enum: [idle, gettingPayload, preLaunch, waitingForLaunch, launched, failed]
         pendingRestart:
           type: boolean
           description: Has some operations been done on the LaunchPad that requires a restart?          
         lastChanged:
           type: string
+          format: date-time
           description: When was the last time anything changed in the current status of the LaunchPad.
         statusNumber:
           type: integer
@@ -155,10 +163,10 @@ components:
           description: Total CPU usage of the system.
         memoryUsage:
           type: integer
-          description: Number of bytes of memory currently being used on the launch pad's computer.
-        memoryAvailable:
+          description: Number of bytes of memory currently being used on the launchpad's computer.
+        memoryInstalled:
           type: integer
-          description: Number of bytes of physical memory installed on the launch pad's computer.
+          description: Number of bytes of physical memory installed on the launchpad's computer.
     PrepareCommand:
       type: object
       description: Command indicating that the LaunchPad should prepare for launching the specified payload.
@@ -177,15 +185,18 @@ components:
           type: string
           description: URI of where to download payloads if they are not already available in the HangarBay.
           example: http://mission-control-server:8000
+        launchableData:
+          type: object
+          description: Some data (opaque to all parts of MissionControl, only to be used by the launch and pre-launch executables) to be passed using the LAUNCHABLE_DATA environment variable both during launch and pre-launch.  This is the same hard-coded data for all nodes of the cluster, useful for configuring some options decided at the moment of producing the launch catalog.
         launchData:
           type: object
           description: Some data (opaque to the Launchpad) to be passed using the LAUNCH_DATA environment variable both during launch and pre-launch.  Because of OS limitations the amount of data in this object should be kept reasonable (current limitation seem to be around 8192 characters).
         preLaunchPath:
           type: string
-          description: Path (relative to the toLaunch folder) to an optional executable to execute before launch.  This executable is responsible to ensure that any external dependencies are installed and ready to use.
+          description: Path (relative to where prepared payload is stored) to an optional executable to execute before launch.  This executable is responsible to ensure that any external dependencies are installed and ready to use.  Can be an executable, a ps1 or an assemblyrun:// url.
         launchPath:
           type: string
-          description: Path (relative to the toLaunch folder) to the executable to launch when the LaunchPad receives the Launch command.
+          description: Path (relative to where prepared payload is stored) to the executable to launch when the LaunchPad receives the Launch command.  Can be an executable, a ps1 or an assemblyrun:// url.
       required:
         - type
         - payloadIds

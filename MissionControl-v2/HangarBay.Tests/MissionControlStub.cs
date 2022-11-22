@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 {
@@ -31,7 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
     /// </summary>
     class MissionControlStub
     {
-        public static string HttpListenerEndpoint => k_HttpListenerEndpoint;
+        public static Uri HttpListenerEndpoint => new Uri(k_HttpListenerEndpoint);
 
         public MissionControlStub()
         {
@@ -56,8 +57,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         public class HistoryEntry
         {
-            public string Uri { get; set; } = "";
-            public HttpMethod Method { get; set; } = HttpMethod.Get;
+            public string Uri { get; init; } = "";
         }
 
         public void AddFile(Guid payloadId, string path, Guid fileBobId, string content, bool forceFile = false)
@@ -100,8 +100,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
                     payloadInfo = new();
                     m_Payloads[payloadId] = payloadInfo;
                 }
-                payloadInfo.Files.Add(new PayloadFile() {
-                    Path = path, FileBlob = fileBobId, CompressedSize = fileInfo.CompressedSize, Size = fileInfo.Size });
+                payloadInfo.Files.Add(new PayloadFile(path, fileBobId, fileInfo.CompressedSize, fileInfo.Size));
             }
         }
 
@@ -160,16 +159,17 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
             }
         }
 
-        void ProcessRequest(HttpListenerContext ctxt)
+        void ProcessRequest(HttpListenerContext context)
         {
-            var request = ctxt.Request;
+            var request = context.Request;
             Assert.That(request, Is.Not.Null);
-            var response = ctxt.Response;
+            var response = context.Response;
             Assert.That(response, Is.Not.Null);
 
             var requestedUri = new Uri(k_HttpListenerEndpoint).MakeRelativeUri(request.Url!).ToString();
             var httpMethod = new HttpMethod(request.HttpMethod);
-            History.Enqueue(new HistoryEntry() { Uri = requestedUri, Method = httpMethod });
+            Assert.That(httpMethod, Is.EqualTo(HttpMethod.Get)); // So far, all methods we are "stubbing" are gets...
+            History.Enqueue(new HistoryEntry() { Uri = requestedUri });
 
             if (requestedUri.StartsWith("api/v1/payloads"))
             {
@@ -265,17 +265,18 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
 
         class FileInfo
         {
-            public byte[] Data { get; set; } = new byte[] { };
+            public byte[] Data { get; set; } = { };
             public long CompressedSize { get; set; }
             public long Size { get; set; }
-            public List<MissionControlStubCheckpoint> Checkpoints { get; private set; } = new();
+            public List<MissionControlStubCheckpoint> Checkpoints { get; } = new();
         }
 
         class PayloadInfo
         {
-            public List<PayloadFile> Files { get; private set; } = new();
+            // ReSharper disable once CollectionNeverQueried.Local -> Used when PayloadFile are serialized
+            public List<PayloadFile> Files { get; } = new();
             [JsonIgnore]
-            public List<MissionControlStubCheckpoint> Checkpoints { get; private set; } = new();
+            public List<MissionControlStubCheckpoint> Checkpoints { get; } = new();
         }
 
         const string k_HttpListenerEndpoint = "http://localhost:8000/";

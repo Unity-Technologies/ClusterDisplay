@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 
         public override void Write(Utf8JsonWriter writer, Command value, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
         }
     }
 }

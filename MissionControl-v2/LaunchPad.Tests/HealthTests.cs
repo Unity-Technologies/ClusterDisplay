@@ -51,16 +51,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             try
             {
-                // Wait a little bit so that CPU usage has the time to increase and the launch pad sample CPU usage often
+                // Wait a little bit so that CPU usage has the time to increase and the launchpad sample CPU usage often
                 // enough.
+                // ReSharper disable once MethodSupportsCancellation -> We always want to wait, no need for cancel
                 await Task.Delay(5000);
 
                 // Get health
                 var health = await m_ProcessHelper.GetHealth();
-                Assert.That(health, Is.Not.Null);
-                Assert.That(health!.CpuUtilization, Is.GreaterThan(0.75f));
+                Assert.That(health.CpuUtilization, Is.GreaterThan(0.75f));
                 Assert.That(health.MemoryUsage, Is.GreaterThan(0));
-                Assert.That(health.MemoryAvailable, Is.GreaterThan(0));
+                Assert.That(health.MemoryInstalled, Is.GreaterThan(0));
             }
             finally
             {

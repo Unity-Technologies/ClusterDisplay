@@ -25,12 +25,9 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay
 
         public bool Equals(UpgradeCommand? other)
         {
-            if (other == null || other.GetType() != typeof(UpgradeCommand))
-            {
-                return false;
-            }
-
-            return NewVersionUrl == other.NewVersionUrl && TimeoutSec == other.TimeoutSec;
+            return other != null &&
+                NewVersionUrl == other.NewVersionUrl &&
+                TimeoutSec == other.TimeoutSec;
         }
     }
 }

@@ -33,6 +33,55 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
         }
 
         [Test]
+        public async Task SimpleLaunch()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            Guid payloadId = Guid.NewGuid();
+            m_HangarBayStub.AddFile(payloadId, "launch.ps1",
+                "$pid | Out-File \"pid.txt\"    \n" +
+                "while ( $true )                \n" +
+                "{                              \n" +
+                "    Start-Sleep -Seconds 60    \n" +
+                "}");
+
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadIds = new [] { payloadId };
+            prepareCommand.LaunchPath = "launch.ps1";
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
+
+            LaunchCommand launchCommand = new();
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+
+            // Wait for the process to be launched and get its pid
+            string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
+            var waitLaunched = Stopwatch.StartNew();
+            Process? launchedProcess = null;
+            while (waitLaunched.Elapsed < TimeSpan.FromSeconds(15) && launchedProcess == null)
+            {
+                try
+                {
+                    var pidText = await File.ReadAllTextAsync(processIdFilename);
+                    launchedProcess = Process.GetProcessById(Convert.ToInt32(pidText));
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+            Assert.That(launchedProcess, Is.Not.Null);
+            Assert.That(launchedProcess!.HasExited, Is.False);
+
+            // Kill that process
+            launchedProcess.Kill();
+            Assert.That(launchedProcess.HasExited, Is.True);
+
+            // Launchpad status should reflect that and become "over"
+            await m_ProcessHelper.WaitForState(State.Over);
+        }
+
+        [Test]
         public async Task KillOnExit()
         {
             await m_ProcessHelper.Start(GetTestTempFolder());
@@ -48,14 +97,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "launch.ps1";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             LaunchCommand launchCommand = new();
-            postCommandRet = await m_ProcessHelper.PostCommand(launchCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
 
             // Wait for the process to be launched and get its pid
             string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
@@ -99,14 +145,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "launch.ps1";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             LaunchCommand launchCommand = new();
-            postCommandRet = await m_ProcessHelper.PostCommand(launchCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
 
             // Wait for the process to be launched and get its pid
             string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
@@ -128,23 +171,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(launchedProcess!.HasExited, Is.False);
 
             AbortCommand abortCommand = new();
-            postCommandRet = await m_ProcessHelper.PostCommand(abortCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            await m_ProcessHelper.PostCommand(abortCommand);
 
             // The launched process should have been killed
             Assert.That(launchedProcess.HasExited, Is.True);
 
             // And so launchpad idle
-            var waitIdle = Stopwatch.StartNew();
+            await m_ProcessHelper.WaitForState(State.Idle);
+
+            await Task.Delay(100);
             var status = await m_ProcessHelper.GetStatus();
-            Assert.That(status, Is.Not.Null);
-            while (waitIdle.Elapsed < TimeSpan.FromSeconds(15) && status!.State != State.Idle)
-            {
-                status = await m_ProcessHelper.GetStatus();
-                Assert.That(status, Is.Not.Null);
-            }
-            Assert.That(status!.State, Is.EqualTo(State.Idle));
+            Assert.That(status.State, Is.EqualTo(State.Idle));
         }
 
         [Test]
@@ -163,14 +200,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             PrepareCommand prepareCommand = new();
             prepareCommand.PayloadIds = new [] { payloadId };
             prepareCommand.LaunchPath = "launch.ps1";
-            var postCommandRet = await m_ProcessHelper.PostCommand(prepareCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
 
             LaunchCommand launchCommand = new();
-            postCommandRet = await m_ProcessHelper.PostCommand(launchCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
 
             // Wait for the process to be launched and get its pid
             string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
@@ -192,12 +226,34 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             Assert.That(launchedProcess!.HasExited, Is.False);
 
             // Try to launch again
-            postCommandRet = await m_ProcessHelper.PostCommand(launchCommand);
-            Assert.That(postCommandRet, Is.Not.Null);
-            Assert.That(postCommandRet.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            await m_ProcessHelper.PostCommand(launchCommand, HttpStatusCode.Conflict);
 
             // The process should still be running
             Assert.That(launchedProcess.HasExited, Is.False);
+        }
+
+        [Test]
+        public async Task MissingExecutable()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            Guid payloadId = Guid.NewGuid();
+            m_HangarBayStub.AddFile(payloadId, "launch.ps1",
+                "$pid | Out-File \"pid.txt\"    \n" +
+                "while ( $true )                \n" +
+                "{                              \n" +
+                "    Start-Sleep -Seconds 60    \n" +
+                "}");
+
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadIds = new [] { payloadId };
+            prepareCommand.LaunchPath = "patate.n'estixte.pas";
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
+
+            await m_ProcessHelper.WaitForState(State.WaitingForLaunch);
+
+            LaunchCommand launchCommand = new();
+            await m_ProcessHelper.PostCommand(launchCommand, HttpStatusCode.BadRequest);
         }
 
         string GetTestTempFolder()

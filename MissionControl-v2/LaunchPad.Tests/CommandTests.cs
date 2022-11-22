@@ -10,8 +10,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
         {
             var toSerialize = new PrepareCommand();
             toSerialize.PayloadIds = new[] {Guid.NewGuid(), Guid.NewGuid()};
-            toSerialize.PayloadSource = "http://mission-control-server:8000";
-            toSerialize.LaunchData = new { SomeString = "SomeValue", SomeInt = 42 };
+            toSerialize.PayloadSource = new Uri("http://mission-control-server:8000");
+            toSerialize.LaunchableData = new { SomeString = "SomeValue", SomeInt = 42 };
+            toSerialize.LaunchData = new { SomeOtherString = "SomeOtherValue", SomeOtherInt = 28 };
             toSerialize.PreLaunchPath = "prelaunch.ps1";
             toSerialize.LaunchPath = "ClusterDisplayReady.exe";
             var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);

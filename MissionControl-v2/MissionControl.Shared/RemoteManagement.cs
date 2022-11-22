@@ -15,6 +15,7 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that will be
         /// copied to the installation path (delegate's second <see cref="string"/> parameter).</remarks>
+        // ReSharper disable once MemberCanBePrivate.Global -> will eed to be public when used
         public Action<string, string> PreUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>
@@ -22,6 +23,7 @@ namespace Unity.ClusterDisplay.MissionControl
         /// </summary>
         /// <remarks>Delegate's first <see cref="string"/> is the path to the folder containing the files that have been
         /// copied to the installation path (delegate's second <see cref="string"/> parameter).</remarks>
+        // ReSharper disable once MemberCanBePrivate.Global -> will eed to be public when used
         public Action<string, string> PostUpgradeCopy { get; set; } = (_, _) => { };
 
         /// <summary>

@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
         {
             var toSerialize = new PrepareCommand();
             toSerialize.PayloadIds = new[] {Guid.NewGuid(), Guid.NewGuid()};
-            toSerialize.PayloadSource = "http://mission-control-server:8000";
+            toSerialize.PayloadSource = new Uri("http://mission-control-server:8000");
             toSerialize.Path = "C:\\MissionControl\\LaunchPad39A\\";
             var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
