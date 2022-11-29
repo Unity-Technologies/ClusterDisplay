@@ -1,0 +1,15 @@
+{
+  "name": "com.unity.live-editing",
+  "displayName": "Live Editing",
+  "version": "1.0.0",
+  "unity": "2022.1",
+  "description": "Remotely edit scenes from the Unity Editor.",
+  "keywords": [
+    "Remote",
+    "Editing"
+  ],
+  "category": "Unity",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  }
+}
