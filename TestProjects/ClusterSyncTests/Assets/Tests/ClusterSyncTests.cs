@@ -158,6 +158,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(node, Is.Not.Null);
             Assert.That(node.RepeatersStatus.RepeaterPresence.SetBitsCount, Is.Zero);
             Assert.That(node.EmitterConfig.ExpectedRepeaterCount, Is.EqualTo(numRepeaters));
+            Assert.That(node.HasExternalSync, Is.False);
 
             emitterEventBus.Publish(new TestData
             {
@@ -197,7 +198,8 @@ namespace Unity.ClusterDisplay.Tests
                 AdapterName = m_InterfaceName,
                 Port = TestPort,
                 CommunicationTimeout = Timeout,
-                HandshakeTimeout = Timeout
+                HandshakeTimeout = Timeout,
+                Fence = FrameSyncFence.External
             });
 
             m_TestAgent = GetTestAgent(EmitterNode.ReceiveMessageTypes);
@@ -209,6 +211,7 @@ namespace Unity.ClusterDisplay.Tests
 
             var node = repeaterClusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
+            Assert.That(node.HasExternalSync, Is.True);
 
             long testDeadline = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(10));
 
