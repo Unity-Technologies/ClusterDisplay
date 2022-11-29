@@ -46,7 +46,7 @@ namespace Unity.ClusterDisplay.Tests
                 HandshakeTimeout = NodeTestUtils.Timeout,
                 CommunicationTimeout = NodeTestUtils.Timeout,
                 RepeatersDelayed = false,
-                EnableHardwareSync = false // Can't really test with true as computers running unit test don't have that hardware...
+                Fence = FrameSyncFence.Network
             };
 
             m_RepeaterNode = new RepeaterNode(nodeConfig, new UdpAgent(repeaterAgentConfig));
