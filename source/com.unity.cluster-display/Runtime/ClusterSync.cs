@@ -211,7 +211,7 @@ namespace Unity.ClusterDisplay
                     HandshakeTimeout = clusterParams.HandshakeTimeout,
                     CommunicationTimeout = clusterParams.CommunicationTimeout,
                     RepeatersDelayed = clusterParams.DelayRepeaters,
-                    EnableHardwareSync = clusterParams.EnableHardwareSync
+                    Fence = clusterParams.Fence
                 };
 
                 var udpAgentConfig = new UdpAgentConfig

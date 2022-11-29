@@ -27,9 +27,9 @@ namespace Unity.ClusterDisplay
         /// </summary>
         public bool RepeatersDelayed { get; set; }
         /// <summary>
-        /// Do we enable hardware sync (if present)?
+        /// Synchronization strategy
         /// </summary>
-        public bool EnableHardwareSync { get; set; }
+        public FrameSyncFence Fence { get; set; }
     }
 
     /// <summary>
@@ -58,7 +58,8 @@ namespace Unity.ClusterDisplay
         public ulong FrameIndex { get; private set; }
 
         /// <summary>
-        /// Gets or sets whether there is a layer of synchronization performed by hardware (e.g. Nvidia Quadro Sync).
+        /// Gets or sets whether there is a layer of synchronization performed by external component (not managed by
+        /// Cluster Display, e.g. Nvidia Quadro Sync).
         /// Default is <c>false</c>.
         /// </summary>
         /// <remarks>
@@ -68,7 +69,7 @@ namespace Unity.ClusterDisplay
         /// Repeater node: If true they can set <see cref="RepeaterWaitingToStartFrame.WillUseNetworkSyncOnNextFrame"/>
         /// to false and start relying exclusively on hardware synchronization.
         /// </remarks>
-        public bool HasHardwareSync { get; set; }
+        public bool HasExternalSync { get; set; }
 
         /// <summary>
         /// Method called to perform the work the node has to do for the current frame
@@ -143,6 +144,11 @@ namespace Unity.ClusterDisplay
         {
             Config = config;
             UdpAgent = udpAgent;
+            if (config.Fence is FrameSyncFence.External)
+            {
+                HasExternalSync = true;
+                ClusterDebug.Log("Using external sync. Bypassing network fence");
+            }
         }
 
         /// <summary>

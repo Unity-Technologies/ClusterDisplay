@@ -112,7 +112,7 @@ namespace Unity.ClusterDisplay
             : base(config, udpAgent)
         {
             EmitterConfig = emitterConfig;
-            SetInitialState(Config.EnableHardwareSync ?
+            SetInitialState(Config.Fence is FrameSyncFence.Hardware ?
                 HardwareSyncInitState.Create(this) : new WelcomeRepeatersState(this));
         }
 

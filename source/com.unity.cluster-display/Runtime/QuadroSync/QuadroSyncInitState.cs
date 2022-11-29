@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay
             var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
             if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
             {
-                Node.HasHardwareSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
+                Node.HasExternalSync = (initializationState == GfxPluginQuadroSyncInitializationState.Initialized);
 
                 // Initialization finished, we do not need to be called again
                 PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);
