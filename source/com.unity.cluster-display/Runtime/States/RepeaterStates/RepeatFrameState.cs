@@ -131,7 +131,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             {
                 FrameIndex = Node.FrameIndex,
                 NodeId = Node.Config.NodeId,
-                WillUseNetworkSyncOnNextFrame = !Node.HasExternalSync
+                WillUseNetworkSyncOnNextFrame = Node.UsingNetworkSync
             };
             m_EmitterExpectingNotificationOnStart = waitToStartMessage.WillUseNetworkSyncOnNextFrame;
 

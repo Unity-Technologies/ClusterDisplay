@@ -58,18 +58,21 @@ namespace Unity.ClusterDisplay
         public ulong FrameIndex { get; private set; }
 
         /// <summary>
-        /// Gets or sets whether there is a layer of synchronization performed by external component (not managed by
-        /// Cluster Display, e.g. Nvidia Quadro Sync).
-        /// Default is <c>false</c>.
+        /// Gets whether the nodes are synchronized at the beginning of the frame with a network fence.
+        /// If this property is <c>false</c>, it means that the node is relying some other synchronization
+        /// mechanism (likely hardware).
         /// </summary>
         /// <remarks>
-        /// Emitter node: Will always use network sync (<see cref="RepeaterWaitingToStartFrame"/> and
+        /// Emitter node: Will always use network fence (<see cref="RepeaterWaitingToStartFrame"/> and
         /// <see cref="EmitterWaitingToStartFrame"/>) for as long as some of the repeaters indicate they are using
-        /// network sync.  This property is more for an informative purpose.<br/><br/>
-        /// Repeater node: If true they can set <see cref="RepeaterWaitingToStartFrame.WillUseNetworkSyncOnNextFrame"/>
-        /// to false and start relying exclusively on hardware synchronization.
+        /// network fence.  This property is more for an informative purpose.<br/><br/>
+        /// Repeater node: If <c>false</c> it can set <see cref="RepeaterWaitingToStartFrame.WillUseNetworkSyncOnNextFrame"/>
+        /// to false and start relying exclusively on external synchronization.
+        /// <br/><br/>
+        /// Note: Initializing the node with <see cref="FrameSyncFence.External"/> will cause this property to be
+        /// always <c>false</c>.
         /// </remarks>
-        public bool HasExternalSync { get; set; }
+        public bool UsingNetworkSync { get; internal set; } = true;
 
         /// <summary>
         /// Method called to perform the work the node has to do for the current frame
@@ -146,7 +149,7 @@ namespace Unity.ClusterDisplay
             UdpAgent = udpAgent;
             if (config.Fence is FrameSyncFence.External)
             {
-                HasExternalSync = true;
+                UsingNetworkSync = false;
                 ClusterDebug.Log("Using external sync. Bypassing network fence");
             }
         }

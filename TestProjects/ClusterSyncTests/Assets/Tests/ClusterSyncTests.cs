@@ -158,7 +158,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(node, Is.Not.Null);
             Assert.That(node.RepeatersStatus.RepeaterPresence.SetBitsCount, Is.Zero);
             Assert.That(node.EmitterConfig.ExpectedRepeaterCount, Is.EqualTo(numRepeaters));
-            Assert.That(node.HasExternalSync, Is.False);
+            Assert.That(node.UsingNetworkSync, Is.True);
 
             emitterEventBus.Publish(new TestData
             {
@@ -211,7 +211,7 @@ namespace Unity.ClusterDisplay.Tests
 
             var node = repeaterClusterSync.LocalNode as RepeaterNode;
             Assert.That(node, Is.Not.Null);
-            Assert.That(node.HasExternalSync, Is.True);
+            Assert.That(node.UsingNetworkSync, Is.False);
 
             long testDeadline = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(10));
 
