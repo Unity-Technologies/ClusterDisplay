@@ -71,7 +71,7 @@ test_{{ platform.name }}_{{ editor.version }}_{{ project.name }}:
   - git submodule update --init
 {% endif -%}
   - npm install upm-ci-utils@stable -g --registry https://artifactory.prd.cds.internal.unity3d.com/artifactory/api/npm/upm-npm
-  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.path }}
+  - upm-ci project test --type project-tests --unity-version {{ editor.version }} --project-path  {{ project.path }} --extra-editor-arg="--burst-disable-compilation"
   artifacts:
     logs.zip:
       paths:
