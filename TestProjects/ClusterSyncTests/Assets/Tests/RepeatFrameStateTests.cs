@@ -358,7 +358,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Node.ConcludeFrame();
 
             // Turn on hardware sync before starting frame #2 so that emitter knows not to wait for repeater on frame #3.
-            m_Node.HasHardwareSync = true;
+            m_Node.UsingNetworkSync = false;
 
             // Start second frame
             var (synchronizeAndSendFrame1Task, frame1Data) = CreateSyncAndSendTask(1, 500, testDeadline);
@@ -503,7 +503,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(receivedRepeaterWaiting, Is.Not.Null);
             Assert.That(receivedRepeaterWaiting.Payload.FrameIndex, Is.EqualTo(frameIndex));
             Assert.That(receivedRepeaterWaiting.Payload.NodeId, Is.EqualTo(k_NodeId));
-            Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.EqualTo(!m_Node.HasHardwareSync));
+            Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.EqualTo(m_Node.UsingNetworkSync));
         }
 
         (Task, byte[]) CreateSyncAndSendTask(ulong frameIndex, int dataLength, long testDeadline)

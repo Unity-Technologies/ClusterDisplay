@@ -133,7 +133,7 @@ namespace Unity.ClusterDisplay.Tests
                 ReplaceHeadlessEmitter = true,
                 HandshakeTimeout = TimeSpan.FromMilliseconds(6000),
                 CommunicationTimeout = TimeSpan.FromMilliseconds(5000),
-                EnableHardwareSync = true
+                Fence = FrameSyncFence.Hardware
             };
             Assert.That(clusterParams, Is.EqualTo(expected));
 
@@ -154,7 +154,7 @@ namespace Unity.ClusterDisplay.Tests
                 HeadlessEmitter = false,
                 HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
                 CommunicationTimeout = TimeSpan.FromMilliseconds(10000),
-                EnableHardwareSync = false
+                Fence = FrameSyncFence.Network
             };
 
             Assert.That(clusterParams, Is.EqualTo(expected));
