@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -18,6 +19,22 @@ namespace Unity.ClusterDisplay
     /// </summary>
     public partial class ClusterSync
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void EnableClusterSync()
+        {
+            if (!ClusterDisplaySettings.CurrentSettings.EnableOnPlay) return;
+
+            if (!ServiceLocator.TryGet<IClusterSyncState>(out _))
+            {
+                ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
+
+                var clusterSync = new ClusterSync();
+                ServiceLocator.Provide<IClusterSyncState>(clusterSync);
+
+                clusterSync.EnableClusterDisplay(ClusterParams.FromCommandLine());
+            }
+        }
+
         const string k_DefaultName = "DefaultClusterSync";
         public string InstanceName { get; }
 
