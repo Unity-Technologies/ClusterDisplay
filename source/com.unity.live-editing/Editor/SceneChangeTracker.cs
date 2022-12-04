@@ -342,11 +342,17 @@ namespace Editor
                     {
                         stream.GetChangeSceneEvent(i, out var change);
 
-                        change.scene.GetRootGameObjects(s_TempGameObjects);
-
-                        foreach (var root in s_TempGameObjects)
+                        // If the scene it tracked, we must check everything in the scene for changes.
+                        if (m_TrackedScenes.TryGetValue(change.scene, out _))
                         {
-                            //CheckGameObjectStructural();
+                            change.scene.GetRootGameObjects(s_TempGameObjects);
+
+                            // TODO: we must track root objects in the scene state to handle deletion of root objects
+                            
+                            foreach (var root in s_TempGameObjects)
+                            {
+                                //CheckGameObjectStructural();
+                            }
                         }
                         break;
                     }
