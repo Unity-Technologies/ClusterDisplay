@@ -71,6 +71,11 @@ namespace Editor
             {
                 Properties.Dispose();
 
+                foreach (var child in Children)
+                {
+                    child.Dispose();
+                }
+
                 foreach (var component in Components)
                 {
                     component.Dispose();
@@ -128,6 +133,8 @@ namespace Editor
         bool m_IsRunning;
         readonly Dictionary<Scene, SceneState> m_TrackedScenes = new Dictionary<Scene, SceneState>();
         readonly Dictionary<GameObject, GameObjectState> m_TrackedGameObjects = new Dictionary<GameObject, GameObjectState>();
+
+        // TODO: time-sliced based polling to catch changes not caught by undo?
 
         /// <summary>
         /// Releases resources held by this instance.
@@ -232,14 +239,12 @@ namespace Editor
 
         void StopTrackingScene(Scene scene)
         {
-            if (!scene.IsValid() || !m_TrackedScenes.ContainsKey(scene))
+            if (!scene.IsValid() || !m_TrackedScenes.Remove(scene, out _))
             {
                 return;
             }
 
             Debug.Log($"StopTrackingScene {scene.name}");
-
-            m_TrackedScenes.Remove(scene);
 
             scene.GetRootGameObjects(s_TempGameObjects);
 
@@ -310,12 +315,11 @@ namespace Editor
 
         void StopTrackingGameObject(GameObject gameObject)
         {
-            if (gameObject == null || !m_TrackedGameObjects.TryGetValue(gameObject, out var state))
+            if (gameObject == null || !m_TrackedGameObjects.Remove(gameObject, out var state))
             {
                 return;
             }
 
-            // TODO: stop tracking components and children
             state.Dispose();
         }
 
@@ -336,7 +340,14 @@ namespace Editor
                 {
                     case ObjectChangeKind.ChangeScene:
                     {
-                        //stream.GetChangeSceneEvent(i, out var change);
+                        stream.GetChangeSceneEvent(i, out var change);
+
+                        change.scene.GetRootGameObjects(s_TempGameObjects);
+
+                        foreach (var root in s_TempGameObjects)
+                        {
+                            //CheckGameObjectStructural();
+                        }
                         break;
                     }
                     case ObjectChangeKind.CreateGameObjectHierarchy:
@@ -358,14 +369,14 @@ namespace Editor
                     {
                         stream.GetChangeGameObjectStructureEvent(i, out var change);
                         var obj = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                        CheckForChanges(obj, false);
+                        CheckGameObjectStructural(obj, false);
                         break;
                     }
                     case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
                     {
                         stream.GetChangeGameObjectStructureHierarchyEvent(i, out var change);
                         var obj = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                        CheckForChanges(obj, true);
+                        CheckGameObjectStructural(obj, true);
                         break;
                     }
                     case ObjectChangeKind.ChangeGameObjectOrComponentProperties:
@@ -377,10 +388,13 @@ namespace Editor
                         switch (obj)
                         {
                             case GameObject gameObject:
-                                CheckProperties(gameObject);
+                                // We can't just check the game object properties, components could be reordered.
+                                // Drag-reordering components triggers this, while Move Up/Down in the component
+                                // menu triggers ChangeGameObjectStructure.
+                                CheckGameObjectStructural(gameObject, false);
                                 break;
                             case Component component:
-                                CheckProperties(component);
+                                CheckComponent(component);
                                 break;
                         }
                         break;
@@ -392,7 +406,7 @@ namespace Editor
                         foreach (var instanceId in change.instanceIds)
                         {
                             var obj = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
-                            CheckForChanges(obj, true);
+                            CheckGameObjectStructural(obj, true);
                         }
                         break;
                     }
@@ -416,7 +430,7 @@ namespace Editor
             }
         }
 
-        void CheckForChanges(GameObject gameObject, bool includeChildren)
+        void CheckGameObjectStructural(GameObject gameObject, bool includeChildren)
         {
             if (gameObject == null || !m_TrackedGameObjects.TryGetValue(gameObject, out var goState))
             {
@@ -437,7 +451,10 @@ namespace Editor
             {
                 // If the game object's properties have not changed, we still must check
                 // component properties for changes.
-                CheckComponentsProperties(goState);
+                foreach (var componentState in goState.Components)
+                {
+                    CheckProperties(componentState.Properties);
+                }
             }
         }
 
@@ -507,7 +524,7 @@ namespace Editor
                 }
 
                 // Check the child for changes.
-                CheckForChanges(child, true);
+                CheckGameObjectStructural(child, true);
             }
         }
 
@@ -577,28 +594,7 @@ namespace Editor
             }
         }
 
-        void CheckComponentsProperties(GameObjectState goState)
-        {
-            foreach (var componentState in goState.Components)
-            {
-                CheckProperties(componentState.Properties);
-            }
-        }
-
-        void CheckProperties(GameObject gameObject)
-        {
-            if (gameObject == null || !m_TrackedGameObjects.TryGetValue(gameObject, out var goState))
-            {
-                return;
-            }
-
-            if (goState.Properties.Update())
-            {
-                CheckProperties(goState.Properties);
-            }
-        }
-
-        void CheckProperties(Component component)
+        void CheckComponent(Component component)
         {
             if (component == null || !m_TrackedGameObjects.TryGetValue(component.gameObject, out var goState))
             {
