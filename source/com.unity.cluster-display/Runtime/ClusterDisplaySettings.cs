@@ -9,11 +9,12 @@ namespace Unity.ClusterDisplay
         [SerializeField]
         bool m_EnableOnPlay = true;
 
-        public bool EnableOnPlay
-        {
-            get => m_EnableOnPlay;
-            set => m_EnableOnPlay = value;
-        }
+        [SerializeField]
+        ClusterParams m_ClusterParams;
+
+        public bool EnableOnPlay => m_EnableOnPlay;
+
+        public ClusterParams ClusterParams => m_ClusterParams;
 
         public static ClusterDisplaySettings CurrentSettings
         {
@@ -24,6 +25,11 @@ namespace Unity.ClusterDisplay
                 if (settings == null)
                 {
                     settings = CreateInstance<ClusterDisplaySettings>();
+                    settings.m_ClusterParams = ClusterParams.Default;
+                    if (!UnityEditor.AssetDatabase.IsValidFolder("Assets/Resources"))
+                    {
+                        UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
+                    }
                     UnityEditor.AssetDatabase.CreateAsset(settings, $"Assets/Resources/{k_AssetName}.asset");
                     UnityEditor.AssetDatabase.SaveAssets();
                 }

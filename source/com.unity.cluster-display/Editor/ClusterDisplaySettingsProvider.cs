@@ -39,6 +39,10 @@ namespace Unity.ClusterDisplay.Editor
                     var properties = new VisualElement();
                     rootElement.Add(properties);
                     properties.Add(new PropertyField(settings.FindProperty("m_EnableOnPlay"), Contents.InitializeOnPlay));
+
+                    var parameters = new VisualElement();
+                    rootElement.Add(parameters);
+                    parameters.Add(new PropertyField(settings.FindProperty("m_ClusterParams")));
                     rootElement.Bind(settings);
 
                     parentElement.Add(rootElement);

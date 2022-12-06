@@ -10,3 +10,34 @@
     -unity-font-style: bold;
     margin-bottom: 12px;
 }
+
+.cluster-settings-indented
+{
+    padding-left: 25px;
+}
+
+.hidden
+{
+    display: none;
+}
+
+.toggle-group
+{
+    flex-direction: row;
+}
+
+.toggle-group > Button
+{
+    flex-grow: 1;
+}
+
+.toggle-group > Button.checked
+{
+    background-color: #46607C;
+}
+
+.toggle-group > Label
+{
+    margin-left: 3px;
+    -unity-text-align: middle-left;
+}

@@ -14,16 +14,22 @@ namespace Unity.ClusterDisplay
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
     /// node logic each frame by injecting a call back in the player loop.
-    ///
-    /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
     public partial class ClusterSync
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void EnableClusterSyncOnLoad()
+        {
+            var settings = ClusterDisplaySettings.CurrentSettings;
+            Debug.Assert(settings != null);
+            if (settings.EnableOnPlay)
+            {
+                EnableClusterSync();
+            }
+        }
+
         static void EnableClusterSync()
         {
-            if (!ClusterDisplaySettings.CurrentSettings.EnableOnPlay) return;
-
             if (!ServiceLocator.TryGet<IClusterSyncState>(out _))
             {
                 ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
@@ -31,7 +37,19 @@ namespace Unity.ClusterDisplay
                 var clusterSync = new ClusterSync();
                 ServiceLocator.Provide<IClusterSyncState>(clusterSync);
 
-                clusterSync.EnableClusterDisplay(ClusterParams.FromCommandLine());
+                clusterSync.EnableClusterDisplay(ClusterDisplaySettings.CurrentSettings.ClusterParams.ApplyCommandLine());
+                EditorApplication.playModeStateChanged += OnPlayModeChanged;
+
+                #if UNITY_EDITOR
+                void OnPlayModeChanged(PlayModeStateChange playModeStateChange)
+                {
+                    if (playModeStateChange is PlayModeStateChange.ExitingPlayMode)
+                    {
+                        clusterSync.DisableClusterDisplay();
+                        EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+                    }
+                }
+                #endif
             }
         }
 
