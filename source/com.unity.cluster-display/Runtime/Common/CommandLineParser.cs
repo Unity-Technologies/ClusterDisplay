@@ -11,24 +11,8 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    internal static class CommandLineParser
+    static class CommandLineParser
     {
-
-#if UNITY_EDITOR
-        /// These attributes are used to search for properties in ClusterSyncEditorConfig so we
-        /// can call it through reflection.
-
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class IsEmitterFieldAttribute : Attribute { }
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class EmitterCommandLineInjectionFieldAttribute : Attribute { }
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class RepeaterCommandLineInjectionFieldAttribute : Attribute { }
-#endif
-
         /// <summary>
         ///  This delegate is used to override the parsing of an argument's parameters.
         /// </summary>
