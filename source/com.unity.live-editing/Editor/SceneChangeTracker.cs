@@ -51,9 +51,8 @@ namespace Editor
     {
         class SceneState : IDisposable
         {
-            readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
-
             public Scene Scene { get; }
+
             public List<GameObjectState> Roots { get; } = new List<GameObjectState>();
 
             public SceneState(Scene scene)
@@ -63,26 +62,10 @@ namespace Editor
 
             public void Dispose()
             {
-                // TODO: GameObjectState.Dispose is recursive, there will be redundant dispose call, maybe only call on root objects?
-                foreach (var (_, state) in m_TrackedGameObjects)
+                foreach (var rootState in Roots)
                 {
-                    state.Dispose();
+                    rootState.Dispose();
                 }
-            }
-
-            public void AddTrackedObject(GameObjectState state)
-            {
-                m_TrackedGameObjects.Add(state.GameObject.GetInstanceID(), state);
-            }
-
-            public bool RemoveTrackedObject(GameObjectState state)
-            {
-                return m_TrackedGameObjects.Remove(state.InstanceID);
-            }
-
-            public bool TryGetTrackedObject(GameObject gameObject, out GameObjectState state)
-            {
-                return m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out state);
             }
         }
 
@@ -91,6 +74,7 @@ namespace Editor
             public GameObject GameObject { get; }
             public int InstanceID { get; }
             public PropertyState Properties { get; }
+
             public SceneState Scene { get; set; }
             public GameObjectState Parent { get; set; }
             public List<GameObjectState> Children { get; } = new List<GameObjectState>();
@@ -149,8 +133,8 @@ namespace Editor
 
             public void Dispose()
             {
-                PreviousState?.Dispose();
-                CurrentState?.Dispose();
+                PreviousState.Dispose();
+                CurrentState.Dispose();
             }
 
             public bool Update()
@@ -168,9 +152,11 @@ namespace Editor
 
         bool m_IsRunning;
         readonly Dictionary<Scene, SceneState> m_TrackedScenes = new Dictionary<Scene, SceneState>();
+        readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
 
         // TODO: time-sliced based polling to catch changes not caught by undo?
         // TODO: scene parameters (lighting, etc.)
+        // TODO: use index in parent or scene and transform path to specify things like deleted game objects so we can validate the correct thing is removed.
 
         /// <summary>
         /// Releases resources held by this instance.
@@ -189,8 +175,6 @@ namespace Editor
             {
                 return;
             }
-
-            Debug.Log("Start");
 
             EditorSceneManager.sceneOpened += OnSceneOpened;
             EditorSceneManager.sceneClosing += OnSceneClosing;
@@ -214,8 +198,6 @@ namespace Editor
                 return;
             }
 
-            Debug.Log("Stop");
-
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneClosing -= OnSceneClosing;
             ObjectChangeEvents.changesPublished -= OnChangesPublished;
@@ -226,6 +208,7 @@ namespace Editor
             }
 
             m_TrackedScenes.Clear();
+            m_TrackedGameObjects.Clear();
 
             m_IsRunning = false;
         }
@@ -250,12 +233,10 @@ namespace Editor
 
                 scene.GetRootGameObjects(s_TempGameObjects);
 
-                foreach (var root in s_TempGameObjects)
+                for (var i = 0; i < s_TempGameObjects.Count; i++)
                 {
-                    StartTrackingGameObject(sceneState, null, root);
+                    StartTrackingGameObject(sceneState, null, s_TempGameObjects[i]);
                 }
-
-                Debug.Log($"StartTrackingScene {scene.name}");
             }
         }
 
@@ -264,8 +245,6 @@ namespace Editor
             if (scene.IsValid() && m_TrackedScenes.Remove(scene, out var sceneState))
             {
                 sceneState.Dispose();
-
-                Debug.Log($"StopTrackingScene {scene.name}");
             }
         }
 
@@ -277,7 +256,7 @@ namespace Editor
                 Parent = parentState,
             };
 
-            sceneState.AddTrackedObject(goState);
+            m_TrackedGameObjects.Add(goState.InstanceID, goState);
 
             if (goState.Parent == null)
             {
@@ -451,59 +430,178 @@ namespace Editor
         /// <param name="sceneState">The scene to look for changes in.</param>
         void CheckScene(SceneState sceneState)
         {
+            /*
+             * Care must be taken ensure that the stream of changes can be applied in order and get correct results,
+             * For example, we shouldn't try to update component properties before adding new game objects, as the
+             * properties could reference a game object that hasn't been created yet. Therefore, we do the following:
+             *
+             * 1) Add gameobjects
+             * 2) Reparent gameobjects
+             * 3) Remove gameobjects
+             * 4) Reorder gameobjects
+             * 6) Add components
+             * 5) Remove components
+             * 7) Reorder components
+             * 8) Update game object (maybe before adding components?) and component properties
+             */
+
+            // Detect added or re-parented game objects.
+            sceneState.Scene.GetRootGameObjects(s_TempGameObjects);
+
+            for (var i = 0; i < s_TempGameObjects.Count; i++)
+            {
+                FindAddedGameObjects(sceneState, null, s_TempGameObjects[i]);
+            }
+
             // Detect removed root game objects.
             for (var i = sceneState.Roots.Count - 1; i >= 0; i--)
             {
-                var root = sceneState.Roots[i];
-
-                if (root.GameObject == null)
+                if (FindRemovedGameObjects(sceneState.Roots[i]))
                 {
-                    Debug.Log($"Change: Removed root game object at index {i}.");
-
-                    sceneState.RemoveTrackedObject(root);
+                    Debug.Log($"Change: Removed root of {sceneState.Scene.name} at index {i}.");
                     sceneState.Roots.RemoveAt(i);
-                    root.Dispose();
                 }
-
-                // TODO: handle re-parented objects, they won't be null
             }
 
-            // TODO: we must ensure that all gameobjects are created before components, then components before all properties,
-            // otherwise, it might not be possible to fill the serialized properties values.
-
-            // Detect added and reordered root game objects.
-            sceneState.Scene.GetRootGameObjects(s_TempGameObjects);
-
+            // Detect reordered root game objects.
             for (var currIndex = 0; currIndex < s_TempGameObjects.Count; currIndex++)
             {
-                var root = s_TempGameObjects[currIndex];
-
-                // Find the previous index of the root.
-                var prevIndex = sceneState.Roots.Count;
-
-                for (var i = 0; i < sceneState.Roots.Count; i++)
-                {
-                    var prevRoot = sceneState.Roots[i];
-
-                    if (prevRoot.GameObject == root)
-                    {
-                        prevIndex = i;
-                        break;
-                    }
-                }
-
-                // Check the hierarchy under the root object for changes.
-                var rootState = CheckGameObjectStructural(sceneState, root, true);
-
-                // Check if the root index has changed.
-                if (currIndex != prevIndex)
+                if (HandleReordered(s_TempGameObjects[currIndex], sceneState.Roots, currIndex, out var prevIndex, out var rootState))
                 {
                     Debug.Log($"Change: Reorder root game object from {prevIndex} to {currIndex}.");
+                }
 
-                    sceneState.Roots.RemoveAt(prevIndex);
-                    sceneState.Roots.Insert(currIndex, rootState);
+                FindReorderedGameObjects(rootState);
+            }
+        }
+
+        GameObjectState FindAddedGameObjects(SceneState sceneState, GameObjectState parentState, GameObject gameObject)
+        {
+            if (sceneState == null || gameObject == null)
+            {
+                return null;
+            }
+
+            // Check if the game object is new.
+            if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
+            {
+                goState = new GameObjectState(gameObject);
+                m_TrackedGameObjects.Add(goState.InstanceID, goState);
+
+                Debug.Log($"Change: Added game object {gameObject}");
+            }
+
+            // Check if the game object's parent has changed.
+            var sceneChanged = goState.Scene != sceneState;
+            var parentChanged = goState.Parent != parentState;
+
+            if (sceneChanged || parentChanged)
+            {
+                if (goState.Parent == null)
+                {
+                    goState.Scene?.Roots.Remove(goState);
+                }
+                else if (parentChanged)
+                {
+                    goState.Parent.Children.Remove(goState);
+                }
+
+                goState.Scene = sceneState;
+                goState.Parent = parentState;
+
+                if (goState.Parent == null)
+                {
+                    goState.Scene.Roots.Add(goState);
+                }
+                else if (parentChanged)
+                {
+                    goState.Parent.Children.Add(goState);
+                }
+
+                if (goState.Parent == null)
+                {
+                    Debug.Log($"Change: Set Parent {goState.Scene.Scene.name}->{gameObject.name}");
+                }
+                else
+                {
+                    Debug.Log($"Change: Set parent {goState.Parent.GameObject.name}->{gameObject.name}");
                 }
             }
+
+            // Check children for changes.
+            var transform = gameObject.transform;
+
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                FindAddedGameObjects(sceneState, goState, transform.GetChild(i).gameObject);
+            }
+
+            return goState;
+        }
+
+        bool FindRemovedGameObjects(GameObjectState goState)
+        {
+            // Check if this game object is destroyed.
+            if (goState.GameObject == null)
+            {
+                m_TrackedGameObjects.Remove(goState.InstanceID);
+                goState.Dispose();
+                return true;
+            }
+
+            // Check children for removed game objects.
+            for (var i = goState.Children.Count - 1; i >= 0; i--)
+            {
+                if (FindRemovedGameObjects(goState.Children[i]))
+                {
+                    Debug.Log($"Change: Removed child of {goState.GameObject.name} at index {i}.");
+                    goState.Children.RemoveAt(i);
+                }
+            }
+
+            return false;
+        }
+
+        void FindReorderedGameObjects(GameObjectState goState)
+        {
+            var transform = goState.GameObject.transform;
+
+            for (var currIndex = 0; currIndex < transform.childCount; currIndex++)
+            {
+                var child = transform.GetChild(currIndex).gameObject;
+
+                if (HandleReordered(child, goState.Children, currIndex, out var prevIndex, out var childState))
+                {
+                    Debug.Log($"Change: Reorder game object from {prevIndex} to {currIndex}.");
+                }
+
+                FindReorderedGameObjects(childState);
+            }
+        }
+
+        static bool HandleReordered(GameObject obj, List<GameObjectState> siblings, int currIndex, out int prevIndex, out GameObjectState sibling)
+        {
+            for (prevIndex = 0; prevIndex < siblings.Count; prevIndex++)
+            {
+                sibling = siblings[prevIndex];
+
+                if (sibling.GameObject != obj)
+                {
+                    continue;
+                }
+
+                if (currIndex != prevIndex)
+                {
+                    siblings.RemoveAt(prevIndex);
+                    siblings.Insert(currIndex, sibling);
+                    return true;
+                }
+
+                break;
+            }
+
+            sibling = default;
+            return false;
         }
 
         /// <summary>
@@ -697,7 +795,7 @@ namespace Editor
         }
 
         /// <summary>
-        /// Looks for property changes made to a single component.
+        /// Looks for changes to the properties of a single component.
         /// </summary>
         /// <param name="sceneState">The scene the component is in.</param>
         /// <param name="component">The component to look for changes in.</param>
