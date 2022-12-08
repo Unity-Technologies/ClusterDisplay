@@ -643,7 +643,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2109992066}
-  - component: {fileID: 2109992065}
   - component: {fileID: 2109992063}
   - component: {fileID: 2109992062}
   - component: {fileID: 2109992061}
@@ -720,18 +719,6 @@ MonoBehaviour:
     m_OverscanInPixels: 0
   m_ProjectionPolicy: {fileID: 2109992068}
   m_DelayPresentByOneFrame: 0
---- !u!114 &2109992065
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2109992060}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18e572db6e8010442841a0b005aafba6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &2109992066
 Transform:
   m_ObjectHideFlags: 0

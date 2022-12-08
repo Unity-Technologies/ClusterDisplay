@@ -21,19 +21,19 @@ namespace Unity.ClusterDisplay
             get
             {
                 ClusterDisplaySettings settings = Resources.Load<ClusterDisplaySettings>(k_AssetName);
-#if UNITY_EDITOR
                 if (settings == null)
                 {
                     settings = CreateInstance<ClusterDisplaySettings>();
                     settings.m_ClusterParams = ClusterParams.Default;
+#if UNITY_EDITOR
                     if (!UnityEditor.AssetDatabase.IsValidFolder("Assets/Resources"))
                     {
                         UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
                     }
                     UnityEditor.AssetDatabase.CreateAsset(settings, $"Assets/Resources/{k_AssetName}.asset");
                     UnityEditor.AssetDatabase.SaveAssets();
-                }
 #endif
+                }
                 return settings;
             }
         }

@@ -5,7 +5,7 @@ using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay
 {
-    class QuadroSyncInitState: HardwareSyncInitState
+    class QuadroSyncInitState : HardwareSyncInitState
     {
         bool m_Initialized;
 
@@ -23,7 +23,10 @@ namespace Unity.ClusterDisplay
                 QualitySettings.maxQueuedFrames = 1;
 
                 ClusterDebug.Log("Initializing Quadro Sync.");
-                GfxPluginQuadroSyncSystem.Instance.ExecuteQuadroSyncCommand(GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
+#if UNITY_EDITOR
+                ClusterDebug.Log("You are attempting to initialize Quadro Sync swap barriers in the Editor. This will likely fail.");
+#endif
+                GfxPluginQuadroSyncSystem.ExecuteQuadroSyncCommand(GfxPluginQuadroSyncSystem.EQuadroSyncRenderEvent.QuadroSyncInitialize, new IntPtr());
 
                 // We won't know immediately if everything worked (and if we are really using hardware acceleration), so
                 // continue to peek at the state to know when initialization of QuadroSync is done.
@@ -42,13 +45,20 @@ namespace Unity.ClusterDisplay
 
         void ProcessQuadroSyncInitResult()
         {
-            var initializationState = GfxPluginQuadroSyncSystem.Instance.FetchState().InitializationState;
+            var initializationState = GfxPluginQuadroSyncSystem.FetchState().InitializationState;
             if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
             {
                 Node.UsingNetworkSync = (initializationState != GfxPluginQuadroSyncInitializationState.Initialized);
 
                 // Initialization finished, we do not need to be called again
                 PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);
+
+                // Initialization failed
+                if (initializationState is not GfxPluginQuadroSyncInitializationState.Initialized)
+                {
+                    // Disable logging so we don't pollute the output
+                    GfxPluginQuadroSyncSystem.DisableLogging();
+                }
             }
         }
     }
