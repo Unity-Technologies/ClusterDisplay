@@ -9,9 +9,7 @@ namespace Unity.ClusterDisplay
     /// </summary>
     /// <remarks>
     /// With the exception of <see cref="GetIsActive"/>, properties will throw exceptions if there
-    /// is no instance registered with <see cref="ServiceLocator"/>. This class is intended to
-    /// be used in conjunction with <see cref="ClusterDisplayManager"/> which automatically
-    /// initializes and registers a <see cref="ClusterSync"/> instance.
+    /// is no active instance (registered with <see cref="ServiceLocator"/>).
     /// Consider using <code>ServiceLocator.TryGet&lt;IClusterSyncState&gt;()</code> instead if you are unsure.
     /// </remarks>
     public static class ClusterDisplayState
@@ -112,7 +110,7 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// You can use this ID to identify which unique instance is executing. 
+        /// You can use this ID to identify which unique instance is executing.
         /// </summary>
         /// <returns>
         /// True if the cluster synchronization is available, otherwise it will return false.

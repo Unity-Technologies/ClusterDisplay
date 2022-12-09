@@ -42,23 +42,6 @@ namespace Unity.ClusterDisplay.Tests
             return new UdpAgent(testConfig);
         }
 
-        [UnityTest]
-        public IEnumerator TestBootstrap()
-        {
-            // Bootstrap component creates a ClusterDisplayManager then deletes itself
-            // ClusterDisplayManager uses commandline params.
-            // This is a hack to make the ClusterDisplayManager initialize with
-            // cluster logic disabled.
-            CommandLineParser.Override(new List<string>());
-            m_TestGameObject = new GameObject("Bootstrap", typeof(ClusterDisplayBootstrap));
-            yield return null;
-            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayManager>(out _), Is.True);
-            Assert.That(m_TestGameObject.TryGetComponent<ClusterDisplayBootstrap>(out _), Is.False);
-
-            Assert.That(ClusterDisplayManager.ClusterSyncInstance, Is.EqualTo(ServiceLocator.Get<IClusterSyncState>()));
-            m_Instances.Add(ClusterDisplayManager.ClusterSyncInstance);
-        }
-
         [Test]
         public void TestClusterDisplayState()
         {
