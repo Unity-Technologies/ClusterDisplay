@@ -273,37 +273,6 @@ namespace Unity.ClusterDisplay
         internal static bool clusterDisplayLogicSpecified => emitterSpecified.Defined || repeaterSpecified.Defined;
         private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
 
-#if UNITY_EDITOR
-        private static FieldInfo GetField (Type type, Type attributeType, Type expectedTypeField)
-        {
-            var publicInstanceFields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-            FieldInfo field = null;
-
-            foreach (var fields in publicInstanceFields)
-            {
-                if (fields.GetCustomAttribute(attributeType) == null)
-                {
-                    continue;
-                }
-
-                field = fields;
-                break;
-            }
-
-            if (field == null)
-            {
-                throw new Exception($"The type: \"{type.Name}\" must contain a field with the attribute: \"{attributeType.Name}\".");
-            }
-
-            if (field.FieldType != expectedTypeField)
-            {
-                throw new Exception($"The type: \"{type.Name}\" with the field: \"{field.Name}\" is not the expected type: \"{expectedTypeField.Name}\".");
-            }
-
-            return field;
-        }
-#endif
-
         internal static void CacheArguments ()
         {
             Reset();
@@ -311,42 +280,6 @@ namespace Unity.ClusterDisplay
             m_Arguments = new List<string>(20) { };
 
             m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
-
-#if false
-            // This section of code is kind of a hack, but it's purpose is to retrieve the editor only scriptable
-            // object: "ClusterSyncEditorConfig" and through reflection call a method to override the arguments
-            // with the arguments stored in the scriptable object.
-            var assets = AssetDatabase.FindAssets("t:ClusterSyncEditorConfig"); // Make sure that if you rename this class, you need to change that here as well.
-
-            if (assets.Length > 0)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(assets[0]);
-                var type = AssetDatabase.GetMainAssetTypeAtPath(path);
-
-                var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
-                var isEmitterFieldAttribute = typeof(IsEmitterFieldAttribute);
-
-                var isEmitterField = GetField(type, isEmitterFieldAttribute, typeof(bool));
-
-                bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
-
-                var cmdLineFieldAttribute =
-                    isEmitter ?
-                        typeof(EmitterCommandLineInjectionFieldAttribute) :
-                        typeof(RepeaterCommandLineInjectionFieldAttribute);
-
-                var cmdLineField = GetField(type, cmdLineFieldAttribute, typeof(string));
-                var value = cmdLineField.GetValue(clusterSyncEditorConfig) as string;
-
-                Debug.Assert(!string.IsNullOrEmpty(value), "Received a NULL arguments string while attempting to retrieve command line arguments from editor config");
-
-                var list = value.Split(' ').ToList();
-                if (list.Count > 0)
-                {
-                    m_Arguments.AddRange(list);
-                }
-            }
-#endif
 
             PrintArguments(m_Arguments);
         }

@@ -39,10 +39,11 @@ namespace Unity.ClusterDisplay
             var clusterSyncInstance = new ClusterSync();
             ServiceLocator.Provide<IClusterSyncState>(clusterSyncInstance);
 
-            clusterSyncInstance.EnableClusterDisplay(
-                ClusterDisplaySettings.CurrentSettings.ClusterParams.ApplyCommandLine());
+            var clusterParams = ClusterDisplaySettings.CurrentSettings.ClusterParams;
 
 #if UNITY_EDITOR
+            clusterParams.ClusterLogicSpecified = ClusterDisplaySettings.CurrentSettings.EnableOnPlay;
+            // Make sure we shut down cluster logic gracefully when we exit play mode
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             void OnPlayModeChanged(PlayModeStateChange playModeStateChange)
             {
@@ -56,6 +57,8 @@ namespace Unity.ClusterDisplay
                 }
             }
 #endif
+
+            clusterSyncInstance.EnableClusterDisplay(clusterParams.PreProcess());
         }
 
         const string k_DefaultName = "DefaultClusterSync";
@@ -72,6 +75,8 @@ namespace Unity.ClusterDisplay
         DebugPerf m_EndDelayMonitor = new();
 
         public delegate void OnClusterDisplayStateChange();
+
+        public static Func<ClusterParams, ClusterParams> ParameterPreProcessor = null;
 
         public static OnClusterDisplayStateChange onPreEnableClusterDisplay;
         public static OnClusterDisplayStateChange onPostEnableClusterDisplay;
