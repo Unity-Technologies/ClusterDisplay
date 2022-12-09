@@ -26,6 +26,7 @@ namespace Unity.ClusterDisplay.Editor
             container.Add(new PropertyField(property.FindPropertyRelative("m_HandshakeTimeoutSec"), Contents.HandshakeTimeoutLabel));
             container.Add(new PropertyField(property.FindPropertyRelative("m_CommTimeoutSec"), Contents.CommTimeoutLabel));
 
+            container.Add(new PropertyField(property.FindPropertyRelative("TargetFps")));
             container.Add(new PropertyField(property.FindPropertyRelative("Fence")));
             container.Add(new PropertyField(property.FindPropertyRelative("AdapterName")));
 

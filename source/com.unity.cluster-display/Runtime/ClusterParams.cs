@@ -92,26 +92,8 @@ namespace Unity.ClusterDisplay
                 MulticastAddress = "224.0.1.0",
                 HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
                 CommunicationTimeout = TimeSpan.FromMilliseconds(5000),
-                Fence = FrameSyncFence.Hardware
-            };
-
-        public static ClusterParams FromCommandLine() =>
-            new()
-            {
-                ClusterLogicSpecified = CommandLineParser.clusterDisplayLogicSpecified,
-                EmitterSpecified = CommandLineParser.emitterSpecified.Value,
-                NodeID = CommandLineParser.nodeID.Value,
-                RepeaterCount = CommandLineParser.emitterSpecified.Value ? CommandLineParser.repeaterCount.Value : 0,
-                Port = CommandLineParser.port.Value,
-                MulticastAddress = CommandLineParser.multicastAddress.Value,
-                AdapterName = CommandLineParser.adapterName.Value,
-                TargetFps = CommandLineParser.targetFps.Value,
-                DelayRepeaters = CommandLineParser.delayRepeaters.Defined,
-                HeadlessEmitter = CommandLineParser.headlessEmitter.Defined,
-                ReplaceHeadlessEmitter = CommandLineParser.replaceHeadlessEmitter.Defined,
-                HandshakeTimeout = TimeSpan.FromMilliseconds(CommandLineParser.handshakeTimeout.Defined ? CommandLineParser.handshakeTimeout.Value : 10000),
-                CommunicationTimeout = TimeSpan.FromMilliseconds(CommandLineParser.communicationTimeout.Defined ? CommandLineParser.communicationTimeout.Value : 10000),
-                Fence = CommandLineParser.disableQuadroSync.Defined ? FrameSyncFence.Network : FrameSyncFence.Hardware
+                Fence = FrameSyncFence.Hardware,
+                TargetFps = -1
             };
     }
 
@@ -182,6 +164,8 @@ namespace Unity.ClusterDisplay
             ApplyArgument(ref clusterParams.DelayRepeaters, CommandLineParser.delayRepeaters);
             ApplyArgument(ref clusterParams.ReplaceHeadlessEmitter, CommandLineParser.replaceHeadlessEmitter);
             ApplyArgument(ref clusterParams.HeadlessEmitter, CommandLineParser.headlessEmitter);
+            ApplyArgument(ref clusterParams.AdapterName, CommandLineParser.adapterName);
+            ApplyArgument(ref clusterParams.TargetFps, CommandLineParser.targetFps);
 
             if (CommandLineParser.handshakeTimeout.Defined)
             {
