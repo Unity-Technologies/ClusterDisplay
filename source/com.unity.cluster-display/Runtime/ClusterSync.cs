@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -13,11 +14,53 @@ namespace Unity.ClusterDisplay
     /// Need one and only one instance of this class in the scene.
     /// it's responsible for reading the config and applying it, then invoking the
     /// node logic each frame by injecting a call back in the player loop.
-    ///
-    /// Note: Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
     /// </summary>
     public partial class ClusterSync
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void EnableClusterSyncOnLoad()
+        {
+            if (ClusterDisplaySettings.CurrentSettings.EnableOnPlay)
+            {
+                EnableClusterSync();
+            }
+        }
+
+        static void EnableClusterSync()
+        {
+            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync))
+            {
+                ClusterDebug.Log($"Using existing ClusterSync instance {clusterSync.InstanceName}");
+                return;
+            }
+
+            ClusterDebug.Log($"Creating instance of: {nameof(ClusterSync)} on demand.");
+
+            var clusterSyncInstance = new ClusterSync();
+            ServiceLocator.Provide<IClusterSyncState>(clusterSyncInstance);
+
+            var clusterParams = ClusterDisplaySettings.CurrentSettings.ClusterParams;
+
+#if UNITY_EDITOR
+            clusterParams.ClusterLogicSpecified = ClusterDisplaySettings.CurrentSettings.EnableOnPlay;
+            // Make sure we shut down cluster logic gracefully when we exit play mode
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            void OnPlayModeChanged(PlayModeStateChange playModeStateChange)
+            {
+                if (playModeStateChange is PlayModeStateChange.ExitingPlayMode)
+                {
+                    Debug.AssertFormat(ServiceLocator.TryGet(out clusterSync) && clusterSync == clusterSyncInstance,
+                        "The active ClusterSync instance was changed. Unable to perform graceful shutdown.");
+
+                    clusterSyncInstance.DisableClusterDisplay();
+                    EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+                }
+            }
+#endif
+
+            clusterSyncInstance.EnableClusterDisplay(clusterParams.PreProcess());
+        }
+
         const string k_DefaultName = "DefaultClusterSync";
         public string InstanceName { get; }
 
@@ -75,7 +118,7 @@ namespace Unity.ClusterDisplay
                 return string.Empty;
             }
 
-            var quadroSyncState = GfxPluginQuadroSyncSystem.Instance.FetchState();
+            var quadroSyncState = GfxPluginQuadroSyncSystem.FetchState();
             return $"Cluster Sync Instance: {InstanceName},\r\n" +
 				   $"Frame Stats:\r\n{LocalNode.GetDebugString(LocalNode.UdpAgent.Stats)}" +
                    $"\r\n\r\n\tAverage Frame Time: {(m_FrameRatePerf.Average * 1000)} ms" +

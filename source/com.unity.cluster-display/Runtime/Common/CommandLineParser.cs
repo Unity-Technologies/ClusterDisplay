@@ -11,24 +11,8 @@ using System.Reflection;
 
 namespace Unity.ClusterDisplay
 {
-    internal static class CommandLineParser
+    static class CommandLineParser
     {
-
-#if UNITY_EDITOR
-        /// These attributes are used to search for properties in ClusterSyncEditorConfig so we
-        /// can call it through reflection.
-
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class IsEmitterFieldAttribute : Attribute { }
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class EmitterCommandLineInjectionFieldAttribute : Attribute { }
-
-        [AttributeUsage(AttributeTargets.Field)]
-        public class RepeaterCommandLineInjectionFieldAttribute : Attribute { }
-#endif
-
         /// <summary>
         ///  This delegate is used to override the parsing of an argument's parameters.
         /// </summary>
@@ -127,10 +111,10 @@ namespace Unity.ClusterDisplay
 
             internal BaseArgument(string argumentName, bool required = false)
             {
-                Reset();
-
                 k_Required = required;
                 m_ArgumentName = argumentName;
+
+                Reset();
 
                 m_Cached = false;
                 m_Value = default(T);
@@ -140,10 +124,10 @@ namespace Unity.ClusterDisplay
 
             internal BaseArgument(string argumentName, TryParseDelegate<T> tryParseDelegate, bool required = false)
             {
-                Reset();
 
                 k_Required = required;
                 m_ArgumentName = argumentName;
+                Reset();
 
                 tryParse = tryParseDelegate;
             }
@@ -247,10 +231,9 @@ namespace Unity.ClusterDisplay
         internal static readonly IntArgument overscan                       = new IntArgument("-overscan");
 
         internal static readonly BoolArgument disableQuadroSync             = new BoolArgument("-disableQuadroSync");
-        internal static readonly IntArgument quadroSyncInitDelay            = new IntArgument("-quadroSyncInitDelay");
 
         internal static readonly StringArgument adapterName                 = new StringArgument("-adapterName");
-        internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: ParseMulticastAddress);
+        internal static readonly StringArgument multicastAddress            = new StringArgument(GetNodeType, tryParse: TryParseMulticastAddress);
         internal static readonly IntArgument port                           = new IntArgument(GetNodeType, ParsePort);
 
         internal static readonly IntArgument handshakeTimeout               = new IntArgument("-handshakeTimeout");
@@ -287,39 +270,8 @@ namespace Unity.ClusterDisplay
         /// <returns></returns>
         private static string GetNodeType() => nodeType;
 
-        internal static bool clusterDisplayLogicSpecified => emitterSpecified.Value || repeaterSpecified.Value;
+        internal static bool clusterDisplayLogicSpecified => emitterSpecified.Defined || repeaterSpecified.Defined;
         private static int addressStartOffset => (emitterSpecified.Value ? 3 : 2);
-
-#if UNITY_EDITOR
-        private static FieldInfo GetField (Type type, Type attributeType, Type expectedTypeField)
-        {
-            var publicInstanceFields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-            FieldInfo field = null;
-
-            foreach (var fields in publicInstanceFields)
-            {
-                if (fields.GetCustomAttribute(attributeType) == null)
-                {
-                    continue;
-                }
-
-                field = fields;
-                break;
-            }
-
-            if (field == null)
-            {
-                throw new Exception($"The type: \"{type.Name}\" must contain a field with the attribute: \"{attributeType.Name}\".");
-            }
-
-            if (field.FieldType != expectedTypeField)
-            {
-                throw new Exception($"The type: \"{type.Name}\" with the field: \"{field.Name}\" is not the expected type: \"{expectedTypeField.Name}\".");
-            }
-
-            return field;
-        }
-#endif
 
         internal static void CacheArguments ()
         {
@@ -328,42 +280,6 @@ namespace Unity.ClusterDisplay
             m_Arguments = new List<string>(20) { };
 
             m_Arguments.AddRange(System.Environment.GetCommandLineArgs());
-
-#if UNITY_EDITOR
-            // This section of code is kind of a hack, but it's purpose is to retrieve the editor only scriptable
-            // object: "ClusterSyncEditorConfig" and through reflection call a method to override the arguments
-            // with the arguments stored in the scriptable object.
-            var assets = AssetDatabase.FindAssets("t:ClusterSyncEditorConfig"); // Make sure that if you rename this class, you need to change that here as well.
-
-            if (assets.Length > 0)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(assets[0]);
-                var type = AssetDatabase.GetMainAssetTypeAtPath(path);
-
-                var clusterSyncEditorConfig = AssetDatabase.LoadAssetAtPath(path, type);
-                var isEmitterFieldAttribute = typeof(IsEmitterFieldAttribute);
-
-                var isEmitterField = GetField(type, isEmitterFieldAttribute, typeof(bool));
-
-                bool isEmitter = (bool)isEmitterField.GetValue(clusterSyncEditorConfig);
-
-                var cmdLineFieldAttribute =
-                    isEmitter ?
-                        typeof(EmitterCommandLineInjectionFieldAttribute) :
-                        typeof(RepeaterCommandLineInjectionFieldAttribute);
-
-                var cmdLineField = GetField(type, cmdLineFieldAttribute, typeof(string));
-                var value = cmdLineField.GetValue(clusterSyncEditorConfig) as string;
-
-                Debug.Assert(!string.IsNullOrEmpty(value), "Received a NULL arguments string while attempting to retrieve command line arguments from editor config");
-
-                var list = value.Split(' ').ToList();
-                if (list.Count > 0)
-                {
-                    m_Arguments.AddRange(list);
-                }
-            }
-#endif
 
             PrintArguments(m_Arguments);
         }
@@ -435,7 +351,7 @@ namespace Unity.ClusterDisplay
             return true;
         }
 
-        private static bool ParseMulticastAddress(string argumentName, out string address)
+        private static bool TryParseMulticastAddress(string argumentName, out string address)
         {
             address = null;
             if (!TryGetIndexOfNodeTypeArgument(argumentName, out var startIndex))
@@ -443,7 +359,9 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            ParseMulticastAddressAndPort(startIndex + addressStartOffset, out address, out var portValue);
+            if (!TryParseMulticastAddressAndPort(startIndex + addressStartOffset, out address, out var portValue))
+                return false;
+
             port.SetValue(portValue);
 
             return true;
@@ -492,12 +410,8 @@ namespace Unity.ClusterDisplay
         private static bool TryParsePort(out int portValue)
         {
             portValue = -1;
-            if (!TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex))
-                return false;
-
-            ParsePortFromAddress(startIndex + addressStartOffset, out portValue);
-
-            return true;
+            return TryGetIndexOfNodeTypeArgument(nodeType, out var startIndex) &&
+                TryParsePortFromAddress(startIndex + addressStartOffset, out portValue);
         }
 
         internal static bool TryGetIndexOfNodeTypeArgument(string nodeType, out int indexOfNodeTypeArgument)
@@ -521,45 +435,62 @@ namespace Unity.ClusterDisplay
                 throw new Exception("Unable to parse repeater count argument.");
         }
 
-        private static void ParseMulticastAddress(int startIndex, out string multicastAddress)
+        private static bool TryParseMulticastAddress(int startIndex, out string multicastAddress)
         {
+            multicastAddress = string.Empty;
             if (!ValidateStartIndex(startIndex))
-                throw new Exception(
-                    "Missing multicast address and RX+TX port as arguments, format should be: (multicast address):(rx port),(tx port)");
+            {
+                return false;
+            }
 
             int colonIndex = Arguments[startIndex].IndexOf(':');
             if (colonIndex == -1)
-                throw new Exception(
+            {
+                Debug.Log(
                     "Unable to parse multicast address, the port separator: \":\" is missing. Format should be: (multicast address):(rx port),(tx port)");
+                return false;
+            }
 
             multicastAddress = Arguments[startIndex].Substring(0, colonIndex);
             if (!ValidateStartIndex(startIndex) || string.IsNullOrEmpty(multicastAddress))
-                throw new Exception(
+            {
+                Debug.Log(
                     $"Unable to parse multicast address: \"{multicastAddress}\", format should be: (multicast address):(rx port),(tx port)");
+                return false;
+            }
+
+            return true;
         }
 
-        private static void ParsePortFromAddress(int startIndex, out int portValue)
+        private static bool TryParsePortFromAddress(int startIndex, out int portValue)
         {
             portValue = -1;
 
             if (!ValidateStartIndex(startIndex))
-                throw new Exception(
-                    "Unable to parse port, format should be: (multicast address):port");
+            {
+                return false;
+            }
 
             int colonIndex = Arguments[startIndex].IndexOf(':');
             if (colonIndex == -1)
-                throw new Exception(
-                    "Unable to parse port, the port separator: \":\" is missing. Format should be: (multicast address):port");
+            {
+                return false;
+            }
 
             string portStr = Arguments[startIndex].Substring(colonIndex + 1);
             if (!int.TryParse(portStr, out portValue))
-                throw new Exception($"Port argument: \"{portStr}\" is invalid.");
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        private static void ParseMulticastAddressAndPort(int startIndex, out string multicastAddress, out int portValue)
+        private static bool TryParseMulticastAddressAndPort(int startIndex, out string multicastAddress, out int portValue)
         {
-            ParseMulticastAddress(startIndex, out multicastAddress);
-            ParsePortFromAddress(startIndex, out portValue);
+            portValue = 0;
+            return TryParseMulticastAddress(startIndex, out multicastAddress) &&
+                TryParsePortFromAddress(startIndex, out portValue);
         }
 
         internal static bool TryParseVector2Int(string argumentName, out Vector2Int value, bool required = false)

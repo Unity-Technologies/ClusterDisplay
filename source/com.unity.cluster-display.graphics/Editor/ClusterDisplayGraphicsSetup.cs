@@ -1,35 +1,43 @@
 using System.Linq;
 using UnityEditor;
-using System;
-using System.Reflection;
 using UnityEngine;
-using static Unity.ClusterDisplay.Graphics.Editor.ClusterRendererInspector;
+using Unity.ClusterDisplay.Graphics.Editor;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    [InitializeOnLoad]
-    internal static class ClusterDisplayGraphicsSetup
+    static class ClusterDisplayGraphicsSetup
     {
-        private static Type[] expectedTypes = new Type[]
+        [MenuItem("Cluster Display/Setup Cluster Rendering")]
+        static void SetupComponents()
         {
-            typeof(ClusterRenderer),
-            typeof(ClusterRendererCommandLineUtils)
-        };
-
-        static ClusterDisplayGraphicsSetup ()
-        {
-            ClusterDisplaySetup.registerExpectedComponents += (listOfExpectedTypes) => listOfExpectedTypes.AddRange(expectedTypes);
-            ClusterDisplaySetup.onAddedComponent += (addedType, instance) =>
+            GameObject gameObject;
+            var instances = Object.FindObjectsOfType<ClusterRenderer>();
+            if (instances.FirstOrDefault() is { } clusterRenderer)
             {
-                var clusterRenderer = instance as ClusterRenderer;
-                if (clusterRenderer == null)
-                {
-                    return;
-                }
+                gameObject = clusterRenderer.gameObject;
+                Debug.LogWarning("A ClusterRenderer already exists in the scene.");
+            }
+            else
+            {
+                gameObject = new GameObject("ClusterDisplay");
+                clusterRenderer = gameObject.AddComponent<ClusterRenderer>();
+                gameObject.AddComponent<ClusterRendererCommandLineUtils>();
+                ClusterRendererInspector.SetProjectionPolicy(clusterRenderer, typeof(TiledProjection));
+                ClusterRendererInspector.AddMissingClusterCameraComponents();
 
-                SetProjectionPolicy(clusterRenderer, typeof(TiledProjection));
-                AddMissingClusterCameraComponents();
-            };
+                Undo.RegisterCreatedObjectUndo(gameObject, "Created Cluster Display object");
+                Debug.Log("Added ClusterRenderer to the scene");
+            }
+
+            if (!gameObject.TryGetComponent<ClusterRendererCommandLineUtils>(out _))
+            {
+                Undo.AddComponent<ClusterRendererCommandLineUtils>(gameObject);
+                Debug.Log("Added ClusterRendererCommandLineUtils");
+            }
+
+            EditorGUIUtility.PingObject(gameObject);
+
+            Debug.Log("Cluster Rendering setup complete.");
         }
     }
 }

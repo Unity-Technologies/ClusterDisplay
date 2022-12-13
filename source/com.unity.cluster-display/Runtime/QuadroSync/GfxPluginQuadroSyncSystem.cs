@@ -11,7 +11,7 @@ namespace Unity.ClusterDisplay
     /// <summary>
     /// This class is responsible for controlling the QuadroSync technology.
     /// </summary>
-    public class GfxPluginQuadroSyncSystem
+    public static class GfxPluginQuadroSyncSystem
     {
         /// <summary>
         ///  Parameters to define the various QuadroSync states and the use of the SwapGroup and SwapBarrier system.
@@ -87,24 +87,25 @@ namespace Unity.ClusterDisplay
             public static extern void GetState(ref GfxPluginQuadroSyncState state);
         }
 
-        /// <summary>
-        /// Gets the unique instance of the class (Singleton).
-        /// </summary>
-        public static GfxPluginQuadroSyncSystem Instance
+        static GfxPluginQuadroSyncSystem()
         {
-            get { return instance; }
+            EnableLogging();
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += DisableLogging;
+#endif
         }
 
-        static readonly GfxPluginQuadroSyncSystem instance = new GfxPluginQuadroSyncSystem();
-
-        static GfxPluginQuadroSyncSystem() { }
-
-        GfxPluginQuadroSyncSystem()
+        static void EnableLogging()
         {
-            #if CLUSTER_DISPLAY_VERBOSE_LOGGING
+#if CLUSTER_DISPLAY_VERBOSE_LOGGING
             GfxPluginQuadroSyncUtilities.SetLogCallback((type, message) =>
                 Debug.unityLogger.Log((LogType)type, Marshal.PtrToStringAnsi(message)));
-            #endif
+#endif
+        }
+
+        public static void DisableLogging()
+        {
+            GfxPluginQuadroSyncUtilities.SetLogCallback(null);
         }
 
         /// <summary>
@@ -112,14 +113,14 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="id"> QuadroSync command to execute.</param>
         /// <param name="data"> Data bound to the executed command.</param>
-        public void ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent id, IntPtr data)
+        public static void ExecuteQuadroSyncCommand(EQuadroSyncRenderEvent id, IntPtr data)
         {
             var cmdBuffer = new CommandBuffer();
 
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D11 ||
                 SystemInfo.graphicsDeviceType == GraphicsDeviceType.Direct3D12)
             {
-                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int) id, data);
+                cmdBuffer.IssuePluginEventAndData(GfxPluginQuadroSyncUtilities.GetRenderEventFunc(), (int)id, data);
             }
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);
@@ -131,7 +132,7 @@ namespace Unity.ClusterDisplay
         /// <returns>The state of GfxPluginQuadroSync</returns>
         /// <remarks>This is not a simple readonly property as getting this state is not "free" and fetching of the
         /// latest value is done every time the method is called.</remarks>
-        public GfxPluginQuadroSyncState FetchState()
+        public static GfxPluginQuadroSyncState FetchState()
         {
             var toReturn = new GfxPluginQuadroSyncState();
             GfxPluginQuadroSyncUtilities.GetState(ref toReturn);

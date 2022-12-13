@@ -115,17 +115,17 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestClusterParamsFromArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25690";
+            var cmd = commonArguments + "-emitterNode 0 4 225.0.6.0:25690";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
-            var clusterParams = ClusterParams.FromCommandLine();
+            var clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
             var expected = new ClusterParams
             {
                 ClusterLogicSpecified = true,
                 EmitterSpecified = true,
                 RepeaterCount = 4,
                 Port = 25690,
-                MulticastAddress = "224.0.1.0",
+                MulticastAddress = "225.0.6.0",
                 AdapterName = "Ethernet",
                 TargetFps = 60,
                 DelayRepeaters = true,
@@ -137,27 +137,59 @@ namespace Unity.ClusterDisplay.Tests
             };
             Assert.That(clusterParams, Is.EqualTo(expected));
 
-            cmd = "-node 4 224.0.1.2:25690 -disableQuadroSync";
+            cmd = "-node 4 -disableQuadroSync";
             CommandLineParser.Override(cmd.Split(' ').ToList());
-            clusterParams = ClusterParams.FromCommandLine();
+            clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
 
-            expected = new ClusterParams
-            {
-                ClusterLogicSpecified = true,
-                EmitterSpecified = false,
-                NodeID = 4,
-                RepeaterCount = 0,
-                Port = 25690,
-                MulticastAddress = "224.0.1.2",
-                TargetFps = -1,
-                DelayRepeaters = false,
-                HeadlessEmitter = false,
-                HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
-                CommunicationTimeout = TimeSpan.FromMilliseconds(10000),
-                Fence = FrameSyncFence.Network
-            };
+            expected = ClusterParams.Default;
+            expected.ClusterLogicSpecified = true;
+            expected.NodeID = 4;
+            expected.Fence = FrameSyncFence.Network;
 
             Assert.That(clusterParams, Is.EqualTo(expected));
+
+            cmd = "-emitterNode 3 4";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
+            clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
+
+            expected = ClusterParams.Default;
+            expected.EmitterSpecified = true;
+            expected.ClusterLogicSpecified = true;
+            expected.NodeID = 3;
+            expected.RepeaterCount = 4;
+
+            Assert.That(clusterParams, Is.EqualTo(expected));
+
+            cmd = "-blah blah";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
+            clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
+
+            Assert.That(clusterParams.ClusterLogicSpecified, Is.False);
+        }
+
+        [ClusterParamProcessor]
+        static class MyExternalParamProcessor
+        {
+            [ClusterParamProcessorMethod]
+            static ClusterParams MessWithParams(ClusterParams inputOutput)
+            {
+                inputOutput.EmitterSpecified = true;
+                inputOutput.NodeID = 6;
+                inputOutput.ClusterLogicSpecified = true;
+                return inputOutput;
+            }
+        }
+
+        [Test]
+        public void TestExternalParameterProcessor()
+        {
+            var cmd = "-blah blah";
+            CommandLineParser.Override(cmd.Split(' ').ToList());
+
+            var clusterParams = ClusterParams.Default.PreProcess();
+            Assert.That(clusterParams.EmitterSpecified, Is.True);
+            Assert.That(clusterParams.NodeID, Is.EqualTo(6));
+            Assert.That(clusterParams.ClusterLogicSpecified, Is.True);
         }
     }
 }

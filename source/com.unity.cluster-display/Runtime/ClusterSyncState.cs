@@ -25,6 +25,7 @@ namespace Unity.ClusterDisplay
 
     public interface IClusterSyncState
     {
+        string InstanceName { get; }
         NodeRole NodeRole { get; }
         bool EmitterIsHeadless { get; }
         bool IsClusterLogicEnabled { get; }
