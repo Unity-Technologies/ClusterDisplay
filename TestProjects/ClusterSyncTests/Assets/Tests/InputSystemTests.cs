@@ -18,6 +18,7 @@ namespace Unity.ClusterDisplay.Tests
     {
         class MockClusterSync : IClusterSyncState
         {
+            public string InstanceName { get; } = "MockClusterSync";
             public NodeRole NodeRole { get; set; }
             public bool EmitterIsHeadless { get; set; }
             public bool IsClusterLogicEnabled { get; set; }

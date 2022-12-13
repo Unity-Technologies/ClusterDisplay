@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             // The goal of this test is to exercise the FetchState method and be sure it does not crash, hang or produce
             // completely bogus output.
-            var state = GfxPluginQuadroSyncSystem.Instance.FetchState();
+            var state = GfxPluginQuadroSyncSystem.FetchState();
 
             // Initialization state might be different things (depending on the state of the engine, hardware present on
             // the computer, ... but in any case it should be a valid enum value.
