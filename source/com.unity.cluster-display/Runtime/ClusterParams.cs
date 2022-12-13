@@ -100,7 +100,7 @@ namespace Unity.ClusterDisplay
     /// <summary>
     /// Indicates that this type contains a method for processing cluster display parameters.
     /// </summary>
-    /// <seealso cref="ClusterParamProcessorAttribute"/>
+    /// <seealso cref="ClusterParamProcessorMethodAttribute"/>
     /// <remarks>
     /// TODO: We can do this better with a static interface, which will be available
     /// in C# 11.

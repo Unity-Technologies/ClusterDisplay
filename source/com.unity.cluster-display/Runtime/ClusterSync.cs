@@ -76,8 +76,6 @@ namespace Unity.ClusterDisplay
 
         public delegate void OnClusterDisplayStateChange();
 
-        public static Func<ClusterParams, ClusterParams> ParameterPreProcessor = null;
-
         public static OnClusterDisplayStateChange onPreEnableClusterDisplay;
         public static OnClusterDisplayStateChange onPostEnableClusterDisplay;
         public static OnClusterDisplayStateChange onDisableCLusterDisplay;
