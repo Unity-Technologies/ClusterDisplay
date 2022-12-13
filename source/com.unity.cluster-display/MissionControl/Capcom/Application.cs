@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Unity.ClusterDisplay.MissionControl.Capsule;
 
 namespace Unity.ClusterDisplay.MissionControl.Capcom
 {
@@ -18,13 +20,15 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="missingControlEntry">Base Uri to use to access MissionControl.</param>
-        public Application(Uri missingControlEntry)
+        /// <param name="missionControlEntry">Base Uri to use to access MissionControl.</param>
+        public Application(Uri missionControlEntry)
         {
-            m_HttpClient.BaseAddress = missingControlEntry;
+            m_HttpClient.BaseAddress = missionControlEntry;
             // Blocking calls from mission control should return after +/- 3 minutes, so setting the timeout to 10
             // minutes should be safe enough.
             m_HttpClient.Timeout = TimeSpan.FromMinutes(10);
+
+            m_MissionControlMirror = new(m_HttpClient);
 
             m_ObjectsToMirror = new()
             {
@@ -50,16 +54,23 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 new ToMirrorCollection<MissionControl.Asset>() {
                     Name ="assets",
                     GetNextVersion = () => m_MissionControlMirror.AssetsNextVersion,
-                    UpdateCallback = UpdateAssets }
+                    UpdateCallback = UpdateAssets },
+                new ToMirrorCollection<MissionControl.LaunchPadStatus>() {
+                    Name ="launchPadsStatus",
+                    GetNextVersion = () => m_MissionControlMirror.LaunchPadsStatusNextVersion,
+                    UpdateCallback = UpdateLaunchPadsStatus }
             };
             m_Processes = new()
             {
                 new ShutdownCapcomProcess(m_StopApplication),
-                new ReviewLaunchParametersProcess(new (){BaseAddress = missingControlEntry}),
+                new ReviewLaunchParametersProcess(new (){BaseAddress = missionControlEntry}),
+                new UpdateLaunchPadStatusProcess(),
+                new MonitorCapsulesProcess(m_StopApplication.Token, this),
                 new LandCapsulesProcess()
             };
+            m_CapsuleMessageProcessors.Add(MessagesId.CapsuleStatus, new CapsuleStatusProcessor());
 
-            m_StopApplication.Token.Register(() => m_StopApplicationTask.SetCanceled());
+            m_StopApplication.Token.Register(() => m_StartProcessingLoop.Cancel());
         }
 
         /// <summary>
@@ -99,7 +110,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             {
                 await Task.WhenAll(MonitorChanges("api/v1/objectsUpdate", m_ObjectsToMirror),
                     MonitorChanges("api/v1/incrementalCollectionsUpdate", m_CollectionsToMirror),
-                    ProcessMissionControlChanges());
+                    ProcessingLoop());
             }
             catch (Exception)
             {
@@ -109,6 +120,39 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     throw;
                 }
                 // else this is normal, no need to report the exception
+            }
+        }
+
+        /// <summary>
+        /// Force stopping the application.
+        /// </summary>
+        /// <remarks>Normally there is no need to call this method as we monitor mission control.  This is to make our
+        /// life easier in some unit tests.</remarks>
+        public void ManualStop()
+        {
+            m_StopApplication.Cancel();
+        }
+
+        /// <summary>
+        /// Queue a message received from a capsule to be processed.
+        /// </summary>
+        /// <param name="launchPadId">Identifier of the Launchpad that launched the capsule.</param>
+        /// <param name="messageId">Received message identifier.</param>
+        /// <param name="networkStream">Stream from which to read the message and on which to send the answer.</param>
+        /// <param name="postProcess">To be executed once we are done processing the message.</param>
+        public void QueueMessageFromCapsule(Guid launchPadId, Guid messageId, NetworkStream networkStream,
+            Action postProcess)
+        {
+            lock (m_Lock)
+            {
+                m_MessagesFromCapsules.Add(new()
+                {
+                    LaunchPadId = launchPadId,
+                    MessageId = messageId,
+                    NetworkStream = networkStream,
+                    PostProcess = postProcess
+                });
+                m_StartProcessingLoop.Signal();
             }
         }
 
@@ -162,6 +206,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     await Task.Delay(TimeSpan.FromMilliseconds(250), m_StopApplication.Token).ConfigureAwait(false);
                     continue;
                 }
+
                 lock (m_Lock)
                 {
                     foreach (var toMirror in toMirrorList)
@@ -173,7 +218,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                             {
                                 if (toMirror.ProcessChanges(objectUpdate))
                                 {
-                                    m_MissionControlChanged.Signal();
+                                    m_StartProcessingLoop.Signal();
                                 }
                             }
                         }
@@ -187,15 +232,16 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         /// <summary>
-        /// Main loop of the application that monitor changes to mission control.
+        /// Main loop of the application.
         /// </summary>
-        async Task ProcessMissionControlChanges()
+        async Task ProcessingLoop()
         {
             while (!m_StopApplication.IsCancellationRequested)
             {
                 Task waitTask;
                 lock (m_Lock)
                 {
+                    // First apply the various processes reacting to MissionControl changes
                     foreach (var process in m_Processes)
                     {
                         try
@@ -208,10 +254,33 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                         }
                     }
 
-                    waitTask = m_MissionControlChanged.SignaledTask;
+                    // Then check for capsule messages to process (done after so that it can benefit from changes made
+                    // to m_MissionControlMirror by the IApplicationProcesses).
+                    foreach (var message in m_MessagesFromCapsules)
+                    {
+                        if (m_CapsuleMessageProcessors.TryGetValue(message.MessageId, out var processor))
+                        {
+                            try
+                            {
+                                processor.Process(m_MissionControlMirror, message.LaunchPadId, message.NetworkStream);
+                                message.PostProcess();
+                            }
+                            catch (Exception)
+                            {
+                                // TODO: log
+                            }
+                        }
+                        else
+                        {
+                            // TODO: log
+                        }
+                    }
+                    m_MessagesFromCapsules.Clear();
+
+                    waitTask = m_StartProcessingLoop.SignaledTask;
                 }
 
-                await Task.WhenAny(waitTask, m_StopApplicationTask.Task).ConfigureAwait(false);
+                await Task.WhenAny(waitTask).ConfigureAwait(false);
             }
         }
 
@@ -285,6 +354,17 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.Assets.ApplyDelta(update);
             m_MissionControlMirror.AssetsNextVersion = update.NextUpdate;
+        }
+
+        /// <summary>
+        /// Update <see cref="m_MissionControlMirror"/> from changes in MissionControl's LaunchPadStatus collection.
+        /// </summary>
+        /// <param name="update">New value (json)</param>
+        void UpdateLaunchPadsStatus(IncrementalCollectionUpdate<MissionControl.LaunchPadStatus> update)
+        {
+            Debug.Assert(Monitor.IsEntered(m_Lock));
+            m_MissionControlMirror.LaunchPadsStatus.ApplyDelta(update);
+            m_MissionControlMirror.LaunchPadsStatusNextVersion = update.NextUpdate;
         }
 
         /// <summary>
@@ -374,6 +454,29 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         /// <summary>
+        /// Stores information necessary to process a message received from a capsule.
+        /// </summary>
+        class MessageFromCapsule
+        {
+            /// <summary>
+            /// Identifier of the Launchpad that launched the capsule.
+            /// </summary>
+            public Guid LaunchPadId { get; set; }
+            /// <summary>
+            /// Received message identifier.
+            /// </summary>
+            public Guid MessageId { get; set; }
+            /// <summary>
+            /// Stream from which to read the message and on which to send the answer.
+            /// </summary>
+            public NetworkStream NetworkStream { get; set; }
+            /// <summary>
+            /// To be executed once we are done processing the message.
+            /// </summary>
+            public Action PostProcess { get; set; }
+        }
+
+        /// <summary>
         /// List of single objects (not collections) we update from changes in MissionControl
         /// </summary>
         readonly List<ToMirror> m_ObjectsToMirror;
@@ -385,6 +488,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// List of processes to execute every time something might need to be executed.
         /// </summary>
         readonly List<IApplicationProcess> m_Processes;
+        /// <summary>
+        /// Objects responsible for processing messages from the capsule.
+        /// </summary>
+        readonly Dictionary<Guid, ICapsuleMessageProcessor> m_CapsuleMessageProcessors = new();
         /// <summary>
         /// Main <see cref="HttpClient"/> used to communicate with MissionControl.
         /// </summary>
@@ -401,23 +508,24 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         bool m_Started;
 
         /// <summary>
-        /// ConditionVariable that gets signaled as soon as something changes in the state of the objects that are
-        /// mirrored from MissionControl.
+        /// ConditionVariable that gets signaled as soon as something changes and a new processing loop of the
+        /// application must be executed.
         /// </summary>
-        AsyncConditionVariable m_MissionControlChanged = new();
+        AsyncConditionVariable m_StartProcessingLoop = new();
+
+        /// <summary>
+        /// Messages received from launched capsules.
+        /// </summary>
+        List<MessageFromCapsule> m_MessagesFromCapsules = new();
 
         /// <summary>
         /// Stores the states of data structures mirror from MissionControl.
         /// </summary>
-        MissionControlMirror m_MissionControlMirror = new();
+        MissionControlMirror m_MissionControlMirror;
 
         /// <summary>
         /// Canceled when the application is requested to stop.
         /// </summary>
         CancellationTokenSource m_StopApplication = new();
-        /// <summary>
-        /// Task that gets cancelled when <see cref="m_StopApplication"/> is canceled.
-        /// </summary>
-        TaskCompletionSource<bool> m_StopApplicationTask = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

@@ -1,0 +1,31 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
+
+<div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
+    <div> <!-- To avoid stretching every row of the fixed height container above -->
+        <div class="row my-1">
+            <div class="col-3 align-items-center d-flex">
+                <RadzenLabel Text="Launchable" />
+            </div>
+            <div class="col-9">
+                <RadzenDropDown Data=@CompatibleLaunchables @bind-Value=@LaunchableNameProxy
+                                AllowClear="true"  Class="w-100"
+                                Disabled=@(MissionControlStatus.State != MissionControl.State.Idle)
+                                title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
+            </div>
+        </div>
+        <div class="row my-1">
+            <div class="col-3 align-items-start d-flex">
+                <RadzenLabel Text="Parameters" />
+            </div>
+            <div class="col-9">
+                <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue />
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-1">
+    <div class="col-12 text-end">
+        <RadzenButton Text="Ok" Click=OnOk Style="width: 120px" Class="me-1" />
+        <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
+    </div>
+</div>

@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
             Status retStatus = new();
             using (var lockedStatus = await m_StatusService.LockAsync())
             {
-                retStatus.DeepCopy(lockedStatus.Value);
+                retStatus.DeepCopyFrom(lockedStatus.Value);
             }
             return Ok(retStatus);
         }

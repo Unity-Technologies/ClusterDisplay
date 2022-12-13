@@ -19,6 +19,11 @@ namespace Unity.ClusterDisplay.MissionControl
 
     public static class Helpers
     {
+        /// <summary>
+        /// Port used for services opening listen sockets.
+        /// </summary>
+        public const int ListenPort = 8010;
+
         public static IEnumerator AsIEnumerator<T>(this Task<T> task)
         {
             while (!task.IsCompleted)

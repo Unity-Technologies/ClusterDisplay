@@ -261,7 +261,8 @@ namespace Unity.ClusterDisplay
                 {
                     MulticastIp = IPAddress.Parse(clusterParams.MulticastAddress),
                     Port = clusterParams.Port,
-                    AdapterName = clusterParams.AdapterName
+                    AdapterName = clusterParams.AdapterName,
+                    LoggingFilenameSuffix = $".NodeId-{clusterParams.NodeID}"
                 };
 
                 if (clusterParams.EmitterSpecified)

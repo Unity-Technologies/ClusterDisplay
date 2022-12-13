@@ -29,7 +29,9 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
         [Test]
-        public void MainUseCase()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void MainUseCase(bool withFilter)
         {
             string testFolder = GetNewStorageFolder();
 
@@ -38,6 +40,15 @@ namespace Unity.ClusterDisplay.MissionControl
             string sharedFile2Md5 = GenerateTestFile(testFolder, "folder1/shared2.dll", 100);
             string otherDllMd5 = GenerateTestFile(testFolder, "folder1/other.dll", 100);
             string clusterDisplayMainExeMd5 = GenerateTestFile(testFolder, "main.exe", 100);
+            if (withFilter)
+            {
+                GenerateTestFile(testFolder, "unrelated.exe", 100);
+                GenerateTestFile(testFolder, "folder2/something.bin", 100);
+                GenerateTestFile(testFolder, "folder2/that.bin", 100);
+                GenerateTestFile(testFolder, "folder2/shouldn't.bin", 100);
+                GenerateTestFile(testFolder, "folder2/be.bin", 100);
+                GenerateTestFile(testFolder, "folder2/included.bin", 100);
+            }
 
             var directives = new[]
             {
@@ -65,7 +76,8 @@ namespace Unity.ClusterDisplay.MissionControl
                 }
             };
 
-            var catalog = CatalogBuilder.Build(testFolder, directives);
+            var catalog = withFilter ? CatalogBuilder.Build(testFolder, directives, TestFilter) :
+                CatalogBuilder.Build(testFolder, directives);
             Assert.That(catalog.Payloads.Count, Is.EqualTo(3));
 
             var payload = catalog.Payloads[0];
@@ -98,6 +110,13 @@ namespace Unity.ClusterDisplay.MissionControl
             Assert.That(launchable.Payloads.Count, Is.EqualTo(2));
             Assert.That(launchable.Payloads[0], Is.EqualTo(launchable.Name));
             Assert.That(launchable.Payloads[1], Is.EqualTo("shared"));
+        }
+
+        static bool TestFilter(string filePath)
+        {
+            // FilePath is the result of Directory.GetFiles, so full path with maybe \ or / depending on the platform.
+            var testPath = filePath.Replace('\\', '/');
+            return !(testPath.Contains("/folder2/") || testPath.EndsWith("unrelated.exe"));
         }
 
         [Test]

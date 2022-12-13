@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\SourceCode\ClusterDisplay\MissionControl-v2\MissionControl.EngineeringUI\Server\bin\Release\net6.0\publish\</_PublishTargetUrl>
+    <History>True|2023-01-11T13:47:52.5610776Z;True|2023-01-11T07:19:02.2299500-05:00;True|2022-12-20T08:58:42.1947779-05:00;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

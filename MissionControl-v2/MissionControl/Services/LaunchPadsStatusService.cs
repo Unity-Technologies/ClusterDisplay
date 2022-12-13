@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 
 using StatusFromLaunchPad = Unity.ClusterDisplay.MissionControl.LaunchPad.Status;
+using LaunchPadState = Unity.ClusterDisplay.MissionControl.LaunchPad.State;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 {
@@ -17,7 +18,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
     /// <summary>
     /// Service responsible for monitoring status of LaunchdPads.
     /// </summary>
-    public class LaunchPadsStatusService: IDisposable
+    public class LaunchPadsStatusService
     {
         public LaunchPadsStatusService(ILogger<LaunchPadsStatusService> logger,
                                        ComplexesService complexesService,
@@ -63,16 +64,42 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 await m_Lock.LockAsync());
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Add or set a dynamic status entry for the specified <see cref="LaunchPad"/>.
+        /// </summary>
+        /// <param name="launchpadId"><see cref="LaunchPad"/>'s identifier.</param>
+        /// <param name="entry"><see cref="LaunchPadReportDynamicEntry"/> to add or set.</param>
+        /// <exception cref="KeyNotFoundException">If no <see cref="LaunchPad"/> can be found with the specified
+        /// identifier.</exception>
+        public void PutDynamicEntry(Guid launchpadId, LaunchPadReportDynamicEntry entry)
         {
             using (m_Lock.Lock())
             {
-                foreach (var updater in m_Updaters.Values)
+                if (!m_Collection.TryGetValue(launchpadId, out var toUpdate))
                 {
-                    updater.Dispose();
+                    throw new KeyNotFoundException($"Cannot find any launchpad with the identifier {launchpadId}.");
                 }
-                m_Collection.Clear();
-                m_Updaters.Clear();
+                var dynamicEntries = GetDynamicEntriesList(toUpdate);
+
+                var previousDynamicEntry = dynamicEntries.FirstOrDefault(de => de.Name == entry.Name);
+                bool updated = false;
+                if (previousDynamicEntry == null)
+                {
+                    dynamicEntries.Add(entry.DeepClone());
+                    updated = true;
+                }
+                else
+                {
+                    if (!entry.Equals(previousDynamicEntry))
+                    {
+                        previousDynamicEntry.DeepCopyFrom(entry);
+                        updated = true;
+                    }
+                }
+                if (updated)
+                {
+                    toUpdate.SignalChanges(m_Collection);
+                }
             }
         }
 
@@ -174,14 +201,20 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                     return;
                 }
 
-                LaunchPadStatus updatedStatus = new(launchPadId);
+                LaunchPadStatus updatedStatus = toUpdate.DeepClone();
                 updatedStatus.IsDefined = true;
+                updatedStatus.UpdateError = "";
                 updatedStatus.DeepCopyFrom(newStatus);
                 if (updatedStatus.Equals(toUpdate))
                 {
                     return;
                 }
 
+                if (updatedStatus.State != toUpdate.State &&
+                    updatedStatus.State is LaunchPadState.Over or LaunchPadState.Idle)
+                {
+                    GetDynamicEntriesList(updatedStatus).Clear();
+                }
                 toUpdate.DeepCopyFrom(updatedStatus);
                 toUpdate.SignalChanges(m_Collection);
             }
@@ -301,6 +334,23 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             /// Used to cancel <see cref="UpdateLoopAsync"/> when disposing of this.
             /// </summary>
             CancellationTokenSource m_CancellationTokenSource = new CancellationTokenSource();
+        }
+
+        /// <summary>
+        /// Returns a <see cref="List{T}"/> containing the DynamicEntries of the <see cref="LaunchPadStatus"/>.
+        /// </summary>
+        /// <param name="launchPadStatus">The <see cref="LaunchPadStatus"/>.</param>
+        /// <remarks>Will change the <see cref="IEnumerable{T}"/> to a <see cref="List{T}"/> so next call to this method
+        /// is faster.</remarks>
+        static List<LaunchPadReportDynamicEntry> GetDynamicEntriesList(LaunchPadStatus launchPadStatus)
+        {
+            var ret = launchPadStatus.DynamicEntries as List<LaunchPadReportDynamicEntry>;
+            if (ret == null)
+            {
+                ret = launchPadStatus.DynamicEntries.ToList();
+                launchPadStatus.DynamicEntries = ret;
+            }
+            return ret;
         }
 
         readonly ILogger m_Logger;

@@ -59,6 +59,20 @@ namespace Unity.ClusterDisplay
         /// <see cref="Catalog"/>.</param>
         /// <exception cref="ArgumentException">Something not valid in <paramref name="directives"/>.</exception>
         public static Catalog Build(string path, IEnumerable<CatalogBuilderDirective> directives)
+            => Build(path, directives, _ => true);
+
+        /// <summary>
+        /// Build a <see cref="Catalog"/>.
+        /// </summary>
+        /// <param name="path">Path that contains the files include in the <see cref="Launchable"/>s of the
+        /// <see cref="Catalog"/>.</param>
+        /// <param name="directives">List of <see cref="CatalogBuilderDirective"/> guiding the creation of the
+        /// <see cref="Catalog"/>.</param>
+        /// <param name="filesFilter">Global "filter method" used to accept or reject files found of the disk.  Called
+        /// with the full path to the file and returns if the file is to be part of launchables or not.</param>
+        /// <exception cref="ArgumentException">Something not valid in <paramref name="directives"/>.</exception>
+        public static Catalog Build(string path, IEnumerable<CatalogBuilderDirective> directives,
+            Func<string, bool> filesFilter)
         {
             // First step, let's be sure every launchable have a name and it is unique
             if (directives.Any(cbd => cbd.Launchable == null))
@@ -86,7 +100,7 @@ namespace Unity.ClusterDisplay
             }
 
             // Now we can build the catalog
-            var launchablesInformation = GetLaunchablesFiles(path, directives);
+            var launchablesInformation = GetLaunchablesFiles(path, directives, filesFilter);
             var payloads = ComputePayloads(path, launchablesInformation);
 
             Catalog ret = new();
@@ -198,9 +212,13 @@ namespace Unity.ClusterDisplay
         /// <param name="list">The list of files to return.</param>
         /// <param name="excludedList">Files to be removed from the returned set even if present in
         /// <paramref name="list"/>.</param>
-        static HashSet<string> GetFiles(string path, IEnumerable<string> list, IEnumerable<string> excludedList)
+        /// <param name="filesFilter">Global "filter method" used to accept or reject files found of the disk.  Called
+        /// with the full path to the file and returns if the file is to be part of launchables or not.</param>
+        static HashSet<string> GetFiles(string path, IEnumerable<string> list, IEnumerable<string> excludedList,
+            Func<string, bool> filesFilter)
         {
-            var excludedFiles = excludedList.Any() ? GetFiles(path, excludedList, Enumerable.Empty<string>()) : new();
+            var excludedFiles = excludedList.Any() ?
+                GetFiles(path, excludedList, Enumerable.Empty<string>(), filesFilter) : new();
 
             HashSet<string> ret = new();
             foreach (var inList in list)
@@ -208,10 +226,13 @@ namespace Unity.ClusterDisplay
                 var files = Directory.GetFiles(path, inList, SearchOption.AllDirectories);
                 foreach (var file in files)
                 {
-                    var relative = Path.GetRelativePath(path, file);
-                    if (!excludedFiles.Contains(relative))
+                    if (filesFilter(file))
                     {
-                        ret.Add(relative);
+                        var relative = Path.GetRelativePath(path, file);
+                        if (!excludedFiles.Contains(relative))
+                        {
+                            ret.Add(relative);
+                        }
                     }
                 }
             }
@@ -226,7 +247,10 @@ namespace Unity.ClusterDisplay
         /// <see cref="Catalog"/>.</param>
         /// <param name="directives">List of <see cref="CatalogBuilderDirective"/> guiding the creation of the
         /// <see cref="Catalog"/>.</param>
-        static IEnumerable<LaunchableInformation> GetLaunchablesFiles(string path, IEnumerable<CatalogBuilderDirective> directives)
+        /// <param name="filesFilter">Global "filter method" used to accept or reject files found of the disk.  Called
+        /// with the full path to the file and returns if the file is to be part of launchables or not.</param>
+        static IEnumerable<LaunchableInformation> GetLaunchablesFiles(string path,
+            IEnumerable<CatalogBuilderDirective> directives, Func<string, bool> filesFilter)
         {
             List<LaunchableInformation> ret = new();
 
@@ -240,7 +264,7 @@ namespace Unity.ClusterDisplay
                     // Lazy cloning -> No need to be fast anyway, so let's use something that we know will always work.
                     Launchable = JsonConvert.DeserializeObject<Launchable>(
                         JsonConvert.SerializeObject(directive.Launchable, Json.SerializerOptions), Json.SerializerOptions),
-                    Files = GetFiles(path, directive.ExclusiveFiles, directive.ExcludedFiles)
+                    Files = GetFiles(path, directive.ExclusiveFiles, directive.ExcludedFiles, filesFilter)
                 };
                 ret.Add(information);
                 allExcludedFiles.UnionWith(information.Files);
@@ -251,7 +275,8 @@ namespace Unity.ClusterDisplay
             {
                 HashSet<string> excludedFiles = new(allExcludedFiles);
                 excludedFiles.UnionWith(launchableInformation.From.ExcludedFiles);
-                launchableInformation.Files.UnionWith(GetFiles(path, launchableInformation.From.Files, excludedFiles));
+                launchableInformation.Files.UnionWith(GetFiles(path, launchableInformation.From.Files, excludedFiles,
+                    filesFilter));
             }
 
             // Done

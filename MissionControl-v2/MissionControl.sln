@@ -42,6 +42,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.Tests", "Mis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AssemblyRun", "AssemblyRun\AssemblyRun.csproj", "{CFA58C27-9C30-46D2-A63A-DD62E286D060}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.EngineeringUI.Server", "MissionControl.EngineeringUI\Server\MissionControl.EngineeringUI.Server.csproj", "{B6DACFB9-594A-43AC-B75B-E6E336978434}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MissionControl.EngineeringUI.Client", "MissionControl.EngineeringUI\Client\MissionControl.EngineeringUI.Client.csproj", "{0C2A5DF1-48AD-4A70-9E6C-B4BEDBD1DCA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -92,6 +96,14 @@ Global
 		{CFA58C27-9C30-46D2-A63A-DD62E286D060}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CFA58C27-9C30-46D2-A63A-DD62E286D060}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CFA58C27-9C30-46D2-A63A-DD62E286D060}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6DACFB9-594A-43AC-B75B-E6E336978434}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6DACFB9-594A-43AC-B75B-E6E336978434}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6DACFB9-594A-43AC-B75B-E6E336978434}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6DACFB9-594A-43AC-B75B-E6E336978434}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C2A5DF1-48AD-4A70-9E6C-B4BEDBD1DCA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C2A5DF1-48AD-4A70-9E6C-B4BEDBD1DCA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C2A5DF1-48AD-4A70-9E6C-B4BEDBD1DCA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C2A5DF1-48AD-4A70-9E6C-B4BEDBD1DCA9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

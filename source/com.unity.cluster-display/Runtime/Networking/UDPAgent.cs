@@ -46,6 +46,11 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <remarks>The whole receiving thread logic will not be present if null or empty.</remarks>
         public MessageType[] ReceivedMessagesType;
+
+        /// <summary>
+        /// Added to the log filename when producing log for debugging
+        /// </summary>
+        public string LoggingFilenameSuffix;
     }
 
     /// <summary>
@@ -62,6 +67,7 @@ namespace Unity.ClusterDisplay
         /// <exception cref="IOException">When no available network interface can be found</exception>
         public UdpAgent(UdpAgentConfig config)
         {
+            m_LoggingFilenameSuffix = config.LoggingFilenameSuffix;
             var (selectedNic, selectedNicAddress) = SelectNetworkInterface(config.AdapterName);
             if (selectedNic == null)
             {
@@ -169,7 +175,7 @@ namespace Unity.ClusterDisplay
                 m_UdpClient.Send(sendTempBuffer, toSendSize, m_MulticastTxEndpoint);
 
                 Stats.MessageSent(messageType);
-                LogMessage(message, true, additionalData.Length);
+                LogMessage(message, true, additionalData.Length, m_LoggingFilenameSuffix);
             }
             finally
             {
@@ -322,7 +328,7 @@ namespace Unity.ClusterDisplay
                 Enum.GetValues(typeof(MessageType)).Cast<MessageType>().OrderBy( mt => (int)mt );
             m_FactoryByMessageType = new MessageFactory[(int)messageTypes.Last() + 1];
             HashSet<MessageType> receivedMessageTypes = new();
-            foreach ((var messageType, var messageTypeAttribute) in MessageTypeAttribute.AllTypes)
+            foreach (var (messageType, messageTypeAttribute) in MessageTypeAttribute.AllTypes)
             {
                 var messageTypeEnum = messageTypeAttribute.Type;
                 if (receivedMessagesType.Contains(messageTypeEnum) && !receivedMessageTypes.Contains(messageTypeEnum))
@@ -429,7 +435,7 @@ namespace Unity.ClusterDisplay
                             receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
                         }
 
-                        LogReceivedMessage(receivedMessage);
+                        LogReceivedMessage(receivedMessage, m_LoggingFilenameSuffix);
                     }
                     catch (Exception e)
                     {
@@ -452,7 +458,7 @@ namespace Unity.ClusterDisplay
                                 {
                                     Debug.Assert(!ReferenceEquals(ret.Result, receivedMessage),
                                         "Cannot dispose of a ReceivedMessage AND ask to continue processing it...");
-                                    receivedMessage.Dispose();
+                                    receivedMessage?.Dispose();
                                     receivedMessage = ret.Result;
                                 }
                                 else if (ret.Result != null)
@@ -611,6 +617,10 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// Added to the log filename when producing log for debugging
+        /// </summary>
+        string m_LoggingFilenameSuffix;
+        /// <summary>
         /// Main UdpClient used for reception of data and sending to the Multicast endpoint (config's MulticastIp:Port).
         /// </summary>
         UdpClient m_UdpClient;
@@ -696,34 +706,41 @@ namespace Unity.ClusterDisplay
         static ProfilerMarker s_MarkerQueueMessage = new ProfilerMarker("QueueMessage");
 
         [Conditional("CLUSTER_DISPLAY_NETWORK_LOG")]
-        static void LogReceivedMessage(ReceivedMessageBase receivedMessage)
+        static void LogReceivedMessage(ReceivedMessageBase receivedMessage, string loggingFilenameSuffix)
         {
+            // ReSharper disable once RedundantAssignment
             int extraDataLength = receivedMessage.ExtraData?.Length ?? 0;
             switch (receivedMessage.Type)
             {
             case MessageType.RegisteringWithEmitter:
-                LogMessage(((ReceivedMessage<RegisteringWithEmitter>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<RegisteringWithEmitter>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             case MessageType.RepeaterRegistered:
-                LogMessage(((ReceivedMessage<RepeaterRegistered>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<RepeaterRegistered>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             case MessageType.FrameData:
-                LogMessage(((ReceivedMessage<FrameData>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<FrameData>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             case MessageType.RetransmitFrameData:
-                LogMessage(((ReceivedMessage<RetransmitFrameData>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<RetransmitFrameData>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             case MessageType.RepeaterWaitingToStartFrame:
-                LogMessage(((ReceivedMessage<RepeaterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<RepeaterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             case MessageType.EmitterWaitingToStartFrame:
-                LogMessage(((ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength);
+                LogMessage(((ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
                 break;
             }
         }
 
         [Conditional("CLUSTER_DISPLAY_NETWORK_LOG")]
-        static void LogMessage(object message, bool send, int extraDataLength)
+        static void LogMessage(object message, bool send, int extraDataLength, string loggingFilenameSuffix)
         {
             var stringBuilder = new StringBuilder();
             var messageTime = (double)(Stopwatch.GetTimestamp() - k_StartTime) / Stopwatch.Frequency;
@@ -775,23 +792,25 @@ namespace Unity.ClusterDisplay
             {
                 if (s_LogThread == null)
                 {
-                    s_LogThread = new Thread(WriteMessageLogThreadFunc);
+                    s_LogThread = new Thread(() => WriteMessageLogThreadFunc(loggingFilenameSuffix));
                     s_LogThread.Start();
                 }
             }
             s_LogQueue.Add(stringBuilder.ToString());
         }
 
-        static void WriteMessageLogThreadFunc()
+        static void WriteMessageLogThreadFunc(string loggingFilenameSuffix)
         {
             var logFilePath = Path.Combine(Environment.GetEnvironmentVariable("AppData"), "..", "LocalLow",
-                k_CompanyName, k_ProductName, "Network.log");
+                k_CompanyName, k_ProductName, $"Network{loggingFilenameSuffix}.log");
             using StreamWriter file = new(logFilePath);
             for (;;)
             {
                 var line = s_LogQueue.Take();
                 file.WriteLine(line);
             }
+
+            // ReSharper disable once FunctionNeverReturns -> By design, once started it runs until the process ends.
         }
 
         static readonly long k_StartTime = Stopwatch.GetTimestamp();

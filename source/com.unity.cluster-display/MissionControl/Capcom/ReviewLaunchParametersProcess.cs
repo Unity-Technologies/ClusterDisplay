@@ -94,8 +94,9 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 foreach (var launchPadConfiguration in complexConfiguration.LaunchPads)
                 {
                     var launchpadDefinition = complexDefinition.LaunchPads
-                        .First(lp => lp.Identifier == launchPadConfiguration.Identifier);
-                    if (launchpadDefinition.SuitableFor.Contains(LaunchCatalog.Launchable.ClusterNodeType))
+                        .FirstOrDefault(lp => lp.Identifier == launchPadConfiguration.Identifier);
+                    if (launchpadDefinition != null &&
+                        launchpadDefinition.SuitableFor.Contains(LaunchCatalog.Launchable.ClusterNodeType))
                     {
                         var launchable = selectedAsset.Launchables.FirstOrDefault(
                             l => l.Name == launchPadConfiguration.LaunchableName);

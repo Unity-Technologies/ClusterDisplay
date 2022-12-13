@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net.Http;
 
 namespace Unity.ClusterDisplay.MissionControl.Capcom
 {
@@ -8,6 +9,21 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
     /// <remarks>Only <see cref="Application"/> should modify the content of objects of this class.</remarks>
     public class MissionControlMirror
     {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="missionControlHttpClient"><see cref="HttpClient"/> configured to send request to
+        /// MissionControl.</param>
+        public MissionControlMirror(HttpClient missionControlHttpClient)
+        {
+            MissionControlHttpClient = missionControlHttpClient;
+        }
+
+        /// <summary>
+        /// <see cref="HttpClient"/> configured to send request to MissionControl.
+        /// </summary>
+        public HttpClient MissionControlHttpClient { get; }
+
         /// <summary>
         /// Last known version of <see cref="MissionControl.State"/>.
         /// </summary>
@@ -61,6 +77,15 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// Next version of <see cref="Assets"/> to request from MissionControl.
         /// </summary>
         public ulong AssetsNextVersion { get; set; }
+
+        /// <summary>
+        /// Last known version of MissionControl's collection of <see cref="MissionControl.LaunchPadStatus"/>.
+        /// </summary>
+        public IncrementalCollection<MissionControl.LaunchPadStatus> LaunchPadsStatus { get; set; } = new();
+        /// <summary>
+        /// Next version of <see cref="LaunchPadsStatus"/> to request from MissionControl.
+        /// </summary>
+        public ulong LaunchPadsStatusNextVersion { get; set; }
 
         /// <summary>
         /// List of all the LaunchPads participating to the mission with all its associated information.

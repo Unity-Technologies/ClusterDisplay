@@ -20,7 +20,9 @@ namespace Unity.ClusterDisplay
         {
             try
             {
-                Postprocess(report.summary.outputPath);
+                HashSet<string> buildFiles = new(report.GetFiles()
+                    .Select(f => f.path.Replace('/', Path.DirectorySeparatorChar)));
+                Postprocess(report.summary.outputPath, p => buildFiles.Contains(p));
             }
             catch (Exception e)
             {
@@ -28,7 +30,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        static void Postprocess(string pathToBuiltProjectExe)
+        static void Postprocess(string pathToBuiltProjectExe, Func<string, bool> filesFilter)
         {
             var missionControlSettings = ClusterDisplaySettings.CurrentSettings.MissionControlSettings;
             if (!missionControlSettings.Instrument)
@@ -38,7 +40,6 @@ namespace Unity.ClusterDisplay
             var pathToBuiltProject = Path.GetDirectoryName(pathToBuiltProjectExe)!;
             var projectName = Path.GetFileNameWithoutExtension(pathToBuiltProjectExe);
 
-            List<string> toExclude = new() {$"{projectName}_BurstDebugInformation_DoNotShip/*"};
             var catalogDirectives = new[]
             {
                 new CatalogBuilderDirective(),
@@ -46,10 +47,10 @@ namespace Unity.ClusterDisplay
             };
 
             // Ask Capcom to setup the directive for all the files it needs
-            MissionControl.Capcom.MainClass.SetupCatalogBuilderDirective(pathToBuiltProject, catalogDirectives[0]);
+            MissionControl.Capcom.MainClass.SetupCatalogBuilderDirective(pathToBuiltProject, catalogDirectives[0],
+                filesFilter);
             catalogDirectives[0].Launchable.LandingTime = TimeSpan.FromSeconds(missionControlSettings.QuitTimeout);
             Debug.Assert(!catalogDirectives[0].ExcludedFiles.Any());
-            catalogDirectives[0].ExcludedFiles = toExclude;
 
             // All the other files will be for the cluster node
             catalogDirectives[1].Launchable = new()
@@ -64,7 +65,6 @@ namespace Unity.ClusterDisplay
             FillMainLaunchableParameters(catalogDirectives[1].Launchable);
             AddLaunchParametersForProjectionPolicy(catalogDirectives[1].Launchable);
             catalogDirectives[1].Files = new[] {"*"};
-            catalogDirectives[1].ExcludedFiles = toExclude;
 
             // Check if there is a catalog file from a previous build, if yes remove it (so that it does not get
             // included in the catalog!).  This is a big problem as it will not have the right checksum and so will
@@ -84,7 +84,7 @@ namespace Unity.ClusterDisplay
             }
 
             // Create the catalog
-            var catalog = CatalogBuilder.Build(pathToBuiltProject, catalogDirectives);
+            var catalog = CatalogBuilder.Build(pathToBuiltProject, catalogDirectives, filesFilter);
             File.WriteAllText(catalogPath,JsonConvert.SerializeObject(catalog, Json.SerializerOptions));
         }
 
@@ -108,7 +108,7 @@ namespace Unity.ClusterDisplay
                 Id = LaunchParameterConstants.NodeIdParameterId,
                 Type = LaunchParameterType.Integer, DefaultValue = -1,
                 Name = "Node identifier",
-                Description = "Unique identifier among the nodes of the cluster, keep default value for an automatic assignment based on the order of the launchpad in the launch configuration.",
+                Description = "Unique identifier among the nodes of the cluster, keep default value for an automatic assignment based on the order of the launchpad in the launch configuration (-1 for automatic assignment).",
                 Constraint = new RangeConstraint() { Min = -1, Max = 255 },
                 ToBeRevisedByCapcom = true
             });
@@ -139,7 +139,8 @@ namespace Unity.ClusterDisplay
                 Name = "Multicast address",
                 Description = "IPv4 multicast UDP address used for inter-node communication (state propagation).",
                 Constraint = new RegularExpressionConstraint() {
-                    RegularExpression = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$"
+                    RegularExpression = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$",
+                    ErrorMessage = "Must be an ipv4 address: ###.###.###.### (each number from 0 to 255)."
                 }
             });
             toFill.GlobalParameters.Add(new()

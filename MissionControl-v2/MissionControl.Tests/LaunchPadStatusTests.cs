@@ -27,6 +27,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             statusB.UpdateError = "Something failed...";
             Assert.That(statusA, Is.EqualTo(statusB));
 
+            statusA.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueA" } };
+            statusB.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueB" } };
+            Assert.That(statusA, Is.Not.EqualTo(statusB));
+            statusB.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueA" } };
+            Assert.That(statusA, Is.EqualTo(statusB));
+
             statusA.Version = "1.2.3";
             statusB.Version = "1.2.3 beta";
             Assert.That(statusA, Is.Not.EqualTo(statusB));
@@ -74,6 +80,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             LaunchPadStatus toSerialize = new(Guid.NewGuid());
             toSerialize.IsDefined = true;
             toSerialize.UpdateError = "Error message";
+            toSerialize.DynamicEntries = new LaunchPadReportDynamicEntry[] { new () { Name = "Value1" }, new () { Name = "Value2" } };
             toSerialize.Version = "1.2.3";
             toSerialize.StartTime = DateTime.Now;
             toSerialize.State = ClusterDisplay.MissionControl.LaunchPad.State.Launched;
@@ -99,6 +106,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             LaunchPadStatus toClone = new(Guid.NewGuid());
             toClone.IsDefined = true;
             toClone.UpdateError = "Error message";
+            toClone.DynamicEntries = new LaunchPadReportDynamicEntry[] { new () { Name = "Value1" }, new () { Name = "Value2" } };
             toClone.Version = "1.2.3";
             toClone.StartTime = DateTime.Now;
             toClone.State = ClusterDisplay.MissionControl.LaunchPad.State.Launched;
@@ -106,6 +114,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             toClone.LastChanged = DateTime.Now - TimeSpan.FromHours(1);
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));
+
+            // Verify that there isn't any sharing
+            var serializeClone = JsonSerializer.Deserialize<LaunchPadStatus>(
+                JsonSerializer.Serialize(toClone, Json.SerializerOptions), Json.SerializerOptions);
+            Assert.That(cloned, Is.EqualTo(serializeClone));
+
+            toClone.DynamicEntries.ElementAt(0).Name = "NewValue1";
+            toClone.DynamicEntries.ElementAt(1).Name = "NewValue2";
+            Assert.That(cloned, Is.EqualTo(serializeClone));
         }
     }
 }

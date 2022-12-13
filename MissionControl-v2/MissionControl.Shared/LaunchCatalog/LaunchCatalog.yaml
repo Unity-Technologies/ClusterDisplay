@@ -80,7 +80,13 @@ components:
           default: regularExpression
         regularExpression:
           type: string
-          description: Regular expression
+          description: Regular expression.
+        errorMessage:
+          type: string
+          description: Error message to display if regular expression is not valid.
+      required:
+        - regularExpression
+        - errorMessage
     ListConstraint:
       type: object
       description: Gives the list of allowed string values for a LaunchParameter.
@@ -91,12 +97,14 @@ components:
           default: list
         choices:
           type: array
-          description: List of allowed values
+          description: List of allowed values.
           items:
             type: string
+      required:
+        - choices
     LaunchParameter:
       type: object
-      description: Parameter to customize launching behavior of a Launchable
+      description: Parameter to customize launching behavior of a Launchable.
       properties:
         name:
           type: string

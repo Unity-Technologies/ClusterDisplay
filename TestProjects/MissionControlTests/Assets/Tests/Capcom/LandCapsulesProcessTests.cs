@@ -74,8 +74,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             });
         }
 
-        const int k_TestPort = 8000;
+        const int k_TestPort = Helpers.ListenPort;
         List<FakeCapsule> m_Capsules = new();
-        MissionControlMirror m_Mirror = new();
+        MissionControlMirror m_Mirror = new(new());
     }
 }

@@ -71,11 +71,13 @@ namespace Unity.ClusterDisplay.Graphics
         {
             MissionControlSettings.ParametersContainer ret = new();
             AddVector2IntParameter(ret.GlobalParameters, "Tile grid size", TiledProjection.GridSizeParameterId,
-                "Number of displays per row and column.");
-            AddVector2IntParameter(ret.GlobalParameters, "Physical screen size", TiledProjection.PhysicalScreenSizeParameterId,
-                "Physical size of a display (not to be confused with screen size in pixels).");
+                "Number of horizontal displays.", "Number of vertical displays.");
+            AddVector2IntParameter(ret.GlobalParameters, "Physical screen size",
+                TiledProjection.PhysicalScreenSizeParameterId,
+                "Physical width of a display (not to be confused with screen size in pixels).",
+                "Physical height of a display (not to be confused with screen size in pixels).");
             AddVector2IntParameter(ret.GlobalParameters, "Bezel", TiledProjection.BezelParameterId,
-                "Physical size of display bezels.");
+                "Physical width of display bezels.", "Physical height of display bezels.");
             return ret;
         }
 
@@ -85,17 +87,19 @@ namespace Unity.ClusterDisplay.Graphics
         /// <param name="list">List to which to add the parameters.</param>
         /// <param name="name">Display name of the parameter.</param>
         /// <param name="id">Identifier of the parameter.</param>
-        /// <param name="description">Description of the parameter.</param>
-        static void AddVector2IntParameter(List<LaunchParameter> list, string name, string id, string description)
+        /// <param name="descriptionX">Description of the X parameter.</param>
+        /// <param name="descriptionY">Description of the Y parameter.</param>
+        static void AddVector2IntParameter(List<LaunchParameter> list, string name, string id, string descriptionX,
+            string descriptionY)
         {
             list.Add(new()
             {
-                Name = "X", Group = name, Id = $"{id}.X", Description = description, Type = LaunchParameterType.Integer,
+                Name = "X", Group = name, Id = $"{id}.X", Description = descriptionX, Type = LaunchParameterType.Integer,
                 Constraint = new RangeConstraint() {Min = 0}, DefaultValue = 0
             });
             list.Add(new()
             {
-                Name = "Y", Group = name, Id = $"{id}.Y", Description = description, Type = LaunchParameterType.Integer,
+                Name = "Y", Group = name, Id = $"{id}.Y", Description = descriptionY, Type = LaunchParameterType.Integer,
                 Constraint = new RangeConstraint() {Min = 0}, DefaultValue = 0
             });
         }

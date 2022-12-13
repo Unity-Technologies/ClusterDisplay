@@ -8,8 +8,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     class LaunchPadStub
     {
-        public LaunchPadStub(int port)
+        public LaunchPadStub(int port, Guid id = default)
         {
+            m_Id = id == default ? Guid.NewGuid() : id;
             m_Endpoint = new Uri($"http://127.0.0.1:{port}/");
             m_HttpListener.Prefixes.Add(m_Endpoint.ToString());
         }
@@ -222,7 +223,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             }
         }
 
-        readonly Guid m_Id = Guid.NewGuid();
+        readonly Guid m_Id;
         readonly HttpListener m_HttpListener = new();
         readonly Uri m_Endpoint;
 

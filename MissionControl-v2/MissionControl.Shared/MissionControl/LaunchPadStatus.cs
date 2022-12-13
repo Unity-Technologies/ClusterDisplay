@@ -29,6 +29,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// </summary>
         public string UpdateError { get; set; } = "";
 
+        /// <summary>
+        /// Additional status information that depends on the Launchable type running.
+        /// </summary>
+        public IEnumerable<LaunchPadReportDynamicEntry> DynamicEntries { get; set; } = Enumerable.Empty<LaunchPadReportDynamicEntry>();
+
         /// <inheritdoc/>
         public void DeepCopyFrom(IIncrementalCollectionObject fromObject)
         {
@@ -36,6 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             base.DeepCopyFrom(from);
             IsDefined = from.IsDefined;
             UpdateError = from.UpdateError;
+            DynamicEntries = from.DynamicEntries.Select(de => de.DeepClone()).ToList();
         }
 
         public bool Equals(LaunchPadStatus? other)
@@ -44,7 +50,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 base.Equals(other) &&
                 Id == other.Id &&
                 IsDefined == other.IsDefined &&
-                UpdateError == other.UpdateError;
+                UpdateError == other.UpdateError &&
+                DynamicEntries.SequenceEqual(other.DynamicEntries);
         }
     }
 }
