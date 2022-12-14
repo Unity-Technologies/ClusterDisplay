@@ -79,7 +79,7 @@ namespace Unity.ClusterDisplay
         protected static IntPtr CreateProfilingMarker(string stateName)
         {
             var handle = ProfilerUnsafeUtility.CreateMarker(stateName, ProfilerUnsafeUtility.CategoryScripts,
-                MarkerFlags.Default, 1);
+                MarkerFlags.Default | MarkerFlags.AvailabilityNonDevelopment, 1);
             ProfilerUnsafeUtility.SetMarkerMetadata(handle, 0, "Frame index", (byte)ProfilerMarkerDataType.UInt64,
                 (byte)ProfilerMarkerDataUnit.Count);
             return handle;
