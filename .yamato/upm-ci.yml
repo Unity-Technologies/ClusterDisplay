@@ -82,12 +82,6 @@ nightly_test_trigger:
     flavor: b1.large
   commands:
     - dir
-  triggers:
-    recurring:
-      - branch: develop
-        frequency: daily
-      - branch: stable
-        frequency: daily
   artifacts:
     logs:
       paths:
