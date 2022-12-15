@@ -124,11 +124,13 @@ namespace Editor
         {
             public SerializedObject PreviousState { get; private set; }
             public SerializedObject CurrentState { get; private set; }
+            bool m_FirstUpdate;
 
             public PropertyState(UnityObject obj)
             {
                 PreviousState = new SerializedObject(obj);
                 CurrentState = new SerializedObject(obj);
+                m_FirstUpdate = true;
             }
 
             public void Dispose()
@@ -137,13 +139,16 @@ namespace Editor
                 CurrentState.Dispose();
             }
 
-            public bool Update()
+            public bool Update(out bool isFirstUpdate)
             {
+                isFirstUpdate = m_FirstUpdate;
+                m_FirstUpdate = false;
+
                 var newState = PreviousState;
                 PreviousState = CurrentState;
                 CurrentState = newState;
 
-                return CurrentState.UpdateIfRequiredOrScript();
+                return m_FirstUpdate || CurrentState.UpdateIfRequiredOrScript();
             }
         }
 
@@ -315,22 +320,23 @@ namespace Editor
                         }
                         case ObjectChangeKind.CreateGameObjectHierarchy:
                         {
-                            // stream.GetCreateGameObjectHierarchyEvent(i, out var change);
-                            //
-                            // if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            // {
-                            //     var obj = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                            // }
+                            stream.GetCreateGameObjectHierarchyEvent(i, out var change);
+
+                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
+                            {
+                                var gameObject = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
+                                CheckGameObjectStructural(sceneState, gameObject, true);
+                            }
                             break;
                         }
                         case ObjectChangeKind.DestroyGameObjectHierarchy:
                         {
-                            // stream.GetDestroyGameObjectHierarchyEvent(i, out var change);
-                            //
-                            // if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            // {
-                            //
-                            // }
+                            stream.GetDestroyGameObjectHierarchyEvent(i, out var change);
+
+                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
+                            {
+                            change.
+                            }
                             break;
                         }
                         case ObjectChangeKind.ChangeGameObjectParent:
@@ -378,7 +384,7 @@ namespace Editor
                                         CheckGameObjectStructural(sceneState, gameObject, false);
                                         break;
                                     case Component component:
-                                        CheckComponent(sceneState, component);
+                                        CheckComponent(component);
                                         break;
                                 }
                             }
@@ -430,6 +436,13 @@ namespace Editor
         /// <param name="sceneState">The scene to look for changes in.</param>
         void CheckScene(SceneState sceneState)
         {
+            if (sceneState == null)
+            {
+                return;
+            }
+
+            sceneState.Scene.GetRootGameObjects(s_TempGameObjects);
+
             /*
              * Care must be taken ensure that the stream of changes can be applied in order and get correct results,
              * For example, we shouldn't try to update component properties before adding new game objects, as the
@@ -442,18 +455,14 @@ namespace Editor
              * 6) Add components
              * 5) Remove components
              * 7) Reorder components
-             * 8) Update game object (maybe before adding components?) and component properties
+             * 8) Update game object and component properties
              */
-
-            // Detect added or re-parented game objects.
-            sceneState.Scene.GetRootGameObjects(s_TempGameObjects);
 
             for (var i = 0; i < s_TempGameObjects.Count; i++)
             {
-                FindAddedGameObjects(sceneState, null, s_TempGameObjects[i]);
+                FindAddedGameObjects(sceneState, null, s_TempGameObjects[i], true);
             }
 
-            // Detect removed root game objects.
             for (var i = sceneState.Roots.Count - 1; i >= 0; i--)
             {
                 if (FindRemovedGameObjects(sceneState.Roots[i]))
@@ -463,25 +472,62 @@ namespace Editor
                 }
             }
 
-            // Detect reordered root game objects.
             for (var currIndex = 0; currIndex < s_TempGameObjects.Count; currIndex++)
             {
-                if (HandleReordered(s_TempGameObjects[currIndex], sceneState.Roots, currIndex, out var prevIndex, out var rootState))
+                if (HandleReorderedGameObject(s_TempGameObjects[currIndex], sceneState.Roots, currIndex, out var prevIndex, out var rootState))
                 {
                     Debug.Log($"Change: Reorder root game object from {prevIndex} to {currIndex}.");
                 }
 
                 FindReorderedGameObjects(rootState);
             }
+
+            foreach (var root in sceneState.Roots)
+            {
+                FindComponentStructuralChanges(root, true);
+            }
+
+            foreach (var root in sceneState.Roots)
+            {
+                FindPropertyChanges(root, true);
+            }
         }
 
-        GameObjectState FindAddedGameObjects(SceneState sceneState, GameObjectState parentState, GameObject gameObject)
+        void CheckGameObjectStructural(SceneState sceneState, GameObject gameObject, bool recurseChildren)
         {
             if (sceneState == null || gameObject == null)
             {
-                return null;
+                return;
             }
 
+            // Find the parent object state. If the parent is not tracked, check for all changes from the hierarchy root instead.
+            var parent = gameObject.transform.parent;
+            var parentState = default(GameObjectState);
+
+            if (parent != null)
+            {
+                if (!m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState))
+                {
+                    CheckGameObjectStructural(sceneState, parent.root.gameObject, true);
+                    return;
+                }
+            }
+
+            // Check for changes to the game object, and the children if requested.
+            var goState = FindAddedGameObjects(sceneState, parentState, gameObject, recurseChildren);
+
+            if (recurseChildren)
+            {
+                FindRemovedGameObjects(goState);
+                FindReorderedGameObjects(goState);
+            }
+
+            FindComponentStructuralChanges(goState, recurseChildren);
+            FindPropertyChanges(goState, recurseChildren);
+        }
+
+        GameObjectState FindAddedGameObjects(SceneState sceneState, GameObjectState parentState, GameObject gameObject, bool recurseChildren)
+        {
             // Check if the game object is new.
             if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
             {
@@ -529,11 +575,14 @@ namespace Editor
             }
 
             // Check children for changes.
-            var transform = gameObject.transform;
-
-            for (var i = 0; i < transform.childCount; i++)
+            if (recurseChildren)
             {
-                FindAddedGameObjects(sceneState, goState, transform.GetChild(i).gameObject);
+                var transform = gameObject.transform;
+
+                for (var i = 0; i < transform.childCount; i++)
+                {
+                    FindAddedGameObjects(sceneState, goState, transform.GetChild(i).gameObject, recurseChildren);
+                }
             }
 
             return goState;
@@ -570,7 +619,7 @@ namespace Editor
             {
                 var child = transform.GetChild(currIndex).gameObject;
 
-                if (HandleReordered(child, goState.Children, currIndex, out var prevIndex, out var childState))
+                if (HandleReorderedGameObject(child, goState.Children, currIndex, out var prevIndex, out var childState))
                 {
                     Debug.Log($"Change: Reorder game object from {prevIndex} to {currIndex}.");
                 }
@@ -579,7 +628,7 @@ namespace Editor
             }
         }
 
-        static bool HandleReordered(GameObject obj, List<GameObjectState> siblings, int currIndex, out int prevIndex, out GameObjectState sibling)
+        static bool HandleReorderedGameObject(GameObject obj, List<GameObjectState> siblings, int currIndex, out int prevIndex, out GameObjectState sibling)
         {
             for (prevIndex = 0; prevIndex < siblings.Count; prevIndex++)
             {
@@ -604,132 +653,7 @@ namespace Editor
             return false;
         }
 
-        /// <summary>
-        /// Looks for changes to the properties, components, and children of a game object.
-        /// </summary>
-        /// <remarks>
-        /// If the game object is not yet tracked, it will be tracked and the initial state of the game object will be reported.
-        /// </remarks>
-        /// <param name="sceneState">The scene the game object is in.</param>
-        /// <param name="gameObject">The game object to look for changes in.</param>
-        /// <param name="includeChildren">Look for changes in all children of the game object.</param>
-        GameObjectState CheckGameObjectStructural(SceneState sceneState, GameObject gameObject, bool includeChildren)
-        {
-            if (gameObject == null)
-            {
-                return null;
-            }
-
-            var previouslyTracked = sceneState.TryGetTrackedObject(gameObject, out var goState);
-
-            if (!previouslyTracked)
-            {
-                goState = new GameObjectState(gameObject)
-                {
-                    Scene = sceneState,
-                };
-
-                sceneState.AddTrackedObject(goState);
-
-                Debug.Log($"Change: Added game object {gameObject}");
-
-                var parent = gameObject.transform.parent;
-
-                if (parent != null && sceneState.TryGetTrackedObject(parent.gameObject, out var parentState))
-                {
-                    goState.Parent = parentState;
-                    parentState.Children.Add(goState);
-
-                    Debug.Log($"Change: Set parent {parent.name}->{gameObject.name}");
-                }
-
-                if (goState.Parent == null)
-                {
-                    sceneState.Roots.Add(goState);
-                }
-            }
-
-            // TODO: we must ensure that all gameobjects are created before components, then components before all properties,
-            // otherwise, it might not be possible to fill the serialized properties values.
-
-            if (goState.Properties.Update() || !previouslyTracked)
-            {
-                CheckProperties(goState.Properties, previouslyTracked);
-                CheckComponentsStructural(goState);
-            }
-            else
-            {
-                // If the game object's properties have not changed, we still must check
-                // component properties for changes.
-                foreach (var componentState in goState.Components)
-                {
-                    CheckProperties(componentState.Properties);
-                }
-            }
-
-            if (includeChildren)
-            {
-                CheckChildrenStructural(goState);
-            }
-
-            return goState;
-        }
-
-        void CheckChildrenStructural(GameObjectState goState)
-        {
-            // Detect removed children.
-            for (var i = goState.Children.Count - 1; i >= 0; i--)
-            {
-                var prevChild = goState.Children[i];
-
-                if (prevChild.GameObject == null)
-                {
-                    Debug.Log($"Change: Removed child at index {i}.");
-
-                    goState.Scene.RemoveTrackedObject(prevChild);
-                    goState.Children.RemoveAt(i);
-                    prevChild.Dispose();
-                }
-
-                // TODO: handle re-parented objects, they won't be null
-            }
-
-            // Detect added and reordered children.
-            var transform = goState.GameObject.transform;
-
-            for (var currIndex = 0; currIndex < transform.childCount; currIndex++)
-            {
-                var child = transform.GetChild(currIndex).gameObject;
-
-                // Find the previous index of the child.
-                var prevIndex = goState.Children.Count;
-
-                for (var i = 0; i < goState.Children.Count; i++)
-                {
-                    var prevChild = goState.Children[i];
-
-                    if (prevChild.GameObject == child)
-                    {
-                        prevIndex = i;
-                        break;
-                    }
-                }
-
-                // Check the child for changes.
-                var childState = CheckGameObjectStructural(goState.Scene, child, true);
-
-                // Check if the child index has changed.
-                if (currIndex != prevIndex)
-                {
-                    Debug.Log($"Change: Reorder child from {prevIndex} to {currIndex}.");
-
-                    goState.Children.RemoveAt(prevIndex);
-                    goState.Children.Insert(currIndex, childState);
-                }
-            }
-        }
-
-        void CheckComponentsStructural(GameObjectState goState)
+        void FindComponentStructuralChanges(GameObjectState goState, bool recurseChildren)
         {
             // Detect removed components.
             for (var i = goState.Components.Count - 1; i >= 0; i--)
@@ -753,7 +677,6 @@ namespace Editor
                 var component = s_TempComponents[currIndex];
 
                 // Find the state corresponding to the component.
-                var previouslyTracked = false;
                 var componentState = default(ComponentState);
                 var prevIndex = goState.Components.Count;
 
@@ -763,7 +686,6 @@ namespace Editor
 
                     if (prevComponent.Component == component)
                     {
-                        previouslyTracked = true;
                         componentState = prevComponent;
                         prevIndex = i;
                         break;
@@ -773,11 +695,10 @@ namespace Editor
                 // If the component was just added, track it.
                 if (componentState == null)
                 {
-                    Debug.Log($"Change: Added component {component}.");
-
                     componentState = new ComponentState(component);
-
                     goState.Components.Add(componentState);
+
+                    Debug.Log($"Change: Added component {component}.");
                 }
 
                 // Check if the component index has changed.
@@ -788,20 +709,54 @@ namespace Editor
                     goState.Components.RemoveAt(prevIndex);
                     goState.Components.Insert(currIndex, componentState);
                 }
+            }
 
-                // Check for component properties for changes.
-                CheckProperties(componentState.Properties, previouslyTracked);
+            // Check children for changes.
+            if (recurseChildren)
+            {
+                foreach (var child in goState.Children)
+                {
+                    FindComponentStructuralChanges(child, recurseChildren);
+                }
+            }
+        }
+
+        void FindPropertyChanges(GameObjectState goState, bool recurseChildren)
+        {
+            // Find game object property changes
+            if (goState.Properties.Update(out var isFirstGameObjectUpdate))
+            {
+                CheckProperties(goState.Properties, !isFirstGameObjectUpdate);
+            }
+
+            // Find component property changes.
+            for (var i = 0; i < goState.Components.Count; i++)
+            {
+                var component = goState.Components[i];
+
+                if (component.Properties.Update(out var isFirstComponentUpdate))
+                {
+                    CheckProperties(component.Properties, !isFirstComponentUpdate);
+                }
+            }
+
+            // Check children for changes.
+            if (recurseChildren)
+            {
+                foreach (var child in goState.Children)
+                {
+                    FindPropertyChanges(child, recurseChildren);
+                }
             }
         }
 
         /// <summary>
         /// Looks for changes to the properties of a single component.
         /// </summary>
-        /// <param name="sceneState">The scene the component is in.</param>
         /// <param name="component">The component to look for changes in.</param>
-        void CheckComponent(SceneState sceneState, Component component)
+        void CheckComponent(Component component)
         {
-            if (component == null || !sceneState.TryGetTrackedObject(component.gameObject, out var goState))
+            if (component == null || !m_TrackedGameObjects.TryGetValue(component.gameObject.GetInstanceID(), out var goState))
             {
                 return;
             }
@@ -811,11 +766,11 @@ namespace Editor
             {
                 if (componentState.Component == component)
                 {
-                    if (componentState.Properties.Update())
+                    if (componentState.Properties.Update(out var isFirstComponentUpdate))
                     {
-                        CheckProperties(componentState.Properties);
+                        CheckProperties(componentState.Properties, !isFirstComponentUpdate);
                     }
-                    break;
+                    return;
                 }
             }
         }
