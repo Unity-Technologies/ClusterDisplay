@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.Editor
 {
     static class ClusterDisplaySettingsProvider
     {
+        static readonly string k_SettingsPath = "Project/ClusterDisplaySettings";
         const string k_StyleSheetCommon = "Packages/com.unity.cluster-display/Editor/UI/SettingsWindowCommon.uss";
 
         class Contents
@@ -16,9 +17,15 @@ namespace Unity.ClusterDisplay.Editor
             public const string InitializeOnPlay = "Enable On Play";
         }
 
+        [MenuItem("Cluster Display/Settings...")]
+        static void ShowClusterDisplaySettings()
+        {
+            SettingsService.OpenProjectSettings(k_SettingsPath);
+        }
+
         [SettingsProvider]
         static SettingsProvider CreateSettingsProvider() =>
-            new ("Project/ClusterDisplaySettings", SettingsScope.Project)
+            new (k_SettingsPath, SettingsScope.Project)
             {
                 label = "Cluster Display",
                 activateHandler = (searchContext, parentElement) =>
