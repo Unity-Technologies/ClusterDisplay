@@ -148,19 +148,14 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 return value;
             }
 
-            switch (type.Value)
+            return type.Value switch
             {
-                case LaunchParameterType.Boolean:
-                    return ConvertToBoolean(value);
-                case LaunchParameterType.Integer:
-                    return ConvertToInt32(value);
-                case LaunchParameterType.Float:
-                    return ConvertToSingle(value);
-                case LaunchParameterType.String:
-                    return ConvertToString(value);
-                default:
-                    throw new ArgumentException("Unsupported enum constant", nameof(type));
-            }
+                LaunchParameterType.Boolean => ConvertToBoolean(value),
+                LaunchParameterType.Integer => ConvertToInt32(value),
+                LaunchParameterType.Float => ConvertToSingle(value),
+                LaunchParameterType.String => ConvertToString(value),
+                _ => throw new ArgumentException("Unsupported enum constant", nameof(type))
+            };
         }
 
         /// <summary>

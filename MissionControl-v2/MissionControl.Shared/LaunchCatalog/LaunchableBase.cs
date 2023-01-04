@@ -98,6 +98,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         }
 
         /// <summary>
+        /// <see cref="Type"/> for launchables used to identify a special launchable that is to be launched on the
+        /// local mission control computer to act as a liaison with all launched payloads handling aspects of the work
+        /// that has to consider multiple launched payloads.  Capcom is started as soon as the asset is selected.
+        /// Because of those differences capcom launchables does not have any launch parameters (global, complex or
+        /// launchpad).
+        /// </summary>
+        public const string CapcomLaunchableType = "capcom";
+
+        /// <summary>
         /// Returns if all properties of this are equal to properties of <paramref name="other"/>.
         /// </summary>
         /// <param name="other">The other <see cref="LaunchableBase"/> to compare with.</param>

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 {
@@ -194,7 +195,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 List<Task> launchTasks = new();
                 foreach (var launchable in asset.Launchables)
                 {
-                    if (launchable.Type == k_CapcomLaunchableType)
+                    if (launchable.Type == LaunchableBase.CapcomLaunchableType)
                     {
                         CapcomProcess process = new(m_Logger, m_ConfigService, m_PayloadsService, m_FileBlobsService,
                             m_CapcomPath, launchable);
@@ -498,11 +499,5 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// Capcom process running for <see cref="m_PreparedCapcomAssetId"/>.
         /// </summary>
         readonly List<CapcomProcess> m_CapcomProcesses = new();
-
-        /// <summary>
-        /// <see cref="Launchable"/>'s type that we want to launch to handle the specific of some of the payloads that
-        /// are to be launched.
-        /// </summary>
-        const string k_CapcomLaunchableType = "capcom";
     }
 }

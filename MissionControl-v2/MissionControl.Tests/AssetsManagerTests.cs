@@ -590,7 +590,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             Stream file1Stream = CreateStreamFromString("This is the first file");
             string file1Md5 = ComputeMd5String(file1Stream);
-            CreateStreamFromString("This is the second file");
 
             Catalog launchCatalog = new()
             {
@@ -673,6 +672,60 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var propertyInfo = of.GetType().GetProperty(propertyName);
             Assert.That(propertyInfo, Is.Not.Null);
             propertyInfo!.SetValue(of, value);
+        }
+
+        [Test]
+        [TestCase(nameof(Launchable.GlobalParameters))]
+        [TestCase(nameof(Launchable.LaunchComplexParameters))]
+        [TestCase(nameof(Launchable.LaunchPadParameters))]
+        public void CapcomWithParameters(string propertyName)
+        {
+            Assert.That(m_FileBlobsManagerMock, Is.Not.Null);
+            var assetsManager = new AssetsManager(m_LoggerMock.Object, m_PayloadsManagerMock!.Object,
+                m_FileBlobsManagerMock!.Object);
+
+            Stream file1Stream = CreateStreamFromString("This is the first file");
+            string file1Md5 = ComputeMd5String(file1Stream);
+
+            Catalog launchCatalog = new()
+            {
+                Payloads = new [] {
+                    new LaunchCatalog.Payload()
+                    {
+                        Name = "Payload",
+                        Files = new []
+                        {
+                            new LaunchCatalog.PayloadFile() { Path = "file1", Md5 = file1Md5 }
+                        }
+                    }
+                },
+                Launchables = new [] {
+                    new LaunchCatalog.Launchable()
+                    {
+                        Name = "Launchable",
+                        Type = LaunchableBase.CapcomLaunchableType,
+                        Payloads = new [] { "Payload1" }
+                    }
+                }
+            };
+            var launchable = launchCatalog.Launchables.First();
+
+            MockSequence theSequence = new();
+            Mock<IAssetSource> assetSourceMock = new(MockBehavior.Strict);
+
+            // Setup mock
+            assetSourceMock.InSequence(theSequence).Setup(a => a.GetCatalogAsync())
+                .ReturnsAsync(launchCatalog);
+
+            // Set a launch parameter
+            SetLaunchParameters(launchable, propertyName,
+                GetLaunchParameters(launchable, propertyName).Append(new LaunchParameter() { Id = "SomeProperty", DefaultValue = 42}));
+
+            // Test
+            AssetPost newAsset = new() { Name = "TestName", Description = "TestDescription" };
+            Assert.That(async () => { await assetsManager.AddAssetAsync(newAsset, assetSourceMock.Object); },
+                Throws.TypeOf<CatalogException>().With.Message.EqualTo("Capcom launchable does not support launch " +
+                "parameters."));
         }
 
         [Test]

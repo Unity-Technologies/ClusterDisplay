@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 {
@@ -221,6 +222,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             if (catalog.Launchables.Any(l => string.IsNullOrEmpty(l.Name)))
             {
                 throw new CatalogException("Launchable name cannot be empty.");
+            }
+
+            // Validate that capcom launchables do not have any launchable parameters (not supported)
+            var capcomLaunchable = catalog.Launchables.FirstOrDefault(l => l.Type == LaunchableBase.CapcomLaunchableType);
+            if (capcomLaunchable != null)
+            {
+                if (capcomLaunchable.GlobalParameters.Any() || capcomLaunchable.LaunchComplexParameters.Any() ||
+                    capcomLaunchable.LaunchPadParameters.Any())
+                {
+                    throw new CatalogException("Capcom launchable does not support launch parameters.");
+                }
             }
 
             // Validate launchables do not contain multiple parameters with the same identifier or with missing default

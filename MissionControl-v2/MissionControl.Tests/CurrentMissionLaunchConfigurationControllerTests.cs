@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl
@@ -739,7 +740,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 new LaunchCatalog.Launchable()
                 {
                     Name = "Capcom1",
-                    Type = k_CapcomLaunchableType,
+                    Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload" },
                     Data = JsonNode.Parse("{'LaunchData': 42}".Replace('\'', '\"')),
                     PreLaunchPath = "prelaunch.ps1",
@@ -778,7 +779,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 new LaunchCatalog.Launchable()
                 {
                     Name = "Capcom2",
-                    Type = k_CapcomLaunchableType,
+                    Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload" },
                     Data = JsonNode.Parse("{'LaunchData': 28}".Replace('\'', '\"')),
                     PreLaunchPath = "prelaunch.ps1",
@@ -826,7 +827,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 new LaunchCatalog.Launchable()
                 {
                     Name = "Capcom1",
-                    Type = k_CapcomLaunchableType,
+                    Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload1" },
                     Data = JsonNode.Parse("{'LaunchData': 42}".Replace('\'', '\"')),
                     PreLaunchPath = "prelaunch1.ps1",
@@ -835,7 +836,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 new LaunchCatalog.Launchable()
                 {
                     Name = "Capcom2",
-                    Type = k_CapcomLaunchableType,
+                    Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload2" },
                     Data = JsonNode.Parse("{'LaunchData': 28}".Replace('\'', '\"')),
                     PreLaunchPath = "prelaunch2.ps1",
@@ -884,7 +885,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 new LaunchCatalog.Launchable()
                 {
                     Name = "Capcom1",
-                    Type = k_CapcomLaunchableType,
+                    Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload" },
                     Data = JsonNode.Parse("{'LaunchData': 42}".Replace('\'', '\"')),
                     PreLaunchPath = "prelaunch.ps1",
@@ -911,7 +912,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         };
 
         const string k_LaunchConfigurationObjectName = "currentMission/launchConfiguration";
-        const string k_CapcomLaunchableType = "capcom";
         const string k_CapcomFolder = "capcom";
 
         MissionControlProcessHelper m_ProcessHelper = new();

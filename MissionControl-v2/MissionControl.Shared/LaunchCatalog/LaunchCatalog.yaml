@@ -39,7 +39,7 @@ components:
       properties:
         path:
           type: string
-          description: Path of the file relative to the file containing this information.  Folders should be separated using a forward slash (Linux convention, not Dos) so that we have the same result no matter the platform on which the LaunchCatalog.json is generated.
+          description: Path of the file relative to the file containing this information.  Folders should be separated using a forward slash (Linux convention, not Windows) so that we have the same result no matter the platform on which the LaunchCatalog.json is generated.
           example: SpaceshipDemo_Data/sharedassets3.assets
         md5:
           type: string
@@ -151,7 +151,7 @@ components:
           example: Render node
         type:
           type: string
-          description: Identifier of this type of Launchable (to find compatible nodes).  The type "capcom" is used to identify a launchable that is to be launched on the local mission control computer to act to act as a liaison with launched payloads handling work that is dependent on the payload.
+          description: Identifier of this type of Launchable (to find compatible nodes).<br/><br/>The type "capcom" is used to identify a special launchable that is to be launched on the local mission control computer to act as a liaison with all launched payloads handling aspects of the work that has to consider multiple launched payloads.  Capcom is started as soon as the asset is selected.  Because of those differences capcom launchables does not have any launch parameters (global, complex or launchpad).
         payloads:
           type: array
           description: Name of Payloads forming the list of all the files needed by this Launchable.
