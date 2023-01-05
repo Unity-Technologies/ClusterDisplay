@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         protected override NodeState DoFrameImplementation()
         {
             // Have we been requested to initiate the quitting of the cluster?
-            if (Utils.ServiceLocator.TryGet<IClusterSyncShouldQuit>(out var _))
+            if (InternalMessageQueue<InternalQuitMessage>.Instance.TryDequeue(out InternalQuitMessage _))
             {
                 return new PropagateQuitState(Node);
             }

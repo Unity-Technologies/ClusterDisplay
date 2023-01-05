@@ -11,6 +11,7 @@ using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Utils;
 using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
@@ -316,27 +317,14 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
-        class TestQuitMarker: IClusterSyncShouldQuit
-        {
-
-        }
-
         [Test]
         public void TransitionToPropagateQuitState()
         {
             using var testState = new EmitFrameState(m_Node);
 
-            try
-            {
-                TestQuitMarker quitMarker = new();
-                ServiceLocator.Provide<IClusterSyncShouldQuit>(quitMarker);
-                var nextState = testState.DoFrame();
-                Assert.That(nextState, Is.TypeOf<PropagateQuitState>());
-            }
-            finally
-            {
-                ServiceLocator.Withdraw<IClusterSyncShouldQuit>();
-            }
+            InternalMessageQueue<InternalQuitMessage>.Instance.Enqueue(new());
+            var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.TypeOf<PropagateQuitState>());
         }
 
         [SetUp]

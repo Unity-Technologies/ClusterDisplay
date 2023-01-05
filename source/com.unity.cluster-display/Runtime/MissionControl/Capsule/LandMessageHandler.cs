@@ -3,13 +3,14 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using Utils;
 
 namespace Unity.ClusterDisplay.MissionControl.Capsule
 {
     /// <summary>
     /// Handle <see cref="Capsule.MessagesId.Land"/> messages.
     /// </summary>
-    public class LandMessageHandler: IMessageHandler, IClusterSyncShouldQuit
+    public class LandMessageHandler: IMessageHandler
     {
         /// <summary>
         /// Constructor
@@ -29,8 +30,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 return;
             }
 
-            // Add the service indicating that we should quit
-            Utils.ServiceLocator.Provide<IClusterSyncShouldQuit>(this);
+            // Post the internal message indicating that we should quit
+            InternalMessageQueue<InternalQuitMessage>.Instance.Enqueue(new());
 
             // Register to stop capsule resources when application starts to quit
             Application.quitting += () => m_ToCancel.Cancel();
