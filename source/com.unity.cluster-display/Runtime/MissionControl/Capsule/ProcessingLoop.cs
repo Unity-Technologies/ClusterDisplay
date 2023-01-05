@@ -40,7 +40,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         /// Main loop accepting connections
         /// </summary>
         /// <param name="listenPort">Port to listen on for new connections from capcom.</param>
-        public async ValueTask Start(int listenPort)
+        public async Task Start(int listenPort)
         {
             if (m_TcpListener != null)
             {

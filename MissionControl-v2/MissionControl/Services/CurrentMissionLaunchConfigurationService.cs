@@ -27,13 +27,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         public CurrentMissionLaunchConfigurationService(IConfiguration configuration,
             ILogger<CurrentMissionLaunchConfigurationService> logger,
             IHostApplicationLifetime applicationLifetime,
-            IServiceProvider serviceProvider,
+            ObservableObjectCatalogService catalogService,
             ConfigService configService,
             AssetsService assetsService,
             PayloadsService payloadsService,
             FileBlobsService fileBlobsService,
             CapcomUplinkService capcomUplinkService)
-            : base(serviceProvider, new LaunchConfiguration(), "currentMission/launchConfiguration")
+            : base(applicationLifetime, catalogService, new LaunchConfiguration(), "currentMission/launchConfiguration")
         {
             m_Logger = logger;
             m_ConfigService = configService;

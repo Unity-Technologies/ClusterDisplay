@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             public Capsule.ProcessingLoop ProcessingLoop { get; } = new(false);
             public FakeLandHandler FakeLandHandler { get; } = new();
-            public ValueTask ProcessingTask { get; }
+            public Task ProcessingTask { get; }
         }
 
         void AddFakeCapsule(int port)

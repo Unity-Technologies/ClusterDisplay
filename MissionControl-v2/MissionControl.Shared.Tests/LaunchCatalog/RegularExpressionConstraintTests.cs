@@ -56,11 +56,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             Assert.That(constraint.Validate("Thistle is also a word"), Is.True);
             Assert.That(constraint.Validate("but this does not match"), Is.False);
 
-            constraint.RegularExpression = "T.st";
+            constraint.RegularExpression = "T.st$";
             Assert.That(constraint.Validate("Test"), Is.True);
             Assert.That(constraint.Validate("Test with more stuff"), Is.False);
 
-            constraint.RegularExpression = "";
+            constraint.RegularExpression = "^$";
             Assert.That(constraint.Validate(""), Is.True);
             Assert.That(constraint.Validate("Something"), Is.False);
         }

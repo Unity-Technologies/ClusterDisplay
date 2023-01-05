@@ -404,6 +404,8 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.TypeOf<ProcessQuitMessageState>());
+            nextState = nextState.DoFrame();
             Assert.That(nextState, Is.Null);
             Assert.That(m_Node.QuitReceived, Is.True);
             Assert.DoesNotThrow(propagateQuitTask.Wait);
@@ -426,6 +428,8 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.TypeOf<ProcessQuitMessageState>());
+            nextState = nextState.DoFrame();
             Assert.That(nextState, Is.Null);
             Assert.That(m_Node.QuitReceived, Is.True);
             Assert.DoesNotThrow(propagateQuitTask.Wait);

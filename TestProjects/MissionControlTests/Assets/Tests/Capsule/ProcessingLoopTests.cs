@@ -136,6 +136,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         ProcessingLoop m_ProcessingLoop;
         readonly Guid m_TestHandlerId = Guid.NewGuid();
         TestHandler m_TestHandler;
-        ValueTask m_RunningProcessingLoop;
+        Task m_RunningProcessingLoop;
     }
 }

@@ -7,7 +7,8 @@ using Unity.ClusterDisplay.MissionControl.MissionControl;
 namespace Unity.ClusterDisplay.MissionControl.Capcom
 {
     /// <summary>
-    /// <see cref="IApplicationProcess"/> responsible for handling
+    /// <see cref="IApplicationProcess"/> responsible for reviewing launch parameters (updating the value and marking
+    /// them as ready (with an optional review comment)).
     /// </summary>
     public class ReviewLaunchParametersProcess: IApplicationProcess
     {

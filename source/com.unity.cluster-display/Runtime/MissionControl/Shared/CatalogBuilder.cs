@@ -24,10 +24,10 @@ namespace Unity.ClusterDisplay
 
         /// <summary>
         /// List of file paths (relative to the folder from which the catalog is built) that are to be included
-        /// exclusively in this launchable or other launchables including this file as part of their
-        /// <see cref="ExcludedFiles"/>.
+        /// exclusively in this launchable.
         /// </summary>
-        /// <remarks>Can include wildcards (* and ?.)</remarks>
+        /// <remarks>Can include wildcards (* and ?.).<br/><br/>Two (or more) launchables can have the same files in its
+        /// exclusive files list, in that case only those ones will have that file.</remarks>
         public IEnumerable<string> ExclusiveFiles { get; set; } = Enumerable.Empty<string>();
 
         /// <summary>

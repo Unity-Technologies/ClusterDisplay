@@ -63,11 +63,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     receivedMessage = PerformNetworkSynchronization(doFrameDeadline);
                     if (receivedMessage is {Type: MessageType.PropagateQuit})
                     {
-                        // Process request to quit
-                        udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
-                            {NodeId = Node.Config.NodeId});
-                        Node.Quit();
-                        return null;
+                        return new ProcessQuitMessageState(Node);
                     }
                 }
             }
@@ -90,11 +86,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                             // This is the message we want, nothing special to do
                             break;
                         case MessageType.PropagateQuit:
-                            // Process request to quit
-                            udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
-                                {NodeId = Node.Config.NodeId});
-                            Node.Quit();
-                            return null;
+                            return new ProcessQuitMessageState(Node);
                         default:
                             // Other type of messages, don't really know what they are but let's simply ignore them, they
                             // have no impact on us at the moment...

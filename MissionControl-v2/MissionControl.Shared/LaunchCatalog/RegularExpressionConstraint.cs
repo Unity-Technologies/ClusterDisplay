@@ -28,8 +28,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             {
                 return false;
             }
-            var regexMatch = Regex.Match(valueAsString, RegularExpression);
-            return regexMatch.Success && regexMatch.Length == valueAsString.Length;
+            return Regex.IsMatch(valueAsString, RegularExpression);
         }
 
         /// <inheritdoc/>

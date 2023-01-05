@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace Unity.ClusterDisplay.MissionControl
 {
@@ -32,7 +32,11 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 if (m_TaskCompletionSource != null)
                 {
+#if UNITY_64
                     m_TaskCompletionSource.SetResult(true);
+#else
+                    m_TaskCompletionSource.SetResult();
+#endif
                     m_TaskCompletionSource = null;
                 }
             }
@@ -57,8 +61,10 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Used to wake up tasks waiting on the <see cref="AsyncConditionVariable"/>.
         /// </summary>
-        /// <remarks>We would use a simple TaskCompletionSource without generic but it does not exist until .Net 5.
-        /// </remarks>
+#if UNITY_64
         TaskCompletionSource<bool> m_TaskCompletionSource;
+#else
+        TaskCompletionSource? m_TaskCompletionSource;
+#endif
     }
 }

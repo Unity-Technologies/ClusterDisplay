@@ -12,17 +12,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="serviceProvider">Services provider.</param>
+        /// <param name="applicationLifetime"><see cref="IHostApplicationLifetime"/>.</param>
+        /// <param name="catalogService"><see cref="ObservableObjectCatalogService"/>.</param>
         /// <param name="observableObject">The <see cref="ObservableObject"/> we are serving.</param>
         /// <param name="name">Name of the <see cref="ObservableObjectService{T}"/> (should be unique among all
         /// registered <see cref="ObservableObjectService{T}"/>s).</param>
-        protected ObservableObjectService(IServiceProvider serviceProvider, T observableObject, string name): base(name)
+        protected ObservableObjectService(IHostApplicationLifetime applicationLifetime,
+            ObservableObjectCatalogService catalogService, T observableObject, string name): base(name)
         {
-            var applicationLifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
             m_ObservableObject = observableObject;
             m_ObservableObject.ObjectChanged += OnObjectChanged;
 
-            serviceProvider.GetService<ObservableObjectCatalogService>()!.AddObservableObject(this);
+            catalogService.AddObservableObject(this);
 
             applicationLifetime.ApplicationStopping.Register(ApplicationShutdown);
         }

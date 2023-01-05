@@ -9,7 +9,7 @@ using Unity.ClusterDisplay.EmitterStateMachine;
 
 namespace Unity.ClusterDisplay.Tests
 {
-    public class PropagateQuiteStateTests
+    public class PropagateQuitStateTests
     {
         [Test]
         public void PropagateToSingle()
