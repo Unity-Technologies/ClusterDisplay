@@ -1,9 +1,9 @@
 using System.Text.Json;
-
+using System.Text.Json.Nodes;
 using LaunchParameter = Unity.ClusterDisplay.MissionControl.LaunchCatalog.LaunchParameter;
 using LaunchParameterType = Unity.ClusterDisplay.MissionControl.LaunchCatalog.LaunchParameterType;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchableTests
     {
@@ -26,14 +26,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             launchableB.Type = "clusterNode";
             Assert.That(launchableA, Is.EqualTo(launchableB));
 
-            launchableA.Data = new { StringProperty = "StringValue", NumberProperty = 42 };
+            launchableA.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42}".Replace('\'', '\"'));
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
             launchableB.Data = launchableA.Data;
             launchableA.Data = null;
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
-            launchableA.Data = new { OtherStringProperty = "OtherStringValue", OtherNumberProperty = 28 };
+            launchableA.Data = JsonNode.Parse("{'OtherStringProperty': 'OtherStringValue', 'OtherNumberProperty': 28}".Replace('\'', '\"'));
             Assert.That(launchableA, Is.Not.EqualTo(launchableB));
-            launchableA.Data = new { StringProperty = "StringValue", NumberProperty = 42.0 };
+            launchableA.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42}".Replace('\'', '\"'));
             Assert.That(launchableA, Is.EqualTo(launchableB));
 
             launchableA.GlobalParameters = new[] { new LaunchParameter() { Name = "Global parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
@@ -93,7 +93,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             Launchable toSerialize = new();
             toSerialize.Name = "Cluster Node";
             toSerialize.Type = "clusterNode";
-            toSerialize.Data = new { StringProperty = "StringValue", NumberProperty = 42 };
+            toSerialize.Data = JsonNode.Parse("{'StringProperty': 'StringValue', 'NumberProperty': 42}".Replace('\'', '\"'));
             toSerialize.GlobalParameters = new[] { new LaunchParameter() { Name = "Global parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toSerialize.LaunchComplexParameters = new[] { new LaunchParameter() { Name = "Launch complex parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };
             toSerialize.LaunchPadParameters = new[] { new LaunchParameter() { Name = "Launchpad parameter", Type = LaunchParameterType.Integer, DefaultValue = 42 } };

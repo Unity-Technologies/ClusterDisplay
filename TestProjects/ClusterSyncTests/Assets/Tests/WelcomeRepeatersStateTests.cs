@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
-using Unity.ClusterDisplay.RepeaterStateMachine;
 using Utils;
 
 namespace Unity.ClusterDisplay.Tests
@@ -46,7 +45,7 @@ namespace Unity.ClusterDisplay.Tests
                 agent.SendMessage(MessageType.RegisteringWithEmitter, registeringMessage);
 
                 long deadlineTimestamp = StopwatchUtils.TimestampIn(m_MaxTestTime);
-                bool found = false;
+                bool found;
                 do
                 {
                     using var receivedMessage = agent.TryConsumeNextReceivedMessage(m_MaxTestTime);
@@ -83,7 +82,7 @@ namespace Unity.ClusterDisplay.Tests
                 agent.SendMessage(MessageType.RegisteringWithEmitter, registeringMessage);
 
                 long deadlineTimestamp = StopwatchUtils.TimestampIn(m_MaxTestTime);
-                bool found = false;
+                bool found;
                 do
                 {
                     using var receivedMessage = agent.TryConsumeNextReceivedMessage(m_MaxTestTime);
@@ -120,7 +119,7 @@ namespace Unity.ClusterDisplay.Tests
                 }
 
                 long deadlineTimestamp = StopwatchUtils.TimestampIn(m_MaxTestTime);
-                bool found = false;
+                bool found;
                 do
                 {
                     using var receivedMessage = agent.TryConsumeNextReceivedMessage(m_MaxTestTime);

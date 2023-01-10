@@ -54,10 +54,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
 
                     using (var lockedLaunchConfiguration = await m_LaunchConfigurationService.LockAsync())
                     {
-                        var previousValue = lockedLaunchConfiguration.Value.DeepClone();
-                        lockedLaunchConfiguration.Value.DeepCopy(configuration);
-                        if (!lockedLaunchConfiguration.Value.Equals(previousValue))
+                        if (!lockedLaunchConfiguration.Value.Equals(configuration))
                         {
+                            lockedLaunchConfiguration.Value.DeepCopyFrom(configuration);
                             lockedLaunchConfiguration.Value.SignalChanges();
                         }
                     }

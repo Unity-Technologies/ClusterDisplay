@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchPadsStatusControllerTests
     {
@@ -186,12 +186,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             {
                 StartTime = DateTime.Now
             };
-            launchPadB1.SetStatus(b1Status);
+            launchPadB1.Status = b1Status;
             ClusterDisplay.MissionControl.LaunchPad.Status b2Status = new()
             {
                 StartTime = DateTime.Now + TimeSpan.FromHours(1)
             };
-            launchPadB2.SetStatus(b2Status);
+            launchPadB2.Status = b2Status;
 
             var b1StatusTask = GetLaunchPadStatus(k_LaunchPadB1Id, s => s != null && s.StartTime == b1Status.StartTime);
             var b2StatusTask = GetLaunchPadStatus(k_LaunchPadB1Id, s => s != null && s.StartTime == b2Status.StartTime);
@@ -227,7 +227,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 StartTime = DateTime.Now,
                 LastChanged = DateTime.Now
             };
-            launchPadB1.SetStatus(b1Status);
+            launchPadB1.Status = b1Status;
 
             var idleStateTask = GetLaunchPadStatus(k_LaunchPadB1Id,
                 s => s != null && s.StartTime == b1Status.StartTime &&
@@ -245,7 +245,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
 
             // Change the status
             b1Status.State = ClusterDisplay.MissionControl.LaunchPad.State.Launched;
-            launchPadB1.SetStatus(b1Status);
+            launchPadB1.Status = b1Status;
 
             timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             finishedTask = await Task.WhenAny(launchedStateTask, timeoutTask);
@@ -283,14 +283,27 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             var b1StatusInErrorTask = GetLaunchPadStatus(k_LaunchPadB1Id, s => s is {IsDefined: false});
 
             m_LaunchPadStubs.Last().Stop();
-            m_LaunchPadStubs.RemoveAt(m_LaunchPadStubs.Count - 1);
 
             timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             finishedTask = await Task.WhenAny(b1StatusInErrorTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(b1StatusInErrorTask)); // Otherwise we timed out
 
+            Assert.That(a1StatusDefinedTask.Result!.IsDefined, Is.True);
+            Assert.That(a2StatusDefinedTask.Result!.IsDefined, Is.True);
             Assert.That(b1StatusInErrorTask.Result!.IsDefined, Is.False);
             Assert.That(b1StatusInErrorTask.Result!.UpdateError, Is.Not.Empty);
+
+            // Status should recover if we restart the launchpad
+            b1StatusInErrorTask = GetLaunchPadStatus(k_LaunchPadB1Id, s => s is {IsDefined: true});
+
+            m_LaunchPadStubs.Last().Start();
+
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(b1StatusInErrorTask, timeoutTask);
+            Assert.That(finishedTask, Is.SameAs(b1StatusInErrorTask)); // Otherwise we timed out
+
+            Assert.That(b1StatusInErrorTask.Result!.IsDefined, Is.True);
+            Assert.That(b1StatusInErrorTask.Result!.UpdateError, Is.Empty);
         }
 
         [Test]

@@ -27,8 +27,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_PersistPath = Path.Combine(configService.PersistPath, "assets.json");
             Load();
 
-            using var lockedCollection = m_Manager.GetLockedReadOnlyAsync().Result;
-            incrementalCollectionService.Register("assets", lockedCollection.Value, GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register("assets", RegisterForChangesInCollection, GetIncrementalUpdatesAsync);
         }
 
         /// <summary>
@@ -76,6 +75,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                     m_PersistPath);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// <see cref="IncrementalCollectionCatalogService"/>'s callback to register callback to detect changes in the
+        /// collection.
+        /// </summary>
+        /// <param name="toRegister">The callback to register</param>
+        void RegisterForChangesInCollection(Action<IReadOnlyIncrementalCollection> toRegister)
+        {
+            using var lockedCollection = m_Manager.GetLockedReadOnlyAsync().Result;
+            lockedCollection.Value.SomethingChanged += toRegister;
         }
 
         /// <summary>

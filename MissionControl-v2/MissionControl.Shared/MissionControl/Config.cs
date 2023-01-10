@@ -20,8 +20,24 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// Base address that will be used by the launchpads to reach back the mission control controlling them (like
         /// to get payloads and file blobs).
         /// </summary>
-        /// <remarks>Must be one of the elements in <see cref="ControlEndPoints"/>.</remarks>
-        public Uri LaunchPadsEntry { get; set; } = new Uri("http://127.0.0.1:8000");
+        /// <remarks>Cannot use auto property because we want to store the normalized uri (https://www.unity.com ->
+        /// https://www.unity.com/) so that this is the one that gets serialized to json.</remarks>
+        public Uri LaunchPadsEntry {
+            get => m_LaunchPadsEntry;
+            set => m_LaunchPadsEntry = new Uri(value.ToString());
+        }
+        Uri m_LaunchPadsEntry = new Uri("http://127.0.0.1:8000/");
+
+        /// <summary>
+        /// Base address that will be used by local services to reach back mission control (like capcom launchables).
+        /// </summary>
+        /// <remarks>Cannot use auto property because we want to store the normalized uri (https://www.unity.com ->
+        /// https://www.unity.com/) so that this is the one that gets serialized to json.</remarks>
+        public Uri LocalEntry {
+            get => m_LocalEntry;
+            set => m_LocalEntry = new Uri(value.ToString());
+        }
+        Uri m_LocalEntry = new Uri("http://127.0.0.1:8000/");
 
         /// <summary>
         /// List of folders of where we store files (used as a cache to avoid constantly fetching from MissionControl).
@@ -43,6 +59,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // ReSharper disable CompareOfFloatsByEqualityOperator
             return ControlEndPoints.SequenceEqual(other.ControlEndPoints) &&
                 LaunchPadsEntry.Equals(other.LaunchPadsEntry) &&
+                LocalEntry.Equals(other.LocalEntry) &&
                 StorageFolders.SequenceEqual(other.StorageFolders) &&
                 HealthMonitoringIntervalSec == other.HealthMonitoringIntervalSec &&
                 LaunchPadFeedbackTimeoutSec == other.LaunchPadFeedbackTimeoutSec;

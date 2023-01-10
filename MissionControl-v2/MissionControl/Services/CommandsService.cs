@@ -30,7 +30,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// Execute the specified <see cref="Command"/>.
         /// </summary>
         /// <param name="command">The command to execute.</param>
-        /// <returns></returns>
         /// <exception cref="ArgumentException">Unknown type of MissionCommand.</exception>
         public Task<(HttpStatusCode code, string errorMessage)> ExecuteAsync(Command command)
         {

@@ -1,7 +1,8 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     public class CommandTests
     {
@@ -10,15 +11,26 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
         {
             var toSerialize = new PrepareCommand();
             toSerialize.PayloadIds = new[] {Guid.NewGuid(), Guid.NewGuid()};
-            toSerialize.PayloadSource = new Uri("http://mission-control-server:8000");
-            toSerialize.LaunchableData = new { SomeString = "SomeValue", SomeInt = 42 };
-            toSerialize.LaunchData = new { SomeOtherString = "SomeOtherValue", SomeOtherInt = 28 };
+            toSerialize.MissionControlEntry = new Uri("http://mission-control-server:8000");
+            toSerialize.LaunchableData = JsonNode.Parse("{'SomeString': 'SomeValue', 'SomeInt': 42 }".Replace('\'', '\"'));
+            toSerialize.LaunchData = JsonNode.Parse("{'SomeOtherString': 'SomeOtherValue', 'SomeOtherInt': 28 }".Replace('\'', '\"'));
             toSerialize.PreLaunchPath = "prelaunch.ps1";
             toSerialize.LaunchPath = "ClusterDisplayReady.exe";
             var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
+        [TestCase("http://127.0.0.1:8000")]
+        [TestCase("http://127.0.0.1:8000/")]
+        public void PrepareMissionControlEntry(string uri)
+        {
+            PrepareCommand prepareCommand = new();
+            prepareCommand.MissionControlEntry = new Uri(uri);
+            Assert.That(prepareCommand.MissionControlEntry.ToString(), Is.EqualTo("http://127.0.0.1:8000/"));
+            Assert.That(JsonSerializer.Serialize(prepareCommand.MissionControlEntry), Is.EqualTo("\"http://127.0.0.1:8000/\""));
         }
 
         [Test]

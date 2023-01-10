@@ -1,5 +1,6 @@
 using System;
-using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
@@ -11,13 +12,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// <summary>
         /// Some descriptive name identifying the <see cref="LaunchableBase"/> to the user.
         /// </summary>
-        /// <remarks>must be unique within the catalog.</remarks>
+        /// <remarks>Must be unique within the catalog.</remarks>
         public string Name { get; set; } = "";
 
         /// <summary>
         /// Identifier of this type of <see cref="LaunchableBase"/> (to find compatible nodes).
         /// </summary>
-        /// <remarks>Although conceptually type is an enum, a new MissionControl plug-in should be able to add a new
+        /// <remarks>The type "capcom" is used to identify a launchable that is to be launched on the local mission
+        /// control computer to act to act as a liaison with launched payloads handling work that is dependent on the
+        /// payload.<br/><br/>
+        /// Although conceptually type is an enum, a new MissionControl plug-in should be able to add a new
         /// type of launchable support, so we keep this type a string to avoid the need to recompile MissionControl
         /// when a new plug-in is available.</remarks>
         public string Type { get; set; } = "";
@@ -30,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// </summary>
         /// <remarks>Because of OS limitations the amount of data in this object should be kept reasonable (current
         /// limitation seem to be around 8192 characters).</remarks>
-        public dynamic? Data { get; set; }
+        public JsonNode? Data { get; set; }
 
         /// <summary>
         /// Parameters allowing to customize execution (passed in the LAUNCH_DATA environment variable for both
@@ -55,13 +59,26 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// before launch.  This executable is responsible to ensure that any external dependencies are installed and
         /// ready to use.
         /// </summary>
+        /// <remarks>Can be an executable, a ps1 or an assemblyrun:// url.</remarks>
         public string PreLaunchPath { get; set; } = "";
 
         /// <summary>
         /// Path (relative to the location where all payloads files are stored) to the executable to launch to start the
         /// process of this <see cref="LaunchableBase"/>.
         /// </summary>
+        /// <remarks>Can be an executable, a ps1 or an assemblyrun:// url.</remarks>
         public string LaunchPath { get; set; } = "";
+
+        /// <summary>
+        /// How many seconds does a launchable process has to realize it has to stop before being killed.
+        /// </summary>
+        public float LandingTimeSec { get; set; }
+
+        /// <summary>
+        /// <see cref="TimeSpan"/> from <see cref="LandingTimeSec"/>.
+        /// </summary>
+        [JsonIgnore]
+        public TimeSpan LandingTime => TimeSpan.FromSeconds(LandingTimeSec);
 
         /// <summary>
         /// Create a shallow copy of from.
@@ -77,7 +94,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             LaunchPadParameters = from.LaunchPadParameters;
             PreLaunchPath = from.PreLaunchPath;
             LaunchPath = from.LaunchPath;
+            LandingTimeSec = from.LandingTimeSec;
         }
+
+        /// <summary>
+        /// <see cref="Type"/> for launchables used to identify a special launchable that is to be launched on the
+        /// local mission control computer to act as a liaison with all launched payloads handling aspects of the work
+        /// that has to consider multiple launched payloads.  Capcom is started as soon as the asset is selected.
+        /// Because of those differences capcom launchables does not have any launch parameters (global, complex or
+        /// launchpad).
+        /// </summary>
+        public const string CapcomLaunchableType = "capcom";
 
         /// <summary>
         /// Returns if all properties of this are equal to properties of <paramref name="other"/>.
@@ -87,24 +114,19 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         {
             return Name == other.Name &&
                 Type == other.Type &&
-                SerializeDynamic(Data) == SerializeDynamic(other.Data) &&
+                SerializeJsonNode(Data) == SerializeJsonNode(other.Data) &&
                 GlobalParameters.SequenceEqual(other.GlobalParameters) &&
                 LaunchComplexParameters.SequenceEqual(other.LaunchComplexParameters) &&
                 LaunchPadParameters.SequenceEqual(other.LaunchPadParameters) &&
                 PreLaunchPath == other.PreLaunchPath &&
-                LaunchPath == other.LaunchPath;
+                LaunchPath == other.LaunchPath &&
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                LandingTimeSec == other.LandingTimeSec;
         }
 
-        static string SerializeDynamic(dynamic? toSerialize)
+        static string SerializeJsonNode(JsonNode? toSerialize)
         {
-            if (!Object.ReferenceEquals(toSerialize, null))
-            {
-                return JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
-            }
-            else
-            {
-                return "";
-            }
+            return toSerialize != null ? toSerialize.ToJsonString() : "";
         }
     }
 }

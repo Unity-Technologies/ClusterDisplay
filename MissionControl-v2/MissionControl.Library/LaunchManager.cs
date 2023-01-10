@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 using LaunchPadState = Unity.ClusterDisplay.MissionControl.LaunchPad.State;
 using LaunchPadPrepareCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.PrepareCommand;
@@ -79,6 +81,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 }
 
                 m_LaunchSignal = new();
+                m_StopRequested = false;
 
                 // Register to be informed of launchpad status changes.
                 m_LaunchPadsStatusValidation = manifest.LaunchPadsStatus;
@@ -86,6 +89,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 m_LaunchPadsStatusValidation.ObjectRemoved += LaunchPadStatusRemoved;
 
                 // Start the work on each of the launchpads.
+                m_LandingTime = TimeSpan.Zero;
                 foreach (var complexConfiguration in manifest.LaunchConfiguration.LaunchComplexes)
                 {
                     // Find the LaunchComplex to use from the LaunchComplexes lists
@@ -137,10 +141,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                             continue;
                         }
 
+                        // Update landing time
+                        m_LandingTime = launchable.LandingTime > m_LandingTime ? launchable.LandingTime : m_LandingTime;
+
                         // Start the launchpad supervisor that will take care of it.
-                        LaunchPadSupervisor supervisor = new (m_Logger, m_HttpClient, manifest.Config, launchPad,
-                            launchpadConfiguration, launchable, lastKnownStatus.State, m_LaunchSignal.Task);
-                        _ = supervisor.LaunchAsync();
+                        LaunchPadSupervisor supervisor = new (m_Logger, m_HttpClient, manifest.Config,
+                            manifest.LaunchConfiguration, launchPad, launchable, lastKnownStatus.State,
+                            m_LaunchSignal.Task);
                         m_Supervisors.Add(launchPad.Identifier, supervisor);
                     }
                 }
@@ -152,18 +159,130 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 }
 
                 RunningLaunchPads = m_Supervisors.Count();
+
+                FillListOfParametersForReview();
             }
 
             await ContinueLaunchAsync();
         }
 
         /// <summary>
-        /// Stop whatever is currently running
+        /// Returns the incremental to the <see cref="IncrementalCollection{LaunchParameterForReview}"/> update from
+        /// the specified version.
+        /// </summary>
+        /// <param name="fromVersion">Version number from which we want to get the incremental update.</param>
+        public IncrementalCollectionUpdate<LaunchParameterForReview> GetLaunchParametersForReviewUpdate(ulong fromVersion)
+        {
+            lock (m_Lock)
+            {
+                return m_LaunchParametersForReview.GetDeltaSince(fromVersion);
+            }
+        }
+
+        /// <summary>
+        /// Returns the current list of <see cref="LaunchParameterForReview"/>.
+        /// </summary>
+        public List<LaunchParameterForReview> GetLaunchParametersForReview()
+        {
+            lock (m_Lock)
+            {
+                return m_LaunchParametersForReview.Values.Select(lpfr => lpfr.DeepClone()).ToList();
+            }
+        }
+
+        /// <summary>
+        /// Returns the requested <see cref="LaunchParameterForReview"/>.
+        /// </summary>
+        public LaunchParameterForReview GetLaunchParameterForReview(Guid id)
+        {
+            lock (m_Lock)
+            {
+                return m_LaunchParametersForReview[id].DeepClone();
+            }
+        }
+
+        /// <summary>
+        /// Register the provided callback to be called when
+        /// <see cref="IncrementalCollection{LaunchParameterForReview}"/> changes.
+        /// </summary>
+        /// <param name="callback">The callback to register</param>
+        public void RegisterForLaunchParametersForReviewChanges(Action<IReadOnlyIncrementalCollection> callback)
+        {
+            lock (m_Lock)
+            {
+                m_LaunchParametersForReview.SomethingChanged += callback;
+            }
+        }
+
+        /// <summary>
+        /// Update a <see cref="LaunchParameterForReview"/> in the list to be reviewed.
+        /// </summary>
+        /// <param name="update">The update to perform</param>
+        public void UpdateLaunchParameterForReview(LaunchParameterForReview update)
+        {
+            lock (m_Lock)
+            {
+                if (!m_LaunchParametersForReview.TryGetValue(update.Id, out var previousForReview))
+                {
+                    throw new KeyNotFoundException($"Cannot find LaunchParameterForReview with an id of {update.Id}");
+                }
+                if (previousForReview.LaunchPadId != update.LaunchPadId)
+                {
+                    throw new ArgumentException($"Cannot change LaunchPadId from {previousForReview.LaunchPadId} to " +
+                        $"{update.LaunchPadId}");
+                }
+                if (previousForReview.Value.Id != update.Value.Id)
+                {
+                    throw new ArgumentException($"Cannot change parameter id from {previousForReview.Value.Id} to " +
+                        $"{update.Value.Id}");
+                }
+                m_LaunchParametersForReview[update.Id] = update.DeepClone();
+            }
+        }
+
+        /// <summary>
+        /// Initiate the landing procedure.
+        /// </summary>
+        /// <param name="signalLanding">Called when it is the time to signal payloads they have to land (initiate a
+        /// graceful shutdown).</param>
+        public async Task LandAsync(Action signalLanding)
+        {
+            // Get the list of supervisors before initiating the landing, so that we don't stop newly launched processes
+            // if we have the time to launch something new before it is time to call stop.
+            List<LaunchPadSupervisor> supervisors;
+            lock (m_Lock)
+            {
+                m_StopRequested = true;
+                m_LaunchParametersForReview.FakeChanges();
+                supervisors = m_Supervisors.Values.ToList();
+            }
+
+            // Initiate the landing procedure
+            signalLanding();
+
+            // Give some time for the landing
+            await Task.Delay(m_LandingTime);
+
+            // Stop whatever would still be running
+            foreach (var supervisor in supervisors)
+            {
+                supervisor.Stop();
+            }
+        }
+
+        /// <summary>
+        /// Stop whatever is currently running immediately
         /// </summary>
         public void Stop()
         {
             lock (m_Lock)
             {
+                m_StopRequested = true;
+
+                // Add a fake dummy parameter for review to wake up anyone waiting for changes in parameters for review.
+                m_LaunchParametersForReview.Add(new(Guid.NewGuid()));
+
+                // Ask every launchpad supervisor to stop
                 foreach (var supervisor in m_Supervisors.Values)
                 {
                     supervisor.Stop();
@@ -222,28 +341,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 }
 
                 m_RunningLaunchPads = value;
-                if (m_RunningLaunchPadsChanged != null)
-                {
-                    m_RunningLaunchPadsChanged.TrySetResult();
-                    m_RunningLaunchPadsChanged = null;
-                }
+                m_RunningLaunchPadsCv.Signal();
             }
         }
 
         /// <summary>
         /// Returns a task that completes when <see cref="RunningLaunchPads"/> changes.
         /// </summary>
-        public Task RunningLaunchPadsChanged
-        {
-            get
-            {
-                lock (m_Lock)
-                {
-                    m_RunningLaunchPadsChanged ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
-                    return m_RunningLaunchPadsChanged.Task;
-                }
-            }
-        }
+        public Task RunningLaunchPadsChanged => m_RunningLaunchPadsCv.SignaledTask;
 
         /// <summary>
         /// Task indicating that we are done preparing the launchpads and they have received the signal to launch their
@@ -291,6 +396,87 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
                 m_LaunchPadsCount = 0;
                 RunningLaunchPads = 0;
+                m_StopRequested = false;
+            }
+        }
+
+        /// <summary>
+        /// Fills the <see cref="IncrementalCollection{LaunchParameterForReview}"/> with the list of parameters that
+        /// need to be reviewed by capcom.
+        /// </summary>
+        /// <remarks>Assumes caller locked m_lock.</remarks>
+        void FillListOfParametersForReview()
+        {
+            Debug.Assert(Monitor.IsEntered(m_Lock));
+
+            m_LaunchParametersForReview.Clear();
+
+            foreach (var launchSupervisor in m_Supervisors)
+            {
+                foreach (var (launchParameter, launchParameterValue) in
+                    launchSupervisor.Value.LaunchParameters)
+                {
+                    if (launchParameter.ToBeRevisedByCapcom)
+                    {
+                        var forReview = new LaunchParameterForReview(Guid.NewGuid());
+                        forReview.LaunchPadId = launchSupervisor.Key;
+                        forReview.Value = launchParameterValue.DeepClone();
+                        Debug.Assert(!forReview.Ready);
+                        m_LaunchParametersForReview.Add(forReview);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Wait for all <see cref="LaunchParameterForReview"/> to be reviewed.
+        /// </summary>
+        async Task WaitForReviewedParameters()
+        {
+            AsyncConditionVariable listOfForReviewChanged = new();
+            void SignalListOfForReviewChanged(IReadOnlyIncrementalCollection _)
+            {
+                listOfForReviewChanged.Signal();
+            }
+
+            try
+            {
+                lock (m_Lock)
+                {
+                    m_LaunchParametersForReview.SomethingChanged += SignalListOfForReviewChanged;
+                }
+
+                while (!m_StopRequested)
+                {
+                    Task? waitTask = null;
+                    lock (m_Lock)
+                    {
+                        foreach (var forReview in m_LaunchParametersForReview.Values)
+                        {
+                            if (!forReview.Ready)
+                            {
+                                waitTask = listOfForReviewChanged.SignaledTask;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (waitTask != null)
+                    {
+                        await waitTask;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                lock (m_Lock)
+                {
+                    m_LaunchParametersForReview.SomethingChanged -= SignalListOfForReviewChanged;
+                }
             }
         }
 
@@ -301,7 +487,32 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         {
             try
             {
-                // Wait until launchpads are ready to launch (or fail)
+                // First, wait for parameters to be reviewed by capcom
+                await WaitForReviewedParameters();
+
+                // Ask every launch supervisor to launch
+                lock (m_Lock)
+                {
+                    if (m_StopRequested)
+                    {
+                        RunningLaunchPads = 0;
+                        m_LaunchParametersForReview.Clear();
+                        m_LaunchSignal?.SetResult();
+                        return;
+                    }
+                    foreach (var launchpadSupervisor in m_Supervisors)
+                    {
+                        _ = launchpadSupervisor.Value.LaunchAsync(m_LaunchParametersForReview.Values);
+                    }
+                }
+
+                // Clear the list of parameters to review (everyone is launched, nothing to review anymore).
+                lock (m_Lock)
+                {
+                    m_LaunchParametersForReview.Clear();
+                }
+
+                // Wait until launchpads are ready to launch (or failed)
                 List<Task> readyForLaunchTasks;
                 lock (m_Lock)
                 {
@@ -396,24 +607,24 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             /// <param name="logger">The logger to which we send our messages.</param>
             /// <param name="httpClient"><see cref="HttpClient"/> to use to send REST requests.</param>
             /// <param name="config">MissionControl's configuration.</param>
+            /// <param name="launchConfiguration">Launch configuration.</param>
             /// <param name="definition">Launchpad's definition (does not depend on the mission).</param>
-            /// <param name="configuration">Launchpad's configuration for that mission.</param>
             /// <param name="launchable">To launch.</param>
             /// <param name="initialState">Initial state of the <see cref="LaunchPad"/>.</param>
             /// <param name="launchSignal">Task indicating to the supervisor it is the time to send the
             /// <see cref="LaunchPadLaunchCommand"/> to the <see cref="LaunchPad"/>.</param>
-            public LaunchPadSupervisor(ILogger logger, HttpClient httpClient, Config config, LaunchPad definition,
-                LaunchPadConfiguration configuration, Launchable launchable, LaunchPadState initialState,
-                Task launchSignal)
+            public LaunchPadSupervisor(ILogger logger, HttpClient httpClient, Config config,
+                LaunchConfiguration launchConfiguration, LaunchPad definition,
+                Launchable launchable, LaunchPadState initialState, Task launchSignal)
             {
                 m_Logger = logger;
                 m_HttpClient = httpClient;
                 m_Config = config;
                 m_Definition = definition;
-                m_Configuration = configuration;
                 m_Launchable = launchable;
                 m_CurrentState = initialState;
                 m_LaunchSignal = launchSignal;
+                m_LaunchParameters = GetLaunchParameters(launchConfiguration);
 
                 if (m_CurrentState == LaunchPadState.Idle)
                 {
@@ -422,12 +633,32 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             }
 
             /// <summary>
+            /// Launch parameters (global, launch complex and launch pad) merged together into a single list with
+            /// filtering done from the <see cref="Constraint"/>s.
+            /// </summary>
+            public IEnumerable<(LaunchParameter parameter, LaunchParameterValue value)> LaunchParameters =>
+                m_LaunchParameters;
+
+            /// <summary>
             /// Perform all the steps to launch the <see cref="LaunchPad"/> (and monitor it once launched).
             /// </summary>
-            public async Task LaunchAsync()
+            public async Task LaunchAsync(IEnumerable<LaunchParameterForReview> reviewedParameters)
             {
                 try
                 {
+                    // Just before starting the launch, search for launch parameters that have been reviewed by capcom
+                    // and might need updating.
+                    foreach (var reviewedParameter in reviewedParameters)
+                    {
+                        if (reviewedParameter.LaunchPadId == m_Definition.Identifier)
+                        {
+                            var (_, launchParameterValue) = m_LaunchParameters
+                                .FirstOrDefault(tuple => tuple.value.Id == reviewedParameter.Value.Id);
+                            launchParameterValue.Value = reviewedParameter.Value.Value;
+                        }
+                    }
+
+                    // Now do the real launch
                     await LaunchAsyncImplementation();
                 }
                 catch (Exception e)
@@ -616,9 +847,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 // Prepare the launchpad
                 LaunchPadPrepareCommand prepareCommand = new();
                 prepareCommand.PayloadIds = m_Launchable.Payloads;
-                prepareCommand.PayloadSource = m_Config.LaunchPadsEntry;
+                prepareCommand.MissionControlEntry = m_Config.LaunchPadsEntry;
                 prepareCommand.LaunchableData = m_Launchable.Data;
-                //prepareCommand.LaunchData // TODO Set from parameters
+                prepareCommand.LaunchData = PackageLaunchParameters();
                 prepareCommand.PreLaunchPath = m_Launchable.PreLaunchPath;
                 prepareCommand.LaunchPath = m_Launchable.LaunchPath;
 
@@ -695,6 +926,109 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 return m_HttpClient.PostAsJsonAsync(postUri, command, Json.SerializerOptions);
             }
 
+            /// <summary>
+            /// Merge <see cref="LaunchConfiguration.Parameters"/>, <see cref="LaunchComplexConfiguration.Parameters"/>
+            /// and <see cref="LaunchPadConfiguration.Parameters"/> into a single list of validated parameter values.
+            /// </summary>
+            /// <param name="launchConfiguration">Launch configuration.</param>
+            IEnumerable<(LaunchParameter parameter, LaunchParameterValue value)> GetLaunchParameters(
+                LaunchConfiguration launchConfiguration)
+            {
+                // Find the current launch complex and launch pad configuration
+                LaunchComplexConfiguration? launchComplexConfiguration = null;
+                LaunchPadConfiguration? launchPadConfiguration = null;
+                foreach (var currentLaunchComplexConfiguration in launchConfiguration.LaunchComplexes)
+                {
+                    foreach (var currentLaunchpadConfiguration in currentLaunchComplexConfiguration.LaunchPads)
+                    {
+                        if (currentLaunchpadConfiguration.Identifier == m_Definition.Identifier)
+                        {
+                            launchComplexConfiguration = currentLaunchComplexConfiguration;
+                            launchPadConfiguration = currentLaunchpadConfiguration;
+                            break;
+                        }
+                    }
+                    if (launchPadConfiguration != null)
+                    {
+                        break;
+                    }
+                }
+                Debug.Assert(launchComplexConfiguration != null);
+                Debug.Assert(launchPadConfiguration != null);
+
+                // Validate and merge parameters from all "levels".
+                Dictionary<string, (LaunchParameter parameter, LaunchParameterValue value)> ret = new();
+                AddParametersWithValuesTo("global",
+                    launchConfiguration.Parameters, m_Launchable.GlobalParameters, ret);
+                AddParametersWithValuesTo("launch complex",
+                    launchComplexConfiguration.Parameters, m_Launchable.LaunchComplexParameters, ret);
+                AddParametersWithValuesTo("launch pad",
+                    launchPadConfiguration.Parameters, m_Launchable.LaunchPadParameters, ret);
+
+                // Done
+                return ret.Values;
+            }
+
+            /// <summary>
+            /// Add values of parameters to the merged dictionary.
+            /// </summary>
+            /// <param name="parametersSection">Section of parameters (global, launch complex or launch pad), used for
+            /// exception messages.</param>
+            /// <param name="merged">Dictionary into which to put all the merged parameters.</param>
+            /// <param name="values">Parameters value.</param>
+            /// <param name="parameters">Parameters definition.</param>
+            /// <remarks>Perform value validation before adding it to the dictionary.</remarks>
+            void AddParametersWithValuesTo(string parametersSection, IEnumerable<LaunchParameterValue> values,
+                IEnumerable<LaunchParameter> parameters,
+                Dictionary<string, (LaunchParameter parameter, LaunchParameterValue value)> merged)
+            {
+                foreach (var parameter in parameters)
+                {
+                    var value = values.FirstOrDefault(v => v.Id == parameter.Id);
+                    if (value != null && parameter.Constraint != null && !parameter.Constraint.Validate(value.Value))
+                    {
+                        m_Logger.LogError("Parameter {Id} with a value of {Value} does not respect constraints, will " +
+                            "use default value instead", value.Id, value.Value);
+                        value = null;
+                    }
+
+                    value ??= new() {Id = parameter.Id, Value = parameter.DefaultValue!};
+
+                    try
+                    {
+                        merged.Add(value.Id, (parameter.DeepClone(), value.DeepClone()));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        m_Logger.LogError(e, "Failed to add {Section} {Id} parameter to the merged list.  Was it " +
+                            "also present in a parent?", parametersSection, value.Id);
+                    }
+                }
+
+                foreach (var value in values)
+                {
+                    var parameter = parameters.FirstOrDefault(p => p.Id == value.Id);
+                    if (parameter == null)
+                    {
+                        m_Logger.LogError("No parameter with the identifier {Id} can be found in the asset's list of " +
+                            "{Section} parameters", value.Id, parametersSection);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Package the <see cref="LaunchParameterValue"/>s ready to be send to the launch pad.
+            /// </summary>
+            JsonNode PackageLaunchParameters()
+            {
+                JsonObject ret = new();
+                foreach (var (_, launchParameterValue) in m_LaunchParameters)
+                {
+                    ret.Add(launchParameterValue.Id, JsonValue.Create(launchParameterValue.Value));
+                }
+                return ret;
+            }
+
             readonly ILogger m_Logger;
             readonly HttpClient m_HttpClient;
 
@@ -709,13 +1043,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             readonly LaunchPad m_Definition;
 
             /// <summary>
-            /// Launchpad's configuration for that mission.
-            /// </summary>
-            // ReSharper disable once NotAccessedField.Local -> Not currently used but will be whe we add support for
-            // launch parameters.
-            readonly LaunchPadConfiguration m_Configuration;
-
-            /// <summary>
             /// To launch.
             /// </summary>
             readonly Launchable m_Launchable;
@@ -725,6 +1052,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             /// the <see cref="LaunchPad"/>.
             /// </summary>
             readonly Task m_LaunchSignal;
+
+            /// <summary>
+            /// Launch parameters (global, launch complex and launch pad) merged together into a single list with
+            /// filtering done from the <see cref="Constraint"/>s.
+            /// </summary>
+            readonly IEnumerable<(LaunchParameter parameter, LaunchParameterValue value)> m_LaunchParameters;
 
             /// <summary>
             /// Task marked as completed when the <see cref="LaunchPad"/> is idle and ready to start preparing the
@@ -782,6 +1115,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         readonly object m_Lock = new();
 
         /// <summary>
+        /// Was a stop request been done?
+        /// </summary>
+        bool m_StopRequested;
+
+        /// <summary>
         /// To signal it is time to launch every launchpads.
         /// </summary>
         TaskCompletionSource? m_LaunchSignal;
@@ -798,9 +1136,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         int m_RunningLaunchPads;
 
         /// <summary>
-        /// Tasks that gets completed when m_RunningLaunchPads changes.
+        /// To allow blocking and resume when <see cref="RunningLaunchPads"/> changes.
         /// </summary>
-        TaskCompletionSource? m_RunningLaunchPadsChanged;
+        readonly AsyncConditionVariable m_RunningLaunchPadsCv = new();
 
         /// <summary>
         /// Variable to be used only as part of the <see cref="Conclude"/> method to validate we are called with the
@@ -814,5 +1152,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// Objects supervising each of the <see cref="LaunchPad"/>s.
         /// </summary>
         readonly Dictionary<Guid, LaunchPadSupervisor> m_Supervisors = new();
+
+        /// <summary>
+        /// Delay given to the payloads to gracefully stop before being forcefully stopped.
+        /// </summary>
+        TimeSpan m_LandingTime;
+
+        /// <summary>
+        /// <see cref="LaunchParameterValue"/>s that need to be reviewed by capcom before launch.
+        /// </summary>
+        IncrementalCollection<LaunchParameterForReview> m_LaunchParametersForReview = new();
     }
 }

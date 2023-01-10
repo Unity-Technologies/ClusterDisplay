@@ -25,7 +25,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// </param>
         public void DeepCopyFrom(SavedMissionDescription fromObject)
         {
-            var from = (SavedMissionDescription)fromObject;
+            var from = fromObject;
             Name = from.Name;
             Details = from.Details;
         }

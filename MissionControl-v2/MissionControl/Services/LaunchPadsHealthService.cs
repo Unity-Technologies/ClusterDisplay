@@ -28,7 +28,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_ConfigService.Changed += ConfigChangedAsync;
             m_MonitoringInterval = TimeSpan.FromSeconds(m_ConfigService.Current.HealthMonitoringIntervalSec);
 
-            incrementalCollectionService.Register("launchPadsHealth", m_Collection, GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register("launchPadsHealth", RegisterForChangesInCollection,
+                GetIncrementalUpdatesAsync);
 
             Task.Run(UpdateLoopAsync);
         }
@@ -49,6 +50,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_CancellationTokenSource.Cancel();
             m_ConfigService.ValidateNew -= ValidateNewConfig;
             m_ConfigService.Changed -= ConfigChangedAsync;
+        }
+
+        /// <summary>
+        /// <see cref="IncrementalCollectionCatalogService"/>'s callback to register callback to detect changes in the
+        /// collection.
+        /// </summary>
+        /// <param name="toRegister">The callback to register</param>
+        void RegisterForChangesInCollection(Action<IReadOnlyIncrementalCollection> toRegister)
+        {
+            using (m_Lock.LockAsync().Result)
+            {
+                m_Collection.SomethingChanged += toRegister;
+            }
         }
 
         /// <summary>

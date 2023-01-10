@@ -4,7 +4,7 @@ using Unity.ClusterDisplay.MissionControl.LaunchPad;
 
 using LaunchPadCommand = Unity.ClusterDisplay.MissionControl.LaunchPad.Command;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     class LaunchPadStub
     {
@@ -27,14 +27,27 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             m_HttpListener.Stop();
         }
 
-        public void SetStatus(ClusterDisplay.MissionControl.LaunchPad.Status status)
+        public ClusterDisplay.MissionControl.LaunchPad.Status Status
         {
-            lock (m_Lock)
+            get
             {
-                m_Status.DeepCopyFrom(status);
-                ++m_StatusVersionNumber;
-                m_StatusChanged?.TrySetResult();
-                m_StatusChanged = null;
+                ClusterDisplay.MissionControl.LaunchPad.Status ret = new();
+                lock (m_Lock)
+                {
+                    ret.DeepCopyFrom(m_Status);
+                }
+                return ret;
+            }
+            set
+            {
+                lock (m_Lock)
+                {
+                    ulong previousStatusNumber = m_Status.StatusNumber;
+                    m_Status.DeepCopyFrom(value);
+                    m_Status.StatusNumber = previousStatusNumber + 1;
+                    m_StatusChanged?.TrySetResult();
+                    m_StatusChanged = null;
+                }
             }
         }
 
@@ -153,7 +166,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
                 Task toWaitOn;
                 lock (m_Lock)
                 {
-                    if (m_StatusVersionNumber >= fromVersion)
+                    if (m_Status.StatusNumber >= fromVersion)
                     {
                         JsonSerializer.Serialize(response.OutputStream, m_Status, Json.SerializerOptions);
                         Respond(response, HttpStatusCode.OK);
@@ -216,7 +229,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         readonly object m_Lock = new object();
 
         readonly ClusterDisplay.MissionControl.LaunchPad.Status m_Status = new();
-        ulong m_StatusVersionNumber;
         TaskCompletionSource? m_StatusChanged;
 
         readonly Health m_Health = new();

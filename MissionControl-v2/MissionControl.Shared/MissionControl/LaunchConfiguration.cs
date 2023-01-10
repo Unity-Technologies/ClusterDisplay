@@ -3,7 +3,7 @@ using System;
 namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     /// <summary>
-    /// Launch configuration of a MissionControl mission.
+    /// Launch configuration of a MissionControl's mission.
     /// </summary>
     /// <remarks>Parameters and Devices property is still to be implemented</remarks>
     public class LaunchConfiguration: ObservableObject, IEquatable<LaunchConfiguration>
@@ -14,6 +14,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public Guid AssetId { get; set; }
 
         /// <summary>
+        /// Assets <see cref="LaunchCatalog.LaunchableBase.GlobalParameters"/>s value.
+        /// </summary>
+        public IEnumerable<LaunchParameterValue> Parameters { get; set; } =
+            Enumerable.Empty<LaunchParameterValue>();
+
+        /// <summary>
         /// Configuration of every <see cref="LaunchComplex"/> participating to the mission.
         /// </summary>
         public IEnumerable<LaunchComplexConfiguration> LaunchComplexes { get; set; } =
@@ -22,11 +28,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public LaunchConfiguration DeepClone()
         {
             LaunchConfiguration ret = new();
-            ret.DeepCopy(this);
+            ret.DeepCopyFrom(this);
             return ret;
         }
 
@@ -35,9 +40,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// clone).
         /// </summary>
         /// <param name="from">To copy from.</param>
-        public void DeepCopy(LaunchConfiguration from)
+        public void DeepCopyFrom(LaunchConfiguration from)
         {
             AssetId = from.AssetId;
+            Parameters = from.Parameters.Select(p => p.DeepClone()).ToList();
             LaunchComplexes = from.LaunchComplexes.Select(lp => lp.DeepClone()).ToList();
         }
 
@@ -45,6 +51,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             return other != null &&
                 AssetId == other.AssetId &&
+                Parameters.SequenceEqual(other.Parameters) &&
                 LaunchComplexes.SequenceEqual(other.LaunchComplexes);
         }
     }

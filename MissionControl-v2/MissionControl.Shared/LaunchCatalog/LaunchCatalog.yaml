@@ -39,7 +39,7 @@ components:
       properties:
         path:
           type: string
-          description: Path of the file relative to the file containing this information.
+          description: Path of the file relative to the file containing this information.  Folders should be separated using a forward slash (Linux convention, not Windows) so that we have the same result no matter the platform on which the LaunchCatalog.json is generated.
           example: SpaceshipDemo_Data/sharedassets3.assets
         md5:
           type: string
@@ -107,7 +107,7 @@ components:
           description: Name of the group (when displaying the parameter to allow to see or set its value) this parameter is a part of.  Nested groups can be expressed by separating them with a slash (/).
         id:
           type: string
-          description: Identifier of the parameter that will be used to produce the information passed through the LAUNCH_DATA environment variable (must be unique among all LaunchParameters of a launchable).
+          description: Case sensitive identifier of the parameter that will be used to produce the information passed through the LAUNCH_DATA environment variable (must be unique among all LaunchParameters of a launchable).
           example: udpClusterPort
         description:
           type: string
@@ -116,7 +116,7 @@ components:
         type:
           type: string
           description: Type of the value of the LaunchParameter.
-          enum: [integer, float, string]
+          enum: [boolean, integer, float, string]
         constraint: 
           oneOf:
             - $ref: '#/components/schemas/RangeConstraint'
@@ -124,12 +124,20 @@ components:
             - $ref: '#/components/schemas/ListConstraint'
         defaultValue:
           oneOf:
+            - type: boolean
             - type: integer
             - type: number
             - type: string
           description: Default value of the property (type of this property must match the type property).
+        toBeRevisedByCapcom:
+          type: boolean
+          description: Does the value of this parameter need to be revised by capcom before proceeding to launch?
+          default: false
+        hidden:
+          type: boolean
+          description: Indicate that the parameter is not to be displayed to the user.  Especially useful when combined withtoBeRevisedByCapcom to have some parameters computed automatically by capcom (as a consequence of many other parameters in different launchpads for example).
+          default: false
       required:
-        - name
         - id
         - type
         - defaultValue
@@ -143,7 +151,7 @@ components:
           example: Render node
         type:
           type: string
-          description: Identifier of this type of Launchable (to find compatible nodes).
+          description: Identifier of this type of Launchable (to find compatible nodes).<br/><br/>The type "capcom" is used to identify a special launchable that is to be launched on the local mission control computer to act as a liaison with all launched payloads handling aspects of the work that has to consider multiple launched payloads.  Capcom is started as soon as the asset is selected.  Because of those differences capcom launchables does not have any launch parameters (global, complex or launchpad).
         payloads:
           type: array
           description: Name of Payloads forming the list of all the files needed by this Launchable.
@@ -173,7 +181,11 @@ components:
         launchPath:
           type: string
           description: Path (relative to the location where all payloads files are stored) to the executable to launch to start the process of this Launchable.
+        landingTimeSec:
+          type: number
+          description: How many seconds does a launchable process has to realize it has to stop before being killed.
       required:
+        - name
         - type
         - payloads
         - launchPath

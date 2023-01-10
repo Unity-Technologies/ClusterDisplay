@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     public class RestartCommandTests
     {
@@ -128,7 +128,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
             var restartCommand = new RestartCommand();
             await m_ProcessHelper.PostCommand(restartCommand, HttpStatusCode.Accepted);
 
-            await CheckLaunchPadRestart(originalStatus!);
+            await CheckLaunchPadRestart(originalStatus);
         }
 
         [Test]

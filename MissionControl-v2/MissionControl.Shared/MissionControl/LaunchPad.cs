@@ -22,7 +22,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Http endpoint of the LaunchPad.
         /// </summary>
-        public Uri Endpoint { get; set; } = new("http://0.0.0.0");
+        public Uri Endpoint {
+            get => m_Endpoint;
+            set => m_Endpoint = new Uri(value.ToString());
+        }
+        Uri m_Endpoint = new Uri("http://0.0.0.0/");
 
         /// <summary>
         /// Types of Launchables that this LaunchPad can deal with.
@@ -32,7 +36,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public LaunchPad DeepClone()
         {
             LaunchPad ret = new();

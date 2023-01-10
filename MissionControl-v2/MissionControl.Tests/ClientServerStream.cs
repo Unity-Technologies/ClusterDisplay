@@ -1,7 +1,7 @@
 using System;
 using System.IO.Pipes;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     class ClientServerStream: IDisposable
     {

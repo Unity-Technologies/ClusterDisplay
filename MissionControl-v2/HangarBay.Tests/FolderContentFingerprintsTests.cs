@@ -4,7 +4,7 @@ using Unity.ClusterDisplay.MissionControl.HangarBay.Library;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 // ReSharper disable StructuredMessageTemplateProblem
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class FolderContentFingerprintsTests
     {

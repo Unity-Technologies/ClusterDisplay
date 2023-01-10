@@ -1,8 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     public class LaunchCommandTests
     {
@@ -254,6 +255,68 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
 
             LaunchCommand launchCommand = new();
             await m_ProcessHelper.PostCommand(launchCommand, HttpStatusCode.BadRequest);
+        }
+
+        public static void PrelaunchMethod(string arg)
+        {
+            File.WriteAllText("prelaunch.txt", arg);
+        }
+
+        public static void LaunchMethod(string arg)
+        {
+            File.WriteAllText("launch.txt", arg);
+        }
+
+        [Test]
+        public async Task AssemblyRun()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            Guid payloadId = Guid.NewGuid();
+
+            // Add all the files required to load this unit test assembly as the payload
+            var codeAssembly = Assembly.GetAssembly(typeof(LaunchCommandTests))!;
+            var filesPath = Path.GetDirectoryName(codeAssembly.Location)!;
+            var files = Directory.GetFiles(filesPath, "*.dll");
+            foreach (var file in files)
+            {
+                var relativePath = Path.GetRelativePath(filesPath, file);
+                m_HangarBayStub.AddFileToCopy(payloadId, relativePath, file);
+            }
+
+            // Prepare everything
+            var thisClassFullName = typeof(LaunchCommandTests).FullName;
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadIds = new [] { payloadId };
+            prepareCommand.PreLaunchPath = $"assemblyrun://LaunchPad.Tests.dll/{thisClassFullName}/{nameof(PrelaunchMethod)}/Prelaunch%20argument";
+            prepareCommand.LaunchPath = $"assemblyrun://LaunchPad.Tests.dll/{thisClassFullName}/{nameof(LaunchMethod)}/Launch%20argument";
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
+
+            LaunchCommand launchCommand = new();
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+
+            string prelaunchFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "prelaunch.txt");
+            string launchFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "launch.txt");
+
+            // Wait for the process to create a launch.txt file
+            var waitLaunched = Stopwatch.StartNew();
+            while (waitLaunched.Elapsed < TimeSpan.FromSeconds(15))
+            {
+                if (File.Exists(launchFilename))
+                {
+                    break;
+                }
+                await Task.Delay(25);
+            }
+
+            // We know the launched process will immediately end so wait for the state to be over
+            await m_ProcessHelper.WaitForState(State.Over);
+
+            string prelaunchContent = File.ReadAllText(prelaunchFilename);
+            Assert.That(prelaunchContent, Is.EqualTo("Prelaunch argument"));
+            string launchContent = File.ReadAllText(launchFilename);
+            Assert.That(launchContent, Is.EqualTo("Launch argument"));
         }
 
         string GetTestTempFolder()

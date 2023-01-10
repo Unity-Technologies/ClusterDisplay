@@ -12,9 +12,22 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
     public class StatusService: ObservableObjectService<Status>
     {
-        public StatusService(IServiceProvider serviceProvider, ILogger<StatusService> logger)
-            : base(serviceProvider, CreateNewStatus(logger), "status")
+        public StatusService(ILogger<StatusService> logger,
+            IHostApplicationLifetime applicationLifetime,
+            ObservableObjectCatalogService catalogService)
+            : base(applicationLifetime, catalogService, CreateNewStatus(logger), "status")
         {
+        }
+
+        protected override void OnObjectChanged(ObservableObject obj)
+        {
+            var newStatus = (Status)obj;
+            if (newStatus.State != m_LastKnownState)
+            {
+                m_LastKnownState = newStatus.State;
+                newStatus.EnteredStateTime = DateTime.Now;
+            }
+            base.OnObjectChanged(obj);
         }
 
         static Status CreateNewStatus(ILogger logger)
@@ -34,5 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             }
             return ret;
         }
+
+        State m_LastKnownState = State.Idle;
     }
 }

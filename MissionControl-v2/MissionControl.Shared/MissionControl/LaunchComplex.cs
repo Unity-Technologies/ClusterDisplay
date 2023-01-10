@@ -46,7 +46,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             HangarBay = from.HangarBay.DeepClone();
         }
 
-
         public bool Equals(LaunchComplex? other)
         {
             return other != null &&

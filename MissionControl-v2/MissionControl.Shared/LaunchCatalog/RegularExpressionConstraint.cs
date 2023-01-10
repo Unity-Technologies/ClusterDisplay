@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     /// <summary>
@@ -16,7 +18,26 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// <summary>
         /// The Regular Expression.
         /// </summary>
-        public String RegularExpression { get; set; } = ".*";
+        public string RegularExpression { get; set; } = ".*";
+
+        /// <inheritdoc/>
+        public override bool Validate(object value)
+        {
+            var valueAsString = value.ToString();
+            if (valueAsString == null)
+            {
+                return false;
+            }
+            return Regex.IsMatch(valueAsString, RegularExpression);
+        }
+
+        /// <inheritdoc/>
+        public override Constraint DeepClone()
+        {
+            RegularExpressionConstraint ret = new();
+            ret.RegularExpression = RegularExpression;
+            return ret;
+        }
 
         public bool Equals(RegularExpressionConstraint? other)
         {

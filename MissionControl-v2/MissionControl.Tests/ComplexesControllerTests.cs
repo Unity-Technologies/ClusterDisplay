@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class ComplexesControllerTests
     {

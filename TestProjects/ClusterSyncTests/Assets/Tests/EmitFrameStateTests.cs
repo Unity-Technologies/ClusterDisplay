@@ -7,9 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
+using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Utils;
 using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
@@ -315,6 +317,16 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
+        [Test]
+        public void TransitionToPropagateQuitState()
+        {
+            using var testState = new EmitFrameState(m_Node);
+
+            InternalMessageQueue<InternalQuitMessage>.Instance.Enqueue(new());
+            var nextState = testState.DoFrame();
+            Assert.That(nextState, Is.TypeOf<PropagateQuitState>());
+        }
+
         [SetUp]
         public void Setup()
         {
@@ -442,7 +454,7 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         const byte k_NodeId = 42;
-        static byte[] k_RepeaterNodeId = new byte[] {5, 105, 205};
+        static readonly byte[] k_RepeaterNodeId = new byte[] {5, 105, 205};
         const int k_DataBlockTypeId = 28;
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);

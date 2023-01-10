@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
 {
     public class RangeConstraintTests
     {
@@ -118,6 +118,28 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
         }
 
         [Test]
+        public void CloneDefault()
+        {
+            RangeConstraint toClone = new();
+            Constraint cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        public void CloneFull()
+        {
+            RangeConstraint toClone = new();
+            toClone.Min = 28;
+            toClone.MinExclusive = true;
+            toClone.Max = 42;
+            toClone.MaxExclusive = true;
+            Constraint cloned = toClone.DeepClone();
+            Assert.That(cloned, Is.Not.Null);
+            Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
         public void MinMaxFromBadValues()
         {
             RangeConstraint toSerialize = new();
@@ -125,6 +147,48 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog.Tests
             Assert.Throws<OverflowException>(() => toSerialize.Min = ulong.MaxValue);
             Assert.Throws<InvalidCastException>(() => toSerialize.Min = Guid.NewGuid());
             Assert.Throws<InvalidCastException>(() => toSerialize.Min = new Payload());
+        }
+
+        [Test]
+        public void Validate()
+        {
+            RangeConstraint constraint = new();
+
+            constraint.Min = 28;
+            constraint.Max = 42;
+            Assert.That(constraint.Validate(27), Is.False);
+            Assert.That(constraint.Validate(28), Is.True);
+            Assert.That(constraint.Validate(42), Is.True);
+            Assert.That(constraint.Validate(43), Is.False);
+
+            Assert.That(constraint.Validate(27.9f), Is.False);
+            Assert.That(constraint.Validate(28.0f), Is.True);
+            Assert.That(constraint.Validate(42.0f), Is.True);
+            Assert.That(constraint.Validate(42.1f), Is.False);
+
+            constraint.MinExclusive = true;
+            Assert.That(constraint.Validate(28), Is.False);
+            Assert.That(constraint.Validate(29), Is.True);
+            Assert.That(constraint.Validate(42), Is.True);
+            Assert.That(constraint.Validate(43), Is.False);
+
+            Assert.That(constraint.Validate(28.0), Is.False);
+            Assert.That(constraint.Validate(28.1), Is.True);
+            Assert.That(constraint.Validate(42.0), Is.True);
+            Assert.That(constraint.Validate(42.1), Is.False);
+            constraint.MinExclusive = false;
+
+            constraint.MaxExclusive = true;
+            Assert.That(constraint.Validate(27), Is.False);
+            Assert.That(constraint.Validate(28), Is.True);
+            Assert.That(constraint.Validate(41), Is.True);
+            Assert.That(constraint.Validate(42), Is.False);
+
+            Assert.That(constraint.Validate(27.9f), Is.False);
+            Assert.That(constraint.Validate(28.0f), Is.True);
+            Assert.That(constraint.Validate(41.9f), Is.True);
+            Assert.That(constraint.Validate(42.0f), Is.False);
+            constraint.MaxExclusive = false;
         }
     }
 }

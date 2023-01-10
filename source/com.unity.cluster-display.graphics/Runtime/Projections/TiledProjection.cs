@@ -254,6 +254,10 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
+        public const string GridSizeParameterId = "GridSize";
+        public const string BezelParameterId = "Bezel";
+        public const string PhysicalScreenSizeParameterId = "PhysicalScreenSize";
+
         void RenderStitcher(
             IReadOnlyList<RenderTexture> targets,
             Camera camera,

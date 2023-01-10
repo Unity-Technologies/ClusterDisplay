@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 {
@@ -40,15 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         public async Task<Guid> AddAssetAsync(AssetBase assetInformation, IAssetSource assetSource)
         {
             var catalog = await assetSource.GetCatalogAsync();
-            if (catalog.Launchables.Select(l => l.Name).Distinct().Count() < catalog.Launchables.Count())
-            {
-                throw new CatalogException("Some launchable share the same name, every launchable must have a unique " +
-                    "name within the LaunchCatalog.");
-            }
-            if (catalog.Launchables.Any(l => string.IsNullOrEmpty(l.Name)))
-            {
-                throw new CatalogException("Launchable name cannot be empty.");
-            }
+            ValidateCatalog(catalog);
 
             Dictionary<string, Task<FileBlobInfo>> fileBlobsTask = new();
             Dictionary<Guid, FileBlobInfo> uniqueFileBlobs = new();
@@ -211,6 +204,70 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
             // Done
             return true;
+        }
+
+        /// <summary>
+        /// High level validation of the catalog to see if everything in it looks valid.
+        /// </summary>
+        /// <param name="catalog"></param>
+        /// <exception cref="CatalogException">If a problem is found in the catalog</exception>
+        static void ValidateCatalog(LaunchCatalog.Catalog catalog)
+        {
+            // Validate launchables name
+            if (catalog.Launchables.Select(l => l.Name).Distinct().Count() < catalog.Launchables.Count())
+            {
+                throw new CatalogException("Some launchable share the same name, every launchable must have a unique " +
+                    "name within the LaunchCatalog.");
+            }
+            if (catalog.Launchables.Any(l => string.IsNullOrEmpty(l.Name)))
+            {
+                throw new CatalogException("Launchable name cannot be empty.");
+            }
+
+            // Validate that capcom launchables do not have any launchable parameters (not supported)
+            var capcomLaunchable = catalog.Launchables.FirstOrDefault(l => l.Type == LaunchableBase.CapcomLaunchableType);
+            if (capcomLaunchable != null)
+            {
+                if (capcomLaunchable.GlobalParameters.Any() || capcomLaunchable.LaunchComplexParameters.Any() ||
+                    capcomLaunchable.LaunchPadParameters.Any())
+                {
+                    throw new CatalogException("Capcom launchable does not support launch parameters.");
+                }
+            }
+
+            // Validate launchables do not contain multiple parameters with the same identifier or with missing default
+            // value.
+            foreach (var launchable in catalog.Launchables)
+            {
+                HashSet<string> parametersId = new();
+                void ValidateParameters(IEnumerable<LaunchCatalog.LaunchParameter> parameters)
+                {
+                    foreach(var parameter in parameters)
+                    {
+                        if (parameter.DefaultValue == null)
+                        {
+                            throw new CatalogException($"Parameter {parameter.Id} does not have a default value.");
+                        }
+                        if (parameter.Constraint != null && !parameter.Constraint.Validate(parameter.DefaultValue))
+                        {
+                            throw new CatalogException($"Parameter {parameter.Id} default value " +
+                                $"{parameter.DefaultValue} does respect the parameter's constraints.");
+                        }
+                        if (string.IsNullOrEmpty(parameter.Id))
+                        {
+                            throw new CatalogException($"A parameter of {launchable.Name} have an empty identifier.");
+                        }
+                        if (!parametersId.Add(parameter.Id))
+                        {
+                            throw new CatalogException($"Multiple parameters of {launchable.Name} have the " +
+                                $"identifier {parameter.Id}.");
+                        }
+                    }
+                }
+                ValidateParameters(launchable.GlobalParameters);
+                ValidateParameters(launchable.LaunchComplexParameters);
+                ValidateParameters(launchable.LaunchPadParameters);
+            }
         }
 
         /// <summary>

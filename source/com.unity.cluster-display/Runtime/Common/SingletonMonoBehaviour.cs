@@ -7,25 +7,25 @@ namespace Unity.ClusterDisplay
 
     public abstract class SingletonMonoBehaviour<T> : MonoBehaviour where T : SingletonMonoBehaviour<T>
     {
-        private static T m_Instance;
-        
+        static T s_Instance;
+
         protected abstract void OnAwake();
-        private void Awake()
+        void Awake()
         {
-            m_Instance = this as T;
+            s_Instance = this as T;
             OnAwake();
         }
 
         [SingletonMonoBehaviourTryGetInstanceMarker]
-        public static bool TryGetInstance (out T outInstance, bool logError = true)
+        public static bool TryGetInstance (out T outInstance, bool logError = true, bool includeInactive = true)
         {
-            if (m_Instance != null)
+            if (s_Instance != null)
             {
-                outInstance = m_Instance;
+                outInstance = s_Instance;
                 return true;
             }
 
-            var instances = FindObjectsOfType<T>(includeInactive: true);
+            var instances = FindObjectsOfType<T>(includeInactive);
             if (instances.Length == 0)
             {
                 if (logError)
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay
                 return false;
             }
 
-            outInstance = m_Instance = instances[0];
+            outInstance = s_Instance = instances[0];
             return true;
         }
     }

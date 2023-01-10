@@ -24,7 +24,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             AssetsService assetsService,
             ComplexesService complexesService,
             CurrentMissionLaunchConfigurationService currentMissionLaunchConfigurationService,
-            LaunchPadsStatusService launchPadsStatusService)
+            LaunchPadsStatusService launchPadsStatusService,
+            CapcomUplinkService capcomUplink,
+            IncrementalCollectionCatalogService incrementalCollectionCatalogService)
         {
             m_Logger = logger;
             m_ConfigService = configService;
@@ -33,10 +35,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_ComplexesService = complexesService;
             m_CurrentMissionLaunchConfigurationService = currentMissionLaunchConfigurationService;
             m_LaunchPadsStatusService = launchPadsStatusService;
+            m_CapcomUplink = capcomUplink;
 
             m_ConfigService.ValidateNew += ValidateNewConfig;
 
             m_Manager = new(m_Logger, new());
+
+            incrementalCollectionCatalogService.Register("currentMission/launchParametersForReview",
+                RegisterForReviewChangesInCollection, GetReviewIncrementalUpdatesAsync);
 
             applicationLifetime.ApplicationStopping.Register(StopAtExit);
         }
@@ -44,7 +50,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// <summary>
         /// Launch the current launch configuration in <see cref="CurrentMissionLaunchConfigurationService"/>.
         /// </summary>
-        /// <returns></returns>
         public async Task<(HttpStatusCode code, string errorMessage)> LaunchAsync()
         {
             using var lockedStatus = await m_StatusService.LockAsync();
@@ -99,19 +104,54 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             }
         }
 
+        /// <summary>
+        /// Initiate stop of a currently running mission.
+        /// </summary>
         public async Task<(HttpStatusCode code, string errorMessage)> StopAsync()
         {
             using var lockedStatus = await m_StatusService.LockAsync();
             if (lockedStatus.Value.State == State.Idle)
             {
-                return (HttpStatusCode.Conflict, "There is no mission in progress.");
+                return (HttpStatusCode.OK, "");
             }
 
-            m_Manager.Stop();
+            _ = m_Manager.LandAsync(() =>
+            {
+                using var lockedCapcom = m_CapcomUplink.LockAsync().Result;
+                lockedCapcom.Value.ProceedWithLanding = true;
+                lockedCapcom.Value.SignalChanges();
+            });
 
             // MonitorMission will restore the state to idle when all launchpads are stopped.
             return (HttpStatusCode.Accepted, "");
         }
+
+        /// <summary>
+        /// Returns the incremental to the <see cref="IncrementalCollection{LaunchParameterForReview}"/> update from
+        /// the specified version.
+        /// </summary>
+        /// <param name="fromVersion">Version number from which we want to get the incremental update.</param>
+        public IncrementalCollectionUpdate<LaunchParameterForReview> GetLaunchParametersForReviewUpdate(
+            ulong fromVersion) => m_Manager.GetLaunchParametersForReviewUpdate(fromVersion);
+
+        /// <summary>
+        /// Returns the current list of <see cref="LaunchParameterForReview"/>.
+        /// </summary>
+        public List<LaunchParameterForReview> GetLaunchParametersForReview()
+            => m_Manager.GetLaunchParametersForReview();
+
+        /// <summary>
+        /// Returns the requested <see cref="LaunchParameterForReview"/>.
+        /// </summary>
+        public LaunchParameterForReview GetLaunchParameterForReview(Guid id)
+            => m_Manager.GetLaunchParameterForReview(id);
+
+        /// <summary>
+        /// Update a <see cref="LaunchParameterForReview"/> in the list to be reviewed.
+        /// </summary>
+        /// <param name="update">The update to perform</param>
+        public void UpdateLaunchParameterForReview(LaunchParameterForReview update)
+            => m_Manager.UpdateLaunchParameterForReview(update);
 
         /// <summary>
         /// Validate a new mission control configuration
@@ -167,6 +207,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 Debug.Assert(lockedStatus.Value.State == statusState);
                 lockedStatus.Value.State = State.Idle;
                 lockedStatus.Value.SignalChanges();
+
+                using (var lockedCapcom = m_CapcomUplink.LockAsync().Result)
+                {
+                    lockedCapcom.Value.ProceedWithLanding = false;
+                    lockedCapcom.Value.SignalChanges();
+                }
             }
         }
 
@@ -182,6 +228,27 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             }
         }
 
+        /// <summary>
+        /// <see cref="IncrementalCollectionCatalogService"/>'s callback to register callback to detect changes in the
+        /// collection.
+        /// </summary>
+        /// <param name="toRegister">The callback to register</param>
+        void RegisterForReviewChangesInCollection(Action<IReadOnlyIncrementalCollection> toRegister)
+        {
+            m_Manager.RegisterForLaunchParametersForReviewChanges(toRegister);
+        }
+
+        /// <summary>
+        /// <see cref="IncrementalCollectionCatalogService"/>'s callback to get an incremental update from the specified
+        /// version.
+        /// </summary>
+        /// <param name="fromVersion">Version number from which we want to get the incremental update.</param>
+        Task<object?> GetReviewIncrementalUpdatesAsync(ulong fromVersion)
+        {
+            var ret = m_Manager.GetLaunchParametersForReviewUpdate(fromVersion);
+            return Task.FromResult<object?>(ret.IsEmpty ? null : ret);
+        }
+
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
         readonly ILogger m_Logger;
         readonly ConfigService m_ConfigService;
@@ -190,6 +257,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         readonly ComplexesService m_ComplexesService;
         readonly CurrentMissionLaunchConfigurationService m_CurrentMissionLaunchConfigurationService;
         readonly LaunchPadsStatusService m_LaunchPadsStatusService;
+        readonly CapcomUplinkService m_CapcomUplink;
 
         /// <summary>
         /// The manager doing the launch heavy lifting.

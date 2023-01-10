@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchComplexConfigurationTests
     {
@@ -15,6 +15,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             launchComplexB.Identifier = Guid.NewGuid();
             Assert.That(launchComplexA, Is.Not.EqualTo(launchComplexB));
             launchComplexB.Identifier = launchComplexA.Identifier;
+            Assert.That(launchComplexA, Is.EqualTo(launchComplexB));
+
+            launchComplexA.Parameters = new[] { new LaunchParameterValue { Id = "NodeId", Value = 42 } };
+            launchComplexB.Parameters = new[] { new LaunchParameterValue { Id = "NodeId", Value = 28 } };
+            Assert.That(launchComplexA, Is.Not.EqualTo(launchComplexB));
+            launchComplexB.Parameters = new[] { new LaunchParameterValue { Id = "NodeId", Value = 42 } };
             Assert.That(launchComplexA, Is.EqualTo(launchComplexB));
 
             launchComplexA.LaunchPads = new[] { new LaunchPadConfiguration() { Identifier = Guid.NewGuid() } };
@@ -41,6 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             LaunchComplexConfiguration toSerialize = new();
             toSerialize.Identifier = Guid.NewGuid();
+            toSerialize.Parameters = new[] { new LaunchParameterValue { Id = "NodeId", Value = 42 } };
             toSerialize.LaunchPads = new[] { new LaunchPadConfiguration() { Identifier = Guid.NewGuid() } };
             var serializedParameter = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<LaunchComplexConfiguration>(serializedParameter,
@@ -62,6 +69,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
         {
             LaunchComplexConfiguration toClone = new();
             toClone.Identifier = Guid.NewGuid();
+            toClone.Parameters = new[] { new LaunchParameterValue { Id = "NodeId", Value = 42 } };
             toClone.LaunchPads = new[] { new LaunchPadConfiguration() { Identifier = Guid.NewGuid() } };
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));
@@ -69,10 +77,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             // Verify that there isn't any sharing
             var serializeClone = JsonSerializer.Deserialize<LaunchComplexConfiguration>(
                 JsonSerializer.Serialize(toClone, Json.SerializerOptions), Json.SerializerOptions);
-            Assert.That(serializeClone, Is.EqualTo(cloned));
+            Assert.That(cloned, Is.EqualTo(serializeClone));
 
+            toClone.Parameters.First().Value = 28;
             toClone.LaunchPads.First().Identifier = Guid.NewGuid();
-            Assert.That(serializeClone, Is.EqualTo(cloned));
+            Assert.That(cloned, Is.EqualTo(serializeClone));
         }
     }
 }

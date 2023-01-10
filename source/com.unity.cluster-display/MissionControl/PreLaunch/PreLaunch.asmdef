@@ -1,0 +1,16 @@
+{
+    "name": "Unity.ClusterDisplay.MissionControl.PreLaunch",
+    "rootNamespace": "Unity.ClusterDisplay.MissionControl.PreLaunch",
+    "references": [
+        "GUID:3b1101b2355d2694183e91e8f3a8e0ab"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

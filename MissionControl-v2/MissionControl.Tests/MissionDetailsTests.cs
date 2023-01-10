@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class MissionDetailsTests
     {

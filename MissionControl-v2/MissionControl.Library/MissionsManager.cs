@@ -43,7 +43,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public MissionDetails DeepClone()
         {
             MissionDetails ret = new();

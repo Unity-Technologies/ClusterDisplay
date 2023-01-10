@@ -1,6 +1,6 @@
 using System;
 
-namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Tests
+namespace Unity.ClusterDisplay.MissionControl.LaunchPad
 {
     public class HealthTests
     {

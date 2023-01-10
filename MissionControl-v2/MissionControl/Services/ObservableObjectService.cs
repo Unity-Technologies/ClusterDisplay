@@ -12,17 +12,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="serviceProvider">Services provider.</param>
+        /// <param name="applicationLifetime"><see cref="IHostApplicationLifetime"/>.</param>
+        /// <param name="catalogService"><see cref="ObservableObjectCatalogService"/>.</param>
         /// <param name="observableObject">The <see cref="ObservableObject"/> we are serving.</param>
         /// <param name="name">Name of the <see cref="ObservableObjectService{T}"/> (should be unique among all
         /// registered <see cref="ObservableObjectService{T}"/>s).</param>
-        protected ObservableObjectService(IServiceProvider serviceProvider, T observableObject, string name): base(name)
+        protected ObservableObjectService(IHostApplicationLifetime applicationLifetime,
+            ObservableObjectCatalogService catalogService, T observableObject, string name): base(name)
         {
-            var applicationLifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
             m_ObservableObject = observableObject;
             m_ObservableObject.ObjectChanged += OnObjectChanged;
 
-            serviceProvider.GetService<ObservableObjectCatalogService>()!.AddObservableObject(this);
+            catalogService.AddObservableObject(this);
 
             applicationLifetime.ApplicationStopping.Register(ApplicationShutdown);
         }
@@ -61,8 +62,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                         return ret;
                     }
 
-                    m_ChangedTaskCompletionSource ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                    somethingChangedTask = m_ChangedTaskCompletionSource.Task;
+                    somethingChangedTask = m_ChangedCv.SignaledTask;
                 }
 
                 await somethingChangedTask.WaitAsync(cancellationToken);
@@ -84,21 +84,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         }
 
         /// <summary>
-        /// Method called when the application is requested to shutdown.
-        /// </summary>
-        void ApplicationShutdown()
-        {
-            using (m_Lock.Lock())
-            {
-                m_ChangedTaskCompletionSource?.TrySetCanceled();
-            }
-        }
-
-        /// <summary>
         /// Method called when m_ObservableObject is modified.
         /// </summary>
         /// <param name="obj"><see cref="m_ObservableObject"/>.</param>
-        void OnObjectChanged(ObservableObject obj)
+        protected virtual void OnObjectChanged(ObservableObject obj)
         {
             Debug.Assert(obj == m_ObservableObject);
             // Should be locked since we are being modified, otherwise someone is modifying the object without the
@@ -107,8 +96,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
             ++m_VersionNumber;
 
-            m_ChangedTaskCompletionSource?.TrySetResult();
-            m_ChangedTaskCompletionSource = null;
+            m_ChangedCv.Signal();
+        }
+
+        /// <summary>
+        /// Method called when the application is requested to shutdown.
+        /// </summary>
+        void ApplicationShutdown()
+        {
+            m_ChangedCv.Cancel();
         }
 
         /// <summary>
@@ -127,8 +123,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         ulong m_VersionNumber;
 
         /// <summary>
-        /// <see cref="TaskCompletionSource"/> that get triggered every time <see cref="m_ObservableObject"/> changes.
+        /// Condition variable that get triggered every time <see cref="m_ObservableObject"/> changes.
         /// </summary>
-        TaskCompletionSource? m_ChangedTaskCompletionSource;
+        AsyncConditionVariable m_ChangedCv = new();
     }
 }

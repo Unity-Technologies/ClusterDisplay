@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class LaunchPadTests
     {
@@ -78,6 +78,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             toClone.SuitableFor = new[] { "clusterNode" };
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));
+        }
+
+        [Test]
+        [TestCase("http://127.0.0.1:8000")]
+        [TestCase("http://127.0.0.1:8000/")]
+        public void Endpoint(string uri)
+        {
+            LaunchPad launchPad = new();
+            launchPad.Endpoint = new Uri(uri);
+            Assert.That(launchPad.Endpoint.ToString(), Is.EqualTo("http://127.0.0.1:8000/"));
+            Assert.That(JsonSerializer.Serialize(launchPad.Endpoint), Is.EqualTo("\"http://127.0.0.1:8000/\""));
         }
     }
 }

@@ -1,7 +1,7 @@
 using System.Net;
-using static Unity.ClusterDisplay.MissionControl.MissionControl.Tests.Helpers;
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
 
-namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class MissionsControllerTests
     {
@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration1 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "First asset")
+                    k_SimpleLaunchCatalogFileLength, null, "First asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration1);
 
@@ -85,7 +85,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration2 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "Second asset")
+                    k_SimpleLaunchCatalogFileLength, null, "Second asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration2);
 
@@ -126,7 +126,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration1 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "First asset")
+                    k_SimpleLaunchCatalogFileLength, null, "First asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration1);
 
@@ -161,7 +161,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration2 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "Second asset")
+                    k_SimpleLaunchCatalogFileLength, null, "Second asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration2);
 
@@ -199,7 +199,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration1 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "First asset")
+                    k_SimpleLaunchCatalogFileLength, null, "First asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration1);
 
@@ -218,7 +218,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Tests
             LaunchConfiguration launchConfiguration2 = new()
             {
                 AssetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), k_SimpleLaunchCatalog,
-                    k_SimpleLaunchCatalogFileLength, "Second asset")
+                    k_SimpleLaunchCatalogFileLength, null, "Second asset")
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration2);
 

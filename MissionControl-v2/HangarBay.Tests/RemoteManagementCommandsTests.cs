@@ -4,7 +4,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 
-namespace Unity.ClusterDisplay.MissionControl.HangarBay.Tests
+namespace Unity.ClusterDisplay.MissionControl.HangarBay
 {
     public class RemoteManagementCommandsTests
     {

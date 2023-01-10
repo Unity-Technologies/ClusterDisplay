@@ -14,6 +14,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public Guid Identifier { get; set; }
 
         /// <summary>
+        /// Assets <see cref="LaunchCatalog.LaunchableBase.LaunchComplexParameters"/>s value.
+        /// </summary>
+        public IEnumerable<LaunchParameterValue> Parameters { get; set; } =
+            Enumerable.Empty<LaunchParameterValue>();
+
+        /// <summary>
         /// Configuration of every <see cref="LaunchPad"/> of this <see cref="LaunchComplex"/> participating to the
         /// mission.
         /// </summary>
@@ -23,18 +29,17 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public LaunchComplexConfiguration DeepClone()
         {
             LaunchComplexConfiguration ret = new();
-            ret.Identifier = Identifier;
-            ret.LaunchPads = LaunchPads.Select(lp => lp.DeepClone()).ToList();
+            ret.DeepCopyFrom(this);
             return ret;
         }
 
-        public void DeepCopy(LaunchComplexConfiguration from)
+        public void DeepCopyFrom(LaunchComplexConfiguration from)
         {
             Identifier = from.Identifier;
+            Parameters = from.Parameters.Select(p => p.DeepClone()).ToList();
             LaunchPads = from.LaunchPads.Select(lp => lp.DeepClone()).ToList();
         }
 
@@ -42,6 +47,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             return other != null &&
                 Identifier == other.Identifier &&
+                Parameters.SequenceEqual(other.Parameters) &&
                 LaunchPads.SequenceEqual(other.LaunchPads);
         }
     }

@@ -1,6 +1,6 @@
 using System;
 
-namespace Unity.ClusterDisplay.MissionControl.Tests
+namespace Unity.ClusterDisplay.MissionControl
 {
     public class TaskGroupTests
     {

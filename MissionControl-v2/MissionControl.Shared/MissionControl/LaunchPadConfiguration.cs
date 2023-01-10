@@ -14,6 +14,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public Guid Identifier { get; set; }
 
         /// <summary>
+        /// Assets <see cref="LaunchCatalog.LaunchableBase.LaunchPadParameters"/>s value.
+        /// </summary>
+        public IEnumerable<LaunchParameterValue> Parameters { get; set; } =
+            Enumerable.Empty<LaunchParameterValue>();
+
+        /// <summary>
         /// Name of the <see cref="Launchable"/> to launch on this launchpad.
         /// </summary>
         public string LaunchableName { get; set; } = "";
@@ -21,11 +27,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
-        /// <returns></returns>
         public LaunchPadConfiguration DeepClone()
         {
             LaunchPadConfiguration ret = new();
             ret.Identifier = Identifier;
+            ret.Parameters = Parameters.Select(p => p.DeepClone()).ToList();
             ret.LaunchableName = LaunchableName;
             return ret;
         }
@@ -34,6 +40,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             return other != null &&
                 Identifier == other.Identifier &&
+                Parameters.SequenceEqual(other.Parameters) &&
                 LaunchableName == other.LaunchableName;
         }
     }

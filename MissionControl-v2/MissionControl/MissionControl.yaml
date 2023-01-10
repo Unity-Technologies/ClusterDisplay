@@ -15,6 +15,8 @@ tags:
     description: Control of assets
   - name: missions
     description: Control of missions
+  - name: capcom
+    description: Communication with capcom processes
 paths:
   /status:
     get:
@@ -100,6 +102,7 @@ paths:
               - complexes
               - currentMission/panels
               - currentMission/parameters
+              - currentMission/launchParametersForReview
               - devices
               - launchPadsHealth
               - launchPadsStatus
@@ -133,6 +136,7 @@ paths:
           schema:
             type: string
             enum:
+              - capcomUplink
               - currentMission/launchConfiguration
               - status
           description: Name of the single object to wait on for an update.  The N at the end of the parameter name is to be replaced by an integer from 0 to N.  name0 is to be used for the name of the first collection, name1 the second, name2 the third, ...
@@ -567,7 +571,7 @@ paths:
       tags:
         - missions
       summary: Sets the launch configuration of the current mission.
-      description: Sets the launch configuration of the current mission.  Although all LaunchComplexes and LaunchPads referenced by the LaunchConfiguration should exist, this is not a hard requirement as the mapping gets resolved when preparing the launch skipping missing elements.  This is especially useful for loading a saved mission referencing LaunchComplexes or LaunchPads that have been deleted and are added back before the launch.
+      description: Sets the launch configuration of the current mission.  Although all LaunchComplexes and LaunchPads referenced by the LaunchConfiguration should exist, this is not a hard requirement as the mapping gets resolved when preparing the launch skipping missing elements.  This is especially useful for loading a saved mission referencing LaunchComplexes or LaunchPads that have been deleted and are added back before the launch.  The same idea applies to LaunchParameterValue of the launch configuration, nothing is validated against the asset constraints until we launch (at which point only parameters with valid values are passed to the launchpads).
       requestBody:
         description: Launch configuration
         content:
@@ -759,6 +763,74 @@ paths:
             text/plain:
               schema:
                 type: string
+  /capcomUplink:
+    get:
+      tags:
+        - capcom
+      summary: Information to be made accessible to capcom
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapcomUplink'
+  /currentMission/launchParametersForReview:
+    get:
+      tags:
+        - capcom
+      summary: Gets the list of launch parameters to be reviewed by capcom.
+      description: Gets the list of launch parameters to be reviewed by capcom.  This list get automatically filled during the launch process and cleared once the payload is launched.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaunchParameterForReview'
+    put:
+      tags:
+        - capcom
+      summary: Sets a launch parameter reviewed by capcom.
+      description: Sets a launch parameter reviewed by capcom.  Cannot be used to add a new LaunchParameterForReview to the collection.
+      requestBody:
+        description: Launch configuration
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchParameterForReview'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Provided value for a LaunchParameterForReview is not valid.
+        '404':
+          description: Launch parameter review object with the provided identifier not found (put cannot be used to create a new LaunchParameterForReview).
+  /currentMission/launchParametersForReview/{id}:
+    get:
+      tags:
+        - capcom
+      summary: Gets a launch parameter to be reviewed by capcom.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the launch parameter review object to get.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchParameterForReview'
+        '404':
+          description: Launch parameter review object with the provided identifier not found.
 components:
   schemas:
     StorageFolderConfig:
@@ -786,6 +858,9 @@ components:
         launchPadsEntry:
           type: string
           description: Base address that will be used by the launchpads to reach back the mission control controlling them (like to get payloads and file blobs).
+        localEntry:
+          type: string
+          description: Base address that will be used by local services to reach back mission control (like capcom launchables).
         storageFolders:
           type: array
           description: List of folders of where we store files of assets managed by MissionControl.
@@ -865,6 +940,17 @@ components:
              * `launched` - Launchpads have launched their payloads and everything is running.  The only allowed operation is the StopMissionCommand to stop the mission.
              * `failure` - At least one of the launchpad failed to launch (or failed after launch).  The only allowed operation is the StopMissionCommand to stop the mission.
           enum: [idle, preparing, launched, failure]
+        enteredStateTime:
+          type: string
+          format: date-time
+          description: When did state changed to its current value.
+    CapcomUplink:
+      type: object
+      description: Various information to be made accessible to capcom processes working for MissionControl.
+      properties:
+        isRunning:
+          type: string
+          description: Should capcom be running?
     IncrementalCollectionObject:
       type: object
       description: Common properties for objects that are part of incremental collections.
@@ -1220,9 +1306,11 @@ components:
       properties:
         id:
           type: string
-          description: Identifier of the launch parameter (matches LaunchCatalog.json LaunchParameter.id)
+          description: Identifier of the launch parameter (matches LaunchCatalog.json LaunchParameter.id).
         value:
+          description: The actual value of a launch parameter.
           oneOf:
+            - type: boolean
             - type: integer
             - type: number
             - type: string
@@ -1263,6 +1351,25 @@ components:
         launchableName:
           type: string
           description: Name of the launchable to launch on this launchpad.
+    LaunchParameterForReview:
+      type: object
+      description: Represent a LaunchParameterValue that is to be approved by capcom before proceeding to the launch.
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        launchPadId:
+          type: string
+          format: uuid
+          description: Identifier of the LaunchPad with which this parameter will be used for the launch.
+          readOnly: true
+        value:
+          $ref: '#/components/schemas/LaunchParameterValue'
+        ready:
+          type: boolean
+          description: To be set to true once the property value is known as valid.
+        reviewComments:
+          type: string
+          description: Various comments about the changes or problems with the value if there is anything wrong.
     MissionParameter:
       type: object
       description: Value of a runtime controllable parameter -> TODO

@@ -36,6 +36,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         protected override NodeState DoFrameImplementation()
         {
+            // Have we been requested to initiate the quitting of the cluster?
+            if (InternalMessageQueue<InternalQuitMessage>.Instance.TryDequeue(out InternalQuitMessage _))
+            {
+                return new PropagateQuitState(Node);
+            }
+
             // Special case for delayed repeaters.  Gather game state for frame 0 and the custom data will be gathered
             // when starting frame 1.  Don't sync or anything, in fact let's try to finish ASAP so that we can move on
             // to frame 1 so that we can sent frame 0 and repeaters at last also receive frame 0.

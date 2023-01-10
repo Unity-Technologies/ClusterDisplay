@@ -205,11 +205,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 // 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, ignition... and lift off!!!!
                 ProcessStartInfo processStartInfo = new();
                 processStartInfo.WorkingDirectory = m_LaunchRoot;
-                processStartInfo.FileName = Path.Combine(m_LaunchRoot, m_PreparedParameters.LaunchPath);
+                processStartInfo.FileName = m_PreparedParameters.LaunchPath;
                 PrepareEnvironmentVariables(processStartInfo, m_PreparedParameters);
-                InvokePowershell(processStartInfo);
                 try
                 {
+                    ProcessLaunchHelpers.PrepareProcessStartInfo(processStartInfo);
                     m_LaunchedProcess = Process.Start(processStartInfo);
                     if (m_LaunchedProcess == null)
                     {
@@ -258,8 +258,6 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                 Task? toWaitOn = null;
                 lock (m_Lock)
                 {
-                    m_ProcessingAbort = true;
-
                     if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
                     {
                         Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle or State.Over);
@@ -273,6 +271,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         {
                             m_StatusService.State = State.Idle;
                         }
+                        m_ProcessingAbort = true;
                         m_LaunchedProcess?.Kill();
                     }
                 }
@@ -478,7 +477,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         {
             HangarBay.PrepareCommand prepareLaunchPadCommand = new();
             prepareLaunchPadCommand.PayloadIds = prepareCommand.PayloadIds;
-            prepareLaunchPadCommand.PayloadSource = prepareCommand.PayloadSource;
+            prepareLaunchPadCommand.PayloadSource = prepareCommand.MissionControlEntry;
             prepareLaunchPadCommand.Path = m_LaunchRoot;
             Uri uri = new(new Uri(m_ConfigService.Current.HangarBayEndPoint), "api/v1/commands");
             try
@@ -514,9 +513,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
             processStartInfo.WorkingDirectory = m_LaunchRoot;
             processStartInfo.FileName = prepareCommand.PreLaunchPath;
             PrepareEnvironmentVariables(processStartInfo, prepareCommand);
-            InvokePowershell(processStartInfo);
             try
             {
+                ProcessLaunchHelpers.PrepareProcessStartInfo(processStartInfo);
                 var process = Process.Start(processStartInfo);
                 if (process == null)
                 {
@@ -592,26 +591,22 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         /// prepare).</param>
         void PrepareEnvironmentVariables(ProcessStartInfo processStartInfo, PrepareCommand prepareCommand)
         {
-            if (!Object.ReferenceEquals(prepareCommand.LaunchData, null))
+            if (!ReferenceEquals(prepareCommand.LaunchableData, null))
+            {
+                processStartInfo.EnvironmentVariables["LAUNCHABLE_DATA"] =
+                    JsonSerializer.Serialize(prepareCommand.LaunchableData, Json.SerializerOptions);
+            }
+            if (!ReferenceEquals(prepareCommand.LaunchData, null))
             {
                 processStartInfo.EnvironmentVariables["LAUNCH_DATA"] =
                     JsonSerializer.Serialize(prepareCommand.LaunchData, Json.SerializerOptions);
             }
             processStartInfo.EnvironmentVariables["LAUNCHPAD_CONFIG"] =
                 JsonSerializer.Serialize(m_ConfigService.Current, Json.SerializerOptions);
-        }
-
-        /// <summary>
-        /// Detects if we are trying to run a powershell script (.ps1) and if so modify the ProcessStartInfo to execute
-        /// it using powershell.
-        /// </summary>
-        /// <param name="processStartInfo">Information to launch the process.</param>
-        static void InvokePowershell(ProcessStartInfo processStartInfo)
-        {
-            if (processStartInfo.FileName.EndsWith("ps1"))
+            if (prepareCommand.MissionControlEntry != null)
             {
-                processStartInfo.Arguments = "-File \"" + processStartInfo.FileName + "\" " + processStartInfo.Arguments;
-                processStartInfo.FileName = "powershell.exe";
+                processStartInfo.EnvironmentVariables["MISSIONCONTROL_ENTRY"] =
+                    prepareCommand.MissionControlEntry.ToString();
             }
         }
 

@@ -42,19 +42,24 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public DateTime StartTime { get; set; }
 
         /// <summary>
-        /// Has some operations been done on the HangarBay that requires a restart?
-        /// </summary>
-        public bool PendingRestart { get; set; }
-
-        /// <summary>
         /// Status of the different storage folders.
         /// </summary>
         public IEnumerable<StorageFolderStatus> StorageFolders { get; set; } = Enumerable.Empty<StorageFolderStatus>();
 
         /// <summary>
+        /// Has some operations been done on the HangarBay that requires a restart?
+        /// </summary>
+        public bool PendingRestart { get; set; }
+
+        /// <summary>
         /// State of the LaunchPad
         /// </summary>
         public State State { get; set; } = State.Idle;
+
+        /// <summary>
+        /// When did state changed to its current value.
+        /// </summary>
+        public DateTime EnteredStateTime { get; set; }
 
         /// <summary>
         /// Fill this <see cref="Status"/> from another one.
@@ -64,14 +69,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             Version = from.Version;
             StartTime = from.StartTime;
-            PendingRestart = from.PendingRestart;
             StorageFolders = from.StorageFolders.Select(sfs =>
                 {
                     StorageFolderStatus ret = new();
                     ret.DeepCopy(sfs);
                     return ret;
                 }).ToArray();
+            PendingRestart = from.PendingRestart;
             State = from.State;
+            EnteredStateTime = from.EnteredStateTime;
         }
 
         public bool Equals(Status? other)
@@ -79,9 +85,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             return other != null &&
                 Version == other.Version &&
                 StartTime == other.StartTime &&
-                PendingRestart == other.PendingRestart &&
                 StorageFolders.SequenceEqual(other.StorageFolders) &&
-                State == other.State;
+                PendingRestart == other.PendingRestart &&
+                State == other.State &&
+                EnteredStateTime == other.EnteredStateTime;
         }
     }
 }
