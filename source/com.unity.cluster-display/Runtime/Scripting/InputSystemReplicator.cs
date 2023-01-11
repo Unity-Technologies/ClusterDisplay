@@ -1,13 +1,10 @@
 #if ENABLE_INPUT_SYSTEM
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
-using System.Linq;
 using Unity.Collections;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Layouts;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
 
@@ -41,7 +38,6 @@ namespace Unity.ClusterDisplay.Scripting
 
         void OnEnable()
         {
-            Cursor.visible = true;
             m_PreviousUpdateMode = InputSystem.settings.updateMode;
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             switch (ClusterDisplayState.GetNodeRole())
@@ -92,7 +88,7 @@ namespace Unity.ClusterDisplay.Scripting
             {
                 InputSystem.DisableDevice(device);
                 m_RealDevices.Add(device);
-                Debug.Log($"Disabled {device.name ?? "unknown"}");
+                ClusterDebug.Log($"Disabled {device.name ?? "unknown"}");
             }
             else if (change is InputDeviceChange.Removed && m_RealDevices.Contains(device))
             {
@@ -102,14 +98,12 @@ namespace Unity.ClusterDisplay.Scripting
 
         void UpdateVirtualDevices()
         {
-            foreach (var evt in m_EventTrace)
+            foreach (var evt in new InputEventReader(m_EventTrace))
             {
                 if (m_VirtualDeviceMapping.ContainsKey(evt.deviceId)) continue;
 
-                var deviceIndex = m_EventTrace.deviceInfos.IndexOf(info => info.deviceId == evt.deviceId);
-                if (deviceIndex < 0) continue;
+                if (!m_EventTrace.TryGetDeviceInfo(evt.deviceId, out var deviceInfo)) continue;
 
-                var deviceInfo = m_EventTrace.deviceInfos[deviceIndex];
                 var layoutName = new InternedString(deviceInfo.layout);
 
                 // Create device.
@@ -137,7 +131,7 @@ namespace Unity.ClusterDisplay.Scripting
             m_MemoryStream.Flush();
             m_MemoryStream.Position = 0;
             m_EventTrace.ReadFrom(m_MemoryStream);
-            Debug.Log($"Received input data {m_EventTrace.totalEventSizeInBytes} bytes");
+            ClusterDebug.Log($"Received input data {m_EventTrace.totalEventSizeInBytes} bytes");
 
             m_ReplayController?.Dispose();
             m_ReplayController = m_EventTrace.Replay();
