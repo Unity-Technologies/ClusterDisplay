@@ -121,8 +121,8 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(gamepad.leftTrigger.ReadUnprocessedValueFromEvent(currentEventPtr), Is.EqualTo(0.5f));
         }
 
-        [Test]
-        public void TestRepeaterReceivesInputs()
+        [UnityTest]
+        public IEnumerator TestRepeaterReceivesInputs()
         {
             ulong frameId = 0;
 
@@ -140,7 +140,10 @@ namespace Unity.ClusterDisplay.Tests
             var gamepad = InputSystem.AddDevice<Gamepad>();
             Set(gamepad.leftStick, new Vector2(0.123f, 0.234f));
             Set(gamepad.leftTrigger, 0.5f);
-            InputSystem.Update();
+
+            // Advance a frame - allow InputSystemReplicator component to Update()
+            yield return null;
+            // InputSystem.Update();
 
             // Store the input events in a FrameDataBuffer
             using var inputStream = new MemoryStream();
@@ -181,7 +184,10 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(context.ReadValue<float>(), Is.Not.Zero);
             };
 
-            InputSystem.Update();
+            // InputSystem.Update();
+
+            // Advance a frame - allow InputSystemReplicator component to Update()
+            yield return null;
 
             stickAction.Disable();
             triggerAction.Disable();
