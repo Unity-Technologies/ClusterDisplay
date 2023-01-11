@@ -37,20 +37,21 @@ namespace Unity.ClusterDisplay.Scripting
         readonly List<InputDevice> m_VirtualDevices = new();
         readonly Dictionary<int, int> m_VirtualDeviceMapping = new();
         bool m_CreatingVirtualDevice;
+        InputSettings.UpdateMode m_PreviousUpdateMode;
 
         void OnEnable()
         {
             Cursor.visible = true;
+            m_PreviousUpdateMode = InputSystem.settings.updateMode;
+            InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             switch (ClusterDisplayState.GetNodeRole())
             {
                 case NodeRole.Emitter:
                     m_EventTrace.Enable();
-                    InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
                     EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.InputSystem, OnStoreInputData);
                     break;
                 case NodeRole.Repeater:
                     RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.InputSystem, OnLoadInputData);
-                    InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
                     InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
                     DisableRealInputs();
                     break;
@@ -93,7 +94,7 @@ namespace Unity.ClusterDisplay.Scripting
                 m_RealDevices.Add(device);
                 Debug.Log($"Disabled {device.name ?? "unknown"}");
             }
-            else if (change is InputDeviceChange.Removed)
+            else if (change is InputDeviceChange.Removed && m_RealDevices.Contains(device))
             {
                 m_RealDevices.Remove(device);
             }
@@ -172,6 +173,7 @@ namespace Unity.ClusterDisplay.Scripting
             EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.InputSystem, OnStoreInputData);
             EnableRealInputs();
             CleanUpVirtualDevices();
+            InputSystem.settings.updateMode = m_PreviousUpdateMode;
         }
 
         void OnDestroy()
@@ -181,24 +183,15 @@ namespace Unity.ClusterDisplay.Scripting
 
         void Update()
         {
-            switch (ClusterDisplayState.GetNodeRole())
+            InputSystem.Update();
+            if (ClusterDisplayState.GetNodeRole() == NodeRole.Emitter)
             {
-                case NodeRole.Unassigned:
-                    break;
-                case NodeRole.Emitter:
-                    InputSystem.Update();
-                    m_MemoryStream.SetLength(0);
-                    m_EventTrace.WriteTo(m_MemoryStream);
-                    m_MemoryStream.Flush();
-                    m_MemoryStream.Position = 0;
-                    m_EventTrace.Clear();
-                    break;
-                case NodeRole.Repeater:
-                    InputSystem.Update();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                m_MemoryStream.SetLength(0);
+                m_EventTrace.WriteTo(m_MemoryStream);
+                m_MemoryStream.Flush();
+                m_MemoryStream.Position = 0;
             }
+
             m_EventTrace.Clear();
         }
     }

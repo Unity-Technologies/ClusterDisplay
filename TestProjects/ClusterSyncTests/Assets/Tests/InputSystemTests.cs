@@ -38,6 +38,7 @@ namespace Unity.ClusterDisplay.Tests
         EmitterStateWriter m_EmitterStateWriter;
         TestUdpAgent m_EmitterAgent;
         TestUdpAgent m_RepeaterAgent;
+        InputSystemReplicator m_Replicator;
 
         public override void Setup()
         {
@@ -55,6 +56,12 @@ namespace Unity.ClusterDisplay.Tests
             RepeaterStateReader.ClearOnLoadDataDelegates();
             EmitterStateWriter.ClearCustomDataDelegates();
             m_EmitterStateWriter.Dispose();
+
+            // It is necessary to trigger InputSystemReplicator.OnDisable() before
+            // InputTestFixture.TearDown() because InputTestFixture.TearDown() will remove all input devices, including
+            // the virtual devices created by InputSystemReplicator. Otherwise, we'll be trying to remove the virtual
+            // devices twice, resulting in an error.
+            m_Replicator.enabled = false;
             base.TearDown();
         }
 
@@ -72,14 +79,10 @@ namespace Unity.ClusterDisplay.Tests
             var testGameObject = new GameObject();
 
             // The component under test
-            var replicator = testGameObject.AddComponent<InputSystemReplicator>();
+            m_Replicator = testGameObject.AddComponent<InputSystemReplicator>();
 
             // Simulate some inputs
             var gamepad = InputSystem.AddDevice<Gamepad>();
-
-            // TODO: Investigate possible serialization bug
-            // Press(gamepad.buttonEast);
-
             Set(gamepad.leftStick, new Vector2(0.123f, 0.234f));
             Set(gamepad.leftTrigger, 0.5f);
 
@@ -131,19 +134,29 @@ namespace Unity.ClusterDisplay.Tests
 
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
             var testGameObject = new GameObject();
-            var replicator = testGameObject.AddComponent<InputSystemReplicator>();
 
             // Capture some input data to test with
             using var eventTrace = new InputEventTrace();
             eventTrace.Enable();
 
+            // Set up some test bindings
+            var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast");
+            var triggerAction = new InputAction(binding: "<Gamepad>/leftTrigger");
+            var stickAction = new InputAction(binding: "<Gamepad>/leftStick");
+            buttonAction.Enable();
+            stickAction.Enable();
+            triggerAction.Enable();
+
             var gamepad = InputSystem.AddDevice<Gamepad>();
+            Press(gamepad.buttonEast);
             Set(gamepad.leftStick, new Vector2(0.123f, 0.234f));
             Set(gamepad.leftTrigger, 0.5f);
 
             // Advance a frame - allow InputSystemReplicator component to Update()
             yield return null;
-            // InputSystem.Update();
+
+            // The component under test
+            m_Replicator = testGameObject.AddComponent<InputSystemReplicator>();
 
             // Store the input events in a FrameDataBuffer
             using var inputStream = new MemoryStream();
@@ -157,12 +170,6 @@ namespace Unity.ClusterDisplay.Tests
 
             ++frameId;
 
-            // Set up some test bindings
-            var triggerAction = new InputAction(binding: "<Gamepad>/leftTrigger");
-            var stickAction = new InputAction(binding: "<Gamepad>/leftStick");
-            stickAction.Enable();
-            triggerAction.Enable();
-
             // Test repeater logic (just the part that responds to framedata)
             using var frameDataCopy = new NativeArray<byte>(frameData.Length, Allocator.Persistent);
             frameData.CopyTo(frameDataCopy);
@@ -170,6 +177,9 @@ namespace Unity.ClusterDisplay.Tests
 
             // Check that repeater performs the input actions
             // The replicator should have started playing back the deserialized input data at this point
+            var buttonPressed = false;
+            buttonAction.performed += _ => buttonPressed = true;
+
             var stickMoved = false;
             stickAction.performed += context =>
             {
@@ -192,6 +202,7 @@ namespace Unity.ClusterDisplay.Tests
             stickAction.Disable();
             triggerAction.Disable();
 
+            Assert.IsTrue(buttonPressed);
             Assert.IsTrue(triggerPressed);
             Assert.IsTrue(stickMoved);
         }
