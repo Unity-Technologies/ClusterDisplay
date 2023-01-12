@@ -33,22 +33,32 @@ namespace Unity.ClusterDisplay.Scripting
         readonly List<InputDevice> m_RealDevices = new();
         readonly List<InputDevice> m_VirtualDevices = new();
         readonly Dictionary<int, int> m_VirtualDeviceMapping = new();
+
         bool m_CreatingVirtualDevice;
-        InputSettings.UpdateMode m_PreviousUpdateMode;
+        SavedInputSettings m_SavedInputSettings;
+        bool m_UpdatesControlledExternally;
 
         void OnEnable()
         {
-            m_PreviousUpdateMode = InputSystem.settings.updateMode;
+            m_SavedInputSettings = InputSystem.settings.Save();
+
+            // We want to control when we deserialize and deserialize+apply input events by calling
+            // InputSystem.Update() manually.
+            m_UpdatesControlledExternally = m_SavedInputSettings.UpdateMode is InputSettings.UpdateMode.ProcessEventsManually;
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             switch (ClusterDisplayState.GetNodeRole())
             {
                 case NodeRole.Emitter:
+                    // Emitter records input events and transmits them over the cluster.
                     m_EventTrace.Enable();
-                    EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.InputSystem, OnStoreInputData);
+                    EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.InputSystem, WriteInputData);
                     break;
                 case NodeRole.Repeater:
-                    RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.InputSystem, OnLoadInputData);
+                    // Repeater receives input data from the cluster.
+                    RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.InputSystem, LoadInputData);
+                    // For local testing, the repeater needs the input system to work when it's not in focus.
                     InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                    // Repeater cannot accept real inputs, or else the cluster will get out of sync.
                     DisableRealInputs();
                     break;
                 case NodeRole.Unassigned:
@@ -66,7 +76,7 @@ namespace Unity.ClusterDisplay.Scripting
                 OnDeviceChange(device, InputDeviceChange.Added);
             }
 
-            // Handle devices that get added late.
+            // Handle devices that get added late. Not all devices are enumerable on startup.
             InputSystem.onDeviceChange += OnDeviceChange;
         }
 
@@ -106,7 +116,8 @@ namespace Unity.ClusterDisplay.Scripting
 
                 var layoutName = new InternedString(deviceInfo.layout);
 
-                // Create device.
+                // InputSystem.AddDevice triggers our OnDeviceChanged callback. We don't want to disable our virtual
+                // devices.
                 m_CreatingVirtualDevice = true;
                 var device = InputSystem.AddDevice(layoutName);
                 m_CreatingVirtualDevice = false;
@@ -125,29 +136,47 @@ namespace Unity.ClusterDisplay.Scripting
             m_VirtualDeviceMapping.Clear();
         }
 
-        bool OnLoadInputData(NativeArray<byte> stateData)
+        bool LoadInputData(NativeArray<byte> stateData)
         {
+            // There's no API to copy unmanaged bytes directly into InputEventTrace, so we'll take a roundabout
+            // approach using MemoryStream.
+            // First, copy the bytes into a MemoryStream.
             m_MemoryStream.Write(stateData.AsReadOnlySpan());
             m_MemoryStream.Flush();
+
+            // Next, reset the stream so we can read from the beginning.
             m_MemoryStream.Position = 0;
+            // FIXME: ReadFrom() is not alloc-free.
             m_EventTrace.ReadFrom(m_MemoryStream);
+
+            // Clear the stream for re-use.
+            m_MemoryStream.SetLength(0);
+
             ClusterDebug.Log($"Received input data {m_EventTrace.totalEventSizeInBytes} bytes");
 
-            m_ReplayController?.Dispose();
-            m_ReplayController = m_EventTrace.Replay();
+            if (m_ReplayController == null)
+            {
+                // Create a new ReplayController associated with our EventTrace instance
+                m_ReplayController = m_EventTrace.Replay();
+            }
+            else
+            {
+                // The event trace data has been updated.
+                // Set the read head back to the beginning.
+                m_ReplayController.Rewind();
+            }
 
+            // Play back the events remapped to virtual devices.
             UpdateVirtualDevices();
             foreach (var (from, to) in m_VirtualDeviceMapping)
             {
-                m_ReplayController = m_ReplayController.WithDeviceMappedFromTo(from, to);
+                m_ReplayController.WithDeviceMappedFromTo(from, to);
             }
             m_ReplayController.PlayAllEvents();
-
-            m_MemoryStream.SetLength(0);
             return true;
         }
 
-        int OnStoreInputData(NativeArray<byte> writeableBuffer)
+        int WriteInputData(NativeArray<byte> writeableBuffer)
         {
             if (writeableBuffer.Length < m_MemoryStream.Length)
             {
@@ -155,6 +184,8 @@ namespace Unity.ClusterDisplay.Scripting
                 return -1;
             }
 
+            // Copy the memory stream contents (the serialized event data) into the FrameData to be transmitted
+            // over the cluster network.
             int bytesRead = m_MemoryStream.Read(writeableBuffer.AsSpan());
             return bytesRead;
         }
@@ -163,11 +194,12 @@ namespace Unity.ClusterDisplay.Scripting
         {
             m_EventTrace.Disable();
             m_ReplayController?.Dispose();
-            RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.InputSystem, OnLoadInputData);
-            EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.InputSystem, OnStoreInputData);
+            m_ReplayController = null;
+            RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.InputSystem, LoadInputData);
+            EmitterStateWriter.UnregisterCustomDataDelegate((int)StateID.InputSystem, WriteInputData);
             EnableRealInputs();
             CleanUpVirtualDevices();
-            InputSystem.settings.updateMode = m_PreviousUpdateMode;
+            InputSystem.settings.Restore(m_SavedInputSettings);
         }
 
         void OnDestroy()
@@ -177,9 +209,12 @@ namespace Unity.ClusterDisplay.Scripting
 
         void Update()
         {
-            InputSystem.Update();
+            if (!m_UpdatesControlledExternally)
+                InputSystem.Update();
             if (ClusterDisplayState.GetNodeRole() == NodeRole.Emitter)
             {
+                // Serialize the event trace data, which will get copied into the FrameData and transmitted
+                // at the next sync point.
                 m_MemoryStream.SetLength(0);
                 m_EventTrace.WriteTo(m_MemoryStream);
                 m_MemoryStream.Flush();
