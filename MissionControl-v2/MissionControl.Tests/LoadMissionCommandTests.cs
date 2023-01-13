@@ -36,7 +36,21 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             };
             await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration);
 
-            // Save it
+            // With some desired mission parameter values
+            MissionParameterValue desiredValue1 = new(Guid.NewGuid())
+            {
+                ValueIdentifier = "value identifier 1",
+                Value = ParseJsonToElement("[1,2,3,4]")
+            };
+            await m_ProcessHelper.PutDesiredParameterValue(desiredValue1);
+            MissionParameterValue desiredValue2 = new(Guid.NewGuid())
+            {
+                ValueIdentifier = "value identifier 2",
+                Value = ParseJsonToElement("[5,6,7,8,9]")
+            };
+            await m_ProcessHelper.PutDesiredParameterValue(desiredValue2);
+
+            // Save the current mission's configuration
             SaveMissionCommand saveCommand = new()
             {
                 Identifier = Guid.NewGuid(),
@@ -46,6 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Clear current launch configuration
             await m_ProcessHelper.PutLaunchConfiguration(new());
+            Assert.That(await m_ProcessHelper.GetDesiredParametersValues(), Is.Empty);
 
             // Load command but with default identifier (Guid.Empty), should fail.
             LoadMissionCommand loadCommand = new();
@@ -60,6 +75,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // Ensure current launch configuration is still intact (cleared)
             var currentConfiguration = await m_ProcessHelper.GetLaunchConfiguration();
             Assert.That(currentConfiguration, Is.EqualTo(new LaunchConfiguration()));
+            Assert.That(await m_ProcessHelper.GetDesiredParametersValues(), Is.Empty);
 
             // Now really load the launch configuration
             loadCommand.Identifier = saveCommand.Identifier;
@@ -68,6 +84,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // Ensure everything was loaded with success
             currentConfiguration = await m_ProcessHelper.GetLaunchConfiguration();
             Assert.That(currentConfiguration, Is.EqualTo(launchConfiguration));
+
+            var desiredParametersValues = await m_ProcessHelper.GetDesiredParametersValues();
+            Assert.That(desiredParametersValues.Length, Is.EqualTo(2));
+            Assert.That(desiredParametersValues.First(v => v.Id == desiredValue1.Id), Is.EqualTo(desiredValue1));
+            Assert.That(desiredParametersValues.First(v => v.Id == desiredValue2.Id), Is.EqualTo(desiredValue2));
         }
 
         [Test]

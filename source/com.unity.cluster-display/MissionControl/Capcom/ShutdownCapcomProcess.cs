@@ -28,7 +28,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 // amount of time for a graceful shutdown of capcom and then simply kill the process.
                 Task.Run(async () =>
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(50).ConfigureAwait(false);
                     m_ToCancel.Cancel();
                 });
             }

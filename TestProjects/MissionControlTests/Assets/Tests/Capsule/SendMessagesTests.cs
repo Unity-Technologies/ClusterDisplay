@@ -161,7 +161,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
 
             // Validate the received message
             Assert.That(capsuleStatusMessageId, Is.EqualTo(MessagesId.CapsuleStatus));
-            Assert.That(capsuleStatusMessage.NodeRole, Is.EqualTo((byte)NodeRole.Repeater));
+            Assert.That(capsuleStatusMessage.NodeRole, Is.EqualTo(NodeRole.Repeater));
             Assert.That(capsuleStatusMessage.NodeId, Is.EqualTo(28));
             Assert.That(capsuleStatusMessage.RenderNodeId, Is.EqualTo(42));
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Unity.ClusterDisplay.Utils;
 using UnityEditor;
 using UnityEngine;
@@ -101,7 +100,7 @@ namespace Unity.ClusterDisplay.Scripting
                 ? clusterSyncState.NodeRole switch
                 {
                     NodeRole.Emitter => ReplicatorMode.Emitter,
-                    NodeRole.Repeater => ReplicatorMode.Repeater,
+                    NodeRole.Repeater or NodeRole.Backup => ReplicatorMode.Repeater,
                     _ => ReplicatorMode.Editor
                 }
                 : ReplicatorMode.Editor;

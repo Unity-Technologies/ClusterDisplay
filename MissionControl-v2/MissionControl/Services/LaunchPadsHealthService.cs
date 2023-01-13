@@ -28,8 +28,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_ConfigService.Changed += ConfigChangedAsync;
             m_MonitoringInterval = TimeSpan.FromSeconds(m_ConfigService.Current.HealthMonitoringIntervalSec);
 
-            incrementalCollectionService.Register("launchPadsHealth", RegisterForChangesInCollection,
-                GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register(IncrementalCollectionsName.LaunchPadsHealth,
+                RegisterForChangesInCollection, GetIncrementalUpdatesAsync);
 
             Task.Run(UpdateLoopAsync);
         }

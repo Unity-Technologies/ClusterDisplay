@@ -7,12 +7,11 @@
     {
         public void Process(MissionControlMirror missionControlMirror)
         {
-            if (missionControlMirror.LaunchPadsStatusNextVersion == m_LastStatusNextVersion)
+            if (m_StatusLastVersion >= missionControlMirror.LaunchPadsStatus.VersionNumber)
             {
                 return;
             }
-
-            m_LastStatusNextVersion = missionControlMirror.LaunchPadsStatusNextVersion;
+            m_StatusLastVersion = missionControlMirror.LaunchPadsStatus.VersionNumber;
 
             foreach (var launchPadInformation in missionControlMirror.LaunchPadsInformation)
             {
@@ -26,6 +25,6 @@
             }
         }
 
-        ulong m_LastStatusNextVersion = ulong.MaxValue;
+        ulong m_StatusLastVersion;
     }
 }

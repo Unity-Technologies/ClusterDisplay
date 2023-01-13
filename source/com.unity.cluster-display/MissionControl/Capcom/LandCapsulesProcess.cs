@@ -30,11 +30,11 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         public void Process(MissionControlMirror missionControlMirror)
         {
             // As anything that interest us changed?
-            if (missionControlMirror.CapcomUplinkNextVersion == m_LastCapcomUplinkNextVersion)
+            if (m_CapcomUplinkLastVersion >= missionControlMirror.CapcomUplinkVersionNumber)
             {
                 return;
             }
-            m_LastCapcomUplinkNextVersion = missionControlMirror.CapcomUplinkNextVersion;
+            m_CapcomUplinkLastVersion = missionControlMirror.CapcomUplinkVersionNumber;
 
             if (missionControlMirror.CapcomUplink.ProceedWithLanding)
             {
@@ -71,10 +71,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         /// <summary>
-        /// Last version of <see cref="MissionControlMirror.CapcomUplinkNextVersion"/> that the
-        /// <see cref="Process"/> method was called on.
+        /// Last version of <see cref="MissionControlMirror.CapcomUplink"/> that the <see cref="Process"/> method was
+        /// called on.
         /// </summary>
-        ulong m_LastCapcomUplinkNextVersion = ulong.MaxValue;
+        ulong m_CapcomUplinkLastVersion;
         /// <summary>
         /// Was the landing signal sent to the capsules?
         /// </summary>

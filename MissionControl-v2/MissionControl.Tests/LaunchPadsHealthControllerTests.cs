@@ -396,11 +396,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             while (!m_LaunchPadsHealthCts!.IsCancellationRequested)
             {
                 var update = await m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                    (k_HealthCollectionName, fromVersion ) }, m_LaunchPadsHealthCts.Token);
-                if (update.ContainsKey(k_HealthCollectionName))
+                    (IncrementalCollectionsName.LaunchPadsHealth, fromVersion) }, m_LaunchPadsHealthCts.Token);
+                if (update.ContainsKey(IncrementalCollectionsName.LaunchPadsHealth))
                 {
                     var incrementalUpdate = JsonSerializer.Deserialize<IncrementalCollectionUpdate<LaunchPadHealth>>(
-                        update[k_HealthCollectionName], Json.SerializerOptions);
+                        update[IncrementalCollectionsName.LaunchPadsHealth], Json.SerializerOptions);
                     if (incrementalUpdate != null)
                     {
                         lock (m_Lock)
@@ -517,8 +517,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             m_TestTempFolders.Add(folderPath);
             return folderPath;
         }
-
-        const string k_HealthCollectionName = "launchPadsHealth";
 
         readonly MissionControlProcessHelper m_ProcessHelper = new();
         readonly List<string> m_TestTempFolders = new();

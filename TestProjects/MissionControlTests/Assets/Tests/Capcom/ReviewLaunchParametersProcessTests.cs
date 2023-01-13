@@ -229,7 +229,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
             TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
-                LaunchParameterConstants.NodeRoleRepeater, "There can only be one emitter, role changed to repeater.");
+                LaunchParameterConstants.NodeRoleRepeater, "There can only be one emitter, role changed " +
+                "to unassigned (which will then be reassigned to another role).");
         }
 
         [UnityTest]
@@ -257,7 +258,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         [UnityTest]
-        public IEnumerator EmitterLowestNodeIdToEmitterRepeater()
+        public IEnumerator EmitterLowestUnassignedNodeId()
         {
             Setup(3);
 
@@ -272,16 +273,156 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeIdParameterId, 1);
             TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId,
-                LaunchParameterConstants.NodeRoleRepeater);
+                LaunchParameterConstants.NodeRoleEmitter);
 
             TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeIdParameterId, 0);
             TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId,
-                LaunchParameterConstants.NodeRoleEmitter, "Changed to emitter as there was no emitter assigned to " +
-                "any node.");
+                LaunchParameterConstants.NodeRoleRepeater);
 
             TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
             TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
                 LaunchParameterConstants.NodeRoleRepeater);
+        }
+
+        [UnityTest]
+        public IEnumerator EmitterLowestRepeaterNodeId()
+        {
+            Setup(3);
+
+            foreach (var launchComplexId in m_LaunchComplexesId)
+            {
+                var launchPadNodeRole =
+                    GetLaunchParameterForReview(launchComplexId, LaunchParameterConstants.NodeRoleParameterId);
+                launchPadNodeRole.Value.Value = LaunchParameterConstants.NodeRoleRepeater;
+            }
+
+            yield return Process();
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeIdParameterId, 0);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleEmitter, "LaunchPad was assigned the role of emitter " +
+                "(since no node had the role).");
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeIdParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+        }
+
+        [UnityTest]
+        public IEnumerator AllDefaultWithBackup()
+        {
+            Setup(4, 1);
+
+            yield return Process();
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeIdParameterId, 0);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleEmitter);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.RepeaterCountParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.BackupNodeCountParameterId, 1);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeIdParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.RepeaterCountParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.BackupNodeCountParameterId, 1);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.RepeaterCountParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.BackupNodeCountParameterId, 1);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeIdParameterId, 3);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleBackup);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.RepeaterCountParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.BackupNodeCountParameterId, 1);
+        }
+
+        [UnityTest]
+        public IEnumerator BackupPreserveAlreadyAssigned()
+        {
+            Setup(4, 2);
+
+            var launchPad0Role =
+                GetLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId);
+            launchPad0Role.Value.Value = LaunchParameterConstants.NodeRoleBackup;
+            var launchPad3Role =
+                GetLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeRoleParameterId);
+            launchPad3Role.Value.Value = LaunchParameterConstants.NodeRoleEmitter;
+
+            yield return Process();
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeIdParameterId, 0);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleBackup);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeIdParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleBackup);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeIdParameterId, 3);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleEmitter);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+        }
+
+        [UnityTest]
+        public IEnumerator BackupUpdateCountIfMore()
+        {
+            Setup(4);
+
+            var launchPad1Role =
+                GetLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId);
+            launchPad1Role.Value.Value = LaunchParameterConstants.NodeRoleBackup;
+            var launchPad2Role =
+                GetLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId);
+            launchPad2Role.Value.Value = LaunchParameterConstants.NodeRoleBackup;
+            var launchPad3Role =
+                GetLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeRoleParameterId);
+            launchPad3Role.Value.Value = LaunchParameterConstants.NodeRoleEmitter;
+
+            yield return Process();
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeIdParameterId, 0);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleRepeater);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[0], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeIdParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleBackup);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[1], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeIdParameterId, 2);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleBackup);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[2], LaunchParameterConstants.BackupNodeCountParameterId, 2);
+
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeIdParameterId, 3);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.NodeRoleParameterId,
+                LaunchParameterConstants.NodeRoleEmitter);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.RepeaterCountParameterId, 1);
+            TestLaunchParameterForReview(m_LaunchComplexesId[3], LaunchParameterConstants.BackupNodeCountParameterId, 2);
         }
 
         [UnityTest]
@@ -407,23 +548,22 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             var savedLaunchPadInformation = m_Mirror.LaunchPadsInformation.First();
 
             m_Mirror.LaunchParametersForReview.Add(new(Guid.NewGuid()){LaunchPadId = Guid.NewGuid(), Ready = false});
-            ++m_Mirror.LaunchParametersForReviewNextVersion;
             yield return Process();
             Assert.That(m_Mirror.LaunchPadsInformation.First(), Is.SameAs(savedLaunchPadInformation));
 
             m_Mirror.Status.State = State.Failure;
-            ++m_Mirror.StatusNextVersion;
+            ++m_Mirror.StatusVersionNumber;
             yield return Process();
             Assert.That(m_Mirror.LaunchPadsInformation.First(), Is.SameAs(savedLaunchPadInformation));
 
             m_Mirror.CapcomUplink.ProceedWithLanding = true;
-            ++m_Mirror.CapcomUplinkNextVersion;
+            ++m_Mirror.CapcomUplinkVersionNumber;
             yield return Process();
             Assert.That(m_Mirror.LaunchPadsInformation.First(), Is.SameAs(savedLaunchPadInformation));
 
             m_Mirror.Status.State = nextLaunchState;
             m_Mirror.Status.EnteredStateTime += TimeSpan.FromMinutes(1);
-            ++m_Mirror.StatusNextVersion;
+            ++m_Mirror.StatusVersionNumber;
             yield return Process();
             if (nextLaunchState == State.Idle)
             {
@@ -435,7 +575,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             }
         }
 
-        void Setup(int nodesCount)
+        void Setup(int nodesCount, int backupNodeCount = 0)
         {
             m_Mirror.Status.State = State.Preparing;
             m_Mirror.Status.EnteredStateTime = DateTime.Now;
@@ -452,7 +592,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 m_LaunchComplexesId.Add(launchComplexId);
                 LaunchComplex launchComplex = new(launchComplexId)
                 {
-                    LaunchPads = {CreateNewLaunchpad()}
+                    LaunchPads = {CreateNewLaunchpad(backupNodeCount)}
                 };
                 m_Mirror.Complexes.Add(launchComplex);
                 m_Mirror.LaunchConfiguration.AssetId = assetId;
@@ -466,7 +606,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             }
         }
 
-        MissionControl.LaunchPad CreateNewLaunchpad()
+        MissionControl.LaunchPad CreateNewLaunchpad(int backupNodeCount = 0)
         {
             MissionControl.LaunchPad ret = new() {
                 Identifier = Guid.NewGuid(),
@@ -493,6 +633,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 LaunchPadId = ret.Identifier, Value = new() {
                     Id = LaunchParameterConstants.CapsuleBasePortParameterId,
                     Value = LaunchParameterConstants.DefaultCapsuleBasePort
+                }
+            });
+            m_MissionControlStub.LaunchParametersForReview.Add(new(Guid.NewGuid()) {
+                LaunchPadId = ret.Identifier, Value = new() {
+                    Id = LaunchParameterConstants.BackupNodeCountParameterId,
+                    Value = backupNodeCount
                 }
             });
 

@@ -41,7 +41,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
             m_Manager = new(m_Logger, new());
 
-            incrementalCollectionCatalogService.Register("currentMission/launchParametersForReview",
+            incrementalCollectionCatalogService.Register(
+                IncrementalCollectionsName.CurrentMissionLaunchParametersForReview,
                 RegisterForReviewChangesInCollection, GetReviewIncrementalUpdatesAsync);
 
             applicationLifetime.ApplicationStopping.Register(StopAtExit);

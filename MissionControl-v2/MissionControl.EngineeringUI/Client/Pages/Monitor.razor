@@ -1,4 +1,5 @@
 @page "/monitor"
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
 <RadzenPanel AllowCollapse="true">
     <HeaderTemplate>
@@ -105,8 +106,10 @@
             it looks like there is some sort of bug that when using it we cannot configure the list of columns
             anymore...  So skip that feature for now since this is only an engineering ui...
         -->
-        <RadzenDataGrid @ref="m_LaunchapdsStatusGrid" Data=@LaunchPadStatusEntries AllowColumnResize="true"
-                        class="mt-1" CellRender=@CellRender AllowColumnPicking="true">
+        <RadzenDataGrid @ref="m_LaunchapdsStatusGrid" Data=@LaunchPadStatusEntries TItem="LaunchPadStatusEntry"
+                        class="mt-1" CellRender=@CellRender RowRender=@RowRender
+                        AllowColumnResize="true" AllowColumnPicking="true"
+                        ExpandMode="DataGridExpandMode.Single" RowExpand=@RowExpand>
             <Columns>
                 @foreach (var column in LaunchPadStatusColumns)
                 {
@@ -121,6 +124,9 @@
                     </RadzenDataGridColumn>
                 }
             </Columns>
+            <Template Context="statusEntry">
+                <MissionParameters Parameters=@statusEntry.MissionParameters />
+            </Template>
         </RadzenDataGrid>
     </ChildContent>
 </RadzenPanel>

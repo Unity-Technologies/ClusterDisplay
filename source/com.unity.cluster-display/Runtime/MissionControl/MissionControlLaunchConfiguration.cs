@@ -77,16 +77,25 @@ namespace Unity.ClusterDisplay.MissionControl
             {
                 LaunchParameterConstants.NodeRoleEmitter => NodeRole.Emitter,
                 LaunchParameterConstants.NodeRoleRepeater => NodeRole.Repeater,
+                LaunchParameterConstants.NodeRoleBackup => NodeRole.Backup,
                 _ => null
             };
         }
 
         /// <summary>
-        /// Gets the number of repeater counts
+        /// Gets the number of repeater nodes.
         /// </summary>
         public int? GetRepeaterCount()
         {
             return RawLaunchData.Value<int?>(LaunchParameterConstants.RepeaterCountParameterId);
+        }
+
+        /// <summary>
+        /// Gets the number of backup nodes.
+        /// </summary>
+        public int? GetBackupCount()
+        {
+            return RawLaunchData.Value<int?>(LaunchParameterConstants.BackupNodeCountParameterId);
         }
 
         /// <summary>

@@ -19,13 +19,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
        public MissionCommandsService(ILogger<MissionCommandsService> logger,
             StatusService statusService,
             MissionsService missionsService,
-            CurrentMissionLaunchConfigurationService currentMissionLaunchConfiguration,
+            CurrentMissionLaunchConfigurationService currentMissionLaunchConfigurationService,
+            MissionParametersDesiredValuesService missionParametersDesiredValuesService,
             LaunchService launchService)
         {
             m_Logger = logger;
             m_StatusService = statusService;
             m_MissionsService = missionsService;
-            m_CurrentMissionLaunchConfiguration = currentMissionLaunchConfiguration;
+            m_CurrentMissionLaunchConfigurationService = currentMissionLaunchConfigurationService;
+            m_MissionParametersDesiredValuesService = missionParametersDesiredValuesService;
             m_LaunchService = launchService;
         }
 
@@ -56,11 +58,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             MissionDetails toSave = new();
             toSave.Identifier = command.Identifier == Guid.Empty ? Guid.NewGuid() : command.Identifier;
             toSave.Description.DeepCopyFrom(command.Description);
-            using (var missionLock = await m_CurrentMissionLaunchConfiguration.LockAsync())
+            using (var missionLock = await m_CurrentMissionLaunchConfigurationService.LockAsync())
             {
                 toSave.LaunchConfiguration = missionLock.Value.DeepClone();
             }
-            // TODO: Copy parameters (when support for parameters will be added)
+            toSave.DesiredMissionParametersValue = m_MissionParametersDesiredValuesService.CloneAll();
             // TODO: Copy panels (when support for panels will be added)
 
             await m_MissionsService.Manager.StoreAsync(toSave);
@@ -89,7 +91,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                     return (HttpStatusCode.BadRequest, $"Cannot find mission {command.Identifier}.");
                 }
 
-                using (var missionLock = await m_CurrentMissionLaunchConfiguration.LockAsync())
+                using (var missionLock = await m_CurrentMissionLaunchConfigurationService.LockAsync())
                 {
                     if (!missionLock.Value.Equals(missionDetails.LaunchConfiguration))
                     {
@@ -97,7 +99,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                         missionLock.Value.SignalChanges();
                     }
                 }
-                // TODO: Copy parameters (when support for parameters will be added)
+                m_MissionParametersDesiredValuesService.SetAll(missionDetails.DesiredMissionParametersValue);
                 // TODO: Copy panels (when support for panels will be added)
             }
 
@@ -120,7 +122,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         readonly ILogger m_Logger;
         readonly StatusService m_StatusService;
         readonly MissionsService m_MissionsService;
-        readonly CurrentMissionLaunchConfigurationService m_CurrentMissionLaunchConfiguration;
+        readonly CurrentMissionLaunchConfigurationService m_CurrentMissionLaunchConfigurationService;
+        readonly MissionParametersDesiredValuesService m_MissionParametersDesiredValuesService;
         readonly LaunchService m_LaunchService;
     }
 }

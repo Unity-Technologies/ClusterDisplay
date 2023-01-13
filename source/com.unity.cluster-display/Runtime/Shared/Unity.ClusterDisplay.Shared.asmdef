@@ -1,0 +1,14 @@
+{
+    "name": "Unity.ClusterDisplay.Runtime.Shared",
+    "rootNamespace": "Unity.ClusterDisplay",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

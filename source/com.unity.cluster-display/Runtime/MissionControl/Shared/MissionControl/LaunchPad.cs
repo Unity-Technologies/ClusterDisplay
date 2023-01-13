@@ -19,6 +19,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public Guid Identifier { get; set; } = Guid.Empty;
 
         /// <summary>
+        /// User displayed name identifying this LaunchPad.
+        /// </summary>
+        public string Name { get; set; } = "";
+
+        /// <summary>
         /// Http endpoint of the LaunchPad.
         /// </summary>
         public Uri Endpoint {
@@ -40,6 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             LaunchPad ret = new();
             ret.Identifier = Identifier;
+            ret.Name = Name;
             ret.Endpoint = Endpoint;
             ret.SuitableFor = SuitableFor.ToList();
             return ret;
@@ -49,6 +55,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             return other != null &&
                 Identifier == other.Identifier &&
+                Name == other.Name &&
                 Endpoint == other.Endpoint &&
                 SuitableFor.SequenceEqual(other.SuitableFor);
         }

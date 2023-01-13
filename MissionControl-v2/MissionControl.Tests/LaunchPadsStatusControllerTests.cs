@@ -606,11 +606,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             while (!m_LaunchPadsStatusCts!.IsCancellationRequested)
             {
                 var update = await m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                    (k_StatusesCollectionName, fromVersion ) }, m_LaunchPadsStatusCts.Token);
-                if (update.ContainsKey(k_StatusesCollectionName))
+                    (IncrementalCollectionsName.LaunchPadsStatus, fromVersion ) }, m_LaunchPadsStatusCts.Token);
+                if (update.ContainsKey(IncrementalCollectionsName.LaunchPadsStatus))
                 {
                     var incrementalUpdate = JsonSerializer.Deserialize<IncrementalCollectionUpdate<LaunchPadStatus>>(
-                        update[k_StatusesCollectionName], Json.SerializerOptions);
+                        update[IncrementalCollectionsName.LaunchPadsStatus], Json.SerializerOptions);
                     if (incrementalUpdate != null)
                     {
                         lock (m_Lock)
@@ -750,7 +750,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             };
         }
 
-        const string k_StatusesCollectionName = "launchPadsStatus";
         static readonly LaunchCatalog.Catalog k_LaunchCatalog = new()
         {
             Payloads = new[] {

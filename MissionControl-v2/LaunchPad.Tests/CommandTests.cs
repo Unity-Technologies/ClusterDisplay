@@ -54,6 +54,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         }
 
         [Test]
+        public void AbortToOver()
+        {
+            var toSerialize = new AbortCommand();
+            toSerialize.AbortToOver = true;
+            var serializedCommand = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
+            var deserialized = JsonSerializer.Deserialize<Command>(serializedCommand, Json.SerializerOptions);
+            Assert.That(deserialized, Is.Not.Null);
+            Assert.That(deserialized, Is.EqualTo(toSerialize));
+        }
+
+        [Test]
         public void Clear()
         {
             var toSerialize = new ClearCommand();

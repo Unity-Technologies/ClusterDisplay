@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay
 
             // Ask Capcom to setup the directive for all the files it needs
             MissionControl.Capcom.MainClass.SetupCatalogBuilderDirective(pathToBuiltProject, catalogDirectives[0],
-                filesFilter);
+                TimeSpan.FromSeconds(missionControlSettings.QuitTimeout), filesFilter);
             catalogDirectives[0].Launchable.LandingTime = TimeSpan.FromSeconds(missionControlSettings.QuitTimeout);
             Debug.Assert(!catalogDirectives[0].ExcludedFiles.Any());
 
@@ -120,7 +120,7 @@ namespace Unity.ClusterDisplay
                 Description = "Role of the node in the cluster.  One node is to be configured as the Emitter while the other ones should be configured as a Repeater.",
                 Constraint = new ListConstraint() { Choices = new[] {
                     LaunchParameterConstants.NodeRoleUnassigned, LaunchParameterConstants.NodeRoleEmitter,
-                    LaunchParameterConstants.NodeRoleRepeater
+                    LaunchParameterConstants.NodeRoleRepeater, LaunchParameterConstants.NodeRoleBackup
                 } },
                 ToBeRevisedByCapcom = true
             });
@@ -128,8 +128,18 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.RepeaterCountParameterId,
                 Type = LaunchParameterType.Integer, DefaultValue = 0,
-                Constraint = new RangeConstraint() { Min = 0, Max = 255 },
+                Constraint = new RangeConstraint() { Min = 0, Max = 254 },
                 ToBeRevisedByCapcom = true, Hidden = true
+            });
+            toFill.GlobalParameters.Add(new()
+            {
+                Id = LaunchParameterConstants.BackupNodeCountParameterId,
+                Type = LaunchParameterType.Integer, DefaultValue = 0,
+                Constraint = new RangeConstraint() { Min = 0, Max = 254 },
+                Name = "Backup node count",
+                Description = $"How many nodes with a Node role of \"{LaunchParameterConstants.NodeRoleUnassigned}\" " +
+                    $"will have the role of \"{LaunchParameterConstants.NodeRoleBackup}\"?",
+                ToBeRevisedByCapcom = true
             });
             toFill.GlobalParameters.Add(new()
             {

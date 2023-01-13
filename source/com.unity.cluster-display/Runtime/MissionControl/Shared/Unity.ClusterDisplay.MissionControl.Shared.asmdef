@@ -2,7 +2,7 @@
     "name": "Unity.ClusterDisplay.MissionControl.Shared",
     "rootNamespace": "Unity.ClusterDisplay.MissionControl",
     "references": [
-        ""
+        "Unity.ClusterDisplay.Runtime.Shared"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

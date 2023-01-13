@@ -33,7 +33,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             PayloadsService payloadsService,
             FileBlobsService fileBlobsService,
             CapcomUplinkService capcomUplinkService)
-            : base(applicationLifetime, catalogService, new LaunchConfiguration(), "currentMission/launchConfiguration")
+            : base(applicationLifetime, catalogService, new LaunchConfiguration(),
+                  ObservableObjectsName.CurrentMissionLaunchConfiguration)
         {
             m_Logger = logger;
             m_ConfigService = configService;
@@ -51,11 +52,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
 
             applicationLifetime.ApplicationStopping.Register(StopAtExit);
 
-            using (var lockedLaunchConfiguration = LockAsync().Result)
-            {
-                lockedLaunchConfiguration.Value.ObjectChanged += LaunchConfigurationChanged;
-                LaunchConfigurationChanged(lockedLaunchConfiguration.Value);
-            }
+            using var lockedLaunchConfiguration = LockAsync().Result;
+            lockedLaunchConfiguration.Value.ObjectChanged += LaunchConfigurationChanged;
+            LaunchConfigurationChanged(lockedLaunchConfiguration.Value);
         }
 
         /// <summary>

@@ -193,5 +193,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             streamWriter.Flush();
             return ret;
         }
+
+        /// <summary>
+        /// Parse the given json string to a JsonElement.
+        /// </summary>
+        /// <param name="json">The json string.</param>
+        public static JsonElement ParseJsonToElement(string json)
+        {
+            var document = JsonDocument.Parse(json);
+            return document.RootElement.Clone();
+        }
     }
 }

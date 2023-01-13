@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -30,10 +31,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             statusB.IsDefined = true;
             Assert.That(statusA, Is.EqualTo(statusB));
 
-            statusA.UpdateError = "Some error...";
-            statusB.UpdateError = "Some other error...";
+            statusA.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueA" } };
+            statusB.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueB" } };
             Assert.That(statusA, Is.Not.EqualTo(statusB));
-            statusB.UpdateError = "Some error...";
+            statusB.DynamicEntries = new[] { new LaunchPadReportDynamicEntry() { Name = "ValueA" } };
             Assert.That(statusA, Is.EqualTo(statusB));
         }
 
@@ -43,7 +44,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             LaunchPadStatus toSerialize = new(Guid.NewGuid());
             toSerialize.State = LaunchPadState.Launched;
             toSerialize.IsDefined = true;
-            toSerialize.UpdateError = "Something is not working...";
+            toSerialize.DynamicEntries = new LaunchPadReportDynamicEntry[] { new () { Name = "Value1" }, new () { Name = "Value2" } };
 
             var jsonString = JsonConvert.SerializeObject(toSerialize, Json.SerializerOptions);
             var deserialized = JsonConvert.DeserializeObject<LaunchPadStatus>(jsonString, Json.SerializerOptions);
@@ -54,17 +55,25 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         [Test]
         public void Deserialize()
         {
-            var jsonString = ("{'id':'81cfd990-4546-4b31-86c8-d6c1b74448b0','isDefined':true," +
-                "'updateError':'Something','version':'1.0.0.0','startTime':'2022-12-20T09:02:06.4258628-05:00'," +
-                "'state':'over','pendingRestart':false,'lastChanged':'2022-12-21T07:31:44.7122426-05:00'," +
-                "'statusNumber':76}").Replace('\'', '"');
+            var jsonString = ("{'id':'59500aca-62cc-440f-8e27-00e4297f0db1','isDefined':true,'updateError':''," +
+                "'dynamicEntries':[{'name':'Role','value':'Emitter'},{'name':'Node id','value':0}," +
+                "{'name':'Render node id','value':0}],'version':'1.0.0.0'," +
+                "'startTime':'2023-01-16T11:35:04.654262-05:00','state':'launched','pendingRestart':false," +
+                "'lastChanged':'2023-01-16T15:18:36.0126009-05:00','statusNumber':151}")
+                .Replace('\'', '"');
             var deserialized = JsonConvert.DeserializeObject<LaunchPadStatus>(jsonString, Json.SerializerOptions);
 
             Assert.That(deserialized, Is.Not.Null);
-            Assert.That(deserialized.Id, Is.EqualTo(Guid.Parse("81cfd990-4546-4b31-86c8-d6c1b74448b0")));
-            Assert.That(deserialized.State, Is.EqualTo(LaunchPadState.Over));
+            Assert.That(deserialized.Id, Is.EqualTo(Guid.Parse("59500aca-62cc-440f-8e27-00e4297f0db1")));
+            Assert.That(deserialized.State, Is.EqualTo(LaunchPadState.Launched));
             Assert.That(deserialized.IsDefined, Is.True);
-            Assert.That(deserialized.UpdateError, Is.EqualTo("Something"));
+            Assert.That(deserialized.DynamicEntries.Count(), Is.EqualTo(3));
+            Assert.That(deserialized.DynamicEntries.ElementAt(0).Name, Is.EqualTo("Role"));
+            Assert.That(deserialized.DynamicEntries.ElementAt(0).Value, Is.EqualTo("Emitter"));
+            Assert.That(deserialized.DynamicEntries.ElementAt(1).Name, Is.EqualTo("Node id"));
+            Assert.That(deserialized.DynamicEntries.ElementAt(1).Value, Is.EqualTo(0));
+            Assert.That(deserialized.DynamicEntries.ElementAt(2).Name, Is.EqualTo("Render node id"));
+            Assert.That(deserialized.DynamicEntries.ElementAt(2).Value, Is.EqualTo(0));
         }
 
         [Test]
@@ -81,7 +90,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             LaunchPadStatus toClone = new(Guid.NewGuid());
             toClone.State = LaunchPadState.Launched;
             toClone.IsDefined = true;
-            toClone.UpdateError = "Something is not working...";
+            toClone.DynamicEntries = new LaunchPadReportDynamicEntry[] { new () { Name = "Value1" }, new () { Name = "Value2" } };
             var cloned = toClone.DeepClone();
             Assert.That(cloned, Is.EqualTo(toClone));
         }

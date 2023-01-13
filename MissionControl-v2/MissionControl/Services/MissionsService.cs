@@ -25,8 +25,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_PersistPath = Path.Combine(configService.PersistPath, "missions.json");
             Load();
 
-            incrementalCollectionService.Register("missions", RegisterForChangesInCollection,
-                GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register(IncrementalCollectionsName.Missions,
+                RegisterForChangesInCollection, GetIncrementalUpdatesAsync);
         }
 
         /// <summary>

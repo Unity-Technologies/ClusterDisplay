@@ -27,5 +27,8 @@ builder.Services.AddMissionsService();
 builder.Services.AddMissionCommandsService();
 builder.Services.AddLaunchPadsStatusService();
 builder.Services.AddLaunchPadsHealthService();
+builder.Services.AddMissionParametersService();
+builder.Services.AddMissionParametersDesiredValuesService();
+builder.Services.AddMissionParametersEffectiveValuesService();
 
 await builder.Build().RunAsync();

@@ -253,6 +253,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
         // ReSharper disable once UnusedParameter.Local
         async Task<IActionResult> AbortAsync(AbortCommand command)
         {
+            State finalState = command.AbortToOver ? State.Over : State.Idle;
             try
             {
                 Task? toWaitOn = null;
@@ -261,7 +262,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                     if (m_PreparingTaskTcs == null && m_PreparingTask == null && m_LaunchedProcess == null)
                     {
                         Debug.Assert(m_StatusService.State is State.WaitingForLaunch or State.Idle or State.Over);
-                        m_StatusService.State = State.Idle;
+                        m_StatusService.State = finalState;
                     }
                     else
                     {
@@ -269,7 +270,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                         toWaitOn = m_PreparingTask ?? m_ProcessOverTask;
                         if (toWaitOn == null)
                         {
-                            m_StatusService.State = State.Idle;
+                            m_StatusService.State = finalState;
                         }
                         m_ProcessingAbort = true;
                         m_LaunchedProcess?.Kill();
@@ -281,7 +282,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad.Services
                     await toWaitOn;
                     lock (m_Lock)
                     {
-                        m_StatusService.State = State.Idle;
+                        m_StatusService.State = finalState;
                         m_ProcessingAbort = false;
                     }
                 }

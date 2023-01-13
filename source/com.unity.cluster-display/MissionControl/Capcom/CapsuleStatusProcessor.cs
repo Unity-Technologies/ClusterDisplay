@@ -24,18 +24,19 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             // Relay the change to MissionControl
             try
             {
-                var nodeRoleString = statusMessage.Value.NodeRole switch
-                {
-                    0 => "Unassigned",
-                    1 => "Emitter",
-                    2 => "Repeater",
-                    _ => throw new InvalidOperationException("Invalid NodeRole value")
-                };
-
                 var entries = new[] {
-                    new LaunchPadReportDynamicEntry() {Name = "Role", Value = nodeRoleString},
-                    new LaunchPadReportDynamicEntry() {Name = "Node id", Value = (int)statusMessage.Value.NodeId},
-                    new LaunchPadReportDynamicEntry() {Name = "Render node id", Value = (int)statusMessage.Value.RenderNodeId}
+                    new LaunchPadReportDynamicEntry() {
+                        Name = LaunchPadReportDynamicEntryConstants.StatusNodeRole,
+                        Value = statusMessage.Value.NodeRole.ToString()
+                    },
+                    new LaunchPadReportDynamicEntry() {
+                        Name = LaunchPadReportDynamicEntryConstants.StatusNodeId,
+                        Value = (int)statusMessage.Value.NodeId
+                    },
+                    new LaunchPadReportDynamicEntry() {
+                        Name = LaunchPadReportDynamicEntryConstants.StatusRenderNodeId,
+                        Value = (int)statusMessage.Value.RenderNodeId
+                    }
                 };
                 var putRet = mirror.MissionControlHttpClient.PutAsJsonAsync(
                     $"api/v1/launchPadsStatus/{launchpadId}/dynamicEntries", entries).Result;

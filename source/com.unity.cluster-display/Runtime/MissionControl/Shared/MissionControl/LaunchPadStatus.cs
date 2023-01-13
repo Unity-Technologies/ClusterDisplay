@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
@@ -28,13 +30,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Is the status information contained in this object valid?
         /// </summary>
-        /// <remarks>If false, every other properties (except <see cref="UpdateError"/> should be ignored).</remarks>
+        /// <remarks>If false, every other properties (except UpdateError should be ignored).</remarks>
         public bool IsDefined { get; set; }
 
         /// <summary>
-        /// Description of the error fetching a status update from the launchpad.
+        /// Additional status information that depends on the Launchable type running.
         /// </summary>
-        public string UpdateError { get; set; } = "";
+        public IEnumerable<LaunchPadReportDynamicEntry> DynamicEntries { get; set; } =
+            Enumerable.Empty<LaunchPadReportDynamicEntry>();
 
         /// <inheritdoc/>
         public void DeepCopyFrom(IIncrementalCollectionObject fromObject)
@@ -42,7 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var from = (LaunchPadStatus)fromObject;
             base.DeepCopyFrom(from);
             IsDefined = from.IsDefined;
-            UpdateError = from.UpdateError;
+            DynamicEntries = from.DynamicEntries.Select(de => de.DeepClone()).ToList();
         }
 
         public bool Equals(LaunchPadStatus other)
@@ -51,7 +54,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 base.Equals(other) &&
                 Id == other.Id &&
                 IsDefined == other.IsDefined &&
-                UpdateError == other.UpdateError;
+                DynamicEntries.SequenceEqual(other.DynamicEntries);
         }
     }
 }

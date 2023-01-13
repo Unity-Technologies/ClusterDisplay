@@ -32,10 +32,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_MissionControlStub.Stop();
         }
 
-        static readonly ValueTuple<byte, string>[] k_Roles = {(0, "Unassigned"), (1, "Emitter"), (2, "Repeater")};
+        static readonly NodeRole[] k_Roles = {NodeRole.Unassigned, NodeRole.Emitter, NodeRole.Repeater};
 
         [UnityTest]
-        public IEnumerator Working([ValueSource(nameof(k_Roles))] ValueTuple<byte, string> role)
+        public IEnumerator Working([ValueSource(nameof(k_Roles))] NodeRole role)
         {
             Guid launchPadId = Guid.NewGuid();
             string dynamicEntriesJson = "";
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             var bytesBuffer = new byte[Marshal.SizeOf<CapsuleStatusMessage>()];
             MemoryStream memoryStream = new();
-            CapsuleStatusMessage capsuleStatusMessage = new() {NodeRole = role.Item1, NodeId = 28, RenderNodeId = 42};
+            CapsuleStatusMessage capsuleStatusMessage = new() {NodeRole = role, NodeId = 28, RenderNodeId = 42};
             memoryStream.WriteStructAsync(capsuleStatusMessage, bytesBuffer);
             memoryStream.Position = 0;
 
@@ -77,7 +77,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Assert.That(entries, Is.Not.Null);
             Assert.That(entries.Length, Is.EqualTo(3));
             Assert.That(entries[0].Name, Is.EqualTo("Role"));
-            Assert.That(entries[0].Value, Is.EqualTo(role.Item2));
+            Assert.That(entries[0].Value, Is.EqualTo(role.ToString()));
             Assert.That(entries[1].Name, Is.EqualTo("Node id"));
             Assert.That(entries[1].Value, Is.EqualTo(28));
             Assert.That(entries[2].Name, Is.EqualTo("Render node id"));

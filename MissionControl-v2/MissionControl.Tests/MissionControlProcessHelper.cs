@@ -456,6 +456,112 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             return ret.StatusCode;
         }
 
+        public async Task PutMissionParameter(MissionParameter value, HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.PutAsJsonAsync("currentMission/parameters", value, Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task<MissionParameter[]> GetMissionParameters()
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameter[]>($"currentMission/parameters",
+                Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<MissionParameter> GetMissionParameter(Guid id)
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameter>($"currentMission/parameters/{id}",
+                Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<HttpStatusCode> GetMissionParameterStatusCode(Guid id)
+        {
+            var ret = await HttpClient.GetAsync($"currentMission/parameters/{id}");
+            return ret.StatusCode;
+        }
+
+        public async Task DeleteMissionParameter(Guid id, HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.DeleteAsync($"currentMission/parameters/{id}");
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task PutDesiredParameterValue(MissionParameterValue value,
+            HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.PutAsJsonAsync("currentMission/parametersDesiredValues", value,
+                Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task<MissionParameterValue[]> GetDesiredParametersValues()
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameterValue[]>(
+                $"currentMission/parametersDesiredValues", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<MissionParameterValue> GetDesiredParameterValue(Guid id)
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameterValue>(
+                $"currentMission/parametersDesiredValues/{id}", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<HttpStatusCode> GetDesiredParameterValueStatusCode(Guid id)
+        {
+            var ret = await HttpClient.GetAsync($"currentMission/parametersDesiredValues/{id}");
+            return ret.StatusCode;
+        }
+
+        public async Task DeleteDesiredParameterValue(Guid id, HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.DeleteAsync($"currentMission/parametersDesiredValues/{id}");
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task PutEffectiveParameterValue(MissionParameterValue value,
+            HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.PutAsJsonAsync("currentMission/parametersEffectiveValues", value,
+                Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
+        public async Task<MissionParameterValue[]> GetEffectiveParametersValues()
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameterValue[]>(
+                $"currentMission/parametersEffectiveValues", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<MissionParameterValue> GetEffectiveParameterValue(Guid id)
+        {
+            var ret = await HttpClient.GetFromJsonAsync<MissionParameterValue>(
+                $"currentMission/parametersEffectiveValues/{id}", Json.SerializerOptions);
+            Assert.That(ret, Is.Not.Null);
+            return ret!;
+        }
+
+        public async Task<HttpStatusCode> GetEffectiveParameterValueStatusCode(Guid id)
+        {
+            var ret = await HttpClient.GetAsync($"currentMission/parametersEffectiveValues/{id}");
+            return ret.StatusCode;
+        }
+
+        public async Task DeleteEffectiveParameterValue(Guid id, HttpStatusCode expectedRet = HttpStatusCode.OK)
+        {
+            var ret = await HttpClient.DeleteAsync($"currentMission/parametersEffectiveValues/{id}");
+            Assert.That(ret.StatusCode, Is.EqualTo(expectedRet));
+        }
+
         /// <summary>
         /// Force the state of MissionControl the specified value until the returned <see cref="IDisposable"/> is
         /// disposed of.

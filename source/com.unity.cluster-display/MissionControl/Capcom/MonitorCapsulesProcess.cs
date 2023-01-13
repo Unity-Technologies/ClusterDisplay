@@ -69,13 +69,13 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Dictionary<Guid, CapsuleConnection> connections = new();
             // Task to wait on for something to happen
             List<Task> waitOnTasks = new();
+            Dictionary<Guid, Task<CapsuleConnection>> connectionsBeingCreated = new();
 
             while (!m_ShutdownToken.IsCancellationRequested)
             {
                 waitOnTasks.Clear();
 
                 // Update the connections
-                Task tryAgainShortly = null;
                 lock (m_Lock)
                 {
                     waitOnTasks.Add(m_ScanConnectionsCv.SignaledTask);
@@ -87,44 +87,68 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                         {
                             connectionPair.Value.Dispose();
                             connections.Remove(connectionPair.Key);
+                            connectionsBeingCreated.Remove(connectionPair.Key);
                         }
                     }
 
                     // Ensure we have a connection to the capsule of every active launchpads
+                    Dictionary<Guid, Task<CapsuleConnection>> newConnectionsBeingCreated = new();
                     foreach (var launchPad in m_LaunchPads.Values)
                     {
                         if (!connections.TryGetValue(launchPad.Definition.Identifier, out var connection))
                         {
-                            try
+                            // Any previous attempt to create a connection?
+                            TimeSpan connectDelay = TimeSpan.Zero;
+                            if (connectionsBeingCreated.TryGetValue(launchPad.Definition.Identifier, out var connectTask))
                             {
-                                connection = new CapsuleConnection(launchPad, m_ShutdownToken);
-                                connections.Add(launchPad.Definition.Identifier, connection);
+                                if (connectTask.IsCompletedSuccessfully)
+                                {
+                                    connection = connectTask.Result;
+                                    connections.Add(launchPad.Definition.Identifier, connection);
+                                }
+                                else if (connectTask.IsCompleted)
+                                {
+                                    // Completed, but not successfully, so there was an error, let's try again shortly.
+                                    connectDelay = TimeSpan.FromSeconds(2);
+                                }
+                                else
+                                {
+                                    // Still going on, simply add it to the new dictionary of connection being
+                                    // established.
+                                    newConnectionsBeingCreated[launchPad.Definition.Identifier] = connectTask;
+                                    waitOnTasks.Add(connectTask);
+                                    continue;
+                                }
                             }
-                            catch (Exception)
+
+                            if (connection == null &&
+                                !newConnectionsBeingCreated.ContainsKey(launchPad.Definition.Identifier))
                             {
-                                // There was problem establishing the connection to that capsule.  Maybe it is not fully
-                                // started yet, or the opposite, shutting down.  Simply train again shortly.
-                                connection?.Dispose();
-                                tryAgainShortly ??= Task.Delay(TimeSpan.FromSeconds(2), m_ShutdownToken);
-                                continue;
+                                // Still don't have a connection nor any task trying to establish it.  So create a new
+                                // task that will asynchronously try to connect to the capsule.
+                                var newConnectionTask = Task.Run(async () =>
+                                {
+                                    await Task.Delay(connectDelay, m_ShutdownToken);
+                                    return new CapsuleConnection(launchPad, m_ShutdownToken);
+                                }, m_ShutdownToken);
+
+                                newConnectionsBeingCreated[launchPad.Definition.Identifier] = newConnectionTask;
+                                waitOnTasks.Add(newConnectionTask);
                             }
                         }
 
-                        if (!connection.ProcessingScheduled)
+                        if (connection is {ProcessingScheduled: false})
                         {
                             waitOnTasks.Add(connection.WaitForMessageTask);
                         }
                     }
 
+                    connectionsBeingCreated = newConnectionsBeingCreated;
                     ConnectionCount = connections.Count;
                 }
 
                 // Wait for something new to do.
-                if (tryAgainShortly != null)
-                {
-                    waitOnTasks.Add(tryAgainShortly);
-                }
-                await Task.WhenAny(waitOnTasks);
+                await Task.WhenAny(waitOnTasks).ConfigureAwait(false);
 
                 // Try to process every received messages
                 foreach (var connectionPair in connections.ToList())

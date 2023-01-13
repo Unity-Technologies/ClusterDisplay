@@ -183,7 +183,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Setup initial get, should block since there is never been anything in the asset collection yet
             var blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_ComplexesCollectionName, 1 ) });
+                (IncrementalCollectionsName.Complexes, 1 ) });
             await Task.Delay(100); // So that it has the time to complete if blocking would fail
             Assert.That(blockingGetTask.IsCompleted, Is.False);
 
@@ -195,14 +195,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
             var collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_ComplexesCollectionName);
+                IncrementalCollectionsName.Complexes);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(2));
 
             // Start another get that should get stuck until we perform the delete
             blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_ComplexesCollectionName, collectionUpdate.NextUpdate ) });
+                (IncrementalCollectionsName.Complexes, collectionUpdate.NextUpdate ) });
             await Task.Delay(100); // So that it has the time to complete if blocking would fail
             Assert.That(blockingGetTask.IsCompleted, Is.False);
 
@@ -214,7 +214,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
             collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_ComplexesCollectionName);
+                IncrementalCollectionsName.Complexes);
             Assert.That(collectionUpdate.UpdatedObjects, Is.Empty);
             Assert.That(collectionUpdate.RemovedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(3));
@@ -285,8 +285,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             m_TestTempFolders.Add(folderPath);
             return folderPath;
         }
-
-        const string k_ComplexesCollectionName = "complexes";
 
         MissionControlProcessHelper m_ProcessHelper = new();
         List<string> m_TestTempFolders = new();

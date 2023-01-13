@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         public void SetUp()
         {
             m_MissionControlStub.Start();
-            m_Application = new (MissionControlStub.HttpListenerEndpoint);
+            m_Application = new (MissionControlStub.HttpListenerEndpoint, new());
 
             m_MonitorCapsulesProcessStop = new();
             m_MonitorCapsulesProcess = new(m_MonitorCapsulesProcessStop.Token, m_Application);

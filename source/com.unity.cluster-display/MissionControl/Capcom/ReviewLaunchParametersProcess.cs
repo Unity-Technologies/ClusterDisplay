@@ -26,17 +26,17 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         public void Process(MissionControlMirror missionControlMirror)
         {
             // As anything that might interest us changed?
-            if (missionControlMirror.StatusNextVersion == m_LastStateNextVersion &&
-                missionControlMirror.LaunchConfigurationNextVersion == m_LastLaunchConfigurationNextVersion &&
-                missionControlMirror.ComplexesNextVersion == m_LastComplexesNextVersion &&
-                missionControlMirror.LaunchParametersForReviewNextVersion == m_LastLaunchParametersForReviewNextVersion)
+            if (m_StatusLastVersion >= missionControlMirror.StatusVersionNumber &&
+                m_LaunchConfigurationLastVersion >= missionControlMirror.LaunchConfigurationVersionNumber &&
+                m_ComplexesLastVersion >= missionControlMirror.Complexes.VersionNumber &&
+                m_LaunchParametersForReviewLastVersion >= missionControlMirror.LaunchParametersForReview.VersionNumber)
             {
                 return;
             }
-            m_LastStateNextVersion = missionControlMirror.StatusNextVersion;
-            m_LastLaunchConfigurationNextVersion = missionControlMirror.LaunchConfigurationNextVersion;
-            m_LastComplexesNextVersion = missionControlMirror.ComplexesNextVersion;
-            m_LastLaunchParametersForReviewNextVersion = missionControlMirror.LaunchParametersForReviewNextVersion;
+            m_StatusLastVersion = missionControlMirror.StatusVersionNumber;
+            m_LaunchConfigurationLastVersion = missionControlMirror.LaunchConfigurationVersionNumber;
+            m_ComplexesLastVersion = missionControlMirror.Complexes.VersionNumber;
+            m_LaunchParametersForReviewLastVersion = missionControlMirror.LaunchParametersForReview.VersionNumber;
 
             // Changes might happen, but for as long as we are not launching again, keep the LaunchConfiguration we
             // already computed.
@@ -71,6 +71,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             ReviewNodeIds(missionControlMirror);
             ReviewNodeRoles(missionControlMirror);
             ComputeRepeaterCount(missionControlMirror);
+            ComputeBackupNodeCount(missionControlMirror);
             ComputeCapsulePorts(missionControlMirror);
         }
 
@@ -114,6 +115,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     // else this is launchpad is not supporting anything managed by this capcom, skip it.
                 }
             }
+
+            ++missionControlMirror.LaunchPadsInformationVersion;
         }
 
         /// <summary>
@@ -231,37 +234,45 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// <param name="missionControlMirror">Data mirrored from MissionControl.</param>
         void ReviewNodeRoles(MissionControlMirror missionControlMirror)
         {
-            // Make a first pass to find the node that was manually marked as emitter and the lowest NodeId.
-            LaunchPadInformation emitterNode = null;
-            int lowestNodeId = int.MaxValue;
-            foreach (var launchPadInformation in missionControlMirror.LaunchPadsInformation)
+            var orderedLaunchPads = missionControlMirror.LaunchPadsInformation.OrderBy(lpi => lpi.NodeId).ToList();
+            Dictionary<int, string> reviewComments = new();
+
+            // Let's assign NodeRole straight from parameters to review without changing anything
+            foreach (var launchPad in orderedLaunchPads)
             {
-                var launchPadId = launchPadInformation.Definition.Identifier;
+                launchPad.StartRole = NodeRole.Unassigned;
+
                 var nodeRoleForReview = missionControlMirror.LaunchParametersForReview.Values
-                    .FirstOrDefault(lpfr => lpfr.LaunchPadId == launchPadId &&
+                    .FirstOrDefault(lpfr => lpfr.LaunchPadId == launchPad.Definition.Identifier &&
                         lpfr.Value.Id == LaunchParameterConstants.NodeRoleParameterId);
                 if (nodeRoleForReview == null)
                 {
+                    // This is not supposed to happen, MissionControl should have created a NodeRole
+                    // LaunchParameterForReview for every launch pad...  Let's just skip it as we cannot do anything to
+                    // fix this problem...
+                    // TODO: Log
                     continue;
                 }
 
-                if (nodeRoleForReview.Value.Value is LaunchParameterConstants.NodeRoleEmitter && emitterNode == null)
+                if (nodeRoleForReview.Value.Value is string value)
                 {
-                    emitterNode = launchPadInformation;
-                }
-
-                if (launchPadInformation.NodeId >= 0)
-                {
-                    lowestNodeId = Math.Min(launchPadInformation.NodeId, lowestNodeId);
+                    if (Enum.TryParse<NodeRole>(value, out var role))
+                    {
+                        launchPad.StartRole = role;
+                    }
                 }
             }
 
-            // Ok, now lets review each node role and update parameters that need updating.
-            foreach (var launchPadInformation in missionControlMirror.LaunchPadsInformation)
+            // Then let's do a few different passes to correctly assign node roles
+            AssignEmitterNodes(orderedLaunchPads, reviewComments);
+            AssignBackupNodes(orderedLaunchPads, reviewComments, missionControlMirror);
+            UnassignedToRepeaters(orderedLaunchPads);
+
+            // Lets publish review for NodeRoleParameterId for all the nodes.
+            foreach (var launchPad in orderedLaunchPads)
             {
-                var launchPadId = launchPadInformation.Definition.Identifier;
                 var nodeRoleForReview = missionControlMirror.LaunchParametersForReview.Values
-                    .FirstOrDefault(lpfr => lpfr.LaunchPadId == launchPadId &&
+                    .FirstOrDefault(lpfr => lpfr.LaunchPadId == launchPad.Definition.Identifier &&
                         lpfr.Value.Id == LaunchParameterConstants.NodeRoleParameterId);
                 if (nodeRoleForReview == null)
                 {
@@ -273,53 +284,160 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 }
                 LaunchParameterForReview reviewedNodeRole = nodeRoleForReview.DeepClone();
 
-                // Deal with emitter
-                if (emitterNode == null)
+                reviewedNodeRole.Value.Value = launchPad.StartRole.ToString();
+                if (reviewComments.TryGetValue(launchPad.NodeId, out var reviewComment))
                 {
-                    // There was not manually specified emitter, assign the role to the lowest node id.
-                    if (launchPadInformation.NodeId == lowestNodeId)
-                    {
-                        emitterNode = launchPadInformation;
-                        if (reviewedNodeRole.Value.Value is not LaunchParameterConstants.NodeRoleUnassigned)
-                        {
-                            reviewedNodeRole.ReviewComments = "Changed to emitter as there was no emitter assigned " +
-                                "to any node.";
-                        }
-                        reviewedNodeRole.Value.Value = LaunchParameterConstants.NodeRoleEmitter;
-                    }
+                    reviewedNodeRole.ReviewComments = reviewComment;
                 }
-                else
-                {
-                    // Ensure there is only one emitter
-                    if (reviewedNodeRole.Value.Value is LaunchParameterConstants.NodeRoleEmitter &&
-                        !ReferenceEquals(launchPadInformation, emitterNode))
-                    {
-                        reviewedNodeRole.ReviewComments = "There can only be one emitter, role changed to repeater.";
-                        reviewedNodeRole.Value.Value = LaunchParameterConstants.NodeRoleRepeater;
-                    }
-                }
-
-                // Any remaining node should be a repeater
-                if (launchPadInformation.NodeId >= 0 &&
-                    reviewedNodeRole.Value.Value is LaunchParameterConstants.NodeRoleUnassigned)
-                {
-                    reviewedNodeRole.Value.Value = LaunchParameterConstants.NodeRoleRepeater;
-                }
-
-                // Conclude the review
-                launchPadInformation.NodeRole = (string)reviewedNodeRole.Value.Value;
                 PublishReview(reviewedNodeRole);
             }
         }
 
         /// <summary>
-        /// Review NodeRole LaunchParameter for the different launchpads.
+        /// Ensure we have one launchpad that is assigned the emitter node role.
+        /// </summary>
+        /// <param name="orderedLaunchPads">Ordered <see cref="LaunchPadInformation"/> list.</param>
+        /// <param name="reviewComments">Dictionary to which we add review comments if a change deserve a comment.
+        /// </param>
+        static void AssignEmitterNodes(List<LaunchPadInformation> orderedLaunchPads,
+            Dictionary<int, string> reviewComments)
+        {
+            int launchpadIndex;
+            bool emitterFound = false;
+            for (launchpadIndex = 0; launchpadIndex < orderedLaunchPads.Count; ++launchpadIndex)
+            {
+                var launchPad = orderedLaunchPads[launchpadIndex];
+                if (launchPad.StartRole == NodeRole.Emitter)
+                {
+                    emitterFound = true;
+                    break;
+                }
+            }
+            for (++launchpadIndex; launchpadIndex < orderedLaunchPads.Count; ++launchpadIndex)
+            {
+                var launchPad = orderedLaunchPads[launchpadIndex];
+                if (launchPad.StartRole == NodeRole.Emitter)
+                {
+                    launchPad.StartRole = NodeRole.Unassigned;
+                    reviewComments[launchPad.NodeId] = $"There can only be one emitter, role changed to unassigned " +
+                        $"(which will then be reassigned to another role).";
+                }
+            }
+            foreach (var nodeRoleForEmitter in k_SortedNodeRolesForEmitter)
+            {
+                if (emitterFound)
+                {
+                    break;
+                }
+                foreach (var launchPad in orderedLaunchPads)
+                {
+                    if (launchPad.StartRole == nodeRoleForEmitter)
+                    {
+                        launchPad.StartRole = NodeRole.Emitter;
+                        if (nodeRoleForEmitter != NodeRole.Unassigned)
+                        {
+                            reviewComments[launchPad.NodeId] = "LaunchPad was assigned the role of emitter (since no " +
+                                "node had the role).";
+                        }
+                        emitterFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deal with assignation of backup nodes.
+        /// </summary>
+        /// <param name="orderedLaunchPads">Ordered <see cref="LaunchPadInformation"/> list.</param>
+        /// <param name="reviewComments">Dictionary to which we add review comments if a change deserve a comment.
+        /// </param>
+        /// <param name="missionControlMirror">Data mirrored from MissionControl.</param>
+        /// <remarks>Nodes manually assigned as backup are kept as backup and other nodes will be transformed to
+        /// backup nodes if the count is &lt; the LaunchParameterConstants.BackupNodeCountParameterId parameter.
+        /// </remarks>
+        static void AssignBackupNodes(List<LaunchPadInformation> orderedLaunchPads,
+            Dictionary<int, string> reviewComments, MissionControlMirror missionControlMirror)
+        {
+            // Find how many backup nodes do we need (should be the same for all launchpads since
+            // LaunchParameterConstants.BackupNodeCountParameterId is a global parameter).
+            var backupNodeCountForReview = missionControlMirror.LaunchParametersForReview.Values
+                .FirstOrDefault(lpfr => lpfr.LaunchPadId == orderedLaunchPads.First().Definition.Identifier &&
+                    lpfr.Value.Id == LaunchParameterConstants.BackupNodeCountParameterId);
+            if (backupNodeCountForReview == null)
+            {
+                // This is not supposed to happen, MissionControl should have created a NodeRole
+                // LaunchParameterForReview for every launch pad...  Let's just skip it as we cannot do anything to
+                // fix this problem...
+                // TODO: Log
+                return;
+            }
+
+            if (backupNodeCountForReview.Value.Value is not int requestedBackupNodeCount)
+            {
+                // Shouldn't be the case either...
+                // TODO: Log
+                return;
+            }
+
+            // We will want to start assigning backup nodes to the node ids that are the highest first, so reverse the
+            // order of orderedLaunchPads.
+            List<LaunchPadInformation> reversedLaunchpads = new(orderedLaunchPads);
+            reversedLaunchpads.Reverse();
+
+            // Go through the launchpad and change role until we have enough backup nodes.
+            int currentBackupNodeCount =
+                orderedLaunchPads.Count(lpi => lpi.StartRole == NodeRole.Backup);
+            foreach (var nodeRoleForEmitter in k_SortedNodeRolesForBackup)
+            {
+                if (currentBackupNodeCount >= requestedBackupNodeCount)
+                {
+                    break;
+                }
+                foreach (var launchPad in reversedLaunchpads)
+                {
+                    if (launchPad.StartRole == nodeRoleForEmitter)
+                    {
+                        launchPad.StartRole = NodeRole.Backup;
+                        if (nodeRoleForEmitter != NodeRole.Unassigned)
+                        {
+                            reviewComments[launchPad.NodeId] = $"LaunchPad was assigned the role of backup (to reach " +
+                                "the requested number of backup nodes).";
+                        }
+                        ++currentBackupNodeCount;
+
+                        if (currentBackupNodeCount >= requestedBackupNodeCount)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Transform launchpads with the unassigned node role to repeaters.
+        /// </summary>
+        /// <param name="orderedLaunchPads">Ordered <see cref="LaunchPadInformation"/> list.</param>
+        static void UnassignedToRepeaters(List<LaunchPadInformation> orderedLaunchPads)
+        {
+            foreach (var launchPad in orderedLaunchPads)
+            {
+                if (launchPad.StartRole == NodeRole.Unassigned)
+                {
+                    launchPad.StartRole = NodeRole.Repeater;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Review RepeaterCount LaunchParameter for the different launchpads.
         /// </summary>
         /// <param name="missionControlMirror">Data mirrored from MissionControl.</param>
         void ComputeRepeaterCount(MissionControlMirror missionControlMirror)
         {
             int repeaterCount = missionControlMirror.LaunchPadsInformation.Count(
-                lpi => lpi.NodeRole == LaunchParameterConstants.NodeRoleRepeater);
+                lpi => lpi.StartRole == NodeRole.Repeater);
 
             foreach (var launchPadInformation in missionControlMirror.LaunchPadsInformation)
             {
@@ -338,6 +456,36 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
                 LaunchParameterForReview reviewedRepeaterCount = repeaterCountForReview.DeepClone();
                 reviewedRepeaterCount.Value.Value = repeaterCount;
+                PublishReview(reviewedRepeaterCount);
+            }
+        }
+
+        /// <summary>
+        /// Review BackupNodeCount LaunchParameter for the different launchpads.
+        /// </summary>
+        /// <param name="missionControlMirror">Data mirrored from MissionControl.</param>
+        void ComputeBackupNodeCount(MissionControlMirror missionControlMirror)
+        {
+            int backupNodeCount = missionControlMirror.LaunchPadsInformation.Count(
+                lpi => lpi.StartRole == NodeRole.Backup);
+
+            foreach (var launchPadInformation in missionControlMirror.LaunchPadsInformation)
+            {
+                var launchPadId = launchPadInformation.Definition.Identifier;
+                var backupNodeCountForReview = missionControlMirror.LaunchParametersForReview.Values
+                    .FirstOrDefault(lpfr => lpfr.LaunchPadId == launchPadId &&
+                        lpfr.Value.Id == LaunchParameterConstants.BackupNodeCountParameterId);
+                if (backupNodeCountForReview == null)
+                {
+                    // This is not supposed to happen, MissionControl should have created a RepeaterCount
+                    // LaunchParameterForReview for every launch pad...  Let's just skip it as we cannot do anything to
+                    // fix this problem...
+                    // TODO: Log
+                    continue;
+                }
+
+                LaunchParameterForReview reviewedRepeaterCount = backupNodeCountForReview.DeepClone();
+                reviewedRepeaterCount.Value.Value = backupNodeCount;
                 PublishReview(reviewedRepeaterCount);
             }
         }
@@ -415,25 +563,25 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         readonly HttpClient m_HttpClient;
 
         /// <summary>
-        /// Last version of <see cref="MissionControlMirror.LaunchConfigurationNextVersion"/> that the
-        /// <see cref="Process"/> method was called on.
-        /// </summary>
-        ulong m_LastLaunchConfigurationNextVersion = ulong.MaxValue;
-        /// <summary>
-        /// Last version of <see cref="MissionControlMirror.ComplexesNextVersion"/> that the <see cref="Process"/>
-        /// method was called on.
-        /// </summary>
-        ulong m_LastComplexesNextVersion = ulong.MaxValue;
-        /// <summary>
-        /// Last version of <see cref="MissionControlMirror.LaunchParametersForReviewNextVersion"/> that the
-        /// <see cref="Process"/> method was called on.
-        /// </summary>
-        ulong m_LastLaunchParametersForReviewNextVersion = ulong.MaxValue;
-        /// <summary>
-        /// Last version of <see cref="MissionControlMirror.StatusNextVersion"/> that the <see cref="Process"/> method
+        /// Last version of <see cref="MissionControlMirror.LaunchConfiguration"/> that the <see cref="Process"/> method
         /// was called on.
         /// </summary>
-        ulong m_LastStateNextVersion = ulong.MaxValue;
+        ulong m_LaunchConfigurationLastVersion;
+        /// <summary>
+        /// Last version of <see cref="MissionControlMirror.Complexes"/> that the <see cref="Process"/> method was
+        /// called on.
+        /// </summary>
+        ulong m_ComplexesLastVersion;
+        /// <summary>
+        /// Last version of <see cref="MissionControlMirror.LaunchParametersForReview"/> that the <see cref="Process"/>
+        /// method was called on.
+        /// </summary>
+        ulong m_LaunchParametersForReviewLastVersion;
+        /// <summary>
+        /// Last version of <see cref="MissionControlMirror.Status"/> that the <see cref="Process"/> method was called
+        /// on.
+        /// </summary>
+        ulong m_StatusLastVersion;
         /// <summary>
         /// <see cref="Status.State"/> when we last computed <see cref="MissionControlMirror.LaunchPadsInformation"/>.
         /// </summary>
@@ -445,5 +593,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         DateTime m_ComputedOnEnteredStateTime;
 
         const string k_PutUri = "api/v1/currentMission/launchParametersForReview";
+        static readonly NodeRole[] k_SortedNodeRolesForEmitter = new[] {NodeRole.Unassigned, NodeRole.Repeater,
+            NodeRole.Backup};
+        static readonly NodeRole[] k_SortedNodeRolesForBackup = new[] {NodeRole.Unassigned, NodeRole.Repeater};
     }
 }

@@ -10,6 +10,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public const string NodeIdParameterId = "NodeId";
         public const string NodeRoleParameterId = "NodeRole";
         public const string RepeaterCountParameterId = "RepeaterCount";
+        public const string BackupNodeCountParameterId = "BackupNodeCount";
         public const string MulticastAddressParameterId = "MulticastAddress";
         public const string MulticastPortParameterId = "MulticastPort";
         public const string MulticastAdapterNameParameterId = "MulticastAdapterName";
@@ -26,6 +27,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public const string NodeRoleUnassigned = "Unassigned";
         public const string NodeRoleEmitter = "Emitter";
         public const string NodeRoleRepeater = "Repeater";
+        public const string NodeRoleBackup = "Backup";
 
         public const int DefaultCapsuleBasePort = 8300;
         public const bool DefaultDeleteRegistryKey = false;

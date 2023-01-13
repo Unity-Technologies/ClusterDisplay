@@ -20,10 +20,10 @@ namespace Unity.ClusterDisplay.MissionControl
                 return clusterParams;
             }
 
-            var nodeRole = launchConfig.GetNodeRole();
-            var repeaterCount = launchConfig.GetRepeaterCount();
-            if (nodeRole.HasValue && repeaterCount.HasValue &&
-                nodeRole.Value != NodeRole.Unassigned && repeaterCount.Value > 0)
+            var nodeRole = launchConfig.GetNodeRole() ?? NodeRole.Unassigned;
+            var repeaterNodeCount = launchConfig.GetRepeaterCount() ?? 0;
+            int backupNodeCount = launchConfig.GetBackupCount() ?? 0;
+            if (nodeRole != NodeRole.Unassigned && (repeaterNodeCount + backupNodeCount) > 0)
             {
                 clusterParams.ClusterLogicSpecified = true;
             }
@@ -32,9 +32,10 @@ namespace Unity.ClusterDisplay.MissionControl
                 return clusterParams;
             }
 
-            clusterParams.EmitterSpecified = nodeRole.Value == NodeRole.Emitter;
+            clusterParams.Role = nodeRole;
             ApplyArgument(ref clusterParams.NodeID, launchConfig.GetNodeId());
-            clusterParams.RepeaterCount = repeaterCount.Value;
+            clusterParams.RepeaterCount = repeaterNodeCount;
+            clusterParams.BackupCount = backupNodeCount;
             ApplyArgument(ref clusterParams.Port, launchConfig.GetMulticastPort());
             clusterParams.MulticastAddress ??= launchConfig.GetMulticastAddress();
             clusterParams.AdapterName ??= launchConfig.GetMulticastAdapterName();

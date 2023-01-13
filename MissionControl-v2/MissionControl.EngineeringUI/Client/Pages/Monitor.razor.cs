@@ -18,6 +18,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         LaunchPadsStatusService LaunchPadsStatusService { get; set; } = default!;
         [Inject]
         LaunchPadsHealthService LaunchPadsHealthService { get; set; } = default!;
+        [Inject]
+        MissionParametersService MissionParametersService { get; set; } = default!;
 
         class LaunchPadStatusEntry
         {
@@ -40,7 +42,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             public Dictionary<string, Cell> Cells { get; } = new();
 
-            public void UpdateCells(State missionControlState)
+            public List<MissionParameter> MissionParameters { get; private set; } = new();
+
+            public void FinalizeUpdate(State missionControlState, IEnumerable<MissionParameter> missionParameters)
             {
                 Cells.Clear();
 
@@ -58,8 +62,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                     if (Health != null)
                     {
                         Cells["CPU %"] = new Cell() { Value = Health.CpuUtilization.ToString("P2") };
-                        Cells["Memory usage (GB)"] = new Cell() { Value = ToGygabytes(Health.MemoryUsage) };
-                        Cells["Memory installed (GB)"] = new Cell() { Value = ToGygabytes(Health.MemoryInstalled) };
+                        Cells["Memory usage (GB)"] = new Cell() { Value = ToGigabytes(Health.MemoryUsage) };
+                        Cells["Memory installed (GB)"] = new Cell() { Value = ToGigabytes(Health.MemoryInstalled) };
                     }
                     else
                     {
@@ -90,9 +94,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                     Cells["Version"].BackgroundColor = "rz-danger-light";
                     Cells["Version"].Class = "rz-color-white";
                 }
+
+                string launchPadIdAsString = Definition.Identifier.ToString();
+                MissionParameters = missionParameters.Where(p => p.Group == launchPadIdAsString).ToList();
             }
 
-            static string ToGygabytes(long value)
+            static string ToGigabytes(long value)
             {
                 return (value / (double)(1024 * 1024 * 1024)).ToString("0.00");
             }
@@ -124,10 +131,25 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             ComplexesService.Collection.SomethingChanged += ComplexesChanged;
             LaunchPadsStatusService.Collection.SomethingChanged += LaunchPadsStatusChanged;
             LaunchPadsHealthService.Collection.SomethingChanged += LaunchPadsHealthChanged;
+            MissionParametersService.Collection.SomethingChanged += MissionParametersChanged;
 
             m_HealthUpdateToken = LaunchPadsHealthService.InUse();
 
             UpdateLaunchpads();
+        }
+
+        void RowRender(RowRenderEventArgs<LaunchPadStatusEntry> args)
+        {
+            bool previousExpandable = args.Expandable;
+            args.Expandable = args.Data.MissionParameters.Any();
+            if (previousExpandable && !args.Expandable && ReferenceEquals(args.Data, m_ExpandedRow))
+            {
+                m_NeedToClearExpanded = true;
+                // Not nice looking but we need to trigger a refresh "soon", but not immediately...
+                // The delay will cause to check again shortly and the InvokeAsync will ensure that we do it from the
+                // main blazor rendering thread (at a time where we are allowed to start a refresh).
+                _ = Task.Delay(100).ContinueWith(_ => InvokeAsync(UpdateLaunchpads));
+            }
         }
 
         void CellRender(DataGridCellRenderEventArgs<LaunchPadStatusEntry> args)
@@ -168,12 +190,18 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return 1;
         }
 
+        void RowExpand(LaunchPadStatusEntry expandedRow)
+        {
+            m_ExpandedRow = expandedRow;
+        }
+
         public void Dispose()
         {
             MissionControlStatus.ObjectChanged -= MissionControlStatusChanged;
             ComplexesService.Collection.SomethingChanged -= ComplexesChanged;
             LaunchPadsStatusService.Collection.SomethingChanged -= LaunchPadsStatusChanged;
             LaunchPadsHealthService.Collection.SomethingChanged -= LaunchPadsHealthChanged;
+            MissionParametersService.Collection.SomethingChanged -= MissionParametersChanged;
             m_HealthUpdateToken?.Dispose();
         }
 
@@ -193,6 +221,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         }
 
         void LaunchPadsHealthChanged(IReadOnlyIncrementalCollection obj)
+        {
+            UpdateLaunchpads();
+        }
+
+        void MissionParametersChanged(IReadOnlyIncrementalCollection obj)
         {
             UpdateLaunchpads();
         }
@@ -277,13 +310,20 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             // Prepare the entries for the grid
             foreach (var entry in LaunchPadStatusEntries)
             {
-                entry.UpdateCells(MissionControlStatus.State);
+                entry.FinalizeUpdate(MissionControlStatus.State, MissionParametersService.Collection.Values);
             }
 
             // Reload the grid
             m_LaunchapdsStatusGrid?.Reload();
+            if (m_NeedToClearExpanded)
+            {
+                m_LaunchapdsStatusGrid?.ExpandRow(null!);
+                m_NeedToClearExpanded = false;
+            }
         }
 
         IDisposable? m_HealthUpdateToken;
+        bool m_NeedToClearExpanded;
+        LaunchPadStatusEntry? m_ExpandedRow;
     }
 }

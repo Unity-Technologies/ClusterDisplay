@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Unity.ClusterDisplay.MissionControl.MissionControl.Library;
 
+using static Unity.ClusterDisplay.MissionControl.MissionControl.Helpers;
+
 namespace Unity.ClusterDisplay.MissionControl.MissionControl
 {
     public class MissionsManagerTests
@@ -20,20 +22,48 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         }
 
         [Test]
+        public void MissionDetailsEqual()
+        {
+            MissionDetails missionDetailsA = new();
+            MissionDetails missionDetailsB = new();
+            Assert.That(missionDetailsA, Is.EqualTo(missionDetailsB));
+
+            missionDetailsA.Identifier = Guid.NewGuid();
+            missionDetailsB.Identifier = Guid.NewGuid();
+            Assert.That(missionDetailsA, Is.Not.EqualTo(missionDetailsB));
+            missionDetailsB.Identifier = missionDetailsA.Identifier;
+            Assert.That(missionDetailsA, Is.EqualTo(missionDetailsB));
+
+            missionDetailsA.Description = new() { Name = "Mission details A" };
+            missionDetailsB.Description = new() { Name = "Mission details B" };
+            Assert.That(missionDetailsA, Is.Not.EqualTo(missionDetailsB));
+            missionDetailsB.Description = new() { Name = "Mission details A" };
+            Assert.That(missionDetailsA, Is.EqualTo(missionDetailsB));
+
+            missionDetailsA.LaunchConfiguration = new() { AssetId = Guid.NewGuid() };
+            missionDetailsB.LaunchConfiguration = new() { AssetId = Guid.NewGuid() };
+            Assert.That(missionDetailsA, Is.Not.EqualTo(missionDetailsB));
+            missionDetailsB.LaunchConfiguration = new() { AssetId = missionDetailsA.LaunchConfiguration.AssetId };
+            Assert.That(missionDetailsA, Is.EqualTo(missionDetailsB));
+
+            missionDetailsA.DesiredMissionParametersValue = new MissionParameterValue[] {
+                new(Guid.NewGuid()) { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("42")} };
+            missionDetailsB.DesiredMissionParametersValue = new MissionParameterValue[] {
+                new(Guid.NewGuid()) { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("28")} };
+            Assert.That(missionDetailsA, Is.Not.EqualTo(missionDetailsB));
+            missionDetailsB.DesiredMissionParametersValue = new MissionParameterValue[] {
+                new(missionDetailsA.DesiredMissionParametersValue.First().Id)
+                                    { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("42")} };
+            Assert.That(missionDetailsA, Is.EqualTo(missionDetailsB));
+        }
+
+        [Test]
         public async Task Store()
         {
             MissionsManager manager = new(m_LoggerMock.Object);
 
             // Add a new mission
-            MissionDetails toStore = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new() {
-                    Name = "toStore",
-                    Details = "Saved mission details",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore = NewSingleToStore();
             var timeBeforeStore = DateTime.Now;
             await manager.StoreAsync(toStore);
             var timeAfterStore = DateTime.Now;
@@ -51,11 +81,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 Assert.That(summary.AssetId, Is.EqualTo(toStore.LaunchConfiguration.AssetId));
             }
 
-            // Update it
+            // Change the variable we used to store something in the manager and ensure it does not affect the content
+            // of what we retrieve from the store.
             toStore.Description.Name += " updated";
             toStore.Description.Details += " updated";
             toStore.LaunchConfiguration.AssetId = Guid.NewGuid();
+            toStore.DesiredMissionParametersValue.ElementAt(0).ValueIdentifier += ".updated";
+            toStore.DesiredMissionParametersValue.ElementAt(1).ValueIdentifier += ".updated";
 
+            var fromManagerTake2 = await manager.GetDetailsAsync(toStore.Identifier);
+            Assert.That(fromManagerTake2, Is.EqualTo(fromManager));
+
+            // Update the manager from that updated mission
             timeBeforeStore = DateTime.Now;
             await manager.StoreAsync(toStore);
             timeAfterStore = DateTime.Now;
@@ -86,15 +123,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             }
 
             // Add a new mission
-            MissionDetails toStore = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new() {
-                    Name = "toStore",
-                    Details = "Details of toStore",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore = NewSingleToStore();
             Assert.That(changesCounter, Is.EqualTo(0));
             await manager.StoreAsync(toStore);
             Assert.That(changesCounter, Is.EqualTo(1));
@@ -112,27 +141,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             MissionsManager manager = new(m_LoggerMock.Object);
 
             // Add two new missions
-            MissionDetails toStore1 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 1",
-                    Details = "Details of toStore 1",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore1 = NewToStore1();
             await manager.StoreAsync(toStore1);
-            MissionDetails toStore2 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 2",
-                    Details = "Details of toStore 2",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore2 = NewToStore2();
             await manager.StoreAsync(toStore2);
 
             var fromManager = await manager.GetDetailsAsync(toStore1.Identifier);
@@ -179,27 +190,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             MissionsManager manager = new(m_LoggerMock.Object);
 
             // Add two new missions
-            MissionDetails toStore1 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 1",
-                    Details = "Details of toStore 1",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore1 = NewToStore1();
             await manager.StoreAsync(toStore1);
-            MissionDetails toStore2 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 2",
-                    Details = "Details of toStore 2",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore2 = NewToStore2();
             await manager.StoreAsync(toStore2);
 
             SavedMissionSummary toStore1Summary;
@@ -239,33 +232,65 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             MissionsManager manager = new(m_LoggerMock.Object);
 
             // Add two new missions
-            MissionDetails toStore1 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 1",
-                    Details = "Details of toStore 1",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore1 = NewToStore1();
             await manager.StoreAsync(toStore1);
-            MissionDetails toStore2 = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = new()
-                {
-                    Name = "toStore 2",
-                    Details = "Details of toStore 2",
-                },
-                LaunchConfiguration = new() { AssetId = Guid.NewGuid() }
-            };
+            MissionDetails toStore2 = NewToStore2();
             await manager.StoreAsync(toStore2);
 
             Assert.That(await manager.IsAssetInUseAsync(toStore1.LaunchConfiguration.AssetId), Is.True);
             Assert.That(await manager.IsAssetInUseAsync(toStore2.LaunchConfiguration.AssetId), Is.True);
             var thirdAssetId = Guid.NewGuid();
             Assert.That(await manager.IsAssetInUseAsync(thirdAssetId), Is.False);
+        }
+
+        static MissionDetails NewSingleToStore()
+        {
+            return new() {
+                Identifier = Guid.NewGuid(),
+                Description = new() {
+                    Name = "toStore",
+                    Details = "Saved mission details",
+                },
+                LaunchConfiguration = new() { AssetId = Guid.NewGuid() },
+                DesiredMissionParametersValue = new MissionParameterValue[] {
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("42") },
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.title", Value = ParseJsonToElement("\"Forty two\"") }
+                }
+            };
+        }
+
+        static MissionDetails NewToStore1()
+        {
+            return new() {
+                Identifier = Guid.NewGuid(),
+                Description = new()
+                {
+                    Name = "toStore 1",
+                    Details = "Details of toStore 1",
+                },
+                LaunchConfiguration = new() { AssetId = Guid.NewGuid() },
+                DesiredMissionParametersValue = new MissionParameterValue[] {
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("42") },
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.title", Value = ParseJsonToElement("\"Forty two\"") }
+                }
+            };
+        }
+
+        static MissionDetails NewToStore2()
+        {
+            return new() {
+                Identifier = Guid.NewGuid(),
+                Description = new()
+                {
+                    Name = "toStore 2",
+                    Details = "Details of toStore 2",
+                },
+                LaunchConfiguration = new() { AssetId = Guid.NewGuid() },
+                DesiredMissionParametersValue = new MissionParameterValue[] {
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.lightIntensity", Value = ParseJsonToElement("28")},
+                    new(Guid.NewGuid()) { ValueIdentifier = "scene.title", Value = ParseJsonToElement("\"Twenty eight\"")}
+                }
+            };
         }
 
         Mock<ILogger> m_LoggerMock = new();

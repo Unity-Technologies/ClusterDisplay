@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             m_HttpClient = httpClient;
             m_HttpClient.BaseAddress = configuration.GetMissionControlUri();
 
-            collectionsUpdateService.RegisterForUpdates("missions", CollectionUpdate);
+            collectionsUpdateService.RegisterForUpdates(IncrementalCollectionsName.Missions, CollectionUpdate);
         }
 
         /// <summary>

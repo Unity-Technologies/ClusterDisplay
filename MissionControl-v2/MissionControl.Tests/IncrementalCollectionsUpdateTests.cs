@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Ask for a good and a bad
             Assert.ThrowsAsync<HttpRequestException>(() => m_ProcessHelper.GetIncrementalCollectionsUpdate(
-                new List<(string, ulong)> { (k_AssetsCollectionName, 0), ("BadName", 0) }));
+                new List<(string, ulong)> { (IncrementalCollectionsName.Assets, 0), ("BadName", 0) }));
         }
 
         [Test]
@@ -45,7 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Ask without any change
             var blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_AssetsCollectionName, 0), (k_ComplexesCollectionName, 0) });
+                (IncrementalCollectionsName.Assets, 0), (IncrementalCollectionsName.Complexes, 0) });
             await Task.Delay(100); // So that it has the time to complete if blocking would fail
             Assert.That(blockingGetTask.IsCompleted, Is.False);
 
@@ -58,14 +58,14 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
             Assert.That(blockingGetTask.Result.Count, Is.EqualTo(1));
             var collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_ComplexesCollectionName);
+                IncrementalCollectionsName.Complexes);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             ulong complexesNextUpdate = collectionUpdate.NextUpdate;
 
             // Ask for the next update
             blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_AssetsCollectionName, 0), (k_ComplexesCollectionName, complexesNextUpdate) });
+                (IncrementalCollectionsName.Assets, 0), (IncrementalCollectionsName.Complexes, complexesNextUpdate) });
             await Task.Delay(100); // So that it has the time to complete if blocking would fail
             Assert.That(blockingGetTask.IsCompleted, Is.False);
 
@@ -89,7 +89,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
             Assert.That(blockingGetTask.Result.Count, Is.EqualTo(1));
             collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_AssetsCollectionName);
+                IncrementalCollectionsName.Assets);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             ulong assetsNextUpdate = collectionUpdate.NextUpdate;
@@ -98,18 +98,18 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // the other does not guarantee we will receive both in a single update.  So instead ask from old versions
             // which guarantee we receive the answer with both immediately without waiting.
             blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_AssetsCollectionName, 0), (k_ComplexesCollectionName, 0) });
+                (IncrementalCollectionsName.Assets, 0), (IncrementalCollectionsName.Complexes, 0) });
             await blockingGetTask;
             Assert.That(blockingGetTask.Result.Count, Is.EqualTo(2));
 
             collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_AssetsCollectionName);
+                IncrementalCollectionsName.Assets);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(assetsNextUpdate));
 
             collectionUpdate = Helpers.GetCollectionUpdate<LaunchComplex>(blockingGetTask.Result,
-                k_ComplexesCollectionName);
+                IncrementalCollectionsName.Complexes);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(complexesNextUpdate));
@@ -124,7 +124,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Try to get, should stay block since nothing changed so far...
             var blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_AssetsCollectionName, 0), (k_ComplexesCollectionName, 0) }, cancellationTokenSource.Token);
+                (IncrementalCollectionsName.Assets, 0), (IncrementalCollectionsName.Complexes, 0) },
+                cancellationTokenSource.Token);
             // ReSharper disable once MethodSupportsCancellation -> No need to cancel this Delay
             await Task.Delay(100); // So that it has the time to complete if blocking would fail
             Assert.That(blockingGetTask.IsCompleted, Is.False);
@@ -181,9 +182,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             m_TestTempFolders.Add(folderPath);
             return folderPath;
         }
-
-        const string k_AssetsCollectionName = "assets";
-        const string k_ComplexesCollectionName = "complexes";
 
         MissionControlProcessHelper m_ProcessHelper = new();
         List<string> m_TestTempFolders = new();
