@@ -34,7 +34,7 @@ namespace Unity.ClusterDisplay.Scripting
         readonly List<InputDevice> m_VirtualDevices = new();
         readonly Dictionary<int, int> m_VirtualDeviceMapping = new();
 
-        bool m_CreatingVirtualDevice;
+        bool m_UpdatingVirtualDevice;
         SavedInputSettings m_SavedInputSettings;
         bool m_UpdatesControlledExternally;
 
@@ -85,24 +85,26 @@ namespace Unity.ClusterDisplay.Scripting
             InputSystem.onDeviceChange -= OnDeviceChange;
             foreach (var device in m_RealDevices)
             {
+                Debug.Log($"Enabling {device.name}");
                 InputSystem.EnableDevice(device);
             }
         }
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)
         {
-            if (!m_CreatingVirtualDevice &&
-                change is InputDeviceChange.Added &&
-                device != null &&
-                !m_RealDevices.Contains(device))
+            if (!m_UpdatingVirtualDevice && device != null)
             {
-                InputSystem.DisableDevice(device);
-                m_RealDevices.Add(device);
-                ClusterDebug.Log($"Disabled {device.name ?? "unknown"}");
-            }
-            else if (change is InputDeviceChange.Removed && m_RealDevices.Contains(device))
-            {
-                m_RealDevices.Remove(device);
+                switch (change)
+                {
+                    case InputDeviceChange.Added when !m_RealDevices.Contains(device):
+                        InputSystem.DisableDevice(device);
+                        m_RealDevices.Add(device);
+                        ClusterDebug.Log($"Disabled {device.name ?? "unknown"}");
+                        break;
+                    case InputDeviceChange.Removed when m_RealDevices.Contains(device):
+                        m_RealDevices.Remove(device);
+                        break;
+                }
             }
         }
 
@@ -118,9 +120,9 @@ namespace Unity.ClusterDisplay.Scripting
 
                 // InputSystem.AddDevice triggers our OnDeviceChanged callback. We don't want to disable our virtual
                 // devices.
-                m_CreatingVirtualDevice = true;
+                m_UpdatingVirtualDevice = true;
                 var device = InputSystem.AddDevice(layoutName);
-                m_CreatingVirtualDevice = false;
+                m_UpdatingVirtualDevice = false;
                 m_VirtualDevices.Add(device);
                 m_VirtualDeviceMapping[evt.deviceId] = device.deviceId;
             }
@@ -128,10 +130,12 @@ namespace Unity.ClusterDisplay.Scripting
 
         void CleanUpVirtualDevices()
         {
+            m_UpdatingVirtualDevice = true;
             foreach (var device in m_VirtualDevices)
             {
                 InputSystem.RemoveDevice(device);
             }
+            m_UpdatingVirtualDevice = false;
             m_VirtualDevices.Clear();
             m_VirtualDeviceMapping.Clear();
         }

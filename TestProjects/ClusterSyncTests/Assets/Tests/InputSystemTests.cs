@@ -1,4 +1,5 @@
 #if ENABLE_INPUT_SYSTEM
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Tests
 {
@@ -38,17 +40,19 @@ namespace Unity.ClusterDisplay.Tests
         EmitterStateWriter m_EmitterStateWriter;
         TestUdpAgent m_EmitterAgent;
         TestUdpAgent m_RepeaterAgent;
-        InputSystemReplicator m_Replicator;
+        GameObject m_TestObject;
 
+        [SetUp]
         public override void Setup()
         {
-            base.Setup();
-
+            InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             m_EmitterStateWriter = new EmitterStateWriter(false);
             var testNetwork = new TestUdpAgentNetwork();
 
             m_EmitterAgent = new TestUdpAgent(testNetwork, EmitterNode.ReceiveMessageTypes.ToArray());
             m_RepeaterAgent = new TestUdpAgent(testNetwork, RepeaterNode.ReceiveMessageTypes.ToArray());
+            m_TestObject = new GameObject("InputReplicator");
+            base.Setup();
         }
 
         public override void TearDown()
@@ -57,11 +61,13 @@ namespace Unity.ClusterDisplay.Tests
             EmitterStateWriter.ClearCustomDataDelegates();
             m_EmitterStateWriter.Dispose();
 
+            InputSystem.Update();
+
             // It is necessary to trigger InputSystemReplicator.OnDisable() before
             // InputTestFixture.TearDown() because InputTestFixture.TearDown() will remove all input devices, including
             // the virtual devices created by InputSystemReplicator. Otherwise, we'll be trying to remove the virtual
             // devices twice, resulting in an error.
-            m_Replicator.enabled = false;
+            Object.Destroy(m_TestObject);
             base.TearDown();
         }
 
@@ -76,10 +82,9 @@ namespace Unity.ClusterDisplay.Tests
             // Set up dummy UDP networking
             var frameSplitter = new FrameDataSplitter(m_EmitterAgent);
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
-            var testGameObject = new GameObject();
 
             // The component under test
-            m_Replicator = testGameObject.AddComponent<InputSystemReplicator>();
+            var replicator = m_TestObject.AddComponent<InputSystemReplicator>();
 
             // Simulate some inputs
             var gamepad = InputSystem.AddDevice<Gamepad>();
@@ -90,6 +95,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Advance a frame - allow InputSystemReplicator component to Update()
             yield return null;
+            InputSystem.Update();
 
             // Simulate the frame state transmission
             // The InputSystemReplicator should have added the input data into the frame state at this point.
@@ -113,6 +119,7 @@ namespace Unity.ClusterDisplay.Tests
                 eventTrace.ReadFrom(receiveStream);
                 return true;
             });
+            Assert.That(eventTrace.eventCount, Is.Zero);
             RepeaterStateReader.RestoreEmitterFrameData(message.ExtraData.AsNativeArray());
 
             // Check the contents of the input data
@@ -147,16 +154,12 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestRepeaterReceivesInputs()
         {
-            InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
-
             // Pretend we're a repeater if anyone asks.
             ServiceLocator.Provide<IClusterSyncState>(new MockClusterSync { NodeRole = NodeRole.Repeater });
 
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
-            var testGameObject = new GameObject();
 
-            // Add an input device to generate some input events
-            var gamepad = InputSystem.AddDevice<Gamepad>();
+            var replicator = m_TestObject.AddComponent<InputSystemReplicator>();
 
             // Set up some test bindings
             var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast", interactions: "Hold");
@@ -167,16 +170,17 @@ namespace Unity.ClusterDisplay.Tests
             triggerAction.Enable();
 
             // Capture some input data to test with
+            var gamepad = InputSystem.AddDevice<Gamepad>();
+            Assert.That(gamepad, Is.Not.Null);
             using var eventTrace = new InputEventTrace();
             eventTrace.Enable();
+            InputSystem.EnableDevice(gamepad);
             Set(gamepad.leftStick, new Vector2(0.123f, 0.234f));
             Set(gamepad.leftTrigger, 0.5f);
             InputSystem.Update();
-
+            InputSystem.DisableDevice(gamepad);
             Assert.That(eventTrace.eventCount, Is.EqualTo(2));
             using var frameData = DumpEventTraceToFrameData(eventTrace);
-
-            yield return null;
 
             var stickMoved = false;
             stickAction.performed += context =>
@@ -192,12 +196,9 @@ namespace Unity.ClusterDisplay.Tests
                 Assert.That(context.ReadValue<float>(), Is.Not.Zero);
             };
 
-            InputSystem.Update();
             // No events generated this frame so far
             Assert.IsFalse(stickMoved);
             Assert.IsFalse(triggerPressed);
-
-            m_Replicator = testGameObject.AddComponent<InputSystemReplicator>();
 
             // Load the events into the InputSystemReplicator and it should play them back
             RepeaterStateReader.RestoreEmitterFrameData(frameData);
@@ -209,10 +210,12 @@ namespace Unity.ClusterDisplay.Tests
 
             yield return null;
 
+            InputSystem.Update();
             // Record some more inputs
             InputSystem.EnableDevice(gamepad);
             Press(gamepad.buttonEast);
             InputSystem.Update();
+            InputSystem.DisableDevice(gamepad);
             Assert.That(eventTrace.eventCount, Is.EqualTo(1));
             using var frameData2 = DumpEventTraceToFrameData(eventTrace);
 
