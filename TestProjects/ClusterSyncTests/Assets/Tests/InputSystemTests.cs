@@ -42,7 +42,6 @@ namespace Unity.ClusterDisplay.Tests
         TestUdpAgent m_RepeaterAgent;
         GameObject m_TestObject;
 
-        [SetUp]
         public override void Setup()
         {
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
@@ -85,7 +84,7 @@ namespace Unity.ClusterDisplay.Tests
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
 
             // The component under test
-            var replicator = m_TestObject.AddComponent<InputSystemReplicator>();
+            m_TestObject.AddComponent<InputSystemReplicator>();
 
             // Simulate some inputs
             var gamepad = InputSystem.AddDevice<Gamepad>();
@@ -160,7 +159,7 @@ namespace Unity.ClusterDisplay.Tests
 
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
 
-            var replicator = m_TestObject.AddComponent<InputSystemReplicator>();
+            m_TestObject.AddComponent<InputSystemReplicator>();
 
             // Set up some test bindings
             using var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast", interactions: "Hold");
