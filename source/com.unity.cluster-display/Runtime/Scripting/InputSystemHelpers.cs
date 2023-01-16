@@ -9,7 +9,8 @@ namespace Unity.ClusterDisplay.Scripting
     /// Allows foreach enumeration of <see cref="InputEventTrace"/>.
     /// </summary>
     /// <remarks>
-    /// <see cref="InputEventTrace"/> implements <see cref="IEnumerable{T}"/>, but it requires GC allocation.
+    /// <see cref="InputEventTrace"/> has a built-in implementation of <see cref="IEnumerable{T}"/>, but
+    /// <see cref="InputEventTrace.Enumerator"/> requires GC allocation (it is a ref type).
     /// </remarks>
     struct InputEventReader
     {

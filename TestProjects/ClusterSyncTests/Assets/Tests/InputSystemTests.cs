@@ -60,6 +60,7 @@ namespace Unity.ClusterDisplay.Tests
             RepeaterStateReader.ClearOnLoadDataDelegates();
             EmitterStateWriter.ClearCustomDataDelegates();
             m_EmitterStateWriter.Dispose();
+            ServiceLocator.Withdraw<IClusterSyncState>();
 
             InputSystem.Update();
 
@@ -162,9 +163,9 @@ namespace Unity.ClusterDisplay.Tests
             var replicator = m_TestObject.AddComponent<InputSystemReplicator>();
 
             // Set up some test bindings
-            var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast", interactions: "Hold");
-            var triggerAction = new InputAction(binding: "<Gamepad>/leftTrigger");
-            var stickAction = new InputAction(binding: "<Gamepad>/leftStick");
+            using var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast", interactions: "Hold");
+            using var triggerAction = new InputAction(binding: "<Gamepad>/leftTrigger");
+            using var stickAction = new InputAction(binding: "<Gamepad>/leftStick");
             buttonAction.Enable();
             stickAction.Enable();
             triggerAction.Enable();

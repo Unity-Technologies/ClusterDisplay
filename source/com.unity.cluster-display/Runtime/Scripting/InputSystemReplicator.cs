@@ -121,10 +121,16 @@ namespace Unity.ClusterDisplay.Scripting
                 // InputSystem.AddDevice triggers our OnDeviceChanged callback. We don't want to disable our virtual
                 // devices.
                 m_UpdatingVirtualDevice = true;
-                var device = InputSystem.AddDevice(layoutName);
-                m_UpdatingVirtualDevice = false;
-                m_VirtualDevices.Add(device);
-                m_VirtualDeviceMapping[evt.deviceId] = device.deviceId;
+                try
+                {
+                    var device = InputSystem.AddDevice(layoutName);
+                    m_VirtualDevices.Add(device);
+                    m_VirtualDeviceMapping[evt.deviceId] = device.deviceId;
+                }
+                finally
+                {
+                    m_UpdatingVirtualDevice = false;
+                }
             }
         }
 
