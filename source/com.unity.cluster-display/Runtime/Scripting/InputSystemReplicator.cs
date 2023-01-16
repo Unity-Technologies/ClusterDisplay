@@ -3,10 +3,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
+using UnityEngine.PlayerLoop;
 
 namespace Unity.ClusterDisplay.Scripting
 {
@@ -38,14 +40,31 @@ namespace Unity.ClusterDisplay.Scripting
         SavedInputSettings m_SavedInputSettings;
         bool m_UpdatesControlledExternally;
 
+        struct ClusterInputSystemUpdate
+        {
+
+        }
+
+        void InjectInputUpdatePoint()
+        {
+            // Do our InputSystem update before script Update
+            PlayerLoopExtensions.RegisterUpdate<Update.ScriptRunBehaviourUpdate, ClusterInputSystemUpdate>(UpdateInputSystem, 0);
+        }
+
+        void RemoveInputUpdatePoint()
+        {
+            PlayerLoopExtensions.DeregisterUpdate<ClusterInputSystemUpdate>(UpdateInputSystem);
+        }
+
         void OnEnable()
         {
             m_SavedInputSettings = InputSystem.settings.Save();
 
             // We want to control when we deserialize and deserialize+apply input events by calling
-            // InputSystem.Update() manually.
+            // InputSystem.Update() manually. See InjectInputUpdatePoint
             m_UpdatesControlledExternally = m_SavedInputSettings.UpdateMode is InputSettings.UpdateMode.ProcessEventsManually;
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
+            InjectInputUpdatePoint();
             switch (ClusterDisplayState.GetNodeRole())
             {
                 case NodeRole.Emitter:
@@ -92,6 +111,9 @@ namespace Unity.ClusterDisplay.Scripting
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)
         {
+            // Sanity check
+            Debug.Assert(ClusterDisplayState.GetNodeRole() is NodeRole.Repeater,
+                "Only repeaters should be responding to device changes");
             if (!m_UpdatingVirtualDevice && device != null)
             {
                 switch (change)
@@ -210,6 +232,7 @@ namespace Unity.ClusterDisplay.Scripting
             EnableRealInputs();
             CleanUpVirtualDevices();
             InputSystem.settings.Restore(m_SavedInputSettings);
+            RemoveInputUpdatePoint();
         }
 
         void OnDestroy()
@@ -217,18 +240,27 @@ namespace Unity.ClusterDisplay.Scripting
             m_EventTrace.Dispose();
         }
 
-        void Update()
+        void UpdateInputSystem()
         {
             if (!m_UpdatesControlledExternally)
-                InputSystem.Update();
-            if (ClusterDisplayState.GetNodeRole() == NodeRole.Emitter)
             {
-                // Serialize the event trace data, which will get copied into the FrameData and transmitted
-                // at the next sync point.
-                m_MemoryStream.SetLength(0);
-                m_EventTrace.WriteTo(m_MemoryStream);
-                m_MemoryStream.Flush();
-                m_MemoryStream.Position = 0;
+                // Sanity check
+                Debug.Assert(InputSystem.settings.updateMode is InputSettings.UpdateMode.ProcessEventsManually,
+                    "The input system is not set to process events manually. Did someone change it?");
+                InputSystem.Update();
+            }
+
+            switch (ClusterDisplayState.GetNodeRole())
+            {
+                case NodeRole.Emitter:
+                    // Serialize the event trace data, which will get copied into the FrameData and transmitted
+                    // at the next sync point.
+                    m_MemoryStream.SetLength(0);
+                    m_EventTrace.WriteTo(m_MemoryStream);
+                    m_MemoryStream.Flush();
+                    m_MemoryStream.Position = 0;
+                    break;
+                // Other cases have nothing to do right now...
             }
 
             m_EventTrace.Clear();
