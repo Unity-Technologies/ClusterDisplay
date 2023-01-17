@@ -118,13 +118,14 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <typeparam name="T">Type of struct to read from the stream.</typeparam>
         public static T ReadStruct<T>(this Stream stream) where T: struct
         {
-            int sizeOfStruct = Marshal.SizeOf<T>();
-            Span<byte> buffer = stackalloc byte[sizeOfStruct];
+            var outVal = new T();
+            var span = MemoryMarshal.CreateSpan(ref outVal, 1);
+            var buffer = MemoryMarshal.AsBytes(span);
             if (!stream.ReadAllBytes(buffer))
             {
                 throw new InvalidOperationException("Failed to read from stream.");
             }
-            return MemoryMarshal.Read<T>(buffer);
+            return outVal;
         }
 
         /// <summary>
@@ -166,9 +167,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <typeparam name="T">Type of struct to write to the stream.</typeparam>
         public static void WriteStruct<T>(this Stream stream, T toWrite) where T: struct
         {
-            int sizeOfStruct = Marshal.SizeOf<T>();
-            Span<byte> buffer = stackalloc byte[sizeOfStruct];
-            MemoryMarshal.Write(buffer, ref toWrite);
+            var span = MemoryMarshal.CreateSpan(ref toWrite, 1);
+            var buffer = MemoryMarshal.AsBytes(span);
             stream.Write(buffer);
         }
     }
