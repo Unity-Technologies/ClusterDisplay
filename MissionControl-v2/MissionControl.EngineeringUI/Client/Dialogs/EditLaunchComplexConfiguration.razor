@@ -1,0 +1,51 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
+
+<div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
+    <div> <!-- To avoid stretching every row of the fixed height container above -->
+        <div class="row my-1">
+            <div class="col-3 align-items-start d-flex">
+                <RadzenLabel Text="Launchpads" />
+            </div>
+            <div class="col-9">
+                <RadzenDataGrid Data=@Complex.LaunchPads @ref="m_LaunchpadsGrid"
+                                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchPads>
+                    <Columns>
+                        <RadzenDataGridColumn TItem="MissionControl.LaunchPad" Title="Name" Property="Name" />
+                        <RadzenDataGridColumn TItem="MissionControl.LaunchPad" Title="Launchable">
+                            <Template Context="launchpad">
+                                @{
+                                    var cfg = GetConfigurationForLaunchPad(launchpad);
+                                    var effectiveLaunchable = cfg.GetEffectiveLaunchable(Asset, launchpad);
+                                }
+                                @if (effectiveLaunchable != null)
+                                {
+                                    <span>@effectiveLaunchable.Name</span>
+                                }
+                                else
+                                {
+                                    <span>(inactive)</span>
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+                <RadzenButton Click=ConfigureLaunchPad Text="Configure" Icon="settings" ButtonStyle="ButtonStyle.Primary"
+                              class="mt-2" Disabled=@(SelectedLaunchPad == null) />
+            </div>
+        </div>
+        <div class="row my-1">
+            <div class="col-3 align-items-start d-flex">
+                <RadzenLabel Text="Parameters" />
+            </div>
+            <div class="col-9">
+                <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue />
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-1">
+    <div class="col-12 text-end">
+        <RadzenButton Text="Ok" Click=OnOk Style="width: 120px" Class="me-1" />
+        <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
+    </div>
+</div>

@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             lock (m_Lock)
             {
-                if (m_TaskCompletionSource != null)
+                if (m_TaskCompletionSource != null && !m_TaskCompletionSource.Task.IsCanceled)
                 {
 #if UNITY_64
                     m_TaskCompletionSource.SetResult(true);
@@ -49,7 +49,8 @@ namespace Unity.ClusterDisplay.MissionControl
         {
             lock (m_Lock)
             {
-                m_TaskCompletionSource?.TrySetCanceled();
+                m_TaskCompletionSource ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+                m_TaskCompletionSource.TrySetCanceled();
             }
         }
 

@@ -185,6 +185,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
                 // Update the current state based on the number of running launchpads.
                 Task runningLaunchPadsChanged = m_Manager.RunningLaunchPadsChanged;
                 State newState = m_Manager.RunningLaunchPads < m_Manager.LaunchPadsCount ? State.Failure : State.Launched;
+                if (newState == State.Failure && statusState == State.Launched)
+                {
+                    // We are about to enter failure state, just check that we are not landing, if that is the case
+                    // then everything is normal.
+                    using var lockedCapcom = m_CapcomUplink.LockAsync().Result;
+                    if (lockedCapcom.Value.ProceedWithLanding)
+                    {
+                        newState = statusState;
+                    }
+                }
                 if (newState != statusState)
                 {
                     using var lockedStatus = await m_StatusService.LockAsync();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
+using Unity.ClusterDisplay.MissionControl.Capsule;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.Capcom
@@ -47,6 +48,11 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         public LaunchComplexConfiguration ComplexConfiguration { get; set; }
 
         /// <summary>
+        /// Latest launchpad's status.
+        /// </summary>
+        public LaunchPadStatus Status { get; set; }
+
+        /// <summary>
         /// ClusterDisplay NodeId assigned to the node executed by this LaunchPad.
         /// </summary>
         public int NodeId { get; set; } = -1;
@@ -79,8 +85,16 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             get
             {
-                m_CapsuleTcpClient ??= new TcpClient(m_Definition.Endpoint.Host, CapsulePort);
-                m_CapsuleNetworkStream ??= m_CapsuleTcpClient.GetStream();
+                // Create the connection
+                if (m_CapsuleTcpClient == null)
+                {
+                    m_CapsuleTcpClient = new TcpClient(m_Definition.Endpoint.Host, CapsulePort);
+                    m_CapsuleNetworkStream = m_CapsuleTcpClient.GetStream();
+
+                    ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
+                    m_CapsuleNetworkStream.WriteStruct(initStruct);
+                }
+
                 return m_CapsuleNetworkStream;
             }
         }

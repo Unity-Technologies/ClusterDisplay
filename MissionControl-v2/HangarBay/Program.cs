@@ -37,6 +37,16 @@ builder.Services.Configure<MvcJsonOptions>(options => { Json.AddToSerializerOpti
 builder.Services.Configure<HostOptions>(options => {
     options.ShutdownTimeout = TimeSpan.FromSeconds(Convert.ToInt32(builder.Configuration["shutdownTimeoutSec"])); });
 
+const string corsPolicyName = "CorsPolicy";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsPolicyName,
+    policyBuilder =>
+    {
+        policyBuilder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -44,6 +54,8 @@ var app = builder.Build();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseCors(corsPolicyName);
 
 // To ensure that the StatusService is created at startup so that it can get the right startup time.
 app.Services.GetService<StatusService>();

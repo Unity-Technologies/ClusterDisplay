@@ -231,6 +231,58 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             Assert.That(File.Exists(landedPath), Is.False);
         }
 
+        [Test]
+        public async Task GradualLanding()
+        {
+            await PrepareMissionControl(2, k_ControlledLandingCatalog, k_ControlledLandingCatalogFilesContent);
+
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+
+            var launchPadProcessHelper1 = m_LaunchPadsProcessHelper.ElementAt(0);
+            var launchedProcess1 = await GetLaunchedProcess(launchPadProcessHelper1);
+            var landedPath1 = Path.Combine(launchPadProcessHelper1.LaunchFolder, "landed.txt");
+
+            var launchPadProcessHelper2 = m_LaunchPadsProcessHelper.ElementAt(1);
+            var launchedProcess2 = await GetLaunchedProcess(launchPadProcessHelper2);
+            var landedPath2 = Path.Combine(launchPadProcessHelper2.LaunchFolder, "landed.txt");
+
+            // Initiate landing
+            await m_ProcessHelper.PostCommand(new StopMissionCommand(), HttpStatusCode.Accepted);
+
+            // This is a special test where no process should land before first authorized
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+            Assert.That(launchedProcess1.HasExited, Is.False);
+            Assert.That(File.Exists(landedPath1), Is.False);
+            Assert.That(launchedProcess2.HasExited, Is.False);
+            Assert.That(File.Exists(landedPath2), Is.False);
+
+            // Allow launchpad1 to land
+            await File.WriteAllTextAsync(Path.Combine(launchPadProcessHelper1.LaunchFolder, "landingAllowed.txt"), "Go");
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var launchedProcessCompletedTask = launchedProcess1.WaitForExitAsync();
+            var awaitTask = await Task.WhenAny(launchedProcessCompletedTask, timeoutTask);
+            Assert.That(awaitTask, Is.SameAs(launchedProcessCompletedTask)); // Or else timed out
+            Assert.That(File.Exists(landedPath1), Is.True);
+
+            // Stopping should trigger a failure state
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+            Assert.That(m_ProcessHelper.GetStatus().Result.State, Is.EqualTo(State.Launched));
+
+            // Allow launchpad2 to land
+            Assert.That(launchedProcess2.HasExited, Is.False);
+            Assert.That(File.Exists(landedPath2), Is.False);
+            await File.WriteAllTextAsync(Path.Combine(launchPadProcessHelper2.LaunchFolder, "landingAllowed.txt"), "Go");
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            launchedProcessCompletedTask = launchedProcess2.WaitForExitAsync();
+            awaitTask = await Task.WhenAny(launchedProcessCompletedTask, timeoutTask);
+            Assert.That(awaitTask, Is.SameAs(launchedProcessCompletedTask)); // Or else timed out
+            Assert.That(File.Exists(landedPath2), Is.True);
+
+            // Process not running anymore, but internal state of MissionControl might not be updated yet, wait for the
+            // state to be idle ready to restart.
+            await m_ProcessHelper.WaitForState(State.Idle);
+        }
+
         static void ClearPreviousLaunchPidTxt(LaunchPadProcessHelper launchpadProcessHelper)
         {
             var pidTxtPath = Path.Combine(launchpadProcessHelper.LaunchFolder, "pid.txt");
@@ -408,6 +460,55 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 "        Start-Sleep -Milliseconds 5                        \n" +
                 "    }                                                      \n" +
                 "}                                                          \n" +
+                "Out-File \"landed.txt\" -InputObject \"Over\"") }
+        };
+
+        static readonly LaunchCatalog.Catalog k_ControlledLandingCatalog = new()
+        {
+            Payloads = new[] {
+                new LaunchCatalog.Payload()
+                {
+                    Name = "Payload",
+                    Files = new []
+                    {
+                        new LaunchCatalog.PayloadFile() { Path = "launch.ps1" }
+                    }
+                }
+            },
+            Launchables = new[] {
+                new LaunchCatalog.Launchable()
+                {
+                    Name = "Cluster Node",
+                    Type = "clusterNode",
+                    Payloads = new [] { "Payload" },
+                    LaunchPath = "launch.ps1",
+                    LandingTimeSec = 2.5f
+                }
+            }
+        };
+        static readonly Dictionary<string, MemoryStream> k_ControlledLandingCatalogFilesContent = new() {
+            { "launch.ps1", MemoryStreamFromString(
+                "$missionControlUri = $env:MISSIONCONTROL_ENTRY                    \n" +
+                "$pid | Out-File \"pid.txt\"                                       \n" +
+                "$waitToCheckLanding = $true                                       \n" +
+                "while ($waitToCheckLanding)                                       \n" +
+                "{                                                                 \n" +
+                "    $waitToCheckLanding = -not (Test-Path \"landingAllowed.txt\") \n" +
+                "    if ($waitToCheckLanding)                                      \n" +
+                "    {                                                             \n" +
+                "        Start-Sleep -Milliseconds 5                               \n" +
+                "    }                                                             \n" +
+                "}                                                                 \n" +
+                "$proceedWithLanding = $false                                      \n" +
+                "while (-not $proceedWithLanding)                                  \n" +
+                "{                                                                 \n" +
+                "    $uplink = Invoke-RestMethod -Uri \"$($missionControlUri)api/v1/capcomUplink\"\n" +
+                "    $proceedWithLanding = $uplink.proceedWithLanding              \n" +
+                "    if (-not $proceedWithLanding)                                 \n" +
+                "    {                                                             \n" +
+                "        Start-Sleep -Milliseconds 5                               \n" +
+                "    }                                                             \n" +
+                "}                                                                 \n" +
                 "Out-File \"landed.txt\" -InputObject \"Over\"") }
         };
 

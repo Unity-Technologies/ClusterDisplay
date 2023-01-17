@@ -23,10 +23,16 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// </summary>
         public String RegularExpression { get; set; } = ".*";
 
+        /// <summary>
+        /// Error message to display if regular expression is not valid.
+        /// </summary>
+        public string ErrorMessage { get; set; } = "Value not valid";
+
         public bool Equals(RegularExpressionConstraint other)
         {
             return other != null && other.GetType() == typeof(RegularExpressionConstraint) &&
-                RegularExpression == other.RegularExpression;
+                RegularExpression == other.RegularExpression &&
+                ErrorMessage == other.ErrorMessage;
         }
 
         protected override bool EqualsOfSameType(Constraint other)

@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// Fill this <see cref="Status"/> from another one.
         /// </summary>
         /// <param name="from">To fill from.</param>
-        public void DeepCopy(Status from)
+        public void DeepCopyFrom(Status from)
         {
             Version = from.Version;
             StartTime = from.StartTime;

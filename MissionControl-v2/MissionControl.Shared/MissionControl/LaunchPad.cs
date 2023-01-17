@@ -34,6 +34,16 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         public IEnumerable<string> SuitableFor { get; set; } = Enumerable.Empty<string>();
 
         /// <summary>
+        /// Returns the compatible launchables of the given asset.
+        /// </summary>
+        /// <param name="asset"></param>
+        /// <returns></returns>
+        public IEnumerable<Launchable> GetCompatibleLaunchables(Asset asset)
+        {
+            return asset.Launchables.Where(l => SuitableFor.Contains(l.Type));
+        }
+
+        /// <summary>
         /// Returns a complete independent copy of this (no data is be shared between the original and the clone).
         /// </summary>
         public LaunchPad DeepClone()

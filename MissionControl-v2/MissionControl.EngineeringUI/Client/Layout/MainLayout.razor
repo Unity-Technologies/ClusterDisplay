@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+<RadzenContextMenu />
+<RadzenDialog />
+<RadzenContextMenu />
+<RadzenTooltip />
+
+<RadzenLayout>
+    <RadzenHeader>
+        <div class="d-flex align-items-center">
+            <RadzenSidebarToggle Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
+            Mission Control (@MissionControlStatus.State)
+        </div>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
+        <NavPanel/>
+    </RadzenSidebar>
+    <RadzenBody>
+        <div class="p-2">
+            @Body
+        </div>
+    </RadzenBody>
+</RadzenLayout>

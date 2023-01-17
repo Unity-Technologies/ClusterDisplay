@@ -1,0 +1,33 @@
+@page "/assets"
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+
+<h3>Assets</h3>
+<RadzenDataGrid @ref="m_AssetsGrid" Data=@AssetsService.Collection.Values
+                AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
+                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedAsset>
+    <Columns>
+        <RadzenDataGridColumn TItem="Asset" Title="Name" Property="Name"/>
+        <RadzenDataGridColumn TItem="Asset" Title="Description" Property="Description" />
+        <RadzenDataGridColumn TItem="Asset" Title="Size" Property="StorageSize">
+            <Template Context="asset">
+                <span>@((asset.StorageSize / (1024 * 1024.0)).ToString("N2") + " MB")</span>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Asset" Title="Reference count" Sortable="false">
+            <Template Context="asset">
+                @if (AssetsUsageCount.ContainsKey(asset.Id))
+                {
+                    <span>@AssetsUsageCount[asset.Id]</span>
+                }
+                else
+                {
+                    <span>0</span>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+<RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary"
+              class="mt-2"/>
+<RadzenButton Click=@DeleteAsset Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" class="mt-2"
+              Disabled=@(SelectedAsset == null || SelectedAsset == null || AssetsUsageCount.ContainsKey(SelectedAsset.Id)) />

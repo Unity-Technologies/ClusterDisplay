@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\TestProjects\MissionControlTests\Assets\Tests\AsyncConditionVariableTests.cs" Link="AsyncConditionVariableTests.cs" />
     <Compile Include="..\..\TestProjects\MissionControlTests\Assets\Tests\IncrementalCollectionTests.cs" Link="IncrementalCollectionTests.cs" />
     <Compile Include="..\..\TestProjects\MissionControlTests\Assets\Tests\ObjectReferenceEqualityComparer.cs" Link="ObjectReferenceEqualityComparer.cs" />
   </ItemGroup>

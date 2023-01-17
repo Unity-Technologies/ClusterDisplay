@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.MissionControl.Capsule
@@ -51,15 +52,20 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             {
                 m_TcpListener = new(IPAddress.Any, listenPort);
                 m_TcpListener.Start();
-                m_CancellationTokenSource.Token.Register(() => {
+                m_CancellationTokenSource.Token.Register(() =>
+                {
                     var toStop = m_TcpListener;
                     m_TcpListener = null;
                     toStop.Stop();
                 });
+
+                ClusterSyncLooper.onInstanceDoPreFrame += OnDoPreFrame;
+                _ = SendsCapcomMessages();
+
                 while (!m_CancellationTokenSource.IsCancellationRequested)
                 {
                     var tcpClient = await m_TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
-                    _ = ClientLoop(tcpClient);
+                    _ = ProcessConnectionAsync(tcpClient);
                 }
             }
             catch (Exception e)
@@ -72,8 +78,22 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             }
             finally
             {
+                ClusterSyncLooper.onInstanceDoPreFrame -= OnDoPreFrame;
                 m_TcpListener?.Stop();
                 m_TcpListener = null;
+            }
+        }
+
+        /// <summary>
+        /// Queue a message to be sent to capcom.
+        /// </summary>
+        /// <param name="message">Object responsible for sending the message</param>
+        public void QueueSendMessage(IToCapcomMessage message)
+        {
+            lock (m_SendMessageQueueLock)
+            {
+                m_SendMessageQueue.Enqueue(message);
+                m_SendMessageQueueCv.Signal();
             }
         }
 
@@ -86,12 +106,117 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         }
 
         /// <summary>
-        /// Main processing loop of the capsule manager
+        /// Function looping and send messages to capcom when messages are to be sent.
         /// </summary>
-        async ValueTask ClientLoop(TcpClient client)
+        async ValueTask SendsCapcomMessages()
+        {
+            byte[] messageIdBuffer = new byte[Marshal.SizeOf<Guid>()];
+
+            // ReSharper disable once InconsistentlySynchronizedField
+            m_CancellationTokenSource.Token.Register(() => m_SendMessageQueueCv.Cancel());
+
+            try
+            {
+                while (!m_CancellationTokenSource.IsCancellationRequested)
+                {
+                    IToCapcomMessage toSend;
+                    ValueTask? toWaitOn = null;
+                    lock (m_SendMessageQueueLock)
+                    {
+                        if (!m_SendMessageQueue.TryDequeue(out toSend))
+                        {
+                            toWaitOn = m_SendMessageQueueCv.SignaledValueTask;
+                        }
+                    }
+
+                    if (toWaitOn.HasValue)
+                    {
+                        await toWaitOn.Value.ConfigureAwait(false);
+                        continue;
+                    }
+
+                    NetworkStream networkStream;
+                    lock (m_Lock)
+                    {
+                        networkStream = m_ToCapcomNetworkStream;
+                    }
+
+                    if (networkStream == null)
+                    {
+                        // No one care about the message, just skip it.
+                        toSend.Dispose();
+                        continue;
+                    }
+
+                    try
+                    {
+                        await networkStream.WriteStructAsync(toSend.MessageId, messageIdBuffer).ConfigureAwait(false);
+                        await toSend.Send(networkStream).ConfigureAwait(false);
+                        toSend.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        // We log it as an error as normally capcom should always outlive the capsule, so it means that
+                        // there is really something going wrong...
+                        Debug.LogError($"Communication error with capcom: {e}");
+                    }
+                }
+            }
+            finally
+            {
+                lock (m_Lock)
+                {
+                    m_ToCapcomNetworkStream?.Dispose();
+                    m_ToCapcomNetworkStream = null;
+                    m_ToCapcomTcpClient?.Dispose();
+                    m_ToCapcomTcpClient = null;
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Establish a connection with a client.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        async ValueTask ProcessConnectionAsync(TcpClient client)
+        {
+            NetworkStream networkStream = null;
+            ConnectionInit connectionInit;
+            try
+            {
+                networkStream = client.GetStream();
+                connectionInit = networkStream.ReadStruct<ConnectionInit>();
+            }
+            catch
+            {
+                // ReSharper disable once MethodHasAsyncOverload
+                networkStream?.Dispose();
+                client.Dispose();
+                throw;
+            }
+
+            switch (connectionInit.MessageFlow)
+            {
+                default:
+                case MessageDirection.CapcomToCapsule:
+                    await ProcessMessages(client, networkStream);
+                    break;
+                case MessageDirection.CapsuleToCapcom:
+                    SaveMessageReceiver(client, networkStream);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Loop that process messages received from capcom.
+        /// </summary>
+        /// <param name="client"><see cref="TcpClient"/> feeding <paramref name="networkStream"/>.</param>
+        /// <param name="networkStream">Stream over which we are receiving messages and sending responses.</param>
+        async ValueTask ProcessMessages(TcpClient client, NetworkStream networkStream)
         {
             using var clientDisposer = client;
-            await using var networkStream = client.GetStream();
+            await using var networkStreamDisposer = networkStream;
 
             int sizeOfGuid = Marshal.SizeOf<Guid>();
             byte[] messageIdBuffer = new byte[sizeOfGuid];
@@ -105,6 +230,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 {
                     continue;
                 }
+
                 Guid messageId = MemoryMarshal.Read<Guid>(messageIdBuffer);
 
                 // Handle the message
@@ -117,15 +243,70 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                     catch (Exception e)
                     {
                         Debug.LogError($"Message {messageId} generated an exception: {e}");
+
                         // We in theory should send an answer but we have no idea what it is, let's hope the capsule will
                         // be able to deal with it...
                     }
                 }
                 else
                 {
-                    Debug.LogError($"Received an unknown message from the capsule: {messageId}");
+                    Debug.LogError($"Received an unknown message from capcom: {messageId}");
+
                     // We in theory should send an answer but we have no idea what it is, let's hope the capsule will
                     // be able to deal with it...
+                }
+            }
+        }
+
+        /// <summary>
+        /// Save information necessary to send messages we are sending to this <see cref="TcpClient"/>.
+        /// </summary>
+        /// <param name="client"><see cref="TcpClient"/> feeding <paramref name="networkStream"/>.</param>
+        /// <param name="networkStream">Stream over which we are sending messages and receiving responses.</param>
+        void SaveMessageReceiver(TcpClient client, NetworkStream networkStream)
+        {
+            lock (m_Lock)
+            {
+                if (m_ToCapcomTcpClient != null)
+                {
+                    Debug.LogWarning("Refused message receiver as we already have one.");
+                    networkStream.Dispose();
+                    client.Dispose();
+                    return;
+                }
+
+                m_ToCapcomTcpClient = client;
+                m_ToCapcomNetworkStream = networkStream;
+
+                // Immediately send a status update so that capcom does not have to wait for the next status change
+                // (which could take some time).
+                var messageToSend = SendCapsuleStatus.New();
+                messageToSend.NodeRole = m_LastKnownRole;
+                messageToSend.NodeId = (byte)m_NodeId;
+                messageToSend.RenderNodeId = (byte)m_LastRenderNodeId;
+                QueueSendMessage(messageToSend);
+            }
+        }
+
+        /// <summary>
+        /// Callback executed before the start of each frame.
+        /// </summary>
+        void OnDoPreFrame()
+        {
+            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            {
+                if (clusterSyncState.NodeRole != m_LastKnownRole || clusterSyncState.RenderNodeID != m_LastRenderNodeId)
+                {
+                    var messageToSend = SendCapsuleStatus.New();
+                    messageToSend.NodeRole = clusterSyncState.NodeRole;
+                    messageToSend.NodeId = clusterSyncState.NodeID;
+                    messageToSend.RenderNodeId = clusterSyncState.RenderNodeID;
+
+                    m_LastKnownRole = messageToSend.NodeRole;
+                    m_NodeId = messageToSend.NodeId;
+                    m_LastRenderNodeId = messageToSend.RenderNodeId;
+
+                    QueueSendMessage(messageToSend);
                 }
             }
         }
@@ -142,5 +323,47 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         /// The different message handlers
         /// </summary>
         Dictionary<Guid, IMessageHandler> m_MessageHandlers = new();
+
+        /// <summary>
+        /// Last known <see cref="IClusterSyncState.NodeRole"/>.
+        /// </summary>
+        NodeRole m_LastKnownRole = NodeRole.Unassigned;
+        /// <summary>
+        /// Last known <see cref="IClusterSyncState.NodeID"/>.
+        /// </summary>
+        /// <remarks>Constant through execution.</remarks>
+        int m_NodeId = -1;
+        /// <summary>
+        /// Last known <see cref="IClusterSyncState.RenderNodeID"/>.
+        /// </summary>
+        int m_LastRenderNodeId = -1;
+
+        /// <summary>
+        /// Synchronize access to m_SendMessageQueue* member variables.
+        /// </summary>
+        object m_SendMessageQueueLock = new();
+        /// <summary>
+        /// Queue storing <see cref="Action"/> that will send messages to capcoms (there should be one, but nothing
+        /// stops us from having multiple) and process the answers.
+        /// </summary>
+        /// <remarks>Would have loved to use Channel but this is .Net 3.0 only...</remarks>
+        Queue<IToCapcomMessage> m_SendMessageQueue = new(100);
+        /// <summary>
+        /// Signaled every time something is added to <see cref="m_SendMessageQueue"/>.
+        /// </summary>
+        AsyncConditionVariableValueTask m_SendMessageQueueCv = new();
+
+        /// <summary>
+        /// Object used to synchronize access to the member variables below
+        /// </summary>
+        object m_Lock = new();
+        /// <summary>
+        /// Tcp client to send messages to capcom.
+        /// </summary>
+        TcpClient m_ToCapcomTcpClient;
+        /// <summary>
+        /// Network stream to send messages to capcom.
+        /// </summary>
+        NetworkStream m_ToCapcomNetworkStream;
     }
 }

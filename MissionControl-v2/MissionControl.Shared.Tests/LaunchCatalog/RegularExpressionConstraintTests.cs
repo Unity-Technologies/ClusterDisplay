@@ -8,12 +8,19 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         public void Equal()
         {
             RegularExpressionConstraint constraintA = new();
-            constraintA.RegularExpression = "This.*";
-
             RegularExpressionConstraint constraintB = new();
-            Assert.That(constraintA, Is.Not.EqualTo(constraintB));
+            Assert.That(constraintA, Is.EqualTo(constraintB));
 
+            constraintA.RegularExpression = "This.*";
+            constraintB.RegularExpression = "That.*";
+            Assert.That(constraintA, Is.Not.EqualTo(constraintB));
             constraintB.RegularExpression = "This.*";
+            Assert.That(constraintA, Is.EqualTo(constraintB));
+
+            constraintA.ErrorMessage = "This is an error message";
+            constraintB.ErrorMessage = "That is not the expected value";
+            Assert.That(constraintA, Is.Not.EqualTo(constraintB));
+            constraintB.ErrorMessage = "This is an error message";
             Assert.That(constraintA, Is.EqualTo(constraintB));
         }
 
@@ -22,6 +29,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         {
             RegularExpressionConstraint toSerialize = new();
             toSerialize.RegularExpression = "This.*";
+            toSerialize.ErrorMessage ="This is an error message";
             var serializedConstraint = JsonSerializer.Serialize(toSerialize, Json.SerializerOptions);
             var deserialized = JsonSerializer.Deserialize<Constraint>(serializedConstraint, Json.SerializerOptions);
             Assert.That(deserialized, Is.Not.Null);
@@ -42,6 +50,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         {
             RegularExpressionConstraint toClone = new();
             toClone.RegularExpression = "This.*";
+            toClone.ErrorMessage ="This is an error message";
             Constraint cloned = toClone.DeepClone();
             Assert.That(cloned, Is.Not.Null);
             Assert.That(cloned, Is.EqualTo(toClone));
@@ -63,6 +72,12 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
             constraint.RegularExpression = "^$";
             Assert.That(constraint.Validate(""), Is.True);
             Assert.That(constraint.Validate("Something"), Is.False);
+
+            constraint.RegularExpression = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$";
+            Assert.That(constraint.Validate("123.123.123.123"), Is.True);
+            Assert.That(constraint.Validate("123.123.123.1234"), Is.False);
+            Assert.That(constraint.Validate("123.123.123."), Is.False);
+            Assert.That(constraint.Validate(""), Is.False);
         }
     }
 }

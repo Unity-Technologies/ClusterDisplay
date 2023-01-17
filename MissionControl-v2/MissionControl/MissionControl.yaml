@@ -34,7 +34,7 @@ paths:
     get:
       tags:
         - general
-      summary: Status of the LaunchPads.
+      summary: Status of the Launchpads.
       responses:
         '200':
           description: Success
@@ -44,6 +44,66 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LaunchPadStatus'
+  /launchPadsStatus/{id}:
+    get:
+      tags:
+        - general
+      summary: Status of a Launchpad.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the launchpad.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LaunchPadStatus'
+        '404':
+          description: Cannot find a Launchpad with the specified identifier.
+  /launchPadsStatus/{id}/dynamicEntries:
+    put:
+      tags:
+        - general
+      summary: Sets the value of a launchpad DynamicEntry.
+      description: Sets the value of a launchpad DynamicEntry.  The list will get cleared as soon as the LaunchPad is not running anymore.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the launchpad.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: New or updated LaunchPadReportDynamicEntry.
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LaunchPadReportDynamicEntry'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/LaunchPadReportDynamicEntry'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Cannot find a Launchpad with the specified identifier.
+        '409':
+          description: Current state of the server prevent the changes (should only be called while the launchpad is running (its state is Launched)).
+          content:
+            text/plain:
+              schema:
+                type: string
   /launchPadsHealth:
     get:
       tags:
@@ -978,15 +1038,17 @@ components:
           type: integer
           format: uint64
           description: Version number of the next update to ask to get changes from what was just received.
-    LaunchPadStatusEntry:
+    LaunchPadReportDynamicEntry:
       type: object
-      description: An entry in the status of a LaunchPad that depends on what it runs (dynamicEntries).
+      description: An entry in the status or health of a LaunchPad that depends on what it runs (dynamicEntries).
       properties:
         name:
           type: string
-          description: Name (to be displayed to the user) of the status value.
+          description: Name (to be displayed to the user) of the status or health value.
         value:
+          description: Value of the dynamic status or health entry.
           oneOf:
+            - type: boolean
             - type: integer
             - type: number
             - type: string
@@ -1030,7 +1092,7 @@ components:
           type: array
           description: Additional status information that depends on the Launchable type running.
           items:
-            $ref: '#/components/schemas/LaunchPadStatusEntry'
+            $ref: '#/components/schemas/LaunchPadReportDynamicEntry'
     LaunchPadHealth:
       type: object
       description: Health diagnostic of a LaunchPad and its surrounding (changes periodically).
@@ -1062,7 +1124,7 @@ components:
           type: array
           description: Additional health information that depends on the Launchable type running.
           items:
-            $ref: '#/components/schemas/LaunchPadStatusEntry'
+            $ref: '#/components/schemas/LaunchPadReportDynamicEntry'
     ShutdownCommand:
       type: object
       description: Command asking MissionControl to shutdown.  Use with care as the only way to restart it is to do some manual interventions on the computer running it, designed to be sued as part of automated testing.

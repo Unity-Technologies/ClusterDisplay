@@ -125,8 +125,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                         }
 
                         // Find the launchable to launch
-                        var launchables = manifest.Asset.Launchables
-                            .Where(l => l.Name == launchpadConfiguration.LaunchableName && launchPad.SuitableFor.Contains(l.Type));
+                        var launchables = manifest.Asset.Launchables.Where(l =>
+                            l.Name == launchpadConfiguration.LaunchableName && launchPad.SuitableFor.Contains(l.Type));
                         if (launchables.Count() > 1)
                         {
                             m_Logger.LogError("Multiple launchables found with the name {Name} for LaunchPad {PadId}",
@@ -136,8 +136,19 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                         Launchable? launchable = launchables.FirstOrDefault();
                         if (launchable == null)
                         {
-                            m_Logger.LogError("Cannot find any launchable to launch on {PadId}",
-                                launchpadConfiguration.Identifier);
+                            if (launchpadConfiguration.LaunchableName != "")
+                            {
+                                m_Logger.LogError("Cannot find any launchable to launch on {PadId}",
+                                    launchpadConfiguration.Identifier);
+                            }
+                            else
+                            {
+                                // Launchpad with an explicitly empty launchable.  This is the way to specify we do not
+                                // want to launch anything on that launchpad (while still keeping it in the launch
+                                // configuration for whatever reason).  Let's not generate any error message and reduce
+                                // the number of launchapds participating to the mission.
+                                --m_LaunchPadsCount;
+                            }
                             continue;
                         }
 

@@ -11,6 +11,7 @@ on:
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionObjectData.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionUpdate.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IReadOnlyIncrementalCollection.cs'
+      - 'TestProjects/MissionControlTests/Assets/Tests/AsyncConditionVariableTests.cs'
       - 'TestProjects/MissionControlTests/Assets/Tests/IncrementalCollectionTests.cs'
       - 'TestProjects/MissionControlTests/Assets/Tests/ObjectReferenceEqualityComparer.cs'
 
@@ -24,6 +25,7 @@ on:
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionObjectData.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IncrementalCollectionUpdate.cs'
       - 'source/com.unity.cluster-display/Runtime/MissionControl/Shared/IReadOnlyIncrementalCollection.cs'
+      - 'TestProjects/MissionControlTests/Assets/Tests/AsyncConditionVariableTests.cs'
       - 'TestProjects/MissionControlTests/Assets/Tests/IncrementalCollectionTests.cs'
       - 'TestProjects/MissionControlTests/Assets/Tests/ObjectReferenceEqualityComparer.cs'
 

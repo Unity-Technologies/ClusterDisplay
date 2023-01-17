@@ -300,7 +300,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         public async Task<LaunchPadStatus> GetLaunchPadStatus(Guid id)
         {
-            var ret = await HttpClient.GetFromJsonAsync<LaunchPadStatus>($"launchPadsStatus/{id}", Json.SerializerOptions);
+            var ret = await HttpClient.GetFromJsonAsync<LaunchPadStatus>($"launchPadsStatus/{id}",
+                Json.SerializerOptions);
             Assert.That(ret, Is.Not.Null);
             return ret!;
         }
@@ -316,6 +317,26 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var ret = await HttpClient.GetFromJsonAsync<LaunchPadStatus[]>($"launchPadsStatus", Json.SerializerOptions);
             Assert.That(ret, Is.Not.Null);
             return ret!;
+        }
+        public async Task<HttpStatusCode> PutLaunchPadStatusDynamicEntryWithStatusCode(Guid id, LaunchPadReportDynamicEntry entry)
+        {
+            var ret = await HttpClient.PutAsJsonAsync($"launchPadsStatus/{id}/dynamicEntries", entry,
+                Json.SerializerOptions);
+            return ret.StatusCode;
+        }
+
+        public async Task PutLaunchPadStatusDynamicEntry(Guid id, LaunchPadReportDynamicEntry entry)
+        {
+            var ret = await HttpClient.PutAsJsonAsync($"launchPadsStatus/{id}/dynamicEntries", entry,
+                Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        public async Task PutLaunchPadStatusDynamicEntries(Guid id, IEnumerable<LaunchPadReportDynamicEntry> entries)
+        {
+            var ret = await HttpClient.PutAsJsonAsync($"launchPadsStatus/{id}/dynamicEntries", entries,
+                Json.SerializerOptions);
+            Assert.That(ret.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
 
         public async Task<LaunchPadHealth> GetLaunchPadHealth(Guid id)

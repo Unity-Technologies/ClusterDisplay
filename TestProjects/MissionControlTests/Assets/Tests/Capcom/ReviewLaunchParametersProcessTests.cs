@@ -16,7 +16,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         [SetUp]
         public void SetUp()
         {
-            m_Mirror = new();
+            m_Mirror = new(new());
             m_LaunchComplexesId.Clear();
 
             m_MissionControlStub.Start();

@@ -42,6 +42,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
             return Ok(retHealth);
         }
 
-        LaunchPadsHealthService m_LaunchPadsHealthService;
+        readonly LaunchPadsHealthService m_LaunchPadsHealthService;
     }
 }

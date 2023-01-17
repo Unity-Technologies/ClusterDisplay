@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
     /// <summary>
     /// Service responsible for monitoring health of LaunchdPads.
     /// </summary>
-    public class LaunchPadsHealthService: IDisposable
+    public class LaunchPadsHealthService
     {
         public LaunchPadsHealthService(ILogger<LaunchPadsHealthService> logger,
                                        ConfigService configService,
@@ -43,13 +43,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         {
             return new AsyncLockedObject<IReadOnlyIncrementalCollection<LaunchPadHealth>>(m_Collection,
                 await m_Lock.LockAsync());
-        }
-
-        public void Dispose()
-        {
-            m_CancellationTokenSource.Cancel();
-            m_ConfigService.ValidateNew -= ValidateNewConfig;
-            m_ConfigService.Changed -= ConfigChangedAsync;
         }
 
         /// <summary>

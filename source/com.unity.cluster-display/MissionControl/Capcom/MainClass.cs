@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Web;
 using Newtonsoft.Json;
 using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
@@ -34,9 +33,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// </summary>
         /// <param name="searchPath">Path in which to search for the assembly containing this code.</param>
         /// <param name="toSetup">The <see cref="CatalogBuilderDirective"/> to setup.</param>
-        public static void SetupCatalogBuilderDirective(string searchPath, CatalogBuilderDirective toSetup)
+        /// <param name="filesFilter">Filter method used to accept or reject files found of the disk.  Called with the
+        /// full path to the file and returns if the file is to be part of launchables or not.</param>
+        public static void SetupCatalogBuilderDirective(string searchPath, CatalogBuilderDirective toSetup,
+            Func<string, bool> filesFilter)
         {
-            var capcomAssemblyPath = GetCapcomAssemblyPath(searchPath);
+            var capcomAssemblyPath = GetCapcomAssemblyPath(searchPath, filesFilter);
             HashSet<string> dependenciesSet = new();
             GetDependenciesOf(Path.GetDirectoryName(capcomAssemblyPath), Assembly.GetAssembly(typeof(MainClass)),
                 dependenciesSet);
@@ -61,23 +63,23 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// Search files in the given folder for the capcom assembly.
         /// </summary>
         /// <param name="searchPath">Path in which to search</param>
-        static string GetCapcomAssemblyPath(string searchPath)
+        /// <param name="filesFilter">Filter method used to accept or reject files found of the disk.  Called with the
+        /// full path to the file and returns if the file is to be part of launchables or not.</param>
+        static string GetCapcomAssemblyPath(string searchPath, Func<string, bool> filesFilter)
         {
             var scriptAssembly = Assembly.GetAssembly(typeof(MainClass));
             var scriptAssemblyPath = scriptAssembly.Location;
             var assemblyFilename = Path.GetFileName(scriptAssemblyPath);
 
-            var files = Directory.GetFiles(searchPath, $"{assemblyFilename}", SearchOption.AllDirectories);
-            if (files.Length == 0)
+            var files = Directory.GetFiles(searchPath, $"{assemblyFilename}", SearchOption.AllDirectories)
+                .Where(filesFilter).ToList();
+            return files.Count switch
             {
-                throw new FileNotFoundException($"Cannot find {assemblyFilename} in the build.");
-            }
-            if (files.Length > 1)
-            {
-                throw new FileNotFoundException($"Found multiple {assemblyFilename} in the build, there should be " +
-                    $"only one.");
-            }
-            return files.First();
+                0 => throw new FileNotFoundException($"Cannot find {assemblyFilename} in the build."),
+                > 1 => throw new FileNotFoundException($"Found multiple {assemblyFilename} in the build, there " +
+                    $"should be only one."),
+                _ => files.First()
+            };
         }
 
         /// <summary>

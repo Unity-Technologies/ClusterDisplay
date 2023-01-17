@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 
 namespace Unity.ClusterDisplay.MissionControl.Capsule
 {
-    public class ProcessingLoopTests
+    public class ReceiveMessagesTests
     {
         struct TestHandlerMessage
         {
@@ -87,6 +87,9 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using TcpClient testClient = new("127.0.0.1", k_TestPort);
             using var testClientStream = testClient.GetStream();
 
+            ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
+            testClientStream.WriteStruct(initStruct);
+
             TestHandlerMessage message = new() {Value = Guid.NewGuid()};
             yield return SendMessage(testClientStream, message);
             TestHandlerResponseReceiver responseReceiver = new();
@@ -104,6 +107,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using var testClient1Stream = testClient1.GetStream();
             using TcpClient testClient2 = new("127.0.0.1", k_TestPort);
             using var testClient2Stream = testClient2.GetStream();
+
+            ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
+            testClient1Stream.WriteStruct(initStruct);
+            testClient2Stream.WriteStruct(initStruct);
 
             TestHandlerMessage message1 = new() {Value = Guid.NewGuid()};
             yield return SendMessage(testClient1Stream, message1);
@@ -132,7 +139,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             yield return networkStream.WriteStructAsync(message, sendBuffer).AsIEnumerator();
         }
 
-        const int k_TestPort = 8000;
+        const int k_TestPort = Helpers.ListenPort;
         ProcessingLoop m_ProcessingLoop;
         readonly Guid m_TestHandlerId = Guid.NewGuid();
         TestHandler m_TestHandler;

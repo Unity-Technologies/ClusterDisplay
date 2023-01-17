@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay.MissionControl
         public IncrementalCollection<LaunchParameterForReview> LaunchParametersForReview { get; set; } = new();
 
         // ReSharper disable once MemberCanBePrivate.Global
-        public Action<string, HttpMethod, HttpListenerResponse> FallbackHandler { get; set; } =
+        public Action<string, HttpListenerRequest, HttpListenerResponse> FallbackHandler { get; set; } =
             (_, _, response) => Respond(response, HttpStatusCode.NotFound);
 
         void ProcessRequestTask(Task<HttpListenerContext> task)
@@ -158,7 +158,7 @@ namespace Unity.ClusterDisplay.MissionControl
             }
             else
             {
-                FallbackHandler(requestedUri, httpMethod, response);
+                FallbackHandler(requestedUri, request, response);
             }
         }
 
@@ -313,7 +313,7 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
-        static void Respond(HttpListenerResponse response, HttpStatusCode statusCode)
+        public static void Respond(HttpListenerResponse response, HttpStatusCode statusCode)
         {
             response.StatusCode = (int)statusCode;
             response.Close();
@@ -331,7 +331,7 @@ namespace Unity.ClusterDisplay.MissionControl
             response.Close();
         }
 
-        const string k_HttpListenerEndpoint = "http://localhost:8000/";
+        static readonly string k_HttpListenerEndpoint = $"http://localhost:{Helpers.ListenPort}/";
         const string k_CapcomUplinkName = "capcomUplink";
         const string k_ComplexesName = "complexes";
         const string k_ApplicationJson = "application/json";

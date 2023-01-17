@@ -20,6 +20,11 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         /// </summary>
         public string RegularExpression { get; set; } = ".*";
 
+        /// <summary>
+        /// Error message to display if regular expression is not valid.
+        /// </summary>
+        public string ErrorMessage { get; set; } = "Value not valid";
+
         /// <inheritdoc/>
         public override bool Validate(object value)
         {
@@ -36,13 +41,15 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         {
             RegularExpressionConstraint ret = new();
             ret.RegularExpression = RegularExpression;
+            ret.ErrorMessage = ErrorMessage;
             return ret;
         }
 
         public bool Equals(RegularExpressionConstraint? other)
         {
             return other != null && other.GetType() == typeof(RegularExpressionConstraint) &&
-                RegularExpression == other.RegularExpression;
+                RegularExpression == other.RegularExpression &&
+                ErrorMessage == other.ErrorMessage;
         }
 
         protected override bool EqualsOfSameType(Constraint other)
