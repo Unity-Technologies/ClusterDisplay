@@ -48,7 +48,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 throw new InvalidOperationException("Capsule.ProcessingLoop already running...");
             }
 
-            bool onDoPreFrameRegistered = false;
             try
             {
                 m_TcpListener = new(IPAddress.Any, listenPort);
@@ -61,7 +60,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 });
 
                 ClusterSyncLooper.onInstanceDoPreFrame += OnDoPreFrame;
-                onDoPreFrameRegistered = true;
                 _ = SendsCapcomMessages();
 
                 while (!m_CancellationTokenSource.IsCancellationRequested)
@@ -80,10 +78,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             }
             finally
             {
-                if (onDoPreFrameRegistered)
-                {
-                    ClusterSyncLooper.onInstanceDoPreFrame -= OnDoPreFrame;
-                }
+                ClusterSyncLooper.onInstanceDoPreFrame -= OnDoPreFrame;
                 m_TcpListener?.Stop();
                 m_TcpListener = null;
             }
@@ -191,7 +186,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             try
             {
                 networkStream = client.GetStream();
-                connectionInit = ConnectionInit.ReadFrom(networkStream);
+                connectionInit = networkStream.ReadStruct<ConnectionInit>();
             }
             catch
             {

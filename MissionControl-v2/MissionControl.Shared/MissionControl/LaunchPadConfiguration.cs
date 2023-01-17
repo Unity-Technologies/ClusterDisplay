@@ -30,7 +30,9 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <param name="launchPad">The <see cref="LaunchPad"/> this <see cref="LaunchPadConfiguration"/> is
         /// configuring.</param>
         /// <remarks>Returns the one with a matching name or the first one in alphabetical order is not found and
-        /// <see cref="LaunchableName"/> is not empty.</remarks>
+        /// <see cref="LaunchableName"/> is not empty.  We use that approach (of fall-back on the first one found) so 
+        /// that launchpads that were active stay active (because they have a launchable) when switching between
+        /// assets.</remarks>
         public Launchable? GetEffectiveLaunchable(Asset asset, LaunchPad launchPad)
         {
             if (LaunchableName == "")

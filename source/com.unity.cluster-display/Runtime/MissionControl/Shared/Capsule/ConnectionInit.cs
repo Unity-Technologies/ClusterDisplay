@@ -29,32 +29,5 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         /// Direction messages are sent over the connection.
         /// </summary>
         public MessageDirection MessageFlow;
-
-        /// <summary>
-        /// Send the structure over the given stream (to initialize the connection).
-        /// </summary>
-        /// <param name="stream">The <see cref="NetworkStream"/> over which to send the struct.</param>
-        public void Send(NetworkStream stream)
-        {
-            int sizeOfStruct = Marshal.SizeOf<ConnectionInit>();
-            Span<byte> buffer = stackalloc byte[sizeOfStruct];
-            MemoryMarshal.Write(buffer, ref this);
-            stream.Write(buffer);
-        }
-
-        /// <summary>
-        /// Fill the structure from the given stream.
-        /// </summary>
-        /// <param name="stream">The <see cref="NetworkStream"/> from which we set this struct.</param>
-        public static ConnectionInit ReadFrom(NetworkStream stream)
-        {
-            int sizeOfStruct = Marshal.SizeOf<ConnectionInit>();
-            Span<byte> buffer = stackalloc byte[sizeOfStruct];
-            if (!stream.ReadAllBytes(buffer))
-            {
-                throw new InvalidOperationException("Failed to read from stream.");
-            }
-            return MemoryMarshal.Read<ConnectionInit>(buffer);
-        }
     }
 }

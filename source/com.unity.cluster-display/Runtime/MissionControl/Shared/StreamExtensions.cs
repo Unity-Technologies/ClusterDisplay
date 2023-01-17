@@ -112,6 +112,22 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
         /// <summary>
+        /// Read the given struct from the stream.
+        /// </summary>
+        /// <param name="stream">Extended object.</param>
+        /// <typeparam name="T">Type of struct to read from the stream.</typeparam>
+        public static T ReadStruct<T>(this Stream stream) where T: struct
+        {
+            int sizeOfStruct = Marshal.SizeOf<T>();
+            Span<byte> buffer = stackalloc byte[sizeOfStruct];
+            if (!stream.ReadAllBytes(buffer))
+            {
+                throw new InvalidOperationException("Failed to read from stream.");
+            }
+            return MemoryMarshal.Read<T>(buffer);
+        }
+
+        /// <summary>
         /// Write the given struct from the stream.
         /// </summary>
         /// <param name="stream">Extended object.</param>
@@ -140,6 +156,20 @@ namespace Unity.ClusterDisplay.MissionControl
         public static ValueTask WriteStructAsync<T>(this Stream stream, T toWrite, byte[] buffer) where T: struct
         {
             return stream.WriteStructAsync(toWrite, buffer, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Write the given struct from the stream.
+        /// </summary>
+        /// <param name="stream">Extended object.</param>
+        /// <param name="toWrite">Struct to write.</param>
+        /// <typeparam name="T">Type of struct to write to the stream.</typeparam>
+        public static void WriteStruct<T>(this Stream stream, T toWrite) where T: struct
+        {
+            int sizeOfStruct = Marshal.SizeOf<T>();
+            Span<byte> buffer = stackalloc byte[sizeOfStruct];
+            MemoryMarshal.Write(buffer, ref toWrite);
+            stream.Write(buffer);
         }
     }
 }

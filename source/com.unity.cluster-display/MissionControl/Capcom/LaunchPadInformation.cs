@@ -92,7 +92,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     m_CapsuleNetworkStream = m_CapsuleTcpClient.GetStream();
 
                     ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
-                    initStruct.Send(m_CapsuleNetworkStream);
+                    m_CapsuleNetworkStream.WriteStruct(initStruct);
                 }
 
                 return m_CapsuleNetworkStream;
