@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using var testCapcomStream = testClient.GetStream();
 
             ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapsuleToCapcom};
-            initStruct.Send(testCapcomStream);
+            testCapcomStream.WriteStruct(initStruct);
             yield return ConsumeInitialStatusMessage(testCapcomStream);
 
             yield return SendSendCapsuleStatus(testCapcomStream);
@@ -50,14 +50,14 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using var testCapcomStream1 = testClient1.GetStream();
 
             ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapsuleToCapcom};
-            initStruct.Send(testCapcomStream1);
+            testCapcomStream1.WriteStruct(initStruct);
             yield return ConsumeInitialStatusMessage(testCapcomStream1);
 
             // Second connection
             using TcpClient testClient2 = new("127.0.0.1", k_TestPort);
             using var testCapcomStream2 = testClient2.GetStream();
 
-            initStruct.Send(testCapcomStream2);
+            testCapcomStream2.WriteStruct(initStruct);
 
             // Try to write something on that second connection, it should fail when the capsule refuses it and close
             // the stream and the connection.

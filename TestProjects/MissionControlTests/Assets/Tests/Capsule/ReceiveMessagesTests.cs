@@ -88,7 +88,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using var testClientStream = testClient.GetStream();
 
             ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
-            initStruct.Send(testClientStream);
+            testClientStream.WriteStruct(initStruct);
 
             TestHandlerMessage message = new() {Value = Guid.NewGuid()};
             yield return SendMessage(testClientStream, message);
@@ -109,8 +109,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             using var testClient2Stream = testClient2.GetStream();
 
             ConnectionInit initStruct = new() {MessageFlow = MessageDirection.CapcomToCapsule};
-            initStruct.Send(testClient1Stream);
-            initStruct.Send(testClient2Stream);
+            testClient1Stream.WriteStruct(initStruct);
+            testClient2Stream.WriteStruct(initStruct);
 
             TestHandlerMessage message1 = new() {Value = Guid.NewGuid()};
             yield return SendMessage(testClient1Stream, message1);
