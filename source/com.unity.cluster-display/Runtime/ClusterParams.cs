@@ -39,6 +39,15 @@ namespace Unity.ClusterDisplay
         External
     }
 
+    public enum InputSync
+    {
+        None,
+#if ENABLE_INPUT_SYSTEM
+        InputSystem,
+#endif
+        Legacy
+    }
+
     [Serializable]
     public struct ClusterParams
     {
@@ -60,6 +69,8 @@ namespace Unity.ClusterDisplay
         public bool DelayRepeaters;
         public bool HeadlessEmitter;
         public bool ReplaceHeadlessEmitter;
+
+        public InputSync InputSync;
 
         public TimeSpan HandshakeTimeout
         {
@@ -93,7 +104,7 @@ namespace Unity.ClusterDisplay
                 HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
                 CommunicationTimeout = TimeSpan.FromMilliseconds(5000),
                 Fence = FrameSyncFence.Hardware,
-                TargetFps = -1
+                TargetFps = -1,
             };
     }
 

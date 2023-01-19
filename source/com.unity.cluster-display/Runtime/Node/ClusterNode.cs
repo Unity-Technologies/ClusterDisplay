@@ -30,6 +30,7 @@ namespace Unity.ClusterDisplay
         /// Synchronization strategy
         /// </summary>
         public FrameSyncFence Fence { get; set; }
+        public InputSync InputSync { get; set; }
     }
 
     /// <summary>

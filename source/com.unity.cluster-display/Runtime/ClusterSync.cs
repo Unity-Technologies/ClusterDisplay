@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net;
+using Unity.ClusterDisplay.Scripting;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
@@ -214,6 +215,23 @@ namespace Unity.ClusterDisplay
                 NodeRole = NodeRole.Emitter;
                 RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
 
+                switch (clusterNodeConfig.InputSync)
+                {
+#if ENABLE_INPUT_SYSTEM
+                    case InputSync.InputSystem:
+                        ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Emitter));
+                        break;
+#endif
+                    case InputSync.Legacy:
+                        EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.Input,
+                            ClusterSerialization.SaveInputManagerState);
+                        break;
+                    case InputSync.None:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
                 return true;
             }
             catch (Exception e)
@@ -235,6 +253,23 @@ namespace Unity.ClusterDisplay
 
                 NodeRole = NodeRole.Repeater;
 
+                switch (clusterNodeConfig.InputSync)
+                {
+#if ENABLE_INPUT_SYSTEM
+                    case InputSync.InputSystem:
+                        ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Repeater));
+                        break;
+#endif
+                    case InputSync.Legacy:
+                        RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.Input,
+                            ClusterSerialization.RestoreInputManagerState);
+                        break;
+                    case InputSync.None:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
                 return true;
             }
             catch (Exception e)
@@ -254,7 +289,8 @@ namespace Unity.ClusterDisplay
                     HandshakeTimeout = clusterParams.HandshakeTimeout,
                     CommunicationTimeout = clusterParams.CommunicationTimeout,
                     RepeatersDelayed = clusterParams.DelayRepeaters,
-                    Fence = clusterParams.Fence
+                    Fence = clusterParams.Fence,
+                    InputSync = clusterParams.InputSync
                 };
 
                 var udpAgentConfig = new UdpAgentConfig
@@ -269,6 +305,7 @@ namespace Unity.ClusterDisplay
                 {
                     if (!TryInitializeEmitter(nodeConfig, udpAgentConfig, clusterParams))
                         return false;
+
                     return true;
                 }
 
@@ -299,6 +336,14 @@ namespace Unity.ClusterDisplay
             ClusterSyncLooper.RemoveSynchPointFromPlayerLoop();
 
             UnRegisterDelegates();
+
+            #if ENABLE_INPUT_SYSTEM
+            if (ServiceLocator.TryGet(out InputSystemReplicator inputSystemReplicator))
+            {
+                inputSystemReplicator.Dispose();
+                ServiceLocator.Withdraw<InputSystemReplicator>();
+            }
+            #endif
 
             onDisableCLusterDisplay?.Invoke();
 
