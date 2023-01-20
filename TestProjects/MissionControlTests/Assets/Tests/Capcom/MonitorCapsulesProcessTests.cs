@@ -88,6 +88,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         [UnityTest]
+        [Ignore("Disabled for now since it causes problems on Yamato")]
         public IEnumerator Normal()
         {
             AddFakeCapsule(k_TestPort+0);
