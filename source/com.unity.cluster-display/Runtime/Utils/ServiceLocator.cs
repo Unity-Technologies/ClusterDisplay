@@ -45,8 +45,17 @@ namespace Unity.ClusterDisplay.Utils
         /// <summary>
         /// Clear the service provider for type <typeparamref name="T"/>.
         /// </summary>
+        /// <param name="shouldDispose">Whether the service provider should be disposed,
+        /// when applicable</param>
         /// <typeparam name="T">The service type.</typeparam>
-        public static void Withdraw<T>() where T : class => ServiceProvider<T>.Service = null;
+        public static void Withdraw<T>(bool shouldDispose = true) where T : class
+        {
+            if (shouldDispose && ServiceProvider<T>.Service is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            ServiceProvider<T>.Service = null;
+        }
 
         static class ServiceProvider<T> where T : class
         {

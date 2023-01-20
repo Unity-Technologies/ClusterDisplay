@@ -337,13 +337,9 @@ namespace Unity.ClusterDisplay
 
             UnRegisterDelegates();
 
-            #if ENABLE_INPUT_SYSTEM
-            if (ServiceLocator.TryGet(out InputSystemReplicator inputSystemReplicator))
-            {
-                inputSystemReplicator.Dispose();
-                ServiceLocator.Withdraw<InputSystemReplicator>();
-            }
-            #endif
+#if ENABLE_INPUT_SYSTEM
+            ServiceLocator.Withdraw<InputSystemReplicator>();
+#endif
 
             onDisableCLusterDisplay?.Invoke();
 

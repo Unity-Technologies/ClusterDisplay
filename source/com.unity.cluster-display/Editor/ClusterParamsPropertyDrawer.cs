@@ -12,7 +12,7 @@ namespace Unity.ClusterDisplay.Editor
         const string k_StyleSheetCommon = "Packages/com.unity.cluster-display/Editor/UI/SettingsWindowCommon.uss";
         static readonly StyleSheet k_StyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(k_StyleSheetCommon);
 
-        class Contents
+        static class Contents
         {
             public const string HandshakeTimeoutLabel = "Handshake Timeout (s)";
             public const string CommTimeoutLabel = "Communication Timeout (s)";

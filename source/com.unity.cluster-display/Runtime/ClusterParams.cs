@@ -39,13 +39,25 @@ namespace Unity.ClusterDisplay
         External
     }
 
+    /// <summary>
+    /// The input subsystem synchronized by the cluster.
+    /// </summary>
     public enum InputSync
     {
-        None,
+        /// <summary>
+        /// Don't synchronize inputs.
+        /// </summary>
+        None = 0,
 #if ENABLE_INPUT_SYSTEM
-        InputSystem,
+        /// <summary>
+        /// Synchronize inputs from the Input System package (new).
+        /// </summary>
+        InputSystem = 1,
 #endif
-        Legacy
+        /// <summary>
+        /// Synchronize inputs from legacy Input Manager (old).
+        /// </summary>
+        Legacy = 2
     }
 
     [Serializable]

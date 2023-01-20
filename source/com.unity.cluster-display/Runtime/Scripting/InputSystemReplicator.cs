@@ -13,15 +13,13 @@ using UnityEngine.PlayerLoop;
 namespace Unity.ClusterDisplay.Scripting
 {
     /// <summary>
-    /// Attach this script to a GameObject to enable synchronization of InputSystem events
-    /// across all the nodes. Any input events processed by the emitter are replicated on the
-    /// repeaters.
-    /// Only one instance of this script is necessary in each scene.
+    /// Enables synchronization of InputSystem events across all the nodes. Any input events processed by the emitter
+    /// are replicated on the repeaters.
     /// </summary>
     /// <remarks>
-    /// To ensure perfect synchronization, the player must be executed with the "-delayRepeaters" argument.
-    /// This is because the input events arrive on the repeaters one frame after they are processed on the
-    /// emitter.
+    /// To ensure perfect synchronization, the player must be executed with the "Deplay Repeaters" cluster setting or
+    /// the "-delayRepeaters" argument. This is because the input events arrive on the repeaters one frame after they
+    /// are processed on the emitter.
     /// </remarks>
     public class InputSystemReplicator : IDisposable
     {
