@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             foreach (var capsule in m_Capsules)
             {
                 capsule.ProcessingLoop.Stop();
-                yield return capsule.ProcessingTask.AsIEnumerator();
+                yield return capsule.ProcessingTask.AsIEnumeratorNoThrow();
             }
             m_Capsules.Clear();
         }
@@ -118,7 +118,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_MonitorCapsulesProcess.Process(m_Mirror);
 
             // Consume the initial status update
-            yield return WaitForUpdates(m_DynamicEntries, 1);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite1");
             m_DynamicEntries.Clear();
             Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(1));
 
@@ -127,8 +127,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_Capsules[1].FakeStatusChange(1, 3);
 
             // Wait until MissionControl receive those updates
-            yield return WaitForUpdates(m_DynamicEntries, 1);
-            TestEntry(m_DynamicEntries, launchPad1Id, 1, 3);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite2");
+            TestEntry(m_DynamicEntries, launchPad1Id, 1, 3, "CallSite1");
             m_DynamicEntries.Clear();
 
             // Add a second launchpad to be monitored
@@ -136,7 +136,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_MonitorCapsulesProcess.Process(m_Mirror);
 
             // Consume the initial status update
-            yield return WaitForUpdates(m_DynamicEntries, 1);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite3");
             m_DynamicEntries.Clear();
             Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(2));
 
@@ -145,9 +145,9 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_Capsules[1].FakeStatusChange(1, 5);
 
             // Wait until MissionControl receive those updates
-            yield return WaitForUpdates(m_DynamicEntries, 2);
-            TestEntry(m_DynamicEntries, launchPad0Id, 0, 4);
-            TestEntry(m_DynamicEntries, launchPad1Id, 1, 5);
+            yield return WaitForUpdates(m_DynamicEntries, 2, "CallSite4");
+            TestEntry(m_DynamicEntries, launchPad0Id, 0, 4, "CallSite2");
+            TestEntry(m_DynamicEntries, launchPad1Id, 1, 5, "CallSite3");
             m_DynamicEntries.Clear();
 
             // Shutdown a capsule (we need to remove it before removing the launchpad capcom should always outlive
@@ -164,8 +164,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_Capsules[1].FakeStatusChange(1, 6);
 
             // Wait until MissionControl receive those updates
-            yield return WaitForUpdates(m_DynamicEntries, 1);
-            TestEntry(m_DynamicEntries, launchPad1Id, 1, 6);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite5");
+            TestEntry(m_DynamicEntries, launchPad1Id, 1, 6, "CallSite4");
         }
 
         // This test is failing
@@ -182,17 +182,17 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_MonitorCapsulesProcess.Process(m_Mirror);
 
             // Consume the initial status updates
-            yield return WaitForUpdates(m_DynamicEntries, 2);
+            yield return WaitForUpdates(m_DynamicEntries, 2, "CallSite6");
             m_DynamicEntries.Clear();
-            Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(2));
+            Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(2), () => $"m_MonitorCapsulesProcess.ConnectionCount {m_MonitorCapsulesProcess.ConnectionCount} != 2, site 1");
 
             // Send first update
             m_Capsules[0].FakeStatusChange(0, 0);
             m_Capsules[1].FakeStatusChange(1, 1);
 
-            yield return WaitForUpdates(m_DynamicEntries, 2);
-            TestEntry(m_DynamicEntries, launchPad0Id, 0, 0);
-            TestEntry(m_DynamicEntries, launchPad1Id, 1, 1);
+            yield return WaitForUpdates(m_DynamicEntries, 2, "CallSite7");
+            TestEntry(m_DynamicEntries, launchPad0Id, 0, 0, "CallSite5");
+            TestEntry(m_DynamicEntries, launchPad1Id, 1, 1, "CallSite6");
             m_DynamicEntries.Clear();
 
             // Disconnect one of the capsules
@@ -204,8 +204,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             // Test updates of the other capsule still work fine
             m_Capsules[0].FakeStatusChange(0, 2);
-            yield return WaitForUpdates(m_DynamicEntries, 1);
-            TestEntry(m_DynamicEntries, launchPad0Id, 0, 2);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite8");
+            TestEntry(m_DynamicEntries, launchPad0Id, 0, 2, "CallSite7");
             m_DynamicEntries.Clear();
 
             // Reconnect the capsule
@@ -213,17 +213,18 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             // Consume the initial status updates that should be send when the connection is done to the replacement
             // capsule.
-            yield return WaitForUpdates(m_DynamicEntries, 1);
+            yield return WaitForUpdates(m_DynamicEntries, 1, "CallSite9");
             m_DynamicEntries.Clear();
             Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(2));
+            Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(2), () => $"m_MonitorCapsulesProcess.ConnectionCount {m_MonitorCapsulesProcess.ConnectionCount} != 2, site 2");
 
             // Send a new update to validate everything is now back to normal
             m_Capsules[0].FakeStatusChange(0, 3);
             m_Capsules[1].FakeStatusChange(1, 4);
 
-            yield return WaitForUpdates(m_DynamicEntries, 2);
-            TestEntry(m_DynamicEntries, launchPad0Id, 0, 3);
-            TestEntry(m_DynamicEntries, launchPad1Id, 1, 4);
+            yield return WaitForUpdates(m_DynamicEntries, 2, "CallSite10");
+            TestEntry(m_DynamicEntries, launchPad0Id, 0, 3, "CallSite8");
+            TestEntry(m_DynamicEntries, launchPad1Id, 1, 4, "CallSite9");
             m_DynamicEntries.Clear();
         }
 
@@ -274,7 +275,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Assert.That(m_MonitorCapsulesProcess.ConnectionCount, Is.EqualTo(count));
         }
 
-        static IEnumerator WaitForUpdates(Dictionary<Guid, LaunchPadReportDynamicEntry[]> dynamicEntries, int count)
+        static IEnumerator WaitForUpdates(Dictionary<Guid, LaunchPadReportDynamicEntry[]> dynamicEntries, int count, string fromTrace)
         {
             var waitTime = Stopwatch.StartNew();
             while (waitTime.Elapsed < TimeSpan.FromSeconds(10))
@@ -290,12 +291,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             }
             lock (dynamicEntries)
             {
-                Assert.That(dynamicEntries.Count, Is.EqualTo(count));
+                Assert.That(dynamicEntries.Count, Is.EqualTo(count), () => $"dynamicEntries.Count {dynamicEntries.Count} != {count}, called from {fromTrace}");
             }
         }
 
         static void TestEntry(Dictionary<Guid, LaunchPadReportDynamicEntry[]> dynamicEntries, Guid launchPadId,
-            int expectedNodeId, int expectedRenderNodeId)
+            int expectedNodeId, int expectedRenderNodeId, string callingSite)
         {
             lock (dynamicEntries)
             {
@@ -306,7 +307,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 Assert.That(dynamicEntries[launchPadId][1].Name, Is.EqualTo("Node id"));
                 Assert.That(dynamicEntries[launchPadId][1].Value, Is.EqualTo(expectedNodeId));
                 Assert.That(dynamicEntries[launchPadId][2].Name, Is.EqualTo("Render node id"));
-                Assert.That(dynamicEntries[launchPadId][2].Value, Is.EqualTo(expectedRenderNodeId));
+                Assert.That(dynamicEntries[launchPadId][2].Value, Is.EqualTo(expectedRenderNodeId), () => $"dynamicEntries[launchPadId][2].Value {dynamicEntries[launchPadId][2].Value} != {expectedRenderNodeId} from {callingSite}");
             }
         }
 
