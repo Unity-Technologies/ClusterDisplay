@@ -124,7 +124,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 {
                     waitOnTasks.Add(tryAgainShortly);
                 }
-                await Task.WhenAny(waitOnTasks);
+                await Task.WhenAny(waitOnTasks).ConfigureAwait(false);
 
                 // Try to process every received messages
                 foreach (var connectionPair in connections.ToList())

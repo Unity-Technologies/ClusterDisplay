@@ -50,6 +50,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
 
             try
             {
+                Debug.Log("ProcessingLoop Start creating TcpListener");
                 m_TcpListener = new(IPAddress.Any, listenPort);
                 m_TcpListener.Start();
                 m_CancellationTokenSource.Token.Register(() =>
@@ -59,12 +60,15 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                     toStop.Stop();
                 });
 
+                Debug.Log("ProcessingLoop Start Before hooking OnDoPreFrame");
                 ClusterSyncLooper.onInstanceDoPreFrame += OnDoPreFrame;
                 _ = SendsCapcomMessages();
 
                 while (!m_CancellationTokenSource.IsCancellationRequested)
                 {
+                    Debug.Log("ProcessingLoop Start Before AcceptTcpClientAsync");
                     var tcpClient = await m_TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+                    Debug.Log("ProcessingLoop Start After AcceptTcpClientAsync");
                     _ = ProcessConnectionAsync(tcpClient);
                 }
             }
@@ -200,10 +204,14 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             {
                 default:
                 case MessageDirection.CapcomToCapsule:
+                    Debug.Log("ProcessingLoop MessageDirection.CapcomToCapsule In");
                     await ProcessMessages(client, networkStream);
+                    Debug.Log("ProcessingLoop MessageDirection.CapcomToCapsule Out");
                     break;
                 case MessageDirection.CapsuleToCapcom:
+                    Debug.Log("ProcessingLoop MessageDirection.CapcomToCapsule In");
                     SaveMessageReceiver(client, networkStream);
+                    Debug.Log("ProcessingLoop MessageDirection.CapcomToCapsule Out");
                     break;
             }
         }
@@ -224,6 +232,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             while (!m_CancellationTokenSource.IsCancellationRequested)
             {
                 // Get the message identifier
+                Debug.Log("ProcessingLoop ProcessMessages Before Get Identifier");
                 bool gotGuid = await networkStream.ReadAllBytesAsync(messageIdBuffer, 0, sizeOfGuid,
                     m_CancellationTokenSource.Token).ConfigureAwait(false);
                 if (!gotGuid)
@@ -232,13 +241,16 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 }
 
                 Guid messageId = MemoryMarshal.Read<Guid>(messageIdBuffer);
+                Debug.Log($"ProcessingLoop ProcessMessages After Get Identifier: {messageId}");
 
                 // Handle the message
                 if (m_MessageHandlers.TryGetValue(messageId, out var handler))
                 {
                     try
                     {
+                        Debug.Log($"ProcessingLoop HandleMessage Before");
                         await handler.HandleMessage(networkStream).ConfigureAwait(false);
+                        Debug.Log($"ProcessingLoop HandleMessage After");
                     }
                     catch (Exception e)
                     {
