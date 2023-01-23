@@ -80,11 +80,11 @@ namespace Editor
             public List<GameObjectState> Children { get; } = new List<GameObjectState>();
             public List<ComponentState> Components { get; } = new List<ComponentState>();
 
-            public GameObjectState(GameObject gameObject)
+            public GameObjectState(GameObject gameObject, bool isNew)
             {
                 GameObject = gameObject;
                 InstanceID = gameObject.GetInstanceID();
-                Properties = new PropertyState(gameObject);
+                Properties = new PropertyState(gameObject, isNew);
             }
 
             public void Dispose()
@@ -108,10 +108,10 @@ namespace Editor
             public Component Component { get; }
             public PropertyState Properties { get; }
 
-            public ComponentState(Component component)
+            public ComponentState(Component component, bool isNew)
             {
                 Component = component;
-                Properties = new PropertyState(component);
+                Properties = new PropertyState(component, isNew);
             }
 
             public void Dispose()
@@ -124,13 +124,13 @@ namespace Editor
         {
             public SerializedObject PreviousState { get; private set; }
             public SerializedObject CurrentState { get; private set; }
-            bool m_FirstUpdate;
+            bool m_IsNew;
 
-            public PropertyState(UnityObject obj)
+            public PropertyState(UnityObject obj, bool isNew)
             {
                 PreviousState = new SerializedObject(obj);
                 CurrentState = new SerializedObject(obj);
-                m_FirstUpdate = true;
+                m_IsNew = isNew;
             }
 
             public void Dispose()
@@ -139,16 +139,16 @@ namespace Editor
                 CurrentState.Dispose();
             }
 
-            public bool Update(out bool isFirstUpdate)
+            public bool Update(out bool isNew)
             {
-                isFirstUpdate = m_FirstUpdate;
-                m_FirstUpdate = false;
+                isNew = m_IsNew;
+                m_IsNew = false;
 
                 var newState = PreviousState;
                 PreviousState = CurrentState;
                 CurrentState = newState;
 
-                return m_FirstUpdate || CurrentState.UpdateIfRequiredOrScript();
+                return isNew || CurrentState.UpdateIfRequiredOrScript();
             }
         }
 
@@ -255,7 +255,7 @@ namespace Editor
 
         GameObjectState StartTrackingGameObject(SceneState sceneState, GameObjectState parentState, GameObject gameObject)
         {
-            var goState = new GameObjectState(gameObject)
+            var goState = new GameObjectState(gameObject, false)
             {
                 Scene = sceneState,
                 Parent = parentState,
@@ -273,7 +273,7 @@ namespace Editor
 
             foreach (var component in s_TempComponents)
             {
-                goState.Components.Add(new ComponentState(component));
+                goState.Components.Add(new ComponentState(component, false));
             }
 
             // Track the child game objects.
@@ -335,14 +335,19 @@ namespace Editor
 
                             if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
                             {
-                            change.
+                                //change.
                             }
                             break;
                         }
                         case ObjectChangeKind.ChangeGameObjectParent:
                         {
-                            // TODO: we must verify that scene changes that don't trigger this event still are tracked as a move instead of destroying/recreating the object
-                            //stream.GetChangeGameObjectParentEvent(i, out var change);
+                            stream.GetChangeGameObjectParentEvent(i, out var change);
+
+                            if (m_TrackedScenes.TryGetValue(change.newScene, out var sceneState))
+                            {
+                                var gameObject = EditorUtility.InstanceIDToObject(change.newParentInstanceId) as GameObject;
+                                CheckGameObjectStructural(sceneState, gameObject, true);
+                            }
                             break;
                         }
                         case ObjectChangeKind.ChangeGameObjectStructure:
@@ -531,7 +536,7 @@ namespace Editor
             // Check if the game object is new.
             if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
             {
-                goState = new GameObjectState(gameObject);
+                goState = new GameObjectState(gameObject, true);
                 m_TrackedGameObjects.Add(goState.InstanceID, goState);
 
                 Debug.Log($"Change: Added game object {gameObject}");
@@ -695,7 +700,7 @@ namespace Editor
                 // If the component was just added, track it.
                 if (componentState == null)
                 {
-                    componentState = new ComponentState(component);
+                    componentState = new ComponentState(component, true);
                     goState.Components.Add(componentState);
 
                     Debug.Log($"Change: Added component {component}.");
@@ -724,9 +729,9 @@ namespace Editor
         void FindPropertyChanges(GameObjectState goState, bool recurseChildren)
         {
             // Find game object property changes
-            if (goState.Properties.Update(out var isFirstGameObjectUpdate))
+            if (goState.Properties.Update(out var isNewGameObject))
             {
-                CheckProperties(goState.Properties, !isFirstGameObjectUpdate);
+                CheckProperties(goState.Properties, !isNewGameObject);
             }
 
             // Find component property changes.
@@ -734,9 +739,9 @@ namespace Editor
             {
                 var component = goState.Components[i];
 
-                if (component.Properties.Update(out var isFirstComponentUpdate))
+                if (component.Properties.Update(out var isNewComponent))
                 {
-                    CheckProperties(component.Properties, !isFirstComponentUpdate);
+                    CheckProperties(component.Properties, !isNewComponent);
                 }
             }
 
@@ -766,9 +771,9 @@ namespace Editor
             {
                 if (componentState.Component == component)
                 {
-                    if (componentState.Properties.Update(out var isFirstComponentUpdate))
+                    if (componentState.Properties.Update(out var isNew))
                     {
-                        CheckProperties(componentState.Properties, !isFirstComponentUpdate);
+                        CheckProperties(componentState.Properties, !isNew);
                     }
                     return;
                 }
