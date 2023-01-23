@@ -54,6 +54,16 @@ namespace Unity.ClusterDisplay.MissionControl
             yield return null;
         }
 
+        public static IEnumerator AsIEnumeratorNoThrow(this Task task)
+        {
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            yield return null;
+        }
+
         public static IEnumerator AsIEnumerator(this Task task, EnumeratorTimeout timeout)
         {
             var stopwatch = Stopwatch.StartNew();
