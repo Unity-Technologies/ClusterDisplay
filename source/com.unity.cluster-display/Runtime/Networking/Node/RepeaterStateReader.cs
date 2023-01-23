@@ -11,14 +11,13 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    class RepeaterStateReader
+    static class RepeaterStateReader
     {
         internal delegate bool OnLoadCustomData(NativeArray<byte> stateData);
 
         static readonly Dictionary<int, OnLoadCustomData> k_BuiltInOnLoadDelegates = new()
         {
             {(int)StateID.Time, ClusterSerialization.RestoreTimeManagerState},
-            {(int)StateID.Input, ClusterSerialization.RestoreInputManagerState},
             {(int)StateID.Random, RestoreRndGeneratorState}
         };
 

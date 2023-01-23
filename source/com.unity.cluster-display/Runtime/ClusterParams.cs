@@ -39,6 +39,27 @@ namespace Unity.ClusterDisplay
         External
     }
 
+    /// <summary>
+    /// The input subsystem synchronized by the cluster.
+    /// </summary>
+    public enum InputSync
+    {
+        /// <summary>
+        /// Don't synchronize inputs.
+        /// </summary>
+        None = 0,
+#if ENABLE_INPUT_SYSTEM
+        /// <summary>
+        /// Synchronize inputs from the Input System package (new).
+        /// </summary>
+        InputSystem = 1,
+#endif
+        /// <summary>
+        /// Synchronize inputs from legacy Input Manager (old).
+        /// </summary>
+        Legacy = 2
+    }
+
     [Serializable]
     public struct ClusterParams
     {
@@ -60,6 +81,8 @@ namespace Unity.ClusterDisplay
         public bool DelayRepeaters;
         public bool HeadlessEmitter;
         public bool ReplaceHeadlessEmitter;
+
+        public InputSync InputSync;
 
         public TimeSpan HandshakeTimeout
         {
@@ -93,7 +116,7 @@ namespace Unity.ClusterDisplay
                 HandshakeTimeout = TimeSpan.FromMilliseconds(10000),
                 CommunicationTimeout = TimeSpan.FromMilliseconds(5000),
                 Fence = FrameSyncFence.Hardware,
-                TargetFps = -1
+                TargetFps = -1,
             };
     }
 

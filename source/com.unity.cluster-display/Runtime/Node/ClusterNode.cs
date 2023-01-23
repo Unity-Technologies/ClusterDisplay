@@ -30,6 +30,14 @@ namespace Unity.ClusterDisplay
         /// Synchronization strategy
         /// </summary>
         public FrameSyncFence Fence { get; set; }
+        /// <summary>
+        /// The input subsystem synchronized by the cluster.
+        /// </summary>
+        /// <remarks>
+        /// You should select the one that corresponds to your project setup. If your project does not handle
+        /// inputs, use <see cref="ClusterDisplay.InputSync.None"/> to minimize network traffic.
+        /// </remarks>
+        public InputSync InputSync { get; set; }
     }
 
     /// <summary>

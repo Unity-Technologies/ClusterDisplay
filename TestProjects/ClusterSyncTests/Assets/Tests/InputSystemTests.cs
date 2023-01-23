@@ -18,29 +18,9 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class InputSystemTests : InputTestFixture
     {
-        class MockClusterSync : IClusterSyncState
-        {
-            public string InstanceName { get; } = "MockClusterSync";
-            public NodeRole NodeRole { get; set; }
-            public bool EmitterIsHeadless { get; set; }
-            public bool IsClusterLogicEnabled { get; set; }
-            public bool IsTerminated { get; set; }
-            public ulong Frame { get; set; }
-            public byte NodeID { get; set; }
-            public byte RenderNodeID { get; set; }
-            public bool RepeatersDelayedOneFrame { get; set; }
-            public bool ReplaceHeadlessEmitter { get; set; }
-
-            public string GetDiagnostics()
-            {
-                throw new System.NotImplementedException();
-            }
-        }
-
         EmitterStateWriter m_EmitterStateWriter;
         TestUdpAgent m_EmitterAgent;
         TestUdpAgent m_RepeaterAgent;
-        GameObject m_TestObject;
 
         public override void Setup()
         {
@@ -50,7 +30,6 @@ namespace Unity.ClusterDisplay.Tests
 
             m_EmitterAgent = new TestUdpAgent(testNetwork, EmitterNode.ReceiveMessageTypes.ToArray());
             m_RepeaterAgent = new TestUdpAgent(testNetwork, RepeaterNode.ReceiveMessageTypes.ToArray());
-            m_TestObject = new GameObject("InputReplicator");
             base.Setup();
         }
 
@@ -59,15 +38,6 @@ namespace Unity.ClusterDisplay.Tests
             RepeaterStateReader.ClearOnLoadDataDelegates();
             EmitterStateWriter.ClearCustomDataDelegates();
             m_EmitterStateWriter.Dispose();
-            ServiceLocator.Withdraw<IClusterSyncState>();
-
-            InputSystem.Update();
-
-            // It is necessary to trigger InputSystemReplicator.OnDisable() before
-            // InputTestFixture.TearDown() because InputTestFixture.TearDown() will remove all input devices, including
-            // the virtual devices created by InputSystemReplicator. Otherwise, we'll be trying to remove the virtual
-            // devices twice, resulting in an error.
-            Object.Destroy(m_TestObject);
             base.TearDown();
         }
 
@@ -76,15 +46,12 @@ namespace Unity.ClusterDisplay.Tests
         {
             ulong frameId = 0;
 
-            // Pretend we're an emitter if anyone asks
-            ServiceLocator.Provide<IClusterSyncState>(new MockClusterSync { NodeRole = NodeRole.Emitter });
-
             // Set up dummy UDP networking
             var frameSplitter = new FrameDataSplitter(m_EmitterAgent);
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
 
             // The component under test
-            m_TestObject.AddComponent<InputSystemReplicator>();
+            using var replicator = new InputSystemReplicator(NodeRole.Emitter);
 
             // Simulate some inputs
             var gamepad = InputSystem.AddDevice<Gamepad>();
@@ -154,12 +121,8 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator TestRepeaterReceivesInputs()
         {
-            // Pretend we're a repeater if anyone asks.
-            ServiceLocator.Provide<IClusterSyncState>(new MockClusterSync { NodeRole = NodeRole.Repeater });
-
             using var frameAssembler = new FrameDataAssembler(m_RepeaterAgent, false);
-
-            m_TestObject.AddComponent<InputSystemReplicator>();
+            using var replicator = new InputSystemReplicator(NodeRole.Repeater);
 
             // Set up some test bindings
             using var buttonAction = new InputAction(binding: "<Gamepad>/buttonEast", interactions: "Hold");

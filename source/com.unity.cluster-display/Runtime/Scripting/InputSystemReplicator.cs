@@ -13,17 +13,15 @@ using UnityEngine.PlayerLoop;
 namespace Unity.ClusterDisplay.Scripting
 {
     /// <summary>
-    /// Attach this script to a GameObject to enable synchronization of InputSystem events
-    /// across all the nodes. Any input events processed by the emitter are replicated on the
-    /// repeaters.
-    /// Only one instance of this script is necessary in each scene.
+    /// Enables synchronization of InputSystem events across all the nodes. Any input events processed by the emitter
+    /// are replicated on the repeaters.
     /// </summary>
     /// <remarks>
-    /// To ensure perfect synchronization, the player must be executed with the "-delayRepeaters" argument.
-    /// This is because the input events arrive on the repeaters one frame after they are processed on the
-    /// emitter.
+    /// To ensure perfect synchronization, the player must be executed with the "Deplay Repeaters" cluster setting or
+    /// the "-delayRepeaters" argument. This is because the input events arrive on the repeaters one frame after they
+    /// are processed on the emitter.
     /// </remarks>
-    public class InputSystemReplicator : MonoBehaviour
+    public class InputSystemReplicator : IDisposable
     {
         const int k_CaptureMemoryDefaultSize = 512;
         const int k_CaptureMemoryMaxSize = 1024;
@@ -39,6 +37,7 @@ namespace Unity.ClusterDisplay.Scripting
         bool m_UpdatingVirtualDevice;
         SavedInputSettings m_SavedInputSettings;
         bool m_UpdatesControlledExternally;
+        NodeRole m_NodeRole;
 
         struct ClusterInputSystemUpdate
         {
@@ -56,8 +55,9 @@ namespace Unity.ClusterDisplay.Scripting
             PlayerLoopExtensions.DeregisterUpdate<ClusterInputSystemUpdate>(UpdateInputSystem);
         }
 
-        void OnEnable()
+        public InputSystemReplicator(NodeRole nodeRole)
         {
+            m_NodeRole = nodeRole;
             m_SavedInputSettings = InputSystem.settings.Save();
 
             // We want to control when we deserialize and deserialize+apply input events by calling
@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.Scripting
             m_UpdatesControlledExternally = m_SavedInputSettings.UpdateMode is InputSettings.UpdateMode.ProcessEventsManually;
             InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
             InjectInputUpdatePoint();
-            switch (ClusterDisplayState.GetNodeRole())
+            switch (nodeRole)
             {
                 case NodeRole.Emitter:
                     // Emitter records input events and transmits them over the cluster.
@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.Scripting
                     DisableRealInputs();
                     break;
                 case NodeRole.Unassigned:
-                    enabled = false;
+                    Disable();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -112,7 +112,7 @@ namespace Unity.ClusterDisplay.Scripting
         void OnDeviceChange(InputDevice device, InputDeviceChange change)
         {
             // Sanity check
-            Debug.Assert(ClusterDisplayState.GetNodeRole() is NodeRole.Repeater,
+            Debug.Assert(m_NodeRole is NodeRole.Repeater,
                 "Only repeaters should be responding to device changes");
             if (!m_UpdatingVirtualDevice && device != null)
             {
@@ -222,7 +222,7 @@ namespace Unity.ClusterDisplay.Scripting
             return bytesRead;
         }
 
-        void OnDisable()
+        void Disable()
         {
             m_EventTrace.Disable();
             m_ReplayController?.Dispose();
@@ -235,8 +235,9 @@ namespace Unity.ClusterDisplay.Scripting
             RemoveInputUpdatePoint();
         }
 
-        void OnDestroy()
+        public void Dispose()
         {
+            Disable();
             m_EventTrace.Dispose();
         }
 
@@ -250,7 +251,7 @@ namespace Unity.ClusterDisplay.Scripting
                 InputSystem.Update();
             }
 
-            switch (ClusterDisplayState.GetNodeRole())
+            switch (m_NodeRole)
             {
                 case NodeRole.Emitter:
                     // Serialize the event trace data, which will get copied into the FrameData and transmitted

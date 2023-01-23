@@ -23,8 +23,7 @@ namespace Unity.ClusterDisplay
         static readonly (int, FrameDataBuffer.StoreDataDelegate)[] k_StateDataDelegates =
         {
             ((int)StateID.Time, ClusterSerialization.SaveTimeManagerState),
-            ((int)StateID.Input, ClusterSerialization.SaveInputManagerState),
-            ((int)StateID.Random, SaveRandomState),
+            ((int)StateID.Random, SaveRandomState)
         };
 
         /// <summary>
