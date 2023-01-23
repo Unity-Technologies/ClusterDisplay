@@ -87,6 +87,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_Capsules.Clear();
         }
 
+        // This test is failing
         [UnityTest]
         public IEnumerator Normal()
         {
@@ -167,6 +168,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             TestEntry(m_DynamicEntries, launchPad1Id, 1, 6);
         }
 
+        // This test is failing
         [UnityTest]
         public IEnumerator BrokenConnection()
         {
