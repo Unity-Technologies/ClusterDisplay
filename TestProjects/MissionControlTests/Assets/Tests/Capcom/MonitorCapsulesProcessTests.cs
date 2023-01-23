@@ -168,7 +168,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             TestEntry(m_DynamicEntries, launchPad1Id, 1, 6, "CallSite4");
         }
 
-        // This test is failing
+        // This test is failing, why isn't it running again?
         [UnityTest]
         public IEnumerator BrokenConnection()
         {
