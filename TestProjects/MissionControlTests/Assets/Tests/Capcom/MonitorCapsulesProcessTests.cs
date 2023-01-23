@@ -228,6 +228,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_DynamicEntries.Clear();
         }
 
+        [Test]
+        public void NewDummyTest()
+        {
+
+        }
+
         class FakeCapsule
         {
             public FakeCapsule(int port)
