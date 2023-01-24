@@ -92,9 +92,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// <summary>
         /// Start the application loop.
         /// </summary>
+        /// <param name="monitorChanges">Do we want to monitor changes (objectsUpdate and incrementalCollectionsUpdate)?
+        /// Should always be true except in some unit test to make things easier to trace and avoid some problems in
+        /// Unity tasks limitations when running unit tests.</param>
         /// <remarks>The return task will complete when the application has been asked to stop and it ready to exit.
         /// </remarks>
-        public async Task Start()
+        public async Task Start(bool monitorChanges = true)
         {
             lock (m_Lock)
             {
@@ -108,9 +111,14 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             try
             {
-                await Task.WhenAll(MonitorChanges("api/v1/objectsUpdate", m_ObjectsToMirror),
-                    MonitorChanges("api/v1/incrementalCollectionsUpdate", m_CollectionsToMirror),
-                    ProcessingLoop());
+                List<Task> backgroundProcessingTasks = new();
+                if (monitorChanges)
+                {
+                    backgroundProcessingTasks.Add(MonitorChanges("api/v1/objectsUpdate", m_ObjectsToMirror));
+                    backgroundProcessingTasks.Add(MonitorChanges("api/v1/incrementalCollectionsUpdate", m_CollectionsToMirror));
+                }
+                backgroundProcessingTasks.Add(ProcessingLoop());
+                await Task.WhenAll(backgroundProcessingTasks);
             }
             catch (Exception)
             {

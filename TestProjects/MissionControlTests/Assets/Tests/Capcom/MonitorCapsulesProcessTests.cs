@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 }
             };
 
-            m_AppRunningTask = m_Application.Start();
+            m_AppRunningTask = m_Application.Start(false);
         }
 
         [UnityTearDown]
@@ -88,7 +88,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         [UnityTest]
-        [Ignore("Disabled for now since it causes problems on Yamato")]
         public IEnumerator Normal()
         {
             AddFakeCapsule(k_TestPort+0);
@@ -169,7 +168,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         [UnityTest]
-        [Ignore("Disabled for now since it causes problems on Yamato")]
         public IEnumerator BrokenConnection()
         {
             AddFakeCapsule(k_TestPort + 0);

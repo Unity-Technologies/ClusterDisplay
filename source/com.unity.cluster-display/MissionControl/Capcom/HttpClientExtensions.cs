@@ -3,9 +3,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using UnityEngine;
 
-namespace Unity.ClusterDisplay.MissionControl
+namespace Unity.ClusterDisplay.MissionControl.Capcom
 {
     /// <summary>
     /// Various helpers to make using HttpClient simpler.
@@ -42,7 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var serialized = JsonConvert.SerializeObject(value, Json.SerializerOptions);
             using StringContent contentToPut = new(serialized);
             contentToPut.Headers.ContentType = new MediaTypeHeaderValue(k_ApplicationJson);
-            return await httpClient.PutAsync(requestUri, contentToPut);
+            return await httpClient.PutAsync(requestUri, contentToPut).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -57,7 +56,7 @@ namespace Unity.ClusterDisplay.MissionControl
             var serialized = JsonConvert.SerializeObject(value, Json.SerializerOptions);
             using StringContent contentToPost = new(serialized);
             contentToPost.Headers.ContentType = new MediaTypeHeaderValue(k_ApplicationJson);
-            return await httpClient.PostAsync(requestUri, contentToPost);
+            return await httpClient.PostAsync(requestUri, contentToPost).ConfigureAwait(false);
         }
 
         const string k_ApplicationJson = "application/json";
