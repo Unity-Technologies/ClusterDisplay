@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using NUnit.Framework;
@@ -11,13 +13,6 @@ namespace Unity.LiveEditing.Tests
 {
     public class NetworkingTests
     {
-        // A Test behaves as an ordinary method
-        [Test]
-        public void NetworkingTestsSimplePasses()
-        {
-            // Use the Assert class to test conditions
-        }
-
         // A UnityTest behaves like a coroutine in Play Mode. In Edit Mode you can use
         // `yield return null;` to skip a frame.
         [UnityTest]
@@ -26,36 +21,46 @@ namespace Unity.LiveEditing.Tests
             var port = GetFreeTcpPort();
             using var looper = new PlayerUpdateLooper();
 
-            using var server = new TcpMessageHub(port, looper);
+            using var server = new TcpMessageServer(port, looper);
             var serverEndPoint = new IPEndPoint(IPAddress.Loopback, port);
 
             using var client1 = new TcpMessageClient(serverEndPoint, looper);
             using var client2 = new TcpMessageClient(serverEndPoint, looper);
 
+            var sendMessages1 = new List<string> { "Tis but a scratch!", "I fart in your general direction" };
+            var sendMessages2 = new List<string> { "She turned me into a newt", "Well I got better" };
+
+            var receivedMessages1 = new List<string>();
+            var receivedMessages2 = new List<string>();
             client1.DataReceived += bytes =>
             {
-                Debug.Log($"client1 received {System.Text.Encoding.UTF8.GetString(bytes)}");
+                receivedMessages1.Add(System.Text.Encoding.UTF8.GetString(bytes));
             };
 
             client2.DataReceived += bytes =>
             {
-                Debug.Log($"client2 received {System.Text.Encoding.UTF8.GetString(bytes)}");
+                receivedMessages2.Add(System.Text.Encoding.UTF8.GetString(bytes));
             };
 
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSecondsRealtime(1f);
             Assert.That(server.ClientCount, Is.EqualTo(2));
-            client1.Send(System.Text.Encoding.UTF8.GetBytes("Hello"));
-            client2.Send(System.Text.Encoding.UTF8.GetBytes("World"));
+            client1.Send(System.Text.Encoding.UTF8.GetBytes(sendMessages1[0]));
+            client2.Send(System.Text.Encoding.UTF8.GetBytes(sendMessages2[0]));
 
-            // Use the Assert class to test conditions.
-            // Use yield to skip a frame.
-            yield return new WaitForSeconds(1);
-            // client1.Dispose();
+            yield return null;
 
-            yield return new WaitForSeconds(1);
-            client2.Send(System.Text.Encoding.UTF8.GetBytes("Foo"));
+            client1.Send(System.Text.Encoding.UTF8.GetBytes(sendMessages1[1]));
+            client2.Send(System.Text.Encoding.UTF8.GetBytes(sendMessages2[1]));
 
-            yield return new WaitForSeconds(1);
+            // yield return null;
+            yield return new WaitForSecondsRealtime(1f);
+            Assert.That(receivedMessages1, Is.EqualTo(sendMessages2));
+            Assert.That(receivedMessages2, Is.EqualTo(sendMessages1));
+
+            client1.Stop(TimeSpan.FromSeconds(1));
+            client1.Dispose();
+            yield return new WaitForSecondsRealtime(1f);
+            Assert.That(server.ClientCount, Is.EqualTo(1));
         }
 
         static int GetFreeTcpPort()
