@@ -26,11 +26,11 @@ namespace Unity.LiveEditing.Tests
             var port = GetFreeTcpPort();
             using var looper = new PlayerUpdateLooper();
 
-            using var server = new LiveEditTcpServer(port, looper);
+            using var server = new TcpMessageHub(port, looper);
             var serverEndPoint = new IPEndPoint(IPAddress.Loopback, port);
 
-            using var client1 = new LiveEditTcpClient(serverEndPoint, looper);
-            using var client2 = new LiveEditTcpClient(serverEndPoint, looper);
+            using var client1 = new TcpMessageClient(serverEndPoint, looper);
+            using var client2 = new TcpMessageClient(serverEndPoint, looper);
 
             client1.DataReceived += bytes =>
             {
@@ -43,13 +43,18 @@ namespace Unity.LiveEditing.Tests
             };
 
             yield return new WaitForSeconds(1);
-            Debug.Log("=========================================");
             Assert.That(server.ClientCount, Is.EqualTo(2));
             client1.Send(System.Text.Encoding.UTF8.GetBytes("Hello"));
             client2.Send(System.Text.Encoding.UTF8.GetBytes("World"));
 
             // Use the Assert class to test conditions.
             // Use yield to skip a frame.
+            yield return new WaitForSeconds(1);
+            // client1.Dispose();
+
+            yield return new WaitForSeconds(1);
+            client2.Send(System.Text.Encoding.UTF8.GetBytes("Foo"));
+
             yield return new WaitForSeconds(1);
         }
 
