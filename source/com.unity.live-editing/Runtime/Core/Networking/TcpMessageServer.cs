@@ -10,8 +10,18 @@ using UnityEngine;
 namespace Unity.LiveEditing.LowLevel.Networking
 {
     /// <summary>
-    /// A hub for maintaining a many-to-many messaging network for TCP.
+    /// A server (hub) for maintaining a many-to-many messaging network over TCP.
     /// </summary>
+    /// <remarks>
+    /// <p>Each <see cref="TcpMessageClient"/> that connects to the server is able to send
+    /// and receive messages from every other connected <see cref="TcpMessageClient"/>.
+    /// Every message received by the server is relayed to all clients (excluding the
+    /// originator), emulating a "broadcast". </p>
+    /// <p>This class cannot be used directly to send messages. Thus, a messaging network requires at least
+    /// 2 instances of <see cref="TcpMessageClient"/> in addition to an instance of <see cref="TcpMessageServer"/>.</p>
+    /// <p>TODO: Do we want to allow this class to also behave as a "client"?</p>
+    /// </remarks>
+    /// <seealso cref="TcpMessageClient"/>
     class TcpMessageServer : IDisposable
     {
         public int Port { get; }
@@ -30,6 +40,11 @@ namespace Unity.LiveEditing.LowLevel.Networking
         const int k_MaxPendingConnections = 20;
 
         /// <summary>
+        /// The time in milliseconds after which a connection should be closed if the client cannot be reached.
+        /// </summary>
+        const int k_Timeout = 10 * 1000;
+
+        /// <summary>
         /// The time between attempts to create the listener socket if it fails to start.
         /// </summary>
         static readonly TimeSpan k_RetrySocketPeriod = TimeSpan.FromSeconds(0.5);
@@ -42,6 +57,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly CancellationTokenSource m_CancellationTokenSource = new();
         readonly ILooper m_Looper;
 
+        /// <summary>
+        /// Creates a new <see cref="TcpMessageServer"/> instance.
+        /// </summary>
+        /// <param name="port">The port to listen for connections on.</param>
+        /// <param name="looper">The looper determines how the server performs internal updates (e.g. maintaining
+        /// connection statuses).</param>
         public TcpMessageServer(int port, ILooper looper)
         {
             Port = port;
@@ -98,6 +119,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 if (socket != null)
                 {
                     Debug.Log($"Connected to client {socket.RemoteEndPoint}");
+                    socket.SetKeepAlive(true, k_Timeout, 1000);
                     yield return socket;
                 }
             }
@@ -113,7 +135,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 {
                     if (conn.Id != header.ChannelId)
                     {
-                        Debug.Log($"Enqueue for broadcast [{header.PayLoadSize}]");
                         conn.EnqueueSend(in header, payload);
                     }
                 }
@@ -129,10 +150,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     var conn = m_Connections[index];
                     if (conn.IsStopped)
                     {
+                        Debug.Log($"Lost connection with client channel {conn.Id}: {conn.CurrentException}");
                         conn.Dispose();
                         m_Connections.RemoveAt(index);
-
-                        Debug.Log($"Removing connection {index}");
                     }
                 }
             }
@@ -151,10 +171,23 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <summary>
         /// Attempt to stop the server gracefully.
         /// </summary>
+        /// <exception cref="TimeoutException">Timed out waiting for the server to stop.</exception>
         void Stop(TimeSpan timeout)
         {
             m_CancellationTokenSource.Cancel();
-            m_ServerTask.Wait(timeout);
+
+            try
+            {
+                m_ServerTask.Wait(timeout);
+            }
+            catch (AggregateException e)
+            {
+                Debug.Log(e);
+            }
+            finally
+            {
+                m_Looper.Update -= UpdateConnections;
+            }
         }
 
         public void Dispose()

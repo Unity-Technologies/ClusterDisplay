@@ -10,13 +10,24 @@ using UnityEngine;
 
 namespace Unity.LiveEditing.LowLevel.Networking
 {
+    /// <summary>
+    /// Sends and receives messages to other <see cref="TcpMessageClient"/>s connected to the same
+    /// <see cref="TcpMessageServer"/>.
+    /// </summary>
     class TcpMessageClient : IDisposable
     {
-        public TimeSpan ConnectionAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);
-        public int Id => m_Connection?.Id ?? -1;
-
         public delegate void DataReceivedHandler(ReadOnlySpan<byte> data);
 
+        /// <summary>
+        /// Event raised when new data has been received.
+        /// </summary>
+        /// <remarks>
+        /// <p>As with all event handlers, it is good practice to return as quickly as possible in order to not block
+        /// the looper thread (which could be the main game thread).
+        /// For example, you can copy out the data for later processing.</p>
+        /// <p>The context (i.e. thread) on which the handler is invoked depends on the <see cref="ILooper"/> used
+        /// in the constructor</p>.
+        /// </remarks>
         public event DataReceivedHandler DataReceived;
         public Exception CurrentException => m_Connection?.CurrentException;
 
@@ -26,13 +37,23 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly BlockingCollection<(int size, byte[] data)> m_ReceiveQueue = new();
         DataChannel m_Connection;
 
-        public TcpMessageClient(IPEndPoint server, ILooper looper)
+        /// <summary>
+        /// Creates a new <see cref="TcpMessageClient"/>.
+        /// </summary>
+        /// <param name="server">The end point of the <see cref="TcpMessageServer"/>.</param>
+        /// <param name="looper">The looper that controls how <see cref="DataReceived"/> is raised.</param>
+        /// <param name="connectionTimeout">Timeout for making a connection to the server.</param>
+        public TcpMessageClient(IPEndPoint server, ILooper looper, TimeSpan connectionTimeout)
         {
             m_Looper = looper;
             m_Looper.Update += NotifyListeners;
-            m_ClientTask = ConnectToHubTask(server, ConnectionAttemptTimeout, m_CancellationTokenSource.Token);
+            m_ClientTask = ConnectToHubTask(server, connectionTimeout, m_CancellationTokenSource.Token);
         }
 
+        /// <summary>
+        /// Send a binary blob to the other clients.
+        /// </summary>
+        /// <param name="buffer">The buffer containing the data to be sent.</param>
         public void Send(ReadOnlySpan<byte> buffer)
         {
             if (m_Connection is { } connection)
@@ -104,9 +125,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
         }
 
         /// <summary>
-        /// Attempt to stop the client gracefully
+        /// Attempt to stop the client gracefully.
         /// </summary>
-        /// <exception cref="TimeoutException"></exception>
+        /// <exception cref="TimeoutException">Timed out waiting for the client to stop.</exception>
         public void Stop(TimeSpan timeout)
         {
             m_CancellationTokenSource.Cancel();
@@ -128,6 +149,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             m_Connection?.Dispose();
             m_CancellationTokenSource?.Dispose();
+            m_Looper.Update -= NotifyListeners;
         }
     }
 }

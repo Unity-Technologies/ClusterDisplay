@@ -13,12 +13,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
     /// Packet metadata. Contains information necessary to read a packet from a stream.
     /// </summary>
     /// <remarks>
-    /// For internal use.
+    /// For internal use only; required for passing messages using <see cref="DataChannel"/>.
     /// </remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     readonly struct PacketHeader
     {
-        const int k_Revision = 0;
+        internal const int k_Revision = 0;
         public readonly int Revision;
         public readonly MessageType MessageType;
         public readonly int ChannelId;
@@ -32,7 +32,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         public static PacketHeader CreateIdAssignment(int channelId)
         {
-            return new(-1, MessageType.IdAssignment, sizeof(int));
+            return new(channelId, MessageType.IdAssignment, 0);
         }
 
         PacketHeader(int channelId, MessageType type, int payLoadSize)
@@ -46,14 +46,24 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
     enum MessageType : int
     {
+        /// <summary>
+        /// A message containing a binary blob.
+        /// </summary>
         Binary,
+        /// <summary>
+        /// A signal to assign the ID of a <see cref="DataChannel"/>.
+        /// The <see cref="PacketHeader.ChannelId"/> field contains the ID we
+        /// wish to use.
+        /// </summary>
         IdAssignment
     }
 
     /// <summary>
-    /// Low-level primitive for sending and receiving packets (each packet consists of a header and a byte array)
-    /// over a given socket.
+    /// Low-level primitive for sending and receiving packets over a given socket.
     /// </summary>
+    /// <remarks>
+    /// A packet consists of a header and an optional byte array (the payload).
+    /// </remarks>
     class DataChannel : IDisposable
     {
         public delegate void PacketReceivedHandler(in PacketHeader header, ReadOnlySpan<byte> payload);
@@ -68,6 +78,16 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly CancellationTokenSource m_CancellationTokenSource;
         readonly TaskCompletionSource<int> m_IdAssignmentTaskSource = new();
 
+        /// <summary>
+        /// Application-specific identifier.
+        /// </summary>
+        /// <remarks>
+        /// The ID gets attached to all packets send using this channel. The interpretation
+        /// of the ID depends on the application. For example <see cref="TcpMessageServer"/> uses
+        /// it to route messages.<br/>
+        /// To set the ID, use the <see cref="EnqueueIdChange"/> method to coordinate the change
+        /// on both ends of the channel.
+        /// </remarks>
         public int Id { get; private set; } = -1;
 
         // TODO report status as enum
@@ -81,8 +101,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <param name="cancellationToken">Token used to cancel async reads and writes.</param>
         /// <param name="receivedHandler">Callback for handling the arrival of data.</param>
         /// <remarks>
-        /// The caller is responsible for creating the socket in a usable state such that it is able to send and
-        /// receive data.
+        /// <p>The caller is responsible for creating the socket in a usable state such that it is able to send and
+        /// receive data.</p>
+        /// <p>FIXME: The <see cref="CancellationToken"/> cannot reliably cancel blocking receive operations.</p>
         /// </remarks>
         public DataChannel(Socket socket, CancellationToken cancellationToken, PacketReceivedHandler receivedHandler) {
             m_CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -97,11 +118,18 @@ namespace Unity.LiveEditing.LowLevel.Networking
             return await m_IdAssignmentTaskSource.Task;
         }
 
+        /// <summary>
+        /// Assign an ID to this channel.
+        /// </summary>
+        /// <param name="newId"></param>
+        /// <remarks>
+        /// Currently, you can only perform this operation once. TODO: Fix this limitation.
+        /// </remarks>
         public void EnqueueIdChange(int newId)
         {
             Id = newId;
             var header = PacketHeader.CreateIdAssignment(newId);
-            m_OutgoingPackets.Add(QueuedPacket.Create(header, ref newId));
+            m_OutgoingPackets.Add(new QueuedPacket(header, ReadOnlySpan<byte>.Empty));
             m_IdAssignmentTaskSource.SetResult(Id);
         }
 
@@ -118,12 +146,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 Header = header;
                 PayloadData = ArrayPool<byte>.Shared.Rent(header.PayLoadSize);
                 data[..header.PayLoadSize].CopyTo(PayloadData);
-            }
-
-            public static QueuedPacket Create<T>(in PacketHeader header, ref T value) where T : unmanaged
-            {
-                Debug.Assert(Marshal.SizeOf<T>() == header.PayLoadSize);
-                return new QueuedPacket(header, MemoryMarshal.CreateReadOnlySpan(ref value, 1).AsBytes());
             }
 
             public void Dispose()
@@ -171,13 +193,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
                         var header = m_Socket.ReadPacket(payload);
                         if (header.MessageType is MessageType.IdAssignment)
                         {
-                            Id = MemoryMarshal.Read<int>(payload);
-                            Debug.Log($"Channel received and ID of {Id}");
+                            Id = header.ChannelId;
+                            Debug.Log($"Channel received ID assignment: {Id}");
                             m_IdAssignmentTaskSource.SetResult(Id);
                             continue;
                         }
 
-                        // Debug.Log($"Datachannel received packet [{header.PayLoadSize}]");
                         receivedHandler(in header, payload[..header.PayLoadSize]);
                     }
                     catch (OperationCanceledException)
@@ -212,7 +233,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
         }
     }
 
-    static class PacketTransport
+    /// <summary>
+    /// Extension methods for sending and receiving discrete packets over a socket.
+    /// </summary>
+    static class PacketTransportExtensions
     {
         static readonly int k_HeaderSize = Marshal.SizeOf<PacketHeader>();
 
@@ -226,6 +250,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
             }
 
             var header = MemoryMarshal.Read<PacketHeader>(headerDataBuffer);
+            if (header.Revision != PacketHeader.k_Revision)
+            {
+                throw new InvalidCastException("Unknown message header revision.");
+            }
             bytesRead = 0;
             while (bytesRead < header.PayLoadSize)
             {
