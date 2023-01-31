@@ -338,7 +338,7 @@ namespace Unity.ClusterDisplay
             /// <see cref="m_DatagramSentTimestamp"/>.</param>
             void GrowDatagramSentTimestampArrayIfNeeded(int datagramIndex)
             {
-                if (datagramIndex > m_DatagramSentTimestamp.Length)
+                if (datagramIndex >= m_DatagramSentTimestamp.Length)
                 {
                     var newArray = new long[datagramIndex + 16];
                     Array.Copy(m_DatagramSentTimestamp, newArray, m_DatagramSentTimestamp.Length);
