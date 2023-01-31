@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.LiveEditing.LowLevel.Networking
 {
@@ -157,15 +158,16 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             return Task.Run(() =>
             {
+                Profiler.BeginSample(nameof(SendPacketsInQueueAsync));
+                token.Register(m_OutgoingPackets.CompleteAdding);
                 try
                 {
-                    while (m_OutgoingPackets.TryTake(out var packet, Timeout.Infinite, token))
+                    // FIXME: BlockingCollection.TryTake allocates. Look for an alternative.
+                    while (m_OutgoingPackets.TryTake(out var packet, Timeout.Infinite))
                     {
                         m_Socket.SendPacket(packet.Header, packet.PayloadData);
                         packet.Dispose();
                     }
-
-                    Debug.LogError("Whoops. Shouldn't happen.");
                 }
                 catch (OperationCanceledException)
                 {
@@ -174,6 +176,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 catch (Exception ex)
                 {
                     CurrentException = ex;
+                }
+                finally
+                {
+                    Profiler.EndSample();
                 }
             }, token).ContinueWith(_ =>
             {
@@ -185,6 +191,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             return Task.Run(() =>
             {
+                Profiler.BeginSample(nameof(ReceivePacketsAsync));
                 Span<byte> payload = stackalloc byte[k_ReceiveBufferSize];
                 while (!token.IsCancellationRequested)
                 {
@@ -211,6 +218,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                         break;
                     }
                 }
+                Profiler.EndSample();
             }, token).ContinueWith(_ =>
             {
                 Debug.Log($"{nameof(ReceivePacketsAsync)} exited");

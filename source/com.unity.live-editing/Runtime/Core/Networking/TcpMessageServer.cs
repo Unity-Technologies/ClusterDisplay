@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.LiveEditing.LowLevel.Networking
 {
@@ -129,6 +130,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         void EnqueueForBroadcast(in PacketHeader header, ReadOnlySpan<byte> payload)
         {
+            Profiler.BeginSample(nameof(EnqueueForBroadcast));
             lock (m_ConnectionsLock)
             {
                 foreach (var conn in m_Connections)
@@ -139,10 +141,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     }
                 }
             }
+            Profiler.EndSample();
         }
 
         void UpdateConnections()
         {
+            Profiler.BeginSample(nameof(UpdateConnections));
             lock (m_ConnectionsLock)
             {
                 for (var index = m_Connections.Count - 1; index >= 0; index--)
@@ -156,6 +160,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     }
                 }
             }
+            Profiler.EndSample();
         }
 
         static Socket CreateSocket(int port)

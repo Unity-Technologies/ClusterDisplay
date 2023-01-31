@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.LiveEditing.LowLevel.Networking
 {
@@ -56,11 +57,13 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <param name="buffer">The buffer containing the data to be sent.</param>
         public void Send(ReadOnlySpan<byte> buffer)
         {
+            Profiler.BeginSample(nameof(Send));
             if (m_Connection is { } connection)
             {
                 var header = PacketHeader.CreateForBinaryBlob(m_Connection.Id, buffer.Length);
                 connection.EnqueueSend(header, buffer);
             }
+            Profiler.EndSample();
         }
 
         async Task ConnectToHubTask(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
@@ -72,9 +75,11 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         void ReceivedHandler(in PacketHeader header, ReadOnlySpan<byte> payload)
         {
+            Profiler.BeginSample(nameof(ReceivedHandler));
             var queueBuffer = ArrayPool<byte>.Shared.Rent(header.PayLoadSize);
             payload.CopyTo(queueBuffer);
             m_ReceiveQueue.Add((header.PayLoadSize, queueBuffer), m_CancellationTokenSource.Token);
+            Profiler.EndSample();
         }
 
         static async Task<Socket> ConnectToServerAsync(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
