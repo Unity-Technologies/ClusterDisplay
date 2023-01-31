@@ -24,6 +24,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         public readonly MessageType MessageType;
         public readonly int ChannelId;
         public readonly int PayLoadSize;
+
         // TODO: add extra metadata here
 
         public static PacketHeader CreateForBinaryBlob(int channelId, int payLoadSize)
@@ -75,7 +76,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly Task m_ReceiveTask;
         readonly Task m_SendTask;
 
-        BlockingCollection<QueuedPacket> m_OutgoingPackets; // TODO: replace with non-allocating implementation
+        BlockingQueue<QueuedPacket> m_OutgoingPackets;
         readonly CancellationTokenSource m_CancellationTokenSource;
         readonly TaskCompletionSource<int> m_IdAssignmentTaskSource = new();
 
@@ -104,12 +105,14 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <remarks>
         /// <p>The caller is responsible for creating the socket in a usable state such that it is able to send and
         /// receive data.</p>
-        /// <p>FIXME: The <see cref="CancellationToken"/> cannot reliably cancel blocking receive operations.</p>
         /// </remarks>
-        public DataChannel(Socket socket, CancellationToken cancellationToken, PacketReceivedHandler receivedHandler) {
+        public DataChannel(Socket socket, CancellationToken cancellationToken, PacketReceivedHandler receivedHandler)
+        {
             m_CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             m_Socket = socket;
-            m_OutgoingPackets = new BlockingCollection<QueuedPacket>(k_SendQueueMaxLength);
+
+            m_OutgoingPackets = new BlockingQueue<QueuedPacket>(k_SendQueueMaxLength);
+            cancellationToken.Register(m_OutgoingPackets.CompleteAdding);
             m_ReceiveTask = ReceivePacketsAsync(receivedHandler, m_CancellationTokenSource.Token);
             m_SendTask = SendPacketsInQueueAsync(m_CancellationTokenSource.Token);
         }
@@ -130,12 +133,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             Id = newId;
             var header = PacketHeader.CreateIdAssignment(newId);
-            m_OutgoingPackets.Add(new QueuedPacket(header, ReadOnlySpan<byte>.Empty));
+            m_OutgoingPackets.TryEnqueue(new QueuedPacket(header, ReadOnlySpan<byte>.Empty));
             m_IdAssignmentTaskSource.SetResult(Id);
         }
 
         public void EnqueueSend(in PacketHeader header, ReadOnlySpan<byte> payload) =>
-            m_OutgoingPackets.Add(new QueuedPacket(header, payload), m_CancellationTokenSource.Token);
+            m_OutgoingPackets.TryEnqueue(new QueuedPacket(header, payload));
 
         readonly struct QueuedPacket : IDisposable
         {
@@ -154,6 +157,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 ArrayPool<byte>.Shared.Return(PayloadData);
             }
         }
+
         Task SendPacketsInQueueAsync(CancellationToken token)
         {
             return Task.Run(() =>
@@ -162,9 +166,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 token.Register(m_OutgoingPackets.CompleteAdding);
                 try
                 {
-                    // FIXME: BlockingCollection.TryTake allocates. Look for an alternative.
-                    while (m_OutgoingPackets.TryTake(out var packet, Timeout.Infinite))
+                    while (!token.IsCancellationRequested)
                     {
+                        var packet = m_OutgoingPackets.Dequeue();
                         m_Socket.SendPacket(packet.Header, packet.PayloadData);
                         packet.Dispose();
                     }
@@ -218,6 +222,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                         break;
                     }
                 }
+
                 Profiler.EndSample();
             }, token).ContinueWith(_ =>
             {
@@ -230,12 +235,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
             m_Socket?.Dispose();
             if (m_OutgoingPackets != null)
             {
-                while (m_OutgoingPackets.TryTake(out var packet))
+                while (m_OutgoingPackets.TryDequeue(out var packet))
                 {
                     packet.Dispose();
                 }
             }
-            m_OutgoingPackets?.Dispose();
+
             m_OutgoingPackets = null;
             m_CancellationTokenSource?.Dispose();
         }
@@ -251,30 +256,71 @@ namespace Unity.LiveEditing.LowLevel.Networking
         public static PacketHeader ReadPacket(this Socket socket, Span<byte> payloadDataOut)
         {
             var bytesRead = 0;
-            Span<byte> headerDataBuffer = stackalloc byte[k_HeaderSize];
-            while (bytesRead < k_HeaderSize)
+
+            // Use the Receive() overload that takes a byte[] because it doesn't implicitly allocate additional garbage.
+            var headerDataBuffer = ArrayPool<byte>.Shared.Rent(k_HeaderSize);
+            PacketHeader headerOut;
+            try
             {
-                bytesRead += socket.Receive(headerDataBuffer[bytesRead..k_HeaderSize]);
+                while (bytesRead < k_HeaderSize)
+                {
+                    bytesRead += socket.Receive(headerDataBuffer,
+                        bytesRead,
+                        k_HeaderSize - bytesRead,
+                        SocketFlags.None);
+                }
+
+                headerOut = MemoryMarshal.Read<PacketHeader>(headerDataBuffer);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(headerDataBuffer);
             }
 
-            var header = MemoryMarshal.Read<PacketHeader>(headerDataBuffer);
-            if (header.Revision != PacketHeader.k_Revision)
+            if (headerOut.Revision != PacketHeader.k_Revision)
             {
                 throw new InvalidCastException("Unknown message header revision.");
             }
+
+            Debug.Assert(payloadDataOut.Length >= headerOut.PayLoadSize);
             bytesRead = 0;
-            while (bytesRead < header.PayLoadSize)
+
+            var payloadReceiveBuffer = ArrayPool<byte>.Shared.Rent(headerOut.PayLoadSize);
+            try
             {
-                bytesRead += socket.Receive(payloadDataOut[bytesRead..header.PayLoadSize]);
+                while (bytesRead < headerOut.PayLoadSize)
+                {
+                    bytesRead += socket.Receive(payloadReceiveBuffer,
+                        bytesRead,
+                        headerOut.PayLoadSize - bytesRead,
+                        SocketFlags.None);
+                }
+
+                payloadReceiveBuffer.CopyTo(payloadDataOut);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(payloadReceiveBuffer);
             }
 
-            return header;
+            return headerOut;
         }
 
         public static void SendPacket(this Socket socket, in PacketHeader header, ReadOnlySpan<byte> payload)
         {
-            socket.Send(MemoryExtensions.CreateReadOnlySpan(in header).AsBytes());
-            socket.Send(payload[..header.PayLoadSize], SocketFlags.None);
+            var headerSize = Marshal.SizeOf<PacketHeader>();
+            var temp = ArrayPool<byte>.Shared.Rent(header.PayLoadSize + headerSize);
+            MemoryMarshal.Write(temp, ref MemoryExtensions.AsRef(header));
+            payload[..header.PayLoadSize].CopyTo(temp.AsSpan()[headerSize..]);
+            try
+            {
+                // Use the Send() overload that takes a byte[] because it doesn't implicitly allocate additional garbage.
+                socket.Send(temp, 0, headerSize + header.PayLoadSize, SocketFlags.None);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(temp);
+            }
         }
     }
 }

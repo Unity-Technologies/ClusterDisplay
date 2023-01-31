@@ -32,10 +32,11 @@ namespace Unity.LiveEditing.LowLevel.Networking
         public event DataReceivedHandler DataReceived;
         public Exception CurrentException => m_Connection?.CurrentException;
 
+        const int k_ReceiveQueueSize = 32;
         readonly CancellationTokenSource m_CancellationTokenSource = new();
         readonly Task m_ClientTask;
         readonly ILooper m_Looper;
-        readonly BlockingCollection<(int size, byte[] data)> m_ReceiveQueue = new();
+        readonly BlockingQueue<(int size, byte[] data)> m_ReceiveQueue = new(k_ReceiveQueueSize);
         DataChannel m_Connection;
 
         /// <summary>
@@ -66,6 +67,23 @@ namespace Unity.LiveEditing.LowLevel.Networking
             Profiler.EndSample();
         }
 
+        /// <summary>
+        /// Send blittable data to other clients.
+        /// </summary>
+        /// <param name="data">A blittable object.</param>
+        /// <typeparam name="T">The type of the object to send.</typeparam>
+        public void Send<T>(ref T data) where T : unmanaged
+        {
+            Profiler.BeginSample(nameof(Send));
+            if (m_Connection is { } connection)
+            {
+                var dataAsBytes = MemoryMarshal.CreateReadOnlySpan(ref data, 1).AsBytes();
+                var header = PacketHeader.CreateForBinaryBlob(m_Connection.Id, dataAsBytes.Length);
+                connection.EnqueueSend(header, dataAsBytes);
+            }
+            Profiler.EndSample();
+        }
+
         async Task ConnectToHubTask(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
         {
             var socket = await ConnectToServerAsync(serverEndPoint, timeout, token);
@@ -78,7 +96,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
             Profiler.BeginSample(nameof(ReceivedHandler));
             var queueBuffer = ArrayPool<byte>.Shared.Rent(header.PayLoadSize);
             payload.CopyTo(queueBuffer);
-            m_ReceiveQueue.Add((header.PayLoadSize, queueBuffer), m_CancellationTokenSource.Token);
+            m_ReceiveQueue.TryEnqueue((header.PayLoadSize, queueBuffer));
             Profiler.EndSample();
         }
 
@@ -105,9 +123,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         void NotifyListeners()
         {
-            while (m_ReceiveQueue.TryTake(out var packetData))
+            while (m_ReceiveQueue.TryDequeue(out var packetData))
             {
-                DataReceived?.Invoke(packetData.data[..packetData.size]);
+                DataReceived?.Invoke(packetData.data.AsSpan()[..packetData.size]);
                 ArrayPool<byte>.Shared.Return(packetData.data);
             }
         }
@@ -136,6 +154,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         public void Stop(TimeSpan timeout)
         {
             m_CancellationTokenSource.Cancel();
+            m_ReceiveQueue.CompleteAdding();
             try
             {
                 m_ClientTask.Wait(timeout);
