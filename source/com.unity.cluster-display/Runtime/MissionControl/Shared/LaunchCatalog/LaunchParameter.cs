@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
         static float ConvertToSingle(object value)
         {
             float ret = Convert.ToSingle(value);
-            if (!float.IsNormal(ret))
+            if (!float.IsFinite(ret))
             {
                 throw new InvalidCastException($"Cannot convert {value} to {typeof(float)}.");
             }
