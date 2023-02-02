@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -79,6 +78,8 @@ namespace Unity.LiveEditing.LowLevel.Networking
         BlockingQueue<QueuedPacket> m_OutgoingPackets;
         readonly CancellationTokenSource m_CancellationTokenSource;
         readonly TaskCompletionSource<int> m_IdAssignmentTaskSource = new();
+        public string Name { get; set; }
+        ArrayPool<byte> m_PacketQueueDataPool = ArrayPool<byte>.Create();
 
         /// <summary>
         /// Application-specific identifier.
@@ -133,44 +134,53 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             Id = newId;
             var header = PacketHeader.CreateIdAssignment(newId);
-            m_OutgoingPackets.TryEnqueue(new QueuedPacket(header, ReadOnlySpan<byte>.Empty));
+            m_OutgoingPackets.TryEnqueue(CreateQueuePacket(in header, ReadOnlySpan<byte>.Empty));
             m_IdAssignmentTaskSource.SetResult(Id);
         }
 
         public void EnqueueSend(in PacketHeader header, ReadOnlySpan<byte> payload) =>
-            m_OutgoingPackets.TryEnqueue(new QueuedPacket(header, payload));
+            m_OutgoingPackets.TryEnqueue(CreateQueuePacket(in header, payload));
 
-        readonly struct QueuedPacket : IDisposable
+        readonly struct QueuedPacket
         {
             public readonly PacketHeader Header;
             public readonly byte[] PayloadData;
 
-            public QueuedPacket(in PacketHeader header, ReadOnlySpan<byte> data)
+            public QueuedPacket(in PacketHeader header, byte[] data)
             {
                 Header = header;
-                PayloadData = ArrayPool<byte>.Shared.Rent(header.PayLoadSize);
-                data[..header.PayLoadSize].CopyTo(PayloadData);
+                PayloadData = data;
             }
+        }
 
-            public void Dispose()
-            {
-                ArrayPool<byte>.Shared.Return(PayloadData);
-            }
+        QueuedPacket CreateQueuePacket(in PacketHeader header, ReadOnlySpan<byte> data)
+        {
+            var dataCopy = m_PacketQueueDataPool.Rent(header.PayLoadSize);
+            data[..header.PayLoadSize].CopyTo(dataCopy);
+            return new QueuedPacket(in header, dataCopy);
+        }
+
+        void ReleaseQueuePacket(ref QueuedPacket packet)
+        {
+            m_PacketQueueDataPool.Return(packet.PayloadData);
         }
 
         Task SendPacketsInQueueAsync(CancellationToken token)
         {
             return Task.Run(() =>
             {
+                Debug.Log($"{nameof(SendPacketsInQueueAsync)} started");
                 Profiler.BeginSample(nameof(SendPacketsInQueueAsync));
                 token.Register(m_OutgoingPackets.CompleteAdding);
                 try
                 {
                     while (!token.IsCancellationRequested)
                     {
-                        var packet = m_OutgoingPackets.Dequeue();
-                        m_Socket.SendPacket(packet.Header, packet.PayloadData);
-                        packet.Dispose();
+                        if (m_OutgoingPackets.TryDequeue(out var packet, Timeout.InfiniteTimeSpan))
+                        {
+                            m_Socket.SendPacket(packet.Header, packet.PayloadData);
+                            ReleaseQueuePacket(ref packet);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -187,7 +197,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 }
             }, token).ContinueWith(_ =>
             {
-                Debug.Log($"{nameof(SendPacketsInQueueAsync)} exited");
+                Debug.Log($"{nameof(SendPacketsInQueueAsync)} exited {(Name ?? "") + Id}");
             });
         }
 
@@ -195,6 +205,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             return Task.Run(() =>
             {
+                Debug.Log($"{nameof(ReceivePacketsAsync)} started");
                 Profiler.BeginSample(nameof(ReceivePacketsAsync));
                 Span<byte> payload = stackalloc byte[k_ReceiveBufferSize];
                 while (!token.IsCancellationRequested)
@@ -216,6 +227,17 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     {
                         // Don't need to bubble up cancellations
                     }
+                    catch (SocketException ex)
+                    {
+                        // The other end has requested a shutdown.
+                        if (ex.ErrorCode == (int)SocketError.Shutdown)
+                        {
+                            m_Socket.Shutdown(SocketShutdown.Both);
+                            m_Socket.Close();
+                        }
+
+                        break;
+                    }
                     catch (Exception ex)
                     {
                         CurrentException = ex;
@@ -226,22 +248,26 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 Profiler.EndSample();
             }, token).ContinueWith(_ =>
             {
-                Debug.Log($"{nameof(ReceivePacketsAsync)} exited");
+                Debug.Log($"{nameof(ReceivePacketsAsync)} exited {(Name ?? "") + Id}");
             }, token);
+        }
+
+        /// <summary>
+        /// Initiate a clean shutdown of the socket connection.
+        /// </summary>
+        /// <remarks>
+        /// The socket will remain alive until the other end has acknowledged with its own
+        /// shutdown signal.
+        /// </remarks>
+        public void StartShutdown()
+        {
+            m_Socket?.Shutdown(SocketShutdown.Send);
         }
 
         public void Dispose()
         {
             m_Socket?.Dispose();
-            if (m_OutgoingPackets != null)
-            {
-                while (m_OutgoingPackets.TryDequeue(out var packet))
-                {
-                    packet.Dispose();
-                }
-            }
-
-            m_OutgoingPackets = null;
+            m_OutgoingPackets?.CompleteAdding();
             m_CancellationTokenSource?.Dispose();
         }
     }
@@ -264,10 +290,20 @@ namespace Unity.LiveEditing.LowLevel.Networking
             {
                 while (bytesRead < k_HeaderSize)
                 {
-                    bytesRead += socket.Receive(headerDataBuffer,
+                    var result = socket.Receive(headerDataBuffer,
                         bytesRead,
                         k_HeaderSize - bytesRead,
                         SocketFlags.None);
+
+                    if (result > 0)
+                    {
+                        bytesRead += result;
+                    }
+                    else
+                    {
+                        // We received a 0-byte packet which means the other end has disconnected.
+                        throw new SocketException((int)SocketError.Shutdown);
+                    }
                 }
 
                 headerOut = MemoryMarshal.Read<PacketHeader>(headerDataBuffer);
@@ -290,10 +326,20 @@ namespace Unity.LiveEditing.LowLevel.Networking
             {
                 while (bytesRead < headerOut.PayLoadSize)
                 {
-                    bytesRead += socket.Receive(payloadReceiveBuffer,
+                    var result = socket.Receive(payloadReceiveBuffer,
                         bytesRead,
                         headerOut.PayLoadSize - bytesRead,
                         SocketFlags.None);
+
+                    if (result > 0)
+                    {
+                        bytesRead += result;
+                    }
+                    else
+                    {
+                        // We received a 0-byte packet which means the other end has disconnected.
+                        throw new SocketException((int)SocketError.Shutdown);
+                    }
                 }
 
                 payloadReceiveBuffer.CopyTo(payloadDataOut);
@@ -308,8 +354,11 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         public static void SendPacket(this Socket socket, in PacketHeader header, ReadOnlySpan<byte> payload)
         {
+            // Create a buffer big enough for both the header and the payload
             var headerSize = Marshal.SizeOf<PacketHeader>();
             var temp = ArrayPool<byte>.Shared.Rent(header.PayLoadSize + headerSize);
+
+            // Write the header and the payload into the temporary buffer
             MemoryMarshal.Write(temp, ref MemoryExtensions.AsRef(header));
             payload[..header.PayLoadSize].CopyTo(temp.AsSpan()[headerSize..]);
             try

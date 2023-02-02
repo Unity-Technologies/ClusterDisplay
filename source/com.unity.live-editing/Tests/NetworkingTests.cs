@@ -94,16 +94,21 @@ namespace Unity.LiveEditing.Tests
             Assert.That(receivedMessages2, Is.EquivalentTo(sendMessages1.Concat(sendMessages3)));
             Assert.That(receivedMessages3, Is.EquivalentTo(sendMessages1.Concat(sendMessages2)));
 
-            // TEST: Kill one of the clients and verify that the server updates its connections.
+            // TEST: Disconnect a client and verify that the server updates its connections.
             client1.Stop(TimeSpan.FromSeconds(1));
-            client1.Dispose();
 
+            // We don't know how long it takes for the shutdown to propagate back to the server.
             retries = 0;
             while (server.ClientCount >= 3 && retries < 30)
             {
                 retries++;
-                yield return null;
+                yield return new WaitForSecondsRealtime(0.5f);
             }
+
+            // TEST: Verify that we disconnected cleanly
+            Assert.That(client1.CurrentException, Is.Null);
+            Assert.That(server.HasErrors, Is.False);
+
             Assert.That(server.ClientCount, Is.EqualTo(2));
         }
 

@@ -65,13 +65,22 @@ namespace Unity.LiveEditing.LowLevel
         }
 
         /// <summary>
-        /// Removes an and item from the queue.
+        /// Tries to remove an item from the queue.
         /// </summary>
-        /// <returns>The item that was removed from the queue.</returns>
-        /// <remarks>A call may block until an item is available to be removed.</remarks>
-        public T Dequeue()
+        /// <param name="item">The item removed from the collection.</param>
+        /// <param name="timeout">A <see cref="TimeSpan"/> that represents the number of milliseconds to wait for
+        /// the item to be removed, or <see cref="Timeout.InfiniteTimeSpan"/> to wait indefinitely.</param>
+        /// <returns>
+        /// <c>true</c> if an item could be removed within the specified timeout;
+        /// otherwise <c>false</c>
+        /// </returns>
+        /// <remarks>
+        /// Due to the current implementation, this method does not automatically unblock when the timeout elapses.
+        /// You must enqueue an item or mark it as complete to ensure that this method unblocks.
+        /// </remarks>
+        public bool TryDequeue(out T item, TimeSpan timeout)
         {
-            T item = default;
+            item = default;
             lock (m_Lock)
             {
                 for (;;)
@@ -79,23 +88,20 @@ namespace Unity.LiveEditing.LowLevel
                     if (m_Queue.Count > 0)
                     {
                         item = m_Queue.Dequeue();
-                        break;
+                        return true;
                     }
-                    if (m_Completed)
+                    if (m_Completed || !Monitor.Wait(m_Lock, timeout))
                     {
-                        break;
+                        return false;
                     }
-                    Monitor.Wait(m_Lock);
                 }
             }
-
-            return item;
         }
 
         /// <summary>
         /// Tries to remove an item from the queue.
         /// </summary>
-        /// <param name="item">The item removed from the collection.</param>
+        /// <param name="item">The item removed from the collection. </param>
         /// <returns><c>true</c> if an item could be removed; otherwise <c>false</c></returns>
         public bool TryDequeue(out T item)
         {
@@ -117,8 +123,8 @@ namespace Unity.LiveEditing.LowLevel
         /// </summary>
         /// <remarks>
         /// After a queue as been marked as complete, adding to the queue is no longer permitted, and all
-        /// calls to <see cref="Dequeue"/> will immediately return the default element (block calls will immediately
-        /// unblock).
+        /// calls to <see cref="TryDequeue(out T,System.TimeSpan)"/> will immediately return false
+        /// (blocking calls will immediately unblock).
         /// </remarks>
         public void CompleteAdding()
         {

@@ -30,6 +30,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// in the constructor</p>.
         /// </remarks>
         public event DataReceivedHandler DataReceived;
+
         public Exception CurrentException => m_Connection?.CurrentException;
 
         const int k_ReceiveQueueSize = 32;
@@ -64,6 +65,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 var header = PacketHeader.CreateForBinaryBlob(m_Connection.Id, buffer.Length);
                 connection.EnqueueSend(header, buffer);
             }
+
             Profiler.EndSample();
         }
 
@@ -81,13 +83,14 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 var header = PacketHeader.CreateForBinaryBlob(m_Connection.Id, dataAsBytes.Length);
                 connection.EnqueueSend(header, dataAsBytes);
             }
+
             Profiler.EndSample();
         }
 
         async Task ConnectToHubTask(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
         {
             var socket = await ConnectToServerAsync(serverEndPoint, timeout, token);
-            m_Connection = new DataChannel(socket, token, ReceivedHandler);
+            m_Connection = new DataChannel(socket, token, ReceivedHandler) { Name = "ClientChannel" };
             await m_Connection.WaitForIdAssignment();
         }
 
@@ -151,10 +154,12 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// Attempt to stop the client gracefully.
         /// </summary>
         /// <exception cref="TimeoutException">Timed out waiting for the client to stop.</exception>
+        /// <remarks>It is safe to call this multiple times.</remarks>
         public void Stop(TimeSpan timeout)
         {
             m_CancellationTokenSource.Cancel();
             m_ReceiveQueue.CompleteAdding();
+            m_Connection?.StartShutdown();
             try
             {
                 m_ClientTask.Wait(timeout);

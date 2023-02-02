@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -34,6 +35,23 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 lock (m_ConnectionsLock)
                 {
                     return m_Connections.Count;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns whether we have any connection errors.
+        /// </summary>
+        /// <remarks>
+        /// TODO: Report status in a more granular way.
+        /// </remarks>
+        public bool HasErrors
+        {
+            get
+            {
+                lock (m_Connections)
+                {
+                    return m_Connections.Any(connection => connection.CurrentException != null);
                 }
             }
         }
@@ -79,7 +97,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 lock (m_ConnectionsLock)
                 {
                     var nextId = m_Connections.Count;
-                    var channel = new DataChannel(clientSocket, token, EnqueueForBroadcast);
+                    var channel = new DataChannel(clientSocket, token, EnqueueForBroadcast) { Name = "ServerConnection" };
                     channel.EnqueueIdChange(nextId);
                     m_Connections.Add(channel);
                 }
@@ -141,6 +159,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     }
                 }
             }
+
             Profiler.EndSample();
         }
 
@@ -160,6 +179,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     }
                 }
             }
+
             Profiler.EndSample();
         }
 
@@ -177,7 +197,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// Attempt to stop the server gracefully.
         /// </summary>
         /// <exception cref="TimeoutException">Timed out waiting for the server to stop.</exception>
-        void Stop(TimeSpan timeout)
+        public void Stop(TimeSpan timeout)
         {
             m_CancellationTokenSource.Cancel();
 
@@ -191,6 +211,11 @@ namespace Unity.LiveEditing.LowLevel.Networking
             }
             finally
             {
+                foreach (var connection in m_Connections)
+                {
+                    connection.StartShutdown();
+                }
+
                 m_Looper.Update -= UpdateConnections;
             }
         }
@@ -204,6 +229,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     connection.Dispose();
                 }
             }
+
             m_CancellationTokenSource?.Dispose();
             m_Looper.Update -= UpdateConnections;
         }
