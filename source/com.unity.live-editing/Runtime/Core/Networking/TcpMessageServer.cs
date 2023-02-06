@@ -171,7 +171,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 for (var index = m_Connections.Count - 1; index >= 0; index--)
                 {
                     var conn = m_Connections[index];
-                    if (conn.IsStopped)
+                    if (conn.HasStopped)
                     {
                         Debug.Log($"Lost connection with client channel {conn.Id}: {conn.CurrentException}");
                         conn.Dispose();

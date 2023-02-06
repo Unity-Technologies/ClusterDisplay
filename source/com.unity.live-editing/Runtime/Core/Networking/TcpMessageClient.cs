@@ -59,8 +59,8 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <param name="buffer">The buffer containing the data to be sent.</param>
         public void Send(ReadOnlySpan<byte> buffer)
         {
-            Profiler.BeginSample(nameof(Send));
-            if (m_Connection is { } connection)
+            Profiler.BeginSample("TcpMessageClient.Send");
+            if (m_Connection is { HasStopped: false } connection)
             {
                 var header = PacketHeader.CreateForBinaryBlob(m_Connection.Id, buffer.Length);
                 connection.EnqueueSend(header, buffer);
@@ -76,7 +76,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <typeparam name="T">The type of the object to send.</typeparam>
         public void Send<T>(ref T data) where T : unmanaged
         {
-            Profiler.BeginSample(nameof(Send));
+            Profiler.BeginSample("TcpMessageClient.Send");
             if (m_Connection is { } connection)
             {
                 var dataAsBytes = MemoryMarshal.CreateReadOnlySpan(ref data, 1).AsBytes();

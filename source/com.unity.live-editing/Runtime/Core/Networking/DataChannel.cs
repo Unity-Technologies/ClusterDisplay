@@ -93,8 +93,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// </remarks>
         public int Id { get; private set; } = -1;
 
-        // TODO report status as enum
-        public bool IsStopped => m_ReceiveTask.IsCompleted || m_SendTask.IsCompleted;
+        /// <summary>
+        /// Returns whether this connection has stopped sending and receiving packets.
+        /// </summary>
+        public bool HasStopped => m_ReceiveTask.IsCompleted || m_SendTask.IsCompleted;
         public Exception CurrentException { get; private set; }
 
         /// <summary>
@@ -105,7 +107,8 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <param name="receivedHandler">Callback for handling the arrival of data.</param>
         /// <remarks>
         /// <p>The caller is responsible for creating the socket in a usable state such that it is able to send and
-        /// receive data.</p>
+        /// receive data. <see cref="DataChannel"/> takes ownership of the <see cref="Socket"/>
+        /// (i.e. may call <see cref="Socket.Dispose"/>).</p>
         /// </remarks>
         public DataChannel(Socket socket, CancellationToken cancellationToken, PacketReceivedHandler receivedHandler)
         {
@@ -116,6 +119,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
             cancellationToken.Register(m_OutgoingPackets.CompleteAdding);
             m_ReceiveTask = ReceivePacketsAsync(receivedHandler, m_CancellationTokenSource.Token);
             m_SendTask = SendPacketsInQueueAsync(m_CancellationTokenSource.Token);
+            Task.WhenAny(m_ReceiveTask, m_SendTask).ContinueWith(_ =>
+            {
+                m_CancellationTokenSource.Cancel();
+            });
         }
 
         public async ValueTask<int> WaitForIdAssignment()
@@ -169,7 +176,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             return Task.Run(() =>
             {
-                Debug.Log($"{nameof(SendPacketsInQueueAsync)} started");
                 Profiler.BeginSample(nameof(SendPacketsInQueueAsync));
                 token.Register(m_OutgoingPackets.CompleteAdding);
                 try
@@ -195,17 +201,13 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 {
                     Profiler.EndSample();
                 }
-            }, token).ContinueWith(_ =>
-            {
-                Debug.Log($"{nameof(SendPacketsInQueueAsync)} exited {(Name ?? "") + Id}");
-            });
+            }, token);
         }
 
         Task ReceivePacketsAsync(PacketReceivedHandler receivedHandler, CancellationToken token)
         {
             return Task.Run(() =>
             {
-                Debug.Log($"{nameof(ReceivePacketsAsync)} started");
                 Profiler.BeginSample(nameof(ReceivePacketsAsync));
                 Span<byte> payload = stackalloc byte[k_ReceiveBufferSize];
                 while (!token.IsCancellationRequested)
@@ -227,15 +229,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     {
                         // Don't need to bubble up cancellations
                     }
-                    catch (SocketException ex)
+                    catch (SocketException ex) when (ex.ErrorCode == (int)SocketError.Disconnecting)
                     {
-                        // The other end has requested a shutdown.
-                        if (ex.ErrorCode == (int)SocketError.Shutdown)
-                        {
-                            m_Socket.Shutdown(SocketShutdown.Both);
-                            m_Socket.Close();
-                        }
-
+                        // The other end has initiated a disconnection.
+                        m_Socket.Shutdown(SocketShutdown.Both);
                         break;
                     }
                     catch (Exception ex)
@@ -246,9 +243,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 }
 
                 Profiler.EndSample();
-            }, token).ContinueWith(_ =>
-            {
-                Debug.Log($"{nameof(ReceivePacketsAsync)} exited {(Name ?? "") + Id}");
             }, token);
         }
 
@@ -301,8 +295,8 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     }
                     else
                     {
-                        // We received a 0-byte packet which means the other end has disconnected.
-                        throw new SocketException((int)SocketError.Shutdown);
+                        // We received a 0-byte packet which means the other end wishes to disconnect.
+                        throw new SocketException((int)SocketError.Disconnecting);
                     }
                 }
 
@@ -338,7 +332,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     else
                     {
                         // We received a 0-byte packet which means the other end has disconnected.
-                        throw new SocketException((int)SocketError.Shutdown);
+                        throw new SocketException((int)SocketError.Disconnecting);
                     }
                 }
 

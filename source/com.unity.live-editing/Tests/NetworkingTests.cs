@@ -110,6 +110,11 @@ namespace Unity.LiveEditing.Tests
             Assert.That(server.HasErrors, Is.False);
 
             Assert.That(server.ClientCount, Is.EqualTo(2));
+
+            client1.Dispose();
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.That(client1.CurrentException, Is.Null);
+            Assert.That(server.HasErrors, Is.False);
         }
 
         static int GetFreeTcpPort()
