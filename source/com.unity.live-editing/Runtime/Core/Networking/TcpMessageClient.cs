@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -39,6 +38,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly ILooper m_Looper;
         readonly BlockingQueue<(int size, byte[] data)> m_ReceiveQueue = new(k_ReceiveQueueSize);
         DataChannel m_Connection;
+
+        // TODO: Better API for client status
+        internal bool IsConnected => !m_Connection.HasStopped;
 
         /// <summary>
         /// Creates a new <see cref="TcpMessageClient"/>.
@@ -90,7 +92,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         async Task ConnectToHubTask(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
         {
             var socket = await ConnectToServerAsync(serverEndPoint, timeout, token);
-            m_Connection = new DataChannel(socket, token, ReceivedHandler) { Name = "ClientChannel" };
+            m_Connection = new DataChannel(socket, ReceivedHandler) { Name = "ClientChannel" };
             await m_Connection.WaitForIdAssignment();
         }
 
@@ -159,7 +161,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             m_CancellationTokenSource.Cancel();
             m_ReceiveQueue.CompleteAdding();
-            m_Connection?.StartShutdown();
+            m_Connection?.Shutdown();
             try
             {
                 m_ClientTask.Wait(timeout);

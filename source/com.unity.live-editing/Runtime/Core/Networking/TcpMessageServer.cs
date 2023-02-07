@@ -43,7 +43,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// Returns whether we have any connection errors.
         /// </summary>
         /// <remarks>
-        /// TODO: Report status in a more granular way.
+        /// TODO: Report status in a more granular way, and for connections that were lost.
         /// </remarks>
         public bool HasErrors
         {
@@ -97,7 +97,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                 lock (m_ConnectionsLock)
                 {
                     var nextId = m_Connections.Count;
-                    var channel = new DataChannel(clientSocket, token, EnqueueForBroadcast) { Name = "ServerConnection" };
+                    var channel = new DataChannel(clientSocket, EnqueueForBroadcast) { Name = "ServerConnection" };
                     channel.EnqueueIdChange(nextId);
                     m_Connections.Add(channel);
                 }
@@ -213,7 +213,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
             {
                 foreach (var connection in m_Connections)
                 {
-                    connection.StartShutdown();
+                    connection.Shutdown();
                 }
 
                 m_Looper.Update -= UpdateConnections;

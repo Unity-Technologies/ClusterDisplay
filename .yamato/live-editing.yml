@@ -124,6 +124,7 @@ validate_all:
 test_all:
   name: Run all Live Editing tests
   triggers:
+    cancel_old_ci: true
     expression: pull_request.push.changes.any match ["source/com.unity.live-editing/**", "TestProjects/LiveEditingTests/**", ".yamato/live-editing.yml"]  OR (push.changes.any match ["source/com.unity.live-editing/**", "TestProjects/LiveEditingTests/**",  ".yamato/live-editing.yml"] AND push.branch MATCH "dev")
   dependencies:
 {% for project in projects %}

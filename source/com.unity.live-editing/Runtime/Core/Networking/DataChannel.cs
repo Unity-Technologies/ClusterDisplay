@@ -75,11 +75,10 @@ namespace Unity.LiveEditing.LowLevel.Networking
         readonly Task m_ReceiveTask;
         readonly Task m_SendTask;
 
-        BlockingQueue<QueuedPacket> m_OutgoingPackets;
-        readonly CancellationTokenSource m_CancellationTokenSource;
+        readonly BlockingQueue<QueuedPacket> m_OutgoingPackets = new(k_SendQueueMaxLength);
+        CancellationTokenSource m_CancellationTokenSource = new();
         readonly TaskCompletionSource<int> m_IdAssignmentTaskSource = new();
-        public string Name { get; set; }
-        ArrayPool<byte> m_PacketQueueDataPool = ArrayPool<byte>.Create();
+        readonly ArrayPool<byte> m_PacketQueueDataPool = ArrayPool<byte>.Create();
 
         /// <summary>
         /// Application-specific identifier.
@@ -93,36 +92,35 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// </remarks>
         public int Id { get; private set; } = -1;
 
+        public string Name { get; set; }
+
         /// <summary>
-        /// Returns whether this connection has stopped sending and receiving packets.
+        /// Returns whether this connection has stopped sending or receiving packets.
         /// </summary>
-        public bool HasStopped => m_ReceiveTask.IsCompleted || m_SendTask.IsCompleted;
+        /// <remarks>To be <c>true</c>, the connection must have started successfully and
+        /// then gracefully disconnected or became faulted.</remarks>
+        public bool HasStopped => m_ReceiveTask.IsCompleted && m_SendTask.IsCompleted;
+
         public Exception CurrentException { get; private set; }
 
         /// <summary>
         /// Creates a new channel on the specified socket.
         /// </summary>
         /// <param name="socket">The socket to use.</param>
-        /// <param name="cancellationToken">Token used to cancel async reads and writes.</param>
         /// <param name="receivedHandler">Callback for handling the arrival of data.</param>
         /// <remarks>
         /// <p>The caller is responsible for creating the socket in a usable state such that it is able to send and
         /// receive data. <see cref="DataChannel"/> takes ownership of the <see cref="Socket"/>
         /// (i.e. may call <see cref="Socket.Dispose"/>).</p>
         /// </remarks>
-        public DataChannel(Socket socket, CancellationToken cancellationToken, PacketReceivedHandler receivedHandler)
+        public DataChannel(Socket socket, PacketReceivedHandler receivedHandler)
         {
-            m_CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             m_Socket = socket;
 
-            m_OutgoingPackets = new BlockingQueue<QueuedPacket>(k_SendQueueMaxLength);
+            var cancellationToken = m_CancellationTokenSource.Token;
+            m_ReceiveTask = ReceivePacketsAsync(receivedHandler, cancellationToken);
+            m_SendTask = SendPacketsInQueueAsync(cancellationToken);
             cancellationToken.Register(m_OutgoingPackets.CompleteAdding);
-            m_ReceiveTask = ReceivePacketsAsync(receivedHandler, m_CancellationTokenSource.Token);
-            m_SendTask = SendPacketsInQueueAsync(m_CancellationTokenSource.Token);
-            Task.WhenAny(m_ReceiveTask, m_SendTask).ContinueWith(_ =>
-            {
-                m_CancellationTokenSource.Cancel();
-            });
         }
 
         public async ValueTask<int> WaitForIdAssignment()
@@ -176,30 +174,21 @@ namespace Unity.LiveEditing.LowLevel.Networking
         {
             return Task.Run(() =>
             {
-                Profiler.BeginSample(nameof(SendPacketsInQueueAsync));
-                token.Register(m_OutgoingPackets.CompleteAdding);
                 try
                 {
-                    while (!token.IsCancellationRequested)
+                    while (!token.IsCancellationRequested &&
+                           m_OutgoingPackets.TryDequeue(out var packet, Timeout.InfiniteTimeSpan))
                     {
-                        if (m_OutgoingPackets.TryDequeue(out var packet, Timeout.InfiniteTimeSpan))
-                        {
-                            m_Socket.SendPacket(packet.Header, packet.PayloadData);
-                            ReleaseQueuePacket(ref packet);
-                        }
+                        Profiler.BeginSample(nameof(SendPacketsInQueueAsync));
+                        m_Socket.SendPacket(packet.Header, packet.PayloadData);
+                        ReleaseQueuePacket(ref packet);
+                        Profiler.EndSample();
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    // Don't bubble up cancellations
                 }
                 catch (Exception ex)
                 {
-                    CurrentException = ex;
-                }
-                finally
-                {
                     Profiler.EndSample();
+                    CurrentException = ex;
                 }
             }, token);
         }
@@ -225,18 +214,22 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
                         receivedHandler(in header, payload[..header.PayLoadSize]);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        // Don't need to bubble up cancellations
-                    }
                     catch (SocketException ex) when (ex.ErrorCode == (int)SocketError.Disconnecting)
                     {
                         // The other end has initiated a disconnection.
-                        m_Socket.Shutdown(SocketShutdown.Both);
+                        m_Socket.Shutdown(SocketShutdown.Receive);
+
+                        // Do a clean shutdown on our end
+                        Shutdown();
                         break;
                     }
                     catch (Exception ex)
                     {
+                        // We've reached an unrecoverable state and need to stop what we're doing.
+                        // We may have gotten here because we've just (improperly) disposed of
+                        // this object while it's still connected. Disposable members may not be
+                        // accessible.
+                        m_CancellationTokenSource?.Cancel();
                         CurrentException = ex;
                         break;
                     }
@@ -253,16 +246,18 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// The socket will remain alive until the other end has acknowledged with its own
         /// shutdown signal.
         /// </remarks>
-        public void StartShutdown()
+        public void Shutdown()
         {
-            m_Socket?.Shutdown(SocketShutdown.Send);
+            m_Socket.Shutdown(SocketShutdown.Send);
+            m_CancellationTokenSource.Cancel();
         }
 
         public void Dispose()
         {
             m_Socket?.Dispose();
-            m_OutgoingPackets?.CompleteAdding();
             m_CancellationTokenSource?.Dispose();
+            m_CancellationTokenSource = null;
+            m_OutgoingPackets?.CompleteAdding();
         }
     }
 

@@ -93,6 +93,30 @@ namespace Unity.LiveEditing.Tests
             Assert.That(receivedMessages1, Is.EquivalentTo(sendMessages2.Concat(sendMessages3)));
             Assert.That(receivedMessages2, Is.EquivalentTo(sendMessages1.Concat(sendMessages3)));
             Assert.That(receivedMessages3, Is.EquivalentTo(sendMessages1.Concat(sendMessages2)));
+        }
+
+        [UnityTest]
+        public IEnumerator TestDisconnect()
+        {
+            var port = GetFreeTcpPort();
+            using var perFrame = new CoroutineLooper();
+
+            using var server = new TcpMessageServer(port, perFrame);
+            var serverEndPoint = new IPEndPoint(IPAddress.Loopback, port);
+
+            // Create some clients
+            var connectionTimeout = TimeSpan.FromSeconds(1);
+            using var client1 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+            using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+
+            // TEST: Verify that server connects all the clients.
+            int retries = 0;
+            while (server.ClientCount < 2 && retries < 30)
+            {
+                retries++;
+                yield return null;
+            }
+            Assert.That(server.ClientCount, Is.EqualTo(2));
 
             // TEST: Disconnect a client and verify that the server updates its connections.
             client1.Stop(TimeSpan.FromSeconds(1));
@@ -111,10 +135,60 @@ namespace Unity.LiveEditing.Tests
 
             Assert.That(server.ClientCount, Is.EqualTo(2));
 
+            // TEST: We can still dispose a disconnected client
             client1.Dispose();
             yield return new WaitForSecondsRealtime(0.5f);
             Assert.That(client1.CurrentException, Is.Null);
             Assert.That(server.HasErrors, Is.False);
+
+            // TEST: Stop the Server. Clients should get disconnected.
+            server.Stop(TimeSpan.FromSeconds(1));
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.That(client2.IsConnected, Is.False);
+            Assert.That(client2.CurrentException, Is.Null);
+        }
+
+
+        [UnityTest]
+        public IEnumerator TestDispose()
+        {
+            var port = GetFreeTcpPort();
+            using var perFrame = new CoroutineLooper();
+
+            using var server = new TcpMessageServer(port, perFrame);
+            var serverEndPoint = new IPEndPoint(IPAddress.Loopback, port);
+
+            // Create some clients
+            var connectionTimeout = TimeSpan.FromSeconds(1);
+            using var client1 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+            using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+
+            // TEST: Verify that server connects all the clients.
+            int retries = 0;
+            while (server.ClientCount < 2 && retries < 30)
+            {
+                retries++;
+                yield return null;
+            }
+            Assert.That(server.ClientCount, Is.EqualTo(2));
+
+            // TEST: Improperly dispose a client and verify that the server updates its connections.
+            client1.Dispose();
+
+            // We don't know how long it takes for the shutdown to propagate back to the server.
+            retries = 0;
+            while (server.ClientCount >= 3 && retries < 30)
+            {
+                retries++;
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+
+            Assert.That(server.ClientCount, Is.EqualTo(2));
+
+            // TEST: Improperly dispose the Server. Clients should get disconnected.
+            server.Dispose();
+            yield return new WaitForSecondsRealtime(0.5f);
+            Assert.That(client2.IsConnected, Is.False);
         }
 
         static int GetFreeTcpPort()
