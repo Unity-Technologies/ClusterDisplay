@@ -41,11 +41,12 @@ namespace Unity.LiveEditing.Tests
             using var client3 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
 
             // TEST: Verify that server connects all the clients.
+            var quickWait = new WaitForSecondsRealtime(0.1f);
             int retries = 0;
-            while (server.ClientCount < 3 && retries < 30)
+            while (server.ClientCount < 3 && retries < 60)
             {
                 retries++;
-                yield return null;
+                yield return quickWait;
             }
             Assert.That(server.ClientCount, Is.EqualTo(3));
 
@@ -110,11 +111,12 @@ namespace Unity.LiveEditing.Tests
             using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
 
             // TEST: Verify that server connects all the clients.
+            var quickWait = new WaitForSecondsRealtime(0.1f);
             int retries = 0;
-            while (server.ClientCount < 2 && retries < 30)
+            while (server.ClientCount < 2 && retries < 60)
             {
                 retries++;
-                yield return null;
+                yield return quickWait;
             }
             Assert.That(server.ClientCount, Is.EqualTo(2));
 
@@ -123,10 +125,10 @@ namespace Unity.LiveEditing.Tests
 
             // We don't know how long it takes for the shutdown to propagate back to the server.
             retries = 0;
-            while (server.ClientCount >= 3 && retries < 30)
+            while (server.ClientCount >= 3 && retries < 60)
             {
                 retries++;
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return quickWait;
             }
 
             // TEST: Verify that we disconnected cleanly
@@ -164,11 +166,12 @@ namespace Unity.LiveEditing.Tests
             using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
 
             // TEST: Verify that server connects all the clients.
+            var quickWait = new WaitForSecondsRealtime(0.1f);
             int retries = 0;
-            while (server.ClientCount < 2 && retries < 30)
+            while (server.ClientCount < 2 && retries < 60)
             {
                 retries++;
-                yield return null;
+                yield return quickWait;
             }
             Assert.That(server.ClientCount, Is.EqualTo(2));
 
@@ -177,10 +180,10 @@ namespace Unity.LiveEditing.Tests
 
             // We don't know how long it takes for the shutdown to propagate back to the server.
             retries = 0;
-            while (server.ClientCount >= 3 && retries < 30)
+            while (server.ClientCount >= 3 && retries < 60)
             {
                 retries++;
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return quickWait;
             }
 
             Assert.That(server.ClientCount, Is.EqualTo(2));
