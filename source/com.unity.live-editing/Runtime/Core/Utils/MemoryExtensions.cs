@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Unity.LiveEditing.LowLevel
 {
-    public static class MemoryExtensions
+    static class MemoryExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe ref T AsRef<T>(in T source) where T : unmanaged
