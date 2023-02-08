@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.LiveEditing.LowLevel;
 using UnityEngine;
@@ -36,18 +38,26 @@ namespace Unity.LiveEditing.Tests
 
             // Create some clients
             var connectionTimeout = TimeSpan.FromSeconds(1);
-            using var client1 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
-            using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
-            using var client3 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+            using var client1 = new TcpMessageClient(perFrame);
+            using var client2 = new TcpMessageClient(perFrame);
+            using var client3 = new TcpMessageClient(perFrame);
+
+            var cts = new CancellationTokenSource();
+            var connectTask = Task.WhenAll(
+                client1.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token),
+                client2.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token),
+                client3.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token));
+
+            while (!connectTask.IsCompleted)
+            {
+                yield return null;
+            }
+
+            // We know that when the JoinMessageServerAsync tasks complete, it means the server has accepted
+            // the connections (because it does an id-assignment handshake).
 
             // TEST: Verify that server connects all the clients.
-            var quickWait = new WaitForSecondsRealtime(0.1f);
-            int retries = 0;
-            while (server.ClientCount < 3 && retries < 60)
-            {
-                retries++;
-                yield return quickWait;
-            }
+            Assert.That(connectTask.IsFaulted, Is.Not.True);
             Assert.That(server.ClientCount, Is.EqualTo(3));
 
             // Create some string data
@@ -107,24 +117,28 @@ namespace Unity.LiveEditing.Tests
 
             // Create some clients
             var connectionTimeout = TimeSpan.FromSeconds(1);
-            using var client1 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
-            using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+            using var client1 = new TcpMessageClient(perFrame);
+            using var client2 = new TcpMessageClient(perFrame);
 
             // TEST: Verify that server connects all the clients.
-            var quickWait = new WaitForSecondsRealtime(0.1f);
-            int retries = 0;
-            while (server.ClientCount < 2 && retries < 60)
+            var cts = new CancellationTokenSource();
+            var connectTask = Task.WhenAll(
+                client1.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token),
+                client2.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token));
+
+            while (!connectTask.IsCompleted)
             {
-                retries++;
-                yield return quickWait;
+                yield return null;
             }
+
             Assert.That(server.ClientCount, Is.EqualTo(2));
 
             // TEST: Disconnect a client and verify that the server updates its connections.
             client1.Stop(TimeSpan.FromSeconds(1));
 
             // We don't know how long it takes for the shutdown to propagate back to the server.
-            retries = 0;
+            var quickWait = new WaitForSecondsRealtime(0.1f);
+            int retries = 0;
             while (server.ClientCount >= 3 && retries < 60)
             {
                 retries++;
@@ -162,24 +176,28 @@ namespace Unity.LiveEditing.Tests
 
             // Create some clients
             var connectionTimeout = TimeSpan.FromSeconds(1);
-            using var client1 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
-            using var client2 = new TcpMessageClient(serverEndPoint, perFrame, connectionTimeout);
+            using var client1 = new TcpMessageClient(perFrame);
+            using var client2 = new TcpMessageClient(perFrame);
 
             // TEST: Verify that server connects all the clients.
-            var quickWait = new WaitForSecondsRealtime(0.1f);
-            int retries = 0;
-            while (server.ClientCount < 2 && retries < 60)
+            var cts = new CancellationTokenSource();
+            var connectTask = Task.WhenAll(
+                client1.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token),
+                client2.JoinMessageServerAsync(serverEndPoint, connectionTimeout, cts.Token));
+
+            while (!connectTask.IsCompleted)
             {
-                retries++;
-                yield return quickWait;
+                yield return null;
             }
+
             Assert.That(server.ClientCount, Is.EqualTo(2));
 
             // TEST: Improperly dispose a client and verify that the server updates its connections.
             client1.Dispose();
 
             // We don't know how long it takes for the shutdown to propagate back to the server.
-            retries = 0;
+            var quickWait = new WaitForSecondsRealtime(0.1f);
+            int retries = 0;
             while (server.ClientCount >= 3 && retries < 60)
             {
                 retries++;

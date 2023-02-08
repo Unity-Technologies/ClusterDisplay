@@ -34,25 +34,41 @@ namespace Unity.LiveEditing.LowLevel.Networking
 
         const int k_ReceiveQueueSize = 32;
         readonly CancellationTokenSource m_CancellationTokenSource = new();
-        readonly Task m_ClientTask;
         readonly ILooper m_Looper;
         readonly BlockingQueue<(int size, byte[] data)> m_ReceiveQueue = new(k_ReceiveQueueSize);
         DataChannel m_Connection;
 
         // TODO: Better API for client status
-        internal bool IsConnected => !m_Connection.HasStopped;
+        internal bool IsConnected => !m_Connection.HasStopped && m_Connection.Id >= 0;
 
         /// <summary>
         /// Creates a new <see cref="TcpMessageClient"/>.
         /// </summary>
-        /// <param name="server">The end point of the <see cref="TcpMessageServer"/>.</param>
         /// <param name="looper">The looper that controls how <see cref="DataReceived"/> is raised.</param>
-        /// <param name="connectionTimeout">Timeout for making a connection to the server.</param>
-        public TcpMessageClient(IPEndPoint server, ILooper looper, TimeSpan connectionTimeout)
+        /// <remarks>
+        /// To send and receive with the <see cref="TcpClient"/>, you must call <see cref="JoinMessageServerAsync"/>
+        /// to join a server.
+        /// </remarks>
+        public TcpMessageClient(ILooper looper)
         {
             m_Looper = looper;
             m_Looper.Update += NotifyListeners;
-            m_ClientTask = ConnectToHubTask(server, connectionTimeout, m_CancellationTokenSource.Token);
+        }
+
+        /// <summary>
+        /// Join a <see cref="TcpMessageServer"/> (messaging group).
+        /// </summary>
+        /// <param name="serverEndPoint">The end point of the <see cref="TcpMessageServer"/>.</param>
+        /// <param name="connectionTimeout">Timeout for making a connection to the server.</param>
+        /// <param name="token">A cancellation token to observe while waiting for the connection to be established.</param>
+        /// <returns>An asynchronous task that completes once the client connects to the server.</returns>
+        /// <exception cref="TimeoutException">Timed out attempting to connect.</exception>
+        /// <exception cref="TaskCanceledException">The operation was canceled.</exception>
+        public async Task JoinMessageServerAsync(IPEndPoint serverEndPoint, TimeSpan connectionTimeout, CancellationToken token)
+        {
+            var socket = await ConnectToServerAsync(serverEndPoint, connectionTimeout, token);
+            m_Connection = new DataChannel(socket, ReceivedHandler) { Name = "ClientChannel" };
+            await m_Connection.WaitForIdAssignment();
         }
 
         /// <summary>
@@ -61,6 +77,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <param name="buffer">The buffer containing the data to be sent.</param>
         public void Send(ReadOnlySpan<byte> buffer)
         {
+            Debug.Assert(IsConnected, "The client is not connected.");
             Profiler.BeginSample("TcpMessageClient.Send");
             if (m_Connection is { HasStopped: false } connection)
             {
@@ -78,6 +95,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// <typeparam name="T">The type of the object to send.</typeparam>
         public void Send<T>(ref T data) where T : unmanaged
         {
+            Debug.Assert(IsConnected, "The client is not connected.");
             Profiler.BeginSample("TcpMessageClient.Send");
             if (m_Connection is { } connection)
             {
@@ -87,13 +105,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
             }
 
             Profiler.EndSample();
-        }
-
-        async Task ConnectToHubTask(IPEndPoint serverEndPoint, TimeSpan timeout, CancellationToken token)
-        {
-            var socket = await ConnectToServerAsync(serverEndPoint, timeout, token);
-            m_Connection = new DataChannel(socket, ReceivedHandler) { Name = "ClientChannel" };
-            await m_Connection.WaitForIdAssignment();
         }
 
         void ReceivedHandler(in PacketHeader header, ReadOnlySpan<byte> payload)
@@ -116,13 +127,15 @@ namespace Unity.LiveEditing.LowLevel.Networking
                     Debug.Log($"Client connected to {serverEndPoint}");
                     return socket;
                 }
-                catch (Exception e)
+                catch (SocketException e)
                 {
+                    // Something went wrong when trying to create the socket or trying to connect.
+                    // Log the error and try again.
                     Debug.LogError(e);
                 }
 
                 token.ThrowIfCancellationRequested();
-                await Task.Delay(timeout, token);
+                await Task.Delay(TimeSpan.FromSeconds(0.1f), token);
             }
         }
 
@@ -162,18 +175,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
             m_CancellationTokenSource.Cancel();
             m_ReceiveQueue.CompleteAdding();
             m_Connection?.Shutdown();
-            try
-            {
-                m_ClientTask.Wait(timeout);
-            }
-            catch (AggregateException e)
-            {
-                Debug.Log(e);
-            }
-            finally
-            {
-                m_Looper.Update -= NotifyListeners;
-            }
+            m_Looper.Update -= NotifyListeners;
         }
 
         public void Dispose()
