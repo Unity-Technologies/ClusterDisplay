@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 
-namespace Editor
+namespace Unity.LiveEditing.Editor
 {
     using UnityObject = UnityEngine.Object;
 
@@ -49,7 +50,7 @@ namespace Editor
     /// </summary>
     class SceneChangeTracker : IDisposable
     {
-        class SceneState : IDisposable
+        internal class SceneState : IDisposable
         {
             public Scene Scene { get; }
 
@@ -69,7 +70,7 @@ namespace Editor
             }
         }
 
-        class GameObjectState : IDisposable
+        internal class GameObjectState : IDisposable
         {
             public GameObject GameObject { get; }
             public int InstanceID { get; }
@@ -80,15 +81,20 @@ namespace Editor
             public List<GameObjectState> Children { get; } = new List<GameObjectState>();
             public List<ComponentState> Components { get; } = new List<ComponentState>();
 
-            public GameObjectState(GameObject gameObject, bool isNew)
+            Action<int> m_OnDispose;
+
+            public GameObjectState(GameObject gameObject, bool isNew, Action<int> onDispose)
             {
                 GameObject = gameObject;
                 InstanceID = gameObject.GetInstanceID();
                 Properties = new PropertyState(gameObject, isNew);
+                m_OnDispose = onDispose;
             }
 
             public void Dispose()
             {
+                m_OnDispose?.Invoke(InstanceID);
+
                 Properties.Dispose();
 
                 foreach (var child in Children)
@@ -103,7 +109,7 @@ namespace Editor
             }
         }
 
-        class ComponentState : IDisposable
+        internal class ComponentState : IDisposable
         {
             public Component Component { get; }
             public PropertyState Properties { get; }
@@ -120,7 +126,7 @@ namespace Editor
             }
         }
 
-        class PropertyState : IDisposable
+        internal class PropertyState : IDisposable
         {
             public SerializedObject PreviousState { get; private set; }
             public SerializedObject CurrentState { get; private set; }
@@ -255,7 +261,7 @@ namespace Editor
 
         GameObjectState StartTrackingGameObject(SceneState sceneState, GameObjectState parentState, GameObject gameObject)
         {
-            var goState = new GameObjectState(gameObject, false)
+            var goState = new GameObjectState(gameObject, false, id => m_TrackedGameObjects.Remove(id))
             {
                 Scene = sceneState,
                 Parent = parentState,
@@ -335,7 +341,16 @@ namespace Editor
 
                             if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
                             {
-                                //change.
+                                var parent = EditorUtility.InstanceIDToObject(change.parentInstanceId) as GameObject;
+
+                                if (parent != null)
+                                {
+                                    CheckGameObjectStructural(sceneState, parent, true);
+                                }
+                                else
+                                {
+                                    CheckScene(sceneState);
+                                }
                             }
                             break;
                         }
@@ -343,10 +358,31 @@ namespace Editor
                         {
                             stream.GetChangeGameObjectParentEvent(i, out var change);
 
-                            if (m_TrackedScenes.TryGetValue(change.newScene, out var sceneState))
+                            if (m_TrackedScenes.TryGetValue(change.newScene, out var newSceneState))
                             {
-                                var gameObject = EditorUtility.InstanceIDToObject(change.newParentInstanceId) as GameObject;
-                                CheckGameObjectStructural(sceneState, gameObject, true);
+                                var newParent = EditorUtility.InstanceIDToObject(change.newParentInstanceId) as GameObject;
+
+                                if (newParent != null)
+                                {
+                                    CheckGameObjectStructural(newSceneState, newParent, true);
+                                }
+                                else
+                                {
+                                    CheckScene(newSceneState);
+                                }
+                            }
+                            else if (m_TrackedScenes.TryGetValue(change.previousScene, out var prevSceneState))
+                            {
+                                var prevParent = EditorUtility.InstanceIDToObject(change.previousParentInstanceId) as GameObject;
+
+                                if (prevParent != null)
+                                {
+                                    CheckGameObjectStructural(prevSceneState, prevParent, true);
+                                }
+                                else
+                                {
+                                    CheckScene(prevSceneState);
+                                }
                             }
                             break;
                         }
@@ -536,7 +572,7 @@ namespace Editor
             // Check if the game object is new.
             if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
             {
-                goState = new GameObjectState(gameObject, true);
+                goState = new GameObjectState(gameObject, true, id => m_TrackedGameObjects.Remove(id));
                 m_TrackedGameObjects.Add(goState.InstanceID, goState);
 
                 Debug.Log($"Change: Added game object {gameObject}");
@@ -598,7 +634,6 @@ namespace Editor
             // Check if this game object is destroyed.
             if (goState.GameObject == null)
             {
-                m_TrackedGameObjects.Remove(goState.InstanceID);
                 goState.Dispose();
                 return true;
             }
@@ -639,19 +674,17 @@ namespace Editor
             {
                 sibling = siblings[prevIndex];
 
-                if (sibling.GameObject != obj)
+                if (sibling.GameObject == obj)
                 {
-                    continue;
-                }
+                    if (currIndex != prevIndex)
+                    {
+                        siblings.RemoveAt(prevIndex);
+                        siblings.Insert(currIndex, sibling);
+                        return true;
+                    }
 
-                if (currIndex != prevIndex)
-                {
-                    siblings.RemoveAt(prevIndex);
-                    siblings.Insert(currIndex, sibling);
-                    return true;
+                    return false;
                 }
-
-                break;
             }
 
             sibling = default;
@@ -818,7 +851,14 @@ namespace Editor
             {
                 // TODO: validate this doesn't need special handling, I suspect it won't
                 //case SerializedPropertyType.ManagedReference:
-
+                // {
+                //     if (previousProp == null || previousProp.mana)
+                //     {
+                //
+                //     }
+                //
+                //     break;
+                // }
                 case SerializedPropertyType.Generic:
                 {
                     // Check for changes in any child properties by iterating over them.
@@ -852,7 +892,7 @@ namespace Editor
                 {
                     if (previousProp == null || !SerializedProperty.DataEquals(previousProp, currentProp))
                     {
-                        Debug.Log($"Change: {currentProp.propertyPath} {currentProp.propertyType} {currentProp.type}");
+                        Debug.Log($"Change: {currentProp.serializedObject.targetObject.name} {currentProp.propertyPath} {currentProp.propertyType} {currentProp.type}");
                     }
                     break;
                 }
