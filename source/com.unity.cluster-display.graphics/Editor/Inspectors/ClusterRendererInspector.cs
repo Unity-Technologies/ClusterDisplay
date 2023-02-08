@@ -110,7 +110,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
             else
             {
-                EditorGUILayout.HelpBox(k_NoPolicyMessage, MessageType.Warning);
+                EditorGUILayout.HelpBox(k_NoPolicyMessage, UnityEditor.MessageType.Warning);
             }
 
             serializedObject.ApplyModifiedProperties();
@@ -159,7 +159,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (!SceneUtils.FindAllObjectsInScene<ClusterCamera>().Any())
             {
-                EditorGUILayout.HelpBox(k_NoCamerasMessage, MessageType.Warning);
+                EditorGUILayout.HelpBox(k_NoCamerasMessage, UnityEditor.MessageType.Warning);
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     GUILayout.FlexibleSpace();

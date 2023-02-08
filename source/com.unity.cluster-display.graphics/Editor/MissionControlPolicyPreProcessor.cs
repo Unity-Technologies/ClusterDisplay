@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.Graphics
         public int callbackOrder => 0;
         public void OnPreprocessBuild(BuildReport report)
         {
-            if (!ClusterDisplaySettings.CurrentSettings.MissionControlSettings.Instrument)
+            if (!ClusterDisplaySettings.Current.MissionControlSettings.Instrument)
             {
                 return;
             }
@@ -42,7 +42,7 @@ namespace Unity.ClusterDisplay.Graphics
                     continue;
                 }
 
-                var missionControlSettings = ClusterDisplaySettings.CurrentSettings.MissionControlSettings;
+                var missionControlSettings = ClusterDisplaySettings.Current.MissionControlSettings;
                 if (ClusterRenderer.TryGetInstance(out var clusterRenderer, logError: false, includeInactive: false))
                 {
                     missionControlSettings.PolicyParameters = clusterRenderer.ProjectionPolicy switch

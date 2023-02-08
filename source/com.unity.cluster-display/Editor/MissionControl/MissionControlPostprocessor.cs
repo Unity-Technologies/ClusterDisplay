@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay
 
         static void Postprocess(string pathToBuiltProjectExe, Func<string, bool> filesFilter)
         {
-            var missionControlSettings = ClusterDisplaySettings.CurrentSettings.MissionControlSettings;
+            var missionControlSettings = ClusterDisplaySettings.Current.MissionControlSettings;
             if (!missionControlSettings.Instrument)
             {
                 return;
@@ -135,7 +135,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.MulticastAddressParameterId,
                 Type = LaunchParameterType.String,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.MulticastAddress,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.MulticastAddress,
                 Name = "Multicast address",
                 Description = "IPv4 multicast UDP address used for inter-node communication (state propagation).",
                 Constraint = new RegularExpressionConstraint() {
@@ -147,7 +147,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.MulticastPortParameterId,
                 Type = LaunchParameterType.Integer,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.Port,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.Port,
                 Name = "Multicast port",
                 Description = "Multicast UDP port used for inter-node communication (state propagation).",
                 Constraint = new RangeConstraint() { Min = 1, Max = ushort.MaxValue }
@@ -165,7 +165,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.TargetFrameRateParameterId,
                 Type = LaunchParameterType.Integer,
-                DefaultValue = Math.Max(ClusterDisplaySettings.CurrentSettings.ClusterParams.TargetFps, 0),
+                DefaultValue = Math.Max(ClusterDisplaySettings.Current.ClusterParams.TargetFps, 0),
                 Name = "Target frame rate",
                 Description = "Target frame per seconds at which the cluster should run.  Set to 0 for unlimited.",
                 Constraint = new RangeConstraint() { Min = 0, Max = 240 }
@@ -174,7 +174,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.DelayRepeatersParameterId,
                 Type = LaunchParameterType.Boolean,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.DelayRepeaters,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.DelayRepeaters,
                 Name = "Delay repeaters",
                 Description = "Delay rendering of repeaters by one frame, to be used when repeaters depends on state " +
                     "computed during the frame processing of the emitter.  Increases latency of the system by one " +
@@ -184,7 +184,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.HeadlessEmitterParameterId,
                 Type = LaunchParameterType.Boolean,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.HeadlessEmitter,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.HeadlessEmitter,
                 Name = "Headless emitter",
                 Description = "Disables rendering of the emitter (headless)."
             });
@@ -192,7 +192,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.ReplaceHeadlessEmitterParameterId,
                 Type = LaunchParameterType.Boolean,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.ReplaceHeadlessEmitter,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.ReplaceHeadlessEmitter,
                 Name = "Replace headless emitter",
                 Description = "Will shift NodeId used for rendering of repeater nodes (RenderNodeId = NodeId - 1) " +
                     "when used with a headless emitter."
@@ -201,7 +201,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.HandshakeTimeoutParameterId,
                 Type = LaunchParameterType.Float,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.HandshakeTimeout.TotalSeconds,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.HandshakeTimeout.TotalSeconds,
                 Name = "Handshake timeout (seconds)",
                 Description = "Timeout for a starting node to perform handshake with the other nodes during cluster " +
                     "startup.",
@@ -211,7 +211,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.CommunicationTimeoutParameterId,
                 Type = LaunchParameterType.Float,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.CommunicationTimeout.TotalSeconds,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.CommunicationTimeout.TotalSeconds,
                 Name = "Communication timeout (seconds)",
                 Description = "Timeout for communication once the cluster is started.",
                 Constraint = new RangeConstraint() {MinExclusive = true, Min = 0.0f }
@@ -220,7 +220,7 @@ namespace Unity.ClusterDisplay
             {
                 Id = LaunchParameterConstants.EnableHardwareSyncParameterId,
                 Type = LaunchParameterType.Boolean,
-                DefaultValue = ClusterDisplaySettings.CurrentSettings.ClusterParams.Fence == FrameSyncFence.Hardware,
+                DefaultValue = ClusterDisplaySettings.Current.ClusterParams.Fence == FrameSyncFence.Hardware,
                 Name = "Enable hardware synchronization",
                 Description = "Does the cluster tries to use hardware synchronization?"
             });
@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay
         /// on each cluster nodes.</param>
         static void AddLaunchParametersForProjectionPolicy(Launchable toFill)
         {
-            var missionControlSettings = ClusterDisplaySettings.CurrentSettings.MissionControlSettings;
+            var missionControlSettings = ClusterDisplaySettings.Current.MissionControlSettings;
             if (missionControlSettings.PolicyParameters == null)
             {
                 return;

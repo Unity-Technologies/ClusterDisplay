@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Editor
                 label = "Cluster Display",
                 activateHandler = (searchContext, parentElement) =>
                 {
-                    var settings = new SerializedObject(ClusterDisplaySettings.CurrentSettings);
+                    var settings = new SerializedObject(ClusterDisplaySettings.Current);
                     var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(k_StyleSheetCommon);
 
                     var rootElement = (VisualElement)new ScrollView();
