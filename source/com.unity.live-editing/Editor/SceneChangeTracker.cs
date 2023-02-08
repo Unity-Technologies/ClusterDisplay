@@ -165,6 +165,10 @@ namespace Unity.LiveEditing.Editor
         readonly Dictionary<Scene, SceneState> m_TrackedScenes = new Dictionary<Scene, SceneState>();
         readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
 
+        // used for debugging purposes
+        internal SceneState[] TrackedScenes => m_TrackedScenes.Values.ToArray();
+        internal int TrackedGameObjectCount => m_TrackedGameObjects.Count;
+
         // TODO: time-sliced based polling to catch changes not caught by undo?
         // TODO: scene parameters (lighting, etc.)
         // TODO: use index in parent or scene and transform path to specify things like deleted game objects so we can validate the correct thing is removed.
