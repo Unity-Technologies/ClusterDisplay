@@ -545,7 +545,7 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
-            // Find the parent object state. If the parent is not tracked, check for all changes from the hierarchy root instead.
+            // Find the parent object state. If the parent is not tracked, check for all changes from the parent instead.
             var parent = gameObject.transform.parent;
             var parentState = default(GameObjectState);
 
@@ -553,7 +553,7 @@ namespace Unity.LiveEditing.Editor
             {
                 if (!m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState))
                 {
-                    CheckGameObjectStructural(sceneState, parent.root.gameObject, true);
+                    CheckGameObjectStructural(sceneState, parent.parent.gameObject, true);
                     return;
                 }
             }
