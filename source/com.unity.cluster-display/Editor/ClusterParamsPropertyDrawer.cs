@@ -111,19 +111,4 @@ namespace Unity.ClusterDisplay.Editor
             return container;
         }
     }
-
-    static class UIHelpers
-    {
-        public static void SetHidden(this VisualElement element, bool hidden)
-        {
-            if (hidden)
-            {
-                element.AddToClassList("hidden");
-            }
-            else
-            {
-                element.RemoveFromClassList("hidden");
-            }
-        }
-    }
 }

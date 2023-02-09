@@ -1,36 +1,29 @@
-using System.Collections.Generic;
+using System;
+using Unity.ClusterDisplay.MissionControl;
 using UnityEditor;
 using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Unity.ClusterDisplay.Editor
 {
-    static class ClusterDisplaySettingsProvider
+    static class MissionControlSettingsProvider
     {
-        static readonly string k_SettingsPath = "Project/ClusterDisplaySettings";
+        static readonly string k_SettingsPath = "Project/ClusterDisplaySettings/MissionControlSettings";
         const string k_StyleSheetCommon = "Packages/com.unity.cluster-display/Editor/UI/SettingsWindowCommon.uss";
 
         class Contents
         {
-            public const string SettingsName = "Cluster Synchronization Settings";
-            public const string InitializeOnPlay = "Enable On Play";
-        }
-
-        [MenuItem("Cluster Display/Settings...")]
-        static void ShowClusterDisplaySettings()
-        {
-            SettingsService.OpenProjectSettings(k_SettingsPath);
+            public const string SettingsName = "Mission Control Settings";
         }
 
         [SettingsProvider]
         static SettingsProvider CreateSettingsProvider() =>
             new (k_SettingsPath, SettingsScope.Project)
             {
-                label = "Cluster Display",
+                label = "Mission Control",
                 activateHandler = (searchContext, parentElement) =>
                 {
-                    var settings = new SerializedObject(ClusterDisplaySettings.Current);
+                    var settings = new SerializedObject(MissionControlSettings.Current);
                     var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(k_StyleSheetCommon);
 
                     var rootElement = (VisualElement)new ScrollView();
@@ -43,13 +36,7 @@ namespace Unity.ClusterDisplay.Editor
 
                     rootElement.Add(title);
 
-                    var properties = new VisualElement();
-                    rootElement.Add(properties);
-                    properties.Add(new PropertyField(settings.FindProperty("m_EnableOnPlay"), Contents.InitializeOnPlay));
-
-                    var parameters = new VisualElement();
-                    rootElement.Add(parameters);
-                    parameters.Add(new PropertyField(settings.FindProperty("m_ClusterParams")));
+                    rootElement.Add(new InspectorElement(settings));
 
                     rootElement.Bind(settings);
                     parentElement.Add(rootElement);

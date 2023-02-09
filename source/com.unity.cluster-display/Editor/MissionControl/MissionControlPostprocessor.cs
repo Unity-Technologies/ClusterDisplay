@@ -32,7 +32,7 @@ namespace Unity.ClusterDisplay
 
         static void Postprocess(string pathToBuiltProjectExe, Func<string, bool> filesFilter)
         {
-            var missionControlSettings = ClusterDisplaySettings.Current.MissionControlSettings;
+            var missionControlSettings = MissionControlSettings.Current;
             if (!missionControlSettings.Instrument)
             {
                 return;
@@ -254,7 +254,7 @@ namespace Unity.ClusterDisplay
         /// on each cluster nodes.</param>
         static void AddLaunchParametersForProjectionPolicy(Launchable toFill)
         {
-            var missionControlSettings = ClusterDisplaySettings.Current.MissionControlSettings;
+            var missionControlSettings = MissionControlSettings.Current;
             if (missionControlSettings.PolicyParameters == null)
             {
                 return;

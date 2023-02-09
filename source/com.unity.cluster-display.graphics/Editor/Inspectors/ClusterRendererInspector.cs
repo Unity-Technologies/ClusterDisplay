@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-using Object = UnityEngine.Object;
 
 namespace Unity.ClusterDisplay.Graphics.Editor
 {
@@ -51,7 +49,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         /// </summary>
         /// <param name="clusterRenderer"></param>
         /// <param name="policyType"></param>
-        internal static void SetProjectionPolicy(ClusterRenderer clusterRenderer, Type policyType)
+        static void SetProjectionPolicy(ClusterRenderer clusterRenderer, Type policyType)
         {
             if (clusterRenderer.ProjectionPolicy != null)
             {
@@ -63,6 +61,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             clusterRenderer.ProjectionPolicy.hideFlags = HideFlags.HideInInspector;
         }
+
+        internal static void SetProjectionPolicy<T>(ClusterRenderer clusterRenderer) where T : ProjectionPolicy =>
+            SetProjectionPolicy(clusterRenderer, typeof(T));
 
         public override void OnInspectorGUI()
         {

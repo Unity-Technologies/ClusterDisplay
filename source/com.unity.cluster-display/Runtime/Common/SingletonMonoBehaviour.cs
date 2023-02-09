@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay
         }
 
         [SingletonMonoBehaviourTryGetInstanceMarker]
-        public static bool TryGetInstance (out T outInstance, bool logError = true, bool includeInactive = true)
+        public static bool TryGetInstance (out T outInstance, bool logError = false, bool includeInactive = true)
         {
             if (s_Instance != null)
             {
