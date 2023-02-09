@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 
 namespace Unity.LiveEditing.Editor
 {
+    using Debug = UnityEngine.Debug;
     using UnityObject = UnityEngine.Object;
 
     static class Test
@@ -193,12 +194,10 @@ namespace Unity.LiveEditing.Editor
 
             EditorSceneManager.sceneOpened += OnSceneOpened;
             EditorSceneManager.sceneClosing += OnSceneClosing;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             ObjectChangeEvents.changesPublished += OnChangesPublished;
 
-            for (var i = 0; i < SceneManager.sceneCount; i++)
-            {
-                StartTrackingScene(SceneManager.GetSceneAt(i));
-            }
+            StartTrackingAllScenes();
 
             m_IsRunning = true;
         }
@@ -215,6 +214,7 @@ namespace Unity.LiveEditing.Editor
 
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneClosing -= OnSceneClosing;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             ObjectChangeEvents.changesPublished -= OnChangesPublished;
 
             foreach (var (_, state) in m_TrackedScenes)
@@ -236,6 +236,25 @@ namespace Unity.LiveEditing.Editor
         void OnSceneClosing(Scene scene, bool removingScene)
         {
             StopTrackingScene(scene);
+        }
+
+        void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            switch (state)
+            {
+                case PlayModeStateChange.EnteredEditMode:
+                case PlayModeStateChange.EnteredPlayMode:
+                    StartTrackingAllScenes();
+                    break;
+            }
+        }
+
+        void StartTrackingAllScenes()
+        {
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+            {
+                StartTrackingScene(SceneManager.GetSceneAt(i));
+            }
         }
 
         void StartTrackingScene(Scene scene)
@@ -283,7 +302,10 @@ namespace Unity.LiveEditing.Editor
 
             foreach (var component in s_TempComponents)
             {
-                goState.Components.Add(new ComponentState(component, false));
+                if (component != null)
+                {
+                    goState.Components.Add(new ComponentState(component, false));
+                }
             }
 
             // Track the child game objects.
@@ -714,22 +736,33 @@ namespace Unity.LiveEditing.Editor
             // Detect added and reordered components.
             goState.GameObject.GetComponents(s_TempComponents);
 
-            for (var currIndex = 0; currIndex < s_TempComponents.Count; currIndex++)
+            var missingComponents = 0;
+
+            for (var i = 0; i < s_TempComponents.Count; i++)
             {
-                var component = s_TempComponents[currIndex];
+                var component = s_TempComponents[i];
+
+                // Skip over and ignore missing components.
+                if (component == null)
+                {
+                    missingComponents++;
+                    continue;
+                }
+
+                var currIndex = i - missingComponents;
 
                 // Find the state corresponding to the component.
                 var componentState = default(ComponentState);
                 var prevIndex = goState.Components.Count;
 
-                for (var i = 0; i < goState.Components.Count; i++)
+                for (var j = 0; j < goState.Components.Count; j++)
                 {
-                    var prevComponent = goState.Components[i];
+                    var prevComponent = goState.Components[j];
 
                     if (prevComponent.Component == component)
                     {
                         componentState = prevComponent;
-                        prevIndex = i;
+                        prevIndex = j;
                         break;
                     }
                 }
@@ -853,7 +886,7 @@ namespace Unity.LiveEditing.Editor
         {
             switch (currentProp.propertyType)
             {
-                // TODO: validate this doesn't need special handling, I suspect it won't
+                // TODO
                 //case SerializedPropertyType.ManagedReference:
                 // {
                 //     if (previousProp == null || previousProp.mana)
