@@ -258,7 +258,7 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchCatalog
                 throw new InvalidCastException($"Cannot convert {jsonValue} to {typeof(float)}.");
             }
             float ret = Convert.ToSingle(value);
-            if (!float.IsNormal(ret))
+            if (!float.IsFinite(ret))
             {
                 throw new InvalidCastException($"Cannot convert {value} to {typeof(float)}.");
             }
