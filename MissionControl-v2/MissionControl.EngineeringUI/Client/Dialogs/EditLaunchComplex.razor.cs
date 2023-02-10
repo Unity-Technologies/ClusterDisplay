@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
+using System.Numerics;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
+using Radzen.Blazor.Rendering;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
@@ -19,9 +21,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
         [Inject]
         ComplexesService Complexes { get; set; } = default!;
 
-        LaunchComplex Edited { get; set; } = new (Guid.Empty);
+        protected LaunchComplex Edited { get; set; } = new (Guid.Empty);
 
-        string EditedHangarBayEndpoint {
+        protected string EditedHangarBayEndpoint {
             get => m_EditedHangarBayEndpoint;
             set
             {
@@ -42,13 +44,15 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
         }
         string m_EditedHangarBayEndpoint = "";
 
-        string EditedHangarBayEndpointErrorMessage { get; set; } = "";
-        string EditedHangarBayIdentifierErrorMessage { get; set; } = "";
-        IList<MissionControl.LaunchPad>? SelectedLaunchPads { get; set; }
-        bool IsValid => EditedHangarBayEndpointErrorMessage == "" &&
-            EditedHangarBayIdentifierErrorMessage == "" && Edited.HangarBay.Identifier != Guid.Empty;
+        protected string EditedHangarBayEndpointErrorMessage { get; set; } = "";
+        protected string EditedHangarBayIdentifierErrorMessage { get; set; } = "";
 
-        RadzenDataGrid<MissionControl.LaunchPad> m_LaunchpadsGrid = default!;
+        protected RadzenDataGrid<MissionControl.LaunchPad> m_LaunchpadsGrid = default!;
+
+        protected IList<MissionControl.LaunchPad>? SelectedLaunchPads;
+
+        protected bool IsValid => EditedHangarBayEndpointErrorMessage == "" &&
+            EditedHangarBayIdentifierErrorMessage == "" && Edited.HangarBay.Identifier != Guid.Empty;
 
         protected override void OnInitialized()
         {
@@ -56,7 +60,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             EditedHangarBayEndpoint = Edited.HangarBay.Endpoint.ToString();
         }
 
-        Task OnValidateHangarBayEndpoint()
+        protected Task OnValidateHangarBayEndpoint()
         {
             return DialogService.ShowBusy($"Contacting {EditedHangarBayEndpoint}...", async () =>
             {
@@ -92,7 +96,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             });
         }
 
-        async Task AddLaunchPad()
+        protected async Task AddLaunchPad()
         {
             var ret = await DialogService.OpenAsync<EditLaunchPad>($"Add a new Launchpad",
                new Dictionary<string, object>{ {"ParentComplex", Edited} },
@@ -106,7 +110,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             await m_LaunchpadsGrid.Reload();
         }
 
-        async Task EditLaunchPad()
+        protected async Task EditLaunchPad()
         {
             var toEdit = SelectedLaunchPads?.FirstOrDefault();
             if (toEdit == null)
@@ -128,7 +132,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             await m_LaunchpadsGrid.Reload();
         }
 
-        void DeleteLaunchPad()
+        protected void DeleteLaunchPad()
         {
             var toDelete = SelectedLaunchPads?.FirstOrDefault();
             if (toDelete == null)
@@ -140,7 +144,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             m_LaunchpadsGrid.Reload();
         }
 
-        async Task OnOk()
+        protected async Task OnOk()
         {
             await OnValidateHangarBayEndpoint();
             if (!IsValid)
@@ -157,7 +161,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             DialogService.Close();
         }
 
-        void OnCancel()
+        protected void OnCancel()
         {
             DialogService.Close();
         }

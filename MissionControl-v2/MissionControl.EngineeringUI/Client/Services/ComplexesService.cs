@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <summary>
         /// Collection mirroring all the <see cref="LaunchComplex"/>es in MissionControl.
         /// </summary>
-        public IReadOnlyIncrementalCollection<LaunchComplex> Collection => m_Complexes;
+        public IReadOnlyIncrementalCollection<LaunchComplex> Collection => _complexes;
 
         /// <summary>
         /// Put (create a new or update an already existing) <see cref="LaunchComplex"/> in MissionControl.
@@ -61,7 +61,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             {
                 return 0;
             }
-            m_Complexes.ApplyDelta(deserializeRet);
+            _complexes.ApplyDelta(deserializeRet);
             return deserializeRet.NextUpdate;
         }
 
@@ -70,6 +70,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// <summary>
         /// The collection mirroring all the <see cref="LaunchComplex"/>es in MissionControl.
         /// </summary>
-        IncrementalCollection<LaunchComplex> m_Complexes = new();
+        IncrementalCollection<LaunchComplex> _complexes = new();
     }
 }
