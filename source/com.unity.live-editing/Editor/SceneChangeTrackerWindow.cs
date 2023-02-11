@@ -68,7 +68,7 @@ namespace Unity.LiveEditing.Editor
             EditorGUIUtility.hierarchyMode = true;
             EditorGUIUtility.wideMode = true;
 
-            m_TreeView.OnGUI(new Rect(0, 20, position.width, position.height));
+            m_TreeView.OnGUI(new Rect(0, 20, position.width, position.height - EditorGUIUtility.singleLineHeight));
         }
 
         class SceneItem : TreeViewItem
