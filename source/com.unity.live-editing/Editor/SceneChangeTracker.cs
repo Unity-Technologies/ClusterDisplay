@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -25,6 +26,13 @@ namespace Unity.LiveEditing.Editor
             {
                 s_Tracker.Stop();
             };
+
+            EditorApplication.update += Update;
+        }
+
+        static void Update()
+        {
+            s_Tracker.Update();
         }
 
         [MenuItem("Tracking/Start")]
@@ -51,128 +59,186 @@ namespace Unity.LiveEditing.Editor
     /// </summary>
     class SceneChangeTracker : IDisposable
     {
-        internal class SceneState : IDisposable
+        internal abstract class BaseState<TObject, TKey, TData, TState> : IDisposable
+            where TData : IDisposable
+            where TState : BaseState<TObject, TKey, TData, TState>
         {
-            public Scene Scene { get; }
+            public TObject Instance { get; }
+            public TData Previous { get; protected set; }
+            public TData Current { get; protected set; }
+            public bool IsNew { get; set; }
 
-            public List<GameObjectState> Roots { get; } = new List<GameObjectState>();
+            Dictionary<TKey, TState> m_TrackedObjects;
+            TKey m_Key;
 
-            public SceneState(Scene scene)
+            protected BaseState(TObject instance, bool isNew, Dictionary<TKey, TState> trackedObjects, Func<TObject, TKey> getKey)
             {
-                Scene = scene;
+                Instance = instance;
+                IsNew = isNew;
+
+                m_Key = getKey(instance);
+                m_TrackedObjects = trackedObjects;
+                m_TrackedObjects.Add(m_Key, (TState)this);
             }
 
-            public void Dispose()
+            public virtual void Dispose()
             {
-                foreach (var rootState in Roots)
+                Previous.Dispose();
+                Current.Dispose();
+
+                m_TrackedObjects.Remove(m_Key);
+            }
+
+            public void Update()
+            {
+                var temp = Previous;
+                Previous = Current;
+                Current = temp;
+            }
+        }
+
+        internal abstract class UnityObjectState<TObject, TData, TState> : BaseState<TObject, int, TData, TState>
+            where TObject : UnityObject
+            where TData : IDisposable
+            where TState : UnityObjectState<TObject, TData, TState>
+        {
+            internal class UnityObjectData : IDisposable
+            {
+                public SerializedObject Properties { get; }
+                public bool PropertiesChanged { get; private set; }
+
+                protected UnityObjectData(TObject instance)
                 {
-                    rootState.Dispose();
+                    Properties = new SerializedObject(instance);
+                }
+
+                public virtual void Dispose()
+                {
+                    Properties.Dispose();
+                }
+
+                public void UpdateProperties()
+                {
+                    PropertiesChanged = Properties.UpdateIfRequiredOrScript();
                 }
             }
+
+            protected UnityObjectState(TObject instance, bool isNew, Dictionary<int, TState> trackedObjects)
+                : base(instance, isNew, trackedObjects, x => x.GetInstanceID())
+            {
+            }
         }
 
-        internal class GameObjectState : IDisposable
+        internal class SceneState : BaseState<Scene, Scene, SceneState.Data, SceneState>
         {
-            public GameObject GameObject { get; }
-            public int InstanceID { get; }
-            public PropertyState Properties { get; }
-
-            public SceneState Scene { get; set; }
-            public GameObjectState Parent { get; set; }
-            public List<GameObjectState> Children { get; } = new List<GameObjectState>();
-            public List<ComponentState> Components { get; } = new List<ComponentState>();
-
-            Action<int> m_OnDispose;
-
-            public GameObjectState(GameObject gameObject, bool isNew, Action<int> onDispose)
+            internal class Data : IDisposable
             {
-                GameObject = gameObject;
-                InstanceID = gameObject.GetInstanceID();
-                Properties = new PropertyState(gameObject, isNew);
-                m_OnDispose = onDispose;
-            }
+                public List<GameObjectState> Roots { get; } = new List<GameObjectState>();
 
-            public void Dispose()
-            {
-                m_OnDispose?.Invoke(InstanceID);
-
-                Properties.Dispose();
-
-                foreach (var child in Children)
+                public void Dispose()
                 {
-                    child.Dispose();
-                }
-
-                foreach (var component in Components)
-                {
-                    component.Dispose();
+                    foreach (var rootState in Roots)
+                    {
+                        rootState.Dispose();
+                    }
                 }
             }
+
+            public SceneState(Scene instance, Dictionary<Scene, SceneState> trackedObjects)
+                : base(instance, false, trackedObjects, x => x)
+            {
+                Previous = new Data();
+                Current = new Data();
+            }
         }
 
-        internal class ComponentState : IDisposable
+        internal class GameObjectState : UnityObjectState<GameObject, GameObjectState.Data, GameObjectState>
         {
-            public Component Component { get; }
-            public PropertyState Properties { get; }
-
-            public ComponentState(Component component, bool isNew)
+            internal class Data : UnityObjectData
             {
-                Component = component;
-                Properties = new PropertyState(component, isNew);
+                public SceneState Scene { get; set; }
+                public GameObjectState Parent { get; set; }
+                public int Index { get; set; }
+                public List<ComponentState> Components { get; } = new List<ComponentState>();
+                public List<GameObjectState> Children { get; } = new List<GameObjectState>();
+
+                public Data(GameObject instance) : base(instance)
+                {
+                }
+
+                public override void Dispose()
+                {
+                    base.Dispose();
+
+                    foreach (var child in Children)
+                    {
+                        child.Dispose();
+                    }
+
+                    foreach (var component in Components)
+                    {
+                        component.Dispose();
+                    }
+                }
             }
 
-            public void Dispose()
+            public GameObjectState(GameObject instance, bool isNew, Dictionary<int, GameObjectState> trackedObjects)
+                : base(instance, isNew, trackedObjects)
             {
-                Properties.Dispose();
+                Previous = new Data(instance);
+                Current = new Data(instance);
             }
         }
 
-        internal class PropertyState : IDisposable
+        internal class ComponentState : UnityObjectState<Component, ComponentState.Data, ComponentState>
         {
-            public SerializedObject PreviousState { get; private set; }
-            public SerializedObject CurrentState { get; private set; }
-            bool m_IsNew;
-
-            public PropertyState(UnityObject obj, bool isNew)
+            internal class Data : UnityObjectData
             {
-                PreviousState = new SerializedObject(obj);
-                CurrentState = new SerializedObject(obj);
-                m_IsNew = isNew;
+                public int Index { get; set; }
+
+                public Data(Component instance) : base(instance)
+                {
+                }
             }
 
-            public void Dispose()
+            public GameObjectState GameObject { get; }
+
+            public ComponentState(GameObjectState goState, Component instance, bool isNew,  Dictionary<int, ComponentState> trackedObjects)
+                : base(instance, isNew, trackedObjects)
             {
-                PreviousState.Dispose();
-                CurrentState.Dispose();
-            }
-
-            public bool Update(out bool isNew)
-            {
-                isNew = m_IsNew;
-                m_IsNew = false;
-
-                var newState = PreviousState;
-                PreviousState = CurrentState;
-                CurrentState = newState;
-
-                return isNew || CurrentState.UpdateIfRequiredOrScript();
+                GameObject = goState;
+                Previous = new Data(instance);
+                Current = new Data(instance);
             }
         }
+
+        const long k_PollSceneTimeSlice = 1000L; // in microseconds
 
         static readonly List<GameObject> s_TempGameObjects = new List<GameObject>();
         static readonly List<Component> s_TempComponents = new List<Component>();
 
         bool m_IsRunning;
+
         readonly Dictionary<Scene, SceneState> m_TrackedScenes = new Dictionary<Scene, SceneState>();
         readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
+        readonly Dictionary<int, ComponentState> m_TrackedComponents = new Dictionary<int, ComponentState>();
+
+        readonly Queue<GameObjectState> m_GameObjectsCheckForChanges = new Queue<GameObjectState>();
+
+        readonly Queue<GameObjectState> m_AddedGameObjects = new Queue<GameObjectState>();
+        readonly Queue<GameObjectState> m_DestroyedGameObjects = new Queue<GameObjectState>();
+        readonly Queue<GameObjectState> m_ModifiedGameObjects = new Queue<GameObjectState>();
+        readonly Queue<ComponentState> m_AddedComponents = new Queue<ComponentState>();
+        readonly Queue<ComponentState> m_DestroyedComponents = new Queue<ComponentState>();
+        readonly Queue<ComponentState> m_ModifiedComponents = new Queue<ComponentState>();
+
+        readonly Stopwatch m_PollSceneStopwatch = new Stopwatch();
 
         // used for debugging purposes
         internal SceneState[] TrackedScenes => m_TrackedScenes.Values.ToArray();
         internal int TrackedGameObjectCount => m_TrackedGameObjects.Count;
 
-        // TODO: time-sliced based polling to catch changes not caught by undo?
         // TODO: scene parameters (lighting, etc.)
-        // TODO: use index in parent or scene and transform path to specify things like deleted game objects so we can validate the correct thing is removed.
 
         /// <summary>
         /// Releases resources held by this instance.
@@ -195,8 +261,9 @@ namespace Unity.LiveEditing.Editor
             EditorSceneManager.sceneOpened += OnSceneOpened;
             EditorSceneManager.sceneClosing += OnSceneClosing;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            ObjectChangeEvents.changesPublished += OnChangesPublished;
+            //ObjectChangeEvents.changesPublished += OnChangesPublished;
 
+            // TODO: check if we should just dirty and run update instead
             StartTrackingAllScenes();
 
             m_IsRunning = true;
@@ -215,21 +282,86 @@ namespace Unity.LiveEditing.Editor
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneClosing -= OnSceneClosing;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            ObjectChangeEvents.changesPublished -= OnChangesPublished;
+            //ObjectChangeEvents.changesPublished -= OnChangesPublished;
 
-            foreach (var (_, state) in m_TrackedScenes)
+            // Copy values to allow modifying the source dictionary while iterating.
+            foreach (var state in m_TrackedScenes.Values.ToArray())
             {
                 state.Dispose();
             }
 
             m_TrackedScenes.Clear();
             m_TrackedGameObjects.Clear();
+            m_TrackedComponents.Clear();
+
+            m_GameObjectsCheckForChanges.Clear();
+
+            m_AddedGameObjects.Clear();
+            m_DestroyedGameObjects.Clear();
+            m_ModifiedGameObjects.Clear();
+            m_AddedComponents.Clear();
+            m_DestroyedComponents.Clear();
+            m_ModifiedComponents.Clear();
 
             m_IsRunning = false;
         }
 
+        /// <summary>
+        /// Call every frame to check for changes to the scene.
+        /// </summary>
+        public void Update()
+        {
+            if (!m_IsRunning)
+            {
+                return;
+            }
+
+            try
+            {
+                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(Update)}()");
+
+                BufferAllSceneStates(false);
+
+                // TODO: change to depth first queue
+                foreach (var scene in m_TrackedScenes)
+                {
+                    // TODO: handle deletion of roots!!!!!
+                    foreach (var root in scene.Value.Current.Roots)
+                    {
+                        //FindGameObjectChanges(root);
+                    }
+                }
+
+                while (m_GameObjectsCheckForChanges.TryDequeue(out var gameObjectToCheck))
+                {
+                    FindGameObjectChanges(gameObjectToCheck);
+                }
+
+                InvokeEvents();
+
+                /*
+                m_PollSceneStopwatch.Restart();
+
+                // skip if running faster than 60 hz
+
+                if (m_PollSceneStopwatch.ElapsedTicks < (k_PollSceneTimeSlice * Stopwatch.Frequency) / (1000 * 1000))
+                {
+                    foreach (var scene in m_TrackedScenes)
+                    {
+                        CheckScene(scene.Value);
+                    }
+                }
+                */
+            }
+            finally
+            {
+                Profiler.EndSample();
+            }
+        }
+
         void OnSceneOpened(Scene scene, OpenSceneMode mode)
         {
+            // TODO: check if we should just dirty and run update instead
             StartTrackingScene(scene);
         }
 
@@ -240,6 +372,7 @@ namespace Unity.LiveEditing.Editor
 
         void OnPlayModeStateChanged(PlayModeStateChange state)
         {
+            // TODO: check if we should just dirty and run update instead
             switch (state)
             {
                 case PlayModeStateChange.EnteredEditMode:
@@ -262,65 +395,110 @@ namespace Unity.LiveEditing.Editor
             // The scene needs to be loaded to access the scene objects.
             if (scene.IsValid() && scene.isLoaded && !m_TrackedScenes.ContainsKey(scene))
             {
-                var sceneState = new SceneState(scene);
-                m_TrackedScenes.Add(scene, sceneState);
-
-                scene.GetRootGameObjects(s_TempGameObjects);
-
-                for (var i = 0; i < s_TempGameObjects.Count; i++)
-                {
-                    StartTrackingGameObject(sceneState, null, s_TempGameObjects[i]);
-                }
+                var sceneState = new SceneState(scene, m_TrackedScenes);
+                BufferSceneState(sceneState, true);
             }
         }
 
         void StopTrackingScene(Scene scene)
         {
-            if (scene.IsValid() && m_TrackedScenes.Remove(scene, out var sceneState))
+            if (scene.IsValid() && m_TrackedScenes.TryGetValue(scene, out var sceneState))
             {
                 sceneState.Dispose();
             }
         }
 
-        GameObjectState StartTrackingGameObject(SceneState sceneState, GameObjectState parentState, GameObject gameObject)
+        void BufferAllSceneStates(bool loadingScene)
         {
-            var goState = new GameObjectState(gameObject, false, id => m_TrackedGameObjects.Remove(id))
+            foreach (var scene in m_TrackedScenes)
             {
-                Scene = sceneState,
-                Parent = parentState,
-            };
-
-            m_TrackedGameObjects.Add(goState.InstanceID, goState);
-
-            if (goState.Parent == null)
-            {
-                sceneState.Roots.Add(goState);
+                BufferSceneState(scene.Value, loadingScene);
             }
+        }
 
-            // Track the components.
-            gameObject.GetComponents(s_TempComponents);
-
-            foreach (var component in s_TempComponents)
+        void BufferSceneState(SceneState sceneState, bool loadingScene)
+        {
+            try
             {
-                if (component != null)
+                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(BufferSceneState)}()");
+
+                sceneState.Update();
+
+                sceneState.Current.Roots.Clear();
+                sceneState.Instance.GetRootGameObjects(s_TempGameObjects);
+
+                foreach (var root in s_TempGameObjects)
                 {
-                    goState.Components.Add(new ComponentState(component, false));
+                    var rootState = BufferGameObjectState(sceneState, null, root, loadingScene);
+                    sceneState.Current.Roots.Add(rootState);
                 }
             }
+            finally
+            {
+                Profiler.EndSample();
+            }
+        }
 
-            // Track the child game objects.
-            var transform = gameObject.transform;
+        GameObjectState BufferGameObjectState(SceneState sceneState, GameObjectState parentState, GameObject gameObject, bool loadingScene)
+        {
+            if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
+            {
+                goState = new GameObjectState(gameObject, !loadingScene, m_TrackedGameObjects);
+            }
+
+            // Mark this game object as needing to be evaluated for changes to the buffered state.
+            m_GameObjectsCheckForChanges.Enqueue(goState);
+
+            // Buffer the game object state.
+            var transform = goState.Instance.transform;
+
+            goState.Update();
+            goState.Current.UpdateProperties();
+            goState.Current.Scene = sceneState;
+            goState.Current.Parent = parentState;
+            goState.Current.Index = transform.GetSiblingIndex();
+
+            // Buffer the state of all components on the game object.
+            goState.Current.Components.Clear();
+            goState.Instance.GetComponents(s_TempComponents);
+
+            for (var i = 0; i < s_TempComponents.Count; i++)
+            {
+                var component = s_TempComponents[i];
+
+                // Skip over invalid components (ex. when a script is missing).
+                if (component == null)
+                {
+                    continue;
+                }
+
+                if (!m_TrackedComponents.TryGetValue(component.GetInstanceID(), out var compState))
+                {
+                    compState = new ComponentState(goState, component, !loadingScene, m_TrackedComponents);
+                }
+
+                compState.Update();
+                compState.Current.UpdateProperties();
+                compState.Current.Index = i;
+
+                goState.Current.Components.Add(compState);
+            }
+
+            // Buffer the state of all child game objects.
+            goState.Current.Children.Clear();
 
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i).gameObject;
-                var childState = StartTrackingGameObject(sceneState, goState, child);
-                goState.Children.Add(childState);
+                var childState = BufferGameObjectState(sceneState, goState, child, loadingScene);
+                goState.Current.Children.Add(childState);
             }
 
             return goState;
         }
 
+        #region Test
+#if TEST
         void OnChangesPublished(ref ObjectChangeEventStream stream)
         {
             try
@@ -849,23 +1027,233 @@ namespace Unity.LiveEditing.Editor
                 }
             }
         }
+#endif
+        #endregion
+
+        void InvokeEvents()
+        {
+            try
+            {
+                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(InvokeEvents)}()");
+
+                while (m_DestroyedGameObjects.TryDequeue(out var goState))
+                {
+                    var parentState = goState.Current.Parent;
+
+                    if (parentState != null)
+                    {
+                        var parent = parentState.Instance;
+
+                        if (parent != null)
+                        {
+                            try
+                            {
+                                Debug.Log($"Change: Removed child of {parent.name} at index {goState.Current.Index}.");
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogException(e);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var sceneState = goState.Current.Scene;
+                        var scene = sceneState.Instance;
+
+                        if (scene.IsValid() && scene.isLoaded)
+                        {
+                            try
+                            {
+                                Debug.Log($"Change: Removed root of {scene.name} at index {goState.Current.Index}.");
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogException(e);
+                            }
+                        }
+                    }
+                }
+
+                while (m_DestroyedComponents.TryDequeue(out var compState))
+                {
+                    var gameObject = compState.GameObject.Instance;
+
+                    if (gameObject != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"Change: Removed component on {gameObject.name} at index {compState.Current.Index}.");
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
+                    }
+                }
+
+                while (m_AddedGameObjects.TryDequeue(out var goState))
+                {
+                    if (goState.Instance != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"Change: Added game object {goState.Instance.name}.");
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
+                    }
+                }
+
+                while (m_AddedComponents.TryDequeue(out var compState))
+                {
+                    if (compState.Instance != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"Change: Added component {compState.Instance.GetType()}.");
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
+                    }
+                }
+
+                while (m_ModifiedGameObjects.TryDequeue(out var goState))
+                {
+                    if (goState.Instance != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"Change: Modified game object {goState.Instance}.");
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
+                    }
+                }
+
+                while (m_ModifiedComponents.TryDequeue(out var compState))
+                {
+                    if (compState.Instance != null)
+                    {
+                        try
+                        {
+                            Debug.Log($"Change: Modified component {compState.Instance.GetType()}.");
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Profiler.EndSample();
+            }
+        }
+
+        void FindGameObjectChanges(GameObjectState goState)
+        {
+            // Detect added game objects.
+            if (goState.IsNew)
+            {
+                m_AddedGameObjects.Enqueue(goState);
+                goState.IsNew = false;
+            }
+
+            // Detect game object property modifications.
+            if (goState.Current.PropertiesChanged && !ArePropertiesEqual(goState.Previous.Properties, goState.Current.Properties))
+            {
+                m_ModifiedGameObjects.Enqueue(goState);
+            }
+
+            // Detect removed components.
+            foreach (var compState in goState.Previous.Components)
+            {
+                if (compState.Instance == null)
+                {
+                    m_DestroyedComponents.Enqueue(compState);
+                    compState.Dispose();
+                }
+            }
+
+            foreach (var compState in goState.Current.Components)
+            {
+                // Detect added components.
+                if (compState.IsNew)
+                {
+                    m_AddedComponents.Enqueue(compState);
+                    compState.IsNew = false;
+                }
+
+                // Detect component property modifications.
+                if (compState.Current.PropertiesChanged && !ArePropertiesEqual(compState.Previous.Properties, compState.Current.Properties))
+                {
+                    m_ModifiedComponents.Enqueue(compState);
+                }
+            }
+
+            // Detect removed children.
+            foreach (var childState in goState.Previous.Children)
+            {
+                if (childState.Instance == null)
+                {
+                    m_DestroyedGameObjects.Enqueue(childState);
+                    childState.Dispose();
+                }
+            }
+
+            // Detect modifications to children.
+            foreach (var childState in goState.Current.Children)
+            {
+                FindGameObjectChanges(childState);
+            }
+        }
+
+        static bool ArePropertiesEqual(SerializedObject previous, SerializedObject current)
+        {
+            var prevItr = previous.GetIterator();
+            var currItr = current.GetIterator();
+            var prevValid = prevItr.Next(true);
+            var currValid = currItr.Next(true);
+
+            while (prevValid && currValid)
+            {
+                if (!SerializedProperty.DataEquals(currItr, prevItr))
+                {
+                    return false;
+                }
+
+                prevValid = prevItr.Next(false);
+                currValid = currItr.Next(false);
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Finds all changes made to a Unity Object.
         /// </summary>
-        /// <param name="state">The state of the object.</param>
+        /// <param name="previous">The previous state of the object.</param>
+        /// <param name="current">The current state of the object.</param>
         /// <param name="onlyChanged">
         /// When <see langword="true"/>, reports only modified properties as changed.
         /// When <see langword="false"/>, reports all properties as changed regardless of any previous value.
         /// </param>
-        void CheckProperties(PropertyState state, bool onlyChanged = true)
+        void CheckProperties(SerializedObject previous, SerializedObject current, bool onlyChanged = true)
         {
             // Double buffer the serialized state of objects using two serialized objects. When the source object has changed,
             // we update the older serialized object with the source object's current property values. Then iterate through the
             // properties comparing the previous property values with the current property values. If the values are different,
             // we know that property has changed.
-            var prevItr = onlyChanged ? state.PreviousState.GetIterator() : null;
-            var currItr = state.CurrentState.GetIterator();
+            var prevItr = onlyChanged ? previous.GetIterator() : null;
+            var currItr = current.GetIterator();
             var prevValid = prevItr?.Next(true) ?? false;
             var currValid = currItr.Next(true);
 
