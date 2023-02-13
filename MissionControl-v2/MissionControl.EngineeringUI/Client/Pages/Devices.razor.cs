@@ -27,7 +27,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         {
             await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Add a new Launch Complex",
                new Dictionary<string, object>(),
-               new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
+               new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
         }
 
         protected async Task EditLaunchComplex(string name)
@@ -39,7 +39,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             }
             await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {name}",
                new Dictionary<string, object>() { { "ToEdit", selected.DeepClone() } },
-               new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
+               new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
             Console.WriteLine("Selected:::", selected);
 
         }
