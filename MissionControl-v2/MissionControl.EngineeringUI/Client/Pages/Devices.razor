@@ -6,8 +6,7 @@
     <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
 </div>
 
-<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@SelectedLaunchComplexes>
+<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values>
     <Columns>
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
         <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" />
@@ -18,11 +17,9 @@
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LaunchComplex">
             <Template Context="launchComplex">
-                <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex.Name)) ButtonStyle="ButtonStyle.Light" />
-                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex.Name)) ButtonStyle="ButtonStyle.Light" />
+                <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
+                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-
-

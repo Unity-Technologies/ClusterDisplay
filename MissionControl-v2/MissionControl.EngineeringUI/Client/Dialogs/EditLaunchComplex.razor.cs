@@ -80,7 +80,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
                     else if (ToEdit.HangarBay.Identifier == Guid.Empty &&
                              Complexes.Collection.TryGetValue(hangarBayConfig.Identifier, out var alreadyExist))
                     {
-                    {
                         EditedHangarBayIdentifierErrorMessage = $"Launch complex \"{alreadyExist.Name}\" is already " +
                             $"connected to this hangar bay.";
                     }

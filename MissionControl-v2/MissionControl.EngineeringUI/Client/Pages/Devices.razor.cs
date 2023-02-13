@@ -16,8 +16,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         protected RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
 
-        protected IList<LaunchComplex>? SelectedLaunchComplexes;
-
         protected override void OnInitialized()
         {
             Complexes.Collection.SomethingChanged += ComplexesChanged;
@@ -30,44 +28,24 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
         }
 
-        protected async Task EditLaunchComplex(string name)
+        protected async Task EditLaunchComplex(LaunchComplex launchComplex)
         {
-            var selected = SelectedLaunchComplexes?.FirstOrDefault();
-            if (selected == null)
-            {
-                return;
-            }
-            await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {name}",
-               new Dictionary<string, object>() { { "ToEdit", selected.DeepClone() } },
+            await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {launchComplex.Name}",
+               new Dictionary<string, object>() { { "ToEdit", launchComplex.DeepClone() } },
                new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
-            Console.WriteLine("Selected:::", selected);
 
         }
-        // async Task OpenOrder(int orderId)
-        // {
-        //   await DialogService.OpenAsync<DialogCardPage>($"Order {orderId}",
-        //          new Dictionary<string, object>() { { "OrderID", orderId } },
-        //          new DialogOptions() { Width = "700px", Height = "520px" });
-        // }
 
-        // new Dictionary<string, object>() { { "ToEdit", selected.DeepClone() } },
-
-        protected async Task DeleteLaunchComplex(string name)
+        protected async Task DeleteLaunchComplex(LaunchComplex launchComplex)
         {
-            var selected = SelectedLaunchComplexes?.FirstOrDefault();
-            if (selected == null)
-            {
-                return;
-            }
-
-            var ret = await DialogService.Confirm($"Do you want to delete \"{name}\"?",
+            var ret = await DialogService.Confirm($"Do you want to delete \"{launchComplex.Name}\"?",
                 "Confirm deletion", new() { OkButtonText = "Yes", CancelButtonText = "No" });
             if (!ret.HasValue || !ret.Value)
             {
                 return;
             }
 
-            await Complexes.DeleteAsync(selected.Id);
+            await Complexes.DeleteAsync(launchComplex.Id);
         }
 
         public void Dispose()
