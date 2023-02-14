@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
+using System.Reflection;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
@@ -57,16 +58,16 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
 
-        async Task Overwrite()
+        async Task Overwrite(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
+           // var selectedMission = SelectedMission;
+           // if (selectedMission == null)
+            //{
+              //  return;
+           // }
 
-            SaveMissionCommand saveCommand = new() { Identifier = selectedMission.Id };
-            saveCommand.Description.DeepCopyFrom(selectedMission.Description);
+            SaveMissionCommand saveCommand = new() { Identifier = mission.Id };
+            saveCommand.Description.DeepCopyFrom(mission.Description);
 
             var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
                 new Dictionary<string, object>{ {"Command", saveCommand} },
@@ -85,13 +86,13 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
 
-        async Task Load()
+        async Task Load(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
+            //var selectedMission = SelectedMission;
+           // if (selectedMission == null)
+            //{
+               // return;
+            //}
 
             if (LaunchConfigurationService.WorkValueNeedsPush)
             {
@@ -104,40 +105,40 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 LaunchConfigurationService.ClearWorkValue();
             }
 
-            await MissionCommandsService.LoadMissionAsync(selectedMission.Id);
+            await MissionCommandsService.LoadMissionAsync(mission.Id);
         }
 
-        async Task LoadAndLaunch()
+        async Task LoadAndLaunch(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
+            //var selectedMission = SelectedMission;
+           // if (selectedMission == null)
+           // {
+               // return;
+           // }
 
-            await MissionCommandsService.LoadMissionAsync(selectedMission.Id);
+            await MissionCommandsService.LoadMissionAsync(mission.Id);
 
             await MissionCommandsService.LaunchMissionAsync();
 
             NavigationManager.NavigateTo("/launch");
         }
 
-        async Task Delete()
+        async Task Delete(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
+            //var selectedMission = SelectedMission;
+            //if (selectedMission == null)
+           // {
+               // return;
+          //  }
 
-            var ret = await DialogService.Confirm($"Do you really want to delete {selectedMission.Description.Name}?",
+            var ret = await DialogService.Confirm($"Do you really want to delete {mission.Description.Name}?",
                 "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
             if (!ret.HasValue || !ret.Value)
             {
                 return;
             }
 
-            await MissionsService.DeleteAsync(selectedMission.Id);
+            await MissionsService.DeleteAsync(mission.Id);
         }
 
         public void Dispose()

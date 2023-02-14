@@ -53,22 +53,16 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             AssetsChanged(AssetsService.Collection);
         }
 
-        async Task DeleteAsset()
+        async Task DeleteAsset(Asset asset)
         {
-            var selected = SelectedAsset;
-            if (selected == null)
-            {
-                return;
-            }
-
-            var ret = await DialogService.Confirm($"Do you want to delete \"{selected.Name}\"?",
+            var ret = await DialogService.Confirm($"Do you want to delete \"{asset.Name}\"?",
                 "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
             if (!ret.HasValue || !ret.Value)
             {
                 return;
             }
 
-            await AssetsService.DeleteAsync(selected.Id);
+            await AssetsService.DeleteAsync(asset.Id);
         }
 
         void AssetsChanged(IReadOnlyIncrementalCollection obj)

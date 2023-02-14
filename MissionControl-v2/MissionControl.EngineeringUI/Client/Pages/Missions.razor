@@ -23,6 +23,14 @@
                 }
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="SavedMissionSummary">
+            @*<Template Context="mission">
+                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => Delete(mission)) ButtonStyle="ButtonStyle.Light" />
+                <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" Click=@(() => LoadAndLaunch(mission))
+                                       Disabled=@(SelectedMission == null || SelectedMission.AssetId == Guid.Empty) />
+                <RadzenText Click=@(() => Load(mission)) >Load</RadzenText>
+                </Template>*@
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
 @{
@@ -33,6 +41,7 @@
     var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
     var loadTitle = isRunning ? "Cannot load while running." : "";
 }
+@*
 @if (SelectedMission == null)
 {
     <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Primary"
@@ -44,11 +53,13 @@ else
                        class="mt-2 me-1" Style="width: 250px;" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle >
         <ChildContent>
             <RadzenSplitButtonItem Text=@($"{applyPrefix}Overwrite {SelectedMission.Description.Name}...") Icon="save"
-                                   onclick=@Overwrite />
+                                   onclick=@Overwrite() />
         </ChildContent>
     </RadzenSplitButton>
 }
-<RadzenSplitButton Click=@Load Text="Load" Icon="file_open" ButtonStyle="ButtonStyle.Light"
+
+
+<RadzenSplitButton Text="Load" Icon="file_open" ButtonStyle="ButtonStyle.Light"
                    class="mt-2 me-1" Style="width: 250px;"
                    Disabled=@(SelectedMission == null || MissionControlStatus.State != State.Idle) title=@loadTitle>
     <ChildContent>
@@ -56,5 +67,4 @@ else
                                Disabled=@(SelectedMission == null || SelectedMission.AssetId == Guid.Empty) />
     </ChildContent>
 </RadzenSplitButton>
-<RadzenButton Click=@Delete Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" class="mt-2" Style="width: 250px;"
-              Disabled=@(SelectedMission == null) />
+*@

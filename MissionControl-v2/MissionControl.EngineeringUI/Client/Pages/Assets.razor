@@ -1,7 +1,11 @@
 @page "/assets"
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 
-<h3>Assets</h3>
+<div Class="w-100 page-title">
+<h2>Assets</h2>
+    <RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
+</div>
+
 <RadzenDataGrid @ref="m_AssetsGrid" Data=@AssetsService.Collection.Values
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
                 SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedAsset>
@@ -25,9 +29,11 @@
                 }
             </Template>
         </RadzenDataGridColumn>
+         <RadzenDataGridColumn TItem="Asset" >
+            <Template Context="asset">
+                <RadzenButton Icon="delete" Click=@(() => DeleteAsset(asset)) Class="m-1 data-grid-icon" ButtonStyle="ButtonStyle.Light" />
+            </Template>
+         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary"
-              class="mt-2"/>
-<RadzenButton Click=@DeleteAsset Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" class="mt-2"
-              Disabled=@(SelectedAsset == null || SelectedAsset == null || AssetsUsageCount.ContainsKey(SelectedAsset.Id)) />
+
