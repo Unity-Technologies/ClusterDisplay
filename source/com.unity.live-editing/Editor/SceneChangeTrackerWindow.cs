@@ -49,8 +49,10 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
-        void OnGUI()
+        void Update()
         {
+            m_SceneChangeTracker.Update();
+
             if (m_TreeView == null)
             {
                 CreateTreeView();
@@ -63,7 +65,10 @@ namespace Unity.LiveEditing.Editor
                 m_TreeView.Reload();
                 m_TreeDirty = false;
             }
+        }
 
+        void OnGUI()
+        {
             EditorGUILayout.LabelField($"Tracked Game Object Count: {m_SceneChangeTracker.m_TrackedGameObjects.Count}");
             EditorGUILayout.LabelField($"Tracked Component Count: {m_SceneChangeTracker.m_TrackedComponents.Count}");
 
@@ -290,13 +295,13 @@ namespace Unity.LiveEditing.Editor
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null SceneState)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else if (!scene.Instance.IsValid())
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Invalid Scene)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else
                         {
@@ -312,13 +317,13 @@ namespace Unity.LiveEditing.Editor
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null GameObjectState)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else if (gameObject.Instance == null)
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null GameObject)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else
                         {
@@ -334,13 +339,13 @@ namespace Unity.LiveEditing.Editor
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null ComponentState)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else if (component.Instance == null)
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null Component)");
-                            GUI.color = Color.black;
+                            GUI.color = Color.white;
                         }
                         else
                         {
