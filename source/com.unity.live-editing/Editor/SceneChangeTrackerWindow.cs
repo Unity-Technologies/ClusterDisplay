@@ -1,6 +1,7 @@
-﻿#if UNITY_LIVE_EDITING_DEBUG_asadfasdf
+﻿#if UNITY_LIVE_EDITING_DEBUG
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -63,12 +64,15 @@ namespace Unity.LiveEditing.Editor
                 m_TreeDirty = false;
             }
 
-            EditorGUILayout.LabelField($"Tracked Game Object Count: {m_SceneChangeTracker.TrackedGameObjectCount}");
+            EditorGUILayout.LabelField($"Tracked Game Object Count: {m_SceneChangeTracker.m_TrackedGameObjects.Count}");
+            EditorGUILayout.LabelField($"Tracked Component Count: {m_SceneChangeTracker.m_TrackedComponents.Count}");
+
+            var rect = EditorGUILayout.GetControlRect();
 
             EditorGUIUtility.hierarchyMode = true;
             EditorGUIUtility.wideMode = true;
 
-            m_TreeView.OnGUI(new Rect(0, 20, position.width, position.height - EditorGUIUtility.singleLineHeight));
+            m_TreeView.OnGUI(new Rect(0, rect.y, position.width, position.height - rect.y));
         }
 
         class SceneItem : TreeViewItem
@@ -138,17 +142,15 @@ namespace Unity.LiveEditing.Editor
                     displayName = "Root",
                 };
 
-                var scenes = m_SceneChangeTracker.TrackedScenes;
-
-                foreach (var scene in scenes)
+                foreach (var scene in m_SceneChangeTracker.m_TrackedScenes)
                 {
-                    var sceneItem = new SceneItem(scene)
+                    var sceneItem = new SceneItem(scene.Value)
                     {
                         id = id++,
                         depth = 0,
                     };
 
-                    if (scene != null)
+                    if (scene.Value != null)
                     {
                         var sceneRootsItem = new TreeViewItem
                         {
@@ -157,7 +159,7 @@ namespace Unity.LiveEditing.Editor
                             displayName = "Roots"
                         };
 
-                        foreach (var root in scene.Roots)
+                        foreach (var root in scene.Value.Current.Roots)
                         {
                             sceneRootsItem.AddChild(AddGameObject(root, sceneRootsItem.depth + 1, ref id));
                         };
@@ -193,7 +195,7 @@ namespace Unity.LiveEditing.Editor
                         displayName = "Properties"
                     };
 
-                    AddProperties(goState.Properties, propertiesItem, ref id);
+                    AddProperties(goState.Current.Properties, propertiesItem, ref id);
 
                     gameObjectItem.AddChild(propertiesItem);
 
@@ -204,7 +206,7 @@ namespace Unity.LiveEditing.Editor
                         displayName = "Components"
                     };
 
-                    foreach (var component in goState.Components)
+                    foreach (var component in goState.Current.Components)
                     {
                         var componentItem = new ComponentItem(component)
                         {
@@ -214,7 +216,7 @@ namespace Unity.LiveEditing.Editor
 
                         if (component != null)
                         {
-                            AddProperties(component.Properties, componentItem, ref id);
+                            AddProperties(component.Current.Properties, componentItem, ref id);
                         }
 
                         componentsItem.AddChild(componentItem);
@@ -222,7 +224,7 @@ namespace Unity.LiveEditing.Editor
 
                     gameObjectItem.AddChild(componentsItem);
 
-                    if (goState.Children.Count > 0)
+                    if (goState.Current.Children.Count > 0)
                     {
                         var childrenItem = new TreeViewItem
                         {
@@ -231,7 +233,7 @@ namespace Unity.LiveEditing.Editor
                             displayName = "Children"
                         };
 
-                        foreach (var child in goState.Children)
+                        foreach (var child in goState.Current.Children)
                         {
                             childrenItem.AddChild(AddGameObject(child, childrenItem.depth + 1, ref id));
                         }
@@ -243,15 +245,14 @@ namespace Unity.LiveEditing.Editor
                 return gameObjectItem;
             }
 
-            void AddProperties(SceneChangeTracker.PropertyState propertiesState, TreeViewItem parentItem, ref int id)
+            void AddProperties(SerializedObject serializedObject, TreeViewItem parentItem, ref int id)
             {
-                var currProps = propertiesState.CurrentState;
-                var currItr = currProps.GetIterator();
+                var currItr = serializedObject.GetIterator();
                 var currValid = currItr.Next(true);
 
                 while (currValid)
                 {
-                    parentItem.AddChild(new PropertyItem(currProps, currItr.propertyPath)
+                    parentItem.AddChild(new PropertyItem(serializedObject, currItr.propertyPath)
                     {
                         id = id++,
                         depth = parentItem.depth + 1,
@@ -291,7 +292,7 @@ namespace Unity.LiveEditing.Editor
                             EditorGUI.LabelField(rect, "(Null SceneState)");
                             GUI.color = Color.black;
                         }
-                        else if (!scene.Scene.IsValid())
+                        else if (!scene.Instance.IsValid())
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Invalid Scene)");
@@ -299,7 +300,7 @@ namespace Unity.LiveEditing.Editor
                         }
                         else
                         {
-                            EditorGUI.LabelField(rect, scene.Scene.path);
+                            EditorGUI.LabelField(rect, scene.Instance.path);
                         }
                         break;
                     }
@@ -313,7 +314,7 @@ namespace Unity.LiveEditing.Editor
                             EditorGUI.LabelField(rect, "(Null GameObjectState)");
                             GUI.color = Color.black;
                         }
-                        else if (gameObject.GameObject == null)
+                        else if (gameObject.Instance == null)
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null GameObject)");
@@ -321,7 +322,7 @@ namespace Unity.LiveEditing.Editor
                         }
                         else
                         {
-                            EditorGUI.LabelField(rect, gameObject.GameObject.name);
+                            EditorGUI.LabelField(rect, gameObject.Instance.name);
                         }
                         break;
                     }
@@ -335,7 +336,7 @@ namespace Unity.LiveEditing.Editor
                             EditorGUI.LabelField(rect, "(Null ComponentState)");
                             GUI.color = Color.black;
                         }
-                        else if (component.Component == null)
+                        else if (component.Instance == null)
                         {
                             GUI.color = Color.red;
                             EditorGUI.LabelField(rect, "(Null Component)");
@@ -343,7 +344,7 @@ namespace Unity.LiveEditing.Editor
                         }
                         else
                         {
-                            EditorGUI.LabelField(rect, component.Component.GetType().Name);
+                            EditorGUI.LabelField(rect, component.Instance.GetType().Name);
                         }
                         break;
                     }
