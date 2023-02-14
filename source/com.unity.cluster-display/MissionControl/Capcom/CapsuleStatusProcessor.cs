@@ -35,7 +35,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     },
                     new LaunchPadReportDynamicEntry() {
                         Name = LaunchPadReportDynamicEntryConstants.StatusRenderNodeId,
-                        Value = (int)statusMessage.Value.RenderNodeId
+                        Value = statusMessage.Value.NodeRole is NodeRole.Unassigned ?
+                            -1 : statusMessage.Value.RenderNodeId
                     }
                 };
                 var putRet = mirror.MissionControlHttpClient.PutAsJsonAsync(

@@ -468,6 +468,124 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         }
 
         [Test]
+        public async Task PutDynamicEntriesWhenFailed()
+        {
+            await StartProcessHelper();
+
+            CreateLaunchPadStub(k_LaunchPadA1Port, k_LaunchPadA1Id);
+            CreateLaunchPadStub(k_LaunchPadA2Port, k_LaunchPadA2Id);
+            CreateLaunchPadStub(k_LaunchPadB1Port, k_LaunchPadB1Id);
+            PrepareLaunchPadStubForFakeLaunch(m_LaunchPadStubs[0]);
+            PrepareLaunchPadStubForFakeLaunch(m_LaunchPadStubs[1]);
+            PrepareLaunchPadStubForFakeLaunch(m_LaunchPadStubs[2]);
+
+            await m_ProcessHelper.PutLaunchComplex(k_ComplexA);
+            await m_ProcessHelper.PutLaunchComplex(k_ComplexB);
+
+            string assetUrl = await CreateAsset(GetTestTempFolder(), k_LaunchCatalog, new(), k_LaunchCatalogFilesContent);
+            AssetPost assetPost = new()
+            {
+                Name = "Test asset",
+                Url = assetUrl
+            };
+            var assetId = await m_ProcessHelper.PostAsset(assetPost);
+
+            LaunchConfiguration launchConfiguration = new() {
+                AssetId = assetId,
+                LaunchComplexes = new[]
+                {
+                    new LaunchComplexConfiguration()
+                    {
+                        Identifier = k_ComplexA.Id,
+                        LaunchPads = m_LaunchPadStubs.Where(lps => lps.Id == k_LaunchPadA1Id || lps.Id ==k_LaunchPadA2Id)
+                            .Select(lps => new LaunchPadConfiguration() { Identifier = lps.Id, LaunchableName = "Cluster Node" })
+                            .ToList()
+                    },
+                    new LaunchComplexConfiguration()
+                    {
+                        Identifier = k_ComplexB.Id,
+                        LaunchPads = m_LaunchPadStubs.Where(lps => lps.Id == k_LaunchPadB1Id)
+                            .Select(lps => new LaunchPadConfiguration() { Identifier = lps.Id, LaunchableName = "Cluster Node" })
+                            .ToList()
+                    }
+                }
+            };
+            await m_ProcessHelper.PutLaunchConfiguration(launchConfiguration);
+
+            await m_ProcessHelper.PostCommand(new LaunchMissionCommand(), HttpStatusCode.Accepted);
+            await m_ProcessHelper.WaitForState(State.Launched);
+
+            // Stop one of the launchpads so that the global status becomes failure.
+            var overStatus = m_LaunchPadStubs[2].Status;
+            overStatus.State = LaunchPadState.Over;
+            m_LaunchPadStubs[2].Status = overStatus;
+            await m_ProcessHelper.WaitForState(State.Failure);
+
+            // Validate LaunchPadStatus are correctly filled (without dynamic entries so far)
+            var a1LaunchedTask = GetLaunchPadStatus(k_LaunchPadA1Id, s => s is {State: LaunchPadState.Launched});
+            var a2LaunchedTask = GetLaunchPadStatus(k_LaunchPadA2Id, s => s is {State: LaunchPadState.Launched});
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            var finishedTask = await Task.WhenAny(Task.WhenAll(a1LaunchedTask, a2LaunchedTask), timeoutTask);
+            Assert.That(finishedTask, Is.Not.SameAs(timeoutTask)); // Otherwise we timed out
+
+            Assert.That(a1LaunchedTask.Result!.State, Is.EqualTo(LaunchPadState.Launched));
+            Assert.That(a1LaunchedTask.Result.DynamicEntries, Is.Empty);
+            Assert.That(a2LaunchedTask.Result!.State, Is.EqualTo(LaunchPadState.Launched));
+            Assert.That(a2LaunchedTask.Result.DynamicEntries, Is.Empty);
+
+            // Add new dynamic properties
+            await Task.WhenAll(
+                m_ProcessHelper.PutLaunchPadStatusDynamicEntry(k_LaunchPadA1Id,
+                    new() { Name = "Name1", Value = "Value1" }),
+                m_ProcessHelper.PutLaunchPadStatusDynamicEntry(k_LaunchPadA2Id,
+                    new() { Name = "Name2", Value = "Value2" })
+            );
+
+            var a1DynamicEntryTask =
+                GetLaunchPadStatus(k_LaunchPadA1Id, s => s!.DynamicEntries.Any(e => e.Name == "Name1"));
+            var a2DynamicEntryTask =
+                GetLaunchPadStatus(k_LaunchPadA2Id, s => s!.DynamicEntries.Any(e => e.Name == "Name2"));
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(Task.WhenAll(a1DynamicEntryTask, a2DynamicEntryTask), timeoutTask);
+            Assert.That(finishedTask, Is.Not.SameAs(timeoutTask)); // Otherwise we timed out
+
+            Assert.That(a1DynamicEntryTask.Result!.DynamicEntries.Count(), Is.EqualTo(1));
+            Assert.That(a1DynamicEntryTask.Result!.DynamicEntries.First().Name, Is.EqualTo("Name1"));
+            Assert.That(a1DynamicEntryTask.Result!.DynamicEntries.First().Value, Is.EqualTo("Value1"));
+            Assert.That(a2DynamicEntryTask.Result!.DynamicEntries.Count(), Is.EqualTo(1));
+            Assert.That(a2DynamicEntryTask.Result!.DynamicEntries.First().Name, Is.EqualTo("Name2"));
+            Assert.That(a2DynamicEntryTask.Result!.DynamicEntries.First().Value, Is.EqualTo("Value2"));
+
+            // Update dynamic properties
+            await Task.WhenAll(
+                m_ProcessHelper.PutLaunchPadStatusDynamicEntry(k_LaunchPadA1Id,
+                    new() { Name = "Name1", Value = "Value1A" }),
+                m_ProcessHelper.PutLaunchPadStatusDynamicEntry(k_LaunchPadA2Id,
+                    new() { Name = "Name2", Value = "Value2A" })
+            );
+
+            var a1UpdatedDynamicEntryTask = GetLaunchPadStatus(k_LaunchPadA1Id,
+                s => (string)s!.DynamicEntries.First(e => e.Name == "Name1").Value == "Value1A");
+            var a2UpdatedDynamicEntryTask = GetLaunchPadStatus(k_LaunchPadA2Id,
+                s => (string)s!.DynamicEntries.First(e => e.Name == "Name2").Value == "Value2A");
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(
+                Task.WhenAll(a1UpdatedDynamicEntryTask, a2UpdatedDynamicEntryTask), timeoutTask);
+            Assert.That(finishedTask, Is.Not.SameAs(timeoutTask)); // Otherwise we timed out
+
+            // Stop everything
+            await m_ProcessHelper.PostCommand(new StopMissionCommand(), HttpStatusCode.Accepted);
+
+            // This should clear all the dynamic entries
+            var a1ClearedDynamicEntriesTask = GetLaunchPadStatus(k_LaunchPadA1Id, s => s!.DynamicEntries.Any());
+            var a2ClearedDynamicEntriesTask = GetLaunchPadStatus(k_LaunchPadA2Id, s => s!.DynamicEntries.Any());
+            timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            finishedTask = await Task.WhenAny(
+                Task.WhenAll(a1ClearedDynamicEntriesTask, a2ClearedDynamicEntriesTask), timeoutTask);
+            Assert.That(finishedTask, Is.Not.SameAs(timeoutTask)); // Otherwise we timed out
+        }
+
+        [Test]
         public async Task PutDynamicEntriesArray()
         {
             await StartProcessHelper();

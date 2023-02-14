@@ -62,12 +62,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             UpdateMissionParameters(missionControlMirror).Wait();
             ProcessFailParameters(missionControlMirror).Wait();
-            if (!m_CreatedMissionParameters.Any())
-            {
-                // There are not mission parameters created to trigger failure of the node, this means that there are no
-                // backups to take the work of the failed node.  So there is nothing this process can do...
-                return;
-            }
+            //if (!m_CreatedMissionParameters.Any())
+            //{
+            //    // There are not mission parameters created to trigger failure of the node, this means that there are no
+            //    // backups to take the work of the failed node.  So there is nothing this process can do...
+            //    return;
+            //}
             UpdateNodeAssignments(missionControlMirror).Wait();
         }
 
@@ -129,9 +129,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             // Get the list of launchpads for which we need to have a failed MissionParameter.
             HashSet<Guid> aliveLaunchpads = new();
-            int backupNodesCount = missionControlMirror.LaunchPadsInformation
-                .Count(lpi => lpi.CurrentRole == NodeRole.Backup);
-            if (backupNodesCount > 0)
+            int runningBackupNodesCount = missionControlMirror.LaunchPadsInformation
+                .Count(lpi => lpi.Status.IsDefined && lpi.Status.State == State.Launched &&
+                       lpi.CurrentRole == NodeRole.Backup);
+            if (runningBackupNodesCount > 0)
             {
                 foreach (var id in missionControlMirror.LaunchPadsInformation
                              .Where(lpi => lpi.Status.IsDefined && lpi.Status.State == State.Launched)
@@ -170,11 +171,14 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                             Title = "Confirm Failover",
                             FullText = $"Once flagged as failed, you cannot change the status of the device back " +
                                 $"unless you relaunch the mission.  Do you really want to mark " +
-                                $"\"{launchPadInformation.Definition.Name}\" as failed?" +
-                                ">>> NOT YET IMPLEMENTED <<<",
+                                $"\"{launchPadInformation.Definition.Name}\" as failed?"
                         },
                         Group = launchpadId.ToString()
                     };
+                    if (launchPadInformation.StartRole == NodeRole.Emitter)
+                    {
+                        ((ConfirmationConstraint)failedParameter.Constraint).FullText += " >>> NOT YET IMPLEMENTED FOR EMITTER <<<";
+                    }
                     var putRet = await missionControlMirror.MissionControlHttpClient.PutAsJsonAsync(
                         "api/v1/currentMission/parameters", failedParameter).ConfigureAwait(false);
                     putRet.EnsureSuccessStatusCode();

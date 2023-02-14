@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Unity.ClusterDisplay.MissionControl.Capsule;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Unity.ClusterDisplay.RepeaterStateMachine;
@@ -27,9 +29,13 @@ namespace Unity.ClusterDisplay.Tests
         const byte k_EmitterId = 0;
         const byte k_RepeaterId = 1;
 
-        [SetUp]
-        public void SetUp()
+        void SetUp(NodeRole nodeRole, byte renderNodeId)
         {
+            ClusterSyncStub clusterSyncStub = new() {
+                NodeID = k_RepeaterId, NodeRole = nodeRole, RenderNodeID = renderNodeId
+            };
+            ServiceLocator.Provide<IClusterSyncState>(clusterSyncStub);
+
             var emitterAgentConfig = udpConfig;
             emitterAgentConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
             m_EmitterAgent = new(emitterAgentConfig);
@@ -75,6 +81,8 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator StatesTransitions()
         {
+            SetUp(NodeRole.Repeater, k_RepeaterId);
+
             long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
 
             // ======== First Frame ======
@@ -167,6 +175,126 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
+        static readonly IReadOnlyList<ChangeClusterTopologyEntry> k_ChangeBackupToRepeater = new ChangeClusterTopologyEntry[]
+        {
+            new () {NodeId = k_EmitterId, NodeRole = NodeRole.Emitter, RenderNodeId = k_EmitterId},
+            new () {NodeId = k_RepeaterId, NodeRole = NodeRole.Repeater, RenderNodeId = k_RepeaterId},
+        };
+        static readonly int[] k_ChangeBackupToRepeaterBeforeFrames = {0, 1, 2, 10};
+
+        [UnityTest]
+        public IEnumerator ChangeBackupToRepeater(
+            [ValueSource(nameof(k_ChangeBackupToRepeaterBeforeFrames))] int changeBackupToRepeaterBeforeFrame)
+        {
+            NodeRole expectedNodeRole = NodeRole.Backup;
+            byte expectedRenderNodeId = 42;
+            SetUp(expectedNodeRole, expectedRenderNodeId);
+            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
+
+            long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
+
+            // ======== First Frame ======
+            m_EmitterStateWriter.GatherFrameState(); // Has to be called from this thread, can't be done in a task
+            long minimalDoFrameExitTimestamp = long.MaxValue;
+            var emittersJobForFrame0 = Task.Run(() =>
+            {
+                // Receive repeaters registration message
+                using var receivedRegisteringMessage = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RegisteringWithEmitter>;
+                Assert.That(receivedRegisteringMessage, Is.Not.Null);
+                Assert.That(receivedRegisteringMessage.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+
+                // Answer
+                m_EmitterAgent.SendMessage(MessageType.RepeaterRegistered, new RepeaterRegistered
+                {
+                    NodeId = receivedRegisteringMessage.Payload.NodeId,
+                    IPAddressBytes = receivedRegisteringMessage.Payload.IPAddressBytes,
+                    Accepted = true
+                });
+
+                // Receive message about ready to start frame
+                using var receivedRepeaterWaiting = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RepeaterWaitingToStartFrame>;
+                Assert.That(receivedRepeaterWaiting, Is.Not.Null);
+                Assert.That(receivedRepeaterWaiting.Payload.FrameIndex, Is.EqualTo(0));
+                Assert.That(receivedRepeaterWaiting.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+                Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.True);
+
+                // Answer
+                m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                    new EmitterWaitingToStartFrame {FrameIndex = 0});
+
+                // Transmit the first frame
+                minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
+                m_EmitterStateWriter.PublishCurrentState(0, m_EmitterFrameDataSplitter);
+            });
+
+            if (changeBackupToRepeaterBeforeFrame <= 0)
+            {
+                UpdateClusterTopology(k_ChangeBackupToRepeater);
+                expectedNodeRole = NodeRole.Repeater;
+                expectedRenderNodeId = k_RepeaterId;
+            }
+            m_RepeaterNode.DoFrame();
+            long doFrameExitTimestamp = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(emittersJobForFrame0.Wait);
+            Assert.That(doFrameExitTimestamp, Is.GreaterThanOrEqualTo(minimalDoFrameExitTimestamp));
+
+            // ======= End of Frame ===========
+            m_RepeaterNode.ConcludeFrame();
+            Assert.That(clusterSyncState.NodeRole, Is.EqualTo(expectedNodeRole));
+            Assert.That(clusterSyncState.RenderNodeID, Is.EqualTo(expectedRenderNodeId));
+            yield return null;
+
+            // ======= Frame 1 -> 4 ===========
+            for (ulong frameIdx = 1; frameIdx < 5; ++frameIdx)
+            {
+                m_EmitterStateWriter.GatherFrameState(); // Has to be called from this thread, can't be done in a task
+                ulong localFrameIndex = frameIdx; // To avoid "captured variable is modified in the outer scope" warnings
+                minimalDoFrameExitTimestamp = long.MaxValue;
+                var repeatersJobForFrame = Task.Run(() =>
+                {
+                    // A little sleep to be sure repeater is really waiting after the emitter
+                    Thread.Sleep(50);
+
+                    // Receive message about ready to start frame
+                    using var receivedRepeaterWaiting = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(testEndTimestamp)) as ReceivedMessage<RepeaterWaitingToStartFrame>;
+                    Assert.That(receivedRepeaterWaiting, Is.Not.Null);
+                    Assert.That(receivedRepeaterWaiting.Payload.FrameIndex, Is.EqualTo(localFrameIndex));
+                    Assert.That(receivedRepeaterWaiting.Payload.NodeId, Is.EqualTo(k_RepeaterId));
+                    Assert.That(receivedRepeaterWaiting.Payload.WillUseNetworkSyncOnNextFrame, Is.True);
+
+                    // Answer
+                    m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                        new EmitterWaitingToStartFrame {FrameIndex = localFrameIndex});
+
+                    // Transmit the frame data
+                    minimalDoFrameExitTimestamp = Stopwatch.GetTimestamp();
+                    m_EmitterStateWriter.PublishCurrentState(localFrameIndex, m_EmitterFrameDataSplitter);
+                });
+
+                ConsumeAllReceivedEmitterMessages();
+
+                if (changeBackupToRepeaterBeforeFrame <= (int)frameIdx)
+                {
+                    UpdateClusterTopology(k_ChangeBackupToRepeater);
+                    expectedNodeRole = NodeRole.Repeater;
+                    expectedRenderNodeId = k_RepeaterId;
+                }
+                m_RepeaterNode.DoFrame();
+                doFrameExitTimestamp = Stopwatch.GetTimestamp();
+                Assert.DoesNotThrow(repeatersJobForFrame.Wait);
+                Assert.That(doFrameExitTimestamp, Is.GreaterThanOrEqualTo(minimalDoFrameExitTimestamp));
+
+                // ======= End of Frame ===========
+                m_RepeaterNode.ConcludeFrame();
+                Assert.That(clusterSyncState.NodeRole, Is.EqualTo(expectedNodeRole));
+                Assert.That(clusterSyncState.RenderNodeID, Is.EqualTo(expectedRenderNodeId));
+                yield return null;
+            }
+        }
+
         void ConsumeAllReceivedEmitterMessages()
         {
             for (;;)
@@ -188,6 +316,8 @@ namespace Unity.ClusterDisplay.Tests
             m_EmitterStateWriter?.Dispose();
             m_EmitterFrameDataSplitter?.Dispose();
             m_EmitterAgent?.Dispose();
+
+            ServiceLocator.Withdraw<ClusterSyncStub>();
         }
 
         void PublishEvents()
@@ -205,6 +335,12 @@ namespace Unity.ClusterDisplay.Tests
                 LongVal = (long)(m_RepeaterNode.FrameIndex * m_RepeaterNode.FrameIndex) + 1,
                 FloatVal = m_RepeaterNode.FrameIndex,
             });
+        }
+
+        static void UpdateClusterTopology(IReadOnlyList<ChangeClusterTopologyEntry> topology)
+        {
+            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
+            clusterSyncState.UpdatedClusterTopology = topology;
         }
     }
 }

@@ -61,9 +61,7 @@ namespace Unity.ClusterDisplay
         /// Index of the frame we are currently dealing with.
         /// </summary>
         /// <remarks>Every "physical node" start with a FrameIndex of 0 and it increase in lock step between all the
-        /// nodes as the time pass.  However, the <see cref="ClusterNode"/> might start at a different FrameIndex
-        /// when the role of a node changes during the process lifetime (eg. when a <see cref="EmitterNode"/> replaces
-        /// a <see cref="BackupNode"/>).</remarks>
+        /// nodes as the time pass.</remarks>
         public ulong FrameIndex { get; private set; }
 
         /// <summary>
@@ -86,7 +84,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Method called to perform the work the node has to do for the current frame
         /// </summary>
-        public void DoFrame()
+        public virtual void DoFrame()
         {
             NodeState newState;
             do
@@ -190,17 +188,5 @@ namespace Unity.ClusterDisplay
         /// Current state of the node.
         /// </summary>
         NodeState m_CurrentState;
-    }
-
-    /// <summary>
-    /// Not yet implemented, TODO as we start working on redundancy.  Mostly kept so that comments can reference it :)
-    /// </summary>
-    class BackupNode : ClusterNode
-    {
-        BackupNode()
-            : base(new ClusterNodeConfig(), null)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

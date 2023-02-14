@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Unity.ClusterDisplay.MissionControl.Capsule;
+using Unity.ClusterDisplay.Utils;
 using Utils;
 
 namespace Unity.ClusterDisplay
@@ -47,6 +50,10 @@ namespace Unity.ClusterDisplay
             {
                 UdpAgent.RemovePreProcess(PreProcessReceivedMessage);
             }
+            if (m_UpdatedClusterTopologyChangedRegistered && ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            {
+                clusterSyncState.UpdatedClusterTopologyChanged -= UpdatedClusterTopologyChanged;
+            }
         }
 
         /// <summary>
@@ -63,6 +70,19 @@ namespace Unity.ClusterDisplay
         /// <returns>Nodes we are still waiting on or <c>null</c> if all repeater nodes are ready.</returns>
         public NodeIdBitVectorReadOnly TryWaitForAllRepeatersReady(ulong frameIndex, TimeSpan maxTime)
         {
+            // Manage registration to cluster topology changes so that we immediately wake up when a change happens.
+            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            {
+                if (!m_UpdatedClusterTopologyChangedRegistered)
+                {
+                    clusterSyncState.UpdatedClusterTopologyChanged += UpdatedClusterTopologyChanged;
+                }
+            }
+            else
+            {
+                m_UpdatedClusterTopologyChangedRegistered = false;
+            }
+
             long deadlineTimestamp = StopwatchUtils.TimestampIn(maxTime);
             lock (m_ThisLock)
             {
@@ -70,6 +90,15 @@ namespace Unity.ClusterDisplay
                        (frameIndex > m_FrameIndex ||
                         (frameIndex == m_FrameIndex && m_StillWaitingOn.SetBitsCount > 0)))
                 {
+                    if (clusterSyncState?.UpdatedClusterTopology != null &&
+                        (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
+                         !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
+                    {
+                        HandleRemovedRepeaters(clusterSyncState.UpdatedClusterTopology);
+                        m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+                        continue; // Since we might have removed the last repeater we were waiting on...
+                    }
+
                     Monitor.Wait(m_ThisLock, StopwatchUtils.TimeUntil(deadlineTimestamp));
                 }
 
@@ -188,6 +217,41 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// Delegate called when <see cref="IClusterSyncState.UpdatedClusterTopologyChanged"/> is fired.
+        /// </summary>
+        void UpdatedClusterTopologyChanged()
+        {
+            lock (m_ThisLock)
+            {
+                Monitor.PulseAll(m_ThisLock);
+            }
+        }
+
+        /// <summary>
+        /// Check for repeaters that are not included in the cluster topology anymore.
+        /// </summary>
+        void HandleRemovedRepeaters(IReadOnlyList<ChangeClusterTopologyEntry> topologyEntries)
+        {
+            NodeIdBitVector repeatersStillPresent = new();
+            foreach (var entry in topologyEntries)
+            {
+                if (entry.NodeRole is NodeRole.Repeater or NodeRole.Backup)
+                {
+                    repeatersStillPresent[entry.NodeId] = true;
+                }
+            }
+
+            foreach (var toWaitFor in m_ToWaitFor.ExtractSetBits())
+            {
+                if (!repeatersStillPresent[toWaitFor])
+                {
+                    m_ToWaitFor[toWaitFor] = false;
+                    m_StillWaitingOn[toWaitFor] = false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Object to be locked when code needs to serialize access to member variables.
         /// </summary>
         readonly object m_ThisLock = new();
@@ -203,6 +267,15 @@ namespace Unity.ClusterDisplay
         /// Repeaters that we are still waiting on for the current frame.
         /// </summary>
         NodeIdBitVector m_StillWaitingOn;
+        /// <summary>
+        /// Have we registered <see cref="IClusterSyncState.UpdatedClusterTopologyChanged"/> to be informed immediately
+        /// when topology changes are received?
+        /// </summary>
+        bool m_UpdatedClusterTopologyChangedRegistered;
+        /// <summary>
+        /// Last analyzed topology change.
+        /// </summary>
+        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
 
         /// <summary>
         /// <see cref="NodeIdBitVector"/> with all bits always set to 0.

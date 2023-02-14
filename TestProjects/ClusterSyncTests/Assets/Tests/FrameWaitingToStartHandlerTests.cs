@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Unity.ClusterDisplay.MissionControl.Capsule;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Utils;
@@ -12,6 +15,18 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class FrameWaitingToStartHandlerTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            ServiceLocator.Provide<IClusterSyncState>(new ClusterSyncStub());
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            ServiceLocator.Withdraw<ClusterSyncStub>();
+        }
+
         [Test]
         public void WaitingOnSingleFrame()
         {
@@ -126,7 +141,7 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(1, m_MaxTestTime);
-            Assert.DoesNotThrow(repeaterTask1.Wait);
+            Assert.DoesNotThrow(repeaterTask2.Wait);
             Assert.That(stillWaitingOn, Is.Null);
 
             ret = waitingToStartHandler.PrepareForNextFrame(2);
@@ -210,9 +225,66 @@ namespace Unity.ClusterDisplay.Tests
 
             stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(1, m_MaxTestTime);
             long tryWaitEndTime = Stopwatch.GetTimestamp();
-            Assert.DoesNotThrow(repeaterTask1.Wait);
+            Assert.DoesNotThrow(repeaterTask2.Wait);
             Assert.That(stillWaitingOn, Is.Null);
             Assert.That(beforeSendingRightFramesTimestamp, Is.LessThanOrEqualTo(tryWaitEndTime));
+        }
+
+        [Test]
+        public void StopsWaitingForRepeatersRemovedFromTopology()
+        {
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            using var waitingToStartHandler =
+                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}));
+
+            long beforeTopologyChangeTimestamp = long.MaxValue;
+            var repeaterTask1 = Task.Run(() =>
+            {
+                SendRepeaterWaiting(0, 3, true, repeaterAgent);
+                Assert.That(repeaterAgent.ReceivedMessagesCount, Is.EqualTo(1));
+                using var receivedMessageNode3 = repeaterAgent.ConsumeNextReceivedMessage();
+                TestEmitterWaitingMessage(receivedMessageNode3, 0, new byte[] {1});
+
+                Thread.Sleep(250);
+
+                List<ChangeClusterTopologyEntry> newTopology = new();
+                newTopology.Add(new(){NodeId = 0, NodeRole = NodeRole.Emitter, RenderNodeId = 0});
+                newTopology.Add(new(){NodeId = 3, NodeRole = NodeRole.Repeater, RenderNodeId = 3});
+                // 1 is not present in the list of entries anymore, so removing it...
+
+                beforeTopologyChangeTimestamp = Stopwatch.GetTimestamp();
+                ServiceLocator.Get<IClusterSyncState>().UpdatedClusterTopology = newTopology;
+            });
+
+            var stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(0, m_MaxTestTime);
+            long tryWaitEndTime = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(repeaterTask1.Wait);
+            Assert.That(stillWaitingOn, Is.Null);
+            Assert.That(beforeTopologyChangeTimestamp, Is.LessThanOrEqualTo(tryWaitEndTime));
+
+            // Test that the second frame still wait after the repeater that is still in the topology
+            bool ret = waitingToStartHandler.PrepareForNextFrame(1);
+            Assert.That(ret, Is.True);
+
+            long beforeRepeaterWaitingTimeStamp = long.MaxValue;
+            var repeaterTask2 = Task.Run(() =>
+            {
+                Thread.Sleep(250);
+
+                beforeRepeaterWaitingTimeStamp = Stopwatch.GetTimestamp();
+                SendRepeaterWaiting(1, 3, true, repeaterAgent);
+                Assert.That(repeaterAgent.ReceivedMessagesCount, Is.EqualTo(1));
+                using var receivedMessageNode7 = repeaterAgent.ConsumeNextReceivedMessage();
+                TestEmitterWaitingMessage(receivedMessageNode7, 1, new byte[] {});
+            });
+
+            stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(1, m_MaxTestTime);
+            tryWaitEndTime = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(repeaterTask2.Wait);
+            Assert.That(stillWaitingOn, Is.Null);
+            Assert.That(beforeRepeaterWaitingTimeStamp, Is.LessThanOrEqualTo(tryWaitEndTime));
         }
 
         static void SendRepeaterWaiting(ulong frameIndex, byte repeaterId, bool willWaitNextFrame, IUdpAgent repeaterAgent)

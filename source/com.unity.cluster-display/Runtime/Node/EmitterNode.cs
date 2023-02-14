@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using Unity.ClusterDisplay.EmitterStateMachine;
+using Unity.ClusterDisplay.MissionControl.Capsule;
+using Unity.ClusterDisplay.Utils;
 using Utils;
 
 namespace Unity.ClusterDisplay
@@ -116,6 +119,28 @@ namespace Unity.ClusterDisplay
                 HardwareSyncInitState.Create(this) : new WelcomeRepeatersState(this));
         }
 
+        /// <inheritdoc />
+        public override void DoFrame()
+        {
+            // Process cluster topology changes.
+            // Remarks: We need to delay that after calling the base class if there are no repeaters yet.  This will
+            // happen on the first frame as this is the processing done for that first frame that discover the list of
+            // repeaters.
+            bool topologyChangesProcess = false;
+            if (RepeatersStatus.RepeaterPresence.SetBitsCount > 0)
+            {
+                ProcessTopologyChanges();
+                topologyChangesProcess = true;
+            }
+
+            base.DoFrame();
+
+            if (!topologyChangesProcess)
+            {
+                ProcessTopologyChanges();
+            }
+        }
+
         /// <summary>
         /// Emitter specific configuration.
         /// </summary>
@@ -132,9 +157,58 @@ namespace Unity.ClusterDisplay
         public static IReadOnlyCollection<MessageType> ReceiveMessageTypes => s_ReceiveMessageTypes;
 
         /// <summary>
+        /// Process cluster topology changes
+        /// </summary>
+        void ProcessTopologyChanges()
+        {
+            if (!ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            {
+                return;
+            }
+
+            if (clusterSyncState.UpdatedClusterTopology != null &&
+                (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
+                 !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
+            {
+                HandleRemovedRepeaters(clusterSyncState.UpdatedClusterTopology);
+                m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+            }
+        }
+
+        /// <summary>
+        /// Check for repeaters that are not included in the cluster topology anymore.
+        /// </summary>
+        /// <param name="topologyEntries">List of all the entries describing the current topology of the cluster.
+        /// </param>
+        void HandleRemovedRepeaters(IReadOnlyList<ChangeClusterTopologyEntry> topologyEntries)
+        {
+            NodeIdBitVector repeatersStillPresent = new();
+            foreach (var entry in topologyEntries)
+            {
+                if (entry.NodeRole is NodeRole.Repeater or NodeRole.Backup)
+                {
+                    repeatersStillPresent[entry.NodeId] = true;
+                }
+            }
+
+            foreach (var toWaitFor in RepeatersStatus.RepeaterPresence.ExtractSetBits())
+            {
+                if (!repeatersStillPresent[toWaitFor])
+                {
+                    RepeatersStatus[toWaitFor] = new ();
+                }
+            }
+        }
+
+        /// <summary>
         /// <see cref="MessageType"/> that the UdpClient must process upon reception.
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RegisteringWithEmitter,
             MessageType.RetransmitFrameData, MessageType.RepeaterWaitingToStartFrame, MessageType.QuitReceived};
+
+        /// <summary>
+        /// Last analyzed topology change.
+        /// </summary>
+        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
     }
 }

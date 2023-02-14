@@ -111,7 +111,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         [UnityTest]
-        public IEnumerator NodeStops(
+        public IEnumerator LastBackupNodeStops(
             [Values(State.Idle, State.GettingPayload, State.PreLaunch,
                     State.WaitingForLaunch, State.Over)] State stoppedState)
         {
@@ -131,10 +131,39 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             yield return Process();
 
+            // Parameter should be removed for all nodes since there is no more backup nodes to take the place of a
+            // failed node.
+            Assert.That(m_MissionControlStub.MissionParameters, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator OneOutOfTwoBackupNodeStops(
+            [Values(State.Idle, State.GettingPayload, State.PreLaunch,
+                State.WaitingForLaunch, State.Over)] State stoppedState)
+        {
+            Setup(4);
+            SetNodeRoleAs(1, NodeRole.Backup);
+            SetNodeRoleAs(3, NodeRole.Backup);
+
+            yield return Process();
+
+            // No backup nodes, nothing to do if anything fails, so no fail parameters should be created.
+            Assert.That(m_MissionControlStub.MissionParameters.Count, Is.EqualTo(4));
+            TestFailParameter(0);
+            TestFailParameter(1);
+            TestFailParameter(2);
+            TestFailParameter(3);
+
+            // Mark one of the nodes execution as over
+            SetNodeStateAs(1, stoppedState);
+
+            yield return Process();
+
             // Parameter should be removed for that node that is now stopped, the others should stay as they were.
-            Assert.That(m_MissionControlStub.MissionParameters.Count, Is.EqualTo(2));
+            Assert.That(m_MissionControlStub.MissionParameters.Count, Is.EqualTo(3));
             TestFailParameter(0);
             TestFailParameter(2);
+            TestFailParameter(3);
         }
 
         [UnityTest]
@@ -279,7 +308,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Assert.That(m_MissionControlStub.MissionParameters.Count, Is.EqualTo(3));
             TestDidNotReceivedClusterConfiguration();
 
-            // Terminate repeater
+            // Terminate backup
             yield return FailNode(failMethod, 2);
             yield return Process();
 

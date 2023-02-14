@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Unity.ClusterDisplay.MissionControl.Capsule;
 using Unity.ClusterDisplay.RepeaterStateMachine;
+using Unity.ClusterDisplay.Utils;
 #if !UNITY_EDITOR
 using UnityEngine;
 #endif
@@ -24,6 +27,13 @@ namespace Unity.ClusterDisplay
                 HardwareSyncInitState.Create(this) : new RegisterWithEmitterState(this));
         }
 
+        /// <inheritdoc />
+        public override void DoFrame()
+        {
+            ProcessTopologyChanges();
+            base.DoFrame();
+        }
+
         /// <summary>
         /// <see cref="MessageType"/> that the UdpClient must process upon reception.
         /// </summary>
@@ -42,9 +52,63 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// Process cluster topology changes
+        /// </summary>
+        void ProcessTopologyChanges()
+        {
+            if (!ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            {
+                return;
+            }
+
+            if (clusterSyncState.UpdatedClusterTopology != null &&
+                (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
+                 !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
+            {
+                HandleChangesInNodeAssignment(clusterSyncState);
+                m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+            }
+        }
+
+        /// <summary>
+        /// Check if the role or render node id of this node has changed.
+        /// </summary>
+        void HandleChangesInNodeAssignment(IClusterSyncState clusterSyncState)
+        {
+            // Find entry for this node
+            ChangeClusterTopologyEntry? thisNodeEntry = null;
+            if (clusterSyncState.UpdatedClusterTopology != null)
+            {
+                foreach (var entry in clusterSyncState.UpdatedClusterTopology)
+                {
+                    if (entry.NodeId == clusterSyncState.NodeID)
+                    {
+                        thisNodeEntry = entry;
+                        break;
+                    }
+                }
+            }
+            if (!thisNodeEntry.HasValue)
+            {
+                // No entry means the node has been removed from the cluster, let's quit to avoid using power for
+                // nothing...
+                Quit();
+                return;
+            }
+
+            clusterSyncState.NodeRole = thisNodeEntry.Value.NodeRole;
+            clusterSyncState.RenderNodeID = thisNodeEntry.Value.RenderNodeId;
+        }
+
+        /// <summary>
         /// <see cref="MessageType"/> that the UdpClient must process upon reception.
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RepeaterRegistered,
             MessageType.FrameData, MessageType.EmitterWaitingToStartFrame, MessageType.PropagateQuit};
+
+        /// <summary>
+        /// Last analyzed topology change.
+        /// </summary>
+        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
     }
 }
