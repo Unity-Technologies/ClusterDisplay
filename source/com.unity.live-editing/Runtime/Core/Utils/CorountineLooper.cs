@@ -14,9 +14,13 @@ namespace Unity.LiveEditing.LowLevel
             {
                 if (s_Instance == null)
                 {
-                    s_Instance = FindObjectsOfType<CoroutineRunner>() is { Length: > 0 } existing
-                        ? existing[0]
-                        : new GameObject($"{nameof(CoroutineRunner)}_Singleton").AddComponent<CoroutineRunner>();
+                    s_Instance = FindFirstObjectByType<CoroutineRunner>();
+                    if (s_Instance == null)
+                    {
+                        s_Instance = new GameObject($"{nameof(CoroutineRunner)}_Singleton")
+                            .AddComponent<CoroutineRunner>();
+                        s_Instance.gameObject.hideFlags = HideFlags.HideAndDontSave;
+                    }
                 }
 
                 return s_Instance;

@@ -124,7 +124,6 @@ namespace Unity.LiveEditing.LowLevel.Networking
             Debug.Assert(listener != null);
             while (!token.IsCancellationRequested)
             {
-                Debug.Log($"Listening for connections...");
                 Socket socket = null;
                 try
                 {
@@ -149,18 +148,23 @@ namespace Unity.LiveEditing.LowLevel.Networking
         void EnqueueForBroadcast(in PacketHeader header, ReadOnlySpan<byte> payload)
         {
             Profiler.BeginSample(nameof(EnqueueForBroadcast));
-            lock (m_ConnectionsLock)
+            try
             {
-                foreach (var conn in m_Connections)
+                lock (m_ConnectionsLock)
                 {
-                    if (conn.Id != header.ChannelId)
+                    foreach (var conn in m_Connections)
                     {
-                        conn.EnqueueSend(in header, payload);
+                        if (conn.Id != header.ChannelId)
+                        {
+                            conn.EnqueueSend(in header, payload);
+                        }
                     }
                 }
             }
-
-            Profiler.EndSample();
+            finally
+            {
+                Profiler.EndSample();
+            }
         }
 
         void UpdateConnections()

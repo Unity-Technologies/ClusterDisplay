@@ -198,7 +198,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
             return Task.Run(() =>
             {
                 Profiler.BeginSample(nameof(ReceivePacketsAsync));
-                Span<byte> payload = stackalloc byte[k_ReceiveBufferSize];
+                byte[] payload = new byte[k_ReceiveBufferSize];
                 while (!token.IsCancellationRequested)
                 {
                     try
@@ -212,7 +212,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
                             continue;
                         }
 
-                        receivedHandler(in header, payload[..header.PayLoadSize]);
+                        receivedHandler(in header, new ReadOnlySpan<byte>(payload, 0, header.PayLoadSize));
                     }
                     catch (SocketException ex) when (ex.ErrorCode == (int)SocketError.Disconnecting)
                     {

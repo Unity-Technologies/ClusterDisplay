@@ -93,6 +93,9 @@ namespace Unity.LiveEditing.LowLevel.Networking
         /// </summary>
         /// <param name="data">A blittable object.</param>
         /// <typeparam name="T">The type of the object to send.</typeparam>
+        /// <remarks>Use with caution. Make sure to account for the memory layout of <typeparamref name="T"/>
+        /// when deserializing the data on the receiving end.
+        /// </remarks>
         public void Send<T>(ref T data) where T : unmanaged
         {
             Debug.Assert(IsConnected, "The client is not connected.");
