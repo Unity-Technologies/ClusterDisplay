@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_MissionControlStub.LaunchConfiguration = new();
             m_MissionControlStub.CapcomUplink = new() {IsRunning = true};
 
-            m_Application = new (MissionControlStub.HttpListenerEndpoint);
+            m_Application = new (MissionControlStub.HttpListenerEndpoint, new());
         }
 
         [UnityTearDown]

@@ -216,13 +216,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         async Task TaskUpdateParametersForReview()
         {
             List<(string name, ulong fromVersion)> incrementalUpdatesToGet = new(){
-                (k_ForReviewCollectionName, 0) };
+                (IncrementalCollectionsName.CurrentMissionLaunchParametersForReview, 0) };
             while (!m_ParametersForReviewCancelSource.IsCancellationRequested)
             {
                 var updates = await m_ProcessHelper.GetIncrementalCollectionsUpdate(incrementalUpdatesToGet,
                     m_ParametersForReviewCancelSource.Token);
-                var update = GetCollectionUpdate<LaunchParameterForReview>(updates, k_ForReviewCollectionName);
-                incrementalUpdatesToGet[0] = (k_ForReviewCollectionName, update.NextUpdate);
+                var update = GetCollectionUpdate<LaunchParameterForReview>(updates,
+                    IncrementalCollectionsName.CurrentMissionLaunchParametersForReview);
+                incrementalUpdatesToGet[0] = (IncrementalCollectionsName.CurrentMissionLaunchParametersForReview,
+                    update.NextUpdate);
                 lock (m_ParametersForReviewLock)
                 {
                     m_ParametersForReview.ApplyDelta(update);
@@ -274,8 +276,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             m_TestTempFolders.Add(folderPath);
             return folderPath;
         }
-
-        const string k_ForReviewCollectionName = "currentMission/launchParametersForReview";
 
         HangarBayProcessHelper m_HangarBayProcessHelper = new();
         List<LaunchPadProcessHelper> m_LaunchPadsProcessHelper = new();

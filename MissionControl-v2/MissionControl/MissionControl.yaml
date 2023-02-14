@@ -15,6 +15,8 @@ tags:
     description: Control of assets
   - name: missions
     description: Control of missions
+  - name: current mission parameters
+    description: Control of current mission's parameters
   - name: capcom
     description: Communication with capcom processes
 paths:
@@ -162,6 +164,8 @@ paths:
               - complexes
               - currentMission/panels
               - currentMission/parameters
+              - currentMission/parametersDesiredValues
+              - currentMission/parametersEffectiveValues
               - currentMission/launchParametersForReview
               - devices
               - launchPadsHealth
@@ -654,68 +658,6 @@ paths:
             text/plain:
               schema:
                 type: string
-  /currentMission/parameters:
-    get:
-      tags:
-        - missions
-      summary: Gets the current mission's parameters that can be controlled at runtime.
-      description: Gets the current mission's parameters that can be controlled at runtime (their value and some metadata describing how they can be modified).
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MissionParameter'
-  /currentMission/parameters/{id}:
-    get:
-      tags:
-        - missions
-      summary: Gets a mission runtime parameter's value.
-      parameters:
-        - name: id
-          in: path
-          description: Identifier of the runtime controllable parameter.
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Successful operation.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MissionParameter'
-        '404':
-          description: Parameter with the provided identifier not found.
-    put:
-      tags:
-        - missions
-      summary: Sets a mission runtime parameter's value.
-      description: Sets a mission runtime parameter's.
-      parameters:
-        - name: id
-          in: path
-          description: Identifier of the saved mission.
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        description: Launch configuration
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MissionParameter'
-        required: true
-      responses:
-        '200':
-          description: Successful operation.
-        '404':
-          description: Parameter with the provided identifier not found.
   /currentmission/panels:
     get:
       tags:
@@ -823,6 +765,235 @@ paths:
             text/plain:
               schema:
                 type: string
+  /currentMission/parameters:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets the current mission's parameters that can be controlled at runtime.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MissionParameter'
+    put:
+      tags:
+        - current mission parameters
+      summary: Sets a current mission's parameter that can be controlled at runtime.
+      description: Sets a current mission's parameter that can be controlled at runtime.  Doing a put on a parameter that does not exist will create it.  This is expected to be called by a launchable of the asset, however no access control is done and anybody could call it, so unexpected parameters shouldn't cause a fatal error.  The launchable creating a parameter can either be a capcom launchable or a payload of the launchpad, so parameters can be added (or removed) at any time during execution.  Every new MissionParameter is expected to be accompanied by a matching (same value identifier) MissionParameterValue in the parametersEffectiveValues collection.
+      requestBody:
+        description: Launch configuration
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionParameter'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Something bad in the request.  Most likely a mandatory property of the MissionParameter is not specified or the requested modification would cause multiple parameters to have the same valueIdentifier.
+        '409':
+          description: Cannot set a desired value if there is no asset currently defined in the currentMission's LaunchConfiguration. 
+  /currentMission/parameters/{id}:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets a current mission's parameter that can be controlled at runtime.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameter'
+        '404':
+          description: Parameter with the provided identifier not found.
+    delete:
+      tags:
+        - current mission parameters
+      summary: Deletes a current mission's parameter that can be controlled at runtime.
+      description: Deletes a current mission's parameter that can be controlled at runtime.  This is expected to be called by a launchable of the currently running asset, however no access control is done and anybody could call it, so missing parameters shouldn't cause a fatal error.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+        '404':
+          description: Parameter with the provided identifier not found.
+  /currentMission/parametersDesiredValues:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets the desired value of current mission's parameters.
+      description: Gets the desired value of current mission's parameters that have been set by users or processes driving values of those parameters.  No validation is made during the put (existence of parameter with the same id, right type, respecting constraint, ...) so user of desired value should perform all the validation and just ignore the desired value if there is anything wrong.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MissionParameterValue'
+    put:
+      tags:
+        - current mission parameters
+      summary: Sets a current mission's parameter desired value.
+      description: Sets a current mission's parameter desired value.  Values present in the collection will be included in the saved mission (and restored when loading it).
+      requestBody:
+        description: Parameter value.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionParameterValue'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Something bad in the request.  Most likely a mandatory property of the MissionParameterValue is not specified or the requested modification would cause multiple values to have the same valueIdentifier.
+        '409':
+          description: Cannot set a desired value if there is no asset currently defined in the currentMission's LaunchConfiguration.          
+  /currentMission/parametersDesiredValues/{id}:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets the desired value of a current mission's parameter.
+      description: Gets the desired value of a current mission's parameter that have been set by users or processes driving values of parameters.  No validation is made during the put (existence of parameter with the same id, right type, respecting constraint, ...) so user of desired value should perform all the validation and just ignore the desired value if there is anything wrong.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameterValue'
+        '404':
+          description: Parameter with the provided identifier not found.
+    delete:
+      tags:
+        - current mission parameters
+      summary: Clears the desired value of a current mission's parameter.
+      description: Clears the desired value of a current mission's parameter.  Running launchables should interpret the lack of a desired value (either from a delete or that value simply never being set by anyone) as a request to use the default value as if no one would have ever controled it.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameterValue'
+        '404':
+          description: Parameter with the provided identifier not found.
+  /currentMission/parametersEffectiveValues:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets the effective value of current mission's parameters.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MissionParameterValue'
+    put:
+      tags:
+        - current mission parameters
+      summary: Sets a current mission's parameter effective value.
+      description: Sets a current mission's parameter effective value.  Should be called by launchables when they start using a value in parameterDesiredValues and they should remove it when not used anymore.  No MissionParameterValue is automatically removed except when changing asset (which remove all MissionParameterValues).
+      requestBody:
+        description: Parameter value.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionParameterValue'
+        required: true
+      responses:
+        '200':
+          description: Successful operation.
+        '400':
+          description: Something bad in the request.  Most likely a mandatory property of the MissionParameterValue is not specified or the requested modification would cause multiple values to have the same valueIdentifier.
+        '409':
+          description: Cannot set a desired value if there is no asset currently defined in the currentMission's LaunchConfiguration.           
+  /currentMission/parametersEffectiveValues/{id}:
+    get:
+      tags:
+        - current mission parameters
+      summary: Gets the effective value of a current mission's parameter.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameterValue'
+        '404':
+          description: Parameter with the provided identifier not found.
+    delete:
+      tags:
+        - current mission parameters
+      summary: Delete the effective value of a current mission's parameter.
+      description: Delete the effective value of a current mission's parameter.  A missing effective value (either because of a delete or the put simply never being called) means that launchables are not using the corresponding desired parameter value yet / anymore.
+      parameters:
+        - name: id
+          in: path
+          description: Identifier of the runtime controllable parameter.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionParameterValue'
+        '404':
+          description: Parameter with the provided identifier not found.
   /capcomUplink:
     get:
       tags:
@@ -1009,8 +1180,11 @@ components:
       description: Various information to be made accessible to capcom processes working for MissionControl.
       properties:
         isRunning:
-          type: string
+          type: boolean
           description: Should capcom be running?
+        proceedWithLanding:
+          type: boolean
+          description: Should the payload proceed with landing (graceful shutdown)?
     IncrementalCollectionObject:
       type: object
       description: Common properties for objects that are part of incremental collections.
@@ -1019,6 +1193,8 @@ components:
           type: string
           format: uuid
           description: Identifier of this object.
+      required:
+        - id          
     IncrementalCollectionUpdate:
       type: object
       description: Changes that have been done to a collection since some version.
@@ -1211,7 +1387,6 @@ components:
         hangarBay:
           $ref: '#/components/schemas/HangarBay'
       required:
-        - id
         - name
         - launchPads
         - hangarBay
@@ -1225,7 +1400,6 @@ components:
           type: string
           description: User displayed name identifying this Device.
       required:
-        - id
         - name
     LiveCaptureCameraTracker:
       type: object
@@ -1434,9 +1608,89 @@ components:
           description: Various comments about the changes or problems with the value if there is anything wrong.
     MissionParameter:
       type: object
-      description: Value of a runtime controllable parameter -> TODO
+      description: Describes a parameter for which the value can be controlled at runtime.
       allOf:
         - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        valueIdentifier:
+          type: string
+          description: Case sensitive string used to find the corresponding MissionParameterValue.<br/><br/>Should be set such as that if two different assets expose an equivalent MissionParameter, the valueIdentifier will match between the two assets.  This is the main reason we are not relying on IncrementalCollectionObject's id for that purpose as it would be challenging to have matching uuids.<br/><br/>No two MissionParameter should have the same valueIdentifier within currentMission/parameters.
+          example: scene.lightIntensity
+        name:
+          type: string
+          description: Name of the parameter as displayed to the user.
+          example: Light intensity
+        description:
+          type: string
+          description: Detailed description of the parameter (that could for example be displayed in a tooltip).
+          example: Light intensity in lumens.
+        type:
+          type: string
+          enum: [boolean, command, integer, number, string]
+          description: >
+            Type of parameter.  One of:
+             * `boolean` - Boolean value.  Stored as json `true` or `false`.
+             * `command` - Command value.  Stored as a string that contains a uuid.  Setting the desired value to a new uuid indicates that the command is to be executed.  Setting it twice in quick succession before the effective value is updated will cause the command to be executed only once.  A null effective value indicate that the command was never ran.
+             * `integer` - Integer number value.  Stored as json integer value.
+             * `number` - Floating point number value.  Stored as json numerical value.
+             * `string` - String value.  Stored as json string value.
+            <br/><br/>
+            Remarks: This list of types will be extended to include more complex types such as color, vector3, ...
+        constraint:
+          description: Constraint on values of the parameter.
+          oneOf:
+            - $ref: '#/components/schemas/RangeConstraint'
+            - $ref: '#/components/schemas/RegularExpressionConstraint'
+            - $ref: '#/components/schemas/ListConstraint'
+            - $ref: '#/components/schemas/ConfirmationConstraint'
+        group:
+          type: string
+          description: Name of the group (when displaying the parameter to allow to see or set its value) this parameter is a part of.  Nested groups can be expressed by separating them with a slash (/).<br/><br/>The first nested group (start of the group string before the first slash (/) if any is present) can be the identifier of a LaunchPad, indicating this parameter is only affecting payloads launched by this launchpad.
+      required:
+        - valueIdentifier
+        - name
+        - type
+    RangeConstraint:
+      description: Same as in LaunchCatalog
+    RegularExpressionConstraint:
+      description: Same as in LaunchCatalog
+    ListConstraint:
+      description: Same as in LaunchCatalog
+    ConfirmationConstraint:
+      type: object
+      description: Instruct the user interface that a confirmation must be done before sending the command.
+      properties:
+        title:
+          type: string
+          description: Title of the confirmation window.
+        fullText:
+          type: string
+          description: Full text of the confirmation question / message.
+        confirmText:
+          type: string
+          description: Message displayed in the confirm button.
+          default: Yes
+        abortText:
+          type: string
+          description: Message displayed in the abort (in the sense of the user changed its mind and they do not want to execute the command) button.
+          default: No
+      required:
+        - fullText
+    MissionParameterValue:
+      type: object
+      description: Value of a MissionParameter.
+      allOf:
+        - $ref: '#/components/schemas/IncrementalCollectionObject'
+      properties:
+        valueIdentifier:
+          type: string
+          description: Case sensitive string used to find the corresponding MissionParameter.<br/><br/>No two MissionParameterValue should have the same valueIdentifier within currentMission/parametersDesiredValue or currentMission/parametersEffectiveValue.
+        value:
+          description: The value.  The value type will depend on the type of the corresponding MissionParameter.  Can be null if the type of the parameter supports it.
+          type: object
+      required:
+        - valueIdentifier
+        - value
     ControlPanel:
       type: object
       description: Defines the layout of multiple MissionParameter to be used to control the value of the parameters (instead of a flat list of parameter / value).

@@ -16,9 +16,17 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
             Type = CommandType.Abort;
         }
 
+        /// <summary>
+        /// Resulting state of the abort command will be over instead of idle.
+        /// </summary>
+        /// <remarks>Useful to get in the same state as if it would be the payload that exited by itself.</remarks>
+        public bool AbortToOver { get; set; }
+
         public bool Equals(AbortCommand? other)
         {
-            return other != null && other.GetType() == typeof(AbortCommand);
+            return other != null &&
+                other.GetType() == typeof(AbortCommand) &&
+                other.AbortToOver == AbortToOver;
         }
     }
 }

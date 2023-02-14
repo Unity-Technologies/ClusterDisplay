@@ -31,7 +31,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
 
         public async ValueTask Send(NetworkStream networkStream)
         {
-            CapsuleStatusMessage message = new() {NodeRole = (byte)NodeRole, NodeId = NodeId,
+            CapsuleStatusMessage message = new() {NodeRole = NodeRole, NodeId = NodeId,
                 RenderNodeId = RenderNodeId};
 
             // Send the message

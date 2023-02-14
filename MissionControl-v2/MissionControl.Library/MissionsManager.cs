@@ -8,8 +8,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     /// <summary>
     /// Information about a mission in the <see cref="MissionsManager"/>.
     /// </summary>
-    /// <remarks>Not present yet in the class but it will eventually also contain the list of runtime parameters (and
-    /// their values) and the list of panels.</remarks>
     public class MissionDetails: IEquatable<MissionDetails>
     {
         /// <summary>
@@ -26,6 +24,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// Launch configuration of the mission
         /// </summary>
         public LaunchConfiguration LaunchConfiguration { get; set; } = new();
+
+        /// <summary>
+        /// Desired <see cref="MissionParameterValue"/>s to in the saved mission.
+        /// </summary>
+        public IEnumerable<MissionParameterValue> DesiredMissionParametersValue { get; set; } =
+            Enumerable.Empty<MissionParameterValue>();
 
         /// <summary>
         /// Creates a new <see cref="SavedMissionSummary"/> from this detailed mission description.
@@ -49,6 +53,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             ret.Identifier = Identifier;
             ret.Description.DeepCopyFrom(Description);
             ret.LaunchConfiguration = LaunchConfiguration.DeepClone();
+            ret.DesiredMissionParametersValue = DesiredMissionParametersValue.Select(p => p.DeepClone()).ToList();
             return ret;
         }
 
@@ -57,7 +62,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
             return other != null &&
                 Identifier == other.Identifier &&
                 Description.Equals(other.Description) &&
-                LaunchConfiguration.Equals(other.LaunchConfiguration);
+                LaunchConfiguration.Equals(other.LaunchConfiguration) &&
+                DesiredMissionParametersValue.SequenceEqual(other.DesiredMissionParametersValue);
         }
     }
 

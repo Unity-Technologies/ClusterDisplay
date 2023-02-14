@@ -56,7 +56,7 @@ namespace Unity.ClusterDisplay
         /// True if the cluster synchronization is available, otherwise it will return false.
         /// </returns>
         [Obsolete("The property is deprecated. Use NodeRole instead")]
-        public static bool IsRepeater => ServiceLocator.Get<IClusterSyncState>().NodeRole is NodeRole.Repeater;
+        public static bool IsRepeater => ServiceLocator.Get<IClusterSyncState>().NodeRole is (NodeRole.Repeater or NodeRole.Backup);
 
         /// <summary>
         /// Getter that indicates whether cluster display logic is enabled and ready to connect, in contrast to <see cref="GetIsActive"/> which indicates that the cluster is connected and operating.
@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay
         /// <returns>
         /// True if the cluster synchronization is available, otherwise it will return false.
         /// </returns>
-        /// <param name="frame">
+        /// <param name="frameId">
         /// Outputs the current frame Id.
         /// </param>
         public static bool TryGetFrameId(out ulong frameId)
@@ -115,7 +115,7 @@ namespace Unity.ClusterDisplay
         /// <returns>
         /// True if the cluster synchronization is available, otherwise it will return false.
         /// </returns>
-        /// <param name="frame">
+        /// <param name="nodeId">
         /// Outputs the current node id, which will be 0 if cluster synchornization is not available.
         /// </param>
         public static bool TryGetRuntimeNodeId (out ushort nodeId)

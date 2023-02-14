@@ -64,10 +64,11 @@ namespace Unity.ClusterDisplay
     public struct ClusterParams
     {
         public bool ClusterLogicSpecified;
-        public bool EmitterSpecified;
+        public NodeRole Role;
 
         public byte NodeID;
         public int RepeaterCount;
+        public int BackupCount;
 
         public int Port;
 
@@ -169,8 +170,8 @@ namespace Unity.ClusterDisplay
             if (CommandLineParser.clusterDisplayLogicSpecified)
             {
                 clusterParams.ClusterLogicSpecified = true;
-                clusterParams.EmitterSpecified = CommandLineParser.emitterSpecified.Value;
-                if (clusterParams.EmitterSpecified)
+                clusterParams.Role = CommandLineParser.emitterSpecified.Value ? NodeRole.Emitter : NodeRole.Repeater;
+                if (clusterParams.Role == NodeRole.Emitter)
                 {
                     ApplyArgument(ref clusterParams.RepeaterCount, CommandLineParser.repeaterCount);
                 }
@@ -220,7 +221,7 @@ namespace Unity.ClusterDisplay
                     methodInfo.ReturnType == typeof(ClusterParams);
             }
 
-            foreach (var (processorType, attribute) in AttributeUtility.GetAllTypes<ClusterParamProcessorAttribute>())
+            foreach (var (processorType, _) in AttributeUtility.GetAllTypes<ClusterParamProcessorAttribute>())
             {
                 var processorMethods = processorType.GetMethods(bindingFlags)
                     .Where(m => m.IsDefined(typeof(ClusterParamProcessorMethodAttribute)));

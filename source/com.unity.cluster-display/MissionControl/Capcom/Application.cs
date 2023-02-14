@@ -21,7 +21,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// Constructor
         /// </summary>
         /// <param name="missionControlEntry">Base Uri to use to access MissionControl.</param>
-        public Application(Uri missionControlEntry)
+        /// <param name="launchableData">Launchable data giving additional static parameters to capcom.</param>
+        public Application(Uri missionControlEntry, LaunchableData launchableData)
         {
             m_HttpClient.BaseAddress = missionControlEntry;
             // Blocking calls from mission control should return after +/- 3 minutes, so setting the timeout to 10
@@ -29,36 +30,49 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             m_HttpClient.Timeout = TimeSpan.FromMinutes(10);
 
             m_MissionControlMirror = new(m_HttpClient);
+            m_MissionControlMirrorNextUpdates = new();
 
             m_ObjectsToMirror = new()
             {
-                new ToMirrorObject() { Name ="status",
-                    GetNextVersion = () => m_MissionControlMirror.StatusNextVersion,
+                new ToMirrorObject() {
+                    Name = ObservableObjectsName.Status,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.StatusNextVersion,
                     UpdateCallback = UpdateStatus },
-                new ToMirrorObject() { Name ="capcomUplink",
-                    GetNextVersion = () => m_MissionControlMirror.CapcomUplinkNextVersion,
+                new ToMirrorObject() {
+                    Name = ObservableObjectsName.CapcomUpLink,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.CapcomUplinkNextVersion,
                     UpdateCallback = UpdateCapcomUplink },
-                new ToMirrorObject() { Name ="currentMission/launchConfiguration",
-                    GetNextVersion = () => m_MissionControlMirror.LaunchConfigurationNextVersion,
+                new ToMirrorObject() {
+                    Name = ObservableObjectsName.CurrentMissionLaunchConfiguration,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.LaunchConfigurationNextVersion,
                     UpdateCallback = UpdateLaunchConfiguration }
             };
             m_CollectionsToMirror = new()
             {
-                new ToMirrorCollection<MissionControl.LaunchComplex>() { Name ="complexes",
-                    GetNextVersion = () => m_MissionControlMirror.ComplexesNextVersion,
+                new ToMirrorCollection<MissionControl.LaunchComplex>() {
+                    Name = IncrementalCollectionsName.Complexes,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.ComplexesNextVersion,
                     UpdateCallback = UpdateLaunchComplexes },
                 new ToMirrorCollection<MissionControl.LaunchParameterForReview>() {
-                    Name ="currentMission/launchParametersForReview",
-                    GetNextVersion = () => m_MissionControlMirror.LaunchParametersForReviewNextVersion,
+                    Name = IncrementalCollectionsName.CurrentMissionLaunchParametersForReview,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.LaunchParametersForReviewNextVersion,
                     UpdateCallback = UpdateLaunchParametersForReview },
                 new ToMirrorCollection<MissionControl.Asset>() {
-                    Name ="assets",
-                    GetNextVersion = () => m_MissionControlMirror.AssetsNextVersion,
+                    Name = IncrementalCollectionsName.Assets,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.AssetsNextVersion,
                     UpdateCallback = UpdateAssets },
                 new ToMirrorCollection<MissionControl.LaunchPadStatus>() {
-                    Name ="launchPadsStatus",
-                    GetNextVersion = () => m_MissionControlMirror.LaunchPadsStatusNextVersion,
-                    UpdateCallback = UpdateLaunchPadsStatus }
+                    Name = IncrementalCollectionsName.LaunchPadsStatus,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.LaunchPadsStatusNextVersion,
+                    UpdateCallback = UpdateLaunchPadsStatus },
+                new ToMirrorCollection<MissionControl.MissionParameterValue>() {
+                    Name = IncrementalCollectionsName.CurrentMissionParametersDesiredValues,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.ParametersDesiredValuesNextVersion,
+                    UpdateCallback = UpdateParametersDesiredValues },
+                new ToMirrorCollection<MissionControl.MissionParameterValue>() {
+                    Name = IncrementalCollectionsName.CurrentMissionParametersEffectiveValues,
+                    GetNextVersion = () => m_MissionControlMirrorNextUpdates.ParametersEffectiveValuesNextVersion,
+                    UpdateCallback = UpdateParametersEffectiveValues }
             };
             m_Processes = new()
             {
@@ -66,6 +80,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 new ReviewLaunchParametersProcess(new (){BaseAddress = missionControlEntry}),
                 new UpdateLaunchPadStatusProcess(),
                 new MonitorCapsulesProcess(m_StopApplication.Token, this),
+                new FailOverProcess(launchableData, () => m_StartProcessingLoop.Signal()),
                 new LandCapsulesProcess()
             };
             m_CapsuleMessageProcessors.Add(MessagesId.CapsuleStatus, new CapsuleStatusProcessor());
@@ -118,7 +133,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                     backgroundProcessingTasks.Add(MonitorChanges("api/v1/incrementalCollectionsUpdate", m_CollectionsToMirror));
                 }
                 backgroundProcessingTasks.Add(ProcessingLoop());
-                await Task.WhenAll(backgroundProcessingTasks);
+                await Task.WhenAll(backgroundProcessingTasks).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -287,7 +302,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
                     waitTask = m_StartProcessingLoop.SignaledTask;
                 }
-
                 await Task.WhenAny(waitTask).ConfigureAwait(false);
             }
         }
@@ -301,7 +315,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.Status = newValueJson.ToObject<MissionControl.Status>(Json.Serializer);
-            m_MissionControlMirror.StatusNextVersion = nextVersion;
+            ++m_MissionControlMirror.StatusVersionNumber;
+            m_MissionControlMirrorNextUpdates.StatusNextVersion = nextVersion;
         }
 
         /// <summary>
@@ -314,7 +329,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.CapcomUplink =
                 newValueJson.ToObject<MissionControl.CapcomUplink>(Json.Serializer);
-            m_MissionControlMirror.CapcomUplinkNextVersion = nextVersion;
+            ++m_MissionControlMirror.CapcomUplinkVersionNumber;
+            m_MissionControlMirrorNextUpdates.CapcomUplinkNextVersion = nextVersion;
         }
 
         /// <summary>
@@ -327,7 +343,8 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.LaunchConfiguration =
                 newValueJson.ToObject<MissionControl.LaunchConfiguration>(Json.Serializer);
-            m_MissionControlMirror.LaunchConfigurationNextVersion = nextVersion;
+            ++m_MissionControlMirror.LaunchConfigurationVersionNumber;
+            m_MissionControlMirrorNextUpdates.LaunchConfigurationNextVersion = nextVersion;
         }
 
         /// <summary>
@@ -338,7 +355,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.Complexes.ApplyDelta(update);
-            m_MissionControlMirror.ComplexesNextVersion = update.NextUpdate;
+            m_MissionControlMirrorNextUpdates.ComplexesNextVersion = update.NextUpdate;
         }
 
         /// <summary>
@@ -350,7 +367,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.LaunchParametersForReview.ApplyDelta(update);
-            m_MissionControlMirror.LaunchParametersForReviewNextVersion = update.NextUpdate;
+            m_MissionControlMirrorNextUpdates.LaunchParametersForReviewNextVersion = update.NextUpdate;
         }
 
         /// <summary>
@@ -361,7 +378,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.Assets.ApplyDelta(update);
-            m_MissionControlMirror.AssetsNextVersion = update.NextUpdate;
+            m_MissionControlMirrorNextUpdates.AssetsNextVersion = update.NextUpdate;
         }
 
         /// <summary>
@@ -372,7 +389,31 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         {
             Debug.Assert(Monitor.IsEntered(m_Lock));
             m_MissionControlMirror.LaunchPadsStatus.ApplyDelta(update);
-            m_MissionControlMirror.LaunchPadsStatusNextVersion = update.NextUpdate;
+            m_MissionControlMirrorNextUpdates.LaunchPadsStatusNextVersion = update.NextUpdate;
+        }
+
+        /// <summary>
+        /// Update <see cref="m_MissionControlMirror"/> from changes in MissionControl's Parameters DesiredValues
+        /// collection.
+        /// </summary>
+        /// <param name="update">New value (json)</param>
+        void UpdateParametersDesiredValues(IncrementalCollectionUpdate<MissionControl.MissionParameterValue> update)
+        {
+            Debug.Assert(Monitor.IsEntered(m_Lock));
+            m_MissionControlMirror.ParametersDesiredValues.ApplyDelta(update);
+            m_MissionControlMirrorNextUpdates.ParametersDesiredValuesNextVersion = update.NextUpdate;
+        }
+
+        /// <summary>
+        /// Update <see cref="m_MissionControlMirror"/> from changes in MissionControl's Parameters EffectiveValues
+        /// collection.
+        /// </summary>
+        /// <param name="update">New value (json)</param>
+        void UpdateParametersEffectiveValues(IncrementalCollectionUpdate<MissionControl.MissionParameterValue> update)
+        {
+            Debug.Assert(Monitor.IsEntered(m_Lock));
+            m_MissionControlMirror.ParametersEffectiveValues.ApplyDelta(update);
+            m_MissionControlMirrorNextUpdates.ParametersEffectiveValuesNextVersion = update.NextUpdate;
         }
 
         /// <summary>
@@ -527,9 +568,14 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         List<MessageFromCapsule> m_MessagesFromCapsules = new();
 
         /// <summary>
-        /// Stores the states of data structures mirror from MissionControl.
+        /// Stores the states of data structures mirrored from MissionControl.
         /// </summary>
         MissionControlMirror m_MissionControlMirror;
+
+        /// <summary>
+        /// Stores the next update versions for each incremental members of <see cref="m_MissionControlMirror"/>.
+        /// </summary>
+        MissionControlMirrorNextUpdates m_MissionControlMirrorNextUpdates;
 
         /// <summary>
         /// Canceled when the application is requested to stop.

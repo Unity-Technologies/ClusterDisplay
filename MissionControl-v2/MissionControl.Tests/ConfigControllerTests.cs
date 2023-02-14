@@ -31,11 +31,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             await m_ProcessHelper.Start(GetTestTempFolder());
 
             // Get the status through the blocking call
-            var objectsUpdate1 = await m_ProcessHelper.GetObjectsUpdate(new[] { (k_StatusObjectName, 0ul) });
+            var objectsUpdate1 = await m_ProcessHelper.GetObjectsUpdate(new[] { (ObservableObjectsName.Status, 0ul) });
             Assert.That(objectsUpdate1.Count, Is.EqualTo(1));
-            var statusUpdate1 = objectsUpdate1[k_StatusObjectName];
+            var statusUpdate1 = objectsUpdate1[ObservableObjectsName.Status];
             var objectsUpdateTask = m_ProcessHelper.GetObjectsUpdate(
-                new[] { (k_StatusObjectName, statusUpdate1.NextUpdate) });
+                new[] { (ObservableObjectsName.Status, statusUpdate1.NextUpdate) });
             await Task.Delay(100); // So that objectsUpdateTask can have the time to complete if it wouldn't block
             Assert.That(objectsUpdateTask.IsCompleted, Is.False);
 
@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // And that the blocking status update got unblocked
             var objectsUpdate2 = await objectsUpdateTask;
             Assert.That(objectsUpdate2.Count, Is.EqualTo(1));
-            var statusUpdate2 = objectsUpdate2[k_StatusObjectName];
+            var statusUpdate2 = objectsUpdate2[ObservableObjectsName.Status];
             Assert.That(statusUpdate2.NextUpdate, Is.GreaterThan(statusUpdate1.NextUpdate));
             Assert.That(statusUpdate2.Updated.Deserialize<Status>(Json.SerializerOptions), Is.EqualTo(status));
         }
@@ -125,11 +125,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var originalEndPoints = newConfig.ControlEndPoints.ToArray();
 
             // Get the status through the blocking call
-            var objectsUpdate1 = await m_ProcessHelper.GetObjectsUpdate(new[] { (k_StatusObjectName, 0ul) });
+            var objectsUpdate1 = await m_ProcessHelper.GetObjectsUpdate(new[] { (ObservableObjectsName.Status, 0ul) });
             Assert.That(objectsUpdate1.Count, Is.EqualTo(1));
-            var statusUpdate1 = objectsUpdate1[k_StatusObjectName];
+            var statusUpdate1 = objectsUpdate1[ObservableObjectsName.Status];
             var objectsUpdateTask = m_ProcessHelper.GetObjectsUpdate(
-                new[] { (k_StatusObjectName, statusUpdate1.NextUpdate) });
+                new[] { (ObservableObjectsName.Status, statusUpdate1.NextUpdate) });
             await Task.Delay(100); // So that objectsUpdateTask can have the time to complete if it wouldn't block
             Assert.That(objectsUpdateTask.IsCompleted, Is.False);
 
@@ -159,7 +159,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             // And that the blocking call succeeded
             var objectsUpdate2 = await objectsUpdateTask;
             Assert.That(objectsUpdate2.Count, Is.EqualTo(1));
-            var statusUpdate2 = objectsUpdate2[k_StatusObjectName];
+            var statusUpdate2 = objectsUpdate2[ObservableObjectsName.Status];
             Assert.That(statusUpdate2.NextUpdate, Is.GreaterThan(statusUpdate1.NextUpdate));
             Assert.That(statusUpdate2.Updated.Deserialize<Status>(Json.SerializerOptions), Is.EqualTo(status));
 
@@ -392,7 +392,5 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
         MissionControlProcessHelper m_ProcessHelper = new();
         List<string> m_TestTempFolders = new();
-
-        const string k_StatusObjectName = "status";
     }
 }

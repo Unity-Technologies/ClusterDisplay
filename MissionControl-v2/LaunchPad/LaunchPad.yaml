@@ -219,6 +219,10 @@ components:
           type: string
           enum: [abort]
           default: abort
+        abortToOver:
+          type: boolean
+          description: Resulting state of the abort command will be over instead of idle.  Useful to get in the same state as if it would be the payload that exited by itself.
+          default: false
       required:
         - type
     ClearCommand:

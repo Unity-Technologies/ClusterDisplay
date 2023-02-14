@@ -20,6 +20,12 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             launchPadB.Identifier = launchPadA.Identifier;
             Assert.That(launchPadA, Is.EqualTo(launchPadB));
 
+            launchPadA.Name = "Top Left";
+            launchPadB.Name = "Bottom Right";
+            Assert.That(launchPadA, Is.Not.EqualTo(launchPadB));
+            launchPadB.Name = "Top Left";
+            Assert.That(launchPadA, Is.EqualTo(launchPadB));
+
             launchPadA.Endpoint = new("http://1.2.3.4:8200");
             launchPadB.Endpoint = new("http://1.2.3.5:8200");
             Assert.That(launchPadA, Is.Not.EqualTo(launchPadB));
@@ -39,6 +45,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             LaunchPad toSerialize = new();
             toSerialize.Identifier = Guid.NewGuid();
+            toSerialize.Name = "Top Left";
             toSerialize.Endpoint = new("http://1.2.3.6:8200");
             toSerialize.SuitableFor.AddRange(new[]{"clusterNode", "liveEditor"});
 
@@ -56,6 +63,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var deserialized = JsonConvert.DeserializeObject<LaunchPad>(jsonString, Json.SerializerOptions);
 
             Assert.That(deserialized!.Identifier, Is.EqualTo(Guid.Parse("59500aca-62cc-440f-8e27-00e4297f0db1")));
+            Assert.That(deserialized.Name, Is.EqualTo("My LaunchPad"));
             Assert.That(deserialized.Endpoint, Is.EqualTo(new Uri("http://127.0.0.1:8200/")));
             Assert.That(deserialized.SuitableFor.Count, Is.EqualTo(1));
             Assert.That(deserialized.SuitableFor[0], Is.EqualTo("clusterNode"));
@@ -74,6 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             LaunchPad toClone = new();
             toClone.Identifier = Guid.NewGuid();
+            toClone.Name = "My Launchpad!!!";
             toClone.Endpoint = new("http://1.2.3.6:8200");
             toClone.SuitableFor = new() { "clusterNode" };
             var cloned = toClone.DeepClone();

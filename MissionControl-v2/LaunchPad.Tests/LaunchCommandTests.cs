@@ -186,6 +186,62 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
         }
 
         [Test]
+        public async Task AbortToOverLaunched()
+        {
+            await m_ProcessHelper.Start(GetTestTempFolder());
+
+            Guid payloadId = Guid.NewGuid();
+            m_HangarBayStub.AddFile(payloadId, "launch.ps1",
+                "$pid | Out-File \"pid.txt\"    \n" +
+                "while ( $true )                \n" +
+                "{                              \n" +
+                "    Start-Sleep -Seconds 60    \n" +
+                "}");
+
+            PrepareCommand prepareCommand = new();
+            prepareCommand.PayloadIds = new [] { payloadId };
+            prepareCommand.LaunchPath = "launch.ps1";
+            await m_ProcessHelper.PostCommand(prepareCommand, HttpStatusCode.Accepted);
+
+            LaunchCommand launchCommand = new();
+            var postCommandRet = await m_ProcessHelper.PostCommandWithStatusCode(launchCommand);
+            Assert.That(postCommandRet, Is.EqualTo(HttpStatusCode.Accepted).Or.EqualTo(HttpStatusCode.OK));
+
+            // Wait for the process to be launched and get its pid
+            string processIdFilename = Path.Combine(m_ProcessHelper.LaunchFolder, "pid.txt");
+            var waitLaunched = Stopwatch.StartNew();
+            Process? launchedProcess = null;
+            while (waitLaunched.Elapsed < TimeSpan.FromSeconds(15) && launchedProcess == null)
+            {
+                try
+                {
+                    var pidText = await File.ReadAllTextAsync(processIdFilename);
+                    launchedProcess = Process.GetProcessById(Convert.ToInt32(pidText));
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+            Assert.That(launchedProcess, Is.Not.Null);
+            Assert.That(launchedProcess!.HasExited, Is.False);
+
+            AbortCommand abortCommand = new();
+            abortCommand.AbortToOver = true;
+            await m_ProcessHelper.PostCommand(abortCommand);
+
+            // The launched process should have been killed
+            Assert.That(launchedProcess.HasExited, Is.True);
+
+            // And so launchpad should be over
+            await m_ProcessHelper.WaitForState(State.Over);
+
+            await Task.Delay(100);
+            var status = await m_ProcessHelper.GetStatus();
+            Assert.That(status.State, Is.EqualTo(State.Over));
+        }
+
+        [Test]
         public async Task DoubleLaunch()
         {
             await m_ProcessHelper.Start(GetTestTempFolder());
@@ -313,9 +369,9 @@ namespace Unity.ClusterDisplay.MissionControl.LaunchPad
             // We know the launched process will immediately end so wait for the state to be over
             await m_ProcessHelper.WaitForState(State.Over);
 
-            string prelaunchContent = File.ReadAllText(prelaunchFilename);
+            string prelaunchContent = await File.ReadAllTextAsync(prelaunchFilename);
             Assert.That(prelaunchContent, Is.EqualTo("Prelaunch argument"));
-            string launchContent = File.ReadAllText(launchFilename);
+            string launchContent = await File.ReadAllTextAsync(launchFilename);
             Assert.That(launchContent, Is.EqualTo("Launch argument"));
         }
 

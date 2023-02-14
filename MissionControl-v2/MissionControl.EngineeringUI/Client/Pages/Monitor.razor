@@ -1,4 +1,5 @@
 @page "/monitor"
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
 <RadzenPanel AllowCollapse="true">
     <HeaderTemplate>
@@ -52,13 +53,13 @@
                                 <RadzenLabel Text=@folder.Path />
                             </div>
                             <div class="col-2 align-items-center border rz-border-color-base-300">
-                                <RadzenLabel Text=@((folder.CurrentSize / (1024*1024.0)).ToString("N2") + " MB") />
+                                <RadzenLabel Text=@(ToGibibytes(folder.CurrentSize) + " GiB") />
                             </div>
                             <div class="col-2 align-items-center border rz-border-color-base-300">
-                                <RadzenLabel Text=@((folder.ZombiesSize / (1024*1024.0)).ToString("N2") + " MB") />
+                                <RadzenLabel Text=@(ToGibibytes(folder.ZombiesSize) + " GiB") />
                             </div>
                             <div class="col-2 align-items-center border rz-border-color-base-300">
-                                <RadzenLabel Text=@((folder.MaximumSize / (1024*1024.0)).ToString("N2") + " MB") />
+                                <RadzenLabel Text=@(ToGibibytes(folder.MaximumSize) + " GiB") />
                             </div>
                         </div>
                     }
@@ -105,8 +106,10 @@
             it looks like there is some sort of bug that when using it we cannot configure the list of columns
             anymore...  So skip that feature for now since this is only an engineering ui...
         -->
-        <RadzenDataGrid @ref="m_LaunchapdsStatusGrid" Data=@LaunchPadStatusEntries AllowColumnResize="true"
-                        class="mt-1" CellRender=@CellRender AllowColumnPicking="true">
+        <RadzenDataGrid @ref="m_LaunchapdsStatusGrid" Data=@LaunchPadStatusEntries TItem="LaunchPadStatusEntry"
+                        class="mt-1" CellRender=@CellRender RowRender=@RowRender
+                        AllowColumnResize="true" AllowColumnPicking="true"
+                        ExpandMode="DataGridExpandMode.Single" RowExpand=@RowExpand>
             <Columns>
                 @foreach (var column in LaunchPadStatusColumns)
                 {
@@ -121,6 +124,9 @@
                     </RadzenDataGridColumn>
                 }
             </Columns>
+            <Template Context="statusEntry">
+                <MissionParameters Parameters=@statusEntry.MissionParameters />
+            </Template>
         </RadzenDataGrid>
     </ChildContent>
 </RadzenPanel>

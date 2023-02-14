@@ -45,6 +45,7 @@ namespace Unity.ClusterDisplay
         readonly List<BulkEventListener> m_BulkListeners = new();
         readonly bool m_IsReadOnly;
 
+        // ReSharper disable once StaticMemberInGenericType
         static readonly Guid k_NamespaceId = Guid.Parse("8876618a-f18a-11ec-8ea0-0242ac120002");
 
         // Create a (effectively) unique identifier for this event bus based on the full-qualified name
@@ -64,7 +65,7 @@ namespace Unity.ClusterDisplay
             : this(clusterSyncState.NodeRole switch
             {
                 NodeRole.Emitter => EventBusFlags.Loopback | EventBusFlags.WriteToCluster,
-                NodeRole.Repeater => EventBusFlags.ReadFromCluster,
+                NodeRole.Repeater or NodeRole.Backup => EventBusFlags.ReadFromCluster,
                 NodeRole.Unassigned => EventBusFlags.None,
                 _ => throw new ArgumentOutOfRangeException()
             }, id) { }

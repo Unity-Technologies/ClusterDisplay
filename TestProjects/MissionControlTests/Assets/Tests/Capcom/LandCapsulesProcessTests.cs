@@ -29,6 +29,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             LandCapsulesProcess testProcess = new();
             m_Mirror.CapcomUplink.ProceedWithLanding = true;
+            ++m_Mirror.CapcomUplinkVersionNumber;
             testProcess.Process(m_Mirror);
 
             Assert.That(m_Capsules[0].FakeLandHandler.Called, Is.True);

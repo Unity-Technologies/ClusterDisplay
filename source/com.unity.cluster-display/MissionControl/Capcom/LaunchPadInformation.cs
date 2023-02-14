@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Sockets;
 using Unity.ClusterDisplay.MissionControl.Capsule;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
@@ -27,9 +28,13 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         /// <summary>
+        /// Launchpad's identifier
+        /// </summary>
+        public Guid Identifier => Definition.Identifier;
+
+        /// <summary>
         /// Definition of the LaunchComplex owning this LaunchPad (does not depend on configuration of the mission).
         /// </summary>
-
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public LaunchComplex ComplexDefinition { get; set; }
 
@@ -58,9 +63,51 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         public int NodeId { get; set; } = -1;
 
         /// <summary>
+        /// Current render node ID as reported by the Launchpad.
+        /// </summary>
+        public int RenderNodeId
+        {
+            get
+            {
+                if (Status?.IsDefined ?? false)
+                {
+                    var dynamicEntry = Status?.DynamicEntries?.FirstOrDefault(
+                        e => e.Name == LaunchPadReportDynamicEntryConstants.StatusRenderNodeId);
+                    if (dynamicEntry is {Value: int})
+                    {
+                        m_LastRenderNodeId = (int)dynamicEntry.Value;
+                    }
+                }
+                return m_LastRenderNodeId;
+            }
+        }
+        int m_LastRenderNodeId = -1;
+
+        /// <summary>
         /// ClusterDisplay role assigned to the node executed by this LaunchPad.
         /// </summary>
-        public string NodeRole { get; set; } = LaunchParameterConstants.NodeRoleUnassigned;
+        public NodeRole StartRole { get; set; } = NodeRole.Unassigned;
+
+        /// <summary>
+        /// Current role as reported by the Launchpad.
+        /// </summary>
+        public NodeRole CurrentRole
+        {
+            get
+            {
+                if (Status?.IsDefined ?? false)
+                {
+                    var dynamicEntry = Status?.DynamicEntries?.FirstOrDefault(
+                        e => e.Name == LaunchPadReportDynamicEntryConstants.StatusNodeRole);
+                    if (dynamicEntry is {Value: string} && Enum.TryParse<NodeRole>((string)dynamicEntry.Value, out var role))
+                    {
+                        m_LastCurrentRole = role;
+                    }
+                }
+                return m_LastCurrentRole;
+            }
+        }
+        NodeRole m_LastCurrentRole = NodeRole.Unassigned;
 
         /// <summary>
         /// Port to which the capsule will be listening for request from capcom.
@@ -98,6 +145,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 return m_CapsuleNetworkStream;
             }
         }
+
+        /// <summary>
+        /// <see cref="MissionParameter.ValueIdentifier"/> for the parameter used to signal this node is failed and
+        /// should be removed from the cluster.
+        /// </summary>
+        public String FailMissionParameterValueIdentifier => $"{Definition.Identifier}.Fail";
 
         public void Dispose()
         {

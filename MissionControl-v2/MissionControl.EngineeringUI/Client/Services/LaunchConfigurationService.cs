@@ -18,13 +18,15 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
     /// </summary>
     public class LaunchConfigurationService
     {
-        public LaunchConfigurationService(HttpClient httpClient, IConfiguration configuration,
+        public LaunchConfigurationService(HttpClient httpClient,
+            IConfiguration configuration,
             ObjectsUpdateService objectsUpdateService)
         {
             m_HttpClient = httpClient;
             m_HttpClient.BaseAddress = configuration.GetMissionControlUri();
 
-            objectsUpdateService.RegisterForUpdates("currentMission/launchConfiguration", LaunchConfigurationUpdate);
+            objectsUpdateService.RegisterForUpdates(ObservableObjectsName.CurrentMissionLaunchConfiguration,
+                LaunchConfigurationUpdate);
             m_MissionControlValue.ObjectChanged += ReadOnlyObjectChanged;
         }
 
@@ -62,13 +64,17 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
         /// </summary>
         public async Task PushWorkToMissionControlAsync()
         {
+            // Needs to be before or otherwise quick update from mission control could result in testing for
+            // m_JustPushed before we had the time to set it!
+            m_JustPushed = true;
+
             var responseMessage = await m_HttpClient.PutAsJsonAsync("currentMission/launchConfiguration", m_WorkValue,
                 Json.SerializerOptions);
             if (!responseMessage.IsSuccessStatusCode)
             {
+                m_JustPushed = false;
                 throw new InvalidOperationException(await responseMessage.Content.ReadAsStringAsync());
             }
-            m_JustPushed = true;
         }
 
         /// <summary>

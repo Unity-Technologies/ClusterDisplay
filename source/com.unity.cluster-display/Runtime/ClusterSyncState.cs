@@ -1,28 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    /// <summary>
-    /// Enum containing the Cluster node roles.
-    /// </summary>
-    public enum NodeRole
-    {
-        /// <summary>
-        /// The node does not have an assigned role (not operating as part of a cluster).
-        /// </summary>
-        Unassigned,
-        /// <summary>
-        /// The source node that broadcasts synchronization data.
-        /// </summary>
-        Emitter,
-        /// <summary>
-        /// The client nodes that receive synchronization data.
-        /// </summary>
-        Repeater
-    }
-
     public interface IClusterSyncState
     {
         string InstanceName { get; }
@@ -43,7 +22,6 @@ namespace Unity.ClusterDisplay
         /// </remarks>
         byte RenderNodeID { get; }
         bool RepeatersDelayedOneFrame { get; }
-        bool ReplaceHeadlessEmitter { get; }
 
         string GetDiagnostics();
     }
@@ -59,12 +37,8 @@ namespace Unity.ClusterDisplay
         public ulong Frame => LocalNode.FrameIndex;
 
         public byte NodeID => LocalNode.Config.NodeId;
-        public byte RenderNodeID =>
-            ReplaceHeadlessEmitter && NodeRole is NodeRole.Repeater
-                ? (byte)(NodeID - 1)
-                : NodeID;
+        public byte RenderNodeID { get; private set; }
 
         public bool RepeatersDelayedOneFrame { get; private set; }
-        public bool ReplaceHeadlessEmitter { get; private set; }
     }
 }

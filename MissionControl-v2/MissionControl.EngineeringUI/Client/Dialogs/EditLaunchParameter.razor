@@ -1,4 +1,5 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
+@using Unity.ClusterDisplay.MissionControl;
 
 <RadzenTemplateForm TItem="LaunchParameterValue" Data=@Edited Submit=@OnOk Style="height: 100%;">
     <div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
@@ -23,24 +24,10 @@
                     @{
                         int minValue = int.MinValue;
                         int maxValue = int.MaxValue;
-                        if (Parameter.Constraint is LaunchCatalog.RangeConstraint rangeConstraint)
+                        if (Parameter.Constraint is RangeConstraint rangeConstraint)
                         {
-                            if (rangeConstraint.Min != null)
-                            {
-                                minValue = rangeConstraint.MinInt32;
-                                if (rangeConstraint.MinExclusive)
-                                {
-                                    ++minValue;
-                                }
-                            }
-                            if (rangeConstraint.Max != null)
-                            {
-                                maxValue = rangeConstraint.MaxInt32;
-                                if (rangeConstraint.MaxExclusive)
-                                {
-                                    --maxValue;
-                                }
-                            }
+                            minValue = rangeConstraint.MinInt32Inclusive;
+                            maxValue = rangeConstraint.MaxInt32Inclusive;
                         }
                     }
                     @if (minValue > int.MinValue && maxValue < int.MaxValue)
@@ -64,69 +51,31 @@
             {
                 <div class="row mb-1">
                     @{
-                        float step = 0.00001f;
-                        float minValue = (float)decimal.MinValue;
-                        float maxValue = (float)decimal.MaxValue;
-                        if (Parameter.Constraint is LaunchCatalog.RangeConstraint rangeConstraint)
+                        decimal minValue = decimal.MinValue;
+                        decimal maxValue = decimal.MaxValue;
+                        if (Parameter.Constraint is RangeConstraint rangeConstraint)
                         {
-                            if (rangeConstraint.Min != null)
-                            {
-                                minValue = rangeConstraint.MinSingle;
-                                if (rangeConstraint.MinExclusive)
-                                {
-                                    float delta = step;
-                                    // ReSharper disable once CompareOfFloatsByEqualityOperator
-                                    while (minValue + delta == minValue)
-                                    {
-                                        delta += step;
-                                    }
-                                    minValue += delta;
-                                }
-                            }
-                            if (rangeConstraint.Max != null)
-                            {
-                                maxValue = rangeConstraint.MaxSingle;
-                                if (rangeConstraint.MaxExclusive)
-                                {
-                                    float delta = step;
-                                    // ReSharper disable once CompareOfFloatsByEqualityOperator
-                                    while (maxValue - delta == maxValue)
-                                    {
-                                        delta += step;
-                                    }
-                                    maxValue -= delta;
-                                }
-                            }
+                            minValue = rangeConstraint.MinDecimalInclusive;
+                            maxValue = rangeConstraint.MaxDecimalInclusive;
                         }
                     }
-                    @* ReSharper disable once CompareOfFloatsByEqualityOperator *@
-                    @if (minValue != (float)decimal.MinValue && maxValue < (float)decimal.MaxValue)
+                    @if (minValue != decimal.MinValue && maxValue != decimal.MaxValue)
                     {
+                        var step = Math.Round(maxValue - minValue, 0) / 1000;
                         <div class="col-2">
                             <RadzenNumeric TValue="float" @bind-Value=@EditedValueSingle
-                                           Min=@((decimal)minValue) Max=@((decimal)maxValue) />
+                                           Min=@minValue Max=@maxValue Step=@((step * 10).ToString()) />
                         </div>
                         <div class="col-10 align-items-center d-flex">
                             <RadzenSlider TValue="float" @bind-Value=@EditedValueSingle
-                                          Min=@((decimal)minValue) Max=@((decimal)maxValue)
-                                          Class="w-100" />
+                                          Min=@minValue Max=@maxValue Class="w-100 ms-3" Step=@step.ToString() />
                         </div>
                     }
                     else
                     {
-                        decimal minValueDec = decimal.MinValue;
-                        if (minValue > (float)decimal.MinValue)
-                        {
-                            minValueDec = (decimal)minValue;
-                        }
-                        decimal maxValueDec = decimal.MaxValue;
-                        if (maxValue < (float)decimal.MaxValue)
-                        {
-                            maxValueDec = (decimal)maxValue;
-                        }
                         <div class="col-12">
                             <RadzenNumeric TValue="float" @bind-Value=@EditedValueSingle
-                                           Min=@minValueDec Max=@maxValueDec />
+                                           Min=@minValue Max=@maxValue />
                         </div>
                     }
                 </div>
@@ -139,7 +88,7 @@
                         {
                             <RadzenDropDown @bind-Value=@EditedValueString Class="w-100" Data=@listConstraint.Choices />
                         }
-                        else if (Parameter.Constraint is LaunchCatalog.RegularExpressionConstraint regexConstraint)
+                        else if (Parameter.Constraint is RegularExpressionConstraint regexConstraint)
                         {
                             <RadzenTextBox Name="InputField" @bind-Value=@EditedValueString Class="w-100" />
                             @if (!regexConstraint.Validate(""))

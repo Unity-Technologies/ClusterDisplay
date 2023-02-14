@@ -15,7 +15,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         public StatusService(ILogger<StatusService> logger,
             IHostApplicationLifetime applicationLifetime,
             ObservableObjectCatalogService catalogService)
-            : base(applicationLifetime, catalogService, CreateNewStatus(logger), "status")
+            : base(applicationLifetime, catalogService, CreateNewStatus(logger), ObservableObjectsName.Status)
         {
         }
 

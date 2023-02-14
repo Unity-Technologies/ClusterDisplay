@@ -1,17 +1,13 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
-using Unity.ClusterDisplay;
 using System.Linq;
 
 namespace Unity.ClusterDisplay.Tests
 {
     public class TestArguments
     {
-        const string commonArguments =
+        const string k_CommonArguments =
                 "-batchMode " +
                 "-replaceHeadlessEmitter " +
                 "-delayRepeaters " +
@@ -33,7 +29,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestCommonArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691";
+            var cmd = k_CommonArguments + "-emitterNode 0 4 224.0.1.0:25691";
 
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
@@ -74,7 +70,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestEmitterArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 224.0.1.0:25691";
+            var cmd = k_CommonArguments + "-emitterNode 0 4 224.0.1.0:25691";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.emitterSpecified.Defined);
@@ -96,7 +92,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestRepeaterArguments()
         {
-            var cmd = commonArguments + "-node 1 224.0.1.0:25692";
+            var cmd = k_CommonArguments + "-node 1 224.0.1.0:25692";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             Assert.That(CommandLineParser.repeaterSpecified.Defined);
@@ -115,14 +111,14 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TestClusterParamsFromArguments()
         {
-            var cmd = commonArguments + "-emitterNode 0 4 225.0.6.0:25690";
+            var cmd = k_CommonArguments + "-emitterNode 0 4 225.0.6.0:25690";
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             var clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
             var expected = new ClusterParams
             {
                 ClusterLogicSpecified = true,
-                EmitterSpecified = true,
+                Role = NodeRole.Emitter,
                 RepeaterCount = 4,
                 Port = 25690,
                 MulticastAddress = "225.0.6.0",
@@ -142,6 +138,7 @@ namespace Unity.ClusterDisplay.Tests
             clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
 
             expected = ClusterParams.Default;
+            expected.Role = NodeRole.Repeater;
             expected.ClusterLogicSpecified = true;
             expected.NodeID = 4;
             expected.Fence = FrameSyncFence.Network;
@@ -153,7 +150,7 @@ namespace Unity.ClusterDisplay.Tests
             clusterParams = ClusterParamExtensions.ApplyCommandLine(ClusterParams.Default);
 
             expected = ClusterParams.Default;
-            expected.EmitterSpecified = true;
+            expected.Role = NodeRole.Emitter;
             expected.ClusterLogicSpecified = true;
             expected.NodeID = 3;
             expected.RepeaterCount = 4;
@@ -168,12 +165,14 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [ClusterParamProcessor]
+        // ReSharper disable once UnusedType.Local
         static class MyExternalParamProcessor
         {
             [ClusterParamProcessorMethod]
+            // ReSharper disable once UnusedMember.Local
             static ClusterParams MessWithParams(ClusterParams inputOutput)
             {
-                inputOutput.EmitterSpecified = true;
+                inputOutput.Role = NodeRole.Emitter;
                 inputOutput.NodeID = 6;
                 inputOutput.ClusterLogicSpecified = true;
                 return inputOutput;
@@ -187,7 +186,7 @@ namespace Unity.ClusterDisplay.Tests
             CommandLineParser.Override(cmd.Split(' ').ToList());
 
             var clusterParams = ClusterParams.Default.PreProcess();
-            Assert.That(clusterParams.EmitterSpecified, Is.True);
+            Assert.That(clusterParams.Role, Is.EqualTo(NodeRole.Emitter));
             Assert.That(clusterParams.NodeID, Is.EqualTo(6));
             Assert.That(clusterParams.ClusterLogicSpecified, Is.True);
         }

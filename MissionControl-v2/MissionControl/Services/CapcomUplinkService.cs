@@ -13,7 +13,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
         public CapcomUplinkService(ILogger<CapcomUplinkService> logger,
             IHostApplicationLifetime applicationLifetime,
             ObservableObjectCatalogService catalogService)
-            : base(applicationLifetime, catalogService, new CapcomUplink(), "capcomUplink")
+            : base(applicationLifetime, catalogService, new CapcomUplink(), ObservableObjectsName.CapcomUpLink)
         {
         }
     }

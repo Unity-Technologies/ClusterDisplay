@@ -66,7 +66,7 @@ namespace Unity.ClusterDisplay.Tests
             emitterClusterSync.EnableClusterDisplay(new ClusterParams
             {
                 ClusterLogicSpecified = true,
-                EmitterSpecified = true,
+                Role = NodeRole.Emitter,
                 NodeID = k_EmitterId,
                 RepeaterCount = numRepeaters,
                 MulticastAddress = MulticastAddress,
@@ -112,7 +112,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Wait for answer
                 Assert.That(ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(m_TestAgent, testDeadline,
-                    message => message.Payload.NodeId == k_RepeaterId && message.Payload.Accepted), Is.True);
+                    message => message.Payload is {NodeId: k_RepeaterId, Accepted: true}), Is.True);
 
                 bool receivedEmitterWaitingToStartFrame = false;
                 while (Stopwatch.GetTimestamp() < testDeadline && !receivedEmitterWaitingToStartFrame)
@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay.Tests
             repeaterClusterSync.EnableClusterDisplay(new ClusterParams
             {
                 ClusterLogicSpecified = true,
-                EmitterSpecified = false,
+                Role = NodeRole.Repeater,
                 NodeID = k_RepeaterId,
                 MulticastAddress = MulticastAddress,
                 AdapterName = m_InterfaceName,
@@ -218,10 +218,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive message about ready to start frame
                 Assert.That(ConsumeFirstMessageOfRepeaterWhere<RepeaterWaitingToStartFrame>(m_TestAgent, testDeadline,
-                    message =>
-                    {
-                        return message.Payload.FrameIndex == 0 && message.Payload.NodeId == k_RepeaterId;
-                    }), Is.True);
+                    message => message.Payload is {FrameIndex: 0, NodeId: k_RepeaterId}), Is.True);
 
                 // Answer
                 m_TestAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
@@ -236,6 +233,7 @@ namespace Unity.ClusterDisplay.Tests
                     nativeArray.CopyTo(AllocRandomByteArray(nativeArray.Length));
                     return nativeArray.Length;
                 });
+                // ReSharper disable once AccessToDisposedClosure
                 emitterFrameDataSplitter.SendFrameData(0, ref frameDataBuffer);
             });
 
@@ -265,7 +263,7 @@ namespace Unity.ClusterDisplay.Tests
             m_Instances.Clear();
         }
 
-        bool ConsumeFirstMessageOfRepeaterWhere<T>(IUdpAgent udpAgent, long testEndTimestamp,
+        static bool ConsumeFirstMessageOfRepeaterWhere<T>(IUdpAgent udpAgent, long testEndTimestamp,
             Func<ReceivedMessage<T>, bool> predicate, IEnumerable<MessageType> typesToSkip = null) where T: unmanaged
         {
             var typesToSkipHashSet = new HashSet<MessageType>();

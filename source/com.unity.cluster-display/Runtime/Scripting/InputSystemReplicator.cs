@@ -73,6 +73,7 @@ namespace Unity.ClusterDisplay.Scripting
                     EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.InputSystem, WriteInputData);
                     break;
                 case NodeRole.Repeater:
+                case NodeRole.Backup:
                     // Repeater receives input data from the cluster.
                     RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.InputSystem, LoadInputData);
                     // For local testing, the repeater needs the input system to work when it's not in focus.

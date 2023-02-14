@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
     {
         public LaunchPadsStatusService(IncrementalCollectionsUpdateService collectionsUpdateService)
         {
-            collectionsUpdateService.RegisterForUpdates("launchPadsStatus", CollectionUpdate);
+            collectionsUpdateService.RegisterForUpdates(IncrementalCollectionsName.LaunchPadsStatus, CollectionUpdate);
         }
 
         /// <summary>

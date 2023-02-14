@@ -32,7 +32,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         /// <summary>
         /// Additional status information that depends on the Launchable type running.
         /// </summary>
-        public IEnumerable<LaunchPadReportDynamicEntry> DynamicEntries { get; set; } = Enumerable.Empty<LaunchPadReportDynamicEntry>();
+        public IEnumerable<LaunchPadReportDynamicEntry> DynamicEntries { get; set; } =
+            Enumerable.Empty<LaunchPadReportDynamicEntry>();
 
         /// <inheritdoc/>
         public void DeepCopyFrom(IIncrementalCollectionObject fromObject)

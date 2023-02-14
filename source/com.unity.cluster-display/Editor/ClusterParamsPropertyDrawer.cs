@@ -57,13 +57,13 @@ namespace Unity.ClusterDisplay.Editor
             editorDebugFoldout.Add(new PropertyField(property.FindPropertyRelative("NodeID")));
             editorDebugFoldout.Add(new PropertyField(property.FindPropertyRelative("RepeaterCount")));
 
-            var isEmitterProperty = property.FindPropertyRelative("EmitterSpecified");
+            var nodeRoleProperty = property.FindPropertyRelative("Role");
 
-            // Hidden control to create a binding to EmitterSpecified, but we're not going to display it (we don't
+            // Hidden control to create a binding to NodeRoleProperty, but we're not going to display it (we don't
             // want to use a checkbox).
-            var emitterSpecifiedWatcher = new PropertyField(isEmitterProperty);
-            emitterSpecifiedWatcher.SetHidden(true);
-            editorDebugFoldout.Add(emitterSpecifiedWatcher);
+            var nodeRolePropertyWatcher = new PropertyField(nodeRoleProperty);
+            nodeRolePropertyWatcher.SetHidden(true);
+            editorDebugFoldout.Add(nodeRolePropertyWatcher);
 
             // Use buttons to control the Emitter/Repeater setting
             var emitterRepeaterContainer = new VisualElement();
@@ -78,13 +78,13 @@ namespace Unity.ClusterDisplay.Editor
 
             emitterButton.RegisterCallback((ClickEvent _) =>
             {
-                isEmitterProperty.boolValue = true;
+                nodeRoleProperty.enumValueIndex = (int)NodeRole.Emitter;
                 property.serializedObject.ApplyModifiedProperties();
             });
 
             repeaterButton.RegisterCallback((ClickEvent _) =>
             {
-                isEmitterProperty.boolValue = false;
+                nodeRoleProperty.enumValueIndex = (int)NodeRole.Repeater;
                 property.serializedObject.ApplyModifiedProperties();
             });
 
@@ -94,7 +94,7 @@ namespace Unity.ClusterDisplay.Editor
                 inputWarning.SetHidden(hideWarning);
                 replaceHeadlessField.SetHidden(!headlessProperty.boolValue);
 
-                if (isEmitterProperty.boolValue)
+                if (nodeRoleProperty.enumValueIndex == (int)NodeRole.Emitter)
                 {
                     emitterButton.AddToClassList("checked");
                     repeaterButton.RemoveFromClassList("checked");

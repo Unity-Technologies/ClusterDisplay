@@ -36,14 +36,15 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             ++m_InUseCount;
             if (m_InUseCount == 1)
             {
-                m_CollectionsUpdateService.RegisterForUpdates(k_IncrementalCollectionName, CollectionUpdate);
+                m_CollectionsUpdateService.RegisterForUpdates(IncrementalCollectionsName.LaunchPadsHealth,
+                    CollectionUpdate);
             }
 
             return new InUseToken(() => {
                 --m_InUseCount;
                 if (m_InUseCount == 0)
                 {
-                    m_CollectionsUpdateService.UnregisterFromUpdates(k_IncrementalCollectionName);
+                    m_CollectionsUpdateService.UnregisterFromUpdates(IncrementalCollectionsName.LaunchPadsHealth);
                 }
             });
         }
@@ -78,7 +79,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             return deserializeRet.NextUpdate;
         }
 
-        const string k_IncrementalCollectionName = "launchPadsHealth";
         readonly IncrementalCollectionsUpdateService m_CollectionsUpdateService;
 
         /// <summary>

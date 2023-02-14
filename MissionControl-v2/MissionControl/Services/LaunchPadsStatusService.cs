@@ -27,8 +27,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Services
             m_Logger = logger;
             m_ComplexesService = complexesService;
 
-            incrementalCollectionService.Register("launchPadsStatus", RegisterForChangesInCollection,
-                GetIncrementalUpdatesAsync);
+            incrementalCollectionService.Register(IncrementalCollectionsName.LaunchPadsStatus,
+                RegisterForChangesInCollection, GetIncrementalUpdatesAsync);
 
             // Remarks: I admit, it looks strange to lock in the constructor, but created LaunchStatusUpdaters might
             // start to update the collection as soon as updated.  So let's avoid any chance of problems...

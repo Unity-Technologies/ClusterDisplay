@@ -4,9 +4,10 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.ClusterDisplay.MissionControl.Shared",
-        "Unity.ClusterDisplay.Editor",
         "Unity.ClusterDisplay.Runtime",
+        "Unity.ClusterDisplay.Runtime.Shared",
+        "Unity.ClusterDisplay.Editor",
+        "Unity.ClusterDisplay.MissionControl.Shared",
         "Unity.ClusterDisplay.MissionControl.Capcom"
     ],
     "includePlatforms": [

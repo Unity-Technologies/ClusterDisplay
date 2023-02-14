@@ -162,7 +162,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {selected.Name}",
                 new Dictionary<string, object>{ {"Asset", asset}, {"Complex", selected}, {"ToEdit", toEdit} },
                 new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
-            if (ret == null || (bool)ret == false)
+            if (!(bool)(ret ?? false))
             {
                 return;
             }
@@ -180,7 +180,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             if (LaunchConfigurationService.WorkValueNeedsPush)
             {
-                await ApplyChanges();
+                if (!await ApplyChanges())
+                {
+                    return;
+                }
             }
 
             await MissionCommandsService.LaunchMissionAsync();
@@ -191,7 +194,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return MissionCommandsService.StopCurrentMissionAsync();
         }
 
-        async Task ApplyChanges()
+        async Task<bool> ApplyChanges()
         {
             // Check we are not overwriting someone else's work.
             if (LaunchConfigurationService.HasMissionControlValueChangedSinceWorkValueModified)
@@ -201,7 +204,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                     "Overwrite confirmation", new () { OkButtonText = "Yes", CancelButtonText = "No" });
                 if (!ret.HasValue || !ret.Value)
                 {
-                    return;
+                    return false;
                 }
             }
 
@@ -240,6 +243,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             // Send to Mission Control
             await LaunchConfigurationService.PushWorkToMissionControlAsync();
+
+            // Done
+            return true;
         }
 
         void UndoChanges()

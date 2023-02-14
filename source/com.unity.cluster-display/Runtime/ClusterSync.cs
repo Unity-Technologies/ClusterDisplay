@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using System.Net;
+#if ENABLE_INPUT_SYSTEM
 using Unity.ClusterDisplay.Scripting;
+#endif
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
@@ -71,7 +73,7 @@ namespace Unity.ClusterDisplay
             ClusterDebug.Log($"Created instance of: {nameof(ClusterSync)} with name: \"{instanceName}\".");
         }
 
-        private DebugPerf m_FrameRatePerf = new();
+        DebugPerf m_FrameRatePerf = new();
         DebugPerf m_StartDelayMonitor = new();
         DebugPerf m_EndDelayMonitor = new();
 
@@ -111,7 +113,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Debug info.
         /// </summary>
-        /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
+        /// <returns>Returns generic statistics as a string (Average FPS, AvgSynchronization overhead)</returns>
         public string GetDiagnostics()
         {
             if (LocalNode == null)
@@ -168,7 +170,6 @@ namespace Unity.ClusterDisplay
             IsTerminated = false;
             IsClusterLogicEnabled = clusterParams.ClusterLogicSpecified;
             EmitterIsHeadless = clusterParams.HeadlessEmitter;
-            ReplaceHeadlessEmitter = clusterParams.ReplaceHeadlessEmitter && EmitterIsHeadless;
 
             onPreEnableClusterDisplay?.Invoke();
 
@@ -192,6 +193,16 @@ namespace Unity.ClusterDisplay
             }
 #endif
 
+            RenderNodeID = LocalNode.Config.NodeId;
+            if (clusterParams.ReplaceHeadlessEmitter && EmitterIsHeadless && NodeRole is NodeRole.Repeater)
+            {
+                --RenderNodeID;
+            }
+            if (NodeRole == NodeRole.Backup)
+            {
+                RenderNodeID = 0;
+            }
+
             RegisterDelegates();
             ClusterSyncLooper.InjectSynchPointInPlayerLoop();
             onPostEnableClusterDisplay?.Invoke();
@@ -207,7 +218,7 @@ namespace Unity.ClusterDisplay
             {
                 var emitterNodeConfig = new EmitterNodeConfig
                 {
-                    ExpectedRepeaterCount = (byte)clusterParams.RepeaterCount
+                    ExpectedRepeaterCount = (byte)(clusterParams.RepeaterCount + clusterParams.BackupCount)
                 };
                 udpConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
                 LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, new UdpAgent(udpConfig));
@@ -241,8 +252,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        bool TryInitializeRepeater(ClusterNodeConfig clusterNodeConfig, UdpAgentConfig udpConfig,
-            ClusterParams clusterParams)
+        bool TryInitializeRepeater(ClusterNodeConfig clusterNodeConfig, UdpAgentConfig udpConfig)
         {
             InstanceLog($"Initializing {nameof(ClusterSync)} for repeater.");
 
@@ -253,22 +263,7 @@ namespace Unity.ClusterDisplay
 
                 NodeRole = NodeRole.Repeater;
 
-                switch (clusterNodeConfig.InputSync)
-                {
-#if ENABLE_INPUT_SYSTEM
-                    case InputSync.InputSystem:
-                        ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Repeater));
-                        break;
-#endif
-                    case InputSync.Legacy:
-                        RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.Input,
-                            ClusterSerialization.RestoreInputManagerState);
-                        break;
-                    case InputSync.None:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                InitializeRepeaterInputSync(clusterNodeConfig);
 
                 return true;
             }
@@ -276,6 +271,48 @@ namespace Unity.ClusterDisplay
             {
                 ClusterDebug.LogError($"Cannot initialize repeater node: {e.Message}");
                 return false;
+            }
+        }
+
+        bool TryInitializeBackup(ClusterNodeConfig clusterNodeConfig, UdpAgentConfig udpConfig)
+        {
+            InstanceLog($"Initializing {nameof(ClusterSync)} for backup.");
+
+            try
+            {
+                udpConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
+                LocalNode = new RepeaterNode(clusterNodeConfig, new UdpAgent(udpConfig));
+
+                NodeRole = NodeRole.Backup;
+
+                InitializeRepeaterInputSync(clusterNodeConfig);
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                ClusterDebug.LogError($"Cannot initialize backup node: {e.Message}");
+                return false;
+            }
+        }
+
+        static void InitializeRepeaterInputSync(ClusterNodeConfig clusterNodeConfig)
+        {
+            switch (clusterNodeConfig.InputSync)
+            {
+#if ENABLE_INPUT_SYSTEM
+                case InputSync.InputSystem:
+                    ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Repeater));
+                    break;
+#endif
+                case InputSync.Legacy:
+                    RepeaterStateReader.RegisterOnLoadDataDelegate((int)StateID.Input,
+                        ClusterSerialization.RestoreInputManagerState);
+                    break;
+                case InputSync.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -301,18 +338,13 @@ namespace Unity.ClusterDisplay
                     LoggingFilenameSuffix = $".NodeId-{clusterParams.NodeID}"
                 };
 
-                if (clusterParams.EmitterSpecified)
+                return clusterParams.Role switch
                 {
-                    if (!TryInitializeEmitter(nodeConfig, udpAgentConfig, clusterParams))
-                        return false;
-
-                    return true;
-                }
-
-                if (TryInitializeRepeater(nodeConfig, udpAgentConfig, clusterParams))
-                    return true;
-
-                throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.");
+                    NodeRole.Emitter => TryInitializeEmitter(nodeConfig, udpAgentConfig, clusterParams),
+                    NodeRole.Repeater => TryInitializeRepeater(nodeConfig, udpAgentConfig),
+                    NodeRole.Backup => TryInitializeBackup(nodeConfig, udpAgentConfig),
+                    _ => throw new Exception("Cluster command arguments requires a \"-emitterNode\" or \"-node\" flag.")
+                };
             }
 
             catch (Exception e)

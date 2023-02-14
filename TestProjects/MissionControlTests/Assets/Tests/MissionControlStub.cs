@@ -22,7 +22,11 @@ namespace Unity.ClusterDisplay.MissionControl
         public MissionControlStub()
         {
             m_HttpListener.Prefixes.Add(k_HttpListenerEndpoint);
-            LaunchComplexes.SomethingChanged += _ => m_LaunchComplexesCv.Signal();
+            LaunchComplexes.SomethingChanged += _ => m_IncrementalCollectionChangedCv.Signal();
+            LaunchParametersForReview.SomethingChanged += _ => m_IncrementalCollectionChangedCv.Signal();
+            MissionParameters.SomethingChanged += _ => m_IncrementalCollectionChangedCv.Signal();
+            MissionParametersDesiredValues.SomethingChanged += _ => m_IncrementalCollectionChangedCv.Signal();
+            MissionParametersEffectiveValues.SomethingChanged += _ => m_IncrementalCollectionChangedCv.Signal();
         }
 
         public void Start()
@@ -60,8 +64,11 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
-        public IncrementalCollection<LaunchComplex> LaunchComplexes { get; set; } = new();
-        public IncrementalCollection<LaunchParameterForReview> LaunchParametersForReview { get; set; } = new();
+        public IncrementalCollection<LaunchComplex> LaunchComplexes { get; } = new();
+        public IncrementalCollection<LaunchParameterForReview> LaunchParametersForReview { get; } = new();
+        public IncrementalCollection<MissionParameter> MissionParameters { get; } = new();
+        public IncrementalCollection<MissionParameterValue> MissionParametersDesiredValues { get; } = new();
+        public IncrementalCollection<MissionParameterValue> MissionParametersEffectiveValues { get; } = new();
 
         // ReSharper disable once MemberCanBePrivate.Global
         public Action<string, HttpListenerRequest, HttpListenerResponse> FallbackHandler { get; set; } =
@@ -156,6 +163,51 @@ namespace Unity.ClusterDisplay.MissionControl
                     Respond(response, HttpStatusCode.MethodNotAllowed);
                 }
             }
+            else if (requestedUri.StartsWith("api/v1/currentMission/parametersDesiredValues"))
+            {
+                if (httpMethod == HttpMethod.Put)
+                {
+                    _ = ProcessPutMissionParameterDesiredValue(response, request);
+                }
+                else if (httpMethod == HttpMethod.Delete)
+                {
+                    ProcessDeleteMissionParameterDesiredValue(response, requestedUri);
+                }
+                else
+                {
+                    Respond(response, HttpStatusCode.MethodNotAllowed);
+                }
+            }
+            else if (requestedUri.StartsWith("api/v1/currentMission/parametersEffectiveValues"))
+            {
+                if (httpMethod == HttpMethod.Put)
+                {
+                    _ = ProcessPutMissionParameterEffectiveValue(response, request);
+                }
+                else if (httpMethod == HttpMethod.Delete)
+                {
+                    ProcessDeleteMissionParameterEffectiveValue(response, requestedUri);
+                }
+                else
+                {
+                    Respond(response, HttpStatusCode.MethodNotAllowed);
+                }
+            }
+            else if (requestedUri.StartsWith("api/v1/currentMission/parameters"))
+            {
+                if (httpMethod == HttpMethod.Put)
+                {
+                    _ = ProcessPutMissionParameter(response, request);
+                }
+                else if (httpMethod == HttpMethod.Delete)
+                {
+                    ProcessDeleteMissionParameter(response, requestedUri);
+                }
+                else
+                {
+                    Respond(response, HttpStatusCode.MethodNotAllowed);
+                }
+            }
             else
             {
                 FallbackHandler(requestedUri, request, response);
@@ -193,7 +245,7 @@ namespace Unity.ClusterDisplay.MissionControl
                     break;
                 }
                 var name = tokens[nameIndex + 1];
-                if (name != k_CapcomUplinkName)
+                if (name != ObservableObjectsName.CapcomUpLink)
                 {   // For now we just support k_CapcomUplinkName
                     continue;
                 }
@@ -221,7 +273,7 @@ namespace Unity.ClusterDisplay.MissionControl
                     if (m_CapcomUplinkVersion >= fromVersion)
                     {
                         Dictionary<string, ObjectUpdate> updates = new();
-                        updates[k_CapcomUplinkName] =
+                        updates[ObservableObjectsName.CapcomUpLink] =
                             new ObjectUpdate() { Updated = m_CapcomUplink, NextUpdate = m_CapcomUplinkVersion + 1 };
                         RespondJson(response, updates);
                         return;
@@ -238,50 +290,105 @@ namespace Unity.ClusterDisplay.MissionControl
 
         async Task ProcessIncrementalCollectionsUpdateGet(HttpListenerResponse response, string requestUri)
         {
-            var tokens = requestUri.Split(new[] {'?', '&', '='}).ToList();
-
-            int name0Index = tokens.IndexOf("name0");
-            if (name0Index < 0 || name0Index + 1 >= tokens.Count)
+            var kvps = requestUri.Split(new[] {'?', '&'});
+            Dictionary<string, string> values = new();
+            foreach (var kvp in kvps)
             {
-                Respond(response, HttpStatusCode.BadRequest);
-                return;
-            }
-            var name = tokens[name0Index + 1];
-            if (name != k_ComplexesName)
-            {
-                Respond(response, HttpStatusCode.BadRequest);
-                return;
+                var split = kvp.Split('=');
+                switch (split.Length)
+                {
+                    case 1:
+                        values[split[0]] = "";
+                        break;
+                    case 2:
+                        values[split[0]] = split[1];
+                        break;
+                    default:
+                        Assert.Fail("Unexpected query parameter received.");
+                        break;
+                }
             }
 
-            int fromVersion0Index = tokens.IndexOf("fromVersion0");
-            if (fromVersion0Index < 0 || fromVersion0Index + 1 >= tokens.Count)
-            {
-                Respond(response, HttpStatusCode.BadRequest);
-                return;
-            }
-            var fromVersionString = tokens[fromVersion0Index + 1];
-            ulong fromVersion = Convert.ToUInt64(fromVersionString);
+            Dictionary<string, object> ret = new();
 
+            // Get the values of requested collections
+            Dictionary<string, ulong> requestedList = new();
+            int collectionIndex = -1;
             for (;;)
             {
-                Task toWaitOn;
-                lock (m_Lock)
+                ++collectionIndex;
+                if (!values.TryGetValue($"name{collectionIndex}", out var collectionName))
                 {
-                    if (LaunchComplexes.VersionNumber >= fromVersion)
+                    break;
+                }
+
+                if (!values.TryGetValue($"fromVersion{collectionIndex}", out var fromVersionString))
+                {
+                    Respond(response, HttpStatusCode.BadRequest);
+                    return;
+                }
+
+                ulong fromVersion;
+                try
+                {
+                    fromVersion = Convert.ToUInt64(fromVersionString);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+
+                requestedList[collectionName] = fromVersion;
+            }
+
+            void ProcessCollection<T>(IncrementalCollection<T> collection, string collectionName, ulong fromVersion)
+                where T : IIncrementalCollectionObject
+            {
+                if (collection.VersionNumber >= fromVersion)
+                {
+                    ret[collectionName] = collection.GetDeltaSince(fromVersion);
+                }
+            }
+
+            // Wait until at least one collection has something new
+            for (;;)
+            {
+                var collectionChangedTask = m_IncrementalCollectionChangedCv.SignaledTask;
+                foreach (var request in requestedList)
+                {
+                    switch (request.Key)
                     {
-                        Dictionary<string, IncrementalCollectionUpdate<LaunchComplex>> updates = new();
-                        updates[k_ComplexesName] = LaunchComplexes.GetDeltaSince(fromVersion);
-                        RespondJson(response, updates);
-                        return;
-                    }
-                    else
-                    {
-                        toWaitOn = m_LaunchComplexesCv.SignaledTask;
+                        case IncrementalCollectionsName.Complexes:
+                            ProcessCollection(LaunchComplexes, request.Key, request.Value);
+                            break;
+                        case IncrementalCollectionsName.CurrentMissionLaunchParametersForReview:
+                            ProcessCollection(LaunchParametersForReview, request.Key, request.Value);
+                            break;
+                        case IncrementalCollectionsName.CurrentMissionParameters:
+                            ProcessCollection(MissionParameters, request.Key, request.Value);
+                            break;
+                        case IncrementalCollectionsName.CurrentMissionParametersDesiredValues:
+                            ProcessCollection(MissionParametersDesiredValues, request.Key, request.Value);
+                            break;
+                        case IncrementalCollectionsName.CurrentMissionParametersEffectiveValues:
+                            ProcessCollection(MissionParametersEffectiveValues, request.Key, request.Value);
+                            break;
                     }
                 }
 
-                await toWaitOn.ConfigureAwait(false);
+                if (!ret.Any())
+                {
+                    await collectionChangedTask.ConfigureAwait(false);
+                }
+                else
+                {
+                    break;
+                }
             }
+
+            // Package response
+            RespondJson(response, ret);
         }
 
         async Task ProcessPutLaunchParameterForReview(HttpListenerResponse response, HttpListenerRequest request)
@@ -313,6 +420,105 @@ namespace Unity.ClusterDisplay.MissionControl
             }
         }
 
+        async Task ProcessPutMissionParameter(HttpListenerResponse response, HttpListenerRequest request)
+        {
+            if (request.ContentType != k_ApplicationJson)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            string json;
+            using (StreamReader reader = new(request.InputStream))
+            {
+                json = await reader.ReadToEndAsync();
+            }
+
+            var missionParameter = JsonConvert.DeserializeObject<MissionParameter>(json, Json.SerializerOptions);
+            if (missionParameter == null)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            MissionParameters[missionParameter.Id] = missionParameter;
+            Respond(response, HttpStatusCode.OK);
+        }
+
+        void ProcessDeleteMissionParameter(HttpListenerResponse response, string requestUri)
+        {
+            var tokens = requestUri.Split(new[] {'/'}).ToList();
+            var id = Guid.Parse(tokens.Last());
+
+            Respond(response, MissionParameters.Remove(id) ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+        }
+
+        async Task ProcessPutMissionParameterDesiredValue(HttpListenerResponse response, HttpListenerRequest request)
+        {
+            if (request.ContentType != k_ApplicationJson)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            string json;
+            using (StreamReader reader = new(request.InputStream))
+            {
+                json = await reader.ReadToEndAsync();
+            }
+
+            var missionParameterValue = JsonConvert.DeserializeObject<MissionParameterValue>(json, Json.SerializerOptions);
+            if (missionParameterValue == null)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            MissionParametersDesiredValues[missionParameterValue.Id] = missionParameterValue;
+            Respond(response, HttpStatusCode.OK);
+        }
+
+        void ProcessDeleteMissionParameterDesiredValue(HttpListenerResponse response, string requestUri)
+        {
+            var tokens = requestUri.Split(new[] {'/'}).ToList();
+            var id = Guid.Parse(tokens.Last());
+
+            Respond(response, MissionParametersDesiredValues.Remove(id) ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+        }
+
+        async Task ProcessPutMissionParameterEffectiveValue(HttpListenerResponse response, HttpListenerRequest request)
+        {
+            if (request.ContentType != k_ApplicationJson)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            string json;
+            using (StreamReader reader = new(request.InputStream))
+            {
+                json = await reader.ReadToEndAsync();
+            }
+
+            var missionParameterValue = JsonConvert.DeserializeObject<MissionParameterValue>(json, Json.SerializerOptions);
+            if (missionParameterValue == null)
+            {
+                Respond(response, HttpStatusCode.BadRequest);
+                return;
+            }
+
+            MissionParametersEffectiveValues[missionParameterValue.Id] = missionParameterValue;
+            Respond(response, HttpStatusCode.OK);
+        }
+
+        void ProcessDeleteMissionParameterEffectiveValue(HttpListenerResponse response, string requestUri)
+        {
+            var tokens = requestUri.Split(new[] {'/'}).ToList();
+            var id = Guid.Parse(tokens.Last());
+
+            Respond(response, MissionParametersEffectiveValues.Remove(id) ? HttpStatusCode.OK : HttpStatusCode.NotFound);
+        }
+
         public static void Respond(HttpListenerResponse response, HttpStatusCode statusCode)
         {
             response.StatusCode = (int)statusCode;
@@ -332,8 +538,6 @@ namespace Unity.ClusterDisplay.MissionControl
         }
 
         static readonly string k_HttpListenerEndpoint = $"http://localhost:{Helpers.ListenPort}/";
-        const string k_CapcomUplinkName = "capcomUplink";
-        const string k_ComplexesName = "complexes";
         const string k_ApplicationJson = "application/json";
 
         HttpListener m_HttpListener = new();
@@ -342,6 +546,6 @@ namespace Unity.ClusterDisplay.MissionControl
         CapcomUplink m_CapcomUplink = new() {IsRunning = true};
         ulong m_CapcomUplinkVersion;
         AsyncConditionVariable m_CapcomUplinkCv = new();
-        AsyncConditionVariable m_LaunchComplexesCv = new();
+        AsyncConditionVariable m_IncrementalCollectionChangedCv = new();
     }
 }

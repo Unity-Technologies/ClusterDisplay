@@ -8,7 +8,7 @@ using Utils;
 namespace Unity.ClusterDisplay.MissionControl.Capsule
 {
     /// <summary>
-    /// Handle <see cref="Capsule.MessagesId.Land"/> messages.
+    /// Handle <see cref="MessagesId.Land"/> messages.
     /// </summary>
     public class LandMessageHandler: IMessageHandler
     {

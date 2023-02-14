@@ -120,7 +120,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
 
             // Get the initial incremental update
             var blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_MissionsCollectionName, 1) });
+                (IncrementalCollectionsName.Missions, 1) });
 
             // Setup first launch configurations
             LaunchConfiguration launchConfiguration1 = new()
@@ -148,14 +148,15 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             var finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            var collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result, k_MissionsCollectionName);
+            var collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result,
+                IncrementalCollectionsName.Missions);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(2));
 
             // Ask for the next update
             blockingGetTask = m_ProcessHelper.GetIncrementalCollectionsUpdate(new List<(string, ulong)> {
-                (k_MissionsCollectionName, 2) });
+                (IncrementalCollectionsName.Missions, 2) });
 
             // Setup second launch configurations
             LaunchConfiguration launchConfiguration2 = new()
@@ -184,7 +185,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             finishedTask = await Task.WhenAny(blockingGetTask, timeoutTask);
             Assert.That(finishedTask, Is.SameAs(blockingGetTask)); // Otherwise we timed out
-            collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result, k_MissionsCollectionName);
+            collectionUpdate = GetCollectionUpdate<SavedMissionSummary>(blockingGetTask.Result,
+                IncrementalCollectionsName.Missions);
             Assert.That(collectionUpdate.UpdatedObjects.Count, Is.EqualTo(1));
             Assert.That(collectionUpdate.RemovedObjects, Is.Empty);
             Assert.That(collectionUpdate.NextUpdate, Is.EqualTo(3));
@@ -286,8 +288,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             m_TestTempFolders.Add(folderPath);
             return folderPath;
         }
-
-        const string k_MissionsCollectionName = "missions";
 
         MissionControlProcessHelper m_ProcessHelper = new();
         List<string> m_TestTempFolders = new();

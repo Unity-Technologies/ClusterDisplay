@@ -103,10 +103,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         {
             await m_ProcessHelper.Start(GetTestTempFolder());
 
-            var objectsUpdate = await m_ProcessHelper.GetObjectsUpdate(new[] { (k_LaunchConfigurationObjectName, 0ul) });
-            var launchConfigUpdate1 = objectsUpdate[k_LaunchConfigurationObjectName];
+            var objectsUpdate = await m_ProcessHelper.GetObjectsUpdate(
+                new[] { (ObservableObjectsName.CurrentMissionLaunchConfiguration, 0ul) });
+            var launchConfigUpdate1 = objectsUpdate[ObservableObjectsName.CurrentMissionLaunchConfiguration];
             var objectsUpdateTask = m_ProcessHelper.GetObjectsUpdate(
-                new[] { (k_LaunchConfigurationObjectName, launchConfigUpdate1.NextUpdate) });
+                new[] { (ObservableObjectsName.CurrentMissionLaunchConfiguration, launchConfigUpdate1.NextUpdate) });
             await Task.Delay(100); // So that objectsUpdateTask can have the time to complete if it wouldn't block
             Assert.That(objectsUpdateTask.IsCompleted, Is.False);
 
@@ -131,13 +132,13 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             var awaitTask = await Task.WhenAny(objectsUpdateTask, timeoutTask);
             Assert.That(awaitTask, Is.SameAs(objectsUpdateTask)); // Or else timed out
-            var launchConfigUpdate2 = objectsUpdateTask.Result[k_LaunchConfigurationObjectName];
+            var launchConfigUpdate2 = objectsUpdateTask.Result[ObservableObjectsName.CurrentMissionLaunchConfiguration];
             Assert.That(JsonSerializer.Deserialize<LaunchConfiguration>(launchConfigUpdate2.Updated, Json.SerializerOptions),
                 Is.EqualTo(launchConfigPut));
 
             // Start another blocking get
             objectsUpdateTask = m_ProcessHelper.GetObjectsUpdate(
-                new[] { (k_LaunchConfigurationObjectName, launchConfigUpdate2.NextUpdate) });
+                new[] { (ObservableObjectsName.CurrentMissionLaunchConfiguration, launchConfigUpdate2.NextUpdate) });
 
             // Put the same thing, it shouldn't unblock the previous get
             await m_ProcessHelper.PutLaunchConfiguration(launchConfigPut);
@@ -518,7 +519,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             await m_ProcessHelper.Start(configPath);
 
             // Create assets
-            var badCatalog = JsonSerializer.Deserialize<LaunchCatalog.Catalog>(
+            var badCatalog = JsonSerializer.Deserialize<Catalog>(
                 JsonSerializer.Serialize(k_CatalogCapcom3, Json.SerializerOptions), Json.SerializerOptions)!;
             var badFileList = badCatalog.Payloads.First().Files.ToList();
             badFileList.RemoveAt(0);
@@ -573,7 +574,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             await m_ProcessHelper.Start(configPath);
 
             // Create assets
-            var badCatalog = JsonSerializer.Deserialize<LaunchCatalog.Catalog>(
+            var badCatalog = JsonSerializer.Deserialize<Catalog>(
                 JsonSerializer.Serialize(k_CatalogCapcom3, Json.SerializerOptions), Json.SerializerOptions)!;
             badCatalog.Payloads.First().Files = Enumerable.Empty<LaunchCatalog.PayloadFile>();
             var assetId = await PostAsset(m_ProcessHelper, GetTestTempFolder(), badCatalog, new(),
@@ -699,7 +700,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
             return folderPath;
         }
 
-        static readonly LaunchCatalog.Catalog k_SimpleLaunchCatalog = new()
+        static readonly Catalog k_SimpleLaunchCatalog = new()
         {
             Payloads = new[] {
                 new LaunchCatalog.Payload()
@@ -723,7 +724,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
         static readonly Dictionary<string, int> k_SimpleLaunchCatalogFileLength =
             new() { { "file", 1024 } };
 
-        static readonly LaunchCatalog.Catalog k_CatalogCapcom1 = new()
+        static readonly Catalog k_CatalogCapcom1 = new()
         {
             Payloads = new[] {
                 new LaunchCatalog.Payload()
@@ -762,7 +763,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 "}") }
         };
 
-        static readonly LaunchCatalog.Catalog k_CatalogCapcom2 = new()
+        static readonly Catalog k_CatalogCapcom2 = new()
         {
             Payloads = new[] {
                 new LaunchCatalog.Payload()
@@ -801,7 +802,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 "}") }
         };
 
-        static readonly LaunchCatalog.Catalog k_CatalogCapcom3 = new()
+        static readonly Catalog k_CatalogCapcom3 = new()
         {
             Payloads = new[] {
                 new LaunchCatalog.Payload()
@@ -869,7 +870,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 "}") }
         };
 
-        static readonly LaunchCatalog.Catalog k_CatalogCapcom4 = new()
+        static readonly Catalog k_CatalogCapcom4 = new()
         {
             Payloads = new[] {
                 new LaunchCatalog.Payload()
@@ -911,7 +912,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                 "Out-File \"../../launch4_over.txt\" -InputObject \"Over\"") }
         };
 
-        const string k_LaunchConfigurationObjectName = "currentMission/launchConfiguration";
         const string k_CapcomFolder = "capcom";
 
         MissionControlProcessHelper m_ProcessHelper = new();

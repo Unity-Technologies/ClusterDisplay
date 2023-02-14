@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 
 namespace Unity.ClusterDisplay.MissionControl.Capcom
@@ -24,7 +25,28 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 throw new InvalidOperationException($"Environment variable {k_EnvMissionControlConfig} does " +
                     $"not contain the expected MissionControl configuration.");
             }
-            Application application = new(new Uri(missionControlConfig!.LocalEntry));
+
+            LaunchableData launchableData;
+            try
+            {
+                var launchableDataJson = Environment.GetEnvironmentVariable(k_EnvLaunchableData);
+                if (launchableDataJson != null)
+                {
+                    launchableData = JsonConvert.DeserializeObject<LaunchableData>(launchableDataJson!,
+                        Json.SerializerOptions);
+                }
+                else
+                {
+                    launchableData = new();
+                }
+            }
+            catch (Exception)
+            {
+                throw new InvalidOperationException($"Environment variable {k_EnvLaunchableData} does " +
+                    $"not contain the expected launchable data.");
+            }
+
+            Application application = new(new Uri(missionControlConfig!.LocalEntry), launchableData);
             application.Start().Wait();
         }
 
@@ -33,10 +55,12 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         /// </summary>
         /// <param name="searchPath">Path in which to search for the assembly containing this code.</param>
         /// <param name="toSetup">The <see cref="CatalogBuilderDirective"/> to setup.</param>
+        /// <param name="landingTime">Maximum amount of time allocated to launched processes to land when requested.
+        /// </param>
         /// <param name="filesFilter">Filter method used to accept or reject files found of the disk.  Called with the
         /// full path to the file and returns if the file is to be part of launchables or not.</param>
         public static void SetupCatalogBuilderDirective(string searchPath, CatalogBuilderDirective toSetup,
-            Func<string, bool> filesFilter)
+            TimeSpan landingTime, Func<string, bool> filesFilter)
         {
             var capcomAssemblyPath = GetCapcomAssemblyPath(searchPath, filesFilter);
             HashSet<string> dependenciesSet = new();
@@ -52,6 +76,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             {
                 Name = "ClusterDisplay Capcom",
                 Type = Launchable.CapcomType,
+                Data = JToken.FromObject(new LaunchableData() { FailOverProcessTimeout = landingTime }, Json.Serializer),
                 LaunchPath = $"assemblyrun://{capcomAssemblyPathEncoded}/{typeof(MainClass).FullName}/{nameof(Main)}",
                 LandingTime = TimeSpan.FromSeconds(2)
             };
@@ -119,5 +144,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
         }
 
         const string k_EnvMissionControlConfig = "MISSIONCONTROL_CONFIG";
+        const string k_EnvLaunchableData = "LAUNCHABLE_DATA";
     }
 }

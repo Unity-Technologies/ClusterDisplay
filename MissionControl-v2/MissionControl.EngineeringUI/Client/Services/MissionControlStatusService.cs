@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
     {
         public MissionControlStatusService(ObjectsUpdateService objectsUpdateService)
         {
-            objectsUpdateService.RegisterForUpdates("status", StatusUpdate);
+            objectsUpdateService.RegisterForUpdates(ObservableObjectsName.Status, StatusUpdate);
         }
 
         void StatusUpdate(JsonElement update)

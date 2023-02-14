@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
@@ -110,8 +111,11 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkStatistics networkStatistics)
         {
+            ServiceLocator.TryGet(out IClusterSyncState clusterSync);
+
             var builder = new StringBuilder();
-            builder.AppendFormat("\tNode ID: {0}", Config.NodeId);
+            builder.AppendFormat("\tNode (Role / ID / Render ID): {0} / {1} / {2}",
+                clusterSync?.NodeRole ?? NodeRole.Unassigned, Config.NodeId, clusterSync?.RenderNodeID ?? -1);
             builder.AppendLine();
             builder.AppendFormat("\tFrame: {0}", FrameIndex);
             builder.AppendLine();

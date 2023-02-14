@@ -24,11 +24,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
             m_HttpClient = httpClient;
             m_HttpClient.BaseAddress = configuration.GetMissionControlUri();
 
-            collectionsUpdateService.RegisterForUpdates("assets", CollectionUpdate);
+            collectionsUpdateService.RegisterForUpdates(IncrementalCollectionsName.Assets, CollectionUpdate);
         }
 
         /// <summary>
-        /// Collection mirroring all the <see cref="LaunchComplex"/>es in MissionControl.
+        /// The collection mirroring all the <see cref="Asset"/>s in MissionControl.
         /// </summary>
         public IReadOnlyIncrementalCollection<Asset> Collection => m_Assets;
 

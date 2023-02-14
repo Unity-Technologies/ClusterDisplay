@@ -37,6 +37,9 @@ builder.Services.AddMissionsService();
 builder.Services.AddMissionCommandsService();
 builder.Services.AddLaunchService();
 builder.Services.AddCapcomUplinkService();
+builder.Services.AddMissionParametersService();
+builder.Services.AddMissionParametersDesiredValuesService();
+builder.Services.AddMissionParametersEffectiveValuesService();
 
 // Add the service to work with the automated tests
 bool hasTestService = !string.IsNullOrEmpty(builder.Configuration["testService"]) &&
@@ -82,6 +85,9 @@ app.Services.GetService<LaunchPadsHealthService>();
 app.Services.GetService<CurrentMissionLaunchConfigurationService>();
 app.Services.GetService<MissionsService>();
 app.Services.GetService<LaunchService>();
+app.Services.GetService<MissionParametersService>();
+app.Services.GetService<MissionParametersDesiredValuesService>();
+app.Services.GetService<MissionParametersEffectiveValuesService>();
 if (hasTestService)
 {
     app.Services.GetService<TestService>();

@@ -24,6 +24,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             if (addDefaultHandlers)
             {
                 m_MessageHandlers[MessagesId.Land] = new LandMessageHandler(m_CancellationTokenSource);
+                m_MessageHandlers[MessagesId.ChangeClusterTopology] = new ChangeClusterTopologyMessageHandler();
             }
         }
 
