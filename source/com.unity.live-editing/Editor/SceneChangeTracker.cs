@@ -208,6 +208,11 @@ namespace Unity.LiveEditing.Editor
         /// </summary>
         const long k_MaxUpdateTimeSlice = 5 * 1000L;
 
+        /// <summary>
+        /// The time to wait after polling the scene for changes to poll again in milliseconds.
+        /// </summary>
+        const long k_UpdatePeriod = 0L;
+
         static SceneChangeTracker s_Instance;
         static readonly List<GameObject> s_TempGameObjects = new List<GameObject>();
         static readonly List<Component> s_TempComponents = new List<Component>();
@@ -230,6 +235,7 @@ namespace Unity.LiveEditing.Editor
 
         bool m_IsRunning;
         readonly Stopwatch m_UpdateStopwatch = new Stopwatch();
+        readonly Stopwatch m_TimeSliceStopwatch = new Stopwatch();
 
         internal readonly Dictionary<Scene, SceneState> m_TrackedScenes = new Dictionary<Scene, SceneState>();
         internal readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
@@ -247,8 +253,6 @@ namespace Unity.LiveEditing.Editor
         readonly Queue<ComponentState> m_DestroyedComponents = new Queue<ComponentState>();
         readonly Queue<ComponentState> m_ReorderedComponents = new Queue<ComponentState>();
         readonly Queue<(ComponentState, string)> m_ModifiedComponents = new Queue<(ComponentState, string)>();
-
-        // TODO: scene parameters (lighting, etc.)
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectAdded"/> event.
@@ -418,6 +422,9 @@ namespace Unity.LiveEditing.Editor
                 state.Dispose();
             }
 
+            m_UpdateStopwatch.Reset();
+            m_TimeSliceStopwatch.Reset();
+
             m_TrackedScenes.Clear();
             m_TrackedGameObjects.Clear();
             m_TrackedComponents.Clear();
@@ -452,28 +459,31 @@ namespace Unity.LiveEditing.Editor
             {
                 Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(Update)}()");
 
+                m_TimeSliceStopwatch.Restart();
+
+                // The polling rate is limited to prevent using excessive resources.
+                // When there are still buffered states to check for changes, they must be processed before the up-to-date
+                // scene states can be buffered, or else some changes could be missed.
+                if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= k_UpdatePeriod) &&
+                    m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
+                {
+                    // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
+                    BufferAllSceneStates(false);
+
+                    m_UpdateStopwatch.Restart();
+                }
+
                 // Time slicing is used to avoid taking a large amount of time in a single frame to check for scene updates.
                 // This enables handling larger scenes with less stuttering, for a slight cost in overhead.
                 var targetMaxUpdateTimeSliceTicks = (k_MaxUpdateTimeSlice * Stopwatch.Frequency) / (1000 * 1000);
 
-                m_UpdateStopwatch.Restart();
-
-                // When there are still buffered states to check for changes, they must be processed before the up-to-date
-                // scene states can be buffered, or else some changes could be missed.
-                // TODO: set a max limit for the rate of updates in case buffering state takes a long time
-                if (m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
-                {
-                    // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
-                    BufferAllSceneStates(false);
-                }
-
                 // Look for changes in the buffered states until completed or the time slice is over.
-                while (m_UpdateStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
+                while (m_TimeSliceStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
                 {
                     FindSceneChanges(sceneState);
                 }
 
-                while (m_UpdateStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
+                while (m_TimeSliceStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
                 {
                     FindGameObjectChanges(goState);
                 }
