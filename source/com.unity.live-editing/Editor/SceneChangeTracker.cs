@@ -15,36 +15,22 @@ namespace Unity.LiveEditing.Editor
 
     static class Test
     {
-        static readonly SceneChangeTracker s_Tracker = new SceneChangeTracker();
-
         [InitializeOnLoadMethod]
         static void Init()
         {
-            s_Tracker.Start();
-
-            AssemblyReloadEvents.beforeAssemblyReload += () =>
-            {
-                s_Tracker.Stop();
-            };
-
-            EditorApplication.update += Update;
-        }
-
-        static void Update()
-        {
-            s_Tracker.Update();
+            SceneChangeTracker.Instance.Start();
         }
 
         [MenuItem("Tracking/Start")]
         static void Start()
         {
-            s_Tracker.Start();
+            SceneChangeTracker.Instance.Start();
         }
 
         [MenuItem("Tracking/Stop")]
         static void Stop()
         {
-            s_Tracker.Stop();
+            SceneChangeTracker.Instance.Stop();
         }
 
         [MenuItem("Tracking/Dirty Scene")]
@@ -63,7 +49,6 @@ namespace Unity.LiveEditing.Editor
             where TData : IDisposable
             where TState : BaseState<TObject, TKey, TData, TState>
         {
-            public Guid Guid { get; }
             public TObject Instance { get; }
             public TData Previous { get; protected set; }
             public TData Current { get; protected set; }
@@ -74,7 +59,6 @@ namespace Unity.LiveEditing.Editor
 
             protected BaseState(TObject instance, bool isNew, Dictionary<TKey, TState> trackedObjects, Func<TObject, TKey> getKey)
             {
-                Guid = Guid.NewGuid();
                 Instance = instance;
                 IsNew = isNew;
 
@@ -125,9 +109,12 @@ namespace Unity.LiveEditing.Editor
                 }
             }
 
+            public int InstanceId { get; }
+
             protected UnityObjectState(TObject instance, bool isNew, Dictionary<int, TState> trackedObjects)
                 : base(instance, isNew, trackedObjects, x => x.GetInstanceID())
             {
+                InstanceId = instance.GetInstanceID();
             }
         }
 
@@ -221,8 +208,25 @@ namespace Unity.LiveEditing.Editor
         /// </summary>
         const long k_MaxUpdateTimeSlice = 5 * 1000L;
 
+        static SceneChangeTracker s_Instance;
         static readonly List<GameObject> s_TempGameObjects = new List<GameObject>();
         static readonly List<Component> s_TempComponents = new List<Component>();
+
+        /// <summary>
+        /// The singleton instance.
+        /// </summary>
+        public static SceneChangeTracker Instance
+        {
+            get
+            {
+                if (s_Instance == null)
+                {
+                    s_Instance = new SceneChangeTracker();
+                    EditorApplication.update += s_Instance.Update;
+                }
+                return s_Instance;
+            }
+        }
 
         bool m_IsRunning;
         readonly Stopwatch m_UpdateStopwatch = new Stopwatch();
@@ -238,80 +242,80 @@ namespace Unity.LiveEditing.Editor
         readonly Queue<GameObjectState> m_DestroyedGameObjects = new Queue<GameObjectState>();
         readonly Queue<GameObjectState> m_ReparentedGameObjects = new Queue<GameObjectState>();
         readonly Queue<GameObjectState> m_ReorderedGameObjects = new Queue<GameObjectState>();
-        readonly Queue<GameObjectState> m_ModifiedGameObjects = new Queue<GameObjectState>();
+        readonly Queue<(GameObjectState, string)> m_ModifiedGameObjects = new Queue<(GameObjectState, string)>();
         readonly Queue<ComponentState> m_AddedComponents = new Queue<ComponentState>();
         readonly Queue<ComponentState> m_DestroyedComponents = new Queue<ComponentState>();
-        readonly Queue<ComponentState> m_ModifiedComponents = new Queue<ComponentState>();
         readonly Queue<ComponentState> m_ReorderedComponents = new Queue<ComponentState>();
+        readonly Queue<(ComponentState, string)> m_ModifiedComponents = new Queue<(ComponentState, string)>();
 
         // TODO: scene parameters (lighting, etc.)
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectAdded"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the added game object.</param>
+        /// <param name="instanceID">The instance ID of the added game object.</param>
         /// <param name="gameObject">The game object that was added.</param>
-        public delegate void GameObjectAddedEventHandler(Guid guid, GameObject gameObject);
+        public delegate void GameObjectAddedEventHandler(int instanceID, GameObject gameObject);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectDestroyed"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the destroyed game object.</param>
-        public delegate void GameObjectDestroyedEventHandler(Guid guid);
+        /// <param name="instanceID">The instance ID of the destroyed game object.</param>
+        public delegate void GameObjectDestroyedEventHandler(int instanceID);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectParentChanged"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the game object.</param>
+        /// <param name="instanceID">The instance ID of the game object.</param>
         /// <param name="gameObject">The game object whose parent was changed.</param>
         /// <param name="newScene">The new scene of the game object.</param>
         /// <param name="newParent">The new parent of the game object.</param>
-        public delegate void GameObjectParentChangedEventHandler(Guid guid, GameObject gameObject, Scene newScene, GameObject newParent);
+        public delegate void GameObjectParentChangedEventHandler(int instanceID, GameObject gameObject, Scene newScene, GameObject newParent);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectIndexChanged"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the game object.</param>
+        /// <param name="instanceID">The instance ID of the game object.</param>
         /// <param name="gameObject">The game object whose index was changed.</param>
         /// <param name="index">The sibling index of the game object in the hierarchy.</param>
-        public delegate void GameObjectIndexChangedEventHandler(Guid guid, GameObject gameObject, int index);
+        public delegate void GameObjectIndexChangedEventHandler(int instanceID, GameObject gameObject, int index);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectPropertiesChanged"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the game object.</param>
-        /// <param name="gameObject">The game object whose properties were changed.</param>
-        /// <param name="properties">A serialized object containing the properties of the game object.</param>
-        public delegate void GameObjectPropertiesChangedEventHandler(Guid guid, GameObject gameObject, SerializedObject properties);
+        /// <param name="instanceID">The instance ID of the game object.</param>
+        /// <param name="gameObject">The game object whose property were changed.</param>
+        /// <param name="property">The serialized property that has changed.</param>
+        public delegate void GameObjectPropertyChangedEventHandler(int instanceID, GameObject gameObject, SerializedProperty property);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentAdded"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the added component.</param>
+        /// <param name="instanceID">The instance ID of the added component.</param>
         /// <param name="component">The component that was added.</param>
-        public delegate void ComponentAddedEventHandler(Guid guid, Component component);
+        public delegate void ComponentAddedEventHandler(int instanceID, Component component);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentDestroyed"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the destroyed component.</param>
-        public delegate void ComponentDestroyedEventHandler(Guid guid);
+        /// <param name="instanceID">The instance ID of the destroyed component.</param>
+        public delegate void ComponentDestroyedEventHandler(int instanceID);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentIndexChanged"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the component.</param>
+        /// <param name="instanceID">The instance ID of the component.</param>
         /// <param name="component">The component whose index was changed.</param>
         /// <param name="index">The index of the component in the component list of the game object.</param>
-        public delegate void ComponentIndexChangedEventHandler(Guid guid, Component component, int index);
+        public delegate void ComponentIndexChangedEventHandler(int instanceID, Component component, int index);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentPropertiesChanged"/> event.
         /// </summary>
-        /// <param name="guid">The unique ID of the component.</param>
-        /// <param name="component">The component whose properties were changed.</param>
-        /// <param name="properties">A serialized object containing the properties of the component.</param>
-        public delegate void ComponentPropertiesChangedEventHandler(Guid guid, Component component, SerializedObject properties);
+        /// <param name="instanceID">The instance ID of the component.</param>
+        /// <param name="component">The component whose property were changed.</param>
+        /// <param name="property">The serialized property that has changed.</param>
+        public delegate void ComponentPropertyChangedEventHandler(int instanceID, Component component, SerializedProperty property);
 
         /// <summary>
         /// An event invoked when a new game object is added to a tracked scene.
@@ -336,7 +340,7 @@ namespace Unity.LiveEditing.Editor
         /// <summary>
         /// An event invoked when a the properties of a game object are modified.
         /// </summary>
-        public event GameObjectPropertiesChangedEventHandler GameObjectPropertiesChanged;
+        public event GameObjectPropertyChangedEventHandler GameObjectPropertiesChanged;
 
         /// <summary>
         /// An event invoked when a new component is added to a tracked scene.
@@ -356,7 +360,14 @@ namespace Unity.LiveEditing.Editor
         /// <summary>
         /// An event invoked when the properties of a component are modified.
         /// </summary>
-        public event ComponentPropertiesChangedEventHandler ComponentPropertiesChanged;
+        public event ComponentPropertyChangedEventHandler ComponentPropertiesChanged;
+
+        /// <summary>
+        /// Creates a new <see cref="SceneChangeTracker"/> instance.
+        /// </summary>
+        internal SceneChangeTracker()
+        {
+        }
 
         /// <summary>
         /// Releases resources held by this instance.
@@ -640,9 +651,9 @@ namespace Unity.LiveEditing.Editor
                 {
                     var type = stream.GetEventType(i);
 
-
-#if TEST
+                    /*
                     Debug.Log(type);
+
                     switch (type)
                     {
                         case ObjectChangeKind.ChangeScene:
@@ -651,7 +662,9 @@ namespace Unity.LiveEditing.Editor
 
                             if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
                             {
-                                CheckScene(sceneState);
+                                BufferSceneState(sceneState, false);
+
+                                FindChangesInBufferedState();
                             }
                             break;
                         }
@@ -662,7 +675,18 @@ namespace Unity.LiveEditing.Editor
                             if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
                             {
                                 var gameObject = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                                CheckGameObjectStructural(sceneState, gameObject, true);
+                                var parent = gameObject.transform.parent;
+                                var parentState = default(GameObjectState);
+
+                                if (parent != null)
+                                {
+                                    m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState);
+                                }
+
+                                var goState = BufferGameObjectState(sceneState, parentState, gameObject, false);
+                                parentState.Current.Children.Add(goState);
+
+                                FindChangesInBufferedState();
                             }
                             break;
                         }
@@ -674,14 +698,17 @@ namespace Unity.LiveEditing.Editor
                             {
                                 var parent = EditorUtility.InstanceIDToObject(change.parentInstanceId) as GameObject;
 
-                                if (parent != null)
+                                if (parent != null && m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState))
                                 {
+                                    var goState = BufferGameObjectState(sceneState, parentState, gameObject, false);
                                     CheckGameObjectStructural(sceneState, parent, true);
                                 }
                                 else
                                 {
                                     CheckScene(sceneState);
                                 }
+
+                                FindChangesInBufferedState();
                             }
                             break;
                         }
@@ -794,13 +821,27 @@ namespace Unity.LiveEditing.Editor
                             break;
                         }
                     }
-#endif
+                    */
                 }
             }
             finally
             {
                 Profiler.EndSample();
             }
+        }
+
+        void FindChangesInBufferedState()
+        {
+            while (m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
+            {
+                FindSceneChanges(sceneState);
+            }
+            while (m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
+            {
+                FindGameObjectChanges(goState);
+            }
+
+            InvokeEvents();
         }
 
         void FindSceneChanges(SceneState sceneState)
@@ -822,8 +863,6 @@ namespace Unity.LiveEditing.Editor
             if (goState.IsNew)
             {
                 m_AddedGameObjects.Enqueue(goState);
-                m_ModifiedGameObjects.Enqueue(goState);
-                goState.IsNew = false;
             }
 
             // Detect parent changes and reordered game objects.
@@ -838,9 +877,12 @@ namespace Unity.LiveEditing.Editor
             }
 
             // Detect game object property modifications.
-            if (goState.Current.PropertiesChanged && !ArePropertiesEqual(goState.Previous.Properties, goState.Current.Properties))
+            if (goState.IsNew || goState.Current.PropertiesChanged)
             {
-                m_ModifiedGameObjects.Enqueue(goState);
+                foreach (var prop in FindPropertyChanges(goState.Previous.Properties, goState.Current.Properties, !goState.IsNew))
+                {
+                    m_ModifiedGameObjects.Enqueue((goState, prop));
+                }
             }
 
             // Detect removed components.
@@ -863,10 +905,6 @@ namespace Unity.LiveEditing.Editor
                     {
                         m_AddedComponents.Enqueue(compState);
                     }
-
-                    m_ModifiedComponents.Enqueue(compState);
-
-                    compState.IsNew = false;
                 }
 
                 // Detect reordered components.
@@ -876,10 +914,15 @@ namespace Unity.LiveEditing.Editor
                 }
 
                 // Detect component property modifications.
-                if (compState.Current.PropertiesChanged && !ArePropertiesEqual(compState.Previous.Properties, compState.Current.Properties))
+                if (compState.IsNew || compState.Current.PropertiesChanged)
                 {
-                    m_ModifiedComponents.Enqueue(compState);
+                    foreach (var prop in FindPropertyChanges(compState.Previous.Properties, compState.Current.Properties, !compState.IsNew))
+                    {
+                        m_ModifiedComponents.Enqueue((compState, prop));
+                    }
                 }
+
+                compState.IsNew = false;
             }
 
             // Detect removed children.
@@ -891,6 +934,8 @@ namespace Unity.LiveEditing.Editor
                     childState.Dispose();
                 }
             }
+
+            goState.IsNew = false;
         }
 
         void InvokeEvents()
@@ -905,42 +950,14 @@ namespace Unity.LiveEditing.Editor
 
                 while (m_DestroyedGameObjects.TryDequeue(out var goState))
                 {
-                    var parentState = goState.Current.Parent;
-
-                    if (parentState != null)
+                    try
                     {
-                        var parent = parentState.Instance;
-
-                        if (parent != null)
-                        {
-                            try
-                            {
-                                GameObjectDestroyed?.Invoke(goState.Guid);
-                                Debug.Log($"Change: Destroyed game object {goState.Guid}.");
-                            }
-                            catch (Exception e)
-                            {
-                                Debug.LogException(e);
-                            }
-                        }
+                        GameObjectDestroyed?.Invoke(goState.InstanceId);
+                        Debug.Log($"Change: Removed game object at index {goState.Current.Index}.");
                     }
-                    else
+                    catch (Exception e)
                     {
-                        var sceneState = goState.Current.Scene;
-                        var scene = sceneState.Instance;
-
-                        if (scene.IsValid() && scene.isLoaded)
-                        {
-                            try
-                            {
-                                GameObjectDestroyed?.Invoke(goState.Guid);
-                                Debug.Log($"Change: Removed root of {scene.name} at index {goState.Current.Index}.");
-                            }
-                            catch (Exception e)
-                            {
-                                Debug.LogException(e);
-                            }
-                        }
+                        Debug.LogException(e);
                     }
                 }
 
@@ -952,7 +969,7 @@ namespace Unity.LiveEditing.Editor
                     {
                         try
                         {
-                            ComponentDestroyed?.Invoke(compState.Guid);
+                            ComponentDestroyed?.Invoke(compState.InstanceId);
                             Debug.Log($"Change: Removed component on {gameObject.name} at index {compState.Current.Index}.");
                         }
                         catch (Exception e)
@@ -968,7 +985,7 @@ namespace Unity.LiveEditing.Editor
                     {
                         try
                         {
-                            GameObjectAdded?.Invoke(goState.Guid, goState.Instance);
+                            GameObjectAdded?.Invoke(goState.InstanceId, goState.Instance);
                             Debug.Log($"Change: Added game object {goState.Instance.name}.");
                         }
                         catch (Exception e)
@@ -981,16 +998,16 @@ namespace Unity.LiveEditing.Editor
                 while (m_ReparentedGameObjects.TryDequeue(out var goState))
                 {
                     var sceneState = goState.Current.Scene;
-                    var scene = sceneState.Instance;
-
                     var parentState = goState.Current.Parent;
+
+                    var scene = sceneState.Instance;
                     var parent = parentState?.Instance;
 
                     if (goState.Instance != null)
                     {
                         try
                         {
-                            GameObjectParentChanged?.Invoke(goState.Guid, goState.Instance, scene, parent);
+                            GameObjectParentChanged?.Invoke(goState.InstanceId, goState.Instance, scene, parent);
                             Debug.Log($"Change: Set parent {scene.name} {(parent != null ? parent.name : string.Empty)} {goState.Instance.name}.");
                         }
                         catch (Exception e)
@@ -1006,7 +1023,7 @@ namespace Unity.LiveEditing.Editor
                     {
                         try
                         {
-                            GameObjectIndexChanged?.Invoke(goState.Guid, goState.Instance, goState.Current.Index);
+                            GameObjectIndexChanged?.Invoke(goState.InstanceId, goState.Instance, goState.Current.Index);
                             Debug.Log($"Change: Reordered game object {goState.Instance.name} to index {goState.Current.Index}.");
                         }
                         catch (Exception e)
@@ -1022,7 +1039,7 @@ namespace Unity.LiveEditing.Editor
                     {
                         try
                         {
-                            ComponentAdded?.Invoke(compState.Guid, compState.Instance);
+                            ComponentAdded?.Invoke(compState.InstanceId, compState.Instance);
                             Debug.Log($"Change: Added component {compState.Instance.GetType()}.");
                         }
                         catch (Exception e)
@@ -1038,7 +1055,7 @@ namespace Unity.LiveEditing.Editor
                     {
                         try
                         {
-                            ComponentIndexChanged?.Invoke(compState.Guid, compState.Instance, compState.Current.Index);
+                            ComponentIndexChanged?.Invoke(compState.InstanceId, compState.Instance, compState.Current.Index);
                             Debug.Log($"Change: Reordered component {compState.Instance.name} to index {compState.Current.Index}.");
                         }
                         catch (Exception e)
@@ -1048,14 +1065,18 @@ namespace Unity.LiveEditing.Editor
                     }
                 }
 
-                while (m_ModifiedGameObjects.TryDequeue(out var goState))
+                while (m_ModifiedGameObjects.TryDequeue(out var value))
                 {
+                    var goState = value.Item1;
+
                     if (goState.Instance != null)
                     {
+                        var property = goState.Current.Properties.FindProperty(value.Item2);
+
                         try
                         {
-                            GameObjectPropertiesChanged?.Invoke(goState.Guid, goState.Instance, goState.Current.Properties);
-                            Debug.Log($"Change: Modified game object {goState.Instance}.");
+                            GameObjectPropertiesChanged?.Invoke(goState.InstanceId, goState.Instance, property);
+                            Debug.Log($"Change: Modified game object {goState.Instance.name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
                         }
                         catch (Exception e)
                         {
@@ -1064,14 +1085,18 @@ namespace Unity.LiveEditing.Editor
                     }
                 }
 
-                while (m_ModifiedComponents.TryDequeue(out var compState))
+                while (m_ModifiedComponents.TryDequeue(out var value))
                 {
+                    var compState = value.Item1;
+
                     if (compState.Instance != null)
                     {
+                        var property = compState.Current.Properties.FindProperty(value.Item2);
+
                         try
                         {
-                            ComponentPropertiesChanged?.Invoke(compState.Guid, compState.Instance, compState.Current.Properties);
-                            Debug.Log($"Change: Modified component {compState.Instance.GetType().Name} {compState.Instance.gameObject}.");
+                            ComponentPropertiesChanged?.Invoke(compState.InstanceId, compState.Instance, property);
+                            Debug.Log($"Change: Modified component {compState.Instance.GetType().Name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
                         }
                         catch (Exception e)
                         {
@@ -1086,25 +1111,76 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
-        static bool ArePropertiesEqual(SerializedObject previous, SerializedObject current)
+        static IEnumerable<string> FindPropertyChanges(SerializedObject previous, SerializedObject current, bool onlyChanged = true)
         {
-            var prevItr = previous.GetIterator();
+            var prevItr = onlyChanged ? previous.GetIterator() : null;
             var currItr = current.GetIterator();
-            var prevValid = prevItr.Next(true);
+            var prevValid = prevItr?.Next(true) ?? false;
             var currValid = currItr.Next(true);
 
-            while (prevValid && currValid)
+            while (currValid)
             {
-                if (!SerializedProperty.DataEquals(currItr, prevItr))
+                foreach (var property in FindPropertyChanges(prevItr, currItr))
                 {
-                    return false;
+                    yield return property;
                 }
 
-                prevValid = prevItr.Next(false);
+                if (prevValid)
+                {
+                    prevValid = prevItr.Next(false);
+                }
+
                 currValid = currItr.Next(false);
             }
+        }
 
-            return true;
+        static IEnumerable<string> FindPropertyChanges(SerializedProperty previousProp, SerializedProperty currentProp)
+        {
+            if (previousProp != null && SerializedProperty.DataEquals(previousProp, currentProp))
+            {
+                yield break;
+            }
+
+            switch (currentProp.propertyType)
+            {
+                case SerializedPropertyType.Generic:
+                {
+                    // Find the specific changes changes in the child properties by iterating over them.
+                    // If this generic property is an array, there could be a difference in the number of elements
+                    // between the previous and current state. In general, we notify if the array size has changed,
+                    // and update different values in the array elements, which implicitly handles inserting or
+                    // removing from the middle of the list. A special case is when adding to the list, there is no
+                    // previous value to compare against, so we say that every new value is "changed" and set the previous.
+                    // value as null.
+                    var prevItr = previousProp?.Copy();
+                    var currItr = currentProp.Copy();
+                    var prevEnd = previousProp?.GetEndProperty(true);
+                    var currEnd = currentProp.GetEndProperty(true);
+                    var prevValid = prevItr?.Next(true) ?? false;
+                    var currValid = currItr.Next(true);
+
+                    while (currValid)
+                    {
+                        foreach (var property in FindPropertyChanges(prevValid ? prevItr : null, currItr))
+                        {
+                            yield return property;
+                        }
+
+                        if (prevValid)
+                        {
+                            prevValid = prevItr.Next(false) && !SerializedProperty.EqualContents(prevItr, prevEnd);
+                        }
+
+                        currValid = currItr.Next(false) && !SerializedProperty.EqualContents(currItr, currEnd);
+                    }
+                    break;
+                }
+                default:
+                {
+                    yield return currentProp.propertyPath;
+                    break;
+                }
+            }
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿#if UNITY_LIVE_EDITING_DEBUG
 using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -20,7 +19,6 @@ namespace Unity.LiveEditing.Editor
         [SerializeField]
         TreeViewState m_TreeViewState;
 
-        SceneChangeTracker m_SceneChangeTracker;
         SceneChangeTrackerTreeView m_TreeView;
         bool m_TreeDirty;
 
@@ -34,25 +32,11 @@ namespace Unity.LiveEditing.Editor
         {
             titleContent = Contents.WindowTitle;
 
-            m_SceneChangeTracker = new SceneChangeTracker();
-            m_SceneChangeTracker.Start();
-
             CreateTreeView();
-        }
-
-        void OnDisable()
-        {
-            if (m_SceneChangeTracker != null)
-            {
-                m_SceneChangeTracker.Dispose();
-                m_SceneChangeTracker = null;
-            }
         }
 
         void Update()
         {
-            m_SceneChangeTracker.Update();
-
             if (m_TreeView == null)
             {
                 CreateTreeView();
@@ -69,8 +53,8 @@ namespace Unity.LiveEditing.Editor
 
         void OnGUI()
         {
-            EditorGUILayout.LabelField($"Tracked Game Object Count: {m_SceneChangeTracker.m_TrackedGameObjects.Count}");
-            EditorGUILayout.LabelField($"Tracked Component Count: {m_SceneChangeTracker.m_TrackedComponents.Count}");
+            EditorGUILayout.LabelField($"Tracked Game Object Count: {SceneChangeTracker.Instance.m_TrackedGameObjects.Count}");
+            EditorGUILayout.LabelField($"Tracked Component Count: {SceneChangeTracker.Instance.m_TrackedComponents.Count}");
 
             var rect = EditorGUILayout.GetControlRect();
 
@@ -78,6 +62,12 @@ namespace Unity.LiveEditing.Editor
             EditorGUIUtility.wideMode = true;
 
             m_TreeView.OnGUI(new Rect(0, rect.y, position.width, position.height - rect.y));
+        }
+
+        void CreateTreeView()
+        {
+            m_TreeViewState ??= new TreeViewState();
+            m_TreeView = new SceneChangeTrackerTreeView(m_TreeViewState, SceneChangeTracker.Instance);
         }
 
         class SceneItem : TreeViewItem
@@ -376,16 +366,6 @@ namespace Unity.LiveEditing.Editor
                     }
                 }
             }
-        }
-
-        void CreateTreeView()
-        {
-            if (m_TreeViewState == null)
-            {
-                m_TreeViewState = new TreeViewState();
-            }
-
-            m_TreeView = new SceneChangeTrackerTreeView(m_TreeViewState, m_SceneChangeTracker);
         }
     }
 }
