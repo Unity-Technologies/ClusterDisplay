@@ -13,33 +13,6 @@ namespace Unity.LiveEditing.Editor
     using Debug = UnityEngine.Debug;
     using UnityObject = UnityEngine.Object;
 
-    static class Test
-    {
-        [InitializeOnLoadMethod]
-        static void Init()
-        {
-            SceneChangeTracker.Instance.Start();
-        }
-
-        [MenuItem("Tracking/Start")]
-        static void Start()
-        {
-            SceneChangeTracker.Instance.Start();
-        }
-
-        [MenuItem("Tracking/Stop")]
-        static void Stop()
-        {
-            SceneChangeTracker.Instance.Stop();
-        }
-
-        [MenuItem("Tracking/Dirty Scene")]
-        static void Dirty()
-        {
-            EditorSceneManager.MarkAllScenesDirty();
-        }
-    }
-
     /// <summary>
     /// A class used to detect edits made by the user that change scene content.
     /// </summary>
@@ -203,16 +176,6 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
-        /// <summary>
-        /// The maximum time that the scene tracking can consume in a single frame in microseconds.
-        /// </summary>
-        const long k_MaxUpdateTimeSlice = 5 * 1000L;
-
-        /// <summary>
-        /// The time to wait after polling the scene for changes to poll again in milliseconds.
-        /// </summary>
-        const long k_UpdatePeriod = 0L;
-
         static SceneChangeTracker s_Instance;
         static readonly List<GameObject> s_TempGameObjects = new List<GameObject>();
         static readonly List<Component> s_TempComponents = new List<Component>();
@@ -253,6 +216,16 @@ namespace Unity.LiveEditing.Editor
         readonly Queue<ComponentState> m_DestroyedComponents = new Queue<ComponentState>();
         readonly Queue<ComponentState> m_ReorderedComponents = new Queue<ComponentState>();
         readonly Queue<(ComponentState, string)> m_ModifiedComponents = new Queue<(ComponentState, string)>();
+
+        /// <summary>
+        /// The maximum time that the scene tracking can use in a single frame, in milliseconds.
+        /// </summary>
+        public long MaxUpdateTimeSlice { get; set; } = 5L;
+
+        /// <summary>
+        /// The time to wait after polling the scene for changes to poll again, in milliseconds.
+        /// </summary>
+        public long UpdatePeriod { get; set; } = 0L;
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectAdded"/> event.
@@ -464,7 +437,7 @@ namespace Unity.LiveEditing.Editor
                 // The polling rate is limited to prevent using excessive resources.
                 // When there are still buffered states to check for changes, they must be processed before the up-to-date
                 // scene states can be buffered, or else some changes could be missed.
-                if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= k_UpdatePeriod) &&
+                if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= UpdatePeriod) &&
                     m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
                 {
                     // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
@@ -475,7 +448,7 @@ namespace Unity.LiveEditing.Editor
 
                 // Time slicing is used to avoid taking a large amount of time in a single frame to check for scene updates.
                 // This enables handling larger scenes with less stuttering, for a slight cost in overhead.
-                var targetMaxUpdateTimeSliceTicks = (k_MaxUpdateTimeSlice * Stopwatch.Frequency) / (1000 * 1000);
+                var targetMaxUpdateTimeSliceTicks = (MaxUpdateTimeSlice * Stopwatch.Frequency) / 1000;
 
                 // Look for changes in the buffered states until completed or the time slice is over.
                 while (m_TimeSliceStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
