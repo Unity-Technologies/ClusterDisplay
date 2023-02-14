@@ -37,8 +37,8 @@ namespace Unity.ClusterDisplay.MissionControl
             clusterParams.RepeaterCount = repeaterNodeCount;
             clusterParams.BackupCount = backupNodeCount;
             ApplyArgument(ref clusterParams.Port, launchConfig.GetMulticastPort());
-            clusterParams.MulticastAddress ??= launchConfig.GetMulticastAddress();
-            clusterParams.AdapterName ??= launchConfig.GetMulticastAdapterName();
+            clusterParams.MulticastAddress = launchConfig.GetMulticastAddress() ?? clusterParams.MulticastAddress;
+            clusterParams.AdapterName = launchConfig.GetMulticastAdapterName() ?? clusterParams.AdapterName;
             ApplyArgument(ref clusterParams.TargetFps, launchConfig.GetTargetFrameRate());
             ApplyArgument(ref clusterParams.DelayRepeaters, launchConfig.GetDelayRepeaters());
             ApplyArgument(ref clusterParams.HeadlessEmitter, launchConfig.GetHeadlessEmitter());

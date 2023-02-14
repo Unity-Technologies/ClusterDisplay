@@ -113,7 +113,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Debug info.
         /// </summary>
-        /// <returns>Returns generic statistics as a string (Average FPS, AvgSyncronization overhead)</returns>
+        /// <returns>Returns generic statistics as a string (Average FPS, AvgSynchronization overhead)</returns>
         public string GetDiagnostics()
         {
             if (LocalNode == null)
@@ -263,7 +263,7 @@ namespace Unity.ClusterDisplay
 
                 NodeRole = NodeRole.Repeater;
 
-                InitializeRepeatingInputSync(clusterNodeConfig);
+                InitializeRepeaterInputSync(clusterNodeConfig);
 
                 return true;
             }
@@ -285,7 +285,7 @@ namespace Unity.ClusterDisplay
 
                 NodeRole = NodeRole.Backup;
 
-                InitializeRepeatingInputSync(clusterNodeConfig);
+                InitializeRepeaterInputSync(clusterNodeConfig);
 
                 return true;
             }
@@ -296,7 +296,7 @@ namespace Unity.ClusterDisplay
             }
         }
 
-        void InitializeRepeatingInputSync(ClusterNodeConfig clusterNodeConfig)
+        static void InitializeRepeaterInputSync(ClusterNodeConfig clusterNodeConfig)
         {
             switch (clusterNodeConfig.InputSync)
             {

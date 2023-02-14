@@ -1,4 +1,5 @@
 ﻿using System;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Unity.ClusterDisplay.MissionControl.LaunchPad;
@@ -62,6 +63,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Compute the node id for this node.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no NodeId was specified as part of the LaunchData.  This
+        /// shouldn't normally happen as Capcom should have computed a NodeId for every node.</remarks>
         public byte? GetNodeId()
         {
             return (byte?)RawLaunchData.Value<int?>(LaunchParameterConstants.NodeIdParameterId);
@@ -70,6 +73,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Compute the <see cref="NodeRole"/> for this node.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no NodeRole was specified as part of the LaunchData.
+        /// This shouldn't normally happen as Capcom should have computed a NodeRole for every node.</remarks>
         public NodeRole? GetNodeRole()
         {
             var nodeRole = RawLaunchData.Value<string>(LaunchParameterConstants.NodeRoleParameterId);
@@ -85,6 +90,9 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets the number of repeater nodes.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no RepeaterCount was specified as part of the LaunchData.
+        /// This shouldn't normally happen as Capcom should have computed a RepeaterCount for all nodes of the cluster.
+        /// </remarks>
         public int? GetRepeaterCount()
         {
             return RawLaunchData.Value<int?>(LaunchParameterConstants.RepeaterCountParameterId);
@@ -93,6 +101,9 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets the number of backup nodes.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no BackupCount was specified as part of the LaunchData.
+        /// This shouldn't normally happen as Capcom should have computed an effective BackupCount for all nodes of the
+        /// cluster.</remarks>
         public int? GetBackupCount()
         {
             return RawLaunchData.Value<int?>(LaunchParameterConstants.BackupNodeCountParameterId);
@@ -101,6 +112,9 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets the IPv4 multicast UDP address used for inter-node communication (state propagation).
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no MulticastAddress was specified as part of the
+        /// LaunchData.</remarks>
+        [CanBeNull]
         public string GetMulticastAddress()
         {
             return RawLaunchData.Value<string>(LaunchParameterConstants.MulticastAddressParameterId);
@@ -109,6 +123,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets the multicast UDP port used for inter-node communication (state propagation).
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no MulticastPort was specified as part of the LaunchData.
+        /// </remarks>
         public int? GetMulticastPort()
         {
             return RawLaunchData.Value<int?>(LaunchParameterConstants.MulticastPortParameterId);
@@ -118,15 +134,20 @@ namespace Unity.ClusterDisplay.MissionControl
         /// Gets the Network adapter name (or ip) identifying the network adapter to use for inter-node communication
         /// (state propagation).
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no MulticastAdapterName was specified as part of neither
+        /// the LaunchData or LaunchPadConfig.</remarks>
+        [CanBeNull]
         public string GetMulticastAdapterName()
         {
-            var fromLaunchData = RawLaunchData.Value<string>(LaunchParameterConstants.MulticastAdapterNameParameterId) ?? "";
-            return fromLaunchData != "" ? fromLaunchData : LaunchPadConfig.ClusterNetworkNic;
+            return RawLaunchData.Value<string>(LaunchParameterConstants.MulticastAdapterNameParameterId) ??
+                LaunchPadConfig.ClusterNetworkNic;
         }
 
         /// <summary>
         /// Gets the multicast UDP port used for inter-node communication (state propagation).
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no TargetFrameRate was specified as part of the
+        /// LaunchData.</remarks>
         public int? GetTargetFrameRate()
         {
             var targetFrameRate = RawLaunchData.Value<int?>(LaunchParameterConstants.TargetFrameRateParameterId);
@@ -149,6 +170,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets if we should delay repeaters by one frame.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no DelayRepeaters was specified as part of the
+        /// LaunchData.</remarks>
         public bool? GetDelayRepeaters()
         {
             return RawLaunchData.Value<bool?>(LaunchParameterConstants.DelayRepeatersParameterId);
@@ -157,6 +180,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Disables rendering of the emitter (headless).
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no HeadlessEmitter was specified as part of the
+        /// LaunchData.</remarks>
         public bool? GetHeadlessEmitter()
         {
             return RawLaunchData.Value<bool?>(LaunchParameterConstants.HeadlessEmitterParameterId);
@@ -166,6 +191,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// Will shift NodeId used for rendering of repeater nodes (RenderNodeId = NodeId - 1) when used with a headless
         /// emitter.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no ReplaceHeadlessEmitter was specified as part of the
+        /// LaunchData.</remarks>
         public bool? GetReplaceHeadlessEmitter()
         {
             return RawLaunchData.Value<bool?>(LaunchParameterConstants.ReplaceHeadlessEmitterParameterId);
@@ -174,6 +201,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets timeout for a starting node to perform handshake with the other nodes during cluster startup.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no HandshakeTimeout was specified as part of the
+        /// LaunchData.</remarks>
         public TimeSpan? GetHandshakeTimeout()
         {
             var timeoutSec = RawLaunchData.Value<float?>(LaunchParameterConstants.HandshakeTimeoutParameterId);
@@ -183,6 +212,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets timeout for communication once the cluster is started.
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no CommunicationTimeout was specified as part of the
+        /// LaunchData.</remarks>
         public TimeSpan? GetCommunicationTimeout()
         {
             var timeoutSec = RawLaunchData.Value<float?>(LaunchParameterConstants.CommunicationTimeoutParameterId);
@@ -192,6 +223,8 @@ namespace Unity.ClusterDisplay.MissionControl
         /// <summary>
         /// Gets if the cluster tries to use hardware synchronization?
         /// </summary>
+        /// <remarks>A <c>null</c> return value indicates that no EnableHardwareSync was specified as part of the
+        /// LaunchData.</remarks>
         public bool? GetEnableHardwareSync()
         {
             return RawLaunchData.Value<bool?>(LaunchParameterConstants.EnableHardwareSyncParameterId);

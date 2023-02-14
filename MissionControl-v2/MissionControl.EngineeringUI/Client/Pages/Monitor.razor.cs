@@ -62,8 +62,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                     if (Health != null)
                     {
                         Cells["CPU %"] = new Cell() { Value = Health.CpuUtilization.ToString("P2") };
-                        Cells["Memory usage (GB)"] = new Cell() { Value = ToGigabytes(Health.MemoryUsage) };
-                        Cells["Memory installed (GB)"] = new Cell() { Value = ToGigabytes(Health.MemoryInstalled) };
+                        Cells["Memory usage (GiB)"] = new Cell() { Value = ToGibibytes(Health.MemoryUsage) };
+                        Cells["Memory installed (GiB)"] = new Cell() { Value = ToGibibytes(Health.MemoryInstalled) };
                     }
                     else
                     {
@@ -97,11 +97,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
                 string launchPadIdAsString = Definition.Identifier.ToString();
                 MissionParameters = missionParameters.Where(p => p.Group == launchPadIdAsString).ToList();
-            }
-
-            static string ToGigabytes(long value)
-            {
-                return (value / (double)(1024 * 1024 * 1024)).ToString("0.00");
             }
 
             static bool IsLaunchPadStatusValid(LaunchPad.State launchpadState, State missionControlState)
@@ -304,8 +299,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             // Build the list of health columns
             LaunchPadStatusColumns.Add("CPU %");
-            LaunchPadStatusColumns.Add("Memory usage (GB)");
-            LaunchPadStatusColumns.Add("Memory installed (GB)");
+            LaunchPadStatusColumns.Add("Memory usage (GiB)");
+            LaunchPadStatusColumns.Add("Memory installed (GiB)");
 
             // Prepare the entries for the grid
             foreach (var entry in LaunchPadStatusEntries)
@@ -320,6 +315,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 m_LaunchapdsStatusGrid?.ExpandRow(null!);
                 m_NeedToClearExpanded = false;
             }
+        }
+
+        static string ToGibibytes(long value)
+        {
+            return (value / (double)(1024 * 1024 * 1024)).ToString("0.00");
         }
 
         IDisposable? m_HealthUpdateToken;
