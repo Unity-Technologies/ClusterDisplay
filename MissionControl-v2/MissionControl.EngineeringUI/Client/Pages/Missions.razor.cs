@@ -58,16 +58,16 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
 
-        async Task Overwrite(SavedMissionSummary mission)
+        async Task Overwrite()
         {
-           // var selectedMission = SelectedMission;
-           // if (selectedMission == null)
-            //{
-              //  return;
-           // }
+            var selectedMission = SelectedMission;
+            if (selectedMission == null)
+            {
+                return;
+            }
 
-            SaveMissionCommand saveCommand = new() { Identifier = mission.Id };
-            saveCommand.Description.DeepCopyFrom(mission.Description);
+            SaveMissionCommand saveCommand = new() { Identifier = selectedMission.Id };
+            saveCommand.Description.DeepCopyFrom(selectedMission.Description);
 
             var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
                 new Dictionary<string, object>{ {"Command", saveCommand} },

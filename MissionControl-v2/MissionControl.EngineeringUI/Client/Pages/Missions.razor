@@ -7,7 +7,33 @@
     }
 </style>
 
-<h3>Missions</h3>
+@{
+    var isRunning = MissionControlStatus.State != State.Idle;
+    var hasChanges = LaunchConfigurationService.WorkValueNeedsPush;
+    var applyPrefix = hasChanges ? "Apply & " : "";
+    var applyAndSaveEnabled = !isRunning || !hasChanges;
+    var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
+    var loadTitle = isRunning ? "Cannot load while running." : "";
+}
+
+<div Class="w-100 page-title">
+<h2>Missions</h2>
+    @if (SelectedMission == null)
+    {
+        <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
+    }
+    else
+    {
+        <RadzenSplitButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Info"
+                      class="m-1 title-botton" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle>
+            <ChildContent>
+                <RadzenSplitButtonItem Text=@($"{applyPrefix}Overwrite {SelectedMission.Description.Name}...") Icon="save"
+                                   onclick=@Overwrite() />
+            </ChildContent>
+        </RadzenSplitButton>
+    }
+</div>
+
 <RadzenDataGrid @ref="m_MissionsGrid" Data=@MissionsService.Collection.Values
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
                 SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedMission>
@@ -24,41 +50,20 @@
             </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="SavedMissionSummary">
-            @*<Template Context="mission">
+            <Template Context="mission">
+                <RadzenButton Click=@(() => Load(mission)) Text="Load">
+                    @*<ChildContent>
+                <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" Click=@(() => LoadAndLaunch(mission)) />
+                </ChildContent> *@
+                </RadzenButton>
                 <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => Delete(mission)) ButtonStyle="ButtonStyle.Light" />
-                <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" Click=@(() => LoadAndLaunch(mission))
-                                       Disabled=@(SelectedMission == null || SelectedMission.AssetId == Guid.Empty) />
-                <RadzenText Click=@(() => Load(mission)) >Load</RadzenText>
-                </Template>*@
+            </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-@{
-    var isRunning = MissionControlStatus.State != State.Idle;
-    var hasChanges = LaunchConfigurationService.WorkValueNeedsPush;
-    var applyPrefix = hasChanges ? "Apply & " : "";
-    var applyAndSaveEnabled = !isRunning || !hasChanges;
-    var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
-    var loadTitle = isRunning ? "Cannot load while running." : "";
-}
+
+
 @*
-@if (SelectedMission == null)
-{
-    <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Primary"
-                  class="mt-2 me-1" Style="width: 250px;" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
-}
-else
-{
-    <RadzenSplitButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Primary"
-                       class="mt-2 me-1" Style="width: 250px;" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle >
-        <ChildContent>
-            <RadzenSplitButtonItem Text=@($"{applyPrefix}Overwrite {SelectedMission.Description.Name}...") Icon="save"
-                                   onclick=@Overwrite() />
-        </ChildContent>
-    </RadzenSplitButton>
-}
-
-
 <RadzenSplitButton Text="Load" Icon="file_open" ButtonStyle="ButtonStyle.Light"
                    class="mt-2 me-1" Style="width: 250px;"
                    Disabled=@(SelectedMission == null || MissionControlStatus.State != State.Idle) title=@loadTitle>
