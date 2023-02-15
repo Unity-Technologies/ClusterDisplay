@@ -52,6 +52,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             title.AddToClassList("unity-label");
 
             m_RootElement.Add(title);
+
+            // Elements to show if there's no existing ClusterRenderer
             m_CreateRenderer = new VisualElement();
             m_RootElement.Add(m_CreateRenderer);
             m_CreateRenderer.Add(new HelpBox(Contents.NoRenderer, HelpBoxMessageType.Info));
@@ -59,8 +61,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             createRendererButton.clicked += ClusterDisplayGraphicsSetup.SetupComponents;
             m_CreateRenderer.Add(createRendererButton);
 
+            // Settings to show if we have an active ClusterRenderer
             m_SettingsElement = new VisualElement();
-            m_EnableRendererToggle = new Toggle { text = "Enable Cluster Rendering" };
+            m_EnableRendererToggle = new Toggle { label = "Enable Cluster Rendering" };
             m_EnableRendererToggle.RegisterCallback<ChangeEvent<bool>>(evt =>
             {
                 if (m_ActiveClusterRenderer != null)
@@ -71,6 +74,19 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             });
             m_SettingsElement.Add(m_EnableRendererToggle);
 
+            // Option to enable headless emitter
+            // FIXME: Some settings from ClusterParams are only relevant for rendering
+            var clusterSettings = new SerializedObject(ClusterDisplaySettings.Current);
+            var headlessToggle = new PropertyField(clusterSettings.FindProperty("m_ClusterParams.HeadlessEmitter"));
+            var replaceHeadlessToggle = new PropertyField(clusterSettings.FindProperty("m_ClusterParams.ReplaceHeadlessEmitter"));
+            m_SettingsElement.Add(headlessToggle);
+            m_SettingsElement.Add(replaceHeadlessToggle);
+            m_SettingsElement.Bind(clusterSettings);
+            headlessToggle.RegisterCallback<ChangeEvent<bool>>(evt =>
+                replaceHeadlessToggle.SetHidden(!evt.newValue));
+            replaceHeadlessToggle.AddToClassList("cluster-settings-indented");
+
+            // Button that will select the active ClusterRenderer
             var selectButton = new Button { text = Contents.SelectRenderer };
             selectButton.clicked += () =>
             {
@@ -98,7 +114,6 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // m_EnableRendererToggle.value = m_ActiveClusterRenderer.isActiveAndEnabled;
             RefreshRendererOptions();
         }
 
@@ -142,6 +157,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         public override void OnActivate(string searchContext, VisualElement parentElement)
         {
             base.OnActivate(searchContext, parentElement);
+
             parentElement.Add(m_RootElement);
             RefreshRendererOptions();
         }

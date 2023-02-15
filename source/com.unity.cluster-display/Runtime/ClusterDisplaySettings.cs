@@ -7,6 +7,7 @@ namespace Unity.ClusterDisplay
     class ClusterDisplaySettings : ProjectSettings<ClusterDisplaySettings>
     {
         [SerializeField]
+        [Tooltip("Whether Cluster Display synchronization should be activated automatically on game start")]
         bool m_EnableOnPlay = true;
 
         [SerializeField]

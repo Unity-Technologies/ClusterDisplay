@@ -69,19 +69,32 @@ namespace Unity.ClusterDisplay
         public byte NodeID;
         public int RepeaterCount;
 
+        [Tooltip("Network port used for inter-node communication.")]
         public int Port;
 
         /// <remarks>
         /// Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
         /// </remarks>
+        [Tooltip("The IP address used for inter-node communication. " +
+            "Must be within in the range [224.0.1.0, 239.255.255.255]")]
         public string MulticastAddress;
+        [Tooltip("[Optional] Name of the network adapter used for communication.")]
         public string AdapterName;
 
+        [Tooltip("Limit the FPS that you wish the cluster to run at. Set to -1 for unlimited")]
         public int TargetFps;
+        [Tooltip("Run repeaters on a one-frame delay. The emitter's display will be buffered to maintain visual sync.")]
         public bool DelayRepeaters;
+
+        // TODO: HeadlessEmitter and ReplaceHeadlessEmitter only pertain to rendering logic so they should
+        // be moved to Cluster Display Graphics.
+        [Tooltip("Whether the emitter is attached to a display. Enable this option if the emitter node should not be " +
+            "considered in Cluster Renderer logic.")]
         public bool HeadlessEmitter;
+        [Tooltip("Another node should be assigned the emitter's ID for rendering.")]
         public bool ReplaceHeadlessEmitter;
 
+        [Tooltip("Whether inputs should be synchronized.")]
         public InputSync InputSync;
 
         public TimeSpan HandshakeTimeout
@@ -96,12 +109,15 @@ namespace Unity.ClusterDisplay
             set => m_CommTimeoutSec = (float)value.TotalSeconds;
         }
 
+        [Tooltip("Synchronization method")]
         public FrameSyncFence Fence;
 
         [SerializeField]
+        [Tooltip("Timeout for performing node registration (seconds)")]
         float m_HandshakeTimeoutSec;
 
         [SerializeField]
+        [Tooltip("Timeout for network operations (seconds)")]
         float m_CommTimeoutSec;
 
         public static ClusterParams Default { get; } =

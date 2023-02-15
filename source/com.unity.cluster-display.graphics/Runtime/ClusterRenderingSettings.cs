@@ -1,12 +1,20 @@
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay.Graphics
 {
-    class ClusterRenderingSettings : ScriptableObject
+    class ClusterRenderingSettings : ProjectSettings<ClusterRenderingSettings>
     {
         [SerializeField]
-        ClusterRenderer m_Renderer;
+        bool m_EnableOnPlay;
 
+        [SerializeField]
+        bool m_PersistOnSceneChange;
 
+        protected override void InitializeInstance()
+        {
+            m_EnableOnPlay = true;
+            m_PersistOnSceneChange = true;
+        }
     }
 }
