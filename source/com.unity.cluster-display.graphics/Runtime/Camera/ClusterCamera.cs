@@ -22,7 +22,8 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
-        struct CameraState
+        [Serializable]
+        class CameraState
         {
             public bool Enabled;
 #if CLUSTER_DISPLAY_HDRP
@@ -30,7 +31,9 @@ namespace Unity.ClusterDisplay.Graphics
 #endif
         }
 
+        [SerializeField, HideInInspector]
         CameraState m_CameraState;
+
         Camera m_Camera;
 #if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
@@ -52,6 +55,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
 #endif
+            RestoreCameraState();
 
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
@@ -90,13 +94,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             // Save camera state.
-            m_CameraState = new CameraState
-            {
-                Enabled = m_Camera.enabled,
-#if CLUSTER_DISPLAY_HDRP
-                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
-#endif
-            };
+            SaveCameraState();
 
             m_RendererEnabled = true;
 
@@ -114,12 +112,25 @@ namespace Unity.ClusterDisplay.Graphics
 
             // TODO What if the user alters the camera state between Enable() and here?
             // Restore camera state.
+            RestoreCameraState();
+
+            m_RendererEnabled = false;
+        }
+
+        void SaveCameraState()
+        {
+            m_CameraState.Enabled = m_Camera.enabled;
+#if CLUSTER_DISPLAY_HDRP
+            m_CameraState.HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
+#endif
+        }
+
+        void RestoreCameraState()
+        {
             m_Camera.enabled = m_CameraState.Enabled;
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
 #endif
-
-            m_RendererEnabled = false;
         }
     }
 
