@@ -4,7 +4,7 @@ namespace Unity.ClusterDisplay.Utils
 {
     abstract class ProjectSettings<T> : ScriptableObject where T : ProjectSettings<T>
     {
-        const string k_AssetName = nameof(T);
+        static readonly string k_AssetName = typeof(T).Name;
 
         protected abstract void InitializeInstance();
 

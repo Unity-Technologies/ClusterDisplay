@@ -137,6 +137,12 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+#if !UNITY_EDITOR
+            if (ClusterRenderingSettings.Current.PersistOnSceneChange)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
+#endif
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;

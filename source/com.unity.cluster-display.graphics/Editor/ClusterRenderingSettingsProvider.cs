@@ -74,6 +74,10 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             });
             m_SettingsElement.Add(m_EnableRendererToggle);
 
+            var renderingSettings = new SerializedObject(ClusterRenderingSettings.Current);
+            m_SettingsElement.Add(new PropertyField(renderingSettings.FindProperty("m_PersistOnSceneChange")));
+            m_SettingsElement.Bind(renderingSettings);
+
             // Option to enable headless emitter
             // FIXME: Some settings from ClusterParams are only relevant for rendering
             var clusterSettings = new SerializedObject(ClusterDisplaySettings.Current);
