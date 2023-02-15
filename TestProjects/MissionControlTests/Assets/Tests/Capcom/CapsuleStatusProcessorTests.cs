@@ -81,7 +81,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             Assert.That(entries[1].Name, Is.EqualTo("Node id"));
             Assert.That(entries[1].Value, Is.EqualTo(28));
             Assert.That(entries[2].Name, Is.EqualTo("Render node id"));
-            Assert.That(entries[2].Value, Is.EqualTo(42));
+            Assert.That(entries[2].Value, Is.EqualTo(role == NodeRole.Unassigned ? -1 : 42));
         }
 
         MissionControlMirror m_Mirror;
