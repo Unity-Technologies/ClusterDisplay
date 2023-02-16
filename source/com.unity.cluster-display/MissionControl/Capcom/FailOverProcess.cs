@@ -62,12 +62,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
 
             UpdateMissionParameters(missionControlMirror).Wait();
             ProcessFailParameters(missionControlMirror).Wait();
-            //if (!m_CreatedMissionParameters.Any())
-            //{
-            //    // There are not mission parameters created to trigger failure of the node, this means that there are no
-            //    // backups to take the work of the failed node.  So there is nothing this process can do...
-            //    return;
-            //}
             UpdateNodeAssignments(missionControlMirror).Wait();
         }
 
