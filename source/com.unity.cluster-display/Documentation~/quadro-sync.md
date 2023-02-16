@@ -29,19 +29,10 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
 ## Setup
 
-1. Verify that you've added the **ClusterDisplay** prefab to the scene located in **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab**:
+1. In **Project Settings > Cluster Display**, select the "Hardware" option in the **Fence** dropdown.
+   ![](images/fence-hardware.png)
 
-    ![Cluster display prefab](images/cluster-display-prefab.png)
-
-2. Verify that the **GFXPluginQuadroSyncCallbacks** component is added and enabled:
-
-    ![Quadro Sync component](images/quadro-sync-component.png)
-
-3. Verify that your Unity project has vsync set to **Every VBlank**
-
-    ![Unity VSync](images/vsync.png)
-
-4. Verify that your Unity project has **Fullscreen Mode** set to **Exclusive Fullscreen**
+2. Verify that your Unity project has **Fullscreen Mode** set to **Exclusive Fullscreen**
 
     ![Fullscreen Exclusive](images/fullscreen-exclusive.png)
 
@@ -79,30 +70,6 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
     ![configureDriver.exe](images/configureDriver-Utility.png)
 
 11. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
-
-12. Run your cluster with the **-window-mode exclusive** command argument to explicitly specify Unity to run in fullscreen exclusive mode.
-
-    There is an [unexpected issue](https://forum.unity.com/threads/playersettings-are-ignored-when-building-windowed-fullscreen.257700/) where Unity will set a registry key that will override the executable in windowed/borderless if you ran the executable without explicitly specifying **-window-mode exclusive**. Therefore, you will need to delete registry entries for the executable. These registry entries are located in: **\HKEY_SOFTWARE_USER\SOFTWARE\\{Company Name\}\{Product Name\}**
-
-    Until we build a better way of resolving this issue, we suggest writing [PSExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) script that will automatically delete those registry entries for you:
-
-    ```powershell
-    # On the machine that your managing the cluster
-    for($i=41; $i -le 48; $i++) { # Loop through IP address range (41-48) for 192.168.5.*
-        echo "Argument: $($args[0])"
-        # Change this IP address
-        psexec \\192.168.5.$i Powershell "C:\cluster_applications\Tools\delete-reg.ps1 $($args[0])"
-        # The script were executing here is placed on each node.
-    }
-    ```
-
-    ```powershell
-    # On each node, this script exists somewhere and gets executed by the script on the machine managing the cluster.
-    echo "Attempting to delete registry keys in: $($args[0])"
-    reg delete "HKCU\Software\$($args[0])" /f
-    ```
-
-    Then you execute it via `.\delete-registry-entries.ps1 {Company Name}`
 
 ## Multiviewers
 
