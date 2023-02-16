@@ -119,14 +119,17 @@ namespace Unity.ClusterDisplay.Graphics
 
         void SaveCameraState()
         {
+            m_CameraState ??= new CameraState();
             m_CameraState.Enabled = m_Camera.enabled;
 #if CLUSTER_DISPLAY_HDRP
-            m_CameraState.HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
+            m_CameraState.HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory;
 #endif
         }
 
         void RestoreCameraState()
         {
+            if (m_CameraState == null) return;
+
             m_Camera.enabled = m_CameraState.Enabled;
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;

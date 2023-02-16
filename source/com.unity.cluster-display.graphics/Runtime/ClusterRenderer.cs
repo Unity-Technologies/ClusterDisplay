@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(1000)] // Make sure ClusterRenderer executes late.
-    class ClusterRenderer : SingletonMonoBehaviour<ClusterRenderer>
+    public class ClusterRenderer : SingletonMonoBehaviour<ClusterRenderer>
     {
         internal static bool IsActive()
         {
