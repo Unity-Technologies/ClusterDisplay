@@ -1,14 +1,18 @@
 @import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
-/* mixins*/
+/************************* mixins*************************/
 :root {
     /* color palette */
     --first-color: #16f;
     --second-color: #ff7;
     --sidebar-bg-color: #141414;
     --sidebar-bg-hover: rgba(20,20,20,0.4);
+    /* heights */
+    --height32: 32px;
+    --height78: 78px;
 }
 
+/************************* Site wide definitions *************************/
 html, body {
     font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif;
     background-color: var(--rz-base-100);
@@ -37,6 +41,7 @@ a, .btn-link {
     color: red;
 }
 
+/************************* Blazor specific DIV *************************/
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
@@ -66,15 +71,13 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
-.rz-dialog-content {
-    height: 100%;
-}
 
-/* override radzen styles */
+/************************* override radzen styles *************************/
+
+/* Navigations */
 .rz-sidebar {
     background-color: var(--sidebar-bg-color);
     max-width: 240px;
-    padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -88,20 +91,31 @@ a, .btn-link {
     border-bottom-width: 0px !important;
 }
 
-    .rz-navigation-item:hover {
-        color: var(--first-color);
+rz-navigation-item:focus {
+    background-color: none;
+}
 
+.rz-panel-menu .rz-navigation-item-icon {
+    color: white;
+}
+
+.rz-panel-menu .rz-navigation-item-icon:hover {
+    color: white !important;
+}
+
+.rz-panel-menu .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
+    color: white;
+}
+    .rz-panel-menu .rz-navigation-item-icon:active {
+        color: white;
     }
+
 
 .rz-navigation-item-wrapper-active {
     color: white !important;
     background-color: var(--rz-base-900) !important;
     border: 1px solid var(--rz-base-700);
     border-radius: 8px;
-}
-
-.rz-panel-menu .rz-navigation-item-active .rz-navigation-item-icon, .rz-panel-menu .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
-    color: var(--rz-base-200) !important;
 }
 
 .rz-panel-menu .rz-navigation-item-link {
@@ -122,10 +136,11 @@ a, .btn-link {
     font-weight: 600;
 }
 
-.rz-colorpicker, .rz-lookup-search input, .rz-spinner, .rz-calendar .rz-inputtext, .rz-multiselect, .rz-dropdown, .mask, .rz-textarea, .rz-textbox {
+/*.rz-colorpicker, .rz-lookup-search input, .rz-spinner, .rz-calendar .rz-inputtext, .rz-multiselect, .rz-dropdown, .mask, .rz-textarea, .rz-textbox {
     width: calc(100% - var(--rz-input-height)) !important;
-}
+}*/
 
+/* radzen Default content */
 .content-container {
     display: flex;
     flex-direction: column;
@@ -139,26 +154,40 @@ input {
     border: 1px solid var(--rz-base-300);
 }
 
+.rz-header {
+    background-color: var(--rz-white);
+    color: var(--rz-base-900);
+}
+
+.rz-data-row {
+    height: 56px;
+    background-color: var(--rz-base-200);
+}
+
+.rz-body, .rz-header {
+    padding: 0px 32px 0px 32px;
+}
+
+.rz-header {
+    height: 56px;
+    display: flex;
+    align-items: center;
+}
+
+/* radzen Dialog */
 .rz-dialog-titlebar {
     border-bottom: 1px solid var(--rz-base-300);
     padding-bottom: 24px;
 }
 
 .rz-dialog-content {
-    padding-top: 0px;
-    padding-right: 0px;
-    padding-bottom: 0px;
+    height:100%;
 }
 
 .rz-dialog-actions {
     padding-top: 24px;
     padding-bottom: 16px;
     border-top: 1px solid var(--rz-base-300);
-}
-
-.rz-header {
-    background-color: var(--rz-white);
-    color: var(--rz-base-900);
 }
 
 .rz-dialog form {
@@ -174,41 +203,53 @@ input {
     padding: 24px 24px 12px 0px;
 }
 
-.rz-data-row{
-    height:56px;
-    background-color:var(--first-color);
+.rz-textbox {
+   width:calc(100% - 1.98rem);
 }
 
-.rz-body, .rz-header {
-    padding: 0px 32px 0px 32px;
+/* ************************ Custom component ************************ */
+
+/* non-specific definitions */
+.height-78 {
+    height:78px;
 }
 
-.rz-header {
-    height:56px;
-    display:flex;
-    align-items:center;
+/* sidebar containing the mission control logo and status */
+.sidebar-container-top {
+    padding:12px;
 }
 
-
-/* Custom component */
-.sidebar-title {
-    color: white;
-    font-size: 14px;
-    padding-top: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+.sidebar-header {
+    width: 100%;
+    display: flex !important;
+    flex-direction: row;
+    align-items: flex-end;
+    padding-left: 12px;
 }
 
-    .sidebar-title img {
-        height: 60px;
-        width: auto;
-    }
-
-    .sidebar-title p {
+    .sidebar-header img {
+        max-width: 70%;
+        max-height: 32px;
         margin: 0px;
-        padding-left: 12px;
     }
+
+    .sidebar-header p {
+        width: 20%;
+        margin-bottom: 0px;
+        padding-left: 8px;
+        color: var(--rz-base-200);
+    }
+
+/* radzen data-grid */
+
+.data-grid-header {
+    background-color: var(--rz-white);
+    display: flex;
+    padding-left: 16px;
+    margin-top: 32px;
+    align-items: center;
+    margin-bottom: -1px;
+}
 
 .data-grid-icon {
     background: none;
@@ -222,6 +263,7 @@ input {
         border-radius: 20em;
     }
 
+/* Page header contianing H2 and buttons */
 .page-title {
     display: flex;
     flex-direction: row;
@@ -230,29 +272,33 @@ input {
     align-items: center;
 }
 
-.title-botton {
+.title-bottom {
     max-height: 36px;
 }
 
-.sidebar-header {
-    width: 100%;
-    display: flex !important;
-    flex-direction: row;
-    align-items:flex-end;
-    padding-left:12px;
+.rz-button {
+    text-transform: capitalize;
 }
 
-.sidebar-header img {
-    max-width: 70%;
-    max-height:32px;
-    margin:0px;
+/* ************************ Responsive Design ************************ */
+
+@media screen and (max-width: 768px) {
+    .rz-body {
+        width: calc(90vw);
+    }
 }
 
-.sidebar-header p {
-    width: 20%;
-    margin-bottom:0px;
-    padding-left:8px;
-    color: var(--rz-base-200);
+@media screen and (max-width: 550px) {
+    .rz-body {
+        width: calc(87vw);
+    }
 }
 
-
+@media screen and (max-width: 350px) {
+    .page-title {
+        flex-direction:column;
+    }
+    .title-bottom {
+        width: 100%;
+    }
+}

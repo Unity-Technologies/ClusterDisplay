@@ -2,8 +2,8 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 
 <div Class="w-100 page-title">
-    <h2>Launch Complexes</h2>
-    <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
+        <h2>Launch Complexes</h2>
+        <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
 </div>
 
 <RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values>
@@ -15,7 +15,7 @@
                 <span>@launchComplex.LaunchPads.Count()</span>
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LaunchComplex">
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="110px">
             <Template Context="launchComplex">
                 <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
                 <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />

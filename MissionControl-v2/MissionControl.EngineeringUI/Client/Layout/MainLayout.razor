@@ -6,18 +6,18 @@
 <RadzenTooltip />
 
 <RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
-    <RadzenHeader>
-        <div class="d-flex align-items-center rz-background-color-white rz-border-color-base-300">
-            <RadzenSidebarToggle class="rz-color-base-600" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
-            <RadzenLabel Text="Header" />
-        </div>
+    <RadzenHeader class="rz-shadow-1">
+        <RadzenSidebarToggle class="rz-color-base-600" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
+        @* <RadzenLabel Text="Unity Mission Control" />*@
     </RadzenHeader>
     <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
-        <div class="sidebar-header">
-            <RadzenImage Path="images\MCunitylogo.png" />
-            <p>(@MissionControlStatus.State)</p>
+        <div class="sidebar-container-top">
+            <div class="sidebar-header">
+                <RadzenImage Path="images\MCunitylogo.png" />
+                <p>(@MissionControlStatus.State)</p>
+            </div>
+            <NavPanel/>
         </div>
-        <NavPanel/>
     </RadzenSidebar>
     <RadzenBody class="rz-px-8">
         <div class="p-2">

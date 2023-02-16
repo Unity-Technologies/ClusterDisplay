@@ -1,7 +1,7 @@
 @using MissionControl
 
 <RadzenTemplateForm TItem="LaunchComplex" Data=@Edited Submit=@OnOk Style="height: 100%;">
-    <div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
+    <div class="row" style="height: 100%; overflow-y: auto;">
         <div class="content-container">
             <!-- To avoid stretching every row of the fixed height container above -->
             <div class="row mb-1 ">
@@ -9,7 +9,7 @@
                     <RadzenLabel Text="Name" />
                 </div>
                 <div class="col-9">
-                    <RadzenTextBox Name="ComplexName" style="width: 100%;" @bind-Value=@Edited.Name />
+                    <RadzenTextBox Name="ComplexName" @bind-Value=@Edited.Name />
                     <RadzenRequiredValidator Component="ComplexName" Text="Name is required" />
                 </div>
             </div>
@@ -18,10 +18,10 @@
                     <RadzenLabel Text="Hangar bay endpoint" />
                 </div>
                 <div class="col-9">
-                    <RadzenTextBox style="width: 100%;" @bind-Value=@EditedHangarBayEndpoint />
+                    <RadzenTextBox @bind-Value=@EditedHangarBayEndpoint />
                     @if (EditedHangarBayEndpointErrorMessage != "")
                     {
-                        <span class="rz-message rz-messages-error" style="width: 100%;">
+                        <span class="rz-message rz-messages-error">
                             @EditedHangarBayEndpointErrorMessage
                         </span>
                     }
@@ -33,7 +33,7 @@
                 </div>
                 <div class="col-9">
                     <div class="align-items-center d-flex">
-                        <RadzenTextBox style="width: 100%;" Value=@Edited.HangarBay.Identifier.ToString() Disabled="true" />
+                        <RadzenTextBox Value=@Edited.HangarBay.Identifier.ToString() Disabled="true" />
                         <RadzenButton Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled=@(EditedHangarBayEndpoint == "")
                                       Click=@OnValidateHangarBayEndpoint />
                     </div>
@@ -69,9 +69,9 @@
     </div>
     <div class="row mt-1">
         <div class="col-12 text-end">
-            <RadzenButton Text=@(ToEdit.Id == Guid.Empty ? "Add" : "Update") ButtonType="ButtonType.Submit"
-                          Style="width: 120px" Class="me-1" />
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
+            <RadzenButton Text=@(ToEdit.Id == Guid.Empty ? "Add" : "Update") ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info"
+                          Style="width: 120px; margin-left:24px;" Class="me-1" />
         </div>
     </div>
 </RadzenTemplateForm>

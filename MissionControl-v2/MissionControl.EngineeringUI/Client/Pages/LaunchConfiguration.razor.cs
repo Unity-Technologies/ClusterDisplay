@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Numerics;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
@@ -136,19 +137,19 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return activeCount;
         }
 
-        async Task ConfigureLaunchComplex()
+        async Task ConfigureLaunchComplex(LaunchComplex complex)
         {
-            var selected = SelectedLaunchComplexes;
-            if (selected == null)
-            {
-                return;
-            }
+            //var selected = SelectedLaunchComplexes;
+            //if (selected == null)
+            //{
+             //   return;
+            //}
 
             var toEdit =
-                LaunchConfigurationService.WorkValue.LaunchComplexes.FirstOrDefault(c => c.Identifier == selected.Id);
+                LaunchConfigurationService.WorkValue.LaunchComplexes.FirstOrDefault(c => c.Identifier == complex.Id);
             if (toEdit == null)
             {
-                toEdit = new() {Identifier = selected.Id};
+                toEdit = new() {Identifier = complex.Id};
                 LaunchConfigurationService.WorkValue.LaunchComplexes =
                     LaunchConfigurationService.WorkValue.LaunchComplexes.Append(toEdit).ToList();
                 LaunchConfigurationService.WorkValue.SignalChanges();
@@ -161,7 +162,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {selected.Name}",
                 new Dictionary<string, object>{ {"Asset", asset}, {"Complex", selected}, {"ToEdit", toEdit} },
-                new DialogOptions() { Width = "60%", Height = "60%", Resizable = true, Draggable = true });
+                new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
             if (!(bool)(ret ?? false))
             {
                 return;
@@ -327,6 +328,25 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             }
 
             return padCfg;
+        }
+
+        async Task SaveAs()
+        {
+            var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
+                new Dictionary<string, object>(),
+                new DialogOptions() { Width = "80%", Height = "60%", Resizable = true, Draggable = true });
+
+            if (ret == null)
+            {
+                return;
+            }
+
+            if (LaunchConfigurationService.WorkValueNeedsPush)
+            {
+                await LaunchConfigurationService.PushWorkToMissionControlAsync();
+            }
+
+            await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
 
         /// <summary>

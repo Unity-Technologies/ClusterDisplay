@@ -18,20 +18,7 @@
 
 <div Class="w-100 page-title">
 <h2>Missions</h2>
-    @if (SelectedMission == null)
-    {
-        <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
-    }
-    else
-    {
-        <RadzenSplitButton Click=@SaveAs Text=@($"{applyPrefix}Save as...") Icon="save_as" ButtonStyle="ButtonStyle.Info"
-                      class="m-1 title-botton" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle>
-            <ChildContent>
-                <RadzenSplitButtonItem Text=@($"{applyPrefix}Overwrite {SelectedMission.Description.Name}...") Icon="save"
-                                   onclick=@Overwrite() />
-            </ChildContent>
-        </RadzenSplitButton>
-    }
+<RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save New Mission") Icon="save_as" ButtonStyle="ButtonStyle.Info" class="m-1 title-bottom" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
 </div>
 
 <RadzenDataGrid @ref="m_MissionsGrid" Data=@MissionsService.Collection.Values
@@ -49,27 +36,15 @@
                 }
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="SavedMissionSummary">
+        <RadzenDataGridColumn TItem="SavedMissionSummary" Width="240px">
             <Template Context="mission">
-                <RadzenButton Click=@(() => Load(mission)) Text="Load">
-                    @*<ChildContent>
-                <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" Click=@(() => LoadAndLaunch(mission)) />
-                </ChildContent> *@
+                <RadzenButton Variant="Variant.Text" Click=@(() => Load(mission)) Text="Load" ButtonStyle="ButtonStyle.Info">
                 </RadzenButton>
+                <RadzenButton Variant="Variant.Text" Click=@(() => Overwrite(mission)) Text="Overwrite" ButtonStyle="ButtonStyle.Info" />
+
                 <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => Delete(mission)) ButtonStyle="ButtonStyle.Light" />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
 
-
-@*
-<RadzenSplitButton Text="Load" Icon="file_open" ButtonStyle="ButtonStyle.Light"
-                   class="mt-2 me-1" Style="width: 250px;"
-                   Disabled=@(SelectedMission == null || MissionControlStatus.State != State.Idle) title=@loadTitle>
-    <ChildContent>
-        <RadzenSplitButtonItem Text="Load & Launch" Icon="rocket_launch" onclick=@LoadAndLaunch
-                               Disabled=@(SelectedMission == null || SelectedMission.AssetId == Guid.Empty) />
-    </ChildContent>
-</RadzenSplitButton>
-*@

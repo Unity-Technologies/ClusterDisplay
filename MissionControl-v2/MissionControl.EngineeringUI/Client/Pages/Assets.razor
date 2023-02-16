@@ -3,7 +3,7 @@
 
 <div Class="w-100 page-title">
 <h2>Assets</h2>
-    <RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
+    <RadzenButton Click=@AddAsset Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-bottom" />
 </div>
 
 <RadzenDataGrid @ref="m_AssetsGrid" Data=@AssetsService.Collection.Values
@@ -29,7 +29,7 @@
                 }
             </Template>
         </RadzenDataGridColumn>
-         <RadzenDataGridColumn TItem="Asset" >
+        <RadzenDataGridColumn TItem="Asset" Width="70px">
             <Template Context="asset">
                 <RadzenButton Icon="delete" Click=@(() => DeleteAsset(asset)) Class="m-1 data-grid-icon" ButtonStyle="ButtonStyle.Light" />
             </Template>

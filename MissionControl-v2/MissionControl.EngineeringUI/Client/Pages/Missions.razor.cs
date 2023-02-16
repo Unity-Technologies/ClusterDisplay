@@ -58,16 +58,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
 
-        async Task Overwrite()
+        async Task Overwrite(SavedMissionSummary mission)
         {
-            var selectedMission = SelectedMission;
-            if (selectedMission == null)
-            {
-                return;
-            }
-
-            SaveMissionCommand saveCommand = new() { Identifier = selectedMission.Id };
-            saveCommand.Description.DeepCopyFrom(selectedMission.Description);
+            SaveMissionCommand saveCommand = new() { Identifier = mission.Id };
+            saveCommand.Description.DeepCopyFrom(mission.Description);
 
             var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
                 new Dictionary<string, object>{ {"Command", saveCommand} },
@@ -88,12 +82,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         async Task Load(SavedMissionSummary mission)
         {
-            //var selectedMission = SelectedMission;
-           // if (selectedMission == null)
-            //{
-               // return;
-            //}
-
             if (LaunchConfigurationService.WorkValueNeedsPush)
             {
                 var ret = await DialogService.Confirm($"Discard non applied changes to the launch configuration?",
@@ -110,12 +98,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         async Task LoadAndLaunch(SavedMissionSummary mission)
         {
-            //var selectedMission = SelectedMission;
-           // if (selectedMission == null)
-           // {
-               // return;
-           // }
-
             await MissionCommandsService.LoadMissionAsync(mission.Id);
 
             await MissionCommandsService.LaunchMissionAsync();
@@ -125,12 +107,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         async Task Delete(SavedMissionSummary mission)
         {
-            //var selectedMission = SelectedMission;
-            //if (selectedMission == null)
-           // {
-               // return;
-          //  }
-
             var ret = await DialogService.Confirm($"Do you really want to delete {mission.Description.Name}?",
                 "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
             if (!ret.HasValue || !ret.Value)

@@ -1,14 +1,14 @@
 @using MissionControl
 
 <RadzenTemplateForm TItem="AssetPost" Data=@Asset Submit=@OnOk Style="height: 100%;">
-    <div class="row" style="height: calc(100% - 40px); overflow-y: auto;">
+    <div class="row" style="height:100%; overflow-y: auto;">
         <div> <!-- To avoid stretching every row of the fixed height container above -->
             <div class="row mb-1">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Name" />
                 </div>
                 <div class="col-9">
-                    <RadzenTextBox Name="AssetName" style="width: 100%;" @bind-Value=@Asset.Name />
+                    <RadzenTextBox Name="AssetName" @bind-Value=@Asset.Name />
                     <RadzenRequiredValidator Component="AssetName" Text="Name is required" />
                 </div>
             </div>
@@ -17,7 +17,7 @@
                     <RadzenLabel Text="Description" />
                 </div>
                 <div class="col-9">
-                    <RadzenTextArea style="width: 100%; margin-bottom: -7px;" @bind-Value=@Asset.Description />
+                    <RadzenTextArea style="margin-bottom: -7px;" @bind-Value=@Asset.Description />
                 </div>
             </div>
             <div class="row my-1">
@@ -25,7 +25,7 @@
                     <RadzenLabel Text="URL" />
                 </div>
                 <div class="col-9">
-                    <RadzenTextBox Name="URL" style="width: 100%;" @bind-Value=@Asset.Url
+                    <RadzenTextBox Name="URL" @bind-Value=@Asset.Url
                                    title="This URL has to be accessible from the MissionControl server."/>
                     <RadzenRequiredValidator Component="URL" Text="URL is required" />
                 </div>
@@ -34,8 +34,9 @@
     </div>
     <div class="row mt-1">
         <div class="col-12 text-end">
-            <RadzenButton Text="Add" ButtonType="ButtonType.Submit" Style="width: 120px" Class="me-1" />
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
+            <RadzenButton Text="Add" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info"
+                          Style="width: 120px; margin-left:24px;" Class="me-1" />
         </div>
     </div>
 </RadzenTemplateForm>
