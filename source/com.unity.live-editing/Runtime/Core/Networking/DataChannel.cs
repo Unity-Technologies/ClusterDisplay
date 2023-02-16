@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Profiling;
 
@@ -266,7 +267,7 @@ namespace Unity.LiveEditing.LowLevel.Networking
     /// </summary>
     static class PacketTransportExtensions
     {
-        static readonly int k_HeaderSize = Marshal.SizeOf<PacketHeader>();
+        static readonly int k_HeaderSize = UnsafeUtility.SizeOf<PacketHeader>();
 
         public static PacketHeader ReadPacket(this Socket socket, Span<byte> payloadDataOut)
         {
