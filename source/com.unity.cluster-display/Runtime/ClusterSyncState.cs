@@ -60,7 +60,7 @@ namespace Unity.ClusterDisplay
 
         public byte RenderNodeID
         {
-            get => LocalNode?.RenderNodeId ?? 0;
+            get => LocalNode.RenderNodeId;
             set
             {
                 if (LocalNode != null) { LocalNode.RenderNodeId = value; }
