@@ -17,6 +17,4 @@ on a curved display surface (e.g. LED wall).
 
 Same as Mesh Warp, above, but provides better image quality if your displays are flat.
 
-![](../com.unity.cluster-display/Documentation~/images/livecapture-tracking.gif)
-
-## 
+![](../../com.unity.cluster-display/Documentation~/images/livecapture-tracking.gif)
