@@ -889,7 +889,6 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                     Type = LaunchableBase.CapcomLaunchableType,
                     Payloads = new [] { "Payload" },
                     Data = JsonNode.Parse("{'LaunchData': 42}".Replace('\'', '\"')),
-                    PreLaunchPath = "prelaunch.ps1",
                     LaunchPath = "launch.ps1",
                     LandingTimeSec = 5
                 }

@@ -92,8 +92,16 @@ namespace Unity.ClusterDisplay.Tests
             m_NodeEventBus = new EventBus<TestData>(EventBusFlags.WriteToCluster);
         }
 
+        static readonly IReadOnlyList<ClusterTopologyEntry> k_ClusterWithRemovedRepeater = new ClusterTopologyEntry[]
+        {
+            new () {NodeId = k_EmitterId, NodeRole = NodeRole.Emitter, RenderNodeId = k_EmitterId},
+            new () {NodeId = k_RepeaterIds[1], NodeRole = NodeRole.Repeater, RenderNodeId = k_RepeaterIds[1]},
+        };
+        static readonly int[] k_ChangeClusterTopologyBeforeFrames = {0, 1, 2, 10};
+
         [UnityTest]
-        public IEnumerator StatesTransitionsWithNetworkSync()
+        public IEnumerator StatesTransitionsWithNetworkSync(
+            [ValueSource(nameof(k_ChangeClusterTopologyBeforeFrames))] int changeClusterTopologyBeforeFrame)
         {
             SetUp(false);
             long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
@@ -119,10 +127,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -169,6 +174,10 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             PublishEvents();
+            if (changeClusterTopologyBeforeFrame <= 0)
+            {
+                m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
+            }
             m_Node.DoFrame();
             long doFrameExitTimestamp = Stopwatch.GetTimestamp();
             Assert.DoesNotThrow(repeatersJobForFrame0.Wait);
@@ -177,6 +186,7 @@ namespace Unity.ClusterDisplay.Tests
             {
                 Assert.That(repeaterData.ReceivedTestData, Is.EqualTo(2));
             }
+            TestRepeatersPresence();
 
             // ======= End of Frame ===========
             m_Node.ConcludeFrame();
@@ -231,6 +241,10 @@ namespace Unity.ClusterDisplay.Tests
                 });
 
                 PublishEvents();
+                if (changeClusterTopologyBeforeFrame <= (int)frameIdx)
+                {
+                    m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
+                }
                 m_Node.DoFrame();
                 doFrameExitTimestamp = Stopwatch.GetTimestamp();
                 Assert.DoesNotThrow(repeatersJobForFrame.Wait);
@@ -239,6 +253,7 @@ namespace Unity.ClusterDisplay.Tests
                 {
                     Assert.That(repeaterData.ReceivedTestData, Is.EqualTo((frameIdx + 1) * 2));
                 }
+                TestRepeatersPresence();
 
                 // ======= End of Frame ===========
                 m_Node.ConcludeFrame();
@@ -247,7 +262,8 @@ namespace Unity.ClusterDisplay.Tests
         }
 
         [UnityTest]
-        public IEnumerator StatesTransitionsWithHardwareSync()
+        public IEnumerator StatesTransitionsWithHardwareSync(
+            [ValueSource(nameof(k_ChangeClusterTopologyBeforeFrames))] int changeClusterTopologyBeforeFrame)
         {
             SetUp(false);
             long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
@@ -274,10 +290,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -324,6 +337,10 @@ namespace Unity.ClusterDisplay.Tests
             });
 
             PublishEvents();
+            if (changeClusterTopologyBeforeFrame <= 0)
+            {
+                m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
+            }
             m_Node.DoFrame();
             long doFrameExitTimestamp = Stopwatch.GetTimestamp();
             Assert.DoesNotThrow(repeatersJobForFrame0.Wait);
@@ -332,6 +349,7 @@ namespace Unity.ClusterDisplay.Tests
             {
                 Assert.That(repeaterData.ReceivedTestData, Is.EqualTo(2));
             }
+            TestRepeatersPresence();
 
             // ======= End of Frame ===========
             m_Node.ConcludeFrame();
@@ -363,12 +381,17 @@ namespace Unity.ClusterDisplay.Tests
                 });
 
                 PublishEvents();
+                if (changeClusterTopologyBeforeFrame <= (int)frameIdx)
+                {
+                    m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
+                }
                 m_Node.DoFrame();
                 Assert.DoesNotThrow(repeatersJobForFrame.Wait);
                 foreach (var repeaterData in m_Repeaters)
                 {
                     Assert.That(repeaterData.ReceivedTestData, Is.EqualTo((frameIdx + 1) * 2));
                 }
+                TestRepeatersPresence();
 
                 // ======= End of Frame ===========
                 m_Node.ConcludeFrame();
@@ -404,10 +427,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -650,6 +670,23 @@ namespace Unity.ClusterDisplay.Tests
                     break;
             }
             Assert.That(testData.FloatVal, Is.EqualTo(effectiveFrameIndex));
+        }
+
+        void TestRepeatersPresence()
+        {
+            byte[] expectedRepeaters;
+            if (m_Node.UpdatedClusterTopology.Entries == null)
+            {
+                expectedRepeaters = k_RepeaterIds;
+            }
+            else
+            {
+                expectedRepeaters = m_Node.UpdatedClusterTopology.Entries
+                    .Where(e => e.NodeRole is NodeRole.Repeater or NodeRole.Backup)
+                    .Select(e => e.NodeId).ToArray();
+            }
+
+            Assert.That(m_Node.RepeatersStatus.RepeaterPresence.ExtractSetBits(), Is.EqualTo(expectedRepeaters));
         }
     }
 }

@@ -482,7 +482,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl
                     Type = "clusterNode",
                     Payloads = new [] { "Payload" },
                     LaunchPath = "launch.ps1",
-                    LandingTimeSec = 2.5f
+                    LandingTimeSec = 10.0f
                 }
             }
         };

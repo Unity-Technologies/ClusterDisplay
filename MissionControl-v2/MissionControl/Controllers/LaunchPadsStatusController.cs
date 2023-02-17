@@ -50,10 +50,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
         {
             using (var lockedStatus = await m_StatusService.LockAsync())
             {
-                if (lockedStatus.Value.State != State.Launched)
+                if (lockedStatus.Value.State < State.Launched)
                 {
-                    return Conflict($"MissionControl has to be in the Launched state to put dynamic launchpad status " +
-                        $"entries (it is currently {lockedStatus.Value.State}).");
+                    return Conflict($"MissionControl has to be in the Launched state (or launched with failures) to " +
+                        $"put dynamic launchpad status entries (it is currently {lockedStatus.Value.State}).");
                 }
 
                 try

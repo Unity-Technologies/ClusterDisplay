@@ -176,7 +176,6 @@ namespace Unity.ClusterDisplay
             if (!IsClusterLogicEnabled)
             {
                 InstanceLog("ClusterRendering is missing command line configuration. Will be dormant.");
-                NodeRole = NodeRole.Unassigned;
                 return;
             }
 
@@ -223,7 +222,6 @@ namespace Unity.ClusterDisplay
                 udpConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
                 LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, new UdpAgent(udpConfig));
 
-                NodeRole = NodeRole.Emitter;
                 RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
 
                 switch (clusterNodeConfig.InputSync)
@@ -261,8 +259,6 @@ namespace Unity.ClusterDisplay
                 udpConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
                 LocalNode = new RepeaterNode(clusterNodeConfig, new UdpAgent(udpConfig));
 
-                NodeRole = NodeRole.Repeater;
-
                 InitializeRepeaterInputSync(clusterNodeConfig);
 
                 return true;
@@ -281,9 +277,7 @@ namespace Unity.ClusterDisplay
             try
             {
                 udpConfig.ReceivedMessagesType = RepeaterNode.ReceiveMessageTypes.ToArray();
-                LocalNode = new RepeaterNode(clusterNodeConfig, new UdpAgent(udpConfig));
-
-                NodeRole = NodeRole.Backup;
+                LocalNode = new RepeaterNode(clusterNodeConfig, new UdpAgent(udpConfig), true);
 
                 InitializeRepeaterInputSync(clusterNodeConfig);
 
@@ -359,7 +353,6 @@ namespace Unity.ClusterDisplay
 
         public void CleanUp()
         {
-            NodeRole = NodeRole.Unassigned;
             IsClusterLogicEnabled = false;
 
             LocalNode?.Dispose();

@@ -57,17 +57,21 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 {
                     var toStop = m_TcpListener;
                     m_TcpListener = null;
-                    toStop.Stop();
+                    toStop?.Stop();
                 });
 
+                Application.quitting += () => m_CancellationTokenSource.Cancel();
+
                 ClusterSyncLooper.onInstanceDoPreFrame += OnDoPreFrame;
-                _ = SendsCapcomMessages();
+                var sendCapcomMessagesTask = SendsCapcomMessages();
 
                 while (!m_CancellationTokenSource.IsCancellationRequested)
                 {
                     var tcpClient = await m_TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
                     _ = ProcessConnectionAsync(tcpClient);
                 }
+
+                await sendCapcomMessagesTask;
             }
             catch (Exception e)
             {
@@ -165,6 +169,28 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
             }
             finally
             {
+                // Transition our role to unassigned while quitting
+                if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+                {
+                    using var propagateUnassignedNodeRole = SendCapsuleStatus.New();
+                    propagateUnassignedNodeRole.NodeRole = NodeRole.Unassigned;
+                    propagateUnassignedNodeRole.NodeId = clusterSyncState.NodeID;
+                    propagateUnassignedNodeRole.RenderNodeId = clusterSyncState.RenderNodeID;
+
+                    NetworkStream networkStream;
+                    lock (m_Lock)
+                    {
+                        networkStream = m_ToCapcomNetworkStream;
+                    }
+
+                    if (networkStream != null)
+                    {
+                        await networkStream.WriteStructAsync(propagateUnassignedNodeRole.MessageId, messageIdBuffer).ConfigureAwait(false);
+                        await propagateUnassignedNodeRole.Send(networkStream).ConfigureAwait(false);
+                    }
+                }
+
+                // Dispose of the remaining resources
                 lock (m_Lock)
                 {
                     m_ToCapcomNetworkStream?.Dispose();

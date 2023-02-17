@@ -235,6 +235,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
             public void FakeStatusChange(byte nodeId, byte renderNodeId)
             {
                 var capsuleStatus = SendCapsuleStatus.New();
+                capsuleStatus.NodeRole = NodeRole.Repeater;
                 capsuleStatus.NodeId = nodeId;
                 capsuleStatus.RenderNodeId = renderNodeId;
                 ProcessingLoop.QueueSendMessage(capsuleStatus);
@@ -300,7 +301,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                 Assert.That(dynamicEntries.ContainsKey(launchPadId), Is.True);
                 Assert.That(dynamicEntries[launchPadId].Length, Is.EqualTo(3));
                 Assert.That(dynamicEntries[launchPadId][0].Name, Is.EqualTo("Role"));
-                Assert.That(dynamicEntries[launchPadId][0].Value, Is.EqualTo("Unassigned"));
+                Assert.That(dynamicEntries[launchPadId][0].Value, Is.EqualTo("Repeater"));
                 Assert.That(dynamicEntries[launchPadId][1].Name, Is.EqualTo("Node id"));
                 Assert.That(dynamicEntries[launchPadId][1].Value, Is.EqualTo(expectedNodeId));
                 Assert.That(dynamicEntries[launchPadId][2].Name, Is.EqualTo("Render node id"));

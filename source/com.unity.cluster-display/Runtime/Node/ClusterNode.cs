@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
@@ -61,9 +60,7 @@ namespace Unity.ClusterDisplay
         /// Index of the frame we are currently dealing with.
         /// </summary>
         /// <remarks>Every "physical node" start with a FrameIndex of 0 and it increase in lock step between all the
-        /// nodes as the time pass.  However, the <see cref="ClusterNode"/> might start at a different FrameIndex
-        /// when the role of a node changes during the process lifetime (eg. when a <see cref="EmitterNode"/> replaces
-        /// a <see cref="BackupNode"/>).</remarks>
+        /// nodes as the time pass.</remarks>
         public ulong FrameIndex { get; private set; }
 
         /// <summary>
@@ -86,7 +83,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Method called to perform the work the node has to do for the current frame
         /// </summary>
-        public void DoFrame()
+        public virtual void DoFrame()
         {
             NodeState newState;
             do
@@ -111,11 +108,9 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkStatistics networkStatistics)
         {
-            ServiceLocator.TryGet(out IClusterSyncState clusterSync);
-
             var builder = new StringBuilder();
-            builder.AppendFormat("\tNode (Role / ID / Render ID): {0} / {1} / {2}",
-                clusterSync?.NodeRole ?? NodeRole.Unassigned, Config.NodeId, clusterSync?.RenderNodeID ?? -1);
+            builder.AppendFormat("\tNode (Role / ID / Render ID): {0} / {1} / {2}", NodeRole, Config.NodeId,
+                RenderNodeId);
             builder.AppendLine();
             builder.AppendFormat("\tFrame: {0}", FrameIndex);
             builder.AppendLine();
@@ -148,6 +143,24 @@ namespace Unity.ClusterDisplay
 
             return builder.ToString();
         }
+
+        /// <summary>
+        /// Role of the node in the cluster.
+        /// </summary>
+        public NodeRole NodeRole { get; protected set; }
+
+        /// <summary>
+        /// Adjusted node ID for rendering.
+        /// </summary>
+        /// <remarks>
+        /// This could differ from NodeID if not all nodes perform rendering (non-rendering nodes are skipped).
+        /// </remarks>
+        public byte RenderNodeId { get; set; }
+
+        /// <summary>
+        /// Updated topology of the cluster (when updated while running).
+        /// </summary>
+        public ClusterTopology UpdatedClusterTopology { get; } = new();
 
         /// <summary>
         /// Constructor
@@ -190,17 +203,5 @@ namespace Unity.ClusterDisplay
         /// Current state of the node.
         /// </summary>
         NodeState m_CurrentState;
-    }
-
-    /// <summary>
-    /// Not yet implemented, TODO as we start working on redundancy.  Mostly kept so that comments can reference it :)
-    /// </summary>
-    class BackupNode : ClusterNode
-    {
-        BackupNode()
-            : base(new ClusterNodeConfig(), null)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

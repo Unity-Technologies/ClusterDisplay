@@ -6,6 +6,7 @@
         "UnityEditor.TestRunner",
         "Unity.ClusterDisplay.Runtime",
         "Unity.ClusterDisplay.Runtime.Shared",
+        "Unity.ClusterDisplay.MissionControl.Shared",
         "Unity.Collections",
         "Unity.InputSystem",
         "Unity.InputSystem.TestFramework"

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay.MissionControl.Capsule
 {
@@ -28,7 +30,7 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 return;
             }
 
-            m_Entries.Clear();
+            List<ChangeClusterTopologyEntry> entries = new();
             for (int i = 0; i < header.Value.EntriesCount; ++i)
             {
                 var entry = await networkStream.ReadStructAsync<ChangeClusterTopologyEntry>(m_MessageReadBuffer);
@@ -36,10 +38,16 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
                 {
                     break;
                 }
-                m_Entries.Add(entry.Value);
+                entries.Add(entry.Value);
             }
 
-            // TODO: Process
+            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync))
+            {
+                clusterSync.ChangeClusterTopology(entries
+                    .Select(e => new ClusterTopologyEntry()
+                        { NodeId = e.NodeId, NodeRole = e.NodeRole, RenderNodeId = e.RenderNodeId})
+                    .ToList());
+            }
 
             // Done processing the quit request
             await networkStream.WriteStructAsync(new ChangeClusterTopologyResponse(), m_ResponseWriteBuffer);
@@ -55,11 +63,5 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
         /// Buffer used when writing to the network stream.
         /// </summary>
         byte[] m_ResponseWriteBuffer = new byte[Marshal.SizeOf<ChangeClusterTopologyResponse>()];
-
-        /// <summary>
-        /// List used to accumulate all received ChangeClusterTopologyEntry composing a single cluster topology change
-        /// message.
-        /// </summary>
-        List<ChangeClusterTopologyEntry> m_Entries = new();
     }
 }
