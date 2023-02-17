@@ -23,8 +23,9 @@ namespace Unity.ClusterDisplay.Graphics
     public class ClusterCamera : MonoBehaviour
     {
         [Serializable]
-        class CameraState
+        struct CameraState
         {
+            public bool HasSavedState;
             public bool Enabled;
 #if CLUSTER_DISPLAY_HDRP
             public bool HasPersistentHistory;
@@ -32,13 +33,19 @@ namespace Unity.ClusterDisplay.Graphics
         }
 
         [SerializeField, HideInInspector]
-        CameraState m_CameraState;
+        CameraState m_CameraState = new();
 
         Camera m_Camera;
 #if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
 #endif
         bool m_RendererEnabled;
+        bool m_Reloading = true;
+
+        void Start()
+        {
+            Debug.Log("start");
+        }
 
         void Update()
         {
@@ -51,11 +58,15 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
+            Debug.Log("OnEnable");
             m_Camera = GetComponent<Camera>();
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
 #endif
-            RestoreCameraState();
+            if (m_Reloading)
+            {
+                RestoreCameraState();
+            }
 
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
@@ -66,6 +77,8 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 OnRendererEnabled();
             }
+
+            m_Reloading = false;
         }
 
         void OnDisable()
@@ -119,16 +132,19 @@ namespace Unity.ClusterDisplay.Graphics
 
         void SaveCameraState()
         {
-            m_CameraState ??= new CameraState();
-            m_CameraState.Enabled = m_Camera.enabled;
+            m_CameraState = new CameraState
+            {
+                HasSavedState = true,
+                Enabled = m_Camera.enabled,
 #if CLUSTER_DISPLAY_HDRP
-            m_CameraState.HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory;
+                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory,
 #endif
+            };
         }
 
         void RestoreCameraState()
         {
-            if (m_CameraState == null) return;
+            if (!m_CameraState.HasSavedState) return;
 
             m_Camera.enabled = m_CameraState.Enabled;
 #if CLUSTER_DISPLAY_HDRP
