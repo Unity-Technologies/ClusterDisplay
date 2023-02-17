@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             : base(node)
         {
             m_Splitter = new(Node.UdpAgent, new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
-            m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence);
+            m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence, Node.UpdatedClusterTopology);
             m_Emitter = new(Node.Config.RepeatersDelayed);
             Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.registeringWithEmitter, AnswerRegisteringWithEmitter);
         }

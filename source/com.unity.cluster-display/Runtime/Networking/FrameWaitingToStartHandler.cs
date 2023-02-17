@@ -4,8 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Unity.ClusterDisplay.MissionControl.Capsule;
-using Unity.ClusterDisplay.Utils;
+using JetBrains.Annotations;
 using Utils;
 
 namespace Unity.ClusterDisplay
@@ -27,8 +26,13 @@ namespace Unity.ClusterDisplay
         /// <param name="udpAgent">Object through which we we are receiving <see cref="RepeaterWaitingToStartFrame"/>
         /// and transmitting <see cref="EmitterWaitingToStartFrame"/>.</param>
         /// <param name="toWaitFor">Repeater nodes that we have to wait on through network synchronization.</param>
-        public FrameWaitingToStartHandler(IUdpAgent udpAgent, NodeIdBitVectorReadOnly toWaitFor)
+        /// <param name="clusterTopology">List to monitor for changes to the cluster topology (which might interrupt the
+        /// wait).</param>
+        public FrameWaitingToStartHandler(IUdpAgent udpAgent, NodeIdBitVectorReadOnly toWaitFor,
+            [CanBeNull] ClusterTopology clusterTopology = null)
         {
+            m_ClusterTopology = clusterTopology;
+
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.RepeaterWaitingToStartFrame))
             {
                 throw new ArgumentException("UdpAgent does not support receiving required MessageType.RepeaterWaitingToStartFrame");
@@ -50,9 +54,9 @@ namespace Unity.ClusterDisplay
             {
                 UdpAgent.RemovePreProcess(PreProcessReceivedMessage);
             }
-            if (m_UpdatedClusterTopologyChangedRegistered && ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            if (m_UpdatedClusterTopologyChangedRegistered)
             {
-                clusterSyncState.UpdatedClusterTopologyChanged -= UpdatedClusterTopologyChanged;
+                m_ClusterTopology.Changed -= Changed;
             }
         }
 
@@ -71,16 +75,12 @@ namespace Unity.ClusterDisplay
         public NodeIdBitVectorReadOnly TryWaitForAllRepeatersReady(ulong frameIndex, TimeSpan maxTime)
         {
             // Manage registration to cluster topology changes so that we immediately wake up when a change happens.
-            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            if (m_ClusterTopology != null)
             {
                 if (!m_UpdatedClusterTopologyChangedRegistered)
                 {
-                    clusterSyncState.UpdatedClusterTopologyChanged += UpdatedClusterTopologyChanged;
+                    m_ClusterTopology.Changed += Changed;
                 }
-            }
-            else
-            {
-                m_UpdatedClusterTopologyChangedRegistered = false;
             }
 
             long deadlineTimestamp = StopwatchUtils.TimestampIn(maxTime);
@@ -90,12 +90,12 @@ namespace Unity.ClusterDisplay
                        (frameIndex > m_FrameIndex ||
                         (frameIndex == m_FrameIndex && m_StillWaitingOn.SetBitsCount > 0)))
                 {
-                    if (clusterSyncState?.UpdatedClusterTopology != null &&
+                    if (m_ClusterTopology?.Entries != null &&
                         (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
-                         !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
+                         !ReferenceEquals(lastAnalyzedTopology, m_ClusterTopology.Entries)))
                     {
-                        HandleRemovedRepeaters(clusterSyncState.UpdatedClusterTopology);
-                        m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+                        HandleRemovedRepeaters(m_ClusterTopology.Entries);
+                        m_LastAnalyzedTopology.SetTarget(m_ClusterTopology.Entries);
                         continue; // Since we might have removed the last repeater we were waiting on...
                     }
 
@@ -217,9 +217,9 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Delegate called when <see cref="IClusterSyncState.UpdatedClusterTopologyChanged"/> is fired.
+        /// Delegate called when <see cref="ClusterTopology.Changed"/> is fired.
         /// </summary>
-        void UpdatedClusterTopologyChanged()
+        void Changed()
         {
             lock (m_ThisLock)
             {
@@ -230,7 +230,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Check for repeaters that are not included in the cluster topology anymore.
         /// </summary>
-        void HandleRemovedRepeaters(IReadOnlyList<ChangeClusterTopologyEntry> topologyEntries)
+        void HandleRemovedRepeaters(IReadOnlyList<ClusterTopologyEntry> topologyEntries)
         {
             NodeIdBitVector repeatersStillPresent = new();
             foreach (var entry in topologyEntries)
@@ -252,6 +252,11 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// List to monitor for changes to the cluster topology (which might interrupt the wait).
+        /// </summary>
+        readonly ClusterTopology m_ClusterTopology;
+
+        /// <summary>
         /// Object to be locked when code needs to serialize access to member variables.
         /// </summary>
         readonly object m_ThisLock = new();
@@ -268,14 +273,14 @@ namespace Unity.ClusterDisplay
         /// </summary>
         NodeIdBitVector m_StillWaitingOn;
         /// <summary>
-        /// Have we registered <see cref="IClusterSyncState.UpdatedClusterTopologyChanged"/> to be informed immediately
-        /// when topology changes are received?
+        /// Have we registered <see cref="ClusterTopology.Changed"/> to be informed immediately when topology changes
+        /// are received?
         /// </summary>
         bool m_UpdatedClusterTopologyChangedRegistered;
         /// <summary>
         /// Last analyzed topology change.
         /// </summary>
-        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
+        WeakReference<IReadOnlyList<ClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
 
         /// <summary>
         /// <see cref="NodeIdBitVector"/> with all bits always set to 0.

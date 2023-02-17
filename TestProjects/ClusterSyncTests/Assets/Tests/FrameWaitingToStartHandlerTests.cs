@@ -5,8 +5,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using Unity.ClusterDisplay.MissionControl.Capsule;
-using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Utils;
@@ -15,18 +13,6 @@ namespace Unity.ClusterDisplay.Tests
 {
     public class FrameWaitingToStartHandlerTests
     {
-        [SetUp]
-        public void SetUp()
-        {
-            ServiceLocator.Provide<IClusterSyncState>(new ClusterSyncStub());
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            ServiceLocator.Withdraw<ClusterSyncStub>();
-        }
-
         [Test]
         public void WaitingOnSingleFrame()
         {
@@ -236,8 +222,10 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            ClusterTopology clusterTopology = new();
             using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}));
+                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}),
+                    clusterTopology);
 
             long beforeTopologyChangeTimestamp = long.MaxValue;
             var repeaterTask1 = Task.Run(() =>
@@ -249,13 +237,14 @@ namespace Unity.ClusterDisplay.Tests
 
                 Thread.Sleep(250);
 
-                List<ChangeClusterTopologyEntry> newTopology = new();
+                List<ClusterTopologyEntry> newTopology = new();
                 newTopology.Add(new(){NodeId = 0, NodeRole = NodeRole.Emitter, RenderNodeId = 0});
                 newTopology.Add(new(){NodeId = 3, NodeRole = NodeRole.Repeater, RenderNodeId = 3});
                 // 1 is not present in the list of entries anymore, so removing it...
 
                 beforeTopologyChangeTimestamp = Stopwatch.GetTimestamp();
-                ServiceLocator.Get<IClusterSyncState>().UpdatedClusterTopology = newTopology;
+                clusterTopology.Entries = newTopology;
+
             });
 
             var stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(0, m_MaxTestTime);

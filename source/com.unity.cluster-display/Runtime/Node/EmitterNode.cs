@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using Unity.ClusterDisplay.EmitterStateMachine;
-using Unity.ClusterDisplay.MissionControl.Capsule;
-using Unity.ClusterDisplay.Utils;
 using Utils;
 
 namespace Unity.ClusterDisplay
@@ -114,6 +112,7 @@ namespace Unity.ClusterDisplay
         public EmitterNode(ClusterNodeConfig config, EmitterNodeConfig emitterConfig, IUdpAgent udpAgent)
             : base(config, udpAgent)
         {
+            NodeRole = NodeRole.Emitter;
             EmitterConfig = emitterConfig;
             SetInitialState(Config.Fence is FrameSyncFence.Hardware ?
                 HardwareSyncInitState.Create(this) : new WelcomeRepeatersState(this));
@@ -161,17 +160,12 @@ namespace Unity.ClusterDisplay
         /// </summary>
         void ProcessTopologyChanges()
         {
-            if (!ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+            if (UpdatedClusterTopology.Entries != null &&
+                (!m_LastAnalyzedTopologyEntries.TryGetTarget(out var lastAnalyzedTopology) ||
+                 !ReferenceEquals(lastAnalyzedTopology, UpdatedClusterTopology.Entries)))
             {
-                return;
-            }
-
-            if (clusterSyncState.UpdatedClusterTopology != null &&
-                (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
-                 !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
-            {
-                HandleRemovedRepeaters(clusterSyncState.UpdatedClusterTopology);
-                m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+                HandleRemovedRepeaters(UpdatedClusterTopology.Entries);
+                m_LastAnalyzedTopologyEntries.SetTarget(UpdatedClusterTopology.Entries);
             }
         }
 
@@ -180,7 +174,7 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="topologyEntries">List of all the entries describing the current topology of the cluster.
         /// </param>
-        void HandleRemovedRepeaters(IReadOnlyList<ChangeClusterTopologyEntry> topologyEntries)
+        void HandleRemovedRepeaters(IReadOnlyList<ClusterTopologyEntry> topologyEntries)
         {
             NodeIdBitVector repeatersStillPresent = new();
             foreach (var entry in topologyEntries)
@@ -209,6 +203,6 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Last analyzed topology change.
         /// </summary>
-        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
+        WeakReference<IReadOnlyList<ClusterTopologyEntry>> m_LastAnalyzedTopologyEntries = new(null);
     }
 }

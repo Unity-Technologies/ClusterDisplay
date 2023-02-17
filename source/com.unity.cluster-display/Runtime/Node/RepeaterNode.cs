@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Unity.ClusterDisplay.MissionControl.Capsule;
 using Unity.ClusterDisplay.RepeaterStateMachine;
-using Unity.ClusterDisplay.Utils;
 #if !UNITY_EDITOR
 using UnityEngine;
 #endif
@@ -20,9 +18,11 @@ namespace Unity.ClusterDisplay
         /// <param name="config">Node's configuration.</param>
         /// <param name="udpAgent">Object through which we will perform communication with other nodes in the cluster.
         /// Must support reception of <see cref="ReceiveMessageTypes"/>.</param>
-        public RepeaterNode(ClusterNodeConfig config, IUdpAgent udpAgent)
+        /// <param name="isBackup">Is the repeater node used to perform the work of a backup node?</param>
+        public RepeaterNode(ClusterNodeConfig config, IUdpAgent udpAgent, bool isBackup = false)
             : base(config, udpAgent)
         {
+            NodeRole = isBackup ? NodeRole.Backup : NodeRole.Repeater;
             SetInitialState(Config.Fence is FrameSyncFence.Hardware ?
                 HardwareSyncInitState.Create(this) : new RegisterWithEmitterState(this));
         }
@@ -56,36 +56,28 @@ namespace Unity.ClusterDisplay
         /// </summary>
         void ProcessTopologyChanges()
         {
-            if (!ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
-            {
-                return;
-            }
-
-            if (clusterSyncState.UpdatedClusterTopology != null &&
+            if (UpdatedClusterTopology.Entries != null &&
                 (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
-                 !ReferenceEquals(lastAnalyzedTopology, clusterSyncState.UpdatedClusterTopology)))
+                 !ReferenceEquals(lastAnalyzedTopology, UpdatedClusterTopology.Entries)))
             {
-                HandleChangesInNodeAssignment(clusterSyncState);
-                m_LastAnalyzedTopology.SetTarget(clusterSyncState.UpdatedClusterTopology);
+                HandleChangesInNodeAssignment(UpdatedClusterTopology.Entries);
+                m_LastAnalyzedTopology.SetTarget(UpdatedClusterTopology.Entries);
             }
         }
 
         /// <summary>
         /// Check if the role or render node id of this node has changed.
         /// </summary>
-        void HandleChangesInNodeAssignment(IClusterSyncState clusterSyncState)
+        void HandleChangesInNodeAssignment(IReadOnlyList<ClusterTopologyEntry> entries)
         {
             // Find entry for this node
-            ChangeClusterTopologyEntry? thisNodeEntry = null;
-            if (clusterSyncState.UpdatedClusterTopology != null)
+            ClusterTopologyEntry? thisNodeEntry = null;
+            foreach (var entry in entries)
             {
-                foreach (var entry in clusterSyncState.UpdatedClusterTopology)
+                if (entry.NodeId == Config.NodeId)
                 {
-                    if (entry.NodeId == clusterSyncState.NodeID)
-                    {
-                        thisNodeEntry = entry;
-                        break;
-                    }
+                    thisNodeEntry = entry;
+                    break;
                 }
             }
             if (!thisNodeEntry.HasValue)
@@ -96,8 +88,8 @@ namespace Unity.ClusterDisplay
                 return;
             }
 
-            clusterSyncState.NodeRole = thisNodeEntry.Value.NodeRole;
-            clusterSyncState.RenderNodeID = thisNodeEntry.Value.RenderNodeId;
+            NodeRole = thisNodeEntry.Value.NodeRole;
+            RenderNodeId = thisNodeEntry.Value.RenderNodeId;
         }
 
         /// <summary>
@@ -109,6 +101,6 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Last analyzed topology change.
         /// </summary>
-        WeakReference<IReadOnlyList<ChangeClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
+        WeakReference<IReadOnlyList<ClusterTopologyEntry>> m_LastAnalyzedTopology = new(null);
     }
 }

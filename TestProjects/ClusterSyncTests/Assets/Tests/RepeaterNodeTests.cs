@@ -6,13 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using Unity.ClusterDisplay.MissionControl.Capsule;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Unity.ClusterDisplay.RepeaterStateMachine;
-using Unity.ClusterDisplay.Utils;
 using Utils;
-using static Unity.ClusterDisplay.Tests.NetworkingUtils;
 using static Unity.ClusterDisplay.Tests.NodeTestUtils;
 
 namespace Unity.ClusterDisplay.Tests
@@ -29,13 +25,8 @@ namespace Unity.ClusterDisplay.Tests
         const byte k_EmitterId = 0;
         const byte k_RepeaterId = 1;
 
-        void SetUp(NodeRole nodeRole, byte renderNodeId)
+        void SetUp(bool isBackup, byte renderNodeId)
         {
-            ClusterSyncStub clusterSyncStub = new() {
-                NodeID = k_RepeaterId, NodeRole = nodeRole, RenderNodeID = renderNodeId
-            };
-            ServiceLocator.Provide<IClusterSyncState>(clusterSyncStub);
-
             var emitterAgentConfig = udpConfig;
             emitterAgentConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
             m_EmitterAgent = new(emitterAgentConfig);
@@ -55,7 +46,8 @@ namespace Unity.ClusterDisplay.Tests
                 Fence = FrameSyncFence.Network
             };
 
-            m_RepeaterNode = new RepeaterNode(nodeConfig, new UdpAgent(repeaterAgentConfig));
+            m_RepeaterNode = new RepeaterNode(nodeConfig, new UdpAgent(repeaterAgentConfig), isBackup);
+            m_RepeaterNode.RenderNodeId = renderNodeId;
             m_RepeaterEventBus = new(EventBusFlags.ReadFromCluster);
             m_RepeaterEventBus.Subscribe(testData =>
             {
@@ -81,7 +73,7 @@ namespace Unity.ClusterDisplay.Tests
         [UnityTest]
         public IEnumerator StatesTransitions()
         {
-            SetUp(NodeRole.Repeater, k_RepeaterId);
+            SetUp(false, k_RepeaterId);
 
             long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
 
@@ -175,7 +167,7 @@ namespace Unity.ClusterDisplay.Tests
             }
         }
 
-        static readonly IReadOnlyList<ChangeClusterTopologyEntry> k_ChangeBackupToRepeater = new ChangeClusterTopologyEntry[]
+        static readonly IReadOnlyList<ClusterTopologyEntry> k_ChangeBackupToRepeater = new ClusterTopologyEntry[]
         {
             new () {NodeId = k_EmitterId, NodeRole = NodeRole.Emitter, RenderNodeId = k_EmitterId},
             new () {NodeId = k_RepeaterId, NodeRole = NodeRole.Repeater, RenderNodeId = k_RepeaterId},
@@ -188,8 +180,7 @@ namespace Unity.ClusterDisplay.Tests
         {
             NodeRole expectedNodeRole = NodeRole.Backup;
             byte expectedRenderNodeId = 42;
-            SetUp(expectedNodeRole, expectedRenderNodeId);
-            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
+            SetUp(true, expectedRenderNodeId);
 
             long testEndTimestamp = StopwatchUtils.TimestampIn(TimeSpan.FromSeconds(15));
 
@@ -231,7 +222,7 @@ namespace Unity.ClusterDisplay.Tests
 
             if (changeBackupToRepeaterBeforeFrame <= 0)
             {
-                UpdateClusterTopology(k_ChangeBackupToRepeater);
+                m_RepeaterNode.UpdatedClusterTopology.Entries = k_ChangeBackupToRepeater;
                 expectedNodeRole = NodeRole.Repeater;
                 expectedRenderNodeId = k_RepeaterId;
             }
@@ -242,8 +233,8 @@ namespace Unity.ClusterDisplay.Tests
 
             // ======= End of Frame ===========
             m_RepeaterNode.ConcludeFrame();
-            Assert.That(clusterSyncState.NodeRole, Is.EqualTo(expectedNodeRole));
-            Assert.That(clusterSyncState.RenderNodeID, Is.EqualTo(expectedRenderNodeId));
+            Assert.That(m_RepeaterNode.NodeRole, Is.EqualTo(expectedNodeRole));
+            Assert.That(m_RepeaterNode.RenderNodeId, Is.EqualTo(expectedRenderNodeId));
             yield return null;
 
             // ======= Frame 1 -> 4 ===========
@@ -278,7 +269,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 if (changeBackupToRepeaterBeforeFrame <= (int)frameIdx)
                 {
-                    UpdateClusterTopology(k_ChangeBackupToRepeater);
+                    m_RepeaterNode.UpdatedClusterTopology.Entries = k_ChangeBackupToRepeater;
                     expectedNodeRole = NodeRole.Repeater;
                     expectedRenderNodeId = k_RepeaterId;
                 }
@@ -289,8 +280,8 @@ namespace Unity.ClusterDisplay.Tests
 
                 // ======= End of Frame ===========
                 m_RepeaterNode.ConcludeFrame();
-                Assert.That(clusterSyncState.NodeRole, Is.EqualTo(expectedNodeRole));
-                Assert.That(clusterSyncState.RenderNodeID, Is.EqualTo(expectedRenderNodeId));
+                Assert.That(m_RepeaterNode.NodeRole, Is.EqualTo(expectedNodeRole));
+                Assert.That(m_RepeaterNode.RenderNodeId, Is.EqualTo(expectedRenderNodeId));
                 yield return null;
             }
         }
@@ -316,8 +307,6 @@ namespace Unity.ClusterDisplay.Tests
             m_EmitterStateWriter?.Dispose();
             m_EmitterFrameDataSplitter?.Dispose();
             m_EmitterAgent?.Dispose();
-
-            ServiceLocator.Withdraw<ClusterSyncStub>();
         }
 
         void PublishEvents()
@@ -335,12 +324,6 @@ namespace Unity.ClusterDisplay.Tests
                 LongVal = (long)(m_RepeaterNode.FrameIndex * m_RepeaterNode.FrameIndex) + 1,
                 FloatVal = m_RepeaterNode.FrameIndex,
             });
-        }
-
-        static void UpdateClusterTopology(IReadOnlyList<ChangeClusterTopologyEntry> topology)
-        {
-            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
-            clusterSyncState.UpdatedClusterTopology = topology;
         }
     }
 }

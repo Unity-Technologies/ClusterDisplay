@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Unity.ClusterDisplay.Utils;
-using Utils;
 
 namespace Unity.ClusterDisplay.MissionControl.Capsule
 {
@@ -43,7 +43,10 @@ namespace Unity.ClusterDisplay.MissionControl.Capsule
 
             if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSync))
             {
-                clusterSync.UpdatedClusterTopology = entries;
+                clusterSync.ChangeClusterTopology(entries
+                    .Select(e => new ClusterTopologyEntry()
+                        { NodeId = e.NodeId, NodeRole = e.NodeRole, RenderNodeId = e.RenderNodeId})
+                    .ToList());
             }
 
             // Done processing the quit request

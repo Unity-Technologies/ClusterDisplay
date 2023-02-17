@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using NUnit.Framework;
-using Unity.ClusterDisplay.MissionControl.Capsule;
-using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Utils;
@@ -53,8 +51,6 @@ namespace Unity.ClusterDisplay.Tests
 
         void SetUp(bool repeatersDelayed)
         {
-            ServiceLocator.Provide<IClusterSyncState>(new ClusterSyncStub());
-
             m_Repeaters = k_RepeaterIds.Select( nodeId =>
             {
                 var ret = new RepeaterData();
@@ -96,7 +92,7 @@ namespace Unity.ClusterDisplay.Tests
             m_NodeEventBus = new EventBus<TestData>(EventBusFlags.WriteToCluster);
         }
 
-        static readonly IReadOnlyList<ChangeClusterTopologyEntry> k_ClusterWithRemovedRepeater = new ChangeClusterTopologyEntry[]
+        static readonly IReadOnlyList<ClusterTopologyEntry> k_ClusterWithRemovedRepeater = new ClusterTopologyEntry[]
         {
             new () {NodeId = k_EmitterId, NodeRole = NodeRole.Emitter, RenderNodeId = k_EmitterId},
             new () {NodeId = k_RepeaterIds[1], NodeRole = NodeRole.Repeater, RenderNodeId = k_RepeaterIds[1]},
@@ -131,10 +127,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -183,7 +176,7 @@ namespace Unity.ClusterDisplay.Tests
             PublishEvents();
             if (changeClusterTopologyBeforeFrame <= 0)
             {
-                UpdateClusterTopology(k_ClusterWithRemovedRepeater);
+                m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
             }
             m_Node.DoFrame();
             long doFrameExitTimestamp = Stopwatch.GetTimestamp();
@@ -250,7 +243,7 @@ namespace Unity.ClusterDisplay.Tests
                 PublishEvents();
                 if (changeClusterTopologyBeforeFrame <= (int)frameIdx)
                 {
-                    UpdateClusterTopology(k_ClusterWithRemovedRepeater);
+                    m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
                 }
                 m_Node.DoFrame();
                 doFrameExitTimestamp = Stopwatch.GetTimestamp();
@@ -297,10 +290,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -349,7 +339,7 @@ namespace Unity.ClusterDisplay.Tests
             PublishEvents();
             if (changeClusterTopologyBeforeFrame <= 0)
             {
-                UpdateClusterTopology(k_ClusterWithRemovedRepeater);
+                m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
             }
             m_Node.DoFrame();
             long doFrameExitTimestamp = Stopwatch.GetTimestamp();
@@ -393,7 +383,7 @@ namespace Unity.ClusterDisplay.Tests
                 PublishEvents();
                 if (changeClusterTopologyBeforeFrame <= (int)frameIdx)
                 {
-                    UpdateClusterTopology(k_ClusterWithRemovedRepeater);
+                    m_Node.UpdatedClusterTopology.Entries = k_ClusterWithRemovedRepeater;
                 }
                 m_Node.DoFrame();
                 Assert.DoesNotThrow(repeatersJobForFrame.Wait);
@@ -437,10 +427,7 @@ namespace Unity.ClusterDisplay.Tests
 
                 // Receive answers
                 int registeredRepeaters = ConsumeFirstMessageOfRepeaterWhere<RepeaterRegistered>(
-                    testEndTimestamp, (message, repeaterData) =>
-                    {
-                        return message.Payload.NodeId == repeaterData.NodeId;
-                    });
+                    testEndTimestamp, (message, repeaterData) => message.Payload.NodeId == repeaterData.NodeId);
                 Assert.That(registeredRepeaters, Is.EqualTo(k_RepeaterIds.Length));
 
                 // Emitter should then wait for us to inform we are ready for the next (first) frame (network based
@@ -643,8 +630,6 @@ namespace Unity.ClusterDisplay.Tests
             {
                 repeater.Dispose();
             }
-
-            ServiceLocator.Withdraw<ClusterSyncStub>();
         }
 
         void PublishEvents()
@@ -687,23 +672,16 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(testData.FloatVal, Is.EqualTo(effectiveFrameIndex));
         }
 
-        static void UpdateClusterTopology(IReadOnlyList<ChangeClusterTopologyEntry> topology)
-        {
-            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
-            clusterSyncState.UpdatedClusterTopology = topology;
-        }
-
         void TestRepeatersPresence()
         {
-            var clusterSyncState = ServiceLocator.Get<IClusterSyncState>();
             byte[] expectedRepeaters;
-            if (clusterSyncState.UpdatedClusterTopology == null)
+            if (m_Node.UpdatedClusterTopology.Entries == null)
             {
                 expectedRepeaters = k_RepeaterIds;
             }
             else
             {
-                expectedRepeaters = clusterSyncState.UpdatedClusterTopology
+                expectedRepeaters = m_Node.UpdatedClusterTopology.Entries
                     .Where(e => e.NodeRole is NodeRole.Repeater or NodeRole.Backup)
                     .Select(e => e.NodeId).ToArray();
             }

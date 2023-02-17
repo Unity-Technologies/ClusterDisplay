@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using Unity.ClusterDisplay.Utils;
 
 namespace Unity.ClusterDisplay
 {
@@ -109,11 +108,9 @@ namespace Unity.ClusterDisplay
 
         public virtual string GetDebugString(NetworkStatistics networkStatistics)
         {
-            ServiceLocator.TryGet(out IClusterSyncState clusterSync);
-
             var builder = new StringBuilder();
-            builder.AppendFormat("\tNode (Role / ID / Render ID): {0} / {1} / {2}",
-                clusterSync?.NodeRole ?? NodeRole.Unassigned, Config.NodeId, clusterSync?.RenderNodeID ?? -1);
+            builder.AppendFormat("\tNode (Role / ID / Render ID): {0} / {1} / {2}", NodeRole, Config.NodeId,
+                RenderNodeId);
             builder.AppendLine();
             builder.AppendFormat("\tFrame: {0}", FrameIndex);
             builder.AppendLine();
@@ -146,6 +143,24 @@ namespace Unity.ClusterDisplay
 
             return builder.ToString();
         }
+
+        /// <summary>
+        /// Role of the node in the cluster.
+        /// </summary>
+        public NodeRole NodeRole { get; protected set; }
+
+        /// <summary>
+        /// Adjusted node ID for rendering.
+        /// </summary>
+        /// <remarks>
+        /// This could differ from NodeID if not all nodes perform rendering (non-rendering nodes are skipped).
+        /// </remarks>
+        public byte RenderNodeId { get; set; }
+
+        /// <summary>
+        /// Updated topology of the cluster (when updated while running).
+        /// </summary>
+        public ClusterTopology UpdatedClusterTopology { get; } = new();
 
         /// <summary>
         /// Constructor

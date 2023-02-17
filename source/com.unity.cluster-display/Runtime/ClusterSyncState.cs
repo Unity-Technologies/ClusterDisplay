@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.ClusterDisplay.MissionControl.Capsule;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
@@ -8,7 +7,7 @@ namespace Unity.ClusterDisplay
     public interface IClusterSyncState
     {
         string InstanceName { get; }
-        NodeRole NodeRole { get; set; }
+        NodeRole NodeRole { get; }
         bool EmitterIsHeadless { get; }
         bool IsClusterLogicEnabled { get; }
         bool IsTerminated { get; }
@@ -26,22 +25,30 @@ namespace Unity.ClusterDisplay
         byte RenderNodeID { get; set; }
         bool RepeatersDelayedOneFrame { get; }
 
-        /// <summary>
-        /// Updated topology of the cluster (when updated while running).
-        /// </summary>
-        IReadOnlyList<ChangeClusterTopologyEntry> UpdatedClusterTopology { get; set; }
-
-        /// <summary>
-        /// Event signaled when UpdatedClusterTopology is changed (most likely from another thread than the main loop).
-        /// </summary>
-        event Action UpdatedClusterTopologyChanged;
-
         string GetDiagnostics();
+
+        /// <summary>
+        /// Request a change in the topology of the cluster to be done as soon as possible.
+        /// </summary>
+        /// <param name="entries">Entries describing the new topology.</param>
+        /// <remarks>This method can be called from any thread and need to be called with the same topology for all the
+        /// nodes of the cluster.  There are a few important thing to remember in deciding the topology of the cluster:
+        /// <ul>
+        /// <li>A node can only transition from <see cref="ClusterDisplay.NodeRole.Backup"/> to
+        /// <see cref="ClusterDisplay.NodeRole.Emitter"/> or <see cref="ClusterDisplay.NodeRole.Repeater"/>.</li>
+        /// <li>There can be only one <see cref="ClusterDisplay.NodeRole.Emitter"/> node.</li>
+        /// <li>A node id missing in <paramref name="entries"/> indicate that the node is to be removed from the
+        /// cluster.</li>
+        /// <li>A node cannot be added back to the cluster once it has been removed.</li>
+        /// </ul>
+        /// </remarks>
+        void ChangeClusterTopology(IReadOnlyList<ClusterTopologyEntry> entries);
     }
 
     public partial class ClusterSync : IClusterSyncState
     {
-        public NodeRole NodeRole { get; set; }
+        public NodeRole NodeRole => LocalNode?.NodeRole ?? NodeRole.Unassigned;
+
         public bool EmitterIsHeadless { get; private set; }
 
         public bool IsClusterLogicEnabled { get; private set; }
@@ -50,20 +57,35 @@ namespace Unity.ClusterDisplay
         public ulong Frame => LocalNode.FrameIndex;
 
         public byte NodeID => LocalNode.Config.NodeId;
-        public byte RenderNodeID { get; set; }
+
+        public byte RenderNodeID
+        {
+            get => LocalNode?.RenderNodeId ?? 0;
+            set
+            {
+                if (LocalNode != null) { LocalNode.RenderNodeId = value; }
+            }
+        }
 
         public bool RepeatersDelayedOneFrame { get; private set; }
 
-        public IReadOnlyList<ChangeClusterTopologyEntry> UpdatedClusterTopology
+        public void ChangeClusterTopology(IReadOnlyList<ClusterTopologyEntry> entries)
         {
-            get => m_UpdatedClusterTopology;
-            set
+            int emitterCount = 0;
+            foreach (var entry in entries)
             {
-                m_UpdatedClusterTopology = value;
-                UpdatedClusterTopologyChanged?.Invoke();
+                if (entry.NodeRole == NodeRole.Emitter)
+                {
+                    ++emitterCount;
+                }
             }
+
+            if (emitterCount != 1)
+            {
+                throw new ArgumentException($"There should be one (no more, no less) " +
+                    $"{nameof(NodeRole.Emitter)} in {nameof(entries)}.", nameof(entries));
+            }
+            LocalNode.UpdatedClusterTopology.Entries = entries;
         }
-        IReadOnlyList<ChangeClusterTopologyEntry> m_UpdatedClusterTopology;
-        public event Action UpdatedClusterTopologyChanged;
     }
 }
