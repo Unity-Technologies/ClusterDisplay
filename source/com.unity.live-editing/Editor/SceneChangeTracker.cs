@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -176,6 +177,81 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
+        /// <summary>
+        /// A union struct that is used to store different types of undo change events.
+        /// </summary>
+        [StructLayout(LayoutKind.Explicit)]
+        struct ChangeEvent
+        {
+            public struct ChangeScene
+            {
+                public Scene scene;
+            }
+
+            public struct CreateGameObjectHierarchy
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            public struct DestroyGameObjectHierarchy
+            {
+                public int instanceId;
+                public int parentInstanceId;
+                public Scene scene;
+            }
+
+            public struct ChangeGameObjectParent
+            {
+                public int instanceId;
+                public int previousParentInstanceId;
+                public int newParentInstanceId;
+                public Scene previousScene;
+                public Scene newScene;
+            }
+
+            public struct ChangeGameObjectStructure
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            public struct ChangeGameObjectStructureHierarchy
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            public struct ChangeGameObjectOrComponentProperties
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            public struct UpdatePrefabInstances
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            public struct ChangeChildrenOrder
+            {
+                public int instanceId;
+                public Scene scene;
+            }
+
+            [FieldOffset(0)] public ObjectChangeKind type;
+            [FieldOffset(4)] public ChangeScene changeScene;
+            [FieldOffset(4)] public CreateGameObjectHierarchy createGameObjectHierarchy;
+            [FieldOffset(4)] public DestroyGameObjectHierarchy destroyGameObjectHierarchy;
+            [FieldOffset(4)] public ChangeGameObjectParent changeGameObjectParent;
+            [FieldOffset(4)] public ChangeGameObjectStructure changeGameObjectStructure;
+            [FieldOffset(4)] public ChangeGameObjectStructureHierarchy changeGameObjectStructureHierarchy;
+            [FieldOffset(4)] public ChangeGameObjectOrComponentProperties changeGameObjectOrComponentProperties;
+            [FieldOffset(4)] public UpdatePrefabInstances updatePrefabInstances;
+            [FieldOffset(4)] public ChangeChildrenOrder changeChildrenOrder;
+        }
+
         static SceneChangeTracker s_Instance;
         static readonly List<GameObject> s_TempGameObjects = new List<GameObject>();
         static readonly List<Component> s_TempComponents = new List<Component>();
@@ -204,6 +280,8 @@ namespace Unity.LiveEditing.Editor
         internal readonly Dictionary<int, GameObjectState> m_TrackedGameObjects = new Dictionary<int, GameObjectState>();
         internal readonly Dictionary<int, ComponentState> m_TrackedComponents = new Dictionary<int, ComponentState>();
 
+        readonly Queue<ChangeEvent> m_ChangeEvents = new Queue<ChangeEvent>();
+
         readonly Queue<SceneState> m_ScenesToCheckForChanges = new Queue<SceneState>();
         readonly Queue<GameObjectState> m_GameObjectsToCheckForChanges = new Queue<GameObjectState>();
 
@@ -218,14 +296,31 @@ namespace Unity.LiveEditing.Editor
         readonly Queue<(ComponentState, string)> m_ModifiedComponents = new Queue<(ComponentState, string)>();
 
         /// <summary>
-        /// The maximum time that the scene tracking can use in a single frame, in milliseconds.
+        /// The maximum time that the scene tracking will try to use in a single frame, in milliseconds.
         /// </summary>
+        /// <remarks>
+        /// Lowering this value may increase performance at the cost of latency.
+        /// </remarks>
         public long MaxUpdateTimeSlice { get; set; } = 5L;
+
+        /// <summary>
+        /// Periodically iterate through the scene to find changes not registered through the undo system.
+        /// </summary>
+        /// <remarks>
+        /// Try enabling this option if relevant changes to the scene are not being detected. Scene polling only
+        /// works while in Edit Mode. This may be performance intensive for large scenes.
+        /// </remarks>
+        public bool EnablePolling { get; set; } = true;
 
         /// <summary>
         /// The time to wait after polling the scene for changes to poll again, in milliseconds.
         /// </summary>
-        public long UpdatePeriod { get; set; } = 0L;
+        /// <remarks>
+        /// This value is only used when <see cref="EnablePolling"/> is set to <see langword="true"/>.
+        /// Increasing this value can help reduce the performance impact of scene polling at the cost
+        /// of latency.
+        /// </remarks>
+        public long PollingPeriod { get; set; } = 1000L;
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectAdded"/> event.
@@ -402,6 +497,8 @@ namespace Unity.LiveEditing.Editor
             m_TrackedGameObjects.Clear();
             m_TrackedComponents.Clear();
 
+            m_ChangeEvents.Clear();
+
             m_ScenesToCheckForChanges.Clear();
             m_GameObjectsToCheckForChanges.Clear();
 
@@ -432,39 +529,52 @@ namespace Unity.LiveEditing.Editor
             {
                 Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(Update)}()");
 
-                m_TimeSliceStopwatch.Restart();
-
-                // The polling rate is limited to prevent using excessive resources.
-                // When there are still buffered states to check for changes, they must be processed before the up-to-date
-                // scene states can be buffered, or else some changes could be missed.
-                if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= UpdatePeriod) &&
-                    m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
-                {
-                    // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
-                    BufferAllSceneStates(false);
-
-                    m_UpdateStopwatch.Restart();
-                }
-
                 // Time slicing is used to avoid taking a large amount of time in a single frame to check for scene updates.
                 // This enables handling larger scenes with less stuttering, for a slight cost in overhead.
-                var targetMaxUpdateTimeSliceTicks = (MaxUpdateTimeSlice * Stopwatch.Frequency) / 1000;
+                var timeSliceTicks = (MaxUpdateTimeSlice * Stopwatch.Frequency) / 1000;
 
-                // Look for changes in the buffered states until completed or the time slice is over.
-                while (m_TimeSliceStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
+                m_TimeSliceStopwatch.Restart();
+
+                // Periodically iterate through the scene to find any undetected changes.
+                if (EnablePolling && !EditorApplication.isPlayingOrWillChangePlaymode)
                 {
-                    FindSceneChanges(sceneState);
+                    // The polling rate is limited to prevent using excessive resources.
+                    // When there are still buffered states to check for changes, they must be processed before the up-to-date
+                    // scene states can be buffered, or else some changes could be missed.
+                    if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= PollingPeriod) &&
+                        m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
+                    {
+                        // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
+                        BufferAllSceneStates(false);
+
+                        m_UpdateStopwatch.Restart();
+                    }
+
+                    // Look for changes in the buffered states until completed or the time slice is over.
+                    while (m_TimeSliceStopwatch.ElapsedTicks < timeSliceTicks && m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
+                    {
+                        FindSceneChanges(sceneState);
+                    }
+
+                    while (m_TimeSliceStopwatch.ElapsedTicks < timeSliceTicks && m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
+                    {
+                        FindGameObjectChanges(goState);
+                    }
+
+                    // When finished checking all buffered states for changes, report all the detected changes.
+                    if (m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
+                    {
+                        InvokeEvents();
+                    }
                 }
 
-                while (m_TimeSliceStopwatch.ElapsedTicks < targetMaxUpdateTimeSliceTicks && m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
-                {
-                    FindGameObjectChanges(goState);
-                }
-
-                // When finished checking all buffered states for changes, report all the detected changes.
+                // When not in the middle of polling a scene, go through recent undo system events to find changes.
                 if (m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
                 {
-                    InvokeEvents();
+                    while (m_TimeSliceStopwatch.ElapsedTicks < timeSliceTicks && m_ChangeEvents.TryDequeue(out var changeEvent))
+                    {
+                        ProcessChangeEvent(changeEvent);
+                    }
                 }
             }
             finally
@@ -494,6 +604,440 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
+        void OnChangesPublished(ref ObjectChangeEventStream stream)
+        {
+            try
+            {
+                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(OnChangesPublished)}()");
+
+                if (!stream.isCreated)
+                {
+                    return;
+                }
+
+                // Buffer the change events into a queue for processing later.
+                for (var i = 0; i < stream.length; i++)
+                {
+                    var type = stream.GetEventType(i);
+
+                    switch (type)
+                    {
+                        case ObjectChangeKind.ChangeScene:
+                        {
+                            stream.GetChangeSceneEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeScene =
+                                {
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.CreateGameObjectHierarchy:
+                        {
+                            stream.GetCreateGameObjectHierarchyEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                createGameObjectHierarchy =
+                                {
+                                    instanceId = change.instanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.DestroyGameObjectHierarchy:
+                        {
+                            stream.GetDestroyGameObjectHierarchyEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                destroyGameObjectHierarchy =
+                                {
+                                    instanceId = change.instanceId,
+                                    parentInstanceId = change.parentInstanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.ChangeGameObjectParent:
+                        {
+                            stream.GetChangeGameObjectParentEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeGameObjectParent =
+                                {
+                                    instanceId = change.instanceId,
+                                    previousParentInstanceId = change.previousParentInstanceId,
+                                    newParentInstanceId = change.newParentInstanceId,
+                                    previousScene = change.previousScene,
+                                    newScene = change.newScene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.ChangeGameObjectStructure:
+                        {
+                            stream.GetChangeGameObjectStructureEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeGameObjectStructure =
+                                {
+                                    instanceId = change.instanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
+                        {
+                            stream.GetChangeGameObjectStructureHierarchyEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeGameObjectStructureHierarchy =
+                                {
+                                    instanceId = change.instanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.ChangeGameObjectOrComponentProperties:
+                        {
+                            stream.GetChangeGameObjectOrComponentPropertiesEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeGameObjectOrComponentProperties =
+                                {
+                                    instanceId = change.instanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.UpdatePrefabInstances:
+                        {
+                            stream.GetUpdatePrefabInstancesEvent(i, out var change);
+
+                            foreach (var instanceId in change.instanceIds)
+                            {
+                                m_ChangeEvents.Enqueue(new ChangeEvent
+                                {
+                                    type = type,
+                                    updatePrefabInstances =
+                                    {
+                                        instanceId = instanceId,
+                                        scene = change.scene,
+                                    },
+                                });
+                            }
+                            break;
+                        }
+                        case ObjectChangeKind.ChangeChildrenOrder:
+                        {
+                            stream.GetChangeChildrenOrderEvent(i, out var change);
+
+                            m_ChangeEvents.Enqueue(new ChangeEvent
+                            {
+                                type = type,
+                                changeChildrenOrder =
+                                {
+                                    instanceId = change.instanceId,
+                                    scene = change.scene,
+                                },
+                            });
+                            break;
+                        }
+                        case ObjectChangeKind.CreateAssetObject:
+                        case ObjectChangeKind.DestroyAssetObject:
+                        case ObjectChangeKind.ChangeAssetObjectProperties:
+                        {
+                            // Ignore changes to assets.
+                            break;
+                        }
+                        case ObjectChangeKind.None:
+                        {
+                            break;
+                        }
+                        default:
+                        {
+                            Debug.LogError($"Unknown change type: \"{type}\".");
+                            break;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Profiler.EndSample();
+            }
+        }
+
+        void ProcessChangeEvent(ChangeEvent evt)
+        {
+            try
+            {
+                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(ProcessChangeEvent)}()");
+
+                switch (evt.type)
+                {
+                    case ObjectChangeKind.ChangeScene:
+                    {
+                        var change = evt.changeScene;
+                        ProcessSceneChangeEvent(change.scene);
+                        break;
+                    }
+                    case ObjectChangeKind.CreateGameObjectHierarchy:
+                    {
+                        var change = evt.createGameObjectHierarchy;
+                        ProcessGameObjectAddedEvent(change.instanceId);
+                        break;
+                    }
+                    case ObjectChangeKind.DestroyGameObjectHierarchy:
+                    {
+                        var change = evt.destroyGameObjectHierarchy;
+                        ProcessGameObjectDestroyedEvent(change.parentInstanceId, change.scene);
+                        break;
+                    }
+                    case ObjectChangeKind.ChangeGameObjectParent:
+                    {
+                        var change = evt.changeGameObjectParent;
+                        ProcessGameObjectParentChangedEvent(
+                            change.instanceId,
+                            change.previousParentInstanceId,
+                            change.newParentInstanceId,
+                            change.previousScene,
+                            change.newScene
+                        );
+                        break;
+                    }
+                    case ObjectChangeKind.ChangeGameObjectStructure:
+                    {
+                        var change = evt.changeGameObjectStructure;
+                        ProcessGameObjectChangeEvent(change.instanceId, 0);
+                        break;
+                    }
+                    case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
+                    {
+                        var change = evt.changeGameObjectStructureHierarchy;
+                        ProcessGameObjectChangeEvent(change.instanceId, int.MaxValue);
+                        break;
+                    }
+                    case ObjectChangeKind.ChangeGameObjectOrComponentProperties:
+                    {
+                        var change = evt.changeGameObjectOrComponentProperties;
+                        var obj = EditorUtility.InstanceIDToObject(change.instanceId);
+
+                        switch (obj)
+                        {
+                            case GameObject:
+                                ProcessGameObjectChangeEvent(change.instanceId, 0);
+                                break;
+                            case Component:
+                                ProcessComponentChangeEvent(change.instanceId);
+                                break;
+                        }
+                        break;
+                    }
+                    case ObjectChangeKind.UpdatePrefabInstances:
+                    {
+                        var change = evt.updatePrefabInstances;
+                        ProcessGameObjectChangeEvent(change.instanceId, int.MaxValue);
+                        break;
+                    }
+                    case ObjectChangeKind.ChangeChildrenOrder:
+                    {
+                        var change = evt.changeChildrenOrder;
+                        ProcessGameObjectChangeEvent(change.instanceId, 1);
+                        break;
+                    }
+                    default:
+                    {
+                        Debug.LogError($"Unsupported change type: \"{evt.type}\".");
+                        break;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            finally
+            {
+                Profiler.EndSample();
+            }
+        }
+
+        void ProcessSceneChangeEvent(Scene scene)
+        {
+            if (!m_TrackedScenes.TryGetValue(scene, out var sceneState))
+            {
+                return;
+            }
+
+            // TODO: use heuristic based on gameobject count to decide if to ignore this and use scene polling instead
+            BufferSceneState(sceneState, int.MaxValue);
+
+            FindChangesInBufferedState();
+        }
+
+        void ProcessGameObjectAddedEvent(int instanceId)
+        {
+            var gameObject = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+
+            if (gameObject == null)
+            {
+                return;
+            }
+
+            var parent = gameObject.transform.parent;
+
+            if (parent != null)
+            {
+                var parentInstanceId = parent.gameObject.GetInstanceID();
+
+                if (!m_TrackedGameObjects.TryGetValue(parentInstanceId, out var parentState))
+                {
+                    ProcessGameObjectAddedEvent(parentInstanceId);
+                    return;
+                }
+
+                BufferGameObjectState(parentState.Current.Scene, parentState, gameObject, 1);
+            }
+            else if (m_TrackedScenes.TryGetValue(gameObject.scene, out var sceneState))
+            {
+                BufferSceneState(sceneState, 1);
+            }
+
+            FindChangesInBufferedState();
+        }
+
+        void ProcessGameObjectDestroyedEvent(int parentInstanceId, Scene scene)
+        {
+            if (m_TrackedGameObjects.TryGetValue(parentInstanceId, out var parentState))
+            {
+                var parent = parentState.Instance;
+
+                if (parent != null)
+                {
+                    BufferGameObjectState(parentState.Current.Scene, parentState.Current.Parent, parent, 1);
+                }
+            }
+            else if (m_TrackedScenes.TryGetValue(scene, out var sceneState))
+            {
+                BufferSceneState(sceneState, 1);
+            }
+
+            FindChangesInBufferedState();
+        }
+
+        void ProcessGameObjectParentChangedEvent(
+            int instanceId,
+            int previousParentInstanceId,
+            int newParentInstanceId,
+            Scene previousScene,
+            Scene newScene
+        )
+        {
+            var gameObject = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+
+            if (gameObject == null)
+            {
+                return;
+            }
+
+            if (m_TrackedGameObjects.TryGetValue(previousParentInstanceId, out var prevParentState))
+            {
+                var parent = prevParentState.Instance;
+
+                if (parent != null)
+                {
+                    BufferGameObjectState(prevParentState.Current.Scene, prevParentState.Current.Parent, parent, 1);
+                }
+            }
+            else if (m_TrackedScenes.TryGetValue(previousScene, out var prevSceneState))
+            {
+                BufferSceneState(prevSceneState, 1);
+            }
+
+            if (m_TrackedGameObjects.TryGetValue(newParentInstanceId, out var newParentState))
+            {
+                var parent = newParentState.Instance;
+
+                if (parent != null)
+                {
+                    BufferGameObjectState(newParentState.Current.Scene, newParentState.Current.Parent, parent, 1);
+                }
+            }
+            else if (m_TrackedScenes.TryGetValue(newScene, out var newSceneState))
+            {
+                BufferSceneState(newSceneState, 1);
+            }
+
+            FindChangesInBufferedState();
+        }
+
+        void ProcessGameObjectChangeEvent(int instanceId, int maxRecursionDepth)
+        {
+            var gameObject = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+
+            if (gameObject == null || !m_TrackedGameObjects.TryGetValue(instanceId, out var goState))
+            {
+                return;
+            }
+
+            // TODO: use heuristic based on gameobject count to decide if to ignore this and use scene polling instead when recurseChildren is true
+            BufferGameObjectState(goState.Current.Scene, goState.Current.Parent, gameObject, maxRecursionDepth);
+
+            FindChangesInBufferedState();
+        }
+
+        void ProcessComponentChangeEvent(int instanceId)
+        {
+            var component = EditorUtility.InstanceIDToObject(instanceId) as Component;
+
+            if (component == null || !m_TrackedComponents.TryGetValue(instanceId, out var compState))
+            {
+                return;
+            }
+
+            // Check the entire gameobject for changes for simplicity. This could be optimized to check just
+            // the specific component if needed.
+            var goState = compState.GameObject;
+            BufferGameObjectState(goState.Current.Scene, goState.Current.Parent, goState.Instance, 0);
+
+            FindChangesInBufferedState();
+        }
+
+        void FindChangesInBufferedState()
+        {
+            while (m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
+            {
+                FindSceneChanges(sceneState);
+            }
+            while (m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
+            {
+                FindGameObjectChanges(goState);
+            }
+
+            InvokeEvents();
+        }
+
         void StartTrackingAllScenes()
         {
             for (var i = 0; i < SceneManager.sceneCount; i++)
@@ -508,7 +1052,7 @@ namespace Unity.LiveEditing.Editor
             if (scene.IsValid() && scene.isLoaded && !m_TrackedScenes.ContainsKey(scene))
             {
                 var sceneState = new SceneState(scene, m_TrackedScenes);
-                BufferSceneState(sceneState, true);
+                BufferSceneState(sceneState, int.MaxValue, true);
             }
         }
 
@@ -524,11 +1068,11 @@ namespace Unity.LiveEditing.Editor
         {
             foreach (var scene in m_TrackedScenes)
             {
-                BufferSceneState(scene.Value, loadingScene);
+                BufferSceneState(scene.Value, int.MaxValue, loadingScene);
             }
         }
 
-        void BufferSceneState(SceneState sceneState, bool loadingScene)
+        void BufferSceneState(SceneState sceneState, int maxRecursionDepth, bool loadingScene = false)
         {
             try
             {
@@ -548,7 +1092,7 @@ namespace Unity.LiveEditing.Editor
 
                 foreach (var root in s_TempGameObjects)
                 {
-                    var rootState = BufferGameObjectState(sceneState, null, root, loadingScene);
+                    var rootState = BufferGameObjectState(sceneState, null, root, maxRecursionDepth - 1, loadingScene);
                     sceneState.Current.Roots.Add(rootState);
                 }
             }
@@ -558,11 +1102,26 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
-        GameObjectState BufferGameObjectState(SceneState sceneState, GameObjectState parentState, GameObject gameObject, bool loadingScene)
+        GameObjectState BufferGameObjectState(
+            SceneState sceneState,
+            GameObjectState parentState,
+            GameObject gameObject,
+            int maxRecursionDepth,
+            bool loadingScene = false
+        )
         {
+            // Get the tracked state for the game object, or start tracking it if it is not yet tracked.
             if (!m_TrackedGameObjects.TryGetValue(gameObject.GetInstanceID(), out var goState))
             {
                 goState = new GameObjectState(gameObject, !loadingScene, m_TrackedGameObjects);
+
+                // When a new game object is found in the hierarchy, its children should be tracked too.
+                maxRecursionDepth = int.MaxValue;
+            }
+
+            if (maxRecursionDepth < 0)
+            {
+                return goState;
             }
 
             // Mark this game object as needing to be evaluated for changes to the buffered state.
@@ -606,225 +1165,17 @@ namespace Unity.LiveEditing.Editor
                 goState.Current.Components.Add(compState);
             }
 
-            // Buffer the state of all child game objects.
+            // Buffer the state of all child game objects, up to the permitted recursion depth.
             goState.Current.Children.Clear();
 
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i).gameObject;
-                var childState = BufferGameObjectState(sceneState, goState, child, loadingScene);
+                var childState = BufferGameObjectState(sceneState, goState, child, maxRecursionDepth - 1, loadingScene);
                 goState.Current.Children.Add(childState);
             }
 
             return goState;
-        }
-
-        void OnChangesPublished(ref ObjectChangeEventStream stream)
-        {
-            try
-            {
-                Profiler.BeginSample($"{nameof(SceneChangeTracker)}.{nameof(OnChangesPublished)}()");
-
-                if (!stream.isCreated)
-                {
-                    return;
-                }
-
-                for (var i = 0; i < stream.length; i++)
-                {
-                    var type = stream.GetEventType(i);
-
-                    /*
-                    Debug.Log(type);
-
-                    switch (type)
-                    {
-                        case ObjectChangeKind.ChangeScene:
-                        {
-                            stream.GetChangeSceneEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                BufferSceneState(sceneState, false);
-
-                                FindChangesInBufferedState();
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.CreateGameObjectHierarchy:
-                        {
-                            stream.GetCreateGameObjectHierarchyEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                var gameObject = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                                var parent = gameObject.transform.parent;
-                                var parentState = default(GameObjectState);
-
-                                if (parent != null)
-                                {
-                                    m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState);
-                                }
-
-                                var goState = BufferGameObjectState(sceneState, parentState, gameObject, false);
-                                parentState.Current.Children.Add(goState);
-
-                                FindChangesInBufferedState();
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.DestroyGameObjectHierarchy:
-                        {
-                            stream.GetDestroyGameObjectHierarchyEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                var parent = EditorUtility.InstanceIDToObject(change.parentInstanceId) as GameObject;
-
-                                if (parent != null && m_TrackedGameObjects.TryGetValue(parent.gameObject.GetInstanceID(), out parentState))
-                                {
-                                    var goState = BufferGameObjectState(sceneState, parentState, gameObject, false);
-                                    CheckGameObjectStructural(sceneState, parent, true);
-                                }
-                                else
-                                {
-                                    CheckScene(sceneState);
-                                }
-
-                                FindChangesInBufferedState();
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.ChangeGameObjectParent:
-                        {
-                            stream.GetChangeGameObjectParentEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.newScene, out var newSceneState))
-                            {
-                                var newParent = EditorUtility.InstanceIDToObject(change.newParentInstanceId) as GameObject;
-
-                                if (newParent != null)
-                                {
-                                    CheckGameObjectStructural(newSceneState, newParent, true);
-                                }
-                                else
-                                {
-                                    CheckScene(newSceneState);
-                                }
-                            }
-                            else if (m_TrackedScenes.TryGetValue(change.previousScene, out var prevSceneState))
-                            {
-                                var prevParent = EditorUtility.InstanceIDToObject(change.previousParentInstanceId) as GameObject;
-
-                                if (prevParent != null)
-                                {
-                                    CheckGameObjectStructural(prevSceneState, prevParent, true);
-                                }
-                                else
-                                {
-                                    CheckScene(prevSceneState);
-                                }
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.ChangeGameObjectStructure:
-                        {
-                            stream.GetChangeGameObjectStructureEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                var gameObject = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                                CheckGameObjectStructural(sceneState, gameObject, false);
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
-                        {
-                            stream.GetChangeGameObjectStructureHierarchyEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                var gameObject = EditorUtility.InstanceIDToObject(change.instanceId) as GameObject;
-                                CheckGameObjectStructural(sceneState, gameObject, true);
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.ChangeGameObjectOrComponentProperties:
-                        {
-                            stream.GetChangeGameObjectOrComponentPropertiesEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                var obj = EditorUtility.InstanceIDToObject(change.instanceId);
-
-                                switch (obj)
-                                {
-                                    case GameObject gameObject:
-                                        // We can't just check the game object properties, components could be reordered.
-                                        // Drag-reordering components triggers this, while Move Up/Down in the component
-                                        // menu triggers ChangeGameObjectStructure.
-                                        CheckGameObjectStructural(sceneState, gameObject, false);
-                                        break;
-                                    case Component component:
-                                        CheckComponent(component);
-                                        break;
-                                }
-                            }
-
-                            break;
-                        }
-                        case ObjectChangeKind.UpdatePrefabInstances:
-                        {
-                            stream.GetUpdatePrefabInstancesEvent(i, out var change);
-
-                            if (m_TrackedScenes.TryGetValue(change.scene, out var sceneState))
-                            {
-                                foreach (var instanceId in change.instanceIds)
-                                {
-                                    var gameObject = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
-                                    CheckGameObjectStructural(sceneState, gameObject, true);
-                                }
-                            }
-                            break;
-                        }
-                        case ObjectChangeKind.CreateAssetObject:
-                        case ObjectChangeKind.DestroyAssetObject:
-                        case ObjectChangeKind.ChangeAssetObjectProperties:
-                        {
-                            // Ignore changes to assets.
-                            break;
-                        }
-                        case ObjectChangeKind.None:
-                        {
-                            break;
-                        }
-                        default:
-                        {
-                            Debug.LogError($"Unknown change type: \"{type}\".");
-                            break;
-                        }
-                    }
-                    */
-                }
-            }
-            finally
-            {
-                Profiler.EndSample();
-            }
-        }
-
-        void FindChangesInBufferedState()
-        {
-            while (m_ScenesToCheckForChanges.TryDequeue(out var sceneState))
-            {
-                FindSceneChanges(sceneState);
-            }
-            while (m_GameObjectsToCheckForChanges.TryDequeue(out var goState))
-            {
-                FindGameObjectChanges(goState);
-            }
-
-            InvokeEvents();
         }
 
         void FindSceneChanges(SceneState sceneState)
