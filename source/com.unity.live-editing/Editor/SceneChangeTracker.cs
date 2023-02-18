@@ -19,6 +19,39 @@ namespace Unity.LiveEditing.Editor
     /// </summary>
     class SceneChangeTracker : IDisposable
     {
+        /*
+         * Change detection is achieved by two means:
+         *
+         * 1) The ObjectChangeEvents class, which gives access to the steam of changes registered with the Undo system.
+         * This is the preferred approach in terms of performance, and is able to isolate user-made scene changes
+         * while in Play Mode. However, it fails to detect all types of changes, notably ones made by scripts
+         * and editor tools that don't properly use the Undo class.
+         *
+         * 2) Polling the scene (periodically iterating through all game objects and components in open scenes). This
+         * is able to catch all changes, but is hard on performance and is not useful in Play Mode, since it cannot
+         * isolate user-made scene changes. To reduce the performance impact, the polling operation is spread out over
+         * multiple frames if needed.
+         *
+         * By using both techniques in a hybrid approach, we can strike a good balance between correctness and performance.
+         *
+         * In order to precisely detect changes, both the previous scene state and the current scene state must be compared
+         * for differences. To do this, we buffer two copies of the scene state in a custom representation in addition to
+         * the actual scenes, effectively triple buffering the scene state. Therefore, the following steps are taken to
+         * find changes:
+         *
+         * 1) An undo event is received identifying objects that have changed, or it is time to poll the scene again.
+         * 2) The relevant scene state is buffered. This may include the entire scene or a subset of its game objects.
+         *    This operation should be completed in a single frame so that the buffered scene state is self consistent,
+         *    so this operation should be kept as fast as possible.
+         * 3) The previous and current buffered states are compared for any game objects that were buffered. When differences
+         *    are found, the change is recorded in a queue corresponding to the type of change. This operation can be done over
+         *    multiple frames, and the actual scene can continue to be modified without interfering with this step.
+         * 4) The queued changes are presented using events.
+         *
+         * These steps must be completed in order from start to finish before starting to process new changes, or else
+         * changes might be skipped.
+         */
+
         internal abstract class BaseState<TObject, TKey, TData, TState> : IDisposable
             where TData : IDisposable
             where TState : BaseState<TObject, TKey, TData, TState>
@@ -890,7 +923,6 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
-            // TODO: use heuristic based on gameobject count to decide if to ignore this and use scene polling instead
             BufferSceneState(sceneState, int.MaxValue);
 
             FindChangesInBufferedState();
@@ -1001,7 +1033,6 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
-            // TODO: use heuristic based on gameobject count to decide if to ignore this and use scene polling instead when recurseChildren is true
             BufferGameObjectState(goState.Current.Scene, goState.Current.Parent, gameObject, maxRecursionDepth);
 
             FindChangesInBufferedState();
