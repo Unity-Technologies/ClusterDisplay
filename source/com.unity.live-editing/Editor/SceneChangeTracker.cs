@@ -84,9 +84,7 @@ namespace Unity.LiveEditing.Editor
 
             public void Update()
             {
-                var temp = Previous;
-                Previous = Current;
-                Current = temp;
+                (Previous, Current) = (Current, Previous);
             }
         }
 
@@ -549,7 +547,7 @@ namespace Unity.LiveEditing.Editor
         }
 
         /// <summary>
-        /// Call every frame to check for changes to the scene.
+        /// Call every frame to check for recent changes.
         /// </summary>
         public void Update()
         {
@@ -1047,7 +1045,7 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
-            // Check the entire gameobject for changes for simplicity. This could be optimized to check just
+            // Check the entire game object for changes for simplicity. This could be optimized to check just
             // the specific component if needed.
             var goState = compState.GameObject;
             BufferGameObjectState(goState.Current.Scene, goState.Current.Parent, goState.Instance, 0);
@@ -1405,7 +1403,7 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentAdded?.Invoke(compState.InstanceId, compState.Instance);
-                            Debug.Log($"Change: Added component {compState.Instance.GetType()}.");
+                            Debug.Log($"Change: Added component {compState.Type}.");
                         }
                         catch (Exception e)
                         {
@@ -1421,7 +1419,7 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentIndexChanged?.Invoke(compState.InstanceId, compState.Instance, compState.Current.Index);
-                            Debug.Log($"Change: Reordered component {compState.Instance.name} to index {compState.Current.Index}.");
+                            Debug.Log($"Change: Reordered component {compState.Type} to index {compState.Current.Index}.");
                         }
                         catch (Exception e)
                         {
@@ -1461,7 +1459,7 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentPropertiesChanged?.Invoke(compState.InstanceId, compState.Instance, property);
-                            Debug.Log($"Change: Modified component {compState.Instance.GetType().Name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
+                            Debug.Log($"Change: Modified component {compState.Type.Name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
                         }
                         catch (Exception e)
                         {
