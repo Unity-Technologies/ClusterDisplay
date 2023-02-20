@@ -75,7 +75,7 @@ namespace Unity.ClusterDisplay
         /// <remarks>
         /// Allowed IPs for multi casting: 224.0.1.0 to 239.255.255.255.
         /// </remarks>
-        [Tooltip("The IP address used for inter-node communication. " +
+        [Tooltip("The multicast IP address used for inter-node communication. " +
             "Must be within in the range [224.0.1.0, 239.255.255.255]")]
         public string MulticastAddress;
         [Tooltip("[Optional] Name of the network adapter used for communication.")]

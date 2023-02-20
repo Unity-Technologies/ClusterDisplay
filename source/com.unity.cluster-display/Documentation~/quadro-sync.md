@@ -36,11 +36,11 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
     ![Fullscreen Exclusive](images/fullscreen-exclusive.png)
 
-5. **On each node** in the cluster, verify that the display settings **Scale and Layout* option is set to 100%:
+3. **On each node** in the cluster, verify that the display settings **Scale and Layout* option is set to 100%:
 
     ![Scale and Layout to 100%](images/scale-and-layout.png)
 
-6. **On each node** in the cluster, setup the following Nvidia Control Panel settings:
+4. **On each node** in the cluster, setup the following Nvidia Control Panel settings:
    * **3D Settings > Manage 3D Settings > Global Preset** set to **Workstation App–Dynamic Streaming**
 
     ![Workstation App–Dynamic Streaming](images/nvidia-settings-0.png)
@@ -53,23 +53,23 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
     ![Resolution and Framerate](images/nvidia-settings-4.png)
 
-7. **On the "Synchronization master" node** (often the emitter node), setup the following Nvidia Control Panel settings and make sure you set the server refresh rate to the HZ all your nodes are running at.
+5. **On the "Synchronization master" node** (often the emitter node), setup the following Nvidia Control Panel settings and make sure you set the server refresh rate to the HZ all your nodes are running at.
 
     ![Emitter settings](images/nvidia-settings-2.png)
 
-8. **On the "Synchronization slave" nodes** (often the repeater nodes), setup the following Nvidia Control Panel settings.
+6. **On the "Synchronization slave" nodes** (often the repeater nodes), setup the following Nvidia Control Panel settings.
 
     ![Repeaters settings](images/nvidia-settings-3.png)
 
-9. If your using ethernet synchronization with your Quadro Sync cards, use Nvidia's recommendation regarding daisy chaining (**DO NOT CONNECT the ethernet cables to a switch and daisy-chaining all servers from one port is not recommended**):
+7. If your using ethernet synchronization with your Quadro Sync cards, use Nvidia's recommendation regarding daisy chaining (**DO NOT CONNECT the ethernet cables to a switch and daisy-chaining all servers from one port is not recommended**):
 
     ![Connection diagram](images/connection-diagram.png)
 
-10. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](../../../MissionControl/README.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
+8. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](../../../MissionControl/README.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
 
-    ![configureDriver.exe](images/configureDriver-Utility.png)
+   ![configureDriver.exe](images/configureDriver-Utility.png)
 
-11. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
+9. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
 
 ## Multiviewers
 

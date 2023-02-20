@@ -42,11 +42,6 @@ namespace Unity.ClusterDisplay.Graphics
         bool m_RendererEnabled;
         bool m_Reloading = true;
 
-        void Start()
-        {
-            Debug.Log("start");
-        }
-
         void Update()
         {
             if (m_Camera.enabled && ClusterRenderer.IsActive())
@@ -58,7 +53,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnEnable()
         {
-            Debug.Log("OnEnable");
             m_Camera = GetComponent<Camera>();
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);

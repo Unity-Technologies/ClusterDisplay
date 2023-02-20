@@ -6,34 +6,35 @@ This guide describes how to enable Cluster Display in an existing Unity project.
 
 1. Navigate to your project's **Packages\manifest.json**.
 2. Add the cluster display packages:
-    ```
+
+    ```json
         "com.unity.cluster-display": "file:{path to package}/source/com.unity.cluster-display",
         "com.unity.cluster-display.graphics": "file:{path to package}/source/com.unity.cluster-display.graphics"
     ```
-   
+
 3. You should now see in your Project Settings a section for **Cluster Display**. Check the **Enable On Play** option.
-   ![](images/cluster-settings.png)
+   ![Cluster Display Settings](images/cluster-settings.png)
 
 4. Select the **Cluster Rendering** subsection. Click the **Set up Cluster Renderer** button. This will create a new Cluster Renderer component in your scene,
    as well as add a Cluster Camera component to existing cameras. You can edit your projection settings from the Settings window or in the Inspector.
-   ![](images/rendering-settings.png)
+   ![Cluster Rendering Settings](images/rendering-settings.png)
 
 5. Edit your **Project Settings** as per the following recommendations:
 
-    -  In **Quality > Other**, set **VSync Count** to **Every V Blank**.
+    - In **Quality > Other**, set **VSync Count** to **Every V Blank**.
 
-    ![](images/vsync.png)
+    ![Set vsync](images/vsync.png)
 
-    -  ~~In **Player > Other Settings > Configuration**, set **Scripting Backend** to **IL2CPP**.~~ **(Currently broken, use managed)**
+    - ~~In **Player > Other Settings > Configuration**, set **Scripting Backend** to **IL2CPP**.~~ **(Currently broken, use managed)**
 
-    -  In **Player > Other Settings > Configuration**, enable the **Use Incremental GC** option (checkbox) to help avoiding framerate jitters caused by [garbage collection](https://blogs.unity3d.com/2018/11/26/feature-preview-incremental-garbage-collection/).
+    - In **Player > Other Settings > Configuration**, enable the **Use Incremental GC** option (checkbox) to help avoiding framerate jitters caused by [garbage collection](https://blogs.unity3d.com/2018/11/26/feature-preview-incremental-garbage-collection/).
 
-    -  In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **Exclusive Fullscreen** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/class-PlayerSettingsStandalone.html) for more details).
+    - In **Player > Resolution and Presentation > Resolution**, set **Fullscreen Mode** to **Exclusive Fullscreen** (see [Standalone Player Settings](https://docs.unity3d.com/Manual/class-PlayerSettingsStandalone.html) for more details).
 
-    ![](images/fullscreen-exclusive.png)
+    ![Fullscreen Exclusive](images/fullscreen-exclusive.png)
 
     - Verify that your Unity project has **Run in Background** set to **true**
 
-    ![](images/run-in-background.png)
+    ![Run in background](images/run-in-background.png)
 
-6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (docs pending). 
+6. To run your Cluster Display-enabled game, create a standalone build and follow the directions for Mission Control (docs pending).
