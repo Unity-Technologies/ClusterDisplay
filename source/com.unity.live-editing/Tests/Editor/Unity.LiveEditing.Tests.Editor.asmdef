@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.LiveEditing"
+        "Unity.LiveEditing",
+        "Unity.LiveEditing.Editor"
     ],
     "includePlatforms": [
         "Editor"
