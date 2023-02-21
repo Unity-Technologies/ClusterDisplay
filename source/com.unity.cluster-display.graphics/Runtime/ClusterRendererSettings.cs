@@ -9,10 +9,13 @@ namespace Unity.ClusterDisplay.Graphics
     public sealed class ClusterRendererSettings
     {
         // TODO Could be a property on ClusterRenderer unless new settings are added.
-        
+
         [SerializeField]
         [Range(0, 256)]
         int m_OverscanInPixels;
+
+        [SerializeField]
+        bool m_RenderTestPattern;
 
         /// <summary>
         /// Amount of overscan per tile expressed in pixels.
@@ -21,6 +24,12 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get => m_OverscanInPixels;
             set => m_OverscanInPixels = value;
+        }
+
+        public bool RenderTestPattern
+        {
+            get => m_RenderTestPattern;
+            set => m_RenderTestPattern = value;
         }
     }
 }

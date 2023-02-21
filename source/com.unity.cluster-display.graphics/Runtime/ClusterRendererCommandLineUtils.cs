@@ -33,6 +33,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             renderer.DelayPresentByOneFrame = clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame;
+            renderer.Settings.RenderTestPattern = CommandLineParser.testPattern.Defined;
 
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {

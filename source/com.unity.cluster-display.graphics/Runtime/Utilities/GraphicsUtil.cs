@@ -124,12 +124,12 @@ namespace Unity.ClusterDisplay.Graphics
             Blit(commandBuffer, blitCommand.texture, blitCommand.scaleBiasTex, blitCommand.scaleBiasRT, flipY, blitCommand.customMaterial, blitCommand.customMaterialPropertyBlock);
         }
 
-        public static void Blit(CommandBuffer cmd, RenderTexture source, bool flipY)
+        public static void Blit(CommandBuffer cmd, Texture source, bool flipY)
         {
             Blit(cmd, source, k_IdentityScaleBias, k_IdentityScaleBias, flipY);
         }
 
-        public static void Blit(CommandBuffer cmd, RenderTexture source, Vector4 texBias, Vector4 rtBias, bool flipY, Material material = null, MaterialPropertyBlock materialPropertyBlock = null)
+        public static void Blit(CommandBuffer cmd, Texture source, Vector4 texBias, Vector4 rtBias, bool flipY, Material material = null, MaterialPropertyBlock materialPropertyBlock = null)
         {
             var shaderPass = flipY ? 1 : 0;
 
