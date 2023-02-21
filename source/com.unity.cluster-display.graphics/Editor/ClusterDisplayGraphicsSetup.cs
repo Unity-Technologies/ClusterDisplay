@@ -7,8 +7,7 @@ namespace Unity.ClusterDisplay.Graphics
 {
     static class ClusterDisplayGraphicsSetup
     {
-        [MenuItem("Cluster Display/Setup Cluster Rendering")]
-        static void SetupComponents()
+        public static void SetupComponents()
         {
             GameObject gameObject;
             var instances = Object.FindObjectsOfType<ClusterRenderer>();
@@ -22,7 +21,7 @@ namespace Unity.ClusterDisplay.Graphics
                 gameObject = new GameObject("ClusterDisplay");
                 clusterRenderer = gameObject.AddComponent<ClusterRenderer>();
                 gameObject.AddComponent<ClusterRendererCommandLineUtils>();
-                ClusterRendererInspector.SetProjectionPolicy(clusterRenderer, typeof(TiledProjection));
+                ClusterRendererInspector.SetProjectionPolicy<TiledProjection>(clusterRenderer);
                 ClusterRendererInspector.AddMissingClusterCameraComponents();
 
                 Undo.RegisterCreatedObjectUndo(gameObject, "Created Cluster Display object");

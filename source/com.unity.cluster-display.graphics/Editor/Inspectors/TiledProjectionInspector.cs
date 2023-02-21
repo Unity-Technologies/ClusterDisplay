@@ -70,7 +70,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             if ((LayoutMode) m_LayoutProp.intValue == LayoutMode.StandardStitcher)
             {
 #if CLUSTER_DISPLAY_HDRP
-                EditorGUILayout.HelpBox(Labels.GetMessage(Labels.MessageID.StandardStitcherWarning), MessageType.Warning);
+                EditorGUILayout.HelpBox(Labels.GetMessage(Labels.MessageID.StandardStitcherWarning), UnityEditor.MessageType.Warning);
 #endif
                 EditorGUILayout.PropertyField(m_PresentClearColorProp);
             }

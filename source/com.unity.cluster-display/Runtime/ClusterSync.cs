@@ -23,7 +23,7 @@ namespace Unity.ClusterDisplay
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void EnableClusterSyncOnLoad()
         {
-            if (ClusterDisplaySettings.CurrentSettings.EnableOnPlay)
+            if (ClusterDisplaySettings.Current.EnableOnPlay)
             {
                 EnableClusterSync();
             }
@@ -42,10 +42,10 @@ namespace Unity.ClusterDisplay
             var clusterSyncInstance = new ClusterSync();
             ServiceLocator.Provide<IClusterSyncState>(clusterSyncInstance);
 
-            var clusterParams = ClusterDisplaySettings.CurrentSettings.ClusterParams;
+            var clusterParams = ClusterDisplaySettings.Current.ClusterParams;
 
 #if UNITY_EDITOR
-            clusterParams.ClusterLogicSpecified = ClusterDisplaySettings.CurrentSettings.EnableOnPlay;
+            clusterParams.ClusterLogicSpecified = ClusterDisplaySettings.Current.EnableOnPlay;
             // Make sure we shut down cluster logic gracefully when we exit play mode
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             void OnPlayModeChanged(PlayModeStateChange playModeStateChange)

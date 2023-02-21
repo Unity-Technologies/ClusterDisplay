@@ -2,7 +2,21 @@
 
 The Unity Cluster Display solution allows multiple machines to display the same Unity Scene synchronously through display clustering. This feature enables you, for example, to deploy your Unity project to large, multi-display configurations.
 
-## Multiple displays
+## Guides
+
+The following guides will help you setup your project with cluster display:
+
+[Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
+
+[Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
+
+[Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
+
+[About Mission Control](MissionControl/README.md)
+
+[Sample Projects](source/com.unity.cluster-display/Documentation~/sample-projects.md)
+
+## What is it for?
 
 In practice, you could use a single machine to render to multiple displays and/or high resolution displays (4K+), but the machine's computational power might present a limit to this approach. With Unity Cluster Display, you can scale up to an arbitrary number of machines, therefore an arbitrary number of displays: Unity Cluster Display currently supports up to 64 nodes. However, if you need to increase this number, it is technically possible.
 
@@ -17,7 +31,7 @@ A Cluster Display setup typically consists of **one emitter node** and **several
   * All the nodes run the same interactive content in lockstep, but each one only renders a subsection of the total display surface.
 * The emitter is responsible for synchronizing the state for all repeater nodes.
   * The repeater nodes connect to the emitter node via a **wired** Local Area Network.
-  * The emitter node does not technically need to be connected to a display, unless you configure it to also take the role of a repeater node.
+  * The emitter node does not technically need to be connected to a display.
 
 ### Licensing
 
@@ -29,7 +43,7 @@ The packages required to set up Unity Cluster Display are currently available as
 
 ## Requirements
 
-* Requires Unity 2022.x+
+* Requires Unity 2023.1+
 * Windows 10
 
 ## Recommendations
@@ -48,20 +62,6 @@ The packages required to set up Unity Cluster Display are currently available as
 | **Cluster** | A cluster is a collection of nodes that collaborate to render a larger image. |
 | **Emitter** | A emitter is a special node in a cluster that controls and distributes the necessary information for repeaters to be able to render their sections of a larger image. |
 | **Repeater** | A repeater is a special node in a cluster that receives the necessary information from an emitter to render their section of a larger image. |
-
-## Guide
-
-The following guides will help you setup your project with cluster display:
-
-After you've setup your project, the following guides will help you setup synchronization between nodes in the cluster:
-
-[Network Configuration](source/com.unity.cluster-display/Documentation~/network-configuration.md)
-
-[Setup Cluster Display with Existing Project](source/com.unity.cluster-display/Documentation~/setup-existing-project.md)
-
-[Setting up Quadro Sync](source/com.unity.cluster-display/Documentation~/quadro-sync.md)
-
-[About Mission Control](MissionControl/README.md)
 
 ## Send Us Your Logs!
 Include the **CLUSTER_DISPLAY_VERBOSE_LOGGING** scripting define symbol in the player settings to get verbose logging and send those logs to us if something is broken. You can find where those logs are located by reading this [page](https://docs.unity3d.com/Manual/LogFiles.html).

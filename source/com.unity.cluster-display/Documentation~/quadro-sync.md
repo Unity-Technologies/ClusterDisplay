@@ -29,27 +29,18 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
 ## Setup
 
-1. Verify that you've added the **ClusterDisplay** prefab to the scene located in **Cluster Display Graphics/Rutnime/Prefabs/ClusterDisplay.prefab**:
+1. In **Project Settings > Cluster Display**, select the "Hardware" option in the **Fence** dropdown.
+   ![](images/fence-hardware.png)
 
-    ![Cluster display prefab](images/cluster-display-prefab.png)
-
-2. Verify that the **GFXPluginQuadroSyncCallbacks** component is added and enabled:
-
-    ![Quadro Sync component](images/quadro-sync-component.png)
-
-3. Verify that your Unity project has vsync set to **Every VBlank**
-
-    ![Unity VSync](images/vsync.png)
-
-4. Verify that your Unity project has **Fullscreen Mode** set to **Exclusive Fullscreen**
+2. Verify that your Unity project has **Fullscreen Mode** set to **Exclusive Fullscreen**
 
     ![Fullscreen Exclusive](images/fullscreen-exclusive.png)
 
-5. **On each node** in the cluster, verify that the display settings **Scale and Layout* option is set to 100%:
+3. **On each node** in the cluster, verify that the display settings **Scale and Layout* option is set to 100%:
 
     ![Scale and Layout to 100%](images/scale-and-layout.png)
 
-6. **On each node** in the cluster, setup the following Nvidia Control Panel settings:
+4. **On each node** in the cluster, setup the following Nvidia Control Panel settings:
    * **3D Settings > Manage 3D Settings > Global Preset** set to **Workstation App–Dynamic Streaming**
 
     ![Workstation App–Dynamic Streaming](images/nvidia-settings-0.png)
@@ -62,47 +53,23 @@ Notice that the camera cuts **are perfectly synchronized** across the cluster.
 
     ![Resolution and Framerate](images/nvidia-settings-4.png)
 
-7. **On the "Synchronization master" node** (often the emitter node), setup the following Nvidia Control Panel settings and make sure you set the server refresh rate to the HZ all your nodes are running at.
+5. **On the "Synchronization master" node** (often the emitter node), setup the following Nvidia Control Panel settings and make sure you set the server refresh rate to the HZ all your nodes are running at.
 
     ![Emitter settings](images/nvidia-settings-2.png)
 
-8. **On the "Synchronization slave" nodes** (often the repeater nodes), setup the following Nvidia Control Panel settings.
+6. **On the "Synchronization slave" nodes** (often the repeater nodes), setup the following Nvidia Control Panel settings.
 
     ![Repeaters settings](images/nvidia-settings-3.png)
 
-9. If your using ethernet synchronization with your Quadro Sync cards, use Nvidia's recommendation regarding daisy chaining (**DO NOT CONNECT the ethernet cables to a switch and daisy-chaining all servers from one port is not recommended**):
+7. If your using ethernet synchronization with your Quadro Sync cards, use Nvidia's recommendation regarding daisy chaining (**DO NOT CONNECT the ethernet cables to a switch and daisy-chaining all servers from one port is not recommended**):
 
     ![Connection diagram](images/connection-diagram.png)
 
-10. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](../../../MissionControl/README.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
+8. Configure synchronized Quadro frame presentation to "wait before presenting next frame" as opposed to "wait for presenting of current frame to be done".  It allows the get a better frame rate by starting to work on the next frame while Quadro Sync is waiting for all nodes to be ready to present the frame.  This should normally be done automatically by [Mission Control installation](../../../MissionControl/README.md) but if you are not using it or want to do it manually, execute [Nvidia's Configure Driver Utility](https://www.nvidia.com/en-us/drivers/driver-utility/) in administrative mode and select option 11.
 
-    ![configureDriver.exe](images/configureDriver-Utility.png)
+   ![configureDriver.exe](images/configureDriver-Utility.png)
 
-11. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
-
-12. Run your cluster with the **-window-mode exclusive** command argument to explicitly specify Unity to run in fullscreen exclusive mode.
-
-    There is an [unexpected issue](https://forum.unity.com/threads/playersettings-are-ignored-when-building-windowed-fullscreen.257700/) where Unity will set a registry key that will override the executable in windowed/borderless if you ran the executable without explicitly specifying **-window-mode exclusive**. Therefore, you will need to delete registry entries for the executable. These registry entries are located in: **\HKEY_SOFTWARE_USER\SOFTWARE\\{Company Name\}\{Product Name\}**
-
-    Until we build a better way of resolving this issue, we suggest writing [PSExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) script that will automatically delete those registry entries for you:
-
-    ```powershell
-    # On the machine that your managing the cluster
-    for($i=41; $i -le 48; $i++) { # Loop through IP address range (41-48) for 192.168.5.*
-        echo "Argument: $($args[0])"
-        # Change this IP address
-        psexec \\192.168.5.$i Powershell "C:\cluster_applications\Tools\delete-reg.ps1 $($args[0])"
-        # The script were executing here is placed on each node.
-    }
-    ```
-
-    ```powershell
-    # On each node, this script exists somewhere and gets executed by the script on the machine managing the cluster.
-    echo "Attempting to delete registry keys in: $($args[0])"
-    reg delete "HKCU\Software\$($args[0])" /f
-    ```
-
-    Then you execute it via `.\delete-registry-entries.ps1 {Company Name}`
+9. Restart the cluster and the monitors for the repeater nodes briefly turn off, then back on after logging into the windows.
 
 ## Multiviewers
 

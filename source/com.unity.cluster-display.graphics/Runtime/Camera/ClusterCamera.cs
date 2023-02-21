@@ -22,20 +22,25 @@ namespace Unity.ClusterDisplay.Graphics
     [ExecuteAlways, DisallowMultipleComponent]
     public class ClusterCamera : MonoBehaviour
     {
+        [Serializable]
         struct CameraState
         {
+            public bool HasSavedState;
             public bool Enabled;
 #if CLUSTER_DISPLAY_HDRP
             public bool HasPersistentHistory;
 #endif
         }
 
-        CameraState m_CameraState;
+        [SerializeField, HideInInspector]
+        CameraState m_CameraState = new();
+
         Camera m_Camera;
 #if CLUSTER_DISPLAY_HDRP
         HDAdditionalCameraData m_AdditionalCameraData;
 #endif
         bool m_RendererEnabled;
+        bool m_Reloading = true;
 
         void Update()
         {
@@ -52,6 +57,10 @@ namespace Unity.ClusterDisplay.Graphics
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData = ApplicationUtil.GetOrAddComponent<HDAdditionalCameraData>(gameObject);
 #endif
+            if (m_Reloading)
+            {
+                RestoreCameraState();
+            }
 
             ClusterRenderer.Enabled += OnRendererEnabled;
             ClusterRenderer.Disabled += OnRendererDisabled;
@@ -62,6 +71,8 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 OnRendererEnabled();
             }
+
+            m_Reloading = false;
         }
 
         void OnDisable()
@@ -90,13 +101,7 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             // Save camera state.
-            m_CameraState = new CameraState
-            {
-                Enabled = m_Camera.enabled,
-#if CLUSTER_DISPLAY_HDRP
-                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory
-#endif
-            };
+            SaveCameraState();
 
             m_RendererEnabled = true;
 
@@ -114,12 +119,31 @@ namespace Unity.ClusterDisplay.Graphics
 
             // TODO What if the user alters the camera state between Enable() and here?
             // Restore camera state.
+            RestoreCameraState();
+
+            m_RendererEnabled = false;
+        }
+
+        void SaveCameraState()
+        {
+            m_CameraState = new CameraState
+            {
+                HasSavedState = true,
+                Enabled = m_Camera.enabled,
+#if CLUSTER_DISPLAY_HDRP
+                HasPersistentHistory = m_AdditionalCameraData.hasPersistentHistory,
+#endif
+            };
+        }
+
+        void RestoreCameraState()
+        {
+            if (!m_CameraState.HasSavedState) return;
+
             m_Camera.enabled = m_CameraState.Enabled;
 #if CLUSTER_DISPLAY_HDRP
             m_AdditionalCameraData.hasPersistentHistory = m_CameraState.HasPersistentHistory;
 #endif
-
-            m_RendererEnabled = false;
         }
     }
 

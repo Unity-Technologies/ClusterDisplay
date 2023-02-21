@@ -1,47 +1,25 @@
 using Unity.ClusterDisplay.MissionControl;
+using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
-    public class ClusterDisplaySettings : ScriptableObject
+    class ClusterDisplaySettings : ProjectSettings<ClusterDisplaySettings>
     {
-        const string k_AssetName = "ClusterDisplaySettings";
-
         [SerializeField]
+        [Tooltip("Whether Cluster Display synchronization should be activated automatically on game start")]
         bool m_EnableOnPlay = true;
 
         [SerializeField]
         ClusterParams m_ClusterParams;
 
-        [SerializeField]
-        MissionControlSettings m_MissionControlSettings = new();
-
         public bool EnableOnPlay => m_EnableOnPlay;
 
         public ClusterParams ClusterParams => m_ClusterParams;
 
-        public MissionControlSettings MissionControlSettings => m_MissionControlSettings;
-
-        public static ClusterDisplaySettings CurrentSettings
+        protected override void InitializeInstance()
         {
-            get
-            {
-                ClusterDisplaySettings settings = Resources.Load<ClusterDisplaySettings>(k_AssetName);
-                if (settings == null)
-                {
-                    settings = CreateInstance<ClusterDisplaySettings>();
-                    settings.m_ClusterParams = ClusterParams.Default;
-#if UNITY_EDITOR
-                    if (!UnityEditor.AssetDatabase.IsValidFolder("Assets/Resources"))
-                    {
-                        UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
-                    }
-                    UnityEditor.AssetDatabase.CreateAsset(settings, $"Assets/Resources/{k_AssetName}.asset");
-                    UnityEditor.AssetDatabase.SaveAssets();
-#endif
-                }
-                return settings;
-            }
+            m_ClusterParams = ClusterParams.Default;
         }
     }
 }

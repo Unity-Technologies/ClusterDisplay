@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         {
             if (!UrpUtility.HasRenderFeature<TRenderFeature>(out _))
             {
-                EditorGUILayout.HelpBox(k_FormatMaskNotAddedMessage, MessageType.Warning);
+                EditorGUILayout.HelpBox(k_FormatMaskNotAddedMessage, UnityEditor.MessageType.Warning);
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     GUILayout.FlexibleSpace();
