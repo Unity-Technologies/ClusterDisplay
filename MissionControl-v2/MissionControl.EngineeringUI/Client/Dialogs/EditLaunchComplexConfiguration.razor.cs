@@ -61,19 +61,14 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
         }
         List<LaunchParameterValue> LaunchParametersValue { get; set; } = new();
 
-        async Task ConfigureLaunchPad()
+        async Task ConfigureLaunchPad(MissionControl.LaunchPad launchPad)
         {
-            var selected = SelectedLaunchPad;
-            if (selected == null)
-            {
-                return;
-            }
 
-            var toEdit = GetConfigurationForLaunchPad(selected);
+            var toEdit = GetConfigurationForLaunchPad(launchPad);
 
-            await DialogService.OpenAsync<EditLaunchPadConfiguration>($"Configure {selected.Name}",
-               new Dictionary<string, object>{ {"Asset", Asset}, {"LaunchPad", selected}, {"ToEdit", toEdit} },
-               new DialogOptions() { Width = "50%", Height = "50%", Resizable = true, Draggable = true });
+            await DialogService.OpenAsync<EditLaunchPadConfiguration>($"Configure {launchPad.Name}",
+               new Dictionary<string, object>{ {"Asset", Asset}, {"LaunchPad", launchPad }, {"ToEdit", toEdit} },
+               new DialogOptions() { Width = "60%", Height = "auto", Resizable = true, Draggable = true });
         }
 
         void OnOk()

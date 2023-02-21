@@ -139,11 +139,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         async Task ConfigureLaunchComplex(LaunchComplex complex)
         {
-            //var selected = SelectedLaunchComplexes;
-            //if (selected == null)
-            //{
-             //   return;
-            //}
 
             var toEdit =
                 LaunchConfigurationService.WorkValue.LaunchComplexes.FirstOrDefault(c => c.Identifier == complex.Id);
@@ -162,7 +157,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {selected.Name}",
                 new Dictionary<string, object>{ {"Asset", asset}, {"Complex", selected}, {"ToEdit", toEdit} },
-                new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
+                new DialogOptions() { Width = "60%", Height = "auto", Resizable = true, Draggable = true });
             if (!(bool)(ret ?? false))
             {
                 return;

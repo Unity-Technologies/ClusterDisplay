@@ -6,8 +6,8 @@
             <div class="col-3 align-items-center d-flex">
                 <RadzenLabel Text="Launchable" />
             </div>
-            <div class="col-9">
-                <RadzenDropDown Data=@CompatibleLaunchables @bind-Value=@LaunchableNameProxy
+            <div class="col-9 rz-mb-3">
+                <RadzenDropDown style="width:100%;" Data=@CompatibleLaunchables @bind-Value=@LaunchableNameProxy
                                 AllowClear="true"  Class="w-100"
                                 Disabled=@(MissionControlStatus.State != MissionControl.State.Idle)
                                 title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
@@ -17,7 +17,7 @@
             <div class="col-3 align-items-start d-flex">
                 <RadzenLabel Text="Parameters" />
             </div>
-            <div class="col-9">
+            <div class="col-9 rz-mb-3">
                 <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue />
             </div>
         </div>

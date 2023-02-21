@@ -7,7 +7,7 @@
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Name" />
                 </div>
-                <div class="col-9">
+                <div class="col-9 rz-mb-3">
                     <RadzenTextBox Name="MissionName" @bind-Value=@Command.Description.Name />
                     <RadzenRequiredValidator Component="MissionName" Text="Name is required" />
                 </div>
@@ -16,8 +16,8 @@
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Description" />
                 </div>
-                <div class="col-9">
-                    <RadzenTextArea style="margin-bottom: -7px;width:calc(100% - 1.98rem);" @bind-Value=@Command.Description.Details />
+                <div class="col-9 rz-mb-3">
+                    <RadzenTextArea style="margin-bottom: -7px;width:calc(100% - 1.99rem);" @bind-Value=@Command.Description.Details />
                 </div>
             </div>
         </div>

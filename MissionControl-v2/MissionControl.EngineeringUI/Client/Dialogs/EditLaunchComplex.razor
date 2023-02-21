@@ -4,7 +4,7 @@
     <div class="row" style="height: 100%; overflow-y: auto;">
         <div class="content-container">
             <!-- To avoid stretching every row of the fixed height container above -->
-            <div class="row mb-1 ">
+            <div class="row">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Name" />
                 </div>
@@ -13,7 +13,7 @@
                     <RadzenRequiredValidator Component="ComplexName" Text="Name is required" />
                 </div>
             </div>
-            <div class="row my-1">
+            <div class="row">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Hangar bay endpoint" />
                 </div>
@@ -27,14 +27,14 @@
                     }
                 </div>
             </div>
-            <div class="row my-1">
+            <div class="row">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Hangar bay identifier" />
                 </div>
-                <div class="col-9">
-                    <div class="align-items-center d-flex">
+                <div class="col-9 rz-pb-4">
+                    <div class="align-items-center d-flex align-flex-row">
                         <RadzenTextBox Value=@Edited.HangarBay.Identifier.ToString() Disabled="true" />
-                        <RadzenButton Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled=@(EditedHangarBayEndpoint == "")
+                        <RadzenButton Size="ButtonSize.Large" class="rz-ml-4" Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled=@(EditedHangarBayEndpoint == "")
                                       Click=@OnValidateHangarBayEndpoint />
                     </div>
                     @if (EditedHangarBayIdentifierErrorMessage != "")
@@ -45,24 +45,27 @@
                     }
                 </div>
             </div>
-            <div class="row my-1">
-                <div class="col-3 align-items-start d-flex">
-                    <RadzenLabel Text="Launchpads" />
+            <div class="row">
+                <div class="col-9 align-items-start d-flex align-flex-row rz-mb-2">
+                    <RadzenText class="col-5" TextStyle="TextStyle.H6" Text="Launchpads" />
+                    <RadzenButton Click=@AddLaunchPad Text="Add New" Icon="add_circle_outline"
+                                  ButtonStyle="ButtonStyle.Info" class="mt-2" />
                 </div>
                 <div class="col-9">
-                    <RadzenDataGrid Data=@Edited.LaunchPads @ref="m_LaunchpadsGrid"
-                                    SelectionMode="DataGridSelectionMode.Single" @bind-Value=@SelectedLaunchPads>
+                    <RadzenDataGrid Data=@Edited.LaunchPads @ref="m_LaunchpadsGrid">
                         <Columns>
                             <RadzenDataGridColumn TItem="LaunchPad" Title="Name" Property="Name" />
                             <RadzenDataGridColumn TItem="LaunchPad" Title="Endpoint" Property="Endpoint" />
+                            <RadzenDataGridColumn TItem="LaunchPad" Width="110px">
+                                 <Template Context="launchPad">
+                                    <RadzenButton Click=@(() => EditLaunchPad(launchPad)) Icon="edit" ButtonStyle="ButtonStyle.Light"
+                                                  class="m-1 data-grid-icon" />
+                                    <RadzenButton Click=@(() => DeleteLaunchPad(launchPad)) Icon="delete" ButtonStyle="ButtonStyle.Light"
+                                                  Class="m-1 data-grid-icon" />
+                                </Template>
+                            </RadzenDataGridColumn>
                         </Columns>
                     </RadzenDataGrid>
-                    <RadzenButton Click=@AddLaunchPad Text="Add New" Icon="add_circle_outline"
-                                  ButtonStyle="ButtonStyle.Primary" class="mt-2" />
-                    <RadzenButton Click=@EditLaunchPad Text="Edit" Icon="edit" ButtonStyle="ButtonStyle.Light"
-                                  class="mt-2" Disabled=@(SelectedLaunchPads == null || !SelectedLaunchPads.Any()) />
-                    <RadzenButton Click=@DeleteLaunchPad Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
-                                  class="mt-2" Disabled=@(SelectedLaunchPads == null || !SelectedLaunchPads.Any()) />
                 </div>
             </div>
         </div>

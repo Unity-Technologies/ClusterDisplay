@@ -110,9 +110,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             await m_LaunchpadsGrid.Reload();
         }
 
-        protected async Task EditLaunchPad()
+        protected async Task EditLaunchPad(MissionControl.LaunchPad launchpad)
         {
-            var toEdit = SelectedLaunchPads?.FirstOrDefault();
+            var toEdit = launchpad;
             if (toEdit == null)
             {
                 return;
@@ -132,9 +132,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
             await m_LaunchpadsGrid.Reload();
         }
 
-        protected void DeleteLaunchPad()
+        protected void DeleteLaunchPad(MissionControl.LaunchPad launchpad)
         {
-            var toDelete = SelectedLaunchPads?.FirstOrDefault();
+            var toDelete = launchpad;
             if (toDelete == null)
             {
                 return;

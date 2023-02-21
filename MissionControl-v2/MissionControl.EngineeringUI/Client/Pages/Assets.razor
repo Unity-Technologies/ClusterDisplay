@@ -7,8 +7,7 @@
 </div>
 
 <RadzenDataGrid @ref="m_AssetsGrid" Data=@AssetsService.Collection.Values
-                AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedAsset>
+                AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true">
     <Columns>
         <RadzenDataGridColumn TItem="Asset" Title="Name" Property="Name"/>
         <RadzenDataGridColumn TItem="Asset" Title="Description" Property="Description" />

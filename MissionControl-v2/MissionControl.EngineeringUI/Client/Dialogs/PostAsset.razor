@@ -7,7 +7,7 @@
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Name" />
                 </div>
-                <div class="col-9">
+                <div class="col-9 rz-mb-3">
                     <RadzenTextBox Name="AssetName" @bind-Value=@Asset.Name />
                     <RadzenRequiredValidator Component="AssetName" Text="Name is required" />
                 </div>
@@ -16,15 +16,15 @@
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Description" />
                 </div>
-                <div class="col-9">
-                    <RadzenTextArea style="margin-bottom: -7px;" @bind-Value=@Asset.Description />
+                <div class="col-9 rz-mb-3">
+                    <RadzenTextArea style="width:calc(100% - 1.99rem);" @bind-Value=@Asset.Description />
                 </div>
             </div>
             <div class="row my-1">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="URL" />
                 </div>
-                <div class="col-9">
+                <div class="col-9 rz-mb-3">
                     <RadzenTextBox Name="URL" @bind-Value=@Asset.Url
                                    title="This URL has to be accessible from the MissionControl server."/>
                     <RadzenRequiredValidator Component="URL" Text="URL is required" />

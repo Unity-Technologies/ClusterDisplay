@@ -6,7 +6,7 @@
             <div class="col-3 align-items-start d-flex">
                 <RadzenLabel Text="Launchpads" />
             </div>
-            <div class="col-9">
+            <div class="col-9 rz-mb-3">
                 <RadzenDataGrid Data=@Complex.LaunchPads @ref="m_LaunchpadsGrid"
                                 SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchPads>
                     <Columns>
@@ -27,17 +27,20 @@
                                 }
                             </Template>
                         </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="MissionControl.LaunchPad" Width="70px">
+                            <Template Context="launchPad">
+                                <RadzenButton Click=@(() => ConfigureLaunchPad(launchPad)) Icon="settings" ButtonStyle="ButtonStyle.Light" Class="m-1 data-grid-icon" />
+                            </Template>
+                        </RadzenDataGridColumn>
                     </Columns>
                 </RadzenDataGrid>
-                <RadzenButton Click=ConfigureLaunchPad Text="Configure" Icon="settings" ButtonStyle="ButtonStyle.Primary"
-                              class="mt-2" Disabled=@(SelectedLaunchPad == null) />
             </div>
         </div>
         <div class="row my-1">
             <div class="col-3 align-items-start d-flex">
                 <RadzenLabel Text="Parameters" />
             </div>
-            <div class="col-9">
+            <div class="col-9 rz-mb-3">
                 <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue />
             </div>
         </div>

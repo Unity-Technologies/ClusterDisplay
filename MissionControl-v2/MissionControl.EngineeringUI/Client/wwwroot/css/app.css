@@ -164,11 +164,15 @@ input {
     background-color: var(--rz-base-200);
 }
 
-.rz-body, .rz-header {
-    padding: 0px 32px 0px 32px;
+.rz-body {
+    padding: 0px 32px 32px 32px;
 }
 
 .rz-header {
+    padding: 0px 32px 0px 32px;
+}
+
+    .rz-header {
     height: 56px;
     display: flex;
     align-items: center;
@@ -204,7 +208,7 @@ input {
 }
 
 .rz-textbox {
-   width:calc(100% - 1.98rem);
+   width:calc(100% - 1.99rem);
 }
 
 /* ************************ Custom component ************************ */
@@ -214,9 +218,28 @@ input {
     height:78px;
 }
 
+.align-flex-right {
+    display:flex;
+    justify-content:flex-end;
+}
+
+.align-flex-row {
+    width: 100%;
+    display: flex !important;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .align-flex-row h6 {
+        margin: 0px;
+    }
+
+}
+
 /* sidebar containing the mission control logo and status */
 .sidebar-container-top {
-    padding:12px;
+    padding: 12px;
 }
 
 .sidebar-header {
@@ -241,7 +264,6 @@ input {
     }
 
 /* radzen data-grid */
-
 .data-grid-header {
     background-color: var(--rz-white);
     display: flex;
@@ -256,7 +278,6 @@ input {
     background-color: rgba(255,255,255,0) !important;
     box-shadow: none;
 }
-
     .data-grid-icon:hover {
         background-color: var(--rz-base-100);
         box-shadow: none;

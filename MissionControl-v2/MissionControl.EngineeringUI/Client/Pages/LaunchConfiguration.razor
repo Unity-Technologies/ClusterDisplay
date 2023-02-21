@@ -61,25 +61,25 @@
     </div>
 </div>
 <div class="row mb-1">
-    <div class="col-12">
+    <div class="col-12 align-flex-right">
         @{
             var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
             var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
         }
+        <RadzenButton Text="Apply changes" Icon="send" Click=ApplyChanges
+                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Class="me-1 rz-mr-4"
+                      Disabled=@(!needsPush || MissionControlStatus.State != State.Idle)
+                      title=@(MissionControlStatus.State != State.Idle ? "Cannot apply changes while running" : "") />
+        <RadzenButton Text="Undo changes" Icon="undo" Click=UndoChanges class="rz-mr-4"
+                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Disabled=@(!needsPush) />
         @if (MissionControlStatus.State == State.Idle)
         {
             <RadzenButton Text=@((needsPush && hasAsset)? "Apply & Launch" : "Launch") Icon="rocket_launch" Click=Launch
-                          Style="width: 200px" Class="me-1" Disabled=@(!hasAsset) />
+                          ButtonStyle="ButtonStyle.Info" Style="width: 200px" Class="me-1" Disabled=@(!hasAsset) />
         }
         else
         {
-            <RadzenButton Text="Stop" Icon="close" Click=Stop Style="width: 200px" Class="me-1" />
+            <RadzenButton Text="Stop" Icon="close" ButtonStyle="ButtonStyle.Info" Click=Stop Style="width: 200px" Class="me-1" />
         }
-        <RadzenButton Text="Apply changes" Icon="send" Click=ApplyChanges
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Class="me-1"
-                      Disabled=@(!needsPush || MissionControlStatus.State != State.Idle)
-                      title=@(MissionControlStatus.State != State.Idle ? "Cannot apply changes while running" : "") />
-        <RadzenButton Text="Undo changes" Icon="undo" Click=UndoChanges
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Disabled=@(!needsPush) />
     </div>
 </div>
