@@ -31,9 +31,6 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             renderer.DelayPresentByOneFrame = clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame;
-
-            // TODO: RenderTestPattern is currently a command line or Mission Control parameter, but this can be made
-            // into a remote parameter in the future.
             renderer.Settings.RenderTestPattern = CommandLineParser.testPattern.Defined;
 
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)

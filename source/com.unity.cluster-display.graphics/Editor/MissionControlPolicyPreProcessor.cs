@@ -55,9 +55,8 @@ namespace Unity.ClusterDisplay.Graphics
                         missionControlSettings.PolicyParameters.GlobalParameters.Add(new()
                         {
                             Name = "Show Test Pattern",
-                            Description = "Show the test pattern instead of rendering the game. This is only applicable if the " +
-                                "project uses the Cluster Display Graphics packages and is using a projection policy that " +
-                                "supports it",
+                            Id = ProjectionPolicy.TestPatternParameterId,
+                            Description = "Show the test pattern instead of rendering the game.",
                             Type = LaunchParameterType.Boolean,
                             DefaultValue = false
                         });
