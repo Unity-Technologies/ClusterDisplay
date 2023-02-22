@@ -289,8 +289,6 @@ namespace Unity.ClusterDisplay.Graphics
                     continue;
                 }
 
-                // var rendererEnabled = meshData.MeshRenderer.enabled;
-                // meshData.MeshRenderer.enabled = false;
                 if (!meshData.IsValid)
                 {
                     break;
@@ -357,8 +355,6 @@ namespace Unity.ClusterDisplay.Graphics
                     Target = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp"),
                     RenderTestPattern = clusterSettings.RenderTestPattern
                 });
-
-                // meshData.MeshRenderer.enabled = rendererEnabled;
             }
 
             if (IsDebug)
