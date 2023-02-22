@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Unity.ClusterDisplay.MissionControl;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -8,12 +9,9 @@ namespace Unity.ClusterDisplay.Graphics
 {
     /// <summary>
     /// A utility whose purpose is to configure the Cluster Renderer based on command line parameters.
-    /// Introduced to avoid a having direct references to command line parameters in the Cluster Renderer,
-    /// since it would hamper testability.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ClusterRenderer))]
-    // TODO Rename component?
     class ClusterRendererCommandLineUtils : MonoBehaviour
     {
         // This needs to execute after the main manager has initialized and before the renderer does.
@@ -33,7 +31,14 @@ namespace Unity.ClusterDisplay.Graphics
             }
 
             renderer.DelayPresentByOneFrame = clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame;
+
+            // TODO: RenderTestPattern is currently a command line or Mission Control parameter, but this can be made
+            // into a remote parameter in the future.
             renderer.Settings.RenderTestPattern = CommandLineParser.testPattern.Defined;
+            if (MissionControlLaunchConfiguration.Instance?.GetShowTestPattern() is { } showTestPattern)
+            {
+                renderer.Settings.RenderTestPattern = showTestPattern;
+            }
 
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {

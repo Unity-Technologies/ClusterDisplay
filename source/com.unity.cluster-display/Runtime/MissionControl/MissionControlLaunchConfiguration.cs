@@ -230,6 +230,11 @@ namespace Unity.ClusterDisplay.MissionControl
             return RawLaunchData.Value<bool?>(LaunchParameterConstants.EnableHardwareSyncParameterId);
         }
 
+        public bool? GetShowTestPattern()
+        {
+            return RawLaunchData.Value<bool?>(LaunchParameterConstants.ShowTestPattern);
+        }
+
         /// <summary>
         /// Returns the port MissionControl's capsule should listen on for new capcom connections.
         /// </summary>
