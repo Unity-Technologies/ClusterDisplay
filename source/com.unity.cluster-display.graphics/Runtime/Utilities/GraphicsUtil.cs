@@ -47,6 +47,16 @@ namespace Unity.ClusterDisplay.Graphics
             public static readonly int _BlitScaleBias = Shader.PropertyToID("_BlitScaleBias");
             public static readonly int _BlitScaleBiasRt = Shader.PropertyToID("_BlitScaleBiasRt");
             public static readonly int _BlitMipLevel = Shader.PropertyToID("_BlitMipLevel");
+            public static readonly int _UVRotation = Shader.PropertyToID("_UVRotation");
+            public static readonly int _UVShift = Shader.PropertyToID("_UVShift");
+        }
+
+        public enum UVRotation
+        {
+            Zero,
+            CW90,
+            CW180,
+            CW270
         }
 
         // Material for performing the cluster present
@@ -99,6 +109,8 @@ namespace Unity.ClusterDisplay.Graphics
             if (s_PreviewMaterial == null)
             {
                 s_PreviewMaterial = CreateHiddenMaterial(k_PreviewShaderName);
+                s_PreviewMaterial.SetVector(ShaderIDs._UVRotation, new Vector4(1, 0, 0, 1));
+                s_PreviewMaterial.SetVector(ShaderIDs._UVShift, new Vector2(0, 0));
             }
 
             return s_PreviewMaterial;
@@ -117,6 +129,28 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 hideFlags = HideFlags.HideAndDontSave
             };
+        }
+
+        public static void RotateUVs(this MaterialPropertyBlock propertyBlock, UVRotation rotation)
+        {
+            var r = rotation switch
+            {
+                UVRotation.Zero => new Vector4(1, 0, 0, 1),
+                UVRotation.CW90 => new Vector4(0, -1, 1, 0),
+                UVRotation.CW180 => new Vector4(-1, 0, 0, -1),
+                UVRotation.CW270 => new Vector4(0, 1, -1, 0),
+                _ => throw new ArgumentOutOfRangeException(nameof(rotation), rotation, null)
+            };
+            var t = rotation switch {
+                UVRotation.Zero => new Vector2(0, 0),
+                UVRotation.CW90 => new Vector2(1, 0),
+                UVRotation.CW180 => new Vector2(1, 1),
+                UVRotation.CW270 => new Vector2(0, 1),
+                _ => throw new ArgumentOutOfRangeException(nameof(rotation), rotation, null)
+            };
+
+            propertyBlock.SetVector(ShaderIDs._UVRotation, r);
+            propertyBlock.SetVector(ShaderIDs._UVShift, t);
         }
 
         public static void Blit(CommandBuffer commandBuffer, in BlitCommand blitCommand, bool flipY)

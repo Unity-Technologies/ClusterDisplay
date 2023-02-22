@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
-using static Unity.ClusterDisplay.Graphics.MeshUtils;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -20,13 +18,13 @@ namespace Unity.ClusterDisplay.Graphics
         Vector2Int m_ScreenResolution = new(1920, 1080);
 
         [SerializeField]
-        UVRotation m_UVRotation;
+        GraphicsUtil.UVRotation m_UVRotation;
 
         public Vector2Int ScreenResolution => m_ScreenResolution;
 
         public MeshRenderer MeshRenderer => m_MeshRenderer;
 
-        public UVRotation UVRotation => m_UVRotation;
+        public GraphicsUtil.UVRotation UVRotation => m_UVRotation;
 
         // Records the "enabled" state of the MeshRenderer so it can be disabled and restored
         // when performing the main render.
@@ -116,7 +114,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         // Cached Mesh objects belonging to the projection surfaces (to avoid a lookup each frame).
         readonly Dictionary<MeshProjectionSurface, Mesh> m_Meshes = new();
-        readonly List<Mesh> m_MeshInstances = new();
 
         // RT holding the realtime cubemap
         RenderTexture m_OuterFrustumTarget;
@@ -191,27 +188,13 @@ namespace Unity.ClusterDisplay.Graphics
 
         void InitializeMeshes()
         {
-            foreach (var mesh in m_MeshInstances)
-            {
-                if (Application.isEditor)
-                {
-                    DestroyImmediate(mesh);
-                }
-                else
-                {
-                    Destroy(mesh);
-                }
-            }
-
-            m_MeshInstances.Clear();
+            // DO NOT try to call this in OnValidate() or OnAfterDeserialize(), because those methods may not
+            // run on the main thread.
             foreach (var surface in ProjectionSurfaces)
             {
                 if (surface.MeshRenderer != null && surface.MeshRenderer.TryGetComponent<MeshFilter>(out var filter))
                 {
-                    var meshInstance = Instantiate(filter.sharedMesh);
-                    meshInstance.RotateUVs(surface.UVRotation);
-                    m_MeshInstances.Add(meshInstance);
-                    m_Meshes.Add(surface, meshInstance);
+                    m_Meshes.Add(surface, filter.sharedMesh);
                 }
             }
         }
@@ -345,7 +328,7 @@ namespace Unity.ClusterDisplay.Graphics
                 prop.SetTexture(GraphicsUtil.ShaderIDs._MainTex, mainRenderTarget);
                 prop.SetMatrix(ShaderIDs._CameraTransform, cameraOverrides.worldToCamera);
                 prop.SetMatrix(ShaderIDs._CameraProjection, cameraOverrides.projection);
-
+                prop.RotateUVs(meshData.UVRotation);
                 m_WarpCommands.Enqueue(new DrawMeshCommand
                 {
                     Mesh = m_Meshes[meshData],
@@ -373,6 +356,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
                     previewMatProp.SetTexture(GraphicsUtil.ShaderIDs._MainTex, m_RenderTargets[index]);
                     var localToWorld = meshData.MeshRenderer.localToWorldMatrix;
+                    previewMatProp.RotateUVs(meshData.UVRotation);
                     UnityEngine.Graphics.DrawMesh(m_Meshes[meshData],
                         localToWorld,
                         GraphicsUtil.GetPreviewMaterial(),
