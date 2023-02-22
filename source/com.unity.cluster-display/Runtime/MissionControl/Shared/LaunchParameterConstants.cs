@@ -23,7 +23,6 @@ namespace Unity.ClusterDisplay.MissionControl
         public const string EnableHardwareSyncParameterId = "EnableHardwareSync";
         public const string CapsuleBasePortParameterId = "CapsuleBasePort";
         public const string DeleteRegistryKeyParameterId = "DeleteRegistryKey";
-        public const string ShowTestPattern = "ShowTestPattern";
 
         public const string NodeRoleUnassigned = "Unassigned";
         public const string NodeRoleEmitter = "Emitter";

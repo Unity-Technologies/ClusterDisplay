@@ -35,10 +35,6 @@ namespace Unity.ClusterDisplay.Graphics
             // TODO: RenderTestPattern is currently a command line or Mission Control parameter, but this can be made
             // into a remote parameter in the future.
             renderer.Settings.RenderTestPattern = CommandLineParser.testPattern.Defined;
-            if (MissionControlLaunchConfiguration.Instance?.GetShowTestPattern() is { } showTestPattern)
-            {
-                renderer.Settings.RenderTestPattern = showTestPattern;
-            }
 
             if (Application.isPlaying && renderer.ProjectionPolicy is { } projectionPolicy)
             {

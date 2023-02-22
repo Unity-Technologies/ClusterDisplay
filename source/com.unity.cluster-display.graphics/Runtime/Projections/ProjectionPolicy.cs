@@ -21,6 +21,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         public virtual bool SupportsTestPattern => false;
 
+        public const string TestPatternParameterId = "ShowTestPattern";
+
         Material m_CustomBlitMaterial;
         Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
         MaterialPropertyBlock m_CustomBlitMaterialPropertyBlock;

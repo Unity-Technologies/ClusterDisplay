@@ -255,17 +255,6 @@ namespace Unity.ClusterDisplay
                     "execution?  Especially useful to clear display settings of the previously running version of the" +
                     "application."
             });
-
-            toFill.GlobalParameters.Add(new()
-            {
-                Id = LaunchParameterConstants.ShowTestPattern,
-                Type = LaunchParameterType.Boolean,
-                DefaultValue = false,
-                Name = "Show Test Pattern",
-                Description = "Show the test pattern instead of rendering the game. This is only applicable if the " +
-                    "project uses the Cluster Display Graphics packages and is using a projection policy that " +
-                    "supports it"
-            });
         }
 
         /// <summary>

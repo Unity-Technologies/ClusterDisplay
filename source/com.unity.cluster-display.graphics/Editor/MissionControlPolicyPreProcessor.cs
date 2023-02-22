@@ -50,6 +50,18 @@ namespace Unity.ClusterDisplay.Graphics
                         TiledProjection => AddTiledProjectionPolicyParameters(),
                         _ => new()
                     };
+                    if (clusterRenderer.ProjectionPolicy.SupportsTestPattern)
+                    {
+                        missionControlSettings.PolicyParameters.GlobalParameters.Add(new()
+                        {
+                            Name = "Show Test Pattern",
+                            Description = "Show the test pattern instead of rendering the game. This is only applicable if the " +
+                                "project uses the Cluster Display Graphics packages and is using a projection policy that " +
+                                "supports it",
+                            Type = LaunchParameterType.Boolean,
+                            DefaultValue = false
+                        });
+                    }
                     if (missionControlSettings.PolicyParameters.Any)
                     {
                         // Ensure we have a ClusterRenderMissionControlUtils on the clusterRender.
