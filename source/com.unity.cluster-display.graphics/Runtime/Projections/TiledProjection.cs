@@ -114,6 +114,7 @@ namespace Unity.ClusterDisplay.Graphics
             public Matrix4x4 OriginalProjection;
             public BlitParams BlitParams;
             public PostEffectsParams PostEffectsParams;
+            public bool RenderTestPattern;
 
             // Debug data.
             public Rect DebugViewportSubsection;
@@ -130,6 +131,8 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_RuntimeSettings = m_Settings;
         }
+
+        public override bool SupportsTestPattern => true;
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
@@ -163,6 +166,7 @@ namespace Unity.ClusterDisplay.Graphics
 
             var renderContext = new TileProjectionContext
             {
+                RenderTestPattern = clusterSettings.RenderTestPattern,
                 CurrentTileIndex = currentTileIndex,
                 NumTiles = numTiles,
                 OverscannedSize = overscannedSize,
@@ -283,11 +287,22 @@ namespace Unity.ClusterDisplay.Graphics
 
                 var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
-                cameraScope.Render(targets[tileIndex], asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
+                if (tileProjectionContext.RenderTestPattern)
+                {
+                    RenderTestPattern(targets[tileIndex]);
+                }
+                else
+                {
+                    cameraScope.Render(targets[tileIndex], asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
+                }
 
                 var viewportSubsection = tileProjectionContext.Viewport.GetSubsectionWithoutOverscan(tileIndex);
 
-                commands.Add(new BlitCommand(targets[tileIndex], tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.AsScaleBias(viewportSubsection), customBlitMaterial, GetCustomBlitMaterialPropertyBlocks(tileIndex)));
+                commands.Add(new BlitCommand(targets[tileIndex],
+                    tileProjectionContext.BlitParams.ScaleBias,
+                    GraphicsUtil.AsScaleBias(viewportSubsection),
+                    customBlitMaterial,
+                    GetCustomBlitMaterialPropertyBlocks(tileIndex)));
             }
         }
 
@@ -309,7 +324,14 @@ namespace Unity.ClusterDisplay.Graphics
 
             var screenCoordScaleBias = PostEffectsParams.GetScreenCoordScaleBias(overscannedViewportSubsection);
 
-            cameraScope.Render(target, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
+            if (tileProjectionContext.RenderTestPattern)
+            {
+                RenderTestPattern(target);
+            }
+            else
+            {
+                cameraScope.Render(target, asymmetricProjectionMatrix, screenSizeOverride, screenCoordScaleBias);
+            }
 
             commands.Add(new BlitCommand(target, tileProjectionContext.BlitParams.ScaleBias, GraphicsUtil.k_IdentityScaleBias, customBlitMaterial, GetCustomBlitMaterialPropertyBlocks(tileProjectionContext.CurrentTileIndex)));
         }

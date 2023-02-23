@@ -39,12 +39,15 @@ Shader "Hidden/ClusterDisplay/ProjectionPreview"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float4 _UVRotation;
+            float2 _UVShift;
 
             v2f vert (appdata v)
             {
+                const float2x2 uvRotation = float2x2(_UVRotation.x, _UVRotation.y, _UVRotation.z, _UVRotation.w);
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = TRANSFORM_TEX(mul(uvRotation, v.uv) + _UVShift, _MainTex);
                 return o;
             }
 

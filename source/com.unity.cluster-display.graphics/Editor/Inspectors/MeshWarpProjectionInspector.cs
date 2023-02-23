@@ -40,6 +40,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             public static readonly GUIContent CubemapSize = EditorGUIUtility.TrTextContent("Cubemap Size",
                 "Size of the cubemap in pixels");
             public const string UndoCreateSurface = "Create projection surface";
+            public static readonly GUIContent RotateUVs = EditorGUIUtility.TrTextContent("Rotate mesh UVs");
         }
 
         SerializedProperty m_IsDebugProp;
@@ -76,7 +77,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                     EditorGUI.LabelField(rect, Labels.GetGUIContent(Labels.Field.ProjectionSurfaces)),
                 onAddCallback = OnAddSurface,
                 drawElementCallback = DrawElement,
-                elementHeightCallback = index => (EditorGUIUtility.singleLineHeight + 2) * 2 + 2
+                elementHeightCallback = index => (EditorGUIUtility.singleLineHeight + 2) * 3 + 2
             };
         }
 
@@ -90,6 +91,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             position.height = lineHeight;
             var meshProp = element.FindPropertyRelative("m_MeshRenderer");
             var resolutionProp = element.FindPropertyRelative("m_ScreenResolution");
+            var rotationProp = element.FindPropertyRelative("m_UVRotation");
             EditorGUI.PropertyField(position, meshProp);
             if (meshProp.objectReferenceValue == null)
             {
@@ -106,7 +108,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 iconPosition.width = 16;
                 EditorGUI.LabelField(iconPosition, Contents.InvalidResolutionIcon);
             }
+
             EditorGUI.PropertyField(position, resolutionProp);
+
+            position.y += lineHeight + 2;
+            EditorGUI.PropertyField(position, rotationProp, Contents.RotateUVs);
         }
 
         void OnAddSurface(ReorderableList list)

@@ -9,16 +9,22 @@ namespace Unity.ClusterDisplay.Graphics.Editor
     [CustomEditor(typeof(ClusterRenderer))]
     class ClusterRendererInspector : UnityEditor.Editor
     {
-        const string k_NoCamerasMessage = "No cameras are marked to render in this cluster.";
-        const string k_AddCameraScriptText = "Add ClusterCamera component to all cameras";
-        const string k_NoPolicyMessage = "No projection policy assigned.";
-        const string k_UseInspector = "New projection policy assigned to the Cluster Renderer component. Use the " +
-                                      "Cluster Rendering inspector to modify it.";
+        static string k_NoCamerasMessage = L10n.Tr("No cameras are marked to render in this cluster.");
+        static string k_AddCameraScriptText = L10n.Tr("Add ClusterCamera component to all cameras");
+        static string k_NoPolicyMessage = L10n.Tr("No projection policy assigned.");
+        static string k_UseInspector = L10n.Tr("New projection policy assigned to the Cluster Renderer component. Use the " +
+                                      "Cluster Rendering inspector to modify it.");
+        static class Contents
+        {
+            public static readonly GUIContent DrawTestPattern = EditorGUIUtility.TrTextContent("Draw Test Pattern",
+            "Draw test pattern onto surfaces");
+        }
 
         const string k_MultipleDisallowed = "Multiple Projection Policies are not permitted.";
 
         SerializedProperty m_PolicyProp;
         SerializedProperty m_OverscanProp;
+        SerializedProperty m_TestPatternProp;
         SerializedProperty m_DelayPresentByOneFrameProp;
 
         UnityEditor.Editor m_PolicyEditor;
@@ -41,6 +47,7 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_ClusterRenderer = target as ClusterRenderer;
             m_PolicyProp = serializedObject.FindProperty("m_ProjectionPolicy");
             m_OverscanProp = serializedObject.FindProperty("m_Settings.m_OverscanInPixels");
+            m_TestPatternProp = serializedObject.FindProperty("m_Settings.m_RenderTestPattern");
             m_DelayPresentByOneFrameProp = serializedObject.FindProperty("m_DelayPresentByOneFrame");
         }
 
@@ -102,6 +109,11 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             }
 
             EditorGUILayout.PropertyField(m_OverscanProp, Labels.GetGUIContent(Labels.Field.Overscan));
+            if (currentPolicy != null && currentPolicy.SupportsTestPattern)
+            {
+                EditorGUILayout.PropertyField(m_TestPatternProp, Contents.DrawTestPattern);
+            }
+
             EditorGUILayout.PropertyField(m_DelayPresentByOneFrameProp, Labels.GetGUIContent(Labels.Field.DelayPresentByOneFrame));
 
             if (currentPolicy != null)

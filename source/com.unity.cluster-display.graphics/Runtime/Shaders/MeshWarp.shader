@@ -43,6 +43,9 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
+            float4 _UVRotation;
+            float2 _UVShift;
+
             float4x4 _CameraTransform;
             float4x4 _CameraProjection;
 
@@ -71,10 +74,11 @@ Shader "Hidden/ClusterDisplay/MeshWarp"
 
             v2f vert(appdata v)
             {
+                const float2x2 uvRotation = float2x2(_UVRotation.x, _UVRotation.y, _UVRotation.z, _UVRotation.w);
                 v2f o;
                 // Flatten the mesh into a "fullscreen quad" by
                 // using its UVs as screen coordinates.
-                float2 fullScreenClip = v.uv.xy * 2 - float2(1, 1);
+                float2 fullScreenClip = (mul(uvRotation, v.uv.xy) + _UVShift) * 2 - float2(1, 1);
 
                 // (0, 0) is top-left for device coordinates but
                 // (0, 0) is bottom-left for UVs

@@ -150,6 +150,8 @@ namespace Unity.ClusterDisplay.Graphics
 
 #if UNITY_EDITOR
             SceneView.RepaintAll();
+#else
+            IsDebug = false;
 #endif
             Enabled.Invoke();
         }
