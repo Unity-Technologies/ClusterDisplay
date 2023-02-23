@@ -8,6 +8,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     {
         public CatalogException() { }
         public CatalogException(string message) : base(message) { }
+        public CatalogException(string message, Exception? innerException) : base(message, innerException) { }
     }
 
     /// <summary>
@@ -136,6 +137,11 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
 
                 // Done
                 return newAsset.Id;
+            }
+            catch (MD5MismatchException e)
+            {
+                throw new CatalogException($"MD5 checksum mismatch.  Is the asset produced with support for Mission " +
+                    $"Control (or we are using an old LaunchCatalog.json)?", e);
             }
             catch
             {
@@ -276,6 +282,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <param name="assetSource">From where to take the file.</param>
         /// <param name="file">The file to add</param>
         /// <param name="addFileBlobsCancelToken"><see cref="CancellationToken"/> to cancel the work.</param>
+        /// <exception cref="StorageFolderFullException">If no storage folder is large enough to store the uncompressed
+        /// file.</exception>
+        /// <exception cref="MD5MismatchException">If the actual file MD5 checksum does not match
+        /// <see cref="LaunchCatalog.PayloadFile.Md5"/>.</exception>
         async Task<FileBlobInfo> AddFileBlobAsync(IAssetSource assetSource, LaunchCatalog.PayloadFile file,
             CancellationToken addFileBlobsCancelToken)
         {

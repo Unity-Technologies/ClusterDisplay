@@ -26,6 +26,23 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
     }
 
     /// <summary>
+    /// Exception thrown when a file does not have the expected MD5 checksum.
+    /// </summary>
+    public class MD5MismatchException: ArgumentException
+    {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public MD5MismatchException() { }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="message">Exception message.</param>
+        public MD5MismatchException(string message) : base (message) { }
+    }
+
+    /// <summary>
     /// Class responsible for managing all the file blobs of a MissionControl process.
     /// </summary>
     /// <remarks><see cref="Asset"/> for a family portrait of file blobs and its relation to an <see cref="Asset"/>.
@@ -283,6 +300,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// </remarks>
         /// <exception cref="StorageFolderFullException">If no storage folder is large enough to store the uncompressed
         /// file.</exception>
+        /// <exception cref="MD5MismatchException">If the actual file MD5 checksum does not match
+        /// <paramref name="md5"/>.</exception>
         public virtual async Task<Guid> AddFileBlobAsync(Stream fileContent, long fileLength, Guid md5,
             CancellationToken cancellationToken = default)
         {
@@ -872,6 +891,8 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns><paramref name="entry"/> or one in <paramref name="withSameMd5"/> if a duplicate was found.
         /// </returns>
+        /// <exception cref="MD5MismatchException">If the actual file MD5 checksum does not match
+        /// <paramref name="expectedMd5"/>.</exception>
         async Task<FileBlobInfo> CompressFileAsync(Stream fileContent, long fileLength, FileBlobInfo entry,
             IEnumerable<FileBlobInfo> withSameMd5, Guid expectedMd5, CancellationToken cancellationToken)
         {
@@ -1026,7 +1047,7 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Library
                 Guid computeMd5 = new(computedHashBytes);
                 if (computeMd5 != expectedMd5)
                 {
-                    throw new ArgumentException($"Expected MD5 of file blob to be " +
+                    throw new MD5MismatchException($"Expected MD5 of file blob to be " +
                         $"{Convert.ToHexString(expectedMd5.ToByteArray())} but it was " +
                         $"{Convert.ToHexString(computedHashBytes)}");
                 }
