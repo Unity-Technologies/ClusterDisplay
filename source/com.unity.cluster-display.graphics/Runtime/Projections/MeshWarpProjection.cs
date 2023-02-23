@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -18,17 +17,22 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         Vector2Int m_ScreenResolution = new(1920, 1080);
 
+        [SerializeField]
+        GraphicsUtil.UVRotation m_UVRotation;
+
         public Vector2Int ScreenResolution => m_ScreenResolution;
 
         public MeshRenderer MeshRenderer => m_MeshRenderer;
+
+        public GraphicsUtil.UVRotation UVRotation => m_UVRotation;
 
         // Records the "enabled" state of the MeshRenderer so it can be disabled and restored
         // when performing the main render.
         public bool IsEnabled { get; set; }
 
         public bool IsValid => m_MeshRenderer != null && m_ScreenResolution.IsValidResolution();
-    }
 
+    }
     /// <summary>
     /// Holds data needed to perform a mesh render.
     /// </summary>
@@ -39,11 +43,12 @@ namespace Unity.ClusterDisplay.Graphics
         public Material Material;
         public MaterialPropertyBlock PropertyBlock;
         public RenderTexture Target;
+        public bool RenderTestPattern;
     }
 
     [PopupItem("Mesh Warp")]
     [RequiresUnreferencedShader]
-    sealed class MeshWarpProjection : ProjectionPolicy
+    sealed class MeshWarpProjection : ProjectionPolicy, ISerializationCallbackReceiver
     {
         public enum OuterFrustumMode
         {
@@ -135,6 +140,7 @@ namespace Unity.ClusterDisplay.Graphics
         readonly struct HideSurfacesScope : IDisposable
         {
             IEnumerable<MeshProjectionSurface> Surfaces { get; }
+
             public HideSurfacesScope(IEnumerable<MeshProjectionSurface> surfaces)
             {
                 Surfaces = surfaces;
@@ -144,6 +150,7 @@ namespace Unity.ClusterDisplay.Graphics
                     {
                         continue;
                     }
+
                     surface.IsEnabled = surface.MeshRenderer.enabled;
                     surface.MeshRenderer.enabled = false;
                 }
@@ -157,6 +164,7 @@ namespace Unity.ClusterDisplay.Graphics
                     {
                         continue;
                     }
+
                     surface.MeshRenderer.enabled = surface.IsEnabled;
                 }
             }
@@ -166,10 +174,22 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnValidate()
         {
-            m_NodesToRender = IsDebug ? Enumerable.Range(0, ProjectionSurfaces.Count).ToArray() : new[] {GetEffectiveNodeIndex()};
+            m_NodesToRender = IsDebug ? Enumerable.Range(0, ProjectionSurfaces.Count).ToArray() : new[] { GetEffectiveNodeIndex() };
             m_FrustumGizmos.Clear();
+            OnAfterDeserialize();
+        }
 
+        public void OnAfterDeserialize()
+        {
             m_Meshes.Clear();
+        }
+
+        public void OnBeforeSerialize() { }
+
+        void InitializeMeshes()
+        {
+            // DO NOT try to call this in OnValidate() or OnAfterDeserialize(), because those methods may not
+            // run on the main thread.
             foreach (var surface in ProjectionSurfaces)
             {
                 if (surface.MeshRenderer != null && surface.MeshRenderer.TryGetComponent<MeshFilter>(out var filter))
@@ -210,18 +230,24 @@ namespace Unity.ClusterDisplay.Graphics
             m_RenderTargets.Clean();
 
             GraphicsUtil.DeallocateIfNeeded(ref m_OuterFrustumTarget);
-
         }
+
+        public override bool SupportsTestPattern => true;
 
         public override void UpdateCluster(ClusterRendererSettings clusterSettings, Camera activeCamera)
         {
+            if (m_Meshes.Count == 0)
+            {
+                InitializeMeshes();
+            }
+
             var nodeIndex = GetEffectiveNodeIndex();
 
             if (ProjectionSurfaces.Count == 0 || (!IsDebug && nodeIndex >= ProjectionSurfaces.Count)) return;
 
             if (!Application.isEditor)
             {
-                m_NodesToRender ??= new[] {nodeIndex};
+                m_NodesToRender ??= new[] { nodeIndex };
             }
 
             // Hide the projection surfaces for performing the main render.
@@ -246,8 +272,6 @@ namespace Unity.ClusterDisplay.Graphics
                     continue;
                 }
 
-                var rendererEnabled = meshData.MeshRenderer.enabled;
-                meshData.MeshRenderer.enabled = false;
                 if (!meshData.IsValid)
                 {
                     break;
@@ -304,17 +328,16 @@ namespace Unity.ClusterDisplay.Graphics
                 prop.SetTexture(GraphicsUtil.ShaderIDs._MainTex, mainRenderTarget);
                 prop.SetMatrix(ShaderIDs._CameraTransform, cameraOverrides.worldToCamera);
                 prop.SetMatrix(ShaderIDs._CameraProjection, cameraOverrides.projection);
-
+                prop.RotateUVs(meshData.UVRotation);
                 m_WarpCommands.Enqueue(new DrawMeshCommand
                 {
                     Mesh = m_Meshes[meshData],
                     LocalToWorldMatrix = meshData.MeshRenderer.localToWorldMatrix,
                     Material = m_WarpMaterial,
                     PropertyBlock = prop,
-                    Target = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp")
+                    Target = m_RenderTargets.GetOrAllocate(index, meshData.ScreenResolution, "Warp"),
+                    RenderTestPattern = clusterSettings.RenderTestPattern
                 });
-
-                meshData.MeshRenderer.enabled = rendererEnabled;
             }
 
             if (IsDebug)
@@ -333,6 +356,7 @@ namespace Unity.ClusterDisplay.Graphics
                     m_PreviewMaterialProperties.GetOrCreate(index, out var previewMatProp);
                     previewMatProp.SetTexture(GraphicsUtil.ShaderIDs._MainTex, m_RenderTargets[index]);
                     var localToWorld = meshData.MeshRenderer.localToWorldMatrix;
+                    previewMatProp.RotateUVs(meshData.UVRotation);
                     UnityEngine.Graphics.DrawMesh(m_Meshes[meshData],
                         localToWorld,
                         GraphicsUtil.GetPreviewMaterial(),
@@ -405,12 +429,19 @@ namespace Unity.ClusterDisplay.Graphics
             while (m_WarpCommands.TryDequeue(out var meshCommand))
             {
                 commandBuffer.SetRenderTarget(meshCommand.Target);
-                commandBuffer.DrawMesh(meshCommand.Mesh,
-                    meshCommand.LocalToWorldMatrix,
-                    meshCommand.Material,
-                    submeshIndex: 0,
-                    shaderPass: 0,
-                    meshCommand.PropertyBlock);
+                if (meshCommand.RenderTestPattern)
+                {
+                    RenderTestPattern(commandBuffer);
+                }
+                else
+                {
+                    commandBuffer.DrawMesh(meshCommand.Mesh,
+                        meshCommand.LocalToWorldMatrix,
+                        meshCommand.Material,
+                        submeshIndex: 0,
+                        shaderPass: 0,
+                        meshCommand.PropertyBlock);
+                }
             }
 
             commandBuffer.SetRenderTarget(args.BackBuffer);

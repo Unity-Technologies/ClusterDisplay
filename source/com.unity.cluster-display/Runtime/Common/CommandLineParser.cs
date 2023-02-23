@@ -226,6 +226,7 @@ namespace Unity.ClusterDisplay
         internal static readonly Vector2IntArgument gridSize                = new Vector2IntArgument("-gridSize");
         internal static readonly Vector2IntArgument bezel                   = new Vector2IntArgument("-bezel");
         internal static readonly Vector2IntArgument physicalScreenSize      = new Vector2IntArgument("-physicalScreenSize");
+        internal static readonly BoolArgument testPattern                   = new BoolArgument("-testPattern");
 
         internal readonly static IntArgument targetFps                      = new IntArgument("-targetFps", tryParse: ParseTargetFPS);
         internal static readonly IntArgument overscan                       = new IntArgument("-overscan");

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Unity.ClusterDisplay.Graphics
 {
@@ -18,11 +19,19 @@ namespace Unity.ClusterDisplay.Graphics
         [SerializeField]
         bool m_IsDebug;
 
+        public virtual bool SupportsTestPattern => false;
+
+        public const string TestPatternParameterId = "ShowTestPattern";
+
         Material m_CustomBlitMaterial;
         Dictionary<int, MaterialPropertyBlock> m_CustomBlitMaterialPropertyBlocks;
         MaterialPropertyBlock m_CustomBlitMaterialPropertyBlock;
 
         protected Material customBlitMaterial => m_CustomBlitMaterial;
+
+        // Hardcoded test pattern
+        [SerializeField, HideInInspector]
+        Texture2D m_TestPatternTexture;
 
         protected MaterialPropertyBlock GetCustomBlitMaterialPropertyBlocks(int index)
         {
@@ -58,6 +67,8 @@ namespace Unity.ClusterDisplay.Graphics
 
         [SerializeField]
         int m_NodeIndexOverride;
+
+        const string k_TestPatternTexturePath = "uvtestpattern";
 
         /// <summary>
         /// Called just before the frame is rendered.
@@ -101,6 +112,25 @@ namespace Unity.ClusterDisplay.Graphics
         {
             get => m_NodeIndexOverride;
             set => m_NodeIndexOverride = value;
+        }
+
+        protected void RenderTestPattern(CommandBuffer cmd)
+        {
+            if (m_TestPatternTexture == null)
+            {
+                m_TestPatternTexture = Resources.Load<Texture2D>(k_TestPatternTexturePath);
+            }
+            GraphicsUtil.Blit(cmd, m_TestPatternTexture, false);
+        }
+
+        protected void RenderTestPattern(RenderTexture target)
+        {
+            if (m_TestPatternTexture == null)
+            {
+                m_TestPatternTexture = Resources.Load<Texture2D>(k_TestPatternTexturePath);
+            }
+
+            UnityEngine.Graphics.Blit(m_TestPatternTexture, target);
         }
 
         protected int GetEffectiveNodeIndex() =>

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using Unity.ClusterDisplay.MissionControl;
 using Unity.ClusterDisplay.Utils;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -36,6 +37,14 @@ namespace Unity.ClusterDisplay.Graphics
             if (Application.isPlaying && clusterRenderer.ProjectionPolicy is { } projectionPolicy)
             {
                 ApplyMissionControlLaunchParameters(projectionPolicy);
+
+                if (projectionPolicy.SupportsTestPattern &&
+                    MissionControlLaunchConfiguration.Instance?.RawLaunchData?.Value<bool>(ProjectionPolicy
+                            .TestPatternParameterId) is
+                        { } showTestPattern)
+                {
+                    clusterRenderer.Settings.RenderTestPattern = showTestPattern;
+                }
             }
         }
 
@@ -53,7 +62,7 @@ namespace Unity.ClusterDisplay.Graphics
 
         static void ApplySettings(ref TiledProjectionSettings baseSettings)
         {
-            var launchData = MissionControl.MissionControlLaunchConfiguration.Instance?.RawLaunchData;
+            var launchData = MissionControlLaunchConfiguration.Instance?.RawLaunchData;
 
             if (TryGetVector2Int(launchData, TiledProjection.BezelParameterId, out var bezelValue))
             {
