@@ -384,7 +384,7 @@ namespace Unity.LiveEditing.Editor
         public delegate void GameObjectIndexChangedEventHandler(int instanceID, GameObject gameObject, int index);
 
         /// <summary>
-        /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectPropertiesChanged"/> event.
+        /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectPropertyChanged"/> event.
         /// </summary>
         /// <param name="instanceID">The instance ID of the game object.</param>
         /// <param name="gameObject">The game object whose property were changed.</param>
@@ -413,7 +413,7 @@ namespace Unity.LiveEditing.Editor
         public delegate void ComponentIndexChangedEventHandler(int instanceID, Component component, int index);
 
         /// <summary>
-        /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentPropertiesChanged"/> event.
+        /// Represents a method that handles the <see cref="SceneChangeTracker.ComponentPropertyChanged"/> event.
         /// </summary>
         /// <param name="instanceID">The instance ID of the component.</param>
         /// <param name="component">The component whose property were changed.</param>
@@ -441,9 +441,9 @@ namespace Unity.LiveEditing.Editor
         public event GameObjectIndexChangedEventHandler GameObjectIndexChanged;
 
         /// <summary>
-        /// An event invoked when a the properties of a game object are modified.
+        /// An event invoked when a property of a game object is modified.
         /// </summary>
-        public event GameObjectPropertyChangedEventHandler GameObjectPropertiesChanged;
+        public event GameObjectPropertyChangedEventHandler GameObjectPropertyChanged;
 
         /// <summary>
         /// An event invoked when a new component is added to a tracked scene.
@@ -461,9 +461,9 @@ namespace Unity.LiveEditing.Editor
         public event ComponentIndexChangedEventHandler ComponentIndexChanged;
 
         /// <summary>
-        /// An event invoked when the properties of a component are modified.
+        /// An event invoked when a property of a component is modified.
         /// </summary>
-        public event ComponentPropertyChangedEventHandler ComponentPropertiesChanged;
+        public event ComponentPropertyChangedEventHandler ComponentPropertyChanged;
 
         /// <summary>
         /// Creates a new <see cref="SceneChangeTracker"/> instance.
@@ -490,8 +490,11 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
             EditorSceneManager.sceneOpened += OnSceneOpened;
             EditorSceneManager.sceneClosing += OnSceneClosing;
+            EditorSceneManager.sceneManagerSetupRestored += SceneSetupRestored;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             ObjectChangeEvents.changesPublished += OnChangesPublished;
 
@@ -510,6 +513,8 @@ namespace Unity.LiveEditing.Editor
                 return;
             }
 
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneClosing -= OnSceneClosing;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
@@ -614,6 +619,16 @@ namespace Unity.LiveEditing.Editor
             }
         }
 
+        void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            StartTrackingScene(scene);
+        }
+
+        void OnSceneUnloaded(Scene scene)
+        {
+            StopTrackingScene(scene);
+        }
+
         void OnSceneOpened(Scene scene, OpenSceneMode mode)
         {
             StartTrackingScene(scene);
@@ -622,6 +637,11 @@ namespace Unity.LiveEditing.Editor
         void OnSceneClosing(Scene scene, bool removingScene)
         {
             StopTrackingScene(scene);
+        }
+
+        void SceneSetupRestored(Scene[] scenes)
+        {
+            StartTrackingAllScenes();
         }
 
         void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -1316,7 +1336,6 @@ namespace Unity.LiveEditing.Editor
                     try
                     {
                         GameObjectDestroyed?.Invoke(goState.InstanceId);
-                        Debug.Log($"Change: Removed game object at index {goState.Current.Index}.");
                     }
                     catch (Exception e)
                     {
@@ -1333,7 +1352,6 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentDestroyed?.Invoke(compState.InstanceId);
-                            Debug.Log($"Change: Removed component on {gameObject.name} at index {compState.Current.Index}.");
                         }
                         catch (Exception e)
                         {
@@ -1349,7 +1367,6 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             GameObjectAdded?.Invoke(goState.InstanceId, goState.Instance);
-                            Debug.Log($"Change: Added game object {goState.Instance.name}.");
                         }
                         catch (Exception e)
                         {
@@ -1363,15 +1380,15 @@ namespace Unity.LiveEditing.Editor
                     var sceneState = goState.Current.Scene;
                     var parentState = goState.Current.Parent;
 
+                    var gameObject = goState.Instance;
                     var scene = sceneState.Instance;
                     var parent = parentState?.Instance;
 
-                    if (goState.Instance != null)
+                    if (gameObject != null && (parentState == null || parent != null))
                     {
                         try
                         {
-                            GameObjectParentChanged?.Invoke(goState.InstanceId, goState.Instance, scene, parent);
-                            Debug.Log($"Change: Set parent {scene.name} {(parent != null ? parent.name : string.Empty)} {goState.Instance.name}.");
+                            GameObjectParentChanged?.Invoke(goState.InstanceId, gameObject, scene, parent);
                         }
                         catch (Exception e)
                         {
@@ -1387,7 +1404,6 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             GameObjectIndexChanged?.Invoke(goState.InstanceId, goState.Instance, goState.Current.Index);
-                            Debug.Log($"Change: Reordered game object {goState.Instance.name} to index {goState.Current.Index}.");
                         }
                         catch (Exception e)
                         {
@@ -1403,7 +1419,6 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentAdded?.Invoke(compState.InstanceId, compState.Instance);
-                            Debug.Log($"Change: Added component {compState.Type}.");
                         }
                         catch (Exception e)
                         {
@@ -1419,7 +1434,6 @@ namespace Unity.LiveEditing.Editor
                         try
                         {
                             ComponentIndexChanged?.Invoke(compState.InstanceId, compState.Instance, compState.Current.Index);
-                            Debug.Log($"Change: Reordered component {compState.Type} to index {compState.Current.Index}.");
                         }
                         catch (Exception e)
                         {
@@ -1438,8 +1452,7 @@ namespace Unity.LiveEditing.Editor
 
                         try
                         {
-                            GameObjectPropertiesChanged?.Invoke(goState.InstanceId, goState.Instance, property);
-                            Debug.Log($"Change: Modified game object {goState.Instance.name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
+                            GameObjectPropertyChanged?.Invoke(goState.InstanceId, goState.Instance, property);
                         }
                         catch (Exception e)
                         {
@@ -1458,8 +1471,7 @@ namespace Unity.LiveEditing.Editor
 
                         try
                         {
-                            ComponentPropertiesChanged?.Invoke(compState.InstanceId, compState.Instance, property);
-                            Debug.Log($"Change: Modified component {compState.Type.Name} {property.propertyPath} {property.propertyType} {property.boxedValue}");
+                            ComponentPropertyChanged?.Invoke(compState.InstanceId, compState.Instance, property);
                         }
                         catch (Exception e)
                         {
