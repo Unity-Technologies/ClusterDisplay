@@ -1,0 +1,18 @@
+@inject DialogService DialogService
+
+<div class="row">
+    <div>
+        @((MarkupString)Message)
+    </div>
+</div>
+<div class="row mt-1">
+    <div class="col-12 text-center">
+        <RadzenButton Text="Ok" ButtonStyle="ButtonStyle.Primary" Style="width: 120px"
+                      Click=@(() => DialogService.Close())/>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Message { get; set; } = "";
+}
