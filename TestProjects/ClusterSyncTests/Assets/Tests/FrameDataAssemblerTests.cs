@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using JetBrains.Annotations;
 using NUnit.Framework;
 using Unity.Collections;
 using Debug = UnityEngine.Debug;
@@ -19,7 +20,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = 500;
@@ -42,8 +43,8 @@ namespace Unity.ClusterDisplay.Tests
             var toTransmit = AllocRandomByteArray(messageLength);
             var frameDataFirstPart = FakeReceivedData(42, toTransmit, 0);
 
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, frameDataFirstPart)
-                {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId, 0,
+                    frameDataFirstPart) {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
             frameDataFirstPart.Dispose();
 
             // Ideally we would like to have the assembled frame available in recvAgent, however since the received
@@ -53,8 +54,8 @@ namespace Unity.ClusterDisplay.Tests
 
             // However the first FrameData of the next frame will trigger output
             int message2Length = 2000;
-            var toTransmi2t = AllocRandomByteArray(message2Length);
-            SendDatagram(43, toTransmi2t, 0, sendAgent);
+            var toTransmit2 = AllocRandomByteArray(message2Length);
+            SendDatagram(43, toTransmit2, 0, sendAgent);
 
             // And now we should get frame 42.
             Assert.That(recvAgent.ReceivedMessagesCount, Is.EqualTo(1));
@@ -68,7 +69,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = k_DataPerMessage + 500;
@@ -88,7 +89,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = k_DataPerMessage + 500;
@@ -112,7 +113,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             // Send frame 42
@@ -153,7 +154,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = k_DataPerMessage + 500;
@@ -177,7 +178,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = k_DataPerMessage + 500;
@@ -200,7 +201,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             int messageLength = 9 * k_DataPerMessage + 100;
@@ -264,7 +265,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             // Start frame 42
@@ -310,7 +311,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, false)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, false, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             // Start frame 42
@@ -353,7 +354,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             // Since it is hard to think about all possible permutations, let's do some brute force testing where
@@ -436,7 +437,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true)
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId)
                 {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
 
             // Send frame 42
@@ -481,7 +482,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true);
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId);
 
             frameDataAssembler.WillNeedFrame(42);
             using var retransmitRequest = sendAgent.TryConsumeNextReceivedMessage(m_WaitTimeout);
@@ -503,7 +504,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true);
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId);
 
             int messageLength = k_DataPerMessage + 500;
             var toTransmit = AllocRandomByteArray(messageLength);
@@ -539,7 +540,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true);
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId);
 
             int messageLength = 3 * k_DataPerMessage + 500;
             var toTransmit = AllocRandomByteArray(messageLength);
@@ -592,7 +593,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true);
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId);
 
             int messageLength = 3 * k_DataPerMessage + 500;
             var toTransmit = AllocRandomByteArray(messageLength);
@@ -637,6 +638,91 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(lateRetransmit, Is.Null);
         }
 
+        [Test]
+        public void RetransmitReceivedFrameData()
+        {
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmittedReceivedFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,
+                new [] {MessageType.FrameData, MessageType.RetransmitReceivedFrameData});
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId, 2)
+                {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
+
+            // Send frame 42 to 44
+            Dictionary<int, byte[]> sentFrameData = new();
+            for (int frameIndex = 42; frameIndex <= 44; ++frameIndex)
+            {
+                // Send frame 42
+                int messageLength = k_DataPerMessage + 500 + frameIndex;
+                var frameData = AllocRandomByteArray(messageLength);
+                sentFrameData[frameIndex] = frameData;
+                SendDatagram((ulong)frameIndex, frameData, 0, sendAgent);
+                SendDatagram((ulong)frameIndex, frameData, 1, sendAgent);
+
+                // We should receive it
+                using var frameDataMessage = recvAgent.ConsumeNextReceivedMessage();
+                TestFrameData(frameDataMessage, (ulong)frameIndex, frameData);
+            }
+
+            AskReceivedRetransmit(sendAgent, k_RepeaterNodeId, 42);
+            using var frame42Retransmitted = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame42Retransmitted, 42, -1, 0, 0, null);
+
+            AskReceivedRetransmit(sendAgent, k_RepeaterNodeId, 45);
+            using var frame45Retransmitted = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame45Retransmitted, 45, -1, 0, 0, null);
+
+            AskReceivedRetransmit(sendAgent, k_RepeaterNodeId, 43);
+            using var frame43RetransmittedA = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame43RetransmittedA, 43, sentFrameData[43].Length, 0, 0,
+                sentFrameData[43][0..k_DataPerMessage]);
+            using var frame43RetransmittedB = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame43RetransmittedB, 43, sentFrameData[43].Length, 1, k_DataPerMessage,
+                sentFrameData[43][k_DataPerMessage..]);
+
+            AskReceivedRetransmit(sendAgent, k_RepeaterNodeId, 44);
+            using var frame44RetransmittedA = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame44RetransmittedA, 44, sentFrameData[44].Length, 0, 0,
+                sentFrameData[44][0..k_DataPerMessage]);
+            using var frame44RetransmittedB = sendAgent.ConsumeNextReceivedMessage();
+            TestRetransmittedFrameData(frame44RetransmittedB, 44, sentFrameData[44].Length, 1, k_DataPerMessage,
+                sentFrameData[44][k_DataPerMessage..]);
+        }
+
+        [Test]
+        public void RetransmitReceivedFrameDataWhenNotActive()
+        {
+            var testNetwork = new TestUdpAgentNetwork();
+            var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmittedReceivedFrameData});
+            var recvAgent = new TestUdpAgent(testNetwork,
+                new [] {MessageType.FrameData, MessageType.RetransmitReceivedFrameData});
+            using var frameDataAssembler = new FrameDataAssembler(recvAgent, true, k_RepeaterNodeId, 0)
+                {FrameCompletionDelay = m_DisabledFrameCompletionDelay};
+
+            // Send frame 42 to 44
+            Dictionary<int, byte[]> sentFrameData = new();
+            for (int frameIndex = 42; frameIndex <= 44; ++frameIndex)
+            {
+                // Send frame 42
+                int messageLength = k_DataPerMessage + 500 + frameIndex;
+                var frameData = AllocRandomByteArray(messageLength);
+                sentFrameData[frameIndex] = frameData;
+                SendDatagram((ulong)frameIndex, frameData, 0, sendAgent);
+                SendDatagram((ulong)frameIndex, frameData, 1, sendAgent);
+
+                // We should receive it
+                using var frameDataMessage = recvAgent.ConsumeNextReceivedMessage();
+                TestFrameData(frameDataMessage, (ulong)frameIndex, frameData);
+            }
+
+            for (int frameIndex = 42; frameIndex <= 44; ++frameIndex)
+            {
+                AskReceivedRetransmit(sendAgent, k_RepeaterNodeId, (ulong)frameIndex);
+                using var retransmittedAnswer = sendAgent.ConsumeNextReceivedMessage();
+                TestRetransmittedFrameData(retransmittedAnswer, (ulong)frameIndex, -1, 0, 0, null);
+            }
+        }
+
         void SendDatagram(ulong frameIndex, byte[] data, int datagramIndex, IUdpAgent udpAgent)
         {
             var frameData = new FrameData()
@@ -669,7 +755,7 @@ namespace Unity.ClusterDisplay.Tests
             return ret;
         }
 
-        void TestFrameData(ReceivedMessageBase receivedMessage, ulong frameIndex, byte[] data)
+        static void TestFrameData(ReceivedMessageBase receivedMessage, ulong frameIndex, byte[] data)
         {
             Assert.That(receivedMessage.Type, Is.EqualTo(MessageType.FrameData));
             var receivedFrameData = receivedMessage as ReceivedMessage<FrameData>;
@@ -685,7 +771,7 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(new Span<byte>(bytes, extraDataStart, extraDataLength).ToArray(), Is.EqualTo(data));
         }
 
-        void TestRetransmit(ReceivedMessageBase receivedMessage, ulong frameIndex, int datagramIndexStart, int datagramIndexEnd)
+        static void TestRetransmit(ReceivedMessageBase receivedMessage, ulong frameIndex, int datagramIndexStart, int datagramIndexEnd)
         {
             Assert.That(receivedMessage.Type, Is.EqualTo(MessageType.RetransmitFrameData));
             var receivedRetransmit = receivedMessage as ReceivedMessage<RetransmitFrameData>;
@@ -778,7 +864,34 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(missingRetransmitCount, Is.Zero);
         }
 
-        const int k_DataPerMessage = 1236;
+        static void AskReceivedRetransmit(IUdpAgent udpAgent, byte nodeId, ulong frameIndex)
+        {
+            udpAgent.SendMessage(MessageType.RetransmitReceivedFrameData,
+                new RetransmitReceivedFrameData() {NodeId = nodeId, FrameIndex = frameIndex});
+        }
+
+        static void TestRetransmittedFrameData(ReceivedMessageBase receivedMessage, ulong frameIndex, int fullDataLength,
+            int datagramIndex, int datagramOffset, [CanBeNull] byte[] datagramData)
+        {
+            Assert.That(receivedMessage.Type, Is.EqualTo(MessageType.RetransmittedReceivedFrameData));
+            var receivedFrameData = receivedMessage as ReceivedMessage<RetransmittedReceivedFrameData>;
+            Assert.That(receivedFrameData, Is.Not.Null);
+
+            Assert.That(receivedFrameData.Payload.FrameIndex, Is.EqualTo(frameIndex));
+            Assert.That(receivedFrameData.Payload.DataLength, Is.EqualTo(fullDataLength));
+            Assert.That(receivedFrameData.Payload.DatagramIndex, Is.EqualTo(datagramIndex));
+            Assert.That(receivedFrameData.Payload.DatagramDataOffset, Is.EqualTo(datagramOffset));
+
+            if (datagramData != null)
+            {
+                Assert.That(receivedFrameData.ExtraData.Length, Is.EqualTo(datagramData.Length));
+                receivedFrameData.ExtraData.AsManagedArray(out var bytes, out var extraDataStart, out var extraDataLength);
+                Assert.That(new Span<byte>(bytes, extraDataStart, extraDataLength).ToArray(), Is.EqualTo(datagramData));
+            }
+        }
+
+        const byte k_RepeaterNodeId = 28;
+        const int k_DataPerMessage = 1237;
         TimeSpan m_DisabledFrameCompletionDelay = TimeSpan.FromHours(24);
         TimeSpan m_WaitTimeout = TimeSpan.FromSeconds(5);
     }

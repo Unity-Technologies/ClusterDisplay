@@ -20,7 +20,7 @@ namespace Unity.ClusterDisplay.Tests
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}));
+                new FrameWaitingToStartHandler(emitterAgent, 0, new NodeIdBitVectorReadOnly(new byte[]{1,3}));
 
             long beforeSecondRepeaterTimestamp = long.MaxValue;
             var repeaterTask = Task.Run(() =>
@@ -53,7 +53,7 @@ namespace Unity.ClusterDisplay.Tests
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3,9}));
+                new FrameWaitingToStartHandler(emitterAgent, 0, new NodeIdBitVectorReadOnly(new byte[]{1,3,9}));
 
             long beforeThirdRepeaterTimestamp = long.MaxValue;
             var repeaterTask = Task.Run(() =>
@@ -96,7 +96,7 @@ namespace Unity.ClusterDisplay.Tests
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
+                new FrameWaitingToStartHandler(emitterAgent, 0, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
 
             var repeaterTask1 = Task.Run(() =>
             {
@@ -144,7 +144,7 @@ namespace Unity.ClusterDisplay.Tests
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
+                new FrameWaitingToStartHandler(emitterAgent, 0, new NodeIdBitVectorReadOnly(new byte[]{2,7}));
 
             var repeaterTask1 = Task.Run(() =>
             {
@@ -223,9 +223,8 @@ namespace Unity.ClusterDisplay.Tests
             var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
             var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
             ClusterTopology clusterTopology = new();
-            using var waitingToStartHandler =
-                new FrameWaitingToStartHandler(emitterAgent, new NodeIdBitVectorReadOnly(new byte[]{1,3}),
-                    clusterTopology);
+            using var waitingToStartHandler = new FrameWaitingToStartHandler(emitterAgent, 0,
+                new NodeIdBitVectorReadOnly(new byte[]{1,3}), 0, clusterTopology);
 
             long beforeTopologyChangeTimestamp = long.MaxValue;
             var repeaterTask1 = Task.Run(() =>
@@ -244,7 +243,6 @@ namespace Unity.ClusterDisplay.Tests
 
                 beforeTopologyChangeTimestamp = Stopwatch.GetTimestamp();
                 clusterTopology.Entries = newTopology;
-
             });
 
             var stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(0, m_MaxTestTime);
@@ -274,6 +272,74 @@ namespace Unity.ClusterDisplay.Tests
             Assert.DoesNotThrow(repeaterTask2.Wait);
             Assert.That(stillWaitingOn, Is.Null);
             Assert.That(beforeRepeaterWaitingTimeStamp, Is.LessThanOrEqualTo(tryWaitEndTime));
+        }
+
+        [Test]
+        public void StopsWaitingForRepeatersWhenNotEmitterAnymoreStillHasRepeaters()
+        {
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            ClusterTopology clusterTopology = new();
+            using var waitingToStartHandler = new FrameWaitingToStartHandler(emitterAgent, 0,
+                new NodeIdBitVectorReadOnly(new byte[]{1,3}), 0, clusterTopology);
+
+            long beforeTopologyChangeTimestamp = long.MaxValue;
+            var changeTopologyTask = Task.Run(() =>
+            {
+                Thread.Sleep(250);
+
+                List<ClusterTopologyEntry> newTopology = new();
+                newTopology.Add(new(){NodeId = 1, NodeRole = NodeRole.Repeater, RenderNodeId = 1});
+                newTopology.Add(new(){NodeId = 3, NodeRole = NodeRole.Emitter, RenderNodeId = 0});
+                // 0 is not present in the list of entries anymore, so it is not an emitter anymore.
+
+                beforeTopologyChangeTimestamp = Stopwatch.GetTimestamp();
+                clusterTopology.Entries = newTopology;
+            });
+
+            var stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(0, m_MaxTestTime);
+            long tryWaitEndTime = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(changeTopologyTask.Wait);
+            Assert.That(stillWaitingOn, Is.Not.Null);
+            Assert.That(stillWaitingOn.SetBitsCount, Is.EqualTo(2));
+            Assert.That(stillWaitingOn[1], Is.True);
+            Assert.That(stillWaitingOn[3], Is.True); // Should still be waiting on 3 even if it is now an emitter
+            Assert.That(beforeTopologyChangeTimestamp, Is.LessThanOrEqualTo(tryWaitEndTime));
+            Assert.That(tryWaitEndTime - beforeTopologyChangeTimestamp, Is.LessThan(Stopwatch.Frequency * 2));
+        }
+
+        [Test]
+        public void StopsWaitingForRepeatersWhenNotEmitterAnymoreNoMoreRepeaters()
+        {
+            var testNetwork = new TestUdpAgentNetwork();
+            var emitterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.RepeaterWaitingToStartFrame});
+            var repeaterAgent = new TestUdpAgent(testNetwork, new[] {MessageType.EmitterWaitingToStartFrame});
+            ClusterTopology clusterTopology = new();
+            using var waitingToStartHandler = new FrameWaitingToStartHandler(emitterAgent, 0,
+                new NodeIdBitVectorReadOnly(new byte[]{1}), 0, clusterTopology);
+
+            long beforeTopologyChangeTimestamp = long.MaxValue;
+            var changeTopologyTask = Task.Run(() =>
+            {
+                Thread.Sleep(250);
+
+                List<ClusterTopologyEntry> newTopology = new();
+                newTopology.Add(new(){NodeId = 1, NodeRole = NodeRole.Emitter, RenderNodeId = 0});
+                // 0 is not present in the list of entries anymore, so it is not an emitter anymore.
+
+                beforeTopologyChangeTimestamp = Stopwatch.GetTimestamp();
+                clusterTopology.Entries = newTopology;
+            });
+
+            var stillWaitingOn = waitingToStartHandler.TryWaitForAllRepeatersReady(0, m_MaxTestTime);
+            long tryWaitEndTime = Stopwatch.GetTimestamp();
+            Assert.DoesNotThrow(changeTopologyTask.Wait);
+            Assert.That(stillWaitingOn, Is.Not.Null);
+            Assert.That(stillWaitingOn.SetBitsCount, Is.EqualTo(1));
+            Assert.That(stillWaitingOn[1], Is.True); // Should still be waiting on 1 event if it is now an emitter
+            Assert.That(beforeTopologyChangeTimestamp, Is.LessThanOrEqualTo(tryWaitEndTime));
+            Assert.That(tryWaitEndTime - beforeTopologyChangeTimestamp, Is.LessThan(Stopwatch.Frequency * 2));
         }
 
         static void SendRepeaterWaiting(ulong frameIndex, byte repeaterId, bool willWaitNextFrame, IUdpAgent repeaterAgent)

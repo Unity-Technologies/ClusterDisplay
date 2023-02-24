@@ -14,12 +14,12 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public ProcessQuitMessageState(RepeaterNode node)
             : base(node) { }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             Node.UdpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
                 {NodeId = Node.Config.NodeId});
             Node.Quit();
-            return null;
+            return (null, DoFrameResult.FrameDone);
         }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;

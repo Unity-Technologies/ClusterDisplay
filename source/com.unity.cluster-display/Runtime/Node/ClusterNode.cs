@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
@@ -12,24 +13,29 @@ namespace Unity.ClusterDisplay
         /// Identifier uniquely identifying the node throughout the cluster.
         /// </summary>
         public byte NodeId { get; set; }
+
         /// <summary>
         /// Time to establish communication between emitter and repeaters.
         /// </summary>
         public TimeSpan HandshakeTimeout { get; set; }
+
         /// <summary>
         /// Timeout for any other communication than initial handshake.  An emitter waiting for repeaters longer than
         /// this is allowed to kick him out.  A repeater not getting news from the emitter for longer than this is
         /// allowed to abort.
         /// </summary>
         public TimeSpan CommunicationTimeout { get; set; }
+
         /// <summary>
         /// Are the repeaters delayed by one frame.
         /// </summary>
         public bool RepeatersDelayed { get; set; }
+
         /// <summary>
         /// Synchronization strategy
         /// </summary>
         public FrameSyncFence Fence { get; set; }
+
         /// <summary>
         /// The input subsystem synchronized by the cluster.
         /// </summary>
@@ -38,12 +44,48 @@ namespace Unity.ClusterDisplay
         /// inputs, use <see cref="ClusterDisplay.InputSync.None"/> to minimize network traffic.
         /// </remarks>
         public InputSync InputSync { get; set; }
+
+        /// <summary>
+        /// Does the cluster contains at least one backup node?
+        /// </summary>
+        public bool HasAtLeastOneBackupNode { get; set; }
+
+        /// <summary>
+        /// Index of the first frame
+        /// </summary>
+        /// <remarks>Should always be 0, except when starting an emitter node to replace a previously failed one.
+        /// </remarks>
+        public ulong FirstFrameIndex { get; set; }
+    }
+
+    /// <summary>
+    /// Return value for <see cref="ClusterNode.DoFrame"/>.
+    /// </summary>
+    enum DoFrameResult
+    {
+        /// <summary>
+        /// Work to be done for ClusterDisplay for <see cref="ClusterNode.FrameIndex"/> was done.
+        /// </summary>
+        FrameDone,
+        /// <summary>
+        /// <see cref="RepeaterNode"/> with a <see cref="NodeRole"/> of <see cref="NodeRole.Backup"/> is not to be used
+        /// anymore and should be replaced by an <see cref="EmitterNode"/>.
+        /// </summary>
+        BackupToEmitter,
+        /// <summary>
+        /// Returned by <see cref="NodeState{T}"/> to indicate that the node should trigger the application to quit
+        /// ASAP.
+        /// </summary>
+        /// <remarks>This value can also be returned by <see cref="ClusterNode.DoFrame"/>, in this case the quit has
+        /// already be initiated and this value is more of a hint of "Do not waste time doing to much, we are
+        /// quitting..."</remarks>
+        ShouldQuit
     }
 
     /// <summary>
     /// Base class for the classes of objects representing the cluster node.
     /// </summary>
-    class ClusterNode: IDisposable
+    class ClusterNode : IDisposable
     {
         /// <summary>
         /// Configuration of the node.
@@ -64,7 +106,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Object to use to perform network access (sending or receiving).
         /// </summary>
-        public IUdpAgent UdpAgent { get; private set;  }
+        public IUdpAgent UdpAgent { get; private set; }
 
         /// <summary>
         /// Index of the frame we are currently dealing with.
@@ -93,19 +135,27 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Method called to perform the work the node has to do for the current frame
         /// </summary>
-        public virtual void DoFrame()
+        public virtual DoFrameResult DoFrame()
         {
-            NodeState newState;
-            do
+            for (;;)
             {
-                newState = m_CurrentState.DoFrame();
+                var (newState, doFrameResult) = m_CurrentState.DoFrame();
                 if (newState != null)
                 {
                     var disposableState = m_CurrentState as IDisposable;
                     disposableState?.Dispose();
                     m_CurrentState = newState;
                 }
-            } while (newState != null);
+                else
+                {
+                    Debug.Assert(doFrameResult.HasValue); // Either newState != null or doFrameResult.HasValue
+                    if (doFrameResult == DoFrameResult.ShouldQuit)
+                    {
+                        Quit();
+                    }
+                    return doFrameResult.Value;
+                }
+            }
         }
 
         /// <summary>
@@ -173,6 +223,18 @@ namespace Unity.ClusterDisplay
         public ClusterTopology UpdatedClusterTopology { get; } = new();
 
         /// <summary>
+        /// Overridable method called to trigger quit of the application / game
+        /// </summary>
+        public virtual void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="config">Node's configuration.</param>
@@ -182,6 +244,7 @@ namespace Unity.ClusterDisplay
         {
             Config = config;
             UdpAgent = udpAgent;
+            FrameIndex = config.FirstFrameIndex;
             if (config.Fence is FrameSyncFence.External)
             {
                 UsingNetworkSync = false;

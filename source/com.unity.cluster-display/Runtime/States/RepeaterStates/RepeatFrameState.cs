@@ -34,7 +34,9 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             bool orderedReception = false;
 #endif
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-            m_FrameDataAssembler = new(node.UdpAgent, orderedReception, firstFrameData);
+            m_FrameDataAssembler = new(node.UdpAgent, orderedReception, Node.Config.NodeId,
+                Node.Config.HasAtLeastOneBackupNode ? NetworkingHelpers.DefaultRetransmitHistoryLength : 0,
+                firstFrameData);
         }
 
         /// <summary>
@@ -45,7 +47,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             m_FrameDataAssembler?.Dispose();
         }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             var udpAgent = Node.UdpAgent;
 
@@ -64,8 +66,15 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     receivedMessage = PerformNetworkSynchronization(doFrameDeadline);
                     if (receivedMessage is {Type: MessageType.PropagateQuit})
                     {
-                        return new ProcessQuitMessageState(Node);
+                        return (new ProcessQuitMessageState(Node), null);
                     }
+                }
+
+                // Stop execution immediately if we are running for a backup node that is ready to become an emitter
+                // node.
+                if (Node.IsBackupToEmitterSwitchReady())
+                {
+                    return (null, DoFrameResult.BackupToEmitter);
                 }
             }
 
@@ -75,7 +84,16 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                 m_FrameDataAssembler.WillNeedFrame(Node.FrameIndex);
                 while (receivedMessage == null && Stopwatch.GetTimestamp() <= doFrameDeadline)
                 {
-                    receivedMessage = udpAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(doFrameDeadline));
+                    // Stop execution immediately if we are running for a backup node that is ready to become an emitter
+                    // node.
+                    if (Node.IsBackupToEmitterSwitchReady())
+                    {
+                        return (null, DoFrameResult.BackupToEmitter);
+                    }
+
+                    // Get the next message we receive on the network
+                    receivedMessage = udpAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(doFrameDeadline, s_MaxWaitForSingleMessage));
                     if (receivedMessage == null)
                     {
                         continue;
@@ -87,7 +105,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                             // This is the message we want, nothing special to do
                             break;
                         case MessageType.PropagateQuit:
-                            return new ProcessQuitMessageState(Node);
+                            return (new ProcessQuitMessageState(Node), null);
                         default:
                             // Other type of messages, don't really know what they are but let's simply ignore them, they
                             // have no impact on us at the moment...
@@ -114,14 +132,16 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     $"{Node.FrameIndex} but we got {receivedFrameDataDisposer.Payload.FrameIndex}.");
             }
 
+            Node.LastReceivedFrameIndex = receivedFrameDataDisposer.Payload.FrameIndex;
+
             using (s_MarkerApplyingState.Auto())
             {
                 // Push it to the game state
                 RepeaterStateReader.RestoreEmitterFrameData(receivedFrameDataDisposer.ExtraData.AsNativeArray());
             }
 
-            // RepeatFrameState never switch to another state...
-            return null;
+            // Frame done, let Unity finish its processing so that ConcludeFrame gets called and then next frame.
+            return (null, DoFrameResult.FrameDone);
         }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;
@@ -134,6 +154,11 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         /// <see cref="EmitterWaitingToStartFrame"/> and that needs to be processed.</returns>
         ReceivedMessageBase PerformNetworkSynchronization(long deadlineTick)
         {
+            if (Node.IsBackupToEmitterSwitchReady())
+            {
+                return null;
+            }
+
             var udpAgent = Node.UdpAgent;
             var nodeId = Node.Config.NodeId;
 
@@ -165,8 +190,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                 do
                 {
                     // Get the next message
-                    var receivedMessage =
-                        udpAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(stopWaitingForEmitterWaitingDeadline));
+                    var receivedMessage = udpAgent.TryConsumeNextReceivedMessage(
+                        StopwatchUtils.TimeUntil(stopWaitingForEmitterWaitingDeadline, s_MaxWaitForSingleMessage));
                     if (receivedMessage == null)
                     {
                         continue;
@@ -212,14 +237,19 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                         receivedMessage.Dispose();
                         break;
                     }
-                } while (Stopwatch.GetTimestamp() < stopWaitingForEmitterWaitingDeadline);
+                } while (Stopwatch.GetTimestamp() < stopWaitingForEmitterWaitingDeadline &&
+                         !Node.IsBackupToEmitterSwitchReady());
 
-            } while (Stopwatch.GetTimestamp() <= deadlineTick);
+            } while (Stopwatch.GetTimestamp() <= deadlineTick && !Node.IsBackupToEmitterSwitchReady());
 
-            // If we reach this point it is because we haven't got any feedback from the emitter in time -> timeout
-            throw new TimeoutException("Repeater failed to perform network synchronization with emitter for " +
-                $"frame {Node.FrameIndex} within the allocated {Node.EffectiveCommunicationTimeout.TotalSeconds} " +
-                $"seconds.");
+            if (!Node.IsBackupToEmitterSwitchReady())
+            {
+                // If we reach this point it is because we haven't got any feedback from the emitter in time -> timeout
+                throw new TimeoutException("Repeater failed to perform network synchronization with emitter " +
+                    $"for frame {Node.FrameIndex} within the allocated " +
+                    $"{Node.EffectiveCommunicationTimeout.TotalSeconds} seconds.");
+            }
+            return null;
         }
 
         /// <summary>
@@ -240,6 +270,13 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         /// <remarks>Need to be low as in theory every node will waiting for us if the message we sent to the emitter
         /// was lost.</remarks>
         static TimeSpan s_NotAcknowledgedRepeatWaitToStartInterval = TimeSpan.FromMilliseconds(1);
+        /// <summary>
+        /// How much time do we wait for a single message to arrive.
+        /// </summary>
+        /// <remarks>Ideally we would like this to be forever, however something else might change in the global state
+        /// that makes waiting for the message necessary.  So taking a break every 200ms allow to check for those
+        /// external changes often enough while not taxing the system performances too much..</remarks>
+        static TimeSpan s_MaxWaitForSingleMessage = TimeSpan.FromMilliseconds(200);
         /// <summary>
         /// Value returned by <see cref="GetProfilerMarker"/>.
         /// </summary>

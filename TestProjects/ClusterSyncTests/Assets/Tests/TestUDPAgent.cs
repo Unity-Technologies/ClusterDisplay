@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using JetBrains.Annotations;
 using Unity.Collections;
-using UnityEngine;
+using Utils;
+using Debug = UnityEngine.Debug;
 using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay.Tests
@@ -103,6 +106,11 @@ namespace Unity.ClusterDisplay.Tests
 
         public NetworkStatistics Stats { get; } = new NetworkStatistics();
 
+        public IUdpAgent Clone(MessageType[] receivedMessageTypes)
+        {
+            return new TestUdpAgent(m_Network, receivedMessageTypes);
+        }
+
         void QueueReceivedMessage(ReceivedMessageBase receivedMessage)
         {
             lock (m_MessagePreprocessors)
@@ -112,7 +120,7 @@ namespace Unity.ClusterDisplay.Tests
                     try
                     {
                         var ret = preprocessor(receivedMessage);
-                        if (ret.DisposePreProcessedMessage)
+                        if (ret.DisposePreProcessedMessage && receivedMessage != null)
                         {
                             Debug.Assert(!ReferenceEquals(ret.Result, receivedMessage),
                                 "Cannot dispose of a ReceivedMessage AND ask to continue processing it...");
@@ -164,10 +172,7 @@ namespace Unity.ClusterDisplay.Tests
 
         public void AsManagedArray(out byte[] array, out int dataStart, out int dataLength)
         {
-            if (m_ManagedExtraData == null)
-            {
-                m_ManagedExtraData = m_NativeExtraData.ToArray();
-            }
+            m_ManagedExtraData ??= m_NativeExtraData.ToArray();
 
             array = m_ManagedExtraData;
             dataStart = 0;

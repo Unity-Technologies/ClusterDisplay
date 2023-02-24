@@ -34,12 +34,15 @@ namespace Unity.ClusterDisplay
         {
         }
 
-        protected override NodeState DoFrameImplementation() =>
-            Node switch {
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
+        {
+            NodeState nextState = Node switch {
                 EmitterNode emitterNode => new WelcomeRepeatersState(emitterNode),
                 RepeaterNode repeaterNode => new RegisterWithEmitterState(repeaterNode),
                 _ => throw new ArgumentOutOfRangeException(nameof(Node))
             };
+            return (nextState, null);
+        }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;
 

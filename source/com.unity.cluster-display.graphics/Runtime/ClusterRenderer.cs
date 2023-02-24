@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Unity.ClusterDisplay.Utils;
 #if UNITY_EDITOR
 using UnityEditor;
-
 #endif
 
 namespace Unity.ClusterDisplay.Graphics
@@ -23,6 +20,7 @@ namespace Unity.ClusterDisplay.Graphics
     {
         internal static bool IsActive()
         {
+            // ReSharper disable once RedundantArgumentDefaultValue -> I know logError is false by default but we really don't want error messages in the event someone would decide to change the default value...
             if (TryGetInstance(out var instance, false))
             {
                 return instance.isActiveAndEnabled;
@@ -148,6 +146,12 @@ namespace Unity.ClusterDisplay.Graphics
                     $" The current screen resolution is {Screen.width} x {Screen.height}.");
             }
 
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                clusterSync.NodeRole is NodeRole.Backup && clusterSync.RepeatersDelayedOneFrame)
+            {
+                clusterSync.OnNodeRoleChanged += NodeRoleChanged;
+            }
+
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
@@ -160,6 +164,22 @@ namespace Unity.ClusterDisplay.Graphics
             IsDebug = false;
 #endif
             Enabled.Invoke();
+        }
+
+        void NodeRoleChanged()
+        {
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync) &&
+                clusterSync.NodeRole is NodeRole.Emitter && clusterSync.RepeatersDelayedOneFrame)
+            {
+                DelayPresentByOneFrame = true;
+                clusterSync.OnNodeRoleChanged -= NodeRoleChanged;
+            }
+            else if (clusterSync is {NodeRole: not (NodeRole.Backup or NodeRole.Unassigned)})
+            {
+                // The node switched to something else than an emitter.  So we will never need to change
+                // DelayPresentByOneFrame, so remove this delegate.
+                clusterSync.OnNodeRoleChanged -= NodeRoleChanged;
+            }
         }
 
         void Update()
@@ -178,6 +198,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             m_Presenter.Present -= OnPresent;
             m_Presenter.Disable();
+
+            if (ServiceLocator.TryGet(out IClusterSyncState clusterSync))
+            {
+                clusterSync.OnNodeRoleChanged -= NodeRoleChanged;
+            }
         }
 
         void OnPresent(PresentArgs args)

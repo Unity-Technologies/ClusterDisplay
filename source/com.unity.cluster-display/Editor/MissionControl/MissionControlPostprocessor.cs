@@ -264,15 +264,9 @@ namespace Unity.ClusterDisplay
         /// on each cluster nodes.</param>
         static void AddLaunchParametersForProjectionPolicy(Launchable toFill)
         {
-            var missionControlSettings = MissionControlSettings.Current;
-            if (missionControlSettings.PolicyParameters == null)
-            {
-                return;
-            }
-
-            toFill.GlobalParameters.AddRange(missionControlSettings.PolicyParameters.GlobalParameters);
-            toFill.LaunchComplexParameters.AddRange(missionControlSettings.PolicyParameters.LaunchComplexParameters);
-            toFill.LaunchPadParameters.AddRange(missionControlSettings.PolicyParameters.LaunchPadParameters);
+            toFill.GlobalParameters.AddRange(MissionControlParameters.Instance.GlobalParameters);
+            toFill.LaunchComplexParameters.AddRange(MissionControlParameters.Instance.LaunchComplexParameters);
+            toFill.LaunchPadParameters.AddRange(MissionControlParameters.Instance.LaunchPadParameters);
         }
 
         const string k_CatalogFilename = "LaunchCatalog.json";

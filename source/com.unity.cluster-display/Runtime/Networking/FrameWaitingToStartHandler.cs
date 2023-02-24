@@ -25,13 +25,17 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="udpAgent">Object through which we we are receiving <see cref="RepeaterWaitingToStartFrame"/>
         /// and transmitting <see cref="EmitterWaitingToStartFrame"/>.</param>
+        /// <param name="emitterNodeId">Identifier of the emitter node executing this code.</param>
         /// <param name="toWaitFor">Repeater nodes that we have to wait on through network synchronization.</param>
+        /// <param name="firstFrameIndex">Index of the first frame we will be waiting for (and then increment).</param>
         /// <param name="clusterTopology">List to monitor for changes to the cluster topology (which might interrupt the
         /// wait).</param>
-        public FrameWaitingToStartHandler(IUdpAgent udpAgent, NodeIdBitVectorReadOnly toWaitFor,
-            [CanBeNull] ClusterTopology clusterTopology = null)
+        public FrameWaitingToStartHandler(IUdpAgent udpAgent, byte emitterNodeId, NodeIdBitVectorReadOnly toWaitFor,
+            ulong firstFrameIndex = 0, [CanBeNull] ClusterTopology clusterTopology = null)
         {
+            m_EmitterNodeId = emitterNodeId;
             m_ClusterTopology = clusterTopology;
+            m_FrameIndex = firstFrameIndex;
 
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.RepeaterWaitingToStartFrame))
             {
@@ -42,7 +46,7 @@ namespace Unity.ClusterDisplay
             m_StillWaitingOn = new (toWaitFor);
 
             UdpAgent = udpAgent;
-            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.repeaterWaitingToStartFrame, PreProcessReceivedMessage);
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.RepeaterWaitingToStartFrame, PreProcessReceivedMessage);
         }
 
         /// <summary>
@@ -94,6 +98,16 @@ namespace Unity.ClusterDisplay
                         (!m_LastAnalyzedTopology.TryGetTarget(out var lastAnalyzedTopology) ||
                          !ReferenceEquals(lastAnalyzedTopology, m_ClusterTopology.Entries)))
                     {
+                        // First thing to check, is this node still the emitter, if no then stop right away and don't
+                        // claim we are done waiting for the repeater (return the last list we knew we were still
+                        // waiting on).
+                        if (!m_ClusterTopology.Entries.Any(
+                                e => e.NodeId == m_EmitterNodeId && e.NodeRole == NodeRole.Emitter))
+                        {
+                            return new NodeIdBitVectorReadOnly(m_StillWaitingOn);
+                        }
+
+                        // Now let's check if some of the repeaters are gone
                         HandleRemovedRepeaters(m_ClusterTopology.Entries);
                         m_LastAnalyzedTopology.SetTarget(m_ClusterTopology.Entries);
                         continue; // Since we might have removed the last repeater we were waiting on...
@@ -153,7 +167,7 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and track the state of repeaters that are ready to proceed to the next frame.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>Summary of what happened during the pre-processing.</returns>
+        /// <returns>What to do of the received message.</returns>
         PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // We are only interested in FrameData we receive, everything else should simply pass through
@@ -251,6 +265,10 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        /// <summary>
+        /// Identifier of the emitter node executing this code.
+        /// </summary>
+        readonly byte m_EmitterNodeId;
         /// <summary>
         /// List to monitor for changes to the cluster topology (which might interrupt the wait).
         /// </summary>

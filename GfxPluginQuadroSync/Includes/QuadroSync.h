@@ -39,6 +39,7 @@ namespace GfxQuadroSync
         void DisposeWorkStation();
 
         bool Render(IGraphicsDevice* pGraphicsDevice);
+        void SkipSynchronizedPresentOfNextFrame() { m_SkipSynchronizedPresentOfNextFrame = true; }
         void ResetFrameCount(IUnknown* pDevice);
         NvU32 QueryFrameCount(IUnknown* pDevice);
 
@@ -83,6 +84,7 @@ namespace GfxQuadroSync
         bool m_GSyncCounter = false;
         bool m_IsActive = false;
         bool m_NeedToWarmUpBarrier = false;
+        bool m_SkipSynchronizedPresentOfNextFrame = false;
         std::atomic<uint64_t> m_PresentSuccessCount = 0;
         std::atomic<uint64_t> m_PresentFailureCount = 0;
         BarrierWarmupCallback m_BarrierWarmupCallback = &EmptyBarrierWarmupCallback;

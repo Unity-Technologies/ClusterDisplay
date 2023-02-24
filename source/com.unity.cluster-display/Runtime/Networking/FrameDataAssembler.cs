@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Unity.Collections;
 using UnityEngine.Pool;
@@ -30,12 +31,17 @@ namespace Unity.ClusterDisplay
         /// <param name="orderedReception">Assumes datagrams ordering is preserved along the complete transmission chain.
         /// This means that the <see cref="FrameDataAssembler"/> will immediately ask for a retransmission as soon as a
         /// gap is detected in the datagram sequence.</param>
+        /// <param name="nodeId">Identifier of the node running this <see cref="FrameDataAssembler"/>.</param>
+        /// <param name="preserveReceivedHistoryLength">Length of the history of previously received data kept to be
+        /// able to respond to <see cref="RetransmitReceivedFrameData"/>.</param>
         /// <param name="firstFrameData">Some time a <see cref="NodeState"/> might have missed packet and only realize
         /// it once it receives a <see cref="FrameData"/>.  The goal of this member variable is to allow processing the
         /// <see cref="FrameData"/> as if it would have never been removed from the ReceivedMessage queue.</param>
-        public FrameDataAssembler(IUdpAgent udpAgent, bool orderedReception,
-            ReceivedMessage<FrameData> firstFrameData = null)
+        public FrameDataAssembler(IUdpAgent udpAgent, bool orderedReception, byte nodeId,
+            int preserveReceivedHistoryLength = 0, ReceivedMessage<FrameData> firstFrameData = null)
         {
+            m_NodeId = nodeId;
+
             if (!udpAgent.ReceivedMessageTypes.Contains(MessageType.FrameData))
             {
                 throw new ArgumentException("UdpAgent does not support receiving required MessageType.FrameData");
@@ -47,9 +53,23 @@ namespace Unity.ClusterDisplay
             CreateNewNativeExtraDataPool();
             m_GetNewNativeExtraDataDelegate = GetNewNativeExtraData;
 
+            if (preserveReceivedHistoryLength > 0)
+            {
+                m_ReceivedFramesInformation = new ReceivedFrameInformation[preserveReceivedHistoryLength];
+                for (int i = 0; i < preserveReceivedHistoryLength; ++i)
+                {
+                    m_ReceivedFramesInformation[i] = new()
+                    {
+                        FrameIndex = ulong.MaxValue - (ulong)i,
+                        DataBuffer = new FrameDataBuffer()
+                    };
+                }
+                m_NewestReceivedFramesInformationIndex = preserveReceivedHistoryLength - 1;
+            }
+
             UdpAgent = udpAgent;
 
-            if (firstFrameData != null && firstFrameData.ExtraData != null)
+            if (firstFrameData is {ExtraData: { }})
             {
                 Debug.Assert(m_CurrentPartialFrame.FrameIndex == ulong.MaxValue);
                 m_CurrentPartialFrame.FrameIndex = firstFrameData.Payload.FrameIndex;
@@ -57,7 +77,7 @@ namespace Unity.ClusterDisplay
                 SendPendingRetransmissionRequests(m_CurrentPartialFrame.PendingRetransmissions);
             }
 
-            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.frameDataProcessing, PreProcessReceivedMessage);
+            UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.FrameDataProcessing, PreProcessReceivedMessage);
 
             m_FrameCompletionMonitorThreadRunning = true;
             m_FrameCompletionMonitorActive = new(false);
@@ -80,6 +100,15 @@ namespace Unity.ClusterDisplay
             m_FrameCompletionMonitorThreadRunning = false;
             m_FrameCompletionMonitorActive?.Set();
             m_FrameCompletionMonitorThread?.Join();
+
+            // Dispose of members that needs disposing
+            if (m_ReceivedFramesInformation != null)
+            {
+                foreach (var receivedInformation in m_ReceivedFramesInformation)
+                {
+                    receivedInformation.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -128,17 +157,27 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and assemble complete FrameData from them.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>Summary of what happened during the pre-processing.</returns>
+        /// <returns>What to do of the pre-processed message.</returns>
         PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
-            // We are only interested in FrameData we receive, everything else should simply pass through
-            if (received.Type != MessageType.FrameData)
-            {
-                return PreProcessResult.PassThrough();
-            }
+            return received switch
 
-            var receivedFrameData = (ReceivedMessage<FrameData>)received;
-            if (received.ExtraData == null)
+            {
+                ReceivedMessage<FrameData> frameData => PreprocessFrameData(frameData),
+                ReceivedMessage<RetransmitReceivedFrameData> retransmit =>
+                    PreprocessRetransmitReceivedFrameData(retransmit),
+                _ => PreProcessResult.PassThrough()
+            };
+        }
+
+        /// <summary>
+        /// Preprocess a received <see cref="FrameData"/> <see cref="ReceivedMessage{TM}"/>.
+        /// </summary>
+        /// <param name="receivedFrameData">The received message.</param>
+        /// <returns>What to do of the pre-processed message.</returns>
+        PreProcessResult PreprocessFrameData(ReceivedMessage<FrameData> receivedFrameData)
+        {
+            if (receivedFrameData.ExtraData == null)
             {
                 // FrameData with no extra data, it does not provide any useful information, let's just discard it.
                 return PreProcessResult.Stop();
@@ -199,12 +238,87 @@ namespace Unity.ClusterDisplay
                     // to do).
                     m_FrameCompletionMonitorActive.Reset();
 
+                    // Keep a copy of received data if needed
+                    if (m_ReceivedFramesInformation != null)
+                    {
+                        m_OldestReceivedFramesInformationIndex =
+                            (m_OldestReceivedFramesInformationIndex + 1) % m_ReceivedFramesInformation.Length;
+                        m_NewestReceivedFramesInformationIndex =
+                            (m_NewestReceivedFramesInformationIndex + 1) % m_ReceivedFramesInformation.Length;
+                        var receivedInformation = m_ReceivedFramesInformation[m_NewestReceivedFramesInformationIndex];
+                        receivedInformation.FrameIndex = receivedFrameData.Payload.FrameIndex;
+                        receivedInformation.DataBuffer.CopyFrom(
+                            receivedFrameData.ExtraData.AsNativeArray().AsReadOnly());
+                    }
+
                     // Done
                     return PreProcessResult.PassThrough();
                 }
             }
 
             return PreProcessResult.Stop();
+        }
+
+        /// <summary>
+        /// Preprocess a received <see cref="RetransmitReceivedFrameData"/> <see cref="ReceivedMessage{TM}"/>.
+        /// </summary>
+        /// <param name="receivedRetransmit">The received message.</param>
+        /// <returns>What to do of the pre-processed message.</returns>
+        PreProcessResult PreprocessRetransmitReceivedFrameData(ReceivedMessage<RetransmitReceivedFrameData> receivedRetransmit)
+        {
+            // Discard any RetransmitReceivedFrameData for another node.
+            if (receivedRetransmit.Payload.NodeId != m_NodeId)
+            {
+                return PreProcessResult.Stop();
+            }
+
+            lock (m_ThisLock)
+            {
+                // Do we have the message in our history for the requested frame
+                ReceivedFrameInformation toRetransmit = m_ReceivedFramesInformation?.FirstOrDefault(
+                    rfi => rfi.FrameIndex == receivedRetransmit.Payload.FrameIndex);
+                if (toRetransmit == null)
+                {
+                    UdpAgent.SendMessage(MessageType.RetransmittedReceivedFrameData, new RetransmittedReceivedFrameData()
+                        { FrameIndex = receivedRetransmit.Payload.FrameIndex, DataLength = -1 } );
+                    return PreProcessResult.Stop();
+                }
+
+                // Split and send the data
+                var maxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<RetransmittedReceivedFrameData>();
+                int nbrDatagrams = toRetransmit.DataBuffer.Length / maxDataPerMessage;
+                if (toRetransmit.DataBuffer.Length % maxDataPerMessage > 0)
+                {
+                    ++nbrDatagrams;
+                }
+                for (int datagramIndex = 0; datagramIndex < nbrDatagrams; ++datagramIndex)
+                {
+                    RetransmitDatagramOf(toRetransmit, datagramIndex, maxDataPerMessage);
+                }
+            }
+
+            return PreProcessResult.Stop();
+        }
+
+        /// <summary>
+        /// Send the specified datagram.
+        /// </summary>
+        /// <param name="frameInformation">Information about the frame the datagram is part of.</param>
+        /// <param name="datagramIndex">Index of datagram in the sequence of datagrams for that frame.</param>
+        /// <param name="maxDataPerMessage">Maximum number of bytes we can fit in a datagram payload.</param>
+        void RetransmitDatagramOf(ReceivedFrameInformation frameInformation, int datagramIndex, int maxDataPerMessage)
+        {
+            RetransmittedReceivedFrameData receivedFrameData = new()
+            {
+                FrameIndex = frameInformation.FrameIndex,
+                DataLength = frameInformation.DataBuffer.Length,
+                DatagramIndex = datagramIndex,
+                DatagramDataOffset = maxDataPerMessage * datagramIndex
+            };
+            int dataToSend = Math.Min(frameInformation.DataBuffer.Length - receivedFrameData.DatagramDataOffset,
+                maxDataPerMessage);
+            UdpAgent.SendMessage(MessageType.RetransmittedReceivedFrameData, receivedFrameData,
+                frameInformation.DataBuffer.DataSpan(receivedFrameData.DatagramDataOffset, dataToSend));
         }
 
         /// <summary>
@@ -338,6 +452,11 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
+        /// Identifier of the node running this <see cref="FrameDataAssembler"/>.
+        /// </summary>
+        readonly byte m_NodeId;
+
+        /// <summary>
         /// Object to be locked when code needs to serialize access to member variables.
         /// </summary>
         readonly object m_ThisLock = new object();
@@ -394,6 +513,19 @@ namespace Unity.ClusterDisplay
         /// allow plenty of time to process the request without waiting too long increasing time to get a complete
         /// frame.</remarks>
         long m_FrameCompletionDelayTicks = (4 * Stopwatch.Frequency) / 1000;
+
+        /// <summary>
+        /// Received frames kept in case we need to retransmit them.
+        /// </summary>
+        ReceivedFrameInformation[] m_ReceivedFramesInformation;
+        /// <summary>
+        /// Index of the oldest <see cref="ReceivedFrameInformation"/> in <see cref="m_ReceivedFramesInformation"/>.
+        /// </summary>
+        int m_OldestReceivedFramesInformationIndex;
+        /// <summary>
+        /// Index of the most recent <see cref="ReceivedFrameInformation"/> in <see cref="m_ReceivedFramesInformation"/>.
+        /// </summary>
+        int m_NewestReceivedFramesInformationIndex;
 
         /// <summary>
         /// IReceivedMessageData that is used to represent the extra data associated to
@@ -743,6 +875,27 @@ namespace Unity.ClusterDisplay
             /// <see cref="FrameIndex"/>.
             /// </summary>
             int m_DataLength;
+        }
+
+        /// <summary>
+        /// Information stored about each received frame that we keep to be able to retransmit if requested.
+        /// </summary>
+        class ReceivedFrameInformation: IDisposable
+        {
+            /// <summary>
+            /// Index of the frame this struct contains information about.
+            /// </summary>
+            public ulong FrameIndex { get; set; }
+            /// <summary>
+            /// The data that was transmitted.
+            /// </summary>
+            public FrameDataBuffer DataBuffer { get; set; }
+
+            public void Dispose()
+            {
+                DataBuffer?.Dispose();
+                DataBuffer = null;
+            }
         }
     }
 }
