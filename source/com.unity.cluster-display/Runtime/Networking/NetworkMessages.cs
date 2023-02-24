@@ -58,6 +58,11 @@ namespace Unity.ClusterDisplay
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe ReadOnlySpan<T> AsReadOnlySpan<T>(this NativeArray<T> arr) where T : unmanaged =>
             new(arr.GetUnsafePtr(), arr.Length);
+
+        /// <summary>
+        /// Default length of frames history that is kept for retransmission
+        /// </summary>
+        public const int DefaultRetransmitHistoryLength = 2;
     }
 
     /// <summary>
@@ -76,7 +81,11 @@ namespace Unity.ClusterDisplay
         PropagateQuit,
         QuitReceived,
         QuadroBarrierWarmupHeartbeat,
-        QuadroBarrierWarmupStatus
+        QuadroBarrierWarmupStatus,
+        SurveyRepeaters,
+        RepeatersSurveyAnswer,
+        RetransmitReceivedFrameData,
+        RetransmittedReceivedFrameData
     }
 
     /// <summary>
@@ -303,7 +312,7 @@ namespace Unity.ClusterDisplay
     /// <remarks>This message should be sent repetitively every X ms (not too often, something over 100 ms sounds
     /// reasonable) by the emitter requesting to quit until it is forcefully terminated or all repeated have signaled
     /// they received it and are quitting.
-    /// <br/><br/>There isn't really any property in this message at the moment, but let's still have it to be symetric
+    /// <br/><br/>There isn't really any property in this message at the moment, but let's still have it to be symmetric
     /// with the other messages.</remarks>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     [MessageType(MessageType.PropagateQuit)]
@@ -392,5 +401,114 @@ namespace Unity.ClusterDisplay
         /// </summary>
         [MarshalAs(UnmanagedType.I1)]
         public bool Completed;
+    }
+    
+    /// <summary>
+    /// Message sent by a node transitioning from backup to emitter to get the state of the other repeaters in the
+    /// cluster.
+    /// </summary>
+    /// <remarks>This message should be sent repetitively every X ms (not too often, something over 50 ms sounds
+    /// reasonable) by the new emitter until all repeaters reached the same state.
+    /// <br/><br/>There isn't really any property in this message at the moment, but let's still have it to be symmetric
+    /// with the other messages.</remarks>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.SurveyRepeaters)]
+    struct SurveyRepeaters
+    {
+    }
+
+    /// <summary>
+    /// Answer to a <see cref="SurveyRepeaters"/> giving the state of that repeater.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.RepeatersSurveyAnswer)]
+    struct RepeatersSurveyAnswer: IEquatable<RepeatersSurveyAnswer>
+    {
+        /// <summary>
+        /// NodeId of the repeater node producing this response to the survey.
+        /// </summary>
+        public byte NodeId;
+        /// <summary>
+        /// Bytes forming the IP address converted to an integer using <see cref="BitConverter.ToUInt32(byte[],int)"/>
+        /// to identify repeater beyond the NodeId (in case someone else on the network would be miss configured to use
+        /// the same NodeId).
+        /// </summary>
+        /// <remarks>We could in theory use Socket.ReceiveFrom to get that information, however doing so would mean we
+        /// need to do it for all messages when we in fact only need to do it for this message, so instead replicate
+        /// the address inside the message to speed up the general case.</remarks>
+        public uint IPAddressBytes;
+        /// <summary>
+        /// Index of the last frame the repeater has received from the emitter.
+        /// </summary>
+        public ulong LastReceivedFrameIndex;
+        /// <summary>
+        /// Indicate if this node is still using network sync.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool StillUseNetworkSync;
+
+        public bool Equals(RepeatersSurveyAnswer other)
+        {
+            return NodeId == other.NodeId &&
+                IPAddressBytes == other.IPAddressBytes &&
+                LastReceivedFrameIndex == other.LastReceivedFrameIndex &&
+                StillUseNetworkSync == other.StillUseNetworkSync;
+        }
+    }
+
+    /// <summary>
+    /// Message sent by a node transitioning from backup to emitter state to get a frame that a repeater node has
+    /// previously received.
+    /// </summary>
+    /// <remarks>This message will be sent to every repeater one after the other (with a delay between each) until the
+    /// all the parts are received to reconstruct the frame data.</remarks>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.RetransmitReceivedFrameData)]
+    struct RetransmitReceivedFrameData
+    {
+        /// <summary>
+        /// NodeId of the repeater (or backup) that should respond to this message.
+        /// </summary>
+        public byte NodeId;
+        /// <summary>
+        /// Index of the frame to be retransmitted.
+        /// </summary>
+        public ulong FrameIndex;
+    }
+
+    /// <summary>
+    /// Message sent to cary a part of the data of a frame retransmitted as a result of a <see
+    /// cref="RetransmitReceivedFrameData"/> message.
+    /// </summary>
+    /// <remarks>I know, at the moment this struct has the same members as <see cref="FrameData"/>, however this could
+    /// change in the future and the <see cref="UdpAgent"/> does not support two <see cref="MessageType"/> for the same
+    /// struct.  Finally, we cannot use <see cref="MessageType.FrameData"/> for the role of
+    /// <see cref="MessageType.RetransmittedReceivedFrameData"/> a repeater is expected to respond with a DataLength of
+    /// -1 if it does not have the requested frame and having "normal FrameData" being sent with a DataLength of -1
+    /// could start to cause all sort of problems...</remarks>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.RetransmittedReceivedFrameData)]
+    struct RetransmittedReceivedFrameData
+    {
+        /// <summary>
+        /// Index of the frame this message contains information about.
+        /// </summary>
+        public ulong FrameIndex;
+        /// <summary>
+        /// Size (in bytes) of all the data to be retransmitted for <see cref="FrameIndex"/>.
+        /// </summary>
+        /// <remarks>Will be -1 if the repeater does not have all the data for that frame (so the new emitter has to
+        /// ask another repeater for that frame).</remarks>
+        public int DataLength;
+        /// <summary>
+        /// Index of the message in the sequence of datagrams necessary to send all the data to be transmitted for
+        /// <see cref="FrameIndex"/>.
+        /// </summary>
+        public int DatagramIndex;
+        /// <summary>
+        /// Offset of the data carried by this message (located after the last byte of this struct when sent over the
+        /// network) in DatagramData within all the data to be retransmitted for <see cref="FrameIndex"/>.
+        /// </summary>
+        public int DatagramDataOffset;
     }
 }

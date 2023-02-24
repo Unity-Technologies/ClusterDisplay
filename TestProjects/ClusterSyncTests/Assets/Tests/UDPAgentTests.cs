@@ -199,6 +199,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Receive them
             var received1 = receiver.TryConsumeNextReceivedMessage(TimeSpan.FromSeconds(10));
+            // ReSharper disable once UnusedVariable
             var received1ExtraData = received1.ExtraData;
             var received2 = receiver.TryConsumeNextReceivedMessage(TimeSpan.FromSeconds(10));
             var received2ExtraData = received2.ExtraData;
@@ -225,6 +226,7 @@ namespace Unity.ClusterDisplay.Tests
             sender.SendMessage(MessageType.FrameData, messageToSend, extraData4Native.AsReadOnly());
 
             var received3 = receiver.TryConsumeNextReceivedMessage(TimeSpan.FromSeconds(10));
+            // ReSharper disable once UnusedVariable
             var received3ExtraData = received3.ExtraData;
             var received4 = receiver.TryConsumeNextReceivedMessage(TimeSpan.FromSeconds(10));
             var received4ExtraData = received4.ExtraData;

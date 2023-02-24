@@ -14,7 +14,7 @@ namespace Unity.ClusterDisplay
 
         struct CheckQuadroInitState { }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             if (!m_Initialized)
             {

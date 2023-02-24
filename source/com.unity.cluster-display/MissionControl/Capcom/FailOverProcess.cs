@@ -169,10 +169,6 @@ namespace Unity.ClusterDisplay.MissionControl.Capcom
                         },
                         Group = launchpadId.ToString()
                     };
-                    if (launchPadInformation.StartRole == NodeRole.Emitter)
-                    {
-                        ((ConfirmationConstraint)failedParameter.Constraint).FullText += " >>> NOT YET IMPLEMENTED FOR EMITTER <<<";
-                    }
                     var putRet = await missionControlMirror.MissionControlHttpClient.PutAsJsonAsync(
                         "api/v1/currentMission/parameters", failedParameter).ConfigureAwait(false);
                     putRet.EnsureSuccessStatusCode();

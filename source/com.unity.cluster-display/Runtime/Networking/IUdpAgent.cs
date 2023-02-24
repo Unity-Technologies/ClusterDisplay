@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Unity.Collections;
-using UnityEngine;
 using Utils;
+using Debug = UnityEngine.Debug;
 using MessagePreprocessor = System.Func<Unity.ClusterDisplay.ReceivedMessageBase, Unity.ClusterDisplay.PreProcessResult>;
 
 namespace Unity.ClusterDisplay
@@ -281,16 +283,21 @@ namespace Unity.ClusterDisplay
         public const int MessageSniffing = int.MaxValue;
 
         // Repeaters receive ton of FrameData fragments, so put them first in the list
-        public const int frameDataProcessing = 1000;
+        public const int FrameDataProcessing = 1000;
         // We shouldn't receive a lot, but emitter want to be able to react to retransmit request as fast as possible.
-        public const int retransmitFrameDataProcessing = 900;
+        public const int RetransmitFrameDataProcessing = 900;
 
         // Processing of RepeaterWaitingToStartFrame is important but not as critical as we should normally be using
         // hardware synchronization as opposed to network based synchronization...
-        public const int repeaterWaitingToStartFrame = 500;
+        public const int RepeaterWaitingToStartFrame = 500;
+
+        // Emitter placeholder should ideally "never runs" (since used in the fail over) and when it runs it does not
+        // deal with that many messages that need to be processed that fast (but I guess that they should run a little
+        // bit faster than the initial handshake).
+        public const int EmitterPlaceholder = 300;
 
         // Processing of registering node is far from being as critical as the rest...
-        public const int registeringWithEmitter = 100;
+        public const int RegisteringWithEmitter = 100;
     }
 
     /// <summary>
@@ -412,5 +419,43 @@ namespace Unity.ClusterDisplay
         /// Various statistics about networking.
         /// </summary>
         NetworkStatistics Stats { get; }
+
+        /// <summary>
+        /// Clone this UDP agent into a new one with the same settings but that will handle a different set of received
+        /// messages.
+        /// </summary>
+        /// <param name="receivedMessageTypes">New received messages supported.</param>
+        IUdpAgent Clone(MessageType[] receivedMessageTypes);
+    }
+
+    static class UdpAgentExtensions
+    {
+        /// <summary>
+        /// Consume messages until the specified predicate is met.
+        /// </summary>
+        /// <param name="extendedAgent">The <see cref="IUdpAgent"/> to extend with this method.</param>
+        /// <param name="timeout">For how long to try to get a message.</param>
+        /// <param name="predicate">Predicate function to refuse / accept received messages.</param>
+        /// <typeparam name="T">Type of message to get.</typeparam>
+        [CanBeNull]
+        public static ReceivedMessage<T> ConsumeMessagesUntil<T>(this IUdpAgent extendedAgent, TimeSpan timeout,
+            Func<ReceivedMessage<T>, bool> predicate) where T: unmanaged
+        {
+            long deadline = StopwatchUtils.TimestampIn(timeout);
+            do
+            {
+                var consumedMessage = extendedAgent.TryConsumeNextReceivedMessage(StopwatchUtils.TimeUntil(deadline));
+                if (consumedMessage is ReceivedMessage<T> consumedOfType)
+                {
+                    if (predicate(consumedOfType))
+                    {
+                        return consumedOfType;
+                    }
+                    consumedMessage.Dispose();
+                }
+            } while (Stopwatch.GetTimestamp() < deadline);
+
+            return null;
+        }
     }
 }

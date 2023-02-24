@@ -46,5 +46,17 @@ namespace Utils
                 return TimeSpan.Zero;
             }
         }
+
+        /// <summary>
+        /// Returns the time to go before reaching the specified timestamp.
+        /// </summary>
+        /// <param name="targetTimestamp">Future timestamp as it would be returned by
+        /// <see cref="Stopwatch.GetTimestamp"/>.</param>
+        /// <param name="max">Maximum return value</param>
+        public static TimeSpan TimeUntil(long targetTimestamp, TimeSpan max)
+        {
+            var ret = TimeUntil(targetTimestamp);
+            return ret <= max ? ret : max;
+        }
     }
 }

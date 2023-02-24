@@ -224,22 +224,7 @@ namespace Unity.ClusterDisplay
 
                 RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
 
-                switch (clusterNodeConfig.InputSync)
-                {
-#if ENABLE_INPUT_SYSTEM
-                    case InputSync.InputSystem:
-                        ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Emitter));
-                        break;
-#endif
-                    case InputSync.Legacy:
-                        EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.Input,
-                            ClusterSerialization.SaveInputManagerState);
-                        break;
-                    case InputSync.None:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                InitializeEmitterInputSync(clusterNodeConfig);
 
                 return true;
             }
@@ -290,6 +275,26 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        static void InitializeEmitterInputSync(ClusterNodeConfig clusterNodeConfig)
+        {
+            switch (clusterNodeConfig.InputSync)
+            {
+#if ENABLE_INPUT_SYSTEM
+                case InputSync.InputSystem:
+                    ServiceLocator.Provide(new InputSystemReplicator(NodeRole.Emitter));
+                    break;
+#endif
+                case InputSync.Legacy:
+                    EmitterStateWriter.RegisterOnStoreCustomDataDelegate((int)StateID.Input,
+                        ClusterSerialization.SaveInputManagerState);
+                    break;
+                case InputSync.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         static void InitializeRepeaterInputSync(ClusterNodeConfig clusterNodeConfig)
         {
             switch (clusterNodeConfig.InputSync)
@@ -310,6 +315,26 @@ namespace Unity.ClusterDisplay
             }
         }
 
+        static void ClearRepeaterInputSync(ClusterNodeConfig clusterNodeConfig)
+        {
+            switch (clusterNodeConfig.InputSync)
+            {
+#if ENABLE_INPUT_SYSTEM
+                case InputSync.InputSystem:
+                    ServiceLocator.Withdraw<InputSystemReplicator>();
+                    break;
+#endif
+                case InputSync.Legacy:
+                    RepeaterStateReader.UnregisterOnLoadDataDelegate((int)StateID.Input,
+                        ClusterSerialization.RestoreInputManagerState);
+                    break;
+                case InputSync.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         bool TryInitialize(ClusterParams clusterParams)
         {
             try
@@ -321,7 +346,8 @@ namespace Unity.ClusterDisplay
                     CommunicationTimeout = clusterParams.CommunicationTimeout,
                     RepeatersDelayed = clusterParams.DelayRepeaters,
                     Fence = clusterParams.Fence,
-                    InputSync = clusterParams.InputSync
+                    InputSync = clusterParams.InputSync,
+                    HasAtLeastOneBackupNode = clusterParams.BackupCount > 0
                 };
 
                 var udpAgentConfig = new UdpAgentConfig
@@ -349,6 +375,33 @@ namespace Unity.ClusterDisplay
                 CleanUp();
                 return false;
             }
+        }
+
+        void TransitionBackupToEmitterNode()
+        {
+            // Prepare for the new node we will create
+            Debug.Assert(LocalNode != null);
+            var clusterNodeConfig = LocalNode.Config;
+            clusterNodeConfig.FirstFrameIndex = LocalNode.FrameIndex;
+            var udpAgent = LocalNode.UdpAgent.Clone(EmitterNode.ReceiveMessageTypes.ToArray());
+            var localRepeaterNode = (RepeaterNode)LocalNode;
+
+            EmitterNodeConfig emitterNodeConfig = new()
+            {
+                ExpectedRepeaterCount = (byte)LocalNode.UpdatedClusterTopology.Entries.Count(
+                    e => e.NodeRole is NodeRole.Repeater or NodeRole.Backup),
+                RepeatersSurveyResult =
+                    localRepeaterNode.RepeatersSurveyResult.Where(a => a.NodeId != clusterNodeConfig.NodeId).ToArray()
+            };
+
+            // Get rid of the previous node
+            LocalNode?.Dispose();
+            LocalNode = null;
+            ClearRepeaterInputSync(clusterNodeConfig);
+
+            // Create the replacing emitter node.
+            LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, udpAgent);
+            InitializeRepeaterInputSync(clusterNodeConfig);
         }
 
         public void CleanUp()
@@ -396,7 +449,12 @@ namespace Unity.ClusterDisplay
         {
             try
             {
-                LocalNode.DoFrame();
+                var ret = LocalNode.DoFrame();
+                if (ret == DoFrameResult.BackupToEmitter)
+                {
+                    TransitionBackupToEmitterNode();
+                    LocalNode.DoFrame();
+                }
             }
 
             catch (Exception e)

@@ -29,8 +29,9 @@ namespace Unity.ClusterDisplay.Tests
                     GetRepeaterRegistered(receivedMessage, true));
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(RepeatFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 
@@ -88,8 +89,9 @@ namespace Unity.ClusterDisplay.Tests
                     GetRepeaterRegistered(lastReceivedMessage, true));
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(RepeatFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 
@@ -132,8 +134,9 @@ namespace Unity.ClusterDisplay.Tests
                     GetRepeaterRegistered(receivedMessage, true));
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf(typeof(RepeatFrameState)));
+            Assert.That(doFrameResult, Is.Null);
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 
@@ -224,9 +227,13 @@ namespace Unity.ClusterDisplay.Tests
                 emitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
             });
 
-            var nextState = testState.DoFrame();
-            Assert.That(testNode.QuitReceived, Is.True);
+            var (nextState, doFrameResult) = testState.DoFrame();
+            Assert.That(nextState, Is.TypeOf<ProcessQuitMessageState>());
+            Assert.That(doFrameResult, Is.Null);
+            (nextState, doFrameResult) = nextState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
+            Assert.That(testNode.QuitReceived, Is.True);
             Assert.DoesNotThrow(emitterTask.Wait);
         }
 

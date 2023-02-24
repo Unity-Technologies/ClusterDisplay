@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Linq;
 using Unity.Profiling;
 using UnityEngine;
 using Utils;
@@ -14,13 +15,18 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// Constructor
         /// </summary>
         /// <param name="node">Node we are a state of.</param>
-        public EmitFrameState(EmitterNode node)
+        /// <param name="initialToWaitFor">Initial list of repeaters that are performing network based synchronization.
+        /// </param>
+        /// <param name="skipFirstNetworkSync">Do we skip the first network synchronization?</param>
+        public EmitFrameState(EmitterNode node, NodeIdBitVectorReadOnly initialToWaitFor, bool skipFirstNetworkSync = false)
             : base(node)
         {
+            m_SkipNextNetworkSync = skipFirstNetworkSync;
             m_Splitter = new(Node.UdpAgent, true);
-            m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence, Node.UpdatedClusterTopology);
+            m_StartHandler = new(Node.UdpAgent, Node.Config.NodeId, initialToWaitFor, Node.Config.FirstFrameIndex,
+                Node.UpdatedClusterTopology);
             m_Emitter = new(Node.Config.RepeatersDelayed);
-            Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.registeringWithEmitter, AnswerRegisteringWithEmitter);
+            Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.RegisteringWithEmitter, AnswerRegisteringWithEmitter);
         }
 
         /// <summary>
@@ -34,12 +40,12 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             Node.UdpAgent?.RemovePreProcess(AnswerRegisteringWithEmitter);
         }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             // Have we been requested to initiate the quitting of the cluster?
             if (InternalMessageQueue<InternalQuitMessage>.Instance.TryDequeue(out InternalQuitMessage _))
             {
-                return new PropagateQuitState(Node);
+                return (new PropagateQuitState(Node), null);
             }
 
             // Special case for delayed repeaters.  Gather game state for frame 0 and the custom data will be gathered
@@ -48,7 +54,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             if (Node.FrameIndex == 0 && Node.Config.RepeatersDelayed)
             {
                 m_Emitter.GatherPreFrameState();
-                return null;
+                return (null, DoFrameResult.FrameDone);
             }
 
             ulong effectiveFrameIndex = Node.Config.RepeatersDelayed ? Node.FrameIndex - 1 : Node.FrameIndex;
@@ -56,29 +62,46 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // Perform network based start of frame synchronization
             if (m_UsingNetworkSync)
             {
-                using (s_MarkerNetworkSynchronization.Auto())
+                if (m_SkipNextNetworkSync)
                 {
-                    var stillWaitingOn = m_StartHandler.TryWaitForAllRepeatersReady(
-                        effectiveFrameIndex, Node.EffectiveCommunicationTimeout);
-                    if (stillWaitingOn != null)
+                    m_SkipNextNetworkSync = false;
+                }
+                else
+                {
+                    using (s_MarkerNetworkSynchronization.Auto())
                     {
-                        // Looks like some repeater nodes are not responding, drop them...
-                        Debug.LogError($"Repeaters {stillWaitingOn} did not signaled they were ready within " +
-                            $"{Node.EffectiveCommunicationTimeout.TotalSeconds} seconds, they will be dropped from " +
-                            $"the cluster.");
-
-                        m_StartHandler.DropRepeaters(stillWaitingOn);
-
-                        byte[] nodeIds = stillWaitingOn.ExtractSetBits();
-                        foreach (var nodeId in nodeIds)
+                        var stillWaitingOn = m_StartHandler.TryWaitForAllRepeatersReady(
+                        	effectiveFrameIndex, Node.EffectiveCommunicationTimeout);
+                        if (stillWaitingOn != null)
                         {
-                            Node.RepeatersStatus[nodeId] = new RepeaterStatus();
+                            // Problem detected, is it because the topology changed and we are not the emitter anymore?
+                            // If so let's stop right away.
+                            var isStillEmitter = Node.UpdatedClusterTopology?.Entries?.Any(
+                                e => e.NodeId == Node.Config.NodeId && e.NodeRole == NodeRole.Emitter) ?? true;
+                            if (!isStillEmitter)
+                            {
+                                // We are not an emitter anymore, no need to continue anything and lets stop right away.
+                                return (null, DoFrameResult.ShouldQuit);
+                            }
+
+                            // Looks like some repeater nodes are not responding, drop them...
+                        	Debug.LogError($"Repeaters {stillWaitingOn} did not signaled they were ready within " +
+                            	$"{Node.EffectiveCommunicationTimeout.TotalSeconds} seconds, they will be dropped from " +
+                            	$"the cluster.");
+
+                            m_StartHandler.DropRepeaters(stillWaitingOn);
+
+                            byte[] nodeIds = stillWaitingOn.ExtractSetBits();
+                            foreach (var nodeId in nodeIds)
+                            {
+                                Node.RepeatersStatus[nodeId] = new RepeaterStatus();
+                            }
                         }
                     }
-
-                    // Prepare for next frame
-                    m_UsingNetworkSync = m_StartHandler.PrepareForNextFrame(effectiveFrameIndex + 1);
                 }
+
+                // Prepare for next frame
+                m_UsingNetworkSync = m_StartHandler.PrepareForNextFrame(effectiveFrameIndex + 1);
             }
 
             // Emit the frame data for this frame
@@ -92,7 +115,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             }
 
             // EmitFrameState never switch to another state...
-            return null;
+            return (null, DoFrameResult.FrameDone);
         }
 
         /// <summary>
@@ -102,7 +125,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// <remarks>Necessary to deal with the case where the <see cref="RepeaterRegistered"/> sent during
         /// <see cref="WelcomeRepeatersState"/> was lost.  Repeater will repeat the <see cref="RepeaterRegistered"/>
         /// and so we have to also repeat the answer.  We however do not accept new repeaters, it is too late.</remarks>
-        /// <returns>Summary of what happened during the pre-processing.</returns>
+        /// <returns>What to do of the received message.</returns>
         PreProcessResult AnswerRegisteringWithEmitter(ReceivedMessageBase message)
         {
             if (message.Type != MessageType.RegisteringWithEmitter)
@@ -137,6 +160,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// hardware based synchronization).
         /// </summary>
         bool m_UsingNetworkSync = true;
+        /// <summary>
+        /// Do we skip the next network synchronization?
+        /// </summary>
+        bool m_SkipNextNetworkSync;
 
         /// <summary>
         /// Value returned by <see cref="GetProfilerMarker"/>.

@@ -67,8 +67,8 @@ namespace Unity.ClusterDisplay
         /// <exception cref="IOException">When no available network interface can be found</exception>
         public UdpAgent(UdpAgentConfig config)
         {
-            m_LoggingFilenameSuffix = config.LoggingFilenameSuffix;
-            var (selectedNic, selectedNicAddress) = SelectNetworkInterface(config.AdapterName);
+            m_Config = config;
+            var (selectedNic, selectedNicAddress) = SelectNetworkInterface(m_Config.AdapterName);
             if (selectedNic == null)
             {
                 throw new IOException("There are no available network interfaces that support Cluster Display");
@@ -107,23 +107,23 @@ namespace Unity.ClusterDisplay
             m_UdpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             // Bind to receive from the selected adapter on the same port than the port we are sending to (everyone will
             // use the same port).
-            m_UdpClient.Client.Bind(new IPEndPoint(AdapterAddress, config.Port));
+            m_UdpClient.Client.Bind(new IPEndPoint(AdapterAddress, m_Config.Port));
             // Join the multicast group
-            m_UdpClient.JoinMulticastGroup(config.MulticastIp);
+            m_UdpClient.JoinMulticastGroup(m_Config.MulticastIp);
             // This is normally true by default but this is required to keep things simple (unit tests working, multiple
             // instances on the same computer, ...).  So let's get sure it is on.
             m_UdpClient.MulticastLoopback = true;
 
             // Other member variables used to send datagrams
-            m_MulticastTxEndpoint = new IPEndPoint(config.MulticastIp, config.Port);
+            m_MulticastTxEndpoint = new IPEndPoint(m_Config.MulticastIp, m_Config.Port);
             m_SendTempBuffers = new(() => new byte[m_Mtu]);
 
             // Prepare reception of messages
-            if (SetupReceiveMessageFactory(config.ReceivedMessagesType))
+            if (SetupReceiveMessageFactory(m_Config.ReceivedMessagesType))
             {
                 m_ReceivedMessageDataPool = new(() => new ManagedReceivedMessageData(this, m_Mtu));
                 m_ReceiveThread = new Thread(ProcessIncomingDatagrams);
-                m_ReceiveThread.Name = $"ClusterDisplay UDP Reception {AdapterAddress}:{config.Port}";
+                m_ReceiveThread.Name = $"ClusterDisplay UDP Reception {AdapterAddress}:{m_Config.Port}";
                 m_ReceiveThread.Start();
             }
         }
@@ -175,7 +175,7 @@ namespace Unity.ClusterDisplay
                 m_UdpClient.Send(sendTempBuffer, toSendSize, m_MulticastTxEndpoint);
 
                 Stats.MessageSent(messageType);
-                LogMessage(message, true, additionalData.Length, m_LoggingFilenameSuffix);
+                LogMessage(message, true, additionalData.Length, m_Config.LoggingFilenameSuffix);
             }
             finally
             {
@@ -225,6 +225,13 @@ namespace Unity.ClusterDisplay
         }
 
         public NetworkStatistics Stats { get; } = new NetworkStatistics();
+
+        public IUdpAgent Clone(MessageType[] receivedMessageTypes)
+        {
+            var newConfig = m_Config;
+            newConfig.ReceivedMessagesType = receivedMessageTypes;
+            return new UdpAgent(newConfig);
+        }
 
         /// <summary>
         /// Returns the network adapter to use for data transmission and reception.
@@ -439,7 +446,7 @@ namespace Unity.ClusterDisplay
                             receiveReceivedMessageData = m_ReceivedMessageDataPool.Get();
                         }
 
-                        LogReceivedMessage(receivedMessage, m_LoggingFilenameSuffix);
+                        LogReceivedMessage(receivedMessage, m_Config.LoggingFilenameSuffix);
                     }
                     catch (Exception e)
                     {
@@ -621,9 +628,9 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// Added to the log filename when producing log for debugging
+        /// Configuration that was used to create this <see cref="UdpAgent"/>.
         /// </summary>
-        string m_LoggingFilenameSuffix;
+        readonly UdpAgentConfig m_Config;
         /// <summary>
         /// Main UdpClient used for reception of data and sending to the Multicast endpoint (config's MulticastIp:Port).
         /// </summary>
@@ -756,6 +763,22 @@ namespace Unity.ClusterDisplay
                 LogMessage(((ReceivedMessage<QuadroBarrierWarmupStatus>)receivedMessage).Payload, false,
                     extraDataLength, loggingFilenameSuffix);
                 break;
+            case MessageType.SurveyRepeaters:
+                LogMessage(((ReceivedMessage<SurveyRepeaters>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
+                break;
+            case MessageType.RepeatersSurveyAnswer:
+                LogMessage(((ReceivedMessage<RepeatersSurveyAnswer>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
+                break;
+            case MessageType.RetransmitReceivedFrameData:
+                LogMessage(((ReceivedMessage<RetransmitReceivedFrameData>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
+                break;
+            case MessageType.RetransmittedReceivedFrameData:
+                LogMessage(((ReceivedMessage<RetransmittedReceivedFrameData>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
+                break;
             }
         }
 
@@ -771,38 +794,38 @@ namespace Unity.ClusterDisplay
             case RegisteringWithEmitter registering:
                 {
                     var bytes = BitConverter.GetBytes(registering.IPAddressBytes);
-                    stringBuilder.AppendFormat("RegisteringWithEmitter     : NodeId = {0}, IPAddress = {1}.{2}.{3}.{4}",
+                    stringBuilder.AppendFormat("RegisteringWithEmitter         : NodeId = {0}, IPAddress = {1}.{2}.{3}.{4}",
                         registering.NodeId, bytes[0], bytes[1], bytes[2], bytes[3] );
                 }
                 break;
             case RepeaterRegistered registered:
                 {
                     var bytes = BitConverter.GetBytes(registered.IPAddressBytes);
-                    stringBuilder.AppendFormat("RepeaterRegistered         : NodeId = {0}, IPAddress = " +
+                    stringBuilder.AppendFormat("RepeaterRegistered             : NodeId = {0}, IPAddress = " +
                         "{1}.{2}.{3}.{4}, Accepted = {5}",
                         registered.NodeId, bytes[0], bytes[1], bytes[2], bytes[3], registered.Accepted);
                 }
                 break;
             case FrameData frameData:
-                stringBuilder.AppendFormat("FrameData                  : FrameIndex = {0}, DataLength = {1}, " +
+                stringBuilder.AppendFormat("FrameData                      : FrameIndex = {0}, DataLength = {1}, " +
                     "DatagramIndex = {2}, DatagramDataOffset = {3}, ExtraDataLength = {4}",
                     frameData.FrameIndex, frameData.DataLength, frameData.DatagramIndex, frameData.DatagramDataOffset,
                     extraDataLength);
                 break;
             case RetransmitFrameData retransmit:
-                stringBuilder.AppendFormat("RetransmitFrameData        : FrameIndex = {0}, " +
+                stringBuilder.AppendFormat("RetransmitFrameData            : FrameIndex = {0}, " +
                     "DatagramIndexIndexStart = {1}, DatagramIndexIndexEnd = {2}",
                     retransmit.FrameIndex, retransmit.DatagramIndexIndexStart, retransmit.DatagramIndexIndexEnd);
                 break;
             case RepeaterWaitingToStartFrame repeaterWaiting:
-                stringBuilder.AppendFormat("RepeaterWaitingToStartFrame: FrameIndex = {0}, NodeId = {1}, " +
+                stringBuilder.AppendFormat("RepeaterWaitingToStartFrame    : FrameIndex = {0}, NodeId = {1}, " +
                     "WillUseNetworkSyncOnNextFrame = {2}",
                     repeaterWaiting.FrameIndex, repeaterWaiting.NodeId, repeaterWaiting.WillUseNetworkSyncOnNextFrame);
                 break;
             case EmitterWaitingToStartFrame emitterWaiting:
                 var waitingOn = new NodeIdBitVectorReadOnly(emitterWaiting.WaitingOn0, emitterWaiting.WaitingOn1,
                     emitterWaiting.WaitingOn2, emitterWaiting.WaitingOn3);
-                stringBuilder.AppendFormat("EmitterWaitingToStartFrame : FrameIndex = {0}, " +
+                stringBuilder.AppendFormat("EmitterWaitingToStartFrame     : FrameIndex = {0}, " +
                     "WaitingNodesBitField = {1}",
                     emitterWaiting.FrameIndex, waitingOn);
                 break;
@@ -820,6 +843,29 @@ namespace Unity.ClusterDisplay
                 stringBuilder.AppendFormat("QuadroBarrierWarmupStatus      : NodeId = {0}, Stage = {1}, Completed = {2}",
                     quadroBarrierWarmupStatus.NodeId, quadroBarrierWarmupStatus.Stage,
                     quadroBarrierWarmupStatus.Completed);
+                break;
+            case SurveyRepeaters:
+                stringBuilder.AppendFormat("SurveyRepeaters                : (empty)");
+                break;
+            case RepeatersSurveyAnswer repeatersSurveyAnswer:
+                {
+                    var bytes = BitConverter.GetBytes(repeatersSurveyAnswer.IPAddressBytes);
+                    stringBuilder.AppendFormat("RepeatersSurveyAnswer          : NodeId = {0}, " +
+                        "IPAddressBytes = {1}.{2}.{3}.{4}, LastReceivedFrameIndex = {5}, StillUseNetworkSync = {6}",
+                        repeatersSurveyAnswer.NodeId, bytes[0], bytes[1], bytes[2], bytes[3],
+                        repeatersSurveyAnswer.LastReceivedFrameIndex, repeatersSurveyAnswer.StillUseNetworkSync);
+                }
+                break;
+            case RetransmitReceivedFrameData retransmitReceivedFrameData:
+                stringBuilder.AppendFormat("RetransmitReceivedFrameData    : NodeId = {0}, FrameIndex = {1}",
+                    retransmitReceivedFrameData.NodeId, retransmitReceivedFrameData.FrameIndex);
+                break;
+            case RetransmittedReceivedFrameData retransmittedReceivedFrameData:
+                stringBuilder.AppendFormat("RetransmittedReceivedFrameData : FrameIndex = {0}, DataLength = {1}, " +
+                    "DatagramIndex = {2}, DatagramDataOffset = {3}, ExtraDataLength = {4}",
+                    retransmittedReceivedFrameData.FrameIndex, retransmittedReceivedFrameData.DataLength,
+                    retransmittedReceivedFrameData.DatagramIndex, retransmittedReceivedFrameData.DatagramDataOffset,
+                    extraDataLength);
                 break;
             }
 

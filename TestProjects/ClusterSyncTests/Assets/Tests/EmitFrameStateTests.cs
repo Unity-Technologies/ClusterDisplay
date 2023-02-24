@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Unity.ClusterDisplay.EmitterStateMachine;
-using Unity.ClusterDisplay.Utils;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -21,7 +20,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void SendFrame0()
         {
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             byte[] stateData0 = AllocRandomByteArray(500);
             m_StateDataQueue.Enqueue(stateData0);
@@ -39,9 +38,10 @@ namespace Unity.ClusterDisplay.Tests
                 SendRepeaterWaitingToStartFrame(0, k_RepeaterNodeId[2], true);
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             long doFrameEndTimestamp = Stopwatch.GetTimestamp();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
             Assert.That(doFrameEndTimestamp, Is.GreaterThanOrEqualTo(lastReadyTimestamp));
 
@@ -65,7 +65,7 @@ namespace Unity.ClusterDisplay.Tests
         public void OneRepeaterTimeout()
         {
             ReplaceNodeWithNewOne(TimeSpan.FromMilliseconds(250), false);
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             byte[] stateData0 = AllocRandomByteArray(500);
             m_StateDataQueue.Enqueue(stateData0);
@@ -78,9 +78,10 @@ namespace Unity.ClusterDisplay.Tests
                 SendRepeaterWaitingToStartFrame(0, k_RepeaterNodeId[2], true);
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             LogAssert.Expect(LogType.Error, $"Repeaters {k_RepeaterNodeId[1]} did not signaled they were ready within 0.25 seconds, they will be dropped from the cluster.");
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
 
             var receivedByRepeaters = ConsumeAllReceivedRepeaterMessages();
@@ -104,7 +105,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void MultipleFramesWithLessNetworkSync()
         {
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             // Frame 0
 
@@ -124,9 +125,10 @@ namespace Unity.ClusterDisplay.Tests
                 SendRepeaterWaitingToStartFrame(0, k_RepeaterNodeId[2], false);
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             long doFrameEndTimestamp = Stopwatch.GetTimestamp();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
             Assert.That(doFrameEndTimestamp, Is.GreaterThanOrEqualTo(lastReadyTimestamp));
 
@@ -149,8 +151,9 @@ namespace Unity.ClusterDisplay.Tests
 
             SendRepeaterWaitingToStartFrame(1, k_RepeaterNodeId[1], false);
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
 
             receivedByRepeaters = ConsumeAllReceivedRepeaterMessages();
@@ -170,8 +173,9 @@ namespace Unity.ClusterDisplay.Tests
             byte[] customData2 = AllocRandomByteArray(300);
             m_CustomDataQueue.Enqueue(customData2);
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
 
             receivedByRepeaters = ConsumeAllReceivedRepeaterMessages();
@@ -193,13 +197,14 @@ namespace Unity.ClusterDisplay.Tests
         public void DelayedRepeater()
         {
             ReplaceNodeWithNewOne(m_MaxTestTime, true);
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             // DoFrame and conclude frame should not try to wait after repeaters and should not send anything either.
             byte[] stateData0 = AllocRandomByteArray(500);
             m_StateDataQueue.Enqueue(stateData0);
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.That(m_RepeaterAgent.ReceivedMessagesCount, Is.Zero);
             Assert.That(m_StateDataQueue, Is.Empty);
             m_Node.ConcludeFrame();
@@ -221,9 +226,10 @@ namespace Unity.ClusterDisplay.Tests
                 SendRepeaterWaitingToStartFrame(0, k_RepeaterNodeId[2], true);
             });
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             long doFrameEndTimestamp = Stopwatch.GetTimestamp();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
             Assert.That(doFrameEndTimestamp, Is.GreaterThanOrEqualTo(lastReadyTimestamp));
 
@@ -246,7 +252,7 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void AnswerRegisteringWithEmitter()
         {
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             byte[] stateData0 = AllocRandomByteArray(500);
             m_StateDataQueue.Enqueue(stateData0);
@@ -295,9 +301,10 @@ namespace Unity.ClusterDisplay.Tests
                 SendRepeaterWaitingToStartFrame(0, k_RepeaterNodeId[2], true);
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             long doFrameEndTimestamp = Stopwatch.GetTimestamp();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(sendRepeatersReadyTask.Wait);
             Assert.That(doFrameEndTimestamp, Is.GreaterThanOrEqualTo(lastReadyTimestamp));
 
@@ -320,11 +327,12 @@ namespace Unity.ClusterDisplay.Tests
         [Test]
         public void TransitionToPropagateQuitState()
         {
-            using var testState = new EmitFrameState(m_Node);
+            using var testState = new EmitFrameState(m_Node, m_Node.RepeatersStatus.RepeaterPresence);
 
             InternalMessageQueue<InternalQuitMessage>.Instance.Enqueue(new());
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf<PropagateQuitState>());
+            Assert.That(doFrameResult, Is.Null);
         }
 
         [SetUp]

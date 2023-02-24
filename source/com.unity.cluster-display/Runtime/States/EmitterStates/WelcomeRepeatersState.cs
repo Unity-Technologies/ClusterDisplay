@@ -19,7 +19,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         {
         }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             Debug.Assert(Node.FrameIndex == 0, "WelcomeRepeatersState.DoFrame must always be called for the first " +
                 "frame as all nodes in the cluster need to execute all the frames the same way.");
@@ -55,7 +55,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
                      repeatersStatus.RepeaterPresence.SetBitsCount < Node.EmitterConfig.ExpectedRepeaterCount);
 
             // We are done accepting repeaters, let's start sending frames!
-            return new EmitFrameState(Node);
+            return (new EmitFrameState(Node, Node.RepeatersStatus.RepeaterPresence), null);
         }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;

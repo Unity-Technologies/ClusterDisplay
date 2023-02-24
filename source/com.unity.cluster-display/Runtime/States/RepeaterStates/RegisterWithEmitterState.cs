@@ -18,7 +18,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
         public RegisterWithEmitterState(RepeaterNode node)
             : base(node) { }
 
-        protected override NodeState DoFrameImplementation()
+        protected override (NodeState, DoFrameResult?) DoFrameImplementation()
         {
             Debug.Assert(Node.FrameIndex == 0, "RegisterWithEmitterState.DoFrame must always be called for the " +
                 "first frame as all nodes in the cluster need to execute all the frames the same way.");
@@ -89,10 +89,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                                 retransmitRegistrationInterval = s_ShortRetransmitRegistrationInterval;
                                 break;
                             case MessageType.PropagateQuit:
-                                udpAgent.SendMessage(MessageType.QuitReceived, new QuitReceived()
-                                    {NodeId = Node.Config.NodeId});
-                                Node.Quit();
-                                return null;
+                                return (new ProcessQuitMessageState(Node), null);
                         }
                     }
                 } while (!hasReceivedRepeaterRegistered && stopWaitingForRepeaterRegistered > Stopwatch.GetTimestamp());
@@ -106,7 +103,7 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                     $"{Node.Config.HandshakeTimeout.TotalSeconds} seconds");
             }
 
-            return new RepeatFrameState(Node, repeatFrameStateFirstFrameData);
+            return (new RepeatFrameState(Node, repeatFrameStateFirstFrameData), null);
         }
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;

@@ -23,8 +23,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -49,8 +50,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -87,8 +89,9 @@ namespace Unity.ClusterDisplay.Tests
                 frame1Data = SendFrameData(1, 500);
             });
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame1Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame1Data));
@@ -102,8 +105,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -166,8 +170,9 @@ namespace Unity.ClusterDisplay.Tests
                 frame1Data = SendFrameData(1, 500);
             });
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame1Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame1Data));
@@ -181,8 +186,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -217,8 +223,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -239,8 +246,9 @@ namespace Unity.ClusterDisplay.Tests
                 frame1Data = SendFrameData(1, 500);
             });
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame1Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame1Data));
@@ -301,8 +309,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -315,8 +324,9 @@ namespace Unity.ClusterDisplay.Tests
             // Start second frame
             var (synchronizeAndSendFrame1Task, frame1Data) = CreateSyncAndSendTask(1, 400, testDeadline);
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame1Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame1Data));
@@ -331,8 +341,9 @@ namespace Unity.ClusterDisplay.Tests
             // Start third frame
             var (synchronizeAndSendFrame2Task, frame2Data) = CreateSyncAndSendTask(2, 600, testDeadline);
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame2Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame2Data));
@@ -346,8 +357,9 @@ namespace Unity.ClusterDisplay.Tests
 
             var (synchronizeAndSendFrame0Task, frame0Data) = CreateSyncAndSendTask(0, 500, testDeadline);
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame0Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame0Data));
@@ -363,8 +375,9 @@ namespace Unity.ClusterDisplay.Tests
             // Start second frame
             var (synchronizeAndSendFrame1Task, frame1Data) = CreateSyncAndSendTask(1, 500, testDeadline);
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame1Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame1Data));
@@ -383,8 +396,9 @@ namespace Unity.ClusterDisplay.Tests
                 frame2Data = SendFrameData(2, 500);
             });
 
-            nextState = testState.DoFrame();
+            (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.DoesNotThrow(synchronizeAndSendFrame2Task.Wait);
             Assert.That(m_ReceivedData.Count, Is.EqualTo(1));
             Assert.That(m_ReceivedData[0], Is.EqualTo(frame2Data));
@@ -403,10 +417,12 @@ namespace Unity.ClusterDisplay.Tests
                 m_EmitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf<ProcessQuitMessageState>());
-            nextState = nextState.DoFrame();
+            Assert.That(doFrameResult, Is.Null);
+            (nextState, doFrameResult) = nextState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.That(m_Node.QuitReceived, Is.True);
             Assert.DoesNotThrow(propagateQuitTask.Wait);
         }
@@ -427,12 +443,112 @@ namespace Unity.ClusterDisplay.Tests
                 m_EmitterAgent.SendMessage(MessageType.PropagateQuit, new PropagateQuit());
             });
 
-            var nextState = testState.DoFrame();
+            var (nextState, doFrameResult) = testState.DoFrame();
             Assert.That(nextState, Is.TypeOf<ProcessQuitMessageState>());
-            nextState = nextState.DoFrame();
+            Assert.That(doFrameResult, Is.Null);
+            (nextState, doFrameResult) = nextState.DoFrame();
             Assert.That(nextState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.FrameDone));
             Assert.That(m_Node.QuitReceived, Is.True);
             Assert.DoesNotThrow(propagateQuitTask.Wait);
+        }
+
+        [Test]
+        public void SwitchToEmitterWhileWaitingFrameSync()
+        {
+            using var testState = new RepeatFrameState(m_Node);
+
+            NodeState nextNodeState = null;
+            DoFrameResult? doFrameResult = null;
+            var doFrameTask = Task.Run(() =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                (nextNodeState, doFrameResult) = testState.DoFrame();
+            });
+
+            // Wait to be sure that testState is waiting for frame sync
+            int nbrRepeaterWaitingMessage = 0;
+            long stopTestTimestamp = StopwatchUtils.TimestampIn(m_MaxTestTime);
+            while (Stopwatch.GetTimestamp() < stopTestTimestamp && nbrRepeaterWaitingMessage < 2)
+            {
+                using var receivedMessage = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(stopTestTimestamp));
+                if (receivedMessage == null)
+                {
+                    continue;
+                }
+
+                Assert.That(receivedMessage.Type, Is.EqualTo(MessageType.RepeaterWaitingToStartFrame));
+                ++nbrRepeaterWaitingMessage;
+            }
+            Assert.That(nbrRepeaterWaitingMessage, Is.EqualTo(2));
+
+            Assert.That(doFrameTask.IsCompleted, Is.False);
+            m_Node.IsBackupToEmitterSwitchReadyValue = true;
+
+            Assert.That(doFrameTask.Wait(StopwatchUtils.TimeUntil(stopTestTimestamp)));
+            Assert.That(nextNodeState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.BackupToEmitter));
+        }
+
+        [Test]
+        public void SwitchToEmitterWhileWaitingFrameData()
+        {
+            using var testState = new RepeatFrameState(m_Node);
+
+            NodeState nextNodeState = null;
+            DoFrameResult? doFrameResult = null;
+            var doFrameTask = Task.Run(() =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                (nextNodeState, doFrameResult) = testState.DoFrame();
+            });
+
+            // Perform frame synchronization
+            long stopTestTimestamp = StopwatchUtils.TimestampIn(m_MaxTestTime);
+            bool networkSyncPerformed = false;
+            while (Stopwatch.GetTimestamp() < stopTestTimestamp && !networkSyncPerformed)
+            {
+                using var receivedMessage = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(stopTestTimestamp));
+                if (receivedMessage == null)
+                {
+                    continue;
+                }
+
+                var repeaterWaitingToStartFrame = receivedMessage as ReceivedMessage<RepeaterWaitingToStartFrame>;
+                Assert.That(repeaterWaitingToStartFrame, Is.Not.Null);
+
+                m_EmitterAgent.SendMessage(MessageType.EmitterWaitingToStartFrame,
+                    new EmitterWaitingToStartFrame() {FrameIndex = repeaterWaitingToStartFrame.Payload.FrameIndex});
+                networkSyncPerformed = true;
+            }
+            Assert.That(networkSyncPerformed, Is.True);
+
+            // Be sure that testState is waiting for data by looking for retransmit requests
+            int retransmitMessageCount = 0;
+            while (Stopwatch.GetTimestamp() < stopTestTimestamp && retransmitMessageCount < 2)
+            {
+                using var receivedMessage = m_EmitterAgent.TryConsumeNextReceivedMessage(
+                    StopwatchUtils.TimeUntil(stopTestTimestamp));
+                if (receivedMessage == null)
+                {
+                    continue;
+                }
+
+                if (receivedMessage.Type == MessageType.RetransmitFrameData)
+                {
+                    ++retransmitMessageCount;
+                }
+            }
+            Assert.That(retransmitMessageCount, Is.EqualTo(2));
+
+            Assert.That(doFrameTask.IsCompleted, Is.False);
+            m_Node.IsBackupToEmitterSwitchReadyValue = true;
+
+            Assert.That(doFrameTask.Wait(StopwatchUtils.TimeUntil(stopTestTimestamp)));
+            Assert.That(nextNodeState, Is.Null);
+            Assert.That(doFrameResult, Is.EqualTo(DoFrameResult.BackupToEmitter));
         }
 
         [SetUp]
@@ -448,7 +564,7 @@ namespace Unity.ClusterDisplay.Tests
                 CommunicationTimeout = m_MaxTestTime
             };
 
-            m_Node = new RepeaterNodeWithoutQuit(nodeConfig,
+            m_Node = new RepeaterNodeMock(nodeConfig,
                 new TestUdpAgent(udpAgentNetwork, RepeaterNode.ReceiveMessageTypes.ToArray()));
 
             RepeaterStateReader.RegisterOnLoadDataDelegate(k_DataBlockTypeId, HandleReceivedData);
@@ -478,7 +594,7 @@ namespace Unity.ClusterDisplay.Tests
             newNodeConfig.CommunicationTimeout = communicationTimeout;
             IUdpAgent repeaterUdpAgent = m_Node.UdpAgent;
             m_Node.Dispose();
-            m_Node = new RepeaterNodeWithoutQuit(newNodeConfig, repeaterUdpAgent);
+            m_Node = new RepeaterNodeMock(newNodeConfig, repeaterUdpAgent);
         }
 
         byte[] SendFrameData(ulong frameIndex, int dataLength)
@@ -566,9 +682,9 @@ namespace Unity.ClusterDisplay.Tests
             return (task, frameData);
         }
 
-        class RepeaterNodeWithoutQuit: RepeaterNode
+        class RepeaterNodeMock: RepeaterNode
         {
-            public RepeaterNodeWithoutQuit(ClusterNodeConfig config, IUdpAgent udpAgent)
+            public RepeaterNodeMock(ClusterNodeConfig config, IUdpAgent udpAgent)
                 : base(config, udpAgent)
             {
             }
@@ -578,13 +694,17 @@ namespace Unity.ClusterDisplay.Tests
             {
                 QuitReceived = true;
             }
+
+            public bool IsBackupToEmitterSwitchReadyValue { get; set; }
+
+            public override bool IsBackupToEmitterSwitchReady() { return IsBackupToEmitterSwitchReadyValue; }
         }
 
         const byte k_NodeId = 42;
         const int k_DataBlockTypeId = 28;
 
         TimeSpan m_MaxTestTime = TimeSpan.FromSeconds(10);
-        RepeaterNodeWithoutQuit m_Node;
+        RepeaterNodeMock m_Node;
         TestUdpAgent m_EmitterAgent;
         List<byte[]> m_ReceivedData = new ();
     }
