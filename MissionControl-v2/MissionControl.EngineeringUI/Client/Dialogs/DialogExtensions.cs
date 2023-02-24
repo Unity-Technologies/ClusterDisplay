@@ -1,5 +1,10 @@
+using Microsoft.AspNetCore.Components;
+using System;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Options;
 using Radzen;
+using Radzen.Blazor;
 
 namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
 {
@@ -45,6 +50,18 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
 
                 await showDialogTask;
             }
+        }
+
+        public static Task ShowError(this DialogService dialogService, string message)
+        {
+            DialogOptions dialogOptions = new();
+            dialogOptions.Width = "75%";
+            dialogOptions.Resizable = true;
+
+            var replacedMessage = message.Replace("\n", "<br/>");
+
+            return dialogService.OpenAsync<ShowError>("Error", new Dictionary<string, object>{ {"Message", replacedMessage} },
+                dialogOptions);
         }
     }
 }

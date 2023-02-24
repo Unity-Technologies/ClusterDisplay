@@ -89,7 +89,10 @@ namespace Unity.ClusterDisplay.MissionControl.MissionControl.Controllers
             }
             catch (CatalogException e)
             {
-                return BadRequest($"LaunchCatalog.json appear to have an error: {e}");
+                return BadRequest($"LaunchCatalog.json appear to have an error.  Most likely causes are:\n" +
+                    $"- Asset modified after it was produced.\n" +
+                    $"- Mission Control integration not activated when producing the asset." +
+                    $"\n\nError details: {e}");
             }
             catch (StorageFolderFullException e)
             {

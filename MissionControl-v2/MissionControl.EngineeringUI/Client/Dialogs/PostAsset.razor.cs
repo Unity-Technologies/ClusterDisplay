@@ -37,7 +37,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
 
             if (errorMessage != "")
             {
-                await DialogService.Alert(errorMessage);
+                await DialogService.ShowError(errorMessage);
                 return;
             }
 
