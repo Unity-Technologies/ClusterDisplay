@@ -155,8 +155,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 return;
             }
 
-            var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {selected.Name}",
-                new Dictionary<string, object>{ {"Asset", asset}, {"Complex", selected}, {"ToEdit", toEdit} },
+            var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {complex.Name}",
+                new Dictionary<string, object>{ {"Asset", asset}, {"Complex", complex }, {"ToEdit", toEdit} },
                 new DialogOptions() { Width = "60%", Height = "auto", Resizable = true, Draggable = true });
             if (!(bool)(ret ?? false))
             {
