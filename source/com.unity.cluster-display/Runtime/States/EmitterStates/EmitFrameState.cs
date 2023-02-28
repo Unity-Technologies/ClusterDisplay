@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.Profiling;
 using UnityEngine;
 using Utils;
@@ -17,7 +17,9 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public EmitFrameState(EmitterNode node)
             : base(node)
         {
-            m_Splitter = new(Node.UdpAgent, new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
+            m_FrameDataBufferPool = new ConcurrentObjectPool<FrameDataBuffer>(
+                () => new FrameDataBuffer(), null, null, buf => buf.Dispose());
+            m_Splitter = new(Node.UdpAgent, m_FrameDataBufferPool);
             m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence, Node.UpdatedClusterTopology);
             m_Emitter = new(Node.Config.RepeatersDelayed);
             Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.registeringWithEmitter, AnswerRegisteringWithEmitter);
@@ -32,6 +34,9 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             m_StartHandler?.Dispose();
             m_Splitter?.Dispose();
             Node.UdpAgent?.RemovePreProcess(AnswerRegisteringWithEmitter);
+
+            // Clear the FrameDataBuffer pool after m_Splitter.
+            m_FrameDataBufferPool?.Clear();
         }
 
         protected override NodeState DoFrameImplementation()
@@ -119,6 +124,10 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
 
         protected override IntPtr GetProfilerMarker() => s_ProfilerMarker;
 
+        /// <summary>
+        /// the FrameDataBuffer pool.
+        /// </summary>
+        ConcurrentObjectPool<FrameDataBuffer> m_FrameDataBufferPool;
         /// <summary>
         /// Object responsible for splitting data of a frame, sending it and deal with retransmission requests.
         /// </summary>
