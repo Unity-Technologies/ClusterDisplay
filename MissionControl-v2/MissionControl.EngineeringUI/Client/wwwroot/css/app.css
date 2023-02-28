@@ -10,6 +10,7 @@
     /* heights */
     --height32: 32px;
     --height78: 78px;
+    --sidebar-width: 208px;
 }
 
 /************************* Site wide definitions *************************/
@@ -77,11 +78,22 @@ a, .btn-link {
 /* Navigations */
 .rz-sidebar {
     background-color: var(--sidebar-bg-color);
-    max-width: 240px;
+    max-width: var(--sidebar-width);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 16px;
+    align-items: stretch;
     align-content: flex-start;
+}
+
+.rz-sidebar-collapsed {
+    width: 56px !important;
+    opacity: 1.0;
+}
+
+.rz-sidebar-collapsed .rz-navigation-item-text {
+    width: 0;
+    opacity: 0;
 }
 
 .rz-navigation-item {
@@ -93,6 +105,12 @@ a, .btn-link {
 
 rz-navigation-item:focus {
     background-color: none;
+}
+
+.rz-panel-menu {
+    width: calc(100% - 16px);
+    gap: 8px;
+    margin: 8px;
 }
 
 .rz-panel-menu .rz-navigation-item-icon {
@@ -238,28 +256,53 @@ input {
 }
 
 /* sidebar containing the mission control logo and status */
-.sidebar-container-top {
-    padding: 12px;
+.sidebar-contents {
+    flex-grow: 0;
+    align-self: auto;
+}
+
+.sidebar-spacer {
+    flex-grow: 1
+}
+
+.sidebar-container-bottom {
+}
+
+.sidebar-footer {
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 8px;
+}
+
+#sidebar-collapse-button {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#sidebar-collapse-button i {
+    padding-left: 5px;
 }
 
 .sidebar-header {
-    width: 100%;
-    display: flex !important;
-    flex-direction: row;
-    align-items: flex-end;
-    padding-left: 12px;
+    max-width: var(--sidebar-width);
 }
 
     .sidebar-header img {
-        max-width: 70%;
+        max-width: 120px;
         max-height: 32px;
-        margin: 0px;
+        margin-top: 14px;
+        margin-left: 14px;
     }
 
     .sidebar-header p {
         width: 20%;
         margin-bottom: 0px;
-        padding-left: 8px;
+        padding-left: 14px;
         color: var(--rz-base-200);
     }
 

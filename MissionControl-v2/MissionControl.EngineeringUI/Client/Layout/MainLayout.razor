@@ -7,16 +7,24 @@
 
 <RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
     <RadzenHeader class="rz-shadow-1">
-        <RadzenSidebarToggle class="rz-color-base-600" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
-        @* <RadzenLabel Text="Unity Mission Control" />*@
     </RadzenHeader>
     <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
-        <div class="sidebar-container-top">
-            <div class="sidebar-header">
-                <RadzenImage Path="images\MCunitylogo.png" />
-                <p>(@MissionControlStatus.State)</p>
-            </div>
-            <NavPanel/>
+        <div class="sidebar-header">
+            @if (UiGlobal.SideBarExpanded)
+            {
+                <RadzenImage Path="images/MCunitylogo.png" />
+            }
+            else
+            {
+                <RadzenImage Path="images/unity-logo.svg" />
+            }
+        </div>
+        <div class="sidebar-contents">
+            <NavPanel />
+        </div>
+        <div class="sidebar-spacer"/>
+        <div class="sidebar-footer">
+            <RadzenButton id="sidebar-collapse-button" Icon="arrow_back_ios" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded)/>
         </div>
     </RadzenSidebar>
     <RadzenBody class="rz-px-8">
