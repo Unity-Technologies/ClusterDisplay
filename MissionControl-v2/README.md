@@ -22,7 +22,8 @@ It consists of four parts:
 
 ### Common
 
-* Every computer running one of the previously listed four parts will need to have the .Net Core 6.0 runtime installed: <https://dotnet.microsoft.com/en-us/download/dotnet/6.0>.  Remarks: There are multiple components that can be download from that page, what is needed is the "ASP.NET Core Runtime" Hosting Bundle.
+* Every computer running one of the previously listed four parts will need to have the .Net Core 6.0 runtime installed: <https://dotnet.microsoft.com/en-us/download/dotnet/6.0>.
+  > ℹ️ _**Remarks:**_ There are multiple components that can be download from that page, what is needed is the "ASP.NET Core Runtime" Hosting Bundle.
 * The listed setup steps below assumes that TCP ports 8000 - 9000 are free and can be used by services to listen for HTTP requests (to simplify the procedure).
 
 ### High level instructions
@@ -126,4 +127,4 @@ Assets (built scenes, games, levels, ... (depending how you want to call them)) 
 2) Select the asset in the list (at the top)
 3) Click Apply & Launch button (bottom left blue button)
 
-Remarks: Many options can be customized but the default ones should be good to allow launching of the asset.
+> ℹ️ _**Remarks:**_ Many options can be customized but the default ones should be good to allow launching of the asset.
