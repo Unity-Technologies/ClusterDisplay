@@ -11,6 +11,7 @@
     --height32: 32px;
     --height78: 78px;
     --sidebar-width: 208px;
+    --sidebar-collapsed-width: 56px;
 }
 
 /************************* Site wide definitions *************************/
@@ -24,9 +25,9 @@ h1:focus {
     outline: none;
 }
 
-a, .btn-link {
+/*a, .btn-link {
     color: #0071c1;
-}
+}*/
 
 .btn-primary {
     color: #fff;
@@ -87,7 +88,7 @@ a, .btn-link {
 }
 
 .rz-sidebar-collapsed {
-    width: 56px !important;
+    width: var(--sidebar-collapsed-width) !important;
     opacity: 1.0;
 }
 
@@ -103,40 +104,59 @@ a, .btn-link {
     border-bottom-width: 0px !important;
 }
 
-rz-navigation-item:focus {
-    background-color: none;
-}
-
 .rz-panel-menu {
-    width: calc(100% - 16px);
-    gap: 8px;
+    background-color: var(--sidebar-bg-color);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     margin: 8px;
 }
 
-.rz-panel-menu .rz-navigation-item-icon {
-    color: white;
-}
-
-.rz-panel-menu .rz-navigation-item-icon:hover {
+.rz-navigation-item-wrapper-active .rz-navigation-item-icon {
     color: white !important;
 }
 
-.rz-panel-menu .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
-    color: white;
+.rz-navigation-item-wrapper-active:hover .rz-navigation-item-icon {
+    color: white !important;
 }
-    .rz-panel-menu .rz-navigation-item-icon:active {
-        color: white;
-    }
 
+.rz-navigation-item-wrapper:hover {
+    background-color: var(--rz-base-900) !important;
+    color: white !important;
+}
+
+.rz-navigation-item-wrapper {
+    border-radius: 8px;
+    border: 1px solid var(--sidebar-bg-color);
+}
 
 .rz-navigation-item-wrapper-active {
     color: white !important;
-    background-color: var(--rz-base-900) !important;
-    border: 1px solid var(--rz-base-700);
+    background-color: var(--rz-base-800) !important;
+    border: 1px solid var(--rz-base-600);
     border-radius: 8px;
 }
 
+    .rz-navigation-item-wrapper-active:hover {
+        background-color: var(--rz-base-700);
+    }
+
+    .rz-navigation-item-wrapper-active:hover .rz-navigation-item-text{
+        color: white;
+    }
+
+    .rz-navigation-item-wrapper:hover .rz-navigation-item-text {
+        color: white;
+    }
+
+.rz-navigation-item-wrapper:hover .rz-navigation-item-icon {
+    color: white !important;
+}
+
 .rz-panel-menu .rz-navigation-item-link {
+    border: 1px solid var(--sidebar-bg-color);
+    border: 1px none;
+    border-radius: 8px;
     padding: 8px;
 }
 
@@ -172,11 +192,6 @@ input {
     border: 1px solid var(--rz-base-300);
 }
 
-.rz-header {
-    background-color: var(--rz-white);
-    color: var(--rz-base-900);
-}
-
 .rz-data-row {
     height: 56px;
     background-color: var(--rz-base-200);
@@ -187,13 +202,16 @@ input {
 }
 
 .rz-header {
+    background-color: var(--rz-white);
+    color: var(--rz-base-900);
     padding: 0px 32px 0px 32px;
-}
-
-    .rz-header {
     height: 56px;
     display: flex;
     align-items: center;
+}
+
+.rz-header button {
+    margin-left: auto;
 }
 
 /* radzen Dialog */
@@ -252,8 +270,6 @@ input {
     .align-flex-row h6 {
         margin: 0px;
     }
-
-}
 
 /* sidebar containing the mission control logo and status */
 .sidebar-contents {
