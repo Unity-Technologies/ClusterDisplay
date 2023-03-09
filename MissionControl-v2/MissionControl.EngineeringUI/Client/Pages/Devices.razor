@@ -1,21 +1,37 @@
 @page "/devices"
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 
-<div Class="w-100 page-title">
-        <h2>Launch Complexes</h2>
-        <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" class="m-1 title-botton" />
-</div>
+<RadzenText Text="Devices" TextStyle="TextStyle.H4" />
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+    <RadzenText Text="Launch Complexes" TextStyle="TextStyle.H5" />
+    <RadzenStack Orientation="Orientation.Horizontal">
+        <RadzenButton Click=@DeleteSelectedLaunchComplex Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" Disabled=@(!HasSelection) />
+        <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
+    </RadzenStack>
+</RadzenStack>
 
-<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values>
+<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values SelectionMode="DataGridSelectionMode.Multiple"
+                @bind-Value=@m_SelectedComplexes AllowSorting="true" AllowRowSelectOnRowClick="false">
     <Columns>
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TriState="false" TValue="bool"
+                                Value="@HasSelection"
+                                Change=@SelectAllOrNone />
+            </HeaderTemplate>
+            <Template Context="launchComplex">
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedComplexes != null && m_SelectedComplexes.Contains(launchComplex))"
+                                TValue="bool" Change=@(args => m_ComplexesGrid.SelectRow(launchComplex)) />
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
-        <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" />
-        <RadzenDataGridColumn TItem="LaunchComplex" Title="Launchpad count">
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="HangarBay endpoint" Property="HangarBay.Endpoint" Sortable="false" />
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Launchpad count" Sortable="false">
             <Template Context="launchComplex">
                 <span>@launchComplex.LaunchPads.Count()</span>
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LaunchComplex" Width="110px">
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="110px" Sortable="false">
             <Template Context="launchComplex">
                 <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
                 <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
@@ -23,3 +39,6 @@
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
+<RadzenButton Text="Test"
+              Click=@(_ => NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Summary Here", Detail = "Some Details", Duration = -1 })) />
+

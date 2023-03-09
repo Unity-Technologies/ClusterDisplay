@@ -16,7 +16,7 @@
 
 /************************* Site wide definitions *************************/
 html, body {
-    font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif; 
     background-color: var(--rz-base-100);
     margin: 0px;
 }
@@ -360,8 +360,21 @@ input {
     text-transform: capitalize;
 }
 
-/* ************************ Responsive Design ************************ */
+.rz-growl-message p {
+    margin: 0;
+}
 
+/* Growls */
+.rz-growl-message-info .rz-growl-item {
+    color: var(--rz-white);
+    background-color: var(--rz-black);
+}
+
+.rz-growl-message-info .rz-growl-image.rzi-info-circle {
+    color: var(--rz-white);
+}
+
+/* ************************ Responsive Design ************************ */
 @media screen and (max-width: 768px) {
     .rz-body {
         width: calc(90vw);
