@@ -11,6 +11,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Layout
         MissionControlStatusService MissionControlStatus { get; set; } = default!;
         [Inject]
         LaunchConfigurationService LaunchConfigurationService { get; set; } = default!;
+        [Inject]
+        MissionCommandsService MissionCommandsService { get; set; } = default!;
+
         protected override void OnInitialized()
         {
             MissionControlStatus.ObjectChanged += MissionControlStatusChanged;

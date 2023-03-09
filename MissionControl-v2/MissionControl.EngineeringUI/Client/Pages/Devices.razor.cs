@@ -16,6 +16,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         [Inject]
         NotificationService NotificationService { get; set; } = default!;
 
+        [Inject]
+        MissionControlStatusService MissionControlStatus { get; set; } = default!;
         protected RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
 
         IList<LaunchComplex>? m_SelectedComplexes;
@@ -81,7 +83,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             await Task.WhenAll(m_SelectedComplexes!.Select(i => Complexes.DeleteAsync(i.Id)));
             SelectAllOrNone(all: false);
-            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Nodes deleted.");
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Nodes deleted");
         }
 
         public void Dispose()

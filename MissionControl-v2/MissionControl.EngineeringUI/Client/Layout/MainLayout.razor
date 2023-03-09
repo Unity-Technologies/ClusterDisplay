@@ -7,6 +7,17 @@
 
 <RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
     <RadzenHeader class="rz-shadow-1">
+        @if (MissionControlStatus.State is not MissionControl.State.Launched)
+        {
+            <RadzenButton Text="Launch" ButtonStyle="ButtonStyle.Info" Icon="play_arrow"
+                      Click="@MissionCommandsService.LaunchMissionAsync"
+                      Disabled=@(LaunchConfigurationService.WorkValue.AssetId == Guid.Empty) />
+        }
+        else
+        {
+            <RadzenButton Text="Stop" ButtonStyle="ButtonStyle.Light" Icon="stop"
+                      Click="@(MissionCommandsService.StopCurrentMissionAsync)" />
+        }
     </RadzenHeader>
     <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
         <div class="sidebar-header">
@@ -22,9 +33,9 @@
         <div class="sidebar-contents">
             <NavPanel />
         </div>
-        <div class="sidebar-spacer"/>
+        <div class="sidebar-spacer" />
         <div class="sidebar-footer">
-            <RadzenButton id="sidebar-collapse-button" Icon="arrow_back_ios" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded)/>
+            <RadzenButton id="sidebar-collapse-button" Icon="arrow_back_ios" Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
         </div>
     </RadzenSidebar>
     <RadzenBody class="rz-px-8">

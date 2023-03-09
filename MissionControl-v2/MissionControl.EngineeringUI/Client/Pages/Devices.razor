@@ -5,7 +5,8 @@
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
     <RadzenText Text="Launch Complexes" TextStyle="TextStyle.H5" />
     <RadzenStack Orientation="Orientation.Horizontal">
-        <RadzenButton Click=@DeleteSelectedLaunchComplex Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light" Disabled=@(!HasSelection) />
+        <RadzenButton Click=@DeleteSelectedLaunchComplex Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Light"
+                      Disabled=@(!HasSelection || MissionControlStatus.State is MissionControl.State.Launched) />
         <RadzenButton Click=@AddLaunchComplex Text="Add New" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Info" />
     </RadzenStack>
 </RadzenStack>
@@ -33,12 +34,11 @@
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LaunchComplex" Width="110px" Sortable="false">
             <Template Context="launchComplex">
-                <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
-                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex)) ButtonStyle="ButtonStyle.Light" />
+                <RadzenButton Icon="mode_edit" Class="m-1 data-grid-icon" Click=@(() => EditLaunchComplex(launchComplex))
+                              ButtonStyle="ButtonStyle.Light" Disabled=@(MissionControlStatus.State is MissionControl.State.Launched) />
+                <RadzenButton Icon="delete" Class="m-1 data-grid-icon" Click=@(() => DeleteLaunchComplex(launchComplex))
+                              ButtonStyle="ButtonStyle.Light" Disabled=@(MissionControlStatus.State is MissionControl.State.Launched) />
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Text="Test"
-              Click=@(_ => NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Summary Here", Detail = "Some Details", Duration = -1 })) />
-
