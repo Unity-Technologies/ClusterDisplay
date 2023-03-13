@@ -28,5 +28,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Layout
         {
             StateHasChanged();
         }
+
+        async Task Launch()
+        {
+            await MissionCommandsService.LaunchMissionAsync();
+        }
     }
 }

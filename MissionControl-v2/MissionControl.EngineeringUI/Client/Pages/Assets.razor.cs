@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
+using System.Numerics;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
@@ -17,6 +18,24 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         MissionsService Missions { get; set; } = default!;
         [Inject]
         DialogService DialogService { get; set; } = default!;
+        [Inject]
+        NotificationService NotificationService { get; set; } = default!;
+
+        IList<Asset>? m_SelectedAssets = null;
+
+        bool HasSelection => AssetsService.Collection.Values.Any(i => m_SelectedAssets?.Contains(i) ?? false);
+
+        void SelectAllOrNone(bool all)
+        {
+            if (all)
+            {
+                m_SelectedAssets = AssetsService.Collection.Values.ToList();
+            }
+            else
+            {
+                m_SelectedAssets = null;
+            }
+        }
 
         public void Dispose()
         {
@@ -63,6 +82,24 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             }
 
             await AssetsService.DeleteAsync(asset.Id);
+            SelectAllOrNone(all: false);
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Deleted asset \"{asset.Name}\"");
+        }
+
+        async Task DeleteSelectedAssets()
+        {
+            if (!HasSelection) return;
+
+            var ret = await DialogService.Confirm($"Do you want to delete the selected assets?",
+    "Confirm deletion", new() { OkButtonText = "Yes", CancelButtonText = "No" });
+            if (!ret.HasValue || !ret.Value)
+            {
+                return;
+            }
+
+            await Task.WhenAll(m_SelectedAssets!.Select(i => AssetsService.DeleteAsync(i.Id)));
+            SelectAllOrNone(all: false);
+            NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Assets deleted");
         }
 
         void AssetsChanged(IReadOnlyIncrementalCollection obj)
