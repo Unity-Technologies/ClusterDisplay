@@ -568,7 +568,7 @@ namespace Unity.LiveEditing.Editor
                 // Time slicing is used to avoid taking a large amount of time in a single frame to check for scene updates.
                 // This enables handling larger scenes with less stuttering, for a slight cost in overhead.
                 var timeSliceTicks = (MaxUpdateTimeSlice.Ticks * Stopwatch.Frequency) / TimeSpan.TicksPerSecond;
-                
+
                 m_TimeSliceStopwatch.Restart();
 
                 // Periodically iterate through the scene to find any undetected changes.

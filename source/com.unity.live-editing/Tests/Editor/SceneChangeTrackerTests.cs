@@ -75,7 +75,7 @@ namespace Unity.LiveEditing.Tests.Editor
             
             m_SceneChangeTracker = new SceneChangeTracker
             {
-                MaxUpdateTimeSlice = TimeSpan.MaxValue,
+                MaxUpdateTimeSlice = TimeSpan.FromMilliseconds(1000),
                 EnablePolling = true,
                 PollingPeriod = TimeSpan.FromMilliseconds(1000),
             };
