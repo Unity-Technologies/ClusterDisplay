@@ -13,7 +13,7 @@ namespace Unity.LiveEditing.Editor
         {
             public const string WindowName = "Scene Change Tracker";
             public const string WindowPath = "Window/Live Editing/" + WindowName;
-            public static readonly GUIContent WindowTitle = new GUIContent(WindowName);
+            public static readonly GUIContent WindowTitle = EditorGUIUtility.TrTextContent(WindowName);
         }
 
         [SerializeField]
