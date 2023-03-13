@@ -19,8 +19,6 @@ namespace Unity.LiveEditing.Tests.Editor
         static readonly string k_Scene1Path = $"{k_SceneDirectory}/Scene1.unity";
         static readonly string k_Scene2Path = $"{k_SceneDirectory}/Scene2.unity";
         
-        SceneSetup[] m_SceneSetups;
-        
         SceneChangeTracker m_SceneChangeTracker;
         
         readonly Queue<(int, GameObject)> m_GameObjectAddedChanges = new();
@@ -59,17 +57,9 @@ namespace Unity.LiveEditing.Tests.Editor
             m_ComponentPropertyChanges.Clear();
         }
         
-        [OneTimeSetUp]
-        public void OneTimeSetUp()
-        {
-            m_SceneSetups = EditorSceneManager.GetSceneManagerSetup();
-        }
-
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
-            EditorSceneManager.RestoreSceneManagerSetup(m_SceneSetups);
-            
             Undo.ClearAll();
         }
         
@@ -85,9 +75,9 @@ namespace Unity.LiveEditing.Tests.Editor
             
             m_SceneChangeTracker = new SceneChangeTracker
             {
-                MaxUpdateTimeSlice = int.MaxValue,
+                MaxUpdateTimeSlice = TimeSpan.MaxValue,
                 EnablePolling = true,
-                PollingPeriod = 1000,
+                PollingPeriod = TimeSpan.FromMilliseconds(1000),
             };
 
             m_SceneChangeTracker.GameObjectAdded += (id, gameObject) => m_GameObjectAddedChanges.Enqueue((id, gameObject));
@@ -554,11 +544,6 @@ namespace Unity.LiveEditing.Tests.Editor
 
             Assert.AreEqual(1, indexChanges.Count());
 
-            if (!indexChanges.Any())
-            {
-                yield break;
-            }
-            
             var change = indexChanges.First();
             
             Assert.AreEqual(comp1.GetInstanceID(), change.Item1);
@@ -581,11 +566,6 @@ namespace Unity.LiveEditing.Tests.Editor
 
             Assert.AreEqual(1, enabledPropertyChanges.Count());
 
-            if (!enabledPropertyChanges.Any())
-            {
-                yield break;
-            }
-            
             var change = enabledPropertyChanges.First();
             
             Assert.AreEqual(comp1.GetInstanceID(), change.Item1);

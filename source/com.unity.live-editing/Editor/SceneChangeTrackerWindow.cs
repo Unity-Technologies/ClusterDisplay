@@ -37,18 +37,7 @@ namespace Unity.LiveEditing.Editor
 
         void Update()
         {
-            if (m_TreeView == null)
-            {
-                CreateTreeView();
-            }
-
-            m_TreeDirty = true;
-
-            if (m_TreeDirty)
-            {
-                m_TreeView.Reload();
-                m_TreeDirty = false;
-            }
+            m_TreeView.Reload();
         }
 
         void OnGUI()
@@ -130,7 +119,7 @@ namespace Unity.LiveEditing.Editor
             {
                 var id = 0;
 
-                var rootItem = new TreeViewItem
+                var scenesRootItem = new TreeViewItem
                 {
                     id = id++,
                     depth = -1,
@@ -157,20 +146,20 @@ namespace Unity.LiveEditing.Editor
                         foreach (var root in scene.Value.Current.Roots)
                         {
                             sceneRootsItem.AddChild(AddGameObject(root, sceneRootsItem.depth + 1, ref id));
-                        };
+                        }
 
                         sceneItem.AddChild(sceneRootsItem);
                     }
 
-                    rootItem.AddChild(sceneItem);
+                    scenesRootItem.AddChild(sceneItem);
                 }
 
-                if (rootItem.children == null)
+                if (scenesRootItem.children == null)
                 {
-                    rootItem.children = new List<TreeViewItem>();
+                    scenesRootItem.children = new List<TreeViewItem>();
                 }
 
-                return rootItem;
+                return scenesRootItem;
             }
 
             GameObjectItem AddGameObject(SceneChangeTracker.GameObjectState goState, int depth, ref int id)
@@ -295,7 +284,9 @@ namespace Unity.LiveEditing.Editor
                         }
                         else
                         {
-                            EditorGUI.LabelField(rect, scene.Instance.path);
+                            var instance = scene.Instance;
+                            var path = string.IsNullOrEmpty(instance.path) ? "Untitled" : instance.path;
+                            EditorGUI.LabelField(rect, path);
                         }
                         break;
                     }

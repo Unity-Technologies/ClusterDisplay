@@ -22,7 +22,7 @@ namespace Unity.LiveEditing.Editor
         /*
          * Change detection is achieved by two means:
          *
-         * 1) The ObjectChangeEvents class, which gives access to the steam of changes registered with the Undo system.
+         * 1) The ObjectChangeEvents class, which gives access to the stream of changes registered with the Undo system.
          * This is the preferred approach in terms of performance, and is able to isolate user-made scene changes
          * while in Play Mode. However, it fails to detect all types of changes, notably ones made by scripts
          * and editor tools that don't properly use the Undo class.
@@ -64,12 +64,12 @@ namespace Unity.LiveEditing.Editor
             Dictionary<TKey, TState> m_TrackedObjects;
             TKey m_Key;
 
-            protected BaseState(TObject instance, bool isNew, Dictionary<TKey, TState> trackedObjects, Func<TObject, TKey> getKey)
+            protected BaseState(TObject instance, bool isNew, Dictionary<TKey, TState> trackedObjects, TKey key)
             {
                 Instance = instance;
                 IsNew = isNew;
 
-                m_Key = getKey(instance);
+                m_Key = key;
                 m_TrackedObjects = trackedObjects;
                 m_TrackedObjects.Add(m_Key, (TState)this);
             }
@@ -117,7 +117,7 @@ namespace Unity.LiveEditing.Editor
             public int InstanceId { get; }
 
             protected UnityObjectState(TObject instance, bool isNew, Dictionary<int, TState> trackedObjects)
-                : base(instance, isNew, trackedObjects, x => x.GetInstanceID())
+                : base(instance, isNew, trackedObjects, instance.GetInstanceID())
             {
                 InstanceId = instance.GetInstanceID();
             }
@@ -139,7 +139,7 @@ namespace Unity.LiveEditing.Editor
             }
 
             public SceneState(Scene instance, Dictionary<Scene, SceneState> trackedObjects)
-                : base(instance, false, trackedObjects, x => x)
+                : base(instance, false, trackedObjects, instance)
             {
                 Previous = new Data();
                 Current = new Data();
@@ -198,7 +198,7 @@ namespace Unity.LiveEditing.Editor
             public Type Type { get; }
             public GameObjectState GameObject { get; }
 
-            public ComponentState(GameObjectState goState, Component instance, bool isNew,  Dictionary<int, ComponentState> trackedObjects)
+            public ComponentState(GameObjectState goState, Component instance, bool isNew, Dictionary<int, ComponentState> trackedObjects)
                 : base(instance, isNew, trackedObjects)
             {
                 Type = instance.GetType();
@@ -327,12 +327,12 @@ namespace Unity.LiveEditing.Editor
         readonly Queue<(ComponentState, string)> m_ModifiedComponents = new Queue<(ComponentState, string)>();
 
         /// <summary>
-        /// The maximum time that the scene tracking will try to use in a single frame, in milliseconds.
+        /// The maximum time that the scene tracking will try to use in a single frame.
         /// </summary>
         /// <remarks>
         /// Lowering this value may increase performance at the cost of latency.
         /// </remarks>
-        public long MaxUpdateTimeSlice { get; set; } = 5L;
+        public TimeSpan MaxUpdateTimeSlice { get; set; } = TimeSpan.FromMilliseconds(5);
 
         /// <summary>
         /// Periodically iterate through the scene to find changes not registered through the undo system.
@@ -344,14 +344,14 @@ namespace Unity.LiveEditing.Editor
         public bool EnablePolling { get; set; } = true;
 
         /// <summary>
-        /// The time to wait after polling the scene for changes to poll again, in milliseconds.
+        /// The time to wait after polling the scene for changes to poll again.
         /// </summary>
         /// <remarks>
         /// This value is only used when <see cref="EnablePolling"/> is set to <see langword="true"/>.
         /// Increasing this value can help reduce the performance impact of scene polling at the cost
         /// of latency.
         /// </remarks>
-        public long PollingPeriod { get; set; } = 1000L;
+        public TimeSpan PollingPeriod { get; set; } = TimeSpan.FromMilliseconds(1000);
 
         /// <summary>
         /// Represents a method that handles the <see cref="SceneChangeTracker.GameObjectAdded"/> event.
@@ -567,8 +567,8 @@ namespace Unity.LiveEditing.Editor
 
                 // Time slicing is used to avoid taking a large amount of time in a single frame to check for scene updates.
                 // This enables handling larger scenes with less stuttering, for a slight cost in overhead.
-                var timeSliceTicks = (MaxUpdateTimeSlice * Stopwatch.Frequency) / 1000;
-
+                var timeSliceTicks = (MaxUpdateTimeSlice.Ticks * Stopwatch.Frequency) / TimeSpan.TicksPerSecond;
+                
                 m_TimeSliceStopwatch.Restart();
 
                 // Periodically iterate through the scene to find any undetected changes.
@@ -577,7 +577,7 @@ namespace Unity.LiveEditing.Editor
                     // The polling rate is limited to prevent using excessive resources.
                     // When there are still buffered states to check for changes, they must be processed before the up-to-date
                     // scene states can be buffered, or else some changes could be missed.
-                    if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= PollingPeriod) &&
+                    if ((!m_UpdateStopwatch.IsRunning || m_UpdateStopwatch.ElapsedMilliseconds >= PollingPeriod.Milliseconds) &&
                         m_ScenesToCheckForChanges.Count == 0 && m_GameObjectsToCheckForChanges.Count == 0)
                     {
                         // Buffering the scene state must be completed in a single update, or else the state could be inconsistent.
