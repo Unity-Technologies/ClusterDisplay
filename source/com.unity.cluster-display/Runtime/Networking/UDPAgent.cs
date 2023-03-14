@@ -391,6 +391,10 @@ namespace Unity.ClusterDisplay
                             continue;
                         }
                     }
+                    catch (ThreadAbortException e)
+                    {
+                        break;
+                    }
                     catch (Exception e)
                     {
                         Debug.LogError($"Socket.Receive error: {e}");
@@ -512,7 +516,7 @@ namespace Unity.ClusterDisplay
             lock (m_MessagePreprocessors)
             {
                 using var lockedArray = m_SortedMessagePreprocessors.Lock();
-                lockedArray.SetArray(m_MessagePreprocessors.OrderBy(p => p.Item1).
+                lockedArray.SetArray(m_MessagePreprocessors.OrderByDescending(p => p.Item1).
                     Select(p => p.Item2).ToArray());
             }
         }
@@ -729,12 +733,28 @@ namespace Unity.ClusterDisplay
                     loggingFilenameSuffix);
                 break;
             case MessageType.RepeaterWaitingToStartFrame:
-                LogMessage(((ReceivedMessage<RepeaterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength,
-                    loggingFilenameSuffix);
+                LogMessage(((ReceivedMessage<RepeaterWaitingToStartFrame>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
                 break;
             case MessageType.EmitterWaitingToStartFrame:
-                LogMessage(((ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage).Payload, false, extraDataLength,
+                LogMessage(((ReceivedMessage<EmitterWaitingToStartFrame>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
+                break;
+            case MessageType.PropagateQuit:
+                LogMessage(((ReceivedMessage<PropagateQuit>)receivedMessage).Payload, false, extraDataLength,
                     loggingFilenameSuffix);
+                break;
+            case MessageType.QuitReceived:
+                LogMessage(((ReceivedMessage<QuitReceived>)receivedMessage).Payload, false, extraDataLength,
+                    loggingFilenameSuffix);
+                break;
+            case MessageType.QuadroBarrierWarmupHeartbeat:
+                LogMessage(((ReceivedMessage<QuadroBarrierWarmupHeartbeat>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
+                break;
+            case MessageType.QuadroBarrierWarmupStatus:
+                LogMessage(((ReceivedMessage<QuadroBarrierWarmupStatus>)receivedMessage).Payload, false,
+                    extraDataLength, loggingFilenameSuffix);
                 break;
             }
         }
@@ -786,6 +806,21 @@ namespace Unity.ClusterDisplay
                     "WaitingNodesBitField = {1}",
                     emitterWaiting.FrameIndex, waitingOn);
                 break;
+            case PropagateQuit:
+                stringBuilder.AppendFormat("PropagateQuit                  : (empty)");
+                break;
+            case QuitReceived quitReceived:
+                stringBuilder.AppendFormat("QuitReceived                   : NodeId = {0}", quitReceived.NodeId);
+                break;
+            case QuadroBarrierWarmupHeartbeat quadroBarrierWarmupHeartBeat:
+                stringBuilder.AppendFormat("QuadroBarrierWarmupHeartBeat   : Stage = {0}, AdditionalPresentCount = {1}",
+                    quadroBarrierWarmupHeartBeat.Stage, quadroBarrierWarmupHeartBeat.AdditionalPresentCount);
+                break;
+            case QuadroBarrierWarmupStatus quadroBarrierWarmupStatus:
+                stringBuilder.AppendFormat("QuadroBarrierWarmupStatus      : NodeId = {0}, Stage = {1}, Completed = {2}",
+                    quadroBarrierWarmupStatus.NodeId, quadroBarrierWarmupStatus.Stage,
+                    quadroBarrierWarmupStatus.Completed);
+                break;
             }
 
             lock (s_LogThreadLock)
@@ -808,6 +843,7 @@ namespace Unity.ClusterDisplay
             {
                 var line = s_LogQueue.Take();
                 file.WriteLine(line);
+                file.Flush();
             }
 
             // ReSharper disable once FunctionNeverReturns -> By design, once started it runs until the process ends.

@@ -12,59 +12,55 @@ namespace Unity.ClusterDisplay
         /// </summary>
         NotInitialized = 0,
         /// <summary>
-        /// QuadroSync is initialized but still waiting from feedback from Quadro-Sync master.
-        /// </summary>
-        WaitingFeedbackFromQuadroSyncMaster = 1,
-        /// <summary>
         /// QuadroSync is initialized and should be usable.
         /// </summary>
-        Initialized = 2,
+        Initialized = 1,
         /// <summary>
         /// Initialization failed because the received Unity interfaces was null.
         /// </summary>
-        FailedUnityInterfacesNull = 3,
+        FailedUnityInterfacesNull = 2,
         /// <summary>
         /// Initialization failed because of an unsupported graphic api.
         /// </summary>
-        UnsupportedGraphicApi = 4,
+        UnsupportedGraphicApi = 3,
         /// <summary>
         /// Failed to get the ID3D[11|12]Device.
         /// </summary>
-        MissingDevice = 5,
+        MissingDevice = 4,
         /// <summary>
         /// Failed to get the IDXGISwapChain.
         /// </summary>
-        MissingSwapChain = 6,
+        MissingSwapChain = 5,
         /// <summary>
         /// Initialization failed because of a generic error when trying to setup swap chain or barrier for QuadroSync.
         /// </summary>
-        SwapChainOrBarrierGenericFailure = 7,
+        SwapChainOrBarrierGenericFailure = 6,
         /// <summary>
         /// Initialization failed because no swap group support was detect.  Is the hardware present?
         /// </summary>
-        NoSwapGroupDetected = 8,
+        NoSwapGroupDetected = 7,
         /// <summary>
         /// Initialization failed because of a problem querying information about swap groups.
         /// </summary>
-        QuerySwapGroupFailed = 9,
+        QuerySwapGroupFailed = 8,
         /// <summary>
         /// Initialization failed because there was a failure joining the swap group.
         /// </summary>
-        FailedToJoinSwapGroup = 10,
+        FailedToJoinSwapGroup = 9,
         /// <summary>
         /// Initialization failed because a mismatch was detected between the swap group identifier and the available
         /// swap groups.
         /// </summary>
-        SwapGroupMismatch = 11,
+        SwapGroupMismatch = 10,
         /// <summary>
         /// Initialization failed because there was a failure joining the swap barrier.
         /// </summary>
-        FailedToBindSwapBarrier = 12,
+        FailedToBindSwapBarrier = 11,
         /// <summary>
         /// Initialization failed because a mismatch was detected between the swap barrier identifier and the available
         /// swap barriers.
         /// </summary>
-        SwapBarrierIdMismatch = 13,
+        SwapBarrierIdMismatch = 12,
     }
 
     public static class GfxPluginQuadroSyncInitializationStateExtension
@@ -79,7 +75,6 @@ namespace Unity.ClusterDisplay
             enumValue switch
             {
                 GfxPluginQuadroSyncInitializationState.NotInitialized => "Not initialized",
-                GfxPluginQuadroSyncInitializationState.WaitingFeedbackFromQuadroSyncMaster => "Waiting for Quadro Sync master",
                 GfxPluginQuadroSyncInitializationState.Initialized => "Initialized",
                 GfxPluginQuadroSyncInitializationState.FailedUnityInterfacesNull => "Unity interfaces null",
                 GfxPluginQuadroSyncInitializationState.UnsupportedGraphicApi => "Unsupported graphic api",
@@ -92,7 +87,15 @@ namespace Unity.ClusterDisplay
                 GfxPluginQuadroSyncInitializationState.SwapGroupMismatch => "Mismatch between swap group identifier and available swap groups",
                 GfxPluginQuadroSyncInitializationState.FailedToBindSwapBarrier => "Failed to joining swap barrier",
                 GfxPluginQuadroSyncInitializationState.SwapBarrierIdMismatch => "Failed to joining swap barrier",
-                _ => "Unknown initialization state",
+                _ => "Unknown initialization state"
+            };
+
+        public static bool IsSuccess(this GfxPluginQuadroSyncInitializationState enumValue) =>
+            enumValue switch
+            {
+                GfxPluginQuadroSyncInitializationState.NotInitialized => true,
+                GfxPluginQuadroSyncInitializationState.Initialized => true,
+                _ => false
             };
     }
 

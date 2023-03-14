@@ -198,7 +198,8 @@ namespace Unity.ClusterDisplay
         /// <see cref="MessageType"/> that the UdpClient must process upon reception.
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RegisteringWithEmitter,
-            MessageType.RetransmitFrameData, MessageType.RepeaterWaitingToStartFrame, MessageType.QuitReceived};
+            MessageType.RetransmitFrameData, MessageType.RepeaterWaitingToStartFrame, MessageType.QuitReceived,
+            MessageType.QuadroBarrierWarmupStatus};
 
         /// <summary>
         /// Last analyzed topology change.

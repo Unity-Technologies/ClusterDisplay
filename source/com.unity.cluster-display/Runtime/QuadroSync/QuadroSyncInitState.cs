@@ -9,7 +9,7 @@ namespace Unity.ClusterDisplay
     {
         bool m_Initialized;
 
-        internal QuadroSyncInitState(ClusterNode node)
+        protected QuadroSyncInitState(ClusterNode node)
             : base(node) { }
 
         struct CheckQuadroInitState { }
@@ -43,23 +43,39 @@ namespace Unity.ClusterDisplay
             return base.DoFrameImplementation();
         }
 
+        protected GfxPluginQuadroSyncInitializationState InitializationState { get; private set; }
+            = GfxPluginQuadroSyncInitializationState.NotInitialized;
+
         void ProcessQuadroSyncInitResult()
         {
-            var initializationState = GfxPluginQuadroSyncSystem.FetchState().InitializationState;
-            if (initializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
+            InitializationState = GfxPluginQuadroSyncSystem.FetchState().InitializationState;
+            if (InitializationState != GfxPluginQuadroSyncInitializationState.NotInitialized)
             {
-                Node.UsingNetworkSync = (initializationState != GfxPluginQuadroSyncInitializationState.Initialized);
+                Node.UsingNetworkSync = (InitializationState != GfxPluginQuadroSyncInitializationState.Initialized);
 
                 // Initialization finished, we do not need to be called again
                 PlayerLoopExtensions.DeregisterUpdate<CheckQuadroInitState>(ProcessQuadroSyncInitResult);
 
                 // Initialization failed
-                if (initializationState is not GfxPluginQuadroSyncInitializationState.Initialized)
+                if (InitializationState is not GfxPluginQuadroSyncInitializationState.Initialized)
                 {
                     // Disable logging so we don't pollute the output
                     GfxPluginQuadroSyncSystem.DisableLogging();
                 }
             }
         }
+
+        /// <summary>
+        /// If we are waiting for a frame to be presented for more than 150 milliseconds it means that we are blocked
+        /// waiting for other nodes to render the frame and so the barrier is up and running.
+        /// </summary>
+        /// <remarks>150 was chosen as it is a few time longer than the slower rate that we should expect running at (24
+        /// fps) and presenting should in theory never wait more than 1 frame (or 2 or maybe 3 if things are going
+        /// really bad).</remarks>
+        protected static readonly TimeSpan k_BlockDelay = TimeSpan.FromMilliseconds(150);
+        /// <summary>
+        /// We need to repeat messages once in a while in case it gets lost (UDP is not reliable).
+        /// </summary>
+        protected static readonly TimeSpan k_RepeatMessageInterval = TimeSpan.FromMilliseconds(25);
     }
 }

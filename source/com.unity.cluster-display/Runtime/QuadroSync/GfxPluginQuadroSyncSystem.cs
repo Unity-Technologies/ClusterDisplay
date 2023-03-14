@@ -61,29 +61,52 @@ namespace Unity.ClusterDisplay
             /// Enables or disables the use of the Emitter sync counter system (NvAPI).
             /// </summary>
             QuadroSyncEnableSyncCounter
-        };
+        }
+
+        /// <summary>
+        /// How QuadroSync must behave following a call to the BarrierWarmupCallback.
+        /// </summary>
+        public enum BarrierWarmupAction
+        {
+            /// <summary>
+            /// QuadroSync should re-present the previous frame.
+            /// </summary>
+            RepeatPresent = 0,
+            /// <summary>
+            /// Present should be considered done and QuadroSync should proceed to the next frame.
+            /// </summary>
+            ContinueToNextFrame,
+            /// <summary>
+            /// Consider QuadroSync Barrier as warmed up and ready to be used (so the warmup callback will not be called
+            /// anymore).
+            /// </summary>
+            BarrierWarmedUp
+        }
 
         internal static class GfxPluginQuadroSyncUtilities
         {
 #if UNITY_EDITOR_WIN
-            const string DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
+            const string k_DLLPath = "Packages/com.unity.cluster-display/Runtime/Plugins/x86_64/GfxPluginQuadroSync.dll";
 #elif UNITY_STANDALONE
-            const string DLLPath = "GfxPluginQuadroSync";
+            const string k_DLLPath = "GfxPluginQuadroSync";
 #else
-            const string DLLPath = "";
+            const string k_DLLPath = "";
 #error "System not implemented"
 #endif
             [UnmanagedFunctionPointer(CallingConvention.StdCall)]
             public delegate void NewLogMessageCallback(int logType, IntPtr message);
 
-            [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            [DllImport(k_DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern IntPtr GetRenderEventFunc();
 
-            [DllImport(DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            [DllImport(k_DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
             public static extern void SetLogCallback(
                 [MarshalAs(UnmanagedType.FunctionPtr)] NewLogMessageCallback newLogMessageCallback);
 
-            [DllImport(DLLPath, CallingConvention = CallingConvention.StdCall)]
+            [DllImport(k_DLLPath, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.StdCall)]
+            public static extern void SetBarrierWarmupCallback(IntPtr barrierWarmupCallback);
+
+            [DllImport(k_DLLPath, CallingConvention = CallingConvention.StdCall)]
             public static extern void GetState(ref GfxPluginQuadroSyncState state);
         }
 
@@ -91,7 +114,7 @@ namespace Unity.ClusterDisplay
         {
             EnableLogging();
 #if UNITY_EDITOR
-            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += DisableLogging;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += ClearCallbacks;
 #endif
         }
 
@@ -106,6 +129,12 @@ namespace Unity.ClusterDisplay
         public static void DisableLogging()
         {
             GfxPluginQuadroSyncUtilities.SetLogCallback(null);
+        }
+
+        static void ClearCallbacks()
+        {
+            GfxPluginQuadroSyncUtilities.SetLogCallback(null);
+            GfxPluginQuadroSyncUtilities.SetBarrierWarmupCallback(IntPtr.Zero);
         }
 
         /// <summary>
@@ -125,6 +154,23 @@ namespace Unity.ClusterDisplay
 
             Graphics.ExecuteCommandBuffer(cmdBuffer);
         }
+
+        /// <summary>
+        /// Sets the callback to call to ensure all nodes are properly synchronized while quadro sync barrier is warming
+        /// up.
+        /// </summary>
+        /// <param name="func">The callback</param>
+        public static void SetBarrierWarmupCallback(Func<BarrierWarmupAction> func)
+        {
+            // We have to keep a managed copy of the delegate because (from GetFunctionPointerForDelegate remarks):
+            // You must manually keep the delegate from being collected by the garbage collector from managed code. The
+            // garbage collector does not track references to unmanaged code.
+            s_SetBarrierWarmupCallback = func;
+            GfxPluginQuadroSyncUtilities.SetBarrierWarmupCallback(
+                func != null ? Marshal.GetFunctionPointerForDelegate(func) : IntPtr.Zero);
+        }
+        // ReSharper disable once NotAccessedField.Local -> See comment in SetBarrierWarmupCallback
+        static Func<BarrierWarmupAction> s_SetBarrierWarmupCallback;
 
         /// <summary>
         /// Fetch the state of GfxPluginQuadroSync.

@@ -18,7 +18,11 @@ namespace Unity.ClusterDisplay
         public static NodeState Create(ClusterNode node)
         {
 #if UNITY_STANDALONE_WIN
-            return new QuadroSyncInitState(node);
+            return node.NodeRole switch
+            {
+                NodeRole.Emitter => new QuadroSyncInitEmitterState(node),
+                _ => new QuadroSyncInitRepeaterState(node)
+            };
 #else
             ClusterDebug.LogWarning("Hardware synchronization is not available in this environment");
             return new HardwareSyncInitState(node);

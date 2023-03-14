@@ -276,6 +276,10 @@ namespace Unity.ClusterDisplay
     /// </summary>
     public static class UdpAgentPreProcessPriorityTable
     {
+        // To be used for pre-processing that want to sniff received messages as soon as they are received without
+        // modifying them in any way.
+        public const int MessageSniffing = int.MaxValue;
+
         // Repeaters receive ton of FrameData fragments, so put them first in the list
         public const int frameDataProcessing = 1000;
         // We shouldn't receive a lot, but emitter want to be able to react to retransmit request as fast as possible.

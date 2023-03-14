@@ -7,6 +7,7 @@
 
 #include "QuadroSync.h"
 #include "Logger.h"
+#include "IGraphicsDevice.h"
 
 namespace GfxQuadroSync
 {
@@ -150,6 +151,7 @@ namespace GfxQuadroSync
                     {
                         return InitializeStatus::FailedToBindSwapBarrier;
                     }
+                    m_NeedToWarmUpBarrier = true;
                 }
             }
             else if (m_BarrierId > 0)
@@ -191,12 +193,6 @@ namespace GfxQuadroSync
         }
 
         return (status == NVAPI_OK) ? InitializeStatus::Success : InitializeStatus::Failed;
-    }
-
-    bool PluginCSwapGroupClient::CanGetFrameCount(IUnknown* const pDevice)
-    {
-        NvU32 frameCount = 0;
-        return NvAPI_D3D1x_QueryFrameCount(pDevice, &frameCount) == NVAPI_OK;
     }
     
     void PluginCSwapGroupClient::Dispose(IUnknown* const pDevice,
@@ -256,22 +252,47 @@ namespace GfxQuadroSync
         }
     }
 
-    bool PluginCSwapGroupClient::Render(IUnknown* const pDevice,
-        IDXGISwapChain* const pSwapChain,
-        const int pVsync,
-        const int pFlags)
+    bool PluginCSwapGroupClient::Render(IGraphicsDevice* pGraphicsDevice)
     {
-        const auto result = NvAPI_D3D1x_Present(pDevice, pSwapChain, pVsync, pFlags);
+        IUnknown* const pDevice = pGraphicsDevice->GetDevice();
+        IDXGISwapChain* const pSwapChain = pGraphicsDevice->GetSwapChain();
+        const int pVsync = pGraphicsDevice->GetSyncInterval();
+        const int pFlags = pGraphicsDevice->GetPresentFlags();
 
-        if (result == NVAPI_OK)
+        if (m_NeedToWarmUpBarrier)
         {
-            m_PresentSuccessCount.fetch_add(1, std::memory_order_relaxed);
-            return true;
+            pGraphicsDevice->SaveToPresent();
         }
 
-        m_PresentFailureCount.fetch_add(1, std::memory_order_relaxed);
-        CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed: " << result;
-        return false;
+        for (;;)
+        {
+            auto result = NvAPI_D3D1x_Present(pDevice, pSwapChain, pVsync, pFlags);
+            if (result != NVAPI_OK)
+            {
+                m_PresentFailureCount.fetch_add(1, std::memory_order_relaxed);
+                CLUSTER_LOG_ERROR << "NvAPI_D3D1x_Present failed: " << result;
+                return false;
+            }
+
+            if (m_NeedToWarmUpBarrier)
+            {
+                const auto barrierWarmupAction = m_BarrierWarmupCallback();
+                if (barrierWarmupAction == BarrierWarmupAction::RepeatPresent)
+                {
+                    pGraphicsDevice->RepeatSavedToPresent();
+                    continue;
+                }
+                if (barrierWarmupAction == BarrierWarmupAction::BarrierWarmedUp)
+                {
+                    pGraphicsDevice->FreeSavedToPresent();
+                    m_NeedToWarmUpBarrier = false;
+                }
+            }
+            break;
+        }
+
+        m_PresentSuccessCount.fetch_add(1, std::memory_order_relaxed);
+        return true;
     }
 
     void PluginCSwapGroupClient::EnableSystem(IUnknown* const pDevice,
@@ -345,6 +366,7 @@ namespace GfxQuadroSync
         {
             CLUSTER_LOG << "EnableSwapBarrier: (NULL), m_GroupId is different than 1";
         }
+        m_NeedToWarmUpBarrier = true;
     }
 
     void PluginCSwapGroupClient::EnableSyncCounter(const bool value)

@@ -26,5 +26,9 @@ namespace GfxQuadroSync
 
         virtual void SetDevice(IUnknown* const device) = 0;
         virtual void SetSwapChain(IDXGISwapChain* const swapChain) = 0;
+
+        virtual void SaveToPresent() = 0;
+        virtual void RepeatSavedToPresent() = 0;
+        virtual void FreeSavedToPresent() = 0;
     };
 }
