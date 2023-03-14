@@ -374,6 +374,29 @@ input {
     color: var(--rz-white);
 }
 
+/* Page titles */
+.page-title-row h4 {
+    margin-top: 34px;
+    margin-bottom: 34px;
+}
+
+.page-title-row h5 {
+    margin-top: 34px;
+    margin-bottom: 34px;
+}
+
+/* Embedded DataGrid controls*/
+.rz-grid-table td .rz-cell-data {
+    overflow: visible;
+}
+
+.rz-cell-data .rz-spinner .rz-spinner-input{
+    height: calc(100% - var(--rz-numeric-input-padding));
+}
+
+.rz-cell-data > .rz-textbox {
+    height: calc(100% - var(--rz-input-padding));
+}
 /* ************************ Responsive Design ************************ */
 @media screen and (max-width: 768px) {
     .rz-body {

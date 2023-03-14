@@ -48,7 +48,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             public string Id { get; init; } = "";
 
             public override string Name => Definition?.Name ?? "(unknown)";
-            public override object Value => ParameterValue?.Value ?? "(automatic)";
+            public override object Value => ParameterValue?.Value ?? (Definition?.DefaultValue ?? "unknown");
             public override bool IsEmpty => Definition == null && ParameterValue == null;
             public override void Clear()
             {
@@ -57,6 +57,13 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             }
         }
 
+        /// <summary>
+        /// An entry that consists of a group of parameters.
+        /// </summary>
+        /// <remarks>
+        /// Each <see cref="NestedEntry"/> generates a recursive <see cref="LaunchParameter"/> component
+        /// in the UI.
+        /// </remarks>
         protected class NestedEntry: Entry
         {
             public string NestedPrefix { get; set; } = "";
@@ -95,6 +102,15 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         {
             args.Expandable = args.Data is NestedEntry;
         }
+
+        void OnParameterValueChanged<T>(T value, ParameterEntry entry)
+        {
+            entry.ParameterValue ??= new() { Id = entry.Id };
+            entry.ParameterValue.Value = value;
+            
+        }
+
+        static bool ValidateEntry(ParameterEntry entry) => entry.Definition.Constraint.Validate(entry.Value);
 
         async Task OnSetValue()
         {

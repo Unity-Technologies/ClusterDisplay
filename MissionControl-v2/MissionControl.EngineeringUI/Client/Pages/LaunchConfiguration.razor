@@ -1,4 +1,5 @@
 @page "/launch"
+@inject TooltipService tooltipService
 @using Unity.ClusterDisplay.MissionControl.MissionControl
 @using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
@@ -8,78 +9,60 @@
     var applyPrefix = hasChanges ? "Apply & " : "";
     var applyAndSaveEnabled = !isRunning || !hasChanges;
     var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
+    var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
+    var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
+
+    void ShowTooltip(ElementReference elementReference, string message, TooltipOptions options = null) =>
+        tooltipService.Open(elementReference, message, options);
 }
-
-<div Class="w-100 page-title">
-    <h2>Launch</h2>
-    <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save New Mission") Icon="save_as" ButtonStyle="ButtonStyle.Info" class="m-1 title-bottom" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
-</div>
-
-<div class="col-2 align-items-center d-flex">
-        <RadzenLabel Text="Asset" />
-    </div>
-    <div class="col-12">
-        <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
-                                @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
-                                TValue="Guid" ValueProperty="Id" TextProperty="Name"
-                                Data=@AssetsService.Collection.Values
-                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                                AllowFilteringByAllStringColumns="true"
-                                Disabled=@(MissionControlStatus.State != State.Idle)>
-            <Columns>
-                <RadzenDropDownDataGridColumn Property="Name" Title="Name" />
-                <RadzenDropDownDataGridColumn Property="Description" Title="Description" />
-            </Columns>
-        </RadzenDropDownDataGrid>
-    </div>
-
-<div class="row mb-1">
-    <RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
-    <div class="col-10">
-        <RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
-                        SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
-            <Columns>
-                <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name"/>
-                <RadzenDataGridColumn TItem="LaunchComplex" Title="Active Launchpads">
-                    <Template Context="complex">
-                        @GetActiveLaunchPads(complex.Id)
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="LaunchComplex" Width="70px">
-                    <Template Context="complex">
-                        <RadzenButton Icon="settings" Click=@(() => ConfigureLaunchComplex(complex)) Class="m-1 data-grid-icon" ButtonStyle="ButtonStyle.Light" />
-                    </Template>
-                </RadzenDataGridColumn>
-            </Columns>
-        </RadzenDataGrid>
-    </div>
-</div>
-<div class="row mb-1">
-    <RadzenText Text="Global Parameters" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
-    <div class="col-10">
-        <LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue OnValuesUpdated=LaunchParametersValueUpdate />
-    </div>
-</div>
-<div class="row mb-1">
-    <div class="col-12 align-flex-right">
-        @{
-            var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
-            var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
-        }
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
+    <RadzenText Text="Launch" TextStyle="TextStyle.H4" />
+    <RadzenStack Orientation="Orientation.Horizontal">
+        <RadzenButton Text="Reset to default" Icon="refresh" Click=UndoChanges
+                      ButtonStyle="ButtonStyle.Light" Disabled=@(!needsPush) />
         <RadzenButton Text="Apply changes" Icon="send" Click=ApplyChanges
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Class="me-1 rz-mr-4"
+                      ButtonStyle="ButtonStyle.Light"
                       Disabled=@(!needsPush || MissionControlStatus.State != State.Idle)
-                      title=@(MissionControlStatus.State != State.Idle ? "Cannot apply changes while running" : "") />
-        <RadzenButton Text="Undo changes" Icon="undo" Click=UndoChanges class="rz-mr-4"
-                      ButtonStyle="ButtonStyle.Light" Style="width: 200px" Disabled=@(!needsPush) />
-        @if (MissionControlStatus.State == State.Idle)
-        {
-            <RadzenButton Text=@((needsPush && hasAsset)? "Apply & Launch" : "Launch") Icon="rocket_launch" Click=Launch
-                          ButtonStyle="ButtonStyle.Info" Style="width: 200px" Class="me-1" Disabled=@(!hasAsset) />
-        }
-        else
-        {
-            <RadzenButton Text="Stop" Icon="close" ButtonStyle="ButtonStyle.Info" Click=Stop Style="width: 200px" Class="me-1" />
-        }
-    </div>
-</div>
+                      MouseEnter=@(args => { if (isRunning) ShowTooltip(args, "Cannot apply changes while running");}) />
+        <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save Configuration")
+                      ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
+    </RadzenStack>
+</RadzenStack>
+
+<RadzenStack>
+    <RadzenLabel Text="Project" />
+    <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
+                            @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
+                            TValue="Guid" ValueProperty="Id" TextProperty="Name"
+                            Data=@AssetsService.Collection.Values
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            AllowFilteringByAllStringColumns="true"
+                            Disabled=@(MissionControlStatus.State != State.Idle)>
+        <Columns>
+            <RadzenDropDownDataGridColumn Property="Name" Title="Name" />
+            <RadzenDropDownDataGridColumn Property="Description" Title="Description" />
+        </Columns>
+    </RadzenDropDownDataGrid>
+
+</RadzenStack>
+
+<RadzenText Text="Launch Complexes Configuration" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<RadzenDataGrid @ref="m_ComplexesGrid" Data=@Complexes.Collection.Values
+                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedLaunchComplexes>
+    <Columns>
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Name" Property="Name" />
+        <RadzenDataGridColumn TItem="LaunchComplex" Title="Active Launchpads">
+            <Template Context="complex">
+                @GetActiveLaunchPads(complex.Id)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LaunchComplex" Width="70px">
+            <Template Context="complex">
+                <RadzenButton Icon="settings" Click=@(() => ConfigureLaunchComplex(complex)) Class="m-1 data-grid-icon" ButtonStyle="ButtonStyle.Light" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenText Text="Global Parameters" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
+<LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue OnValuesUpdated=LaunchParametersValueUpdate />

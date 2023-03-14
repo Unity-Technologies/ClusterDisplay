@@ -1,7 +1,9 @@
+@inject ILogger<LaunchParameters> logger
+
 <RadzenDataGrid Data=@Entries @ref="m_EntriesGrid"
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
                 ExpandMode="DataGridExpandMode.Single" RowRender=@RowRender
-                SelectionMode="DataGridSelectionMode.Single" @bind-Value=@m_SelectedEntries>
+                @bind-Value=@m_SelectedEntries>
     <Template Context="entry">
         @{
             var nestedEntry = (NestedEntry)entry;
@@ -11,17 +13,56 @@
     </Template>
     <Columns>
         <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name" />
-        <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" />
+        <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" Sortable="false">
+            <Template Context="entry">
+                @{
+                    if (entry is ParameterEntry { Definition: not null } parameterEntry)
+                    {
+                        var value = parameterEntry.ParameterValue;
+                        var definition = parameterEntry.Definition;
+                        switch (definition.Type)
+                        {
+                            case LaunchCatalog.LaunchParameterType.Boolean:
+                                <RadzenSwitch Value=@((bool)parameterEntry.Value) Change=@(arg => OnParameterValueChanged(arg, parameterEntry)) />
+                                break;
+                            case LaunchCatalog.LaunchParameterType.Integer:
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                                    <RadzenNumeric TValue="int" Value=@((int)parameterEntry.Value) Change=@(arg => OnParameterValueChanged(arg, parameterEntry)) />
+                                    @if (definition.Constraint is RangeConstraint { Max: not null, Min: not null } constraint)
+                                    {
+                                        <RadzenSlider TValue="int" Min="constraint.MinInt32Inclusive" Max="constraint.MaxInt32Inclusive"
+                                                Value=@((int)parameterEntry.Value) Change=@(arg => OnParameterValueChanged(arg, parameterEntry)) />
+                                    }
+                                </RadzenStack>
+                                break;
+                            case LaunchCatalog.LaunchParameterType.Float:
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                                    <RadzenNumeric TValue="float" Value=@((float)parameterEntry.Value) Change=@(arg => OnParameterValueChanged(arg, parameterEntry)) />
+                                    @if (definition.Constraint is RangeConstraint { Max: not null, Min: not null } constraint)
+                                    {
+                                        <RadzenSlider TValue="float" Min="constraint.MinDecimalInclusive" Max="constraint.MaxDecimalInclusive"
+                                                Value=@((float)parameterEntry.Value) Change=@(arg => OnParameterValueChanged(arg, parameterEntry)) />
+                                    }
+                                </RadzenStack>
+                                break;
+                            default:
+                                <RadzenTextBox Value="@parameterEntry.Value.ToString()" />
+                                break;
+                        }
+                    }
+                }
+            </Template>
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
 <RadzenButton Click=OnSetValue
               Text=@((SelectedEntry == null || SelectedEntry.ParameterValue == null) ? "Set" : "Edit") Icon="edit"
               Class="mt-2" Style="width: 175px"
               Disabled=@(SelectedEntry == null || SelectedEntry.Definition == null ||
-                         MissionControlStatus.State != MissionControl.State.Idle)
+              MissionControlStatus.State != MissionControl.State.Idle)
               title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
 <RadzenButton Click=OnClearValue Text="Use default" Icon="clear"
               Class="mt-2" Style="width: 175px" ButtonStyle="ButtonStyle.Light"
               Disabled=@(SelectedEntry == null || SelectedEntry.ParameterValue == null ||
-                         MissionControlStatus.State != MissionControl.State.Idle)
+              MissionControlStatus.State != MissionControl.State.Idle)
               title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />

@@ -1,4 +1,7 @@
 @page "/"
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
+@inject DialogService DialogService
+@inject Microsoft.Extensions.Logging.ILogger<Index> logger
 
 <style>
     .nav-button-look {
@@ -63,4 +66,21 @@ Then you can:
     </li>
 </ul>
 
+<RadzenButton Text="Click me" Click="@Test" />
+<RadzenButton Text="Click me 2" Click="@Test2" />
 
+@code
+{
+    async Task Test()
+    {
+        var result = await DialogService.CustomConfirm("Do it?", "Are you sure?", new ConfirmOptions {OkButtonText="Sure", CancelButtonText="Nah"});
+        logger.LogInformation($"Custom dialog result: {result}");
+
+        
+    }
+
+    async Task Test2()
+    {
+        var result = await DialogService.Confirm();
+    }
+}
