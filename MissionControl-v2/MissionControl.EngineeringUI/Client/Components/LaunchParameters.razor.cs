@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// <summary>
         /// One entry displayed in the grid
         /// </summary>
-        protected abstract class Entry
+        public abstract class Entry
         {
             public abstract string Name { get; }
             public abstract object Value { get; }
@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// <summary>
         /// One entry representing a parameter in the grid
         /// </summary>
-        protected class ParameterEntry: Entry
+        public class ParameterEntry: Entry
         {
             public LaunchParameter? Definition { get; set; }
             public LaunchParameterValue? ParameterValue { get; set; }
@@ -103,14 +103,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             args.Expandable = args.Data is NestedEntry;
         }
 
-        void OnParameterValueChanged<T>(T value, ParameterEntry entry)
+        void OnParameterValueChanged(object value, ParameterEntry entry)
         {
             entry.ParameterValue ??= new() { Id = entry.Id };
             entry.ParameterValue.Value = value;
             
         }
-
-        static bool ValidateEntry(ParameterEntry entry) => entry.Definition.Constraint.Validate(entry.Value);
 
         async Task OnSetValue()
         {
@@ -130,6 +128,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             {
                 return;
             }
+
+            RadzenSwitch blah;
 
             entry.ParameterValue = (LaunchParameterValue)ret;
             int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
