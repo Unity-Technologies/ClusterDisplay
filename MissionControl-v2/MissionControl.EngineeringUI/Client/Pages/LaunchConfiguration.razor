@@ -5,26 +5,22 @@
 
 @{
     var isRunning = MissionControlStatus.State != State.Idle;
-    var hasChanges = LaunchConfigurationService.WorkValueNeedsPush;
-    var applyPrefix = hasChanges ? "Apply & " : "";
+    var hasChanges = LaunchConfigurationService.WorkValue.Parameters.Any() ||
+        LaunchConfigurationService.WorkValue.LaunchComplexes.Any(c => c.Parameters.Any() || c.LaunchPads.Any(p => p.Parameters.Any()));
     var applyAndSaveEnabled = !isRunning || !hasChanges;
     var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
     var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
     var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
 
-    void ShowTooltip(ElementReference elementReference, string message, TooltipOptions options = null) =>
+    void ShowTooltip(ElementReference elementReference, string message, TooltipOptions? options = null) =>
         tooltipService.Open(elementReference, message, options);
 }
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
     <RadzenText Text="Launch" TextStyle="TextStyle.H4" />
     <RadzenStack Orientation="Orientation.Horizontal">
-        <RadzenButton Text="Reset to default" Icon="refresh" Click=UndoChanges
-                      ButtonStyle="ButtonStyle.Light" Disabled=@(!needsPush) />
-        <RadzenButton Text="Apply changes" Icon="send" Click=ApplyChanges
-                      ButtonStyle="ButtonStyle.Light"
-                      Disabled=@(!needsPush || MissionControlStatus.State != State.Idle)
-                      MouseEnter=@(args => { if (isRunning) ShowTooltip(args, "Cannot apply changes while running");}) />
-        <RadzenButton Click=@SaveAs Text=@($"{applyPrefix}Save Configuration")
+        <RadzenButton Text="Reset to default" Icon="refresh" Click=@ResetToDefault
+                      ButtonStyle="ButtonStyle.Light" Disabled=@(!hasChanges) />
+        <RadzenButton Click=@SaveAs Text=@("Save Snapshot")
                       ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
     </RadzenStack>
 </RadzenStack>
@@ -33,6 +29,7 @@
     <RadzenLabel Text="Project" />
     <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
                             @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
+                            Change="@(args => ApplyChangesAsync())"
                             TValue="Guid" ValueProperty="Id" TextProperty="Name"
                             Data=@AssetsService.Collection.Values
                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"

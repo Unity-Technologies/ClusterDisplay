@@ -3,13 +3,15 @@ using System.Numerics;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
+using Unity.ClusterDisplay.MissionControl.EngineeringUI.Components;
+using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 {
     // ReSharper disable once ClassNeverInstantiated.Global -> Instantiated through routing
-    public partial class LaunchConfiguration: IDisposable
+    public partial class LaunchConfiguration : IDisposable
     {
         [Inject]
         MissionControlStatusService MissionControlStatus { get; set; } = default!;
@@ -23,6 +25,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         MissionCommandsService MissionCommandsService { get; set; } = default!;
         [Inject]
         DialogService DialogService { get; set; } = default!;
+        [Inject]
+        ILogger<LaunchConfiguration> Logger { get; set; } = default!;
 
         protected override void OnInitialized()
         {
@@ -144,10 +148,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 LaunchConfigurationService.WorkValue.LaunchComplexes.FirstOrDefault(c => c.Identifier == complex.Id);
             if (toEdit == null)
             {
-                toEdit = new() {Identifier = complex.Id};
+                toEdit = new() { Identifier = complex.Id };
                 LaunchConfigurationService.WorkValue.LaunchComplexes =
                     LaunchConfigurationService.WorkValue.LaunchComplexes.Append(toEdit).ToList();
                 LaunchConfigurationService.WorkValue.SignalChanges();
+                await ApplyChangesAsync();
             }
 
             if (!AssetsService.Collection.TryGetValue(LaunchConfigurationService.WorkValue.AssetId, out var asset))
@@ -156,7 +161,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             }
 
             var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplexConfiguration>($"Configure {complex.Name}",
-                new Dictionary<string, object>{ {"Asset", asset}, {"Complex", complex }, {"ToEdit", toEdit} },
+                new Dictionary<string, object> { { "Asset", asset }, { "Complex", complex }, { "ToEdit", toEdit } },
                 new DialogOptions() { Width = "60%", Height = "auto", Resizable = true, Draggable = true });
             if (!(bool)(ret ?? false))
             {
@@ -164,6 +169,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             }
 
             LaunchConfigurationService.WorkValue.SignalChanges();
+            await ApplyChangesAsync();
         }
 
         async Task Launch()
@@ -176,7 +182,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             if (LaunchConfigurationService.WorkValueNeedsPush)
             {
-                if (!await ApplyChanges())
+                if (!await ApplyChangesAsync())
                 {
                     return;
                 }
@@ -190,14 +196,14 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return MissionCommandsService.StopCurrentMissionAsync();
         }
 
-        async Task<bool> ApplyChanges()
+        async Task<bool> ApplyChangesAsync()
         {
             // Check we are not overwriting someone else's work.
             if (LaunchConfigurationService.HasMissionControlValueChangedSinceWorkValueModified)
             {
                 var ret = await DialogService.Confirm($"Launch configuration has be modified by an external source " +
                     $"since you started working on it.  Do you want to overwrite those changes?",
-                    "Overwrite confirmation", new () { OkButtonText = "Yes", CancelButtonText = "No" });
+                    "Overwrite confirmation", new() { OkButtonText = "Yes", CancelButtonText = "No" });
                 if (!ret.HasValue || !ret.Value)
                 {
                     return false;
@@ -244,15 +250,25 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return true;
         }
 
-        void UndoChanges()
+        async Task ResetToDefault()
         {
-            LaunchConfigurationService.ClearWorkValue();
+            var ret = await DialogService.CustomConfirm("Do you want to reset all parameters to their default values? This cannot be undone.",
+                "Reset all to default", new ConfirmOptions { OkButtonText = "Reset all" });
+
+            if (!ret) return;
+
+            LaunchConfigurationService.ResetParametersToDefault();
+            await ApplyChangesAsync();
         }
 
-        void LaunchParametersValueUpdate(List<LaunchParameterValue> updatedValues)
+        async Task LaunchParametersValueUpdate(List<LaunchParameterValue> updatedValues)
         {
             Debug.Assert(ReferenceEquals(updatedValues, LaunchParametersValue));
             LaunchConfigurationService.WorkValue.SignalChanges();
+            if (LaunchConfigurationService.WorkValueNeedsPush)
+            {
+                await ApplyChangesAsync();
+            }
         }
 
         void MissionControlStatusChanged(ObservableObject obj)
@@ -306,7 +322,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 .FirstOrDefault(lc => lc.Identifier == launchComplex.Id);
             if (complexCfg == null)
             {
-                complexCfg = new() {Identifier = launchComplex.Id};
+                complexCfg = new() { Identifier = launchComplex.Id };
                 LaunchConfigurationService.WorkValue.LaunchComplexes =
                     LaunchConfigurationService.WorkValue.LaunchComplexes.Append(complexCfg).ToList();
             }
@@ -314,7 +330,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             var padCfg = complexCfg.LaunchPads.FirstOrDefault(c => c.Identifier == launchPad.Identifier);
             if (padCfg == null)
             {
-                padCfg = new() {Identifier = launchPad.Identifier};
+                padCfg = new() { Identifier = launchPad.Identifier };
                 if (AssetsService.Collection.TryGetValue(LaunchConfigurationService.WorkValue.AssetId, out var asset))
                 {
                     padCfg.LaunchableName = launchPad.GetCompatibleLaunchables(asset).Select(l => l.Name).FirstOrDefault("");

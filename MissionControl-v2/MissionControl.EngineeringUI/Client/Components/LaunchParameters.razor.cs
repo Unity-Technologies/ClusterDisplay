@@ -41,7 +41,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// <summary>
         /// One entry representing a parameter in the grid
         /// </summary>
-        public class ParameterEntry: Entry
+        public class ParameterEntry : Entry
         {
             public LaunchParameter? Definition { get; set; }
             public LaunchParameterValue? ParameterValue { get; set; }
@@ -64,7 +64,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         /// Each <see cref="NestedEntry"/> generates a recursive <see cref="LaunchParameter"/> component
         /// in the UI.
         /// </remarks>
-        protected class NestedEntry: Entry
+        protected class NestedEntry : Entry
         {
             public string NestedPrefix { get; set; } = "";
             public string NestedName { get; init; } = "";
@@ -107,7 +107,20 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
         {
             entry.ParameterValue ??= new() { Id = entry.Id };
             entry.ParameterValue.Value = value;
-            
+
+            Debounce(async () =>
+            {
+                int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
+                if (valueIndex >= 0)
+                {
+                    Values[valueIndex] = entry.ParameterValue;
+                }
+                else
+                {
+                    Values.Add(entry.ParameterValue);
+                }
+                await OnValuesUpdated.InvokeAsync(Values);
+            });
         }
 
         async Task OnSetValue()
@@ -122,14 +135,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             toEdit ??= new() { Id = entry.Id, Value = entry.Definition.DefaultValue! };
 
             var ret = await DialogService.OpenAsync<EditLaunchParameter>($"Set {entry.Name}",
-               new Dictionary<string, object>{ {"Parameter", entry.Definition}, {"ToEdit", toEdit} },
+               new Dictionary<string, object> { { "Parameter", entry.Definition }, { "ToEdit", toEdit } },
                new DialogOptions() { Width = "40%", Height = "40%", Resizable = true, Draggable = true });
             if (ret == null)
             {
                 return;
             }
-
-            RadzenSwitch blah;
 
             entry.ParameterValue = (LaunchParameterValue)ret;
             int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
@@ -254,7 +265,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                     }
                     else
                     {
-                        parameterEntry = new (){ Id = parameter.Id, Definition = parameter };
+                        parameterEntry = new() { Id = parameter.Id, Definition = parameter };
                         Entries.Add(parameterEntry);
                     }
                     parametersEntry[parameter.Id] = parameterEntry;
@@ -266,8 +277,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                         e => e is NestedEntry nestedEntry && nestedEntry.NestedName == nestedName);
                     if (nestedEntry == null)
                     {
-                        nestedEntry = new NestedEntry() {
-                            NestedPrefix = $"{NestedPrefix}/{nestedName}", NestedName = nestedName
+                        nestedEntry = new NestedEntry()
+                        {
+                            NestedPrefix = $"{NestedPrefix}/{nestedName}",
+                            NestedName = nestedName
                         };
                         if (nestedEntry.NestedPrefix.StartsWith('/'))
                         {

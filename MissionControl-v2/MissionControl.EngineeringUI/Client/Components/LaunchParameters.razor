@@ -1,4 +1,4 @@
-@inject ILogger<LaunchParameters> logger
+@inherits RadzenComponent
 
 <RadzenDataGrid Data=@Entries @ref="m_EntriesGrid"
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
@@ -21,17 +21,6 @@
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
-<RadzenButton Click=OnSetValue
-              Text=@((SelectedEntry == null || SelectedEntry.ParameterValue == null) ? "Set" : "Edit") Icon="edit"
-              Class="mt-2" Style="width: 175px"
-              Disabled=@(SelectedEntry == null || SelectedEntry.Definition == null ||
-              MissionControlStatus.State != MissionControl.State.Idle)
-              title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
-<RadzenButton Click=OnClearValue Text="Use default" Icon="clear"
-              Class="mt-2" Style="width: 175px" ButtonStyle="ButtonStyle.Light"
-              Disabled=@(SelectedEntry == null || SelectedEntry.ParameterValue == null ||
-              MissionControlStatus.State != MissionControl.State.Idle)
-              title=@(MissionControlStatus.State != MissionControl.State.Idle ? "Can only change launch parameters when idle": "") />
 
 @{
     RenderFragment? InlineEdit(Entry entry)
