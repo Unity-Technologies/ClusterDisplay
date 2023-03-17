@@ -42,7 +42,7 @@
             <Template Context="asset">
                 <RadzenButton Icon="delete"
                               Disabled=@(AssetsUsageCount.TryGetValue(asset.Id, out var count) && count > 0)
-                              Click=@(() => DeleteAsset(asset)) Class="m-1 data-grid-icon"
+                              Click=@(() => DeleteAsset(asset)) Class="data-grid-icon"
                               ButtonStyle="ButtonStyle.Light" />
             </Template>
         </RadzenDataGridColumn>

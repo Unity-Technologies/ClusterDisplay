@@ -12,6 +12,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
     {
         [Parameter]
         public IEnumerable<LaunchParameter> Parameters { get; set; } = Enumerable.Empty<LaunchParameter>();
+
+        /// <summary>
+        /// The parameter values that we are ultimately editing.
+        /// </summary>
         [Parameter]
         public List<LaunchParameterValue> Values { get; set; } = new();
         [Parameter]
@@ -103,19 +107,35 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             args.Expandable = args.Data is NestedEntry;
         }
 
-        void OnParameterValueChanged(object value, ParameterEntry entry)
+        void OnParameterValueChanged(object? value, ParameterEntry entry)
         {
-            entry.ParameterValue ??= new() { Id = entry.Id };
-            entry.ParameterValue.Value = value;
+            if (value is null)
+            {
+                // Parameter is being reset to default
+                entry.ParameterValue = null;
+            }
+            else
+            {
+                // Setting a non-default value for the parameter
+                entry.ParameterValue ??= new() { Id = entry.Id };
+                entry.ParameterValue.Value = value;
+            }
 
             Debounce(async () =>
             {
                 int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
                 if (valueIndex >= 0)
                 {
-                    Values[valueIndex] = entry.ParameterValue;
+                    if (entry.ParameterValue is not null)
+                    {
+                        Values[valueIndex] = entry.ParameterValue;
+                    }
+                    else
+                    {
+                        Values.RemoveAt(valueIndex);
+                    }
                 }
-                else
+                else if (entry.ParameterValue is not null)
                 {
                     Values.Add(entry.ParameterValue);
                 }

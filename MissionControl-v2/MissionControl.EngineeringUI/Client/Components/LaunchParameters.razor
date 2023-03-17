@@ -12,11 +12,29 @@
                           Parameters=@nestedEntry.Parameters Values=@nestedEntry.Values />
     </Template>
     <Columns>
-        <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name" />
+        <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name">
+            <Template Context="entry">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Left" Gap="2rem">
+                    <span>@(entry.Name)</span>
+                    <RadzenIcon Icon="help" />
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" Sortable="false">
             @* Make inline fields to edit parameter values *@
             <Template Context="entry">
                 @InlineEdit(entry)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="Entry" Width="60px" Sortable="false">
+            <Template Context="entry">
+                @if (entry is ParameterEntry parameterEntry)
+                {
+                    <RadzenButton Icon="refresh" Class="data-grid-icon"
+                              Disabled="@(parameterEntry.ParameterValue is null)"
+                              Click="@(_ => OnParameterValueChanged(null, parameterEntry))"
+                              ButtonStyle="ButtonStyle.Light" />
+                }
             </Template>
         </RadzenDataGridColumn>
     </Columns>
