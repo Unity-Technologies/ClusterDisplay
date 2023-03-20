@@ -15,8 +15,11 @@
         <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name">
             <Template Context="entry">
                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Left" Gap="2rem">
-                    <span>@(entry.Name)</span>
-                    <RadzenIcon Icon="help" />
+                    <span>@(entry.Name)</span>                    
+                    @if (entry is ParameterEntry parameterEntry)
+                    {
+                        <ParameterHelp Icon="help" HelpText="@(parameterEntry.Definition?.Description)" />
+                    }
                 </RadzenStack>
             </Template>
         </RadzenDataGridColumn>

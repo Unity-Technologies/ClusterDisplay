@@ -12,6 +12,7 @@
     --height78: 78px;
     --sidebar-width: 208px;
     --sidebar-collapsed-width: 56px;
+    --icon-font-size: 20px;
 }
 
 /************************* Site wide definitions *************************/
@@ -342,6 +343,27 @@ input {
         box-shadow: none;
         border-radius: 20em;
     }
+
+
+/* Help and tooltips */
+.help-icon
+{
+    font-size: var(--icon-font-size);
+    color: var(--rz-base-00);
+    cursor: pointer;
+}
+
+.tooltip
+{
+    width: 480px;
+    height: auto;
+    white-space: normal;
+}
+
+.rz-tooltip-content {
+    background-color: var(--rz-black);
+    padding: 8px;
+}
 
 /* Page header contianing H2 and buttons */
 .page-title {
