@@ -107,20 +107,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             args.Expandable = args.Data is NestedEntry;
         }
 
-        void OnParameterValueChanged(object? value, ParameterEntry entry)
+        void OnParameterValueChanged(ParameterEntry entry)
         {
-            if (value is null)
-            {
-                // Parameter is being reset to default
-                entry.ParameterValue = null;
-            }
-            else
-            {
-                // Setting a non-default value for the parameter
-                entry.ParameterValue ??= new() { Id = entry.Id };
-                entry.ParameterValue.Value = value;
-            }
-
             Debounce(async () =>
             {
                 int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);

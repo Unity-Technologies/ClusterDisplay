@@ -1,0 +1,95 @@
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+
+@if (Entry.Definition?.Constraint is LaunchCatalog.ListConstraint listConstraint)
+{
+    <RadzenDropDown @bind-Value=@StringValue Data="@listConstraint.Choices" />
+}
+else
+{
+    switch (Entry.Definition?.Type)
+    {
+        case LaunchCatalog.LaunchParameterType.Boolean:
+            <RadzenSwitch @bind-Value=@BoolValue />
+            break;
+        case LaunchCatalog.LaunchParameterType.Integer:
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                <RadzenNumeric @bind-Value=@IntValue />
+                @if (Entry.Definition?.Constraint is RangeConstraint { Max: not null, Min: not null } rangeConstraint)
+                {
+                    <RadzenSlider @bind-Value=@IntValue Min="rangeConstraint.MinInt32Inclusive" Max="rangeConstraint.MaxInt32Inclusive" />
+                }
+            </RadzenStack>
+            break;
+        case LaunchCatalog.LaunchParameterType.Float:
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+            <RadzenNumeric @bind-Value=@FloatValue />
+                @if (Entry.Definition?.Constraint is RangeConstraint { Max: not null, Min: not null } rangeConstraint)
+                {
+                    <RadzenSlider @bind-Value=@IntValue Min="rangeConstraint.MinDecimalInclusive" Max="rangeConstraint.MaxDecimalInclusive" />
+                }
+            </RadzenStack>
+            break;
+        case LaunchCatalog.LaunchParameterType.String:
+            <RadzenTextBox @bind-Value=@StringValue />
+            break;
+        default:
+            break;
+    }
+}
+
+@code {
+    [Parameter]
+    public LaunchParameters.ParameterEntry Entry { get; set; }
+
+    [Parameter]
+    public EventCallback<LaunchParameters.ParameterEntry> OnValueChanged { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (Entry is null)
+        {
+            throw new ArgumentNullException(nameof(Entry));
+        }
+    }
+
+    public string StringValue
+    {
+        get => GetValue<string>();
+        set => SetValue(value);
+    }
+
+    public int IntValue
+    {
+        get => GetValue<int>();
+        set => SetValue(value);
+    }
+
+    public float FloatValue
+    {
+        get => GetValue<float>();
+        set => SetValue(value);
+    }
+
+    public bool BoolValue
+    {
+        get => GetValue<bool>();
+        set => SetValue(value);
+    }
+
+    T GetValue<T>()
+    {
+        return (T)Entry.Value;
+    }
+
+    void SetValue<T>(T maybeValue)
+    {
+        if (maybeValue is T value)
+        {
+            // Setting a non-default value for the parameter
+            Entry.ParameterValue ??= new() { Id = Entry.Id };
+            Entry.ParameterValue.Value = value;
+        }
+
+        OnValueChanged.InvokeAsync(Entry);
+    }
+}

@@ -15,7 +15,7 @@
         <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Name">
             <Template Context="entry">
                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Left" Gap="2rem">
-                    <span>@(entry.Name)</span>                    
+                    <span>@(entry.Name)</span>
                     @if (entry is ParameterEntry parameterEntry)
                     {
                         <ParameterHelp Icon="help" HelpText="@(parameterEntry.Definition?.Description)" />
@@ -26,94 +26,45 @@
         <RadzenDataGridColumn TItem="Entry" Title="Value" Property="Value" Sortable="false">
             @* Make inline fields to edit parameter values *@
             <Template Context="entry">
-                @InlineEdit(entry)
+                @if (entry is ParameterEntry parameterEntry)
+                {
+                    <LaunchParameterInput Entry="@parameterEntry" OnValueChanged="@OnParameterValueChanged" />
+                }
             </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="Entry" Width="60px" Sortable="false">
             <Template Context="entry">
-                @if (entry is ParameterEntry parameterEntry)
-                {
-                    <RadzenButton Icon="refresh" Class="data-grid-icon"
-                              Disabled="@(parameterEntry.ParameterValue is null)"
-                              Click="@(_ => OnParameterValueChanged(null, parameterEntry))"
-                              ButtonStyle="ButtonStyle.Light" />
-                }
+                <RadzenButton Icon="refresh" Class="data-grid-icon"
+                              Click="@(args => ResetToDefault(entry))" ButtonStyle="ButtonStyle.Light"
+                              Disabled=@(IsDefaultValue(entry))/>
             </Template>
         </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>
 
 @{
-    RenderFragment? InlineEdit(Entry entry)
+    static bool IsDefaultValue(Entry entry) =>
+        entry switch
+        {
+            ParameterEntry parameterEntry => parameterEntry.ParameterValue is null,
+            NestedEntry nestedEntry => !nestedEntry.Values.Any(),
+            _ => throw new ArgumentOutOfRangeException(nameof(entry))
+        };
+
+    async Task ResetToDefault(Entry entry)
     {
-        // Generate the appropriate UI component(s) based on parameter definition.
-        // Sometimes we get null entries. Not sure why!
-        if (entry is not ParameterEntry { Definition: LaunchCatalog.LaunchParameter definition } parameterEntry)
+        switch (entry)
         {
-            return null;
-        }
-
-        if (definition.Constraint is LaunchCatalog.ListConstraint listConstraint)
-        {
-            return @InlineEditListOption(parameterEntry, listConstraint);
-        }
-
-        switch (definition.Type)
-        {
-            case LaunchCatalog.LaunchParameterType.Boolean:
-                return InlineEditBool(parameterEntry);
-            case LaunchCatalog.LaunchParameterType.Integer:
-                return InlineEditInt(parameterEntry, definition.Constraint);
-            case LaunchCatalog.LaunchParameterType.Float:
-                return InlineEditFloat(parameterEntry, definition.Constraint);
-            case LaunchCatalog.LaunchParameterType.String:
-                return InlineEditString(parameterEntry, definition.Constraint);
+            case ParameterEntry parameterEntry:
+                parameterEntry.ParameterValue = null;
+                OnParameterValueChanged(parameterEntry);
+                break;
+            case NestedEntry nestedEntry:
+                nestedEntry.Values.Clear();
+                await OnNestedValuesChanged(nestedEntry.Values);
+                break;
             default:
-                return @<RadzenText Text="@parameterEntry.Value.ToString()" />;
+                throw new ArgumentOutOfRangeException(nameof(entry));
         }
-    }
-
-    RenderFragment InlineEditBool(ParameterEntry entry)
-    {
-        return @<RadzenSwitch Value=@((bool)entry.Value) Change=@(arg => OnParameterValueChanged(arg, entry)) />;
-    }
-
-    RenderFragment InlineEditInt(ParameterEntry entry, Constraint? maybeConstraint)
-    {
-        return
-    @<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
-        <RadzenNumeric TValue="int" Value=@((int)entry.Value) Change=@(arg => OnParameterValueChanged(arg, entry)) />
-        @if (maybeConstraint is RangeConstraint { Max: not null, Min: not null } constraint)
-                    {
-        <RadzenSlider TValue="int" Min="constraint.MinInt32Inclusive" Max="constraint.MaxInt32Inclusive" Value=@((int)entry.Value) Change=@(arg => OnParameterValueChanged(arg, entry)) />
-                    }
-    </RadzenStack>;
-
-    }
-
-    RenderFragment InlineEditFloat(ParameterEntry entry, Constraint? maybeConstraint)
-    {
-        return
-    @<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
-        <RadzenNumeric TValue="float" Value=@((float)entry.Value) Change=@(arg => OnParameterValueChanged(arg, entry)) />
-        @if (maybeConstraint is RangeConstraint { Max: not null, Min: not null } constraint)
-                    {
-        <RadzenSlider TValue="float" Min="constraint.MinDecimalInclusive" Max="constraint.MaxDecimalInclusive" Value=@((float)entry.Value) Change=@(arg => OnParameterValueChanged(arg, entry)) />
-                    }
-    </RadzenStack>;
-
-    }
-
-    RenderFragment InlineEditString(ParameterEntry entry, Constraint? maybeConstraint)
-    {
-        return@<RadzenTextBox Value="@((string)entry.Value)" Change=@(arg => OnParameterValueChanged(arg, entry)) />;
-
-    }
-
-    RenderFragment InlineEditListOption(ParameterEntry entry, LaunchCatalog.ListConstraint listConstraint)
-    {
-        return @<RadzenDropDown TValue="string" Value="@(entry.Value.ToString())"
-                Data=@listConstraint.Choices
-                Change=@(arg => OnParameterValueChanged(arg, entry)) />;
     }
 }
