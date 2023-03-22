@@ -28,16 +28,16 @@ packages :
     project_path : TestProjects/GraphicsTestsURP  
     name : "ClusterDisplay"
     package_path : source/com.unity.cluster-display
-
+    
   - short_name : "Cluster_Diplay_HDRP "
     project_path : TestProjects/GraphicsTestsHDRP 
     name : "ClusterDisplay"
     package_path : source/com.unity.cluster-display
-        
+   
  
     
 
-default_editor : 2022.1
+default_editor : 2023.1
 
 ---
 
