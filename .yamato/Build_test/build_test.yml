@@ -30,7 +30,7 @@ packages :
     package_path : source/com.unity.cluster-display
 
   - short_name : "Cluster_Diplay_HDRP "
-    project_path : TestProjects/GraphicsTestsHDRP  
+    project_path : TestProjects/GraphicsTestsURP  
     name : "ClusterDisplay"
     package_path : source/com.unity.cluster-display
         
