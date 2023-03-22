@@ -28,6 +28,17 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         [Inject]
         ILogger<LaunchConfiguration> Logger { get; set; } = default!;
 
+
+        /// <summary>
+        /// <see cref="LaunchCatalog.LaunchParameter"/> of the <see cref="Launchable"/> of the <see cref="LaunchPad"/>s.
+        /// </summary>
+        IEnumerable<LaunchCatalog.LaunchParameter> m_LaunchablesLaunchParameters = Enumerable.Empty<LaunchCatalog.LaunchParameter>();
+
+        /// <summary>
+        /// Tracks the <see cref="Asset"/> and <see cref="Launchable"/>(s) that <see cref="m_LaunchablesLaunchParameters"/> applies to.
+        /// </summary>
+        (Guid assetId, IEnumerable<string> launchableNames) m_CurrentLaunchables = (default, Enumerable.Empty<string>());
+
         protected override void OnInitialized()
         {
             MissionControlStatus.ObjectChanged += MissionControlStatusChanged;
@@ -48,58 +59,62 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             Complexes.Collection.SomethingChanged -= ComplexesChanged;
         }
 
-        LaunchComplex? SelectedLaunchComplexes => m_SelectedLaunchComplexes?.FirstOrDefault();
-
         IEnumerable<LaunchCatalog.LaunchParameter> LaunchParameters
         {
             get
             {
-                HashSet<string> launchableNames = new();
-                if (AssetsService.Collection.TryGetValue(LaunchConfigurationService.WorkValue.AssetId, out var asset))
-                {
-                    foreach (var complex in Complexes.Collection.Values)
-                    {
-                        foreach (var launchPad in complex.LaunchPads)
-                        {
-                            var configuration = GetConfigurationForLaunchPad(complex, launchPad);
-                            var launchable = configuration.GetEffectiveLaunchable(asset, launchPad);
-                            if (launchable != null)
-                            {
-                                launchableNames.Add(launchable.Name);
-                            }
-                        }
-                    }
-
-                    var sortedLaunchableNames = launchableNames.OrderBy(n => n).ToList();
-                    if (!sortedLaunchableNames.SequenceEqual(m_LaunchablesNames))
-                    {
-                        List<LaunchCatalog.LaunchParameter> launchableParameters = new();
-                        foreach (var name in sortedLaunchableNames)
-                        {
-                            var launchable = asset.Launchables.FirstOrDefault(l => l.Name == name);
-                            if (launchable != null)
-                            {
-                                launchableParameters.AddRange(launchable.GlobalParameters);
-                            }
-                        }
-                        m_LaunchablesLaunchParameters = launchableParameters;
-                        m_LaunchablesNames = sortedLaunchableNames;
-                    }
-                }
-                else
-                {
-                    m_LaunchablesLaunchParameters = Enumerable.Empty<LaunchCatalog.LaunchParameter>();
-                    m_LaunchablesNames = Enumerable.Empty<string>();
-                }
-
+                GatherLaunchParameters();
                 return m_LaunchablesLaunchParameters;
             }
         }
+
         List<LaunchParameterValue> LaunchParametersValue { get; set; } = new();
 
         RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
         RadzenDropDownDataGrid<Guid>? m_AssetsDropDown;
         IList<LaunchComplex>? m_SelectedLaunchComplexes;
+
+        void GatherLaunchParameters()
+        {
+            HashSet<string> launchableNames = new();
+            if (AssetsService.Collection.TryGetValue(LaunchConfigurationService.WorkValue.AssetId, out var asset))
+            {
+                foreach (var complex in Complexes.Collection.Values)
+                {
+                    foreach (var launchPad in complex.LaunchPads)
+                    {
+                        var configuration = GetConfigurationForLaunchPad(complex, launchPad);
+                        var launchable = configuration.GetEffectiveLaunchable(asset, launchPad);
+                        if (launchable != null)
+                        {
+                            launchableNames.Add(launchable.Name);
+                        }
+                    }
+                }
+
+                var sortedLaunchableNames = launchableNames.OrderBy(n => n).ToList();
+                if (m_CurrentLaunchables.assetId != asset.Id
+                    || !m_CurrentLaunchables.launchableNames.SequenceEqual(sortedLaunchableNames))
+                {
+                    List<LaunchCatalog.LaunchParameter> launchableParameters = new();
+                    foreach (var name in sortedLaunchableNames)
+                    {
+                        var launchable = asset.Launchables.FirstOrDefault(l => l.Name == name);
+                        if (launchable != null)
+                        {
+                            launchableParameters.AddRange(launchable.GlobalParameters);
+                        }
+                    }
+                    m_LaunchablesLaunchParameters = launchableParameters;
+                    m_CurrentLaunchables = (asset.Id, sortedLaunchableNames);
+                }
+            }
+            else
+            {
+                m_LaunchablesLaunchParameters = Enumerable.Empty<LaunchCatalog.LaunchParameter>();
+                m_CurrentLaunchables = (Guid.Empty, Enumerable.Empty<string>());
+            }
+        }
 
         int GetActiveLaunchPads(Guid launchComplexId)
         {
@@ -282,6 +297,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             m_AssetsDropDown?.Reload();
         }
 
+        async Task OnSelectedAssetChanged()
+        {
+            await ApplyChangesAsync();
+        }
+
         void LaunchConfigurationChanged(ObservableObject obj)
         {
             if (!LaunchConfigurationService.WorkValueNeedsPush)
@@ -359,14 +379,5 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
             await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
         }
-
-        /// <summary>
-        /// Name of the <see cref="Launchable"/> of the <see cref="LaunchPad"/>s.
-        /// </summary>
-        IEnumerable<string> m_LaunchablesNames = Enumerable.Empty<string>();
-        /// <summary>
-        /// <see cref="LaunchCatalog.LaunchParameter"/> of the <see cref="Launchable"/> of the <see cref="LaunchPad"/>s.
-        /// </summary>
-        IEnumerable<LaunchCatalog.LaunchParameter> m_LaunchablesLaunchParameters = Enumerable.Empty<LaunchCatalog.LaunchParameter>();
     }
 }

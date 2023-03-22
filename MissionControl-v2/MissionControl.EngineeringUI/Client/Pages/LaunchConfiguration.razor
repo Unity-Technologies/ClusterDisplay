@@ -29,7 +29,7 @@
     <RadzenLabel Text="Project" />
     <RadzenDropDownDataGrid AllowClear="true" Style="width: 100%" @ref="m_AssetsDropDown"
                             @bind-Value=@LaunchConfigurationService.WorkValue.AssetId
-                            Change="@(args => ApplyChangesAsync())"
+                            Change="@(args => OnSelectedAssetChanged())"
                             TValue="Guid" ValueProperty="Id" TextProperty="Name"
                             Data=@AssetsService.Collection.Values
                             FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"

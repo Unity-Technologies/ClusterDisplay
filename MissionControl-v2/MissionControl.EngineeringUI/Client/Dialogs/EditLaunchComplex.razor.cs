@@ -158,7 +158,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
 
             await DialogService.ShowBusy($"Updating MissionControl...", () => Complexes.PutAsync(toPut));
 
-            DialogService.Close();
+            DialogService.Close(Edited);
         }
 
         protected void OnCancel()

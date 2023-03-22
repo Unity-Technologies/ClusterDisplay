@@ -51,10 +51,13 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         protected async Task EditLaunchComplex(LaunchComplex launchComplex)
         {
-            await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {launchComplex.Name}",
+            var ret = await DialogService.OpenAsync<Dialogs.EditLaunchComplex>($"Edit {launchComplex.Name}",
                new Dictionary<string, object>() { { "ToEdit", launchComplex.DeepClone() } },
                new DialogOptions() { Width = "60%", Height = "80%", Resizable = true, Draggable = true });
-            NotificationService.Notify(NotificationSeverity.Info, $"{launchComplex.Name} updated");
+            if (ret != null)
+            {
+                NotificationService.Notify(NotificationSeverity.Info, $"{launchComplex.Name} updated");
+            }
         }
 
         protected async Task DeleteLaunchComplex(LaunchComplex launchComplex)
