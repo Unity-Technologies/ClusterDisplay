@@ -261,7 +261,7 @@ namespace GfxQuadroSync
 
         if (m_NeedToWarmUpBarrier)
         {
-            pGraphicsDevice->SaveToPresent();
+            pGraphicsDevice->InitiatePresentRepeats();
         }
 
         for (;;)
@@ -279,12 +279,12 @@ namespace GfxQuadroSync
                 const auto barrierWarmupAction = m_BarrierWarmupCallback();
                 if (barrierWarmupAction == BarrierWarmupAction::RepeatPresent)
                 {
-                    pGraphicsDevice->RepeatSavedToPresent();
+                    pGraphicsDevice->PrepareSinglePresentRepeat();
                     continue;
                 }
                 if (barrierWarmupAction == BarrierWarmupAction::BarrierWarmedUp)
                 {
-                    pGraphicsDevice->FreeSavedToPresent();
+                    pGraphicsDevice->ConcludePresentRepeats();
                     m_NeedToWarmUpBarrier = false;
                 }
             }

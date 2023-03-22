@@ -40,6 +40,7 @@ set( QUADROSYNC_WRAPPER_SOURCES
 	Sources/Logger.cpp
 	Sources/D3D11GraphicsDevice.cpp
 	Sources/D3D12GraphicsDevice.cpp
+	Sources/ComHelpers.cpp
 )
 
 INCLUDE_DIRECTORIES(

@@ -15,9 +15,10 @@ namespace Unity.ClusterDisplay
             {
                 if (m_DebugText == null)
                 {
-                    m_DebugText = this.GetComponent<Text>();
-                    if (m_DebugText == null)
+                    if (!TryGetComponent(out m_DebugText))
+                    {
                         throw new System.Exception($"There is no: {nameof(Text)} component attached to: \"{gameObject.name}\".");
+                    }
                 }
 
                 return m_DebugText;

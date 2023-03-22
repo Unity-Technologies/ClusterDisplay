@@ -9,6 +9,7 @@ namespace Unity.ClusterDisplay.Graphics
         Canvas m_RootCanvas;
         RectTransform m_RootCanvasTransform;
         public Vector2 resolution = new(3840, 2160);
+        public float nearPlanOffset = 0.001f;
 
         void OnEnable()
         {
@@ -48,7 +49,11 @@ namespace Unity.ClusterDisplay.Graphics
             var right = cam.ViewportToWorldPoint(new(1 - viewportOverscan.x, 0.5f, nearClipPlaneDistance));
             var top = cam.ViewportToWorldPoint(new(0.5f, 1 - viewportOverscan.y, nearClipPlaneDistance));
 
-            m_RootCanvasTransform.localPosition = center;
+            var canvasUpVector = (top - center).normalized;
+            var fromCanvasCenterToCamera = Vector3.Cross((right - center).normalized, canvasUpVector);
+            m_RootCanvasTransform.rotation = Quaternion.LookRotation(fromCanvasCenterToCamera, canvasUpVector);
+
+            m_RootCanvasTransform.localPosition = cam.ViewportToWorldPoint(new(0.5f, 0.5f, nearClipPlaneDistance + nearPlanOffset));
 
             var size = new Vector2((right - center).magnitude * 2, (top - center).magnitude * 2);
             var sizeDelta = m_RootCanvasTransform.sizeDelta;

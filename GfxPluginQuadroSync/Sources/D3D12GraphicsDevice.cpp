@@ -21,16 +21,11 @@ namespace GfxQuadroSync
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
-        FreeResources();
-        if (m_SwapChain != nullptr)
-        {
-            m_SwapChain->Release();
-        }
     }
 
     IDXGISwapChain* D3D12GraphicsDevice::GetSwapChain() const
     {
-        return m_SwapChain;
+        return m_SwapChain.get();
     }
 
     void D3D12GraphicsDevice::SetSwapChain(IDXGISwapChain* const swapChain)
@@ -43,50 +38,53 @@ namespace GfxQuadroSync
             return;
         }
 
-        if (m_SwapChain != nullptr)
-        {
-            m_SwapChain->Release();
-        }
-        m_SwapChain = swapChain3;
+        m_SwapChain.reset(swapChain3);
     }
 
-    void D3D12GraphicsDevice::SaveToPresent()
+    void D3D12GraphicsDevice::InitiatePresentRepeats()
     {
-        if (m_SwapChain == nullptr)
+        if (!m_SwapChain)
         {
             return;
         }
 
-        if (m_CommandAllocator != nullptr || m_CommandList != nullptr || !m_BackBuffers.empty() ||
-            m_SavedTexture != nullptr)
+        if (m_CommandAllocator || m_CommandList || !m_BackBuffers.empty() || m_SavedTexture)
         {
             CLUSTER_LOG_ERROR << "SaveToPresent called multiple times without calling FreeSavedToPresent";
             return;
         }
 
         // Create CommandAllocator
-        HRESULT hr = m_D3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-            __uuidof(ID3D12CommandAllocator), reinterpret_cast<void**>(&m_CommandAllocator));
-        if (FAILED(hr))
         {
-            CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommandAllocator failed: " << hr;
-            return;
+            ID3D12CommandAllocator* commandAllocator;
+            HRESULT hr = m_D3D12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                __uuidof(ID3D12CommandAllocator), reinterpret_cast<void**>(&commandAllocator));
+            if (FAILED(hr))
+            {
+                CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommandAllocator failed: " << hr;
+                return;
+            }
+            m_CommandAllocator.reset(commandAllocator);
         }
         m_CommandAllocator->SetName(L"GfxPluginQuadroSync CommandAllocator");
 
         // Create CommandList
-        hr = m_D3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, nullptr,
-            __uuidof(ID3D12GraphicsCommandList), reinterpret_cast<void**>(&m_CommandList));
-        if (FAILED(hr))
         {
-            CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommandList failed: " << hr;
-            return;
+            ID3D12GraphicsCommandList* commandList;
+            HRESULT hr = m_D3D12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator.get(),
+                nullptr, __uuidof(ID3D12GraphicsCommandList), reinterpret_cast<void**>(&commandList));
+            if (FAILED(hr))
+            {
+                CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommandList failed: " << hr;
+                return;
+            }
+            m_CommandList.reset(commandList);
         }
         m_CommandList->SetName(L"GfxPluginQuadroSync CommandList");
 
         // Get the back buffers
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
-        hr = m_SwapChain->GetDesc1(&swapChainDesc);
+        HRESULT hr = m_SwapChain->GetDesc1(&swapChainDesc);
         if (FAILED(hr))
         {
             CLUSTER_LOG_ERROR << "IDXGISwapChain1::GetDesc1 failed: " << hr;
@@ -103,7 +101,7 @@ namespace GfxQuadroSync
                     << ": " << hr;
                 return;
             }
-            m_BackBuffers.push_back(backBuffer);
+            m_BackBuffers.push_back(ComSharedPtr<ID3D12Resource>(backBuffer));
         }
 
         // Create a texture to hold the saved content
@@ -118,24 +116,28 @@ namespace GfxQuadroSync
             CLUSTER_LOG_ERROR << "ID3D12Resource::GetHeapProperties failed: " << hr;
             return;
         }
-        hr = m_D3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &backBufferResourceDesc,
-            D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&m_SavedTexture));
-        if (FAILED(hr))
         {
-            CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommittedResource failed to create texture to store the "
-                << "picture to repeat: " << hr;
-            return;
+            ID3D12Resource* savedTexture;
+            hr = m_D3D12Device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &backBufferResourceDesc,
+                D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), reinterpret_cast<void**>(&savedTexture));
+            if (FAILED(hr))
+            {
+                CLUSTER_LOG_ERROR << "ID3D12Device::CreateCommittedResource failed to create texture to store the "
+                    << "picture to repeat: " << hr;
+                return;
+            }
+            m_SavedTexture.reset(savedTexture);
         }
         m_SavedTexture->SetName(L"GfxPluginQuadroSync SavedTexture");
 
         // Copy current backbuffer to it
-        m_CommandList->CopyResource(m_SavedTexture, m_BackBuffers[backBufferIndex]);
+        m_CommandList->CopyResource(m_SavedTexture.get(), m_BackBuffers[backBufferIndex].get());
 
         // Indicate that the texture will become a copy source
         D3D12_RESOURCE_BARRIER renderTargetBarrier;
         renderTargetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         renderTargetBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        renderTargetBarrier.Transition.pResource = m_SavedTexture;
+        renderTargetBarrier.Transition.pResource = m_SavedTexture.get();
         renderTargetBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         renderTargetBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
         renderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -143,7 +145,7 @@ namespace GfxQuadroSync
 
         // Conclude the operations
         m_CommandList->Close();
-        ID3D12CommandList* const commandListsToExecute[] = { m_CommandList };
+        ID3D12CommandList* const commandListsToExecute[] = {m_CommandList.get()};
         m_CommandQueue->ExecuteCommandLists(1, commandListsToExecute);
 
         // Wait for copy to be executed (is it really necessary?  Good question, but its safer and we are not in a
@@ -153,9 +155,9 @@ namespace GfxQuadroSync
         WaitForFence();
     }
 
-    void D3D12GraphicsDevice::RepeatSavedToPresent()
+    void D3D12GraphicsDevice::PrepareSinglePresentRepeat()
     {
-        if (m_SwapChain == nullptr)
+        if (!m_SwapChain)
         {
             return;
         }
@@ -170,26 +172,26 @@ namespace GfxQuadroSync
         // Prepare the command allocator and list for new commands
         // Remarks: Need to be kept alive until processing of those commands are done, so we keep it until next frame.
         m_CommandAllocator->Reset();
-        m_CommandList->Reset(m_CommandAllocator, nullptr);
+        m_CommandList->Reset(m_CommandAllocator.get(), nullptr);
 
         // Indicate that the back buffer will be used as a render target.
         D3D12_RESOURCE_BARRIER renderTargetBarrier;
         renderTargetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         renderTargetBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        renderTargetBarrier.Transition.pResource = m_BackBuffers[backBufferIndex];
+        renderTargetBarrier.Transition.pResource = m_BackBuffers[backBufferIndex].get();
         renderTargetBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         renderTargetBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
         renderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         m_CommandList->ResourceBarrier(1, &renderTargetBarrier);
 
         // Copy the saved texture to it
-        m_CommandList->CopyResource(m_BackBuffers[backBufferIndex], m_SavedTexture);
+        m_CommandList->CopyResource(m_BackBuffers[backBufferIndex].get(), m_SavedTexture.get());
 
         // Indicate that the back buffer will be used to present
         D3D12_RESOURCE_BARRIER presentBarrier;
         renderTargetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         renderTargetBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        renderTargetBarrier.Transition.pResource = m_BackBuffers[backBufferIndex];
+        renderTargetBarrier.Transition.pResource = m_BackBuffers[backBufferIndex].get();
         renderTargetBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         renderTargetBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
         renderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -197,16 +199,16 @@ namespace GfxQuadroSync
 
         // Command list is completed
         m_CommandList->Close();
-        ID3D12CommandList* const commandListsToExecute[] = { m_CommandList };
+        ID3D12CommandList* const commandListsToExecute[] = {m_CommandList.get()};
         m_CommandQueue->ExecuteCommandLists(1, commandListsToExecute);
 
         // Add a barrier to be signaled when commands are done being processed
         QueueUpdateFence();
     }
 
-    void D3D12GraphicsDevice::FreeSavedToPresent()
+    void D3D12GraphicsDevice::ConcludePresentRepeats()
     {
-        if (m_SwapChain == nullptr)
+        if (!m_SwapChain)
         {
             return;
         }
@@ -219,7 +221,7 @@ namespace GfxQuadroSync
         // match.
         while (m_SwapChain->GetCurrentBackBufferIndex() != m_FirstRepeatBackBufferIndex)
         {
-            RepeatSavedToPresent();
+            PrepareSinglePresentRepeat();
             HRESULT hr = m_SwapChain->Present(m_SyncInterval, m_PresentFlags);
             if (FAILED(hr))
             {
@@ -233,15 +235,22 @@ namespace GfxQuadroSync
 
     void D3D12GraphicsDevice::EnsureFenceCreated()
     {
-        if (m_BarrierReachedEvent == NULL)
+        if (!m_BarrierReachedEvent)
         {
-            m_BarrierReachedEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            m_BarrierReachedEvent.reset(CreateEvent(nullptr, FALSE, FALSE, nullptr));
         }
 
-        if (m_CommandExecutionDoneFence == nullptr)
+        if (!m_CommandExecutionDoneFence)
         {
-            m_D3D12Device->CreateFence(m_CommandExecutionDoneFenceNextValue - 1, D3D12_FENCE_FLAG_NONE,
-                __uuidof(ID3D12Fence), reinterpret_cast<void**>(&m_CommandExecutionDoneFence));
+            ID3D12Fence* commandExecutionDoneFence;
+            HRESULT hr = m_D3D12Device->CreateFence(m_CommandExecutionDoneFenceNextValue - 1, D3D12_FENCE_FLAG_NONE,
+                __uuidof(ID3D12Fence), reinterpret_cast<void**>(&commandExecutionDoneFence));
+            if (FAILED(hr))
+            {
+                CLUSTER_LOG_ERROR << "ID3D12Device::CreateFence failed: " << hr;
+                return;
+            }
+            m_CommandExecutionDoneFence.reset(commandExecutionDoneFence);
             m_CommandExecutionDoneFence->SetName(L"GfxPluginQuadroSync Fence");
         }
     }
@@ -249,7 +258,7 @@ namespace GfxQuadroSync
     void D3D12GraphicsDevice::QueueUpdateFence()
     {
         ++m_CommandExecutionDoneFenceNextValue;
-        HRESULT hr = m_CommandQueue->Signal(m_CommandExecutionDoneFence, m_CommandExecutionDoneFenceNextValue);
+        HRESULT hr = m_CommandQueue->Signal(m_CommandExecutionDoneFence.get(), m_CommandExecutionDoneFenceNextValue);
         if (FAILED(hr))
         {
             CLUSTER_LOG_WARNING << "ID3D12CommandQueue::Signal failed: " << hr;
@@ -265,40 +274,20 @@ namespace GfxQuadroSync
 
         if (m_CommandExecutionDoneFence->GetCompletedValue() < m_CommandExecutionDoneFenceNextValue)
         {
-            ResetEvent(m_BarrierReachedEvent);
+            ResetEvent(m_BarrierReachedEvent.get());
             m_CommandExecutionDoneFence->SetEventOnCompletion(m_CommandExecutionDoneFenceNextValue,
-                m_BarrierReachedEvent);
-            WaitForSingleObject(m_BarrierReachedEvent, INFINITE);
+                m_BarrierReachedEvent.get());
+            WaitForSingleObject(m_BarrierReachedEvent.get(), INFINITE);
         }
     }
 
     void D3D12GraphicsDevice::FreeResources()
     {
-        if (m_BarrierReachedEvent != NULL)
-        {
-            CloseHandle(m_BarrierReachedEvent);
-            m_BarrierReachedEvent = NULL;
-        }
-        if (m_CommandExecutionDoneFence != nullptr)
-        {
-            m_CommandExecutionDoneFence->Release();
-        }
-        if (m_CommandList != nullptr)
-        {
-            m_CommandList->Release();
-        }
-        if (m_CommandAllocator != nullptr)
-        {
-            m_CommandAllocator->Release();
-        }
-        for (auto resource : m_BackBuffers)
-        {
-            resource->Release();
-        }
+        m_BarrierReachedEvent.reset();
+        m_CommandExecutionDoneFence.reset();
+        m_CommandList.reset();
+        m_CommandAllocator.reset();
         m_BackBuffers.clear();
-        if (m_SavedTexture != nullptr)
-        {
-            m_SavedTexture->Release();
-        }
+        m_SavedTexture.reset();
     }
 }

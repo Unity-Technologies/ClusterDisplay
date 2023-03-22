@@ -3,6 +3,7 @@
 #include "d3d11.h"
 #include "dxgi.h"
 #include "IGraphicsDevice.h"
+#include "ComHelpers.h"
 
 namespace GfxQuadroSync
 {
@@ -27,9 +28,9 @@ namespace GfxQuadroSync
         void SetDevice(IUnknown* const device) override { m_D3D11Device = static_cast<ID3D11Device*>(device); }
         void SetSwapChain(IDXGISwapChain* const swapChain) override { m_SwapChain = swapChain; }
 
-        void SaveToPresent() override;
-        void RepeatSavedToPresent() override;
-        void FreeSavedToPresent() override;
+        void InitiatePresentRepeats() override;
+        void PrepareSinglePresentRepeat() override;
+        void ConcludePresentRepeats() override;
 
     private:
         ID3D11Device* m_D3D11Device;
@@ -37,9 +38,9 @@ namespace GfxQuadroSync
         UINT32 m_SyncInterval;
         UINT m_PresentFlags;
 
-        ID3D11Texture2D* m_BackBufferTexture = nullptr;
-        ID3D11RenderTargetView* m_BackBufferRenderTargetView = nullptr;
-        ID3D11Texture2D* m_SavedToPresent = nullptr;
-        ID3D11DeviceContext* m_DeviceContext = nullptr;
+        ComSharedPtr<ID3D11Texture2D> m_BackBufferTexture;
+        ComSharedPtr<ID3D11RenderTargetView> m_BackBufferRenderTargetView;
+        ComSharedPtr<ID3D11Texture2D> m_SavedToPresent;
+        ComSharedPtr<ID3D11DeviceContext> m_DeviceContext;
     };
 }

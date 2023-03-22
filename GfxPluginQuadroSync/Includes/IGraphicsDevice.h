@@ -27,8 +27,17 @@ namespace GfxQuadroSync
         virtual void SetDevice(IUnknown* const device) = 0;
         virtual void SetSwapChain(IDXGISwapChain* const swapChain) = 0;
 
-        virtual void SaveToPresent() = 0;
-        virtual void RepeatSavedToPresent() = 0;
-        virtual void FreeSavedToPresent() = 0;
+        /**
+         * Called before starting a sequence of "additional present" required to warm up the quadro sync barrier.
+         */
+        virtual void InitiatePresentRepeats() = 0;
+        /**
+         * Called before every "additional present" required to warm up the quadro sync barrier.
+         */
+        virtual void PrepareSinglePresentRepeat() = 0;
+        /**
+         * Called after the sequence of "additional present" required to warm up the quadro sync barrier.
+         */
+        virtual void ConcludePresentRepeats() = 0;
     };
 }

@@ -3,6 +3,7 @@
 #include "d3d12.h"
 #include "dxgi.h"
 #include "IGraphicsDevice.h"
+#include "ComHelpers.h"
 
 #include <vector>
 
@@ -32,9 +33,9 @@ namespace GfxQuadroSync
         void SetDevice(IUnknown* const device) override { m_D3D12Device = static_cast<ID3D12Device*>(device); }
         void SetSwapChain(IDXGISwapChain* const swapChain) override;
 
-        void SaveToPresent() override;
-        void RepeatSavedToPresent() override;
-        void FreeSavedToPresent() override;
+        void InitiatePresentRepeats() override;
+        void PrepareSinglePresentRepeat() override;
+        void ConcludePresentRepeats() override;
 
     private:
         bool IsFenceCreated() const { return m_CommandExecutionDoneFence != nullptr; }
@@ -44,19 +45,19 @@ namespace GfxQuadroSync
         void FreeResources();
 
         ID3D12Device* m_D3D12Device;
-        IDXGISwapChain3* m_SwapChain = nullptr;
+        ComSharedPtr<IDXGISwapChain3> m_SwapChain;
         ID3D12CommandQueue* m_CommandQueue;
         UINT32 m_SyncInterval;
         UINT m_PresentFlags;
 
-        ID3D12Fence* m_CommandExecutionDoneFence = nullptr;
+        ComSharedPtr<ID3D12Fence> m_CommandExecutionDoneFence;
         UINT64 m_CommandExecutionDoneFenceNextValue = 1;
-        HANDLE m_BarrierReachedEvent = NULL;
+        HandleWrapper m_BarrierReachedEvent;
 
-        ID3D12CommandAllocator* m_CommandAllocator = nullptr;
-        ID3D12GraphicsCommandList* m_CommandList = nullptr;
-        std::vector<ID3D12Resource*> m_BackBuffers;
-        ID3D12Resource* m_SavedTexture = nullptr;
+        ComSharedPtr<ID3D12CommandAllocator> m_CommandAllocator;
+        ComSharedPtr<ID3D12GraphicsCommandList> m_CommandList;
+        std::vector<ComSharedPtr<ID3D12Resource>> m_BackBuffers;
+        ComSharedPtr<ID3D12Resource> m_SavedTexture;
         UINT m_FirstRepeatBackBufferIndex = -1;
     };
 }

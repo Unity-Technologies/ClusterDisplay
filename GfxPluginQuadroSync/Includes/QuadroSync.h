@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../External/NvAPI/nvapi.h"
+#include "../Unity/IUnityInterface.h"
 
 #include <atomic>
 #include <cstdint>
@@ -59,7 +60,7 @@ namespace GfxQuadroSync
         };
 
         // Type of callback to a managed function that is called after the first present when barrier is active.
-        typedef BarrierWarmupAction(__stdcall* BarrierWarmupCallback)();
+        typedef BarrierWarmupAction(UNITY_INTERFACE_API* BarrierWarmupCallback)();
 
         void SetBarrierWarmupCallback(BarrierWarmupCallback callback)
         {

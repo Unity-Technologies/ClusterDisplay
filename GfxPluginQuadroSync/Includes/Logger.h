@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "../../External/NvAPI/nvapi_lite_common.h"
+#include "../Unity/IUnityInterface.h"
 
 namespace GfxQuadroSync
 {
@@ -36,7 +37,7 @@ namespace GfxQuadroSync
         }
 
         /// Type of callback to managed function that receive the log messages
-        typedef void(__stdcall* ManagedCallback)(int, const char*);
+        typedef void(UNITY_INTERFACE_API* ManagedCallback)(int, const char*);
 
         /// Sets the function to be called for every logging message we receive.
         void SetManagedCallback(ManagedCallback managedCallback);
