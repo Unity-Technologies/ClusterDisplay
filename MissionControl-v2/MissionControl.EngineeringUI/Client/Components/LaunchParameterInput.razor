@@ -1,4 +1,5 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl
+@inject ILogger<LaunchParameterInput> logger
 
 @if (Entry.Definition?.Constraint is LaunchCatalog.ListConstraint listConstraint)
 {
@@ -6,31 +7,37 @@
 }
 else
 {
+    Constraint? constraint = Entry.Definition?.Constraint;
+    RangeConstraint? rangeConstraint = constraint as RangeConstraint;
+
     switch (Entry.Definition?.Type)
     {
         case LaunchCatalog.LaunchParameterType.Boolean:
             <RadzenSwitch @bind-Value=@BoolValue />
             break;
         case LaunchCatalog.LaunchParameterType.Integer:
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
-                <RadzenNumeric @bind-Value=@IntValue />
-                @if (Entry.Definition?.Constraint is RangeConstraint { Max: not null, Min: not null } rangeConstraint)
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="24px" JustifyContent="JustifyContent.Stretch">
+                <RadzenNumeric @bind-Value=@IntValue Min="@(rangeConstraint?.MinInt32Inclusive)" Max="@(rangeConstraint?.MaxInt32Inclusive)" />
+                @if (rangeConstraint is { Max: not null, Min: not null })
                 {
-                    <RadzenSlider @bind-Value=@IntValue Min="rangeConstraint.MinInt32Inclusive" Max="rangeConstraint.MaxInt32Inclusive" />
+                    <RadzenSlider @bind-Value=@IntValue Min="@rangeConstraint.MinInt32Inclusive" Max="@rangeConstraint.MaxInt32Inclusive" />
                 }
             </RadzenStack>
             break;
         case LaunchCatalog.LaunchParameterType.Float:
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
-            <RadzenNumeric @bind-Value=@FloatValue />
-                @if (Entry.Definition?.Constraint is RangeConstraint { Max: not null, Min: not null } rangeConstraint)
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                <RadzenNumeric @bind-Value=@FloatValue Min="@(rangeConstraint?.MinDecimalInclusive)" Max="@(rangeConstraint?.MaxDecimalInclusive)" />
+                @if (rangeConstraint is { Max: not null, Min: not null })
                 {
-                    <RadzenSlider @bind-Value=@IntValue Min="rangeConstraint.MinDecimalInclusive" Max="rangeConstraint.MaxDecimalInclusive" />
+                    <RadzenSlider @bind-Value=@FloatValue Min="@rangeConstraint.MinDecimalInclusive" Max="@rangeConstraint.MaxDecimalInclusive" />
                 }
             </RadzenStack>
             break;
         case LaunchCatalog.LaunchParameterType.String:
-            <RadzenTextBox @bind-Value=@StringValue />
+            <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                <RadzenTextBox @bind-Value=@StringValue />
+                <div Class="rz-message rz-messages-error">@validationError</div>
+            </RadzenStack>
             break;
         default:
             break;
@@ -43,6 +50,9 @@ else
 
     [Parameter]
     public EventCallback<LaunchParameters.ParameterEntry> OnValueChanged { get; set; }
+
+    string? validationError;
+    bool HasValidationError => string.IsNullOrEmpty(validationError);
 
     protected override void OnInitialized()
     {
@@ -60,13 +70,13 @@ else
 
     public int IntValue
     {
-        get => GetValue<int>();
+        get => Convert.ToInt32(Entry.Value);
         set => SetValue(value);
     }
 
     public float FloatValue
     {
-        get => GetValue<float>();
+        get => Convert.ToSingle(Entry.Value);
         set => SetValue(value);
     }
 
@@ -76,13 +86,15 @@ else
         set => SetValue(value);
     }
 
-    T GetValue<T>()
+    T GetValue<T>() => (T)Entry.Value;
+
+    void ValidateValue(int value)
     {
-        return (T)Entry.Value;
     }
 
     void SetValue<T>(T maybeValue)
     {
+        // maybeValue could be null
         if (maybeValue is T value)
         {
             // Setting a non-default value for the parameter
