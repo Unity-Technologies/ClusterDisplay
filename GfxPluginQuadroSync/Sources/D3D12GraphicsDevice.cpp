@@ -19,10 +19,6 @@ namespace GfxQuadroSync
         SetSwapChain(swapChain);
     }
 
-    D3D12GraphicsDevice::~D3D12GraphicsDevice()
-    {
-    }
-
     IDXGISwapChain* D3D12GraphicsDevice::GetSwapChain() const
     {
         return m_SwapChain.get();

@@ -21,7 +21,7 @@ namespace GfxQuadroSync
             UINT32 interval,
             UINT presentFlags);
 
-        virtual ~D3D12GraphicsDevice();
+        virtual ~D3D12GraphicsDevice() = default;
 
         GraphicsDeviceType GetDeviceType() const override { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D12; }
 

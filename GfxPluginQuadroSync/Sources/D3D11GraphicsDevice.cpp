@@ -15,10 +15,6 @@ namespace GfxQuadroSync
     {
     }
 
-    D3D11GraphicsDevice::~D3D11GraphicsDevice()
-    {
-    }
-
     void D3D11GraphicsDevice::InitiatePresentRepeats()
     {
         if (m_BackBufferTexture || m_BackBufferRenderTargetView || m_DeviceContext || m_SavedToPresent)
