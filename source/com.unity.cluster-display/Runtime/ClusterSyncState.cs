@@ -43,6 +43,11 @@ namespace Unity.ClusterDisplay
         /// </ul>
         /// </remarks>
         void ChangeClusterTopology(IReadOnlyList<ClusterTopologyEntry> entries);
+
+        /// <summary>
+        /// Terminate ClusterDisplay.
+        /// </summary>
+        void Terminate();
     }
 
     public partial class ClusterSync : IClusterSyncState
@@ -86,6 +91,16 @@ namespace Unity.ClusterDisplay
                     $"{nameof(NodeRole.Emitter)} in {nameof(entries)}.", nameof(entries));
             }
             LocalNode.UpdatedClusterTopology.Entries = entries;
+        }
+
+        public void Terminate()
+        {
+            IsTerminated = true;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
     }
 }

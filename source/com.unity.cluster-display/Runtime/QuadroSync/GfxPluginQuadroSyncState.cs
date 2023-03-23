@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+// ReSharper disable UnassignedGetOnlyAutoProperty
 
 namespace Unity.ClusterDisplay
 {
@@ -61,6 +62,19 @@ namespace Unity.ClusterDisplay
         /// swap barriers.
         /// </summary>
         SwapBarrierIdMismatch = 12,
+
+        /// <summary>
+        /// An unexpected exception (on the managed side) occured while performing the initialization process.
+        /// </summary>
+        UnexpectedException = 13,
+        /// <summary>
+        /// Execution of cluster display stopped unexpectedly.
+        /// </summary>
+        UnexpectedTermination = 14,
+        /// <summary>
+        /// Warmup of the swap barrier took longer than expected.
+        /// </summary>
+        BarrierWarmupTimeout = 15,
     }
 
     public static class GfxPluginQuadroSyncInitializationStateExtension
@@ -86,7 +100,10 @@ namespace Unity.ClusterDisplay
                 GfxPluginQuadroSyncInitializationState.FailedToJoinSwapGroup => "Failed to join swap group",
                 GfxPluginQuadroSyncInitializationState.SwapGroupMismatch => "Mismatch between swap group identifier and available swap groups",
                 GfxPluginQuadroSyncInitializationState.FailedToBindSwapBarrier => "Failed to joining swap barrier",
-                GfxPluginQuadroSyncInitializationState.SwapBarrierIdMismatch => "Failed to joining swap barrier",
+                GfxPluginQuadroSyncInitializationState.SwapBarrierIdMismatch => "Swap barrier id does not match system capability",
+                GfxPluginQuadroSyncInitializationState.UnexpectedException => "Unexpected exception during the initialization process",
+                GfxPluginQuadroSyncInitializationState.UnexpectedTermination => "Unexpected end of cluster display system",
+                GfxPluginQuadroSyncInitializationState.BarrierWarmupTimeout => "Timeout during warmup of the swap barrier",
                 _ => "Unknown initialization state"
             };
 

@@ -46,6 +46,53 @@ namespace Unity.ClusterDisplay
         protected GfxPluginQuadroSyncInitializationState InitializationState { get; private set; }
             = GfxPluginQuadroSyncInitializationState.NotInitialized;
 
+        /// <summary>
+        /// Reports an error that happens during the initialization process.
+        /// </summary>
+        /// <param name="proposedState">The new proposed initialization state.</param>
+        /// <remarks>It is a <b>proposed</b> state because this new state (and the reported error) will be ignored if
+        /// the initialization is already completed.  This is to avoid an error being reported during the teardown
+        /// of the initialization mechanic to stop everything while in fact everything is ok...</remarks>
+        protected void ReportInitializationError(GfxPluginQuadroSyncInitializationState proposedState)
+        {
+            if (InitializationState == GfxPluginQuadroSyncInitializationState.NotInitialized)
+            {
+                InitializationState = proposedState;
+            }
+        }
+
+        /// <summary>
+        /// Wrapper around <see cref="GfxPluginQuadroSyncSystem.SetBarrierWarmupCallback"/> that deals with exceptions.
+        /// </summary>
+        /// <param name="func"></param>
+        protected void SetBarrierWarmupCallback(Func<GfxPluginQuadroSyncSystem.BarrierWarmupAction> func)
+        {
+            if (func != null)
+            {
+                GfxPluginQuadroSyncSystem.SetBarrierWarmupCallback(() =>
+                {
+                    try
+                    {
+                        return func();
+                    }
+                    catch (Exception e)
+                    {
+                        ClusterDebug.LogException(e);
+                        ReportInitializationError(GfxPluginQuadroSyncInitializationState.UnexpectedException);
+                        if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState))
+                        {
+                            clusterSyncState.Terminate();
+                        }
+                        return GfxPluginQuadroSyncSystem.BarrierWarmupAction.ContinueToNextFrame;
+                    }
+                });
+            }
+            else
+            {
+                GfxPluginQuadroSyncSystem.SetBarrierWarmupCallback(null);
+            }
+        }
+
         void ProcessQuadroSyncInitResult()
         {
             InitializationState = GfxPluginQuadroSyncSystem.FetchState().InitializationState;

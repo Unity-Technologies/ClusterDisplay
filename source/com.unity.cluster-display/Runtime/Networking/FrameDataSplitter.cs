@@ -230,7 +230,11 @@ namespace Unity.ClusterDisplay
                 var frameDataInformation = m_SentFramesInformation[bufferIndex];
                 if (frameDataInformation.DataBuffer == null)
                 {
-                    Debug.LogWarning($"Asking to retransmit a frame for which we have no data.");
+                    // Don't report problem for frame 0, this can happen a lot, especially when delayed repeaters is on.
+                    if (retransmitMessage.Payload.FrameIndex > 0)
+                    {
+                        Debug.LogWarning($"Asking to retransmit a frame for which we have no data.");
+                    }
                     return PreProcessResult.Stop();
                 }
 

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
-using UnityEngine;
+using Unity.ClusterDisplay.Utils;
 using Utils;
+using Debug = UnityEngine.Debug;
 
 namespace Unity.ClusterDisplay
 {
@@ -31,9 +33,10 @@ namespace Unity.ClusterDisplay
 
                 m_RepeaterHasCompleted = new(false);
                 m_HeartbeatChanged = new(false);
+                m_BarrierSyncDeadline = StopwatchUtils.TimestampIn(Node.Config.HandshakeTimeout);
 
                 Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.MessageSniffing, SniffReceivedMessages);
-                GfxPluginQuadroSyncSystem.SetBarrierWarmupCallback(BarrierWarmupCallback);
+                SetBarrierWarmupCallback(BarrierWarmupCallback);
                 new Thread(SendHeartbeatLoop).Start();
                 m_EmittersMonitoringInitialized = true;
             }
@@ -43,7 +46,7 @@ namespace Unity.ClusterDisplay
         new EmitterNode Node => base.Node as EmitterNode;
 
         /// <summary>
-        /// Callback used when doing the present of the fist frame to ensure that QudroSync's SwapBarrier is up and
+        /// Callback used when doing the present of the fist frame to ensure that QuadroSync's SwapBarrier is up and
         /// running for all nodes of the cluster.
         /// </summary>
         /// <remarks>Called from the rendering thread.</remarks>
@@ -64,6 +67,32 @@ namespace Unity.ClusterDisplay
             if (toJoin != null)
             {
                 toJoin.Join();
+            }
+
+            // Unblock if the cluster display is terminating for whatever reason
+            var initializationError = GfxPluginQuadroSyncInitializationState.NotInitialized;
+            if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState) &&
+                clusterSyncState.IsTerminated)
+            {
+                initializationError = GfxPluginQuadroSyncInitializationState.UnexpectedTermination;
+            }
+
+            // Be sure we do not try to warmup the barrier for too long
+            if (Stopwatch.GetTimestamp() > m_BarrierSyncDeadline)
+            {
+                initializationError = GfxPluginQuadroSyncInitializationState.BarrierWarmupTimeout;
+            }
+
+            if (initializationError != GfxPluginQuadroSyncInitializationState.NotInitialized)
+            {
+                Node.UdpAgent.RemovePreProcess(SniffReceivedMessages);
+                SetBarrierWarmupCallback(null);
+                ReportInitializationError(initializationError);
+                if (clusterSyncState != null)
+                {
+                    clusterSyncState.Terminate();
+                }
+                return GfxPluginQuadroSyncSystem.BarrierWarmupAction.ContinueToNextFrame;
             }
 
             // See what we need to do next
@@ -204,7 +233,7 @@ namespace Unity.ClusterDisplay
             if (done)
             {
                 Node.UdpAgent.RemovePreProcess(SniffReceivedMessages);
-                GfxPluginQuadroSyncSystem.SetBarrierWarmupCallback(null);
+                SetBarrierWarmupCallback(null);
                 return GfxPluginQuadroSyncSystem.BarrierWarmupAction.BarrierWarmedUp;
             }
             else
@@ -222,11 +251,20 @@ namespace Unity.ClusterDisplay
         /// <returns>Always <c>PreProcessResult.PassThrough()</c>.</returns>
         PreProcessResult SniffReceivedMessages(ReceivedMessageBase message)
         {
-            switch (message.Type)
+            try
             {
-                case MessageType.QuadroBarrierWarmupStatus:
-                    SniffReceivedQuadroBarrierWarmupStatus((ReceivedMessage<QuadroBarrierWarmupStatus>)message);
-                    break;
+                switch (message.Type)
+                {
+                    case MessageType.QuadroBarrierWarmupStatus:
+                        SniffReceivedQuadroBarrierWarmupStatus((ReceivedMessage<QuadroBarrierWarmupStatus>)message);
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                // Not supposed to happen, but we can let the message continue its way through the pipeline without any
+                // arm to anybody, so continue processing as if nothing happened.
+                ClusterDebug.LogException(e);
             }
             return PreProcessResult.PassThrough();
         }
@@ -262,23 +300,45 @@ namespace Unity.ClusterDisplay
         {
             while (InitializationState.IsSuccess())
             {
-                QuadroBarrierWarmupHeartbeat heartbeatToSend;
-                IUdpAgent udpAgentToSendWith;
-                AutoResetEvent heartbeatChanged;
-                lock (m_Lock)
+                try
                 {
-                    heartbeatToSend = m_Heartbeat;
-                    udpAgentToSendWith = Node.UdpAgent;
-                    heartbeatChanged = m_HeartbeatChanged;
+                    QuadroBarrierWarmupHeartbeat heartbeatToSend;
+                    IUdpAgent udpAgentToSendWith;
+                    AutoResetEvent heartbeatChanged;
+                    lock (m_Lock)
+                    {
+                        heartbeatToSend = m_Heartbeat;
+                        udpAgentToSendWith = Node.UdpAgent;
+                        heartbeatChanged = m_HeartbeatChanged;
+                    }
+
+                    udpAgentToSendWith.SendMessage(MessageType.QuadroBarrierWarmupHeartbeat, heartbeatToSend);
+
+                    if (heartbeatChanged == null)
+                    {
+                        return;
+                    }
+
+                    heartbeatChanged.WaitOne(k_RepeatMessageInterval);
                 }
-
-                udpAgentToSendWith.SendMessage(MessageType.QuadroBarrierWarmupHeartbeat, heartbeatToSend);
-
-                if (heartbeatChanged == null)
+                catch (Exception e)
                 {
-                    return;
+                    // No need to continue if cluster is shutting down, something bad must have happened...
+                    if (ServiceLocator.TryGet<IClusterSyncState>(out var clusterSyncState) &&
+                        clusterSyncState.IsTerminated)
+                    {
+                        return;
+                    }
+
+                    // Something strange is going on, but let's continue, either it was a random problem or something
+                    // more dramatic that should eventually cause InitializationState to be marked as failure (but the
+                    // repeating the heartbeat is not that critical and we do not want to completely stop the process).
+                    ClusterDebug.LogException(e);
+
+                    // But wait a little bit to be sure we are not using all the system resources in case the error
+                    // condition persists.
+                    Thread.Sleep(25);
                 }
-                heartbeatChanged.WaitOne(k_RepeatMessageInterval);
             }
         }
 
@@ -333,6 +393,11 @@ namespace Unity.ClusterDisplay
         /// Indicates that a repeater has completed its stage (that we were waiting on).
         /// </summary>
         AutoResetEvent m_RepeaterHasCompleted;
+        /// <summary>
+        /// Maximum <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/> until which we try to warmup the barrier,
+        /// after that we abort and terminate cluster display.
+        /// </summary>
+        long m_BarrierSyncDeadline = long.MaxValue;
 
         /// <summary>
         /// Used to synchronize access to member variables below
