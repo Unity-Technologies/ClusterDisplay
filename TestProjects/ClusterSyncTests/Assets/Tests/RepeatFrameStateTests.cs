@@ -472,6 +472,9 @@ namespace Unity.ClusterDisplay.Tests
         void ReplaceNodeWithNewOne(TimeSpan communicationTimeout)
         {
             var newNodeConfig = m_Node.Config;
+            // We also set the HandshakeTimeout as it is the one that is used for the first frames (and testing for
+            // something else than frame 0 would be a pain).
+            newNodeConfig.HandshakeTimeout = communicationTimeout;
             newNodeConfig.CommunicationTimeout = communicationTimeout;
             IUdpAgent repeaterUdpAgent = m_Node.UdpAgent;
             m_Node.Dispose();
