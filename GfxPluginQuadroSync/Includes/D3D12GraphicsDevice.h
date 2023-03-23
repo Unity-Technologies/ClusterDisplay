@@ -25,12 +25,12 @@ namespace GfxQuadroSync
 
         GraphicsDeviceType GetDeviceType() const override { return GraphicsDeviceType::GRAPHICS_DEVICE_D3D12; }
 
-        IUnknown*       GetDevice() const override { return m_D3D12Device; }
+        IUnknown*       GetDevice() const override { return m_D3D12Device.get(); }
         IDXGISwapChain* GetSwapChain() const override;
         UINT32          GetSyncInterval() const override { return m_SyncInterval; }
         UINT            GetPresentFlags() const override { return m_PresentFlags; }
 
-        void SetDevice(IUnknown* const device) override { m_D3D12Device = static_cast<ID3D12Device*>(device); }
+        void SetDevice(IUnknown* const device) override;
         void SetSwapChain(IDXGISwapChain* const swapChain) override;
 
         void InitiatePresentRepeats() override;
@@ -44,9 +44,9 @@ namespace GfxQuadroSync
         void WaitForFence();
         void FreeResources();
 
-        ID3D12Device* m_D3D12Device;
+        ComSharedPtr<ID3D12Device> m_D3D12Device;
         ComSharedPtr<IDXGISwapChain3> m_SwapChain;
-        ID3D12CommandQueue* m_CommandQueue;
+        ComSharedPtr<ID3D12CommandQueue> m_CommandQueue;
         UINT32 m_SyncInterval;
         UINT m_PresentFlags;
 
@@ -54,9 +54,9 @@ namespace GfxQuadroSync
         UINT64 m_CommandExecutionDoneFenceNextValue = 1;
         HandleWrapper m_BarrierReachedEvent;
 
+        std::vector<ComSharedPtr<ID3D12Resource>> m_BackBuffers;
         ComSharedPtr<ID3D12CommandAllocator> m_CommandAllocator;
         ComSharedPtr<ID3D12GraphicsCommandList> m_CommandList;
-        std::vector<ComSharedPtr<ID3D12Resource>> m_BackBuffers;
         ComSharedPtr<ID3D12Resource> m_SavedTexture;
         UINT m_FirstRepeatBackBufferIndex = -1;
     };

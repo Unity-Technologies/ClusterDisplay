@@ -132,8 +132,8 @@ namespace Unity.ClusterDisplay
                 }
 
                 // Is everybody's barrier up?  Repeaters are presenting frames as fast as they can while we are slow.
-                // So this means that that if they are able to detect their barrier is up it is because the present was
-                // long because it is waiting for the emitter (us) to produce a frame.
+                // So this means that if they are able to detect their barrier is up it is because the present was long
+                // because it is waiting for the emitter (us) to produce a frame.
                 if (m_StageCompletedRepeaters.SetBitsCount >= Node.RepeatersStatus.RepeaterPresence.SetBitsCount)
                 {
                     // However, it is possible that last repeaters detected it was waiting at about the same moment the

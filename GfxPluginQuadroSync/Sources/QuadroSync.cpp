@@ -254,10 +254,10 @@ namespace GfxQuadroSync
 
     bool PluginCSwapGroupClient::Render(IGraphicsDevice* pGraphicsDevice)
     {
-        IUnknown* const pDevice = pGraphicsDevice->GetDevice();
-        IDXGISwapChain* const pSwapChain = pGraphicsDevice->GetSwapChain();
-        const int pVsync = pGraphicsDevice->GetSyncInterval();
-        const int pFlags = pGraphicsDevice->GetPresentFlags();
+        const auto pDevice = pGraphicsDevice->GetDevice();
+        const auto pSwapChain = pGraphicsDevice->GetSwapChain();
+        const auto pVsync = pGraphicsDevice->GetSyncInterval();
+        const auto pFlags = pGraphicsDevice->GetPresentFlags();
 
         if (m_NeedToWarmUpBarrier)
         {

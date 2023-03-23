@@ -17,20 +17,46 @@ namespace GfxQuadroSync
      *         call Release on it).
      */
     template <class T>
-    class ComSharedPtr : public std::shared_ptr<T>
+    class ComSharedPtr final : public std::shared_ptr<T>
     {
     public:
-        ComSharedPtr() {}
-        explicit ComSharedPtr(T* ptr)
-            : std::shared_ptr<T>(ptr, [](T* toRelease) { if (toRelease) toRelease->Release(); }) {}
+        ComSharedPtr() = default;
+        explicit ComSharedPtr(T* const ptr)
+            : std::shared_ptr<T>(ptr, [](T* const toRelease) { if (toRelease) toRelease->Release(); }) {}
         ComSharedPtr(const ComSharedPtr& toCopy) : std::shared_ptr<T>(toCopy) {}
         ComSharedPtr(ComSharedPtr&& toMove) noexcept : std::shared_ptr<T>(toMove) {}
+
+        ComSharedPtr& operator=(const ComSharedPtr& toCopy) noexcept
+        {
+            std::shared_ptr<T>::operator=(toCopy);
+            return *this;
+        }
+
+        template <class T2, std::enable_if_t<std::_SP_pointer_compatible<T2, T>::value, int> = 0>
+        ComSharedPtr& operator=(const shared_ptr<T2>& toCopy) noexcept
+        {
+            std::shared_ptr<T>::operator=(toCopy);
+            return *this;
+        }
+
+        ComSharedPtr& operator=(ComSharedPtr&& toMove) noexcept
+        {
+            std::shared_ptr<T>::operator=(std::move(toMove));
+            return *this;
+        }
+
+        template <class T2, std::enable_if_t<std::_SP_pointer_compatible<T2, T>::value, int> = 0>
+        shared_ptr& operator=(shared_ptr<T2>&& toMove) noexcept
+        {
+            std::shared_ptr<T>::operator=(std::move(toMove));
+            return *this;
+        }
 
         void reset()
         {
             std::shared_ptr<T>::reset();
         }
-        void reset(T* ptr)
+        void reset(T* const ptr)
         {
             ComSharedPtr(ptr).swap(*this);
         }
@@ -49,8 +75,8 @@ namespace GfxQuadroSync
     class HandleWrapper final
     {
     public:
-        HandleWrapper() {}
-        explicit HandleWrapper(HANDLE handle) : m_Handle(handle) {}
+        HandleWrapper() = default;
+        explicit HandleWrapper(const HANDLE handle) : m_Handle(handle) {}
         HandleWrapper(HandleWrapper&& toMove) noexcept { std::swap(m_Handle, toMove.m_Handle); }
 
         ~HandleWrapper()
@@ -75,7 +101,7 @@ namespace GfxQuadroSync
                 m_Handle = NULL;
             }
         }
-        void reset(HANDLE handle)
+        void reset(const HANDLE handle)
         {
             reset();
             m_Handle = handle;

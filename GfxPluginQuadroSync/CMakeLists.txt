@@ -29,6 +29,7 @@ set( QUADROSYNC_WRAPPER_PROJECT_HEADERS
 	Includes/Logger.h
 	Includes/D3D11GraphicsDevice.h
 	Includes/D3D12GraphicsDevice.h
+	Includes/ComHelpers.h
 )
 
 set( QUADROSYNC_WRAPPER_PRIVATE_HEADERS

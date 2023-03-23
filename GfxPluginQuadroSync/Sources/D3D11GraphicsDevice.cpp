@@ -3,6 +3,48 @@
 
 namespace GfxQuadroSync
 {
+    ComSharedPtr<ID3D11Texture2D> GetBackBufferTexture(IDXGISwapChain* const swapChain)
+    {
+        ID3D11Texture2D* backBufferTexture;
+        auto hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBufferTexture));
+        if (FAILED(hr))
+        {
+            CLUSTER_LOG_ERROR << "SaveToPresent failed to get swap chain buffer 0: " << hr;
+            throw std::exception();
+        }
+        return ComSharedPtr<ID3D11Texture2D>(backBufferTexture);
+    }
+
+    ComSharedPtr<ID3D11RenderTargetView> CreateRenderTargetView(ID3D11Device* const device,
+        const ComSharedPtr<ID3D11Texture2D>& texture)
+    {
+        ID3D11RenderTargetView* backBufferRenderTargetView;
+        auto hr = device->CreateRenderTargetView(texture.get(), nullptr, &backBufferRenderTargetView);
+        if (FAILED(hr))
+        {
+            CLUSTER_LOG_ERROR << "SaveToPresent failed to create RenderTargetView: " << hr;
+            throw std::exception();
+        }
+        return ComSharedPtr<ID3D11RenderTargetView>(backBufferRenderTargetView);
+    }
+
+    ComSharedPtr<ID3D11Texture2D> CreateCompatibleTexture(ID3D11Device* const device,
+        const ComSharedPtr<ID3D11Texture2D>& compatibleWith)
+    {
+        D3D11_TEXTURE2D_DESC backBufferCopyDesc;
+        compatibleWith->GetDesc(&backBufferCopyDesc);
+        backBufferCopyDesc.BindFlags = 0;
+
+        ID3D11Texture2D* compatibleTexture;
+        auto hr = device->CreateTexture2D(&backBufferCopyDesc, nullptr, &compatibleTexture);
+        if (FAILED(hr))
+        {
+            CLUSTER_LOG_ERROR << "SaveToPresent failed to allocate copy of back buffer: " << hr;
+            throw std::exception();
+        }
+        return ComSharedPtr<ID3D11Texture2D>(compatibleTexture);
+    }
+
     D3D11GraphicsDevice::D3D11GraphicsDevice(
         ID3D11Device* const device,
         IDXGISwapChain* const swapChain,
@@ -23,29 +65,9 @@ namespace GfxQuadroSync
             return;
         }
 
-        {
-            ID3D11Texture2D* backBufferTexture;
-            HRESULT hr = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
-                reinterpret_cast<void**>(&backBufferTexture));
-            if (FAILED(hr))
-            {
-                CLUSTER_LOG_ERROR << "SaveToPresent failed to get swap chain buffer 0: " << hr;
-                return;
-            }
-            m_BackBufferTexture.reset(backBufferTexture);
-        }
-
-        {
-            ID3D11RenderTargetView* backBufferRenderTargetView;
-            HRESULT hr = m_D3D11Device->CreateRenderTargetView(m_BackBufferTexture.get(), nullptr,
-                &backBufferRenderTargetView);
-            if (FAILED(hr))
-            {
-                CLUSTER_LOG_ERROR << "SaveToPresent failed to create RenderTargetView: " << hr;
-                return;
-            }
-            m_BackBufferRenderTargetView.reset(backBufferRenderTargetView);
-        }
+        m_BackBufferTexture = GetBackBufferTexture(m_SwapChain);
+        m_BackBufferRenderTargetView = CreateRenderTargetView(m_D3D11Device, m_BackBufferTexture);
+        m_SavedToPresent = CreateCompatibleTexture(m_D3D11Device, m_BackBufferTexture);
 
         {
             ID3D11DeviceContext* deviceContext;
@@ -54,20 +76,6 @@ namespace GfxQuadroSync
         }
         ID3D11RenderTargetView* const renderTargetViews[] = {m_BackBufferRenderTargetView.get()};
         m_DeviceContext->OMSetRenderTargets(1, renderTargetViews, nullptr);
-
-        D3D11_TEXTURE2D_DESC backBufferCopyDesc;
-        m_BackBufferTexture->GetDesc(&backBufferCopyDesc);
-        backBufferCopyDesc.BindFlags = 0;
-        {
-            ID3D11Texture2D* savedToPresent;
-            HRESULT hr = m_D3D11Device->CreateTexture2D(&backBufferCopyDesc, nullptr, &savedToPresent);
-            if (FAILED(hr))
-            {
-                CLUSTER_LOG_ERROR << "SaveToPresent failed to allocate copy of back buffer: " << hr;
-                return;
-            }
-            m_SavedToPresent.reset(savedToPresent);
-        }
 
         m_DeviceContext->CopyResource(m_SavedToPresent.get(), m_BackBufferTexture.get());
     }
