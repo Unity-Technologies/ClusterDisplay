@@ -35,8 +35,11 @@ namespace Unity.ClusterDisplay
 
             UdpAgent = udpAgent;
             m_MaxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
-            FrameDataBufferPool = new ConcurrentObjectPool<FrameDataBuffer>(
-                () => new FrameDataBuffer(), null, null, buf => buf.Dispose());
+            if (reuseFrameDataBuffers)
+            {
+                FrameDataBufferPool = new ConcurrentObjectPool<FrameDataBuffer>(
+                    () => new FrameDataBuffer(), null, null, buf => buf.Dispose());
+            }
             m_SentFramesInformation = new SentFrameInformation[retransmitHistory];
             for (int i = 0; i < retransmitHistory; ++i)
             {
