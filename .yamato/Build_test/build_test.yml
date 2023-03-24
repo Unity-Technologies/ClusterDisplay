@@ -1,29 +1,5 @@
+# Refer to virtualproduction Mono repo for details about the setup for how to add build tests
 packages : 
-#EXAMPLE   
-#- short_name : "shortname for you yamato job will appear on the yamato UI"
-#  name : "name.of.the.package" (optional if you have a project_path)
-#  agent :          (optional if you can build with the generic agent  ps: this is the agent for windows build)
-#       type: Unity::VM (optional if you can build with the generic vm )
-#       image: cds-ops/win10-vs2017:v0.0.7-942646(optional if you can build with the generic image )
-#       flavor: b1.large    (optional if you can build with the generic flavor )
-#  mac_agent :   (optional if you can build with the generic agent  ps: this is the agent for macOS build)
-#       type: Unity::VM::osx
-#       image: desktop/unity-macos-10.15-xcode-12.2:stable
-#       flavor: m1.mac
-#
-#  package_path: Packages/name.of.the.package   (conflicts if you have a project_path )
-#  project_path : MyFolder/MyProject  : (conflicts if you have a package path )
-#  unity_component :   (optional if you dont need any additional component to build your project  )
-#       - il2cpp 
-#  commands : (optional if you need to add any commands, these will be executed right before running the build test : Windows )
-#       -  
-#  mac_commands : (optional if you need to add any commands, these will be executed right before running the build test : macOS )
-#       -  
-
-
-
-
-
   - short_name : "Cluster_Diplay_URP"
     project_path : TestProjects/GraphicsTestsURP  
     name : "ClusterDisplay"
@@ -35,8 +11,6 @@ packages :
     package_path : source/com.unity.cluster-display
    
  
-    
-
 default_editor : 2023.1
 
 ---
@@ -45,29 +19,18 @@ default_editor : 2023.1
 
 Build_test_{{package.short_name}} : 
   name : Win_Build_test_{{package.short_name}}
-  triggers : 
-    expression: pull_request.push.changes.any match "{{ package.package_path}}/**" OR (push.changes.any match "{{ package.package_path}}/**" AND push.branch eq "develop") 
   agent: 
-    type : {{package.agent.type}}{% if package.agent.type == nil %}Unity::VM{%endif%}
-    image : {{package.agent.image}}{% if package.agent.image == nil %}package-ci/win10:stable{%endif%}
-    flavor : {{package.agent.flavor}}{% if package.agent.flavor == nil %}b1.large{%endif%}
+    type : Unity::VM
+    image : package-ci/win10:v4
+    flavor : b1.large
   commands: 
     - choco install unity-downloader-cli -y 
-    - unity-downloader-cli -u {% if package.editor == nil %}{{default_editor}}{%endif%}{{package.editor}} -c editor {% for component in package.unity_component  %} -c {{component}} {%endfor%} --wait --published
+    - unity-downloader-cli -u {{default_editor}} -c editor --wait --published
     - choco install standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
     - choco upgrade standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
     - choco install unity-config -y
-    # Creating project if a path to a project has not been specified 
-    {% if package.project_path == nil %}
-    - unity-config project create {{package.name}}_buildingTest 
-    #statically link the package 
-    - unity-config project add  dependency -p {{package.name}}_buildingTest {{package.name}}@file:./../../{{package.package_path}}
-    {%endif%}
     #Moving the tests from the .yamato to the project to test in
-    - move .yamato/Build_test/BuildTests {% if package.project_path == nil %}{{package.name}}_buildingTest{%endif%}{{package.project_path}}/Assets
-    #section for needed command to be added in the metadata 
-    {% for command in package.commands  %}- {{command}} 
-    {%endfor%}
+    - move .yamato/Build_test/BuildTests {{package.project_path}}/Assets
     - UnifiedTestRunner.exe --suite=editor --testproject={% if package.project_path == nil %}{{package.name}}_buildingTest{%endif%}{{package.project_path}} --editor-location=.Editor --artifacts_path=test-results  --testFilter=Build_test.BuildTest
   artifacts:
     logs:
