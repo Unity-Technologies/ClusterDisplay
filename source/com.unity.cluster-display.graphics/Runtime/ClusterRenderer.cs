@@ -142,6 +142,12 @@ namespace Unity.ClusterDisplay.Graphics
                 DontDestroyOnLoad(gameObject);
             }
 
+            if (Application.isPlaying && m_ProjectionPolicy != null)
+            {
+                ClusterDebug.Log($"Cluster Rendering is enabled with {m_ProjectionPolicy.GetType()}." +
+                    $" The current screen resolution is {Screen.width} x {Screen.height}.");
+            }
+
             m_Presenter.SetDelayed(m_DelayPresentByOneFrame);
             m_Presenter.Enable(gameObject);
             m_Presenter.Present += OnPresent;
