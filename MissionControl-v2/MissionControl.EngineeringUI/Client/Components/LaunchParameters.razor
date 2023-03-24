@@ -46,7 +46,7 @@
     static bool IsDefaultValue(Entry entry) =>
         entry switch
         {
-            ParameterEntry parameterEntry => parameterEntry.ParameterValue is null,
+            ParameterEntry parameterEntry => parameterEntry.ParameterValue is null && parameterEntry.ValidationError is null,
             NestedEntry nestedEntry => !nestedEntry.Values.Any(),
             _ => throw new ArgumentOutOfRangeException(nameof(entry))
         };
@@ -57,6 +57,7 @@
         {
             case ParameterEntry parameterEntry:
                 parameterEntry.ParameterValue = null;
+                parameterEntry.ValidationError = null;
                 OnParameterValueChanged(parameterEntry);
                 break;
             case NestedEntry nestedEntry:

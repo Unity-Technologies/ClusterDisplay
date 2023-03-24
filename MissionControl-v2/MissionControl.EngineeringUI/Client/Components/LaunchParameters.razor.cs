@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Radzen;
 using Radzen.Blazor;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
@@ -51,6 +52,8 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             public LaunchParameterValue? ParameterValue { get; set; }
             public string Id { get; init; } = "";
 
+            public string? ValidationError { get; set; } = null;
+
             public override string Name => Definition?.Name ?? "(unknown)";
             public override object Value => ParameterValue?.Value ?? (Definition?.DefaultValue ?? "unknown");
             public override bool IsEmpty => Definition == null && ParameterValue == null;
@@ -58,6 +61,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             {
                 Definition = null;
                 ParameterValue = null;
+                ValidationError = null;
             }
         }
 
@@ -109,6 +113,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
         void OnParameterValueChanged(ParameterEntry entry)
         {
+            if (entry.ValidationError != null)
+            {
+                Logger.LogWarning($"{entry.Name}: {entry.ValidationError}");
+                return;
+            }
+
             Debounce(async () =>
             {
                 int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);

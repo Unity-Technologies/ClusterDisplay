@@ -13,6 +13,9 @@
     --sidebar-width: 208px;
     --sidebar-collapsed-width: 56px;
     --icon-font-size: 20px;
+    --slider-range-color: #2196F3;
+    --slider-handle-color: #2196F3;
+    --switch-checked-color: #2196F3;
 }
 
 /************************* Site wide definitions *************************/
@@ -248,11 +251,23 @@ input {
    width:calc(100% - 1.99rem);
 }
 
-/* ************************ Custom component ************************ */
+/* Widgets */
+.rz-slider-range {
+    background-color: var(--slider-range-color);
+}
 
+.rz-slider-handle {
+    background-color: var(--slider-handle-color);
+}
+
+.rz-switch.rz-switch-checked .rz-switch-circle:before {
+    background: var(--switch-checked-color);
+}
+
+/* ************************ Custom component ************************ */
 /* non-specific definitions */
 .height-78 {
-    height:78px;
+    height: 78px;
 }
 
 .align-flex-right {
