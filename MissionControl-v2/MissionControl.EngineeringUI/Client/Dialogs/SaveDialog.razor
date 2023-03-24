@@ -1,8 +1,22 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
 
-<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk Style="height: 100%;">
+<RadzenTemplateForm TItem="SaveMissionCommand" Data=@Command Submit=@OnOk>
     <div class="row" style="height: 100%; overflow-y: auto;">
-        <div> <!-- To avoid stretching every row of the fixed height container above -->
+        <div>
+            <!-- To avoid stretching every row of the fixed height container above -->
+            @if (Overwritables.Any())
+            {
+                <div class="row mb-1">
+                    <div class="col-3 align-items-center d-flex">
+                        <RadzenLabel Text="Snapshot" />
+                    </div>
+                    <div class="col-9 rz-mb-3">
+                        <RadzenDropDown Name="Snapshot" @bind-Value=@m_SelectedForOverwrite
+                                    Data="@Overwritables" TextProperty="Description.Name"
+                                    Change="@(args => OverwriteSelectionChanged())"/>
+                    </div>
+                </div>
+            }
             <div class="row mb-1">
                 <div class="col-3 align-items-center d-flex">
                     <RadzenLabel Text="Name" />
@@ -25,7 +39,7 @@
     <div class="row mt-1">
         <div class="col-12 text-end">
             <RadzenButton Text="Cancel" Click=OnCancel ButtonStyle="ButtonStyle.Light" Style="width: 120px" />
-            <RadzenButton Text="Save" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info" Style="width: 120px; margin-left:24px" Class="me-1" />
+            <RadzenButton Text="@SaveButtonText" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Info" Style="width: 120px; margin-left:24px" Class="me-1" />
         </div>
     </div>
 </RadzenTemplateForm>

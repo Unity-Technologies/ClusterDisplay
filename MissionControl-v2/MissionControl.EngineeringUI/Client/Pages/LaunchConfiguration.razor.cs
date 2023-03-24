@@ -24,6 +24,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         [Inject]
         MissionCommandsService MissionCommandsService { get; set; } = default!;
         [Inject]
+        MissionsService MissionsService { get; set; } = default!;
+        [Inject]
+        NotificationService NotificationService { get; set; } = default!;
+        [Inject]
         DialogService DialogService { get; set; } = default!;
         [Inject]
         ILogger<LaunchConfiguration> Logger { get; set; } = default!;
@@ -46,6 +50,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             LaunchConfigurationService.ReadOnlyMissionControlValue.ObjectChanged += LaunchConfigurationChanged;
             LaunchConfigurationService.WorkValue.ObjectChanged += LaunchConfigurationChanged;
             Complexes.Collection.SomethingChanged += ComplexesChanged;
+            MissionsService.Collection.SomethingChanged += ComplexesChanged;
 
             SyncParameterValuesToWorkLaunchConfiguration();
         }
@@ -361,11 +366,25 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
             return padCfg;
         }
 
-        async Task SaveAs()
+        async Task OnSaveClick(RadzenSplitButtonItem item)
         {
-            var ret = await DialogService.OpenAsync<Dialogs.SaveDialog>($"Save current configuration as...",
-                new Dictionary<string, object>(),
-                new DialogOptions() { Width = "80%", Height = "60%", Resizable = true, Draggable = true });
+            await SaveAs(overwrite: item != null);
+        }
+
+        async Task SaveAs(bool overwrite = false)
+        {
+            var title = overwrite ? "Overwrite Snapshot" : "New Snapshot";
+            var dialogParams = new Dictionary<string, object>();
+            if (overwrite)
+            {
+                dialogParams["Overwritables"] = MissionsService.Collection.Values;
+            }
+            var ret = await DialogService.OpenAsync<SaveDialog>(title,
+                dialogParams,
+                new DialogOptions() { Width = "80%", Height = "60%",
+                    Resizable = true,
+                    Draggable = true
+                });
 
             if (ret == null)
             {
@@ -377,7 +396,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 await LaunchConfigurationService.PushWorkToMissionControlAsync();
             }
 
-            await MissionCommandsService.SaveMissionAsync((SaveMissionCommand)ret);
+            var command = (SaveMissionCommand)ret;
+            await MissionCommandsService.SaveMissionAsync(command);
+            NotificationService.Notify(NotificationSeverity.Info, $"Configuration saved as \"{command.Description.Name}\"");
         }
+
     }
 }

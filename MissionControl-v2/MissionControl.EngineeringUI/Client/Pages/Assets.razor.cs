@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
 using System.Numerics;
+using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
@@ -74,9 +75,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
 
         async Task DeleteAsset(Asset asset)
         {
-            var ret = await DialogService.Confirm($"Do you want to delete \"{asset.Name}\"?",
+            var ret = await DialogService.CustomConfirm($"Do you want to delete \"{asset.Name}\"?",
                 "Confirm deletion", new () { OkButtonText = "Yes", CancelButtonText = "No" });
-            if (!ret.HasValue || !ret.Value)
+            if (!ret)
             {
                 return;
             }
@@ -90,9 +91,9 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         {
             if (!HasSelection) return;
 
-            var ret = await DialogService.Confirm($"Do you want to delete the selected assets?",
+            var ret = await DialogService.CustomConfirm($"Do you want to delete the selected assets?",
     "Confirm deletion", new() { OkButtonText = "Yes", CancelButtonText = "No" });
-            if (!ret.HasValue || !ret.Value)
+            if (!ret)
             {
                 return;
             }
