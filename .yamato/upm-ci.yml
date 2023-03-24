@@ -133,7 +133,8 @@ test_trigger:
 {% endfor -%}
 {% endfor -%}
 {% endfor -%}
-
+    - .yamato/Build_test/build_test.yml#Build_test_Cluster_Diplay_HDRP
+    - .yamato/Build_test/build_test.yml#Build_test_Cluster_Diplay_URP
 nightly_trigger:
   name: Nightly tests trigger
   triggers:
