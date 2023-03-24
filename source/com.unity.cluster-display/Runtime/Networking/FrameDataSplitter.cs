@@ -18,13 +18,11 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="udpAgent">Object responsible for network access on which we are sending individual fragments of
         /// the whole frame data.</param>
-        /// <param name="frameDataBufferPool">Object to which we return the <see cref="FrameDataBuffer"/> when we are
-        /// done of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will
-        /// instead be disposed of.</param>
+        /// <param name="reuseFrameDataBuffers">Does the <see cref="FrameDataSplitter"/> setup
+        /// <see cref="FrameDataBufferPool"/> to allow reusing buffers used to store the frame data?</param>
         /// <param name="retransmitHistory">Number of frames we keep in history to be retransmitted (must be >= 2).</param>
         /// <exception cref="ArgumentException">If retransmitHistory &lt; 2.</exception>
-        public FrameDataSplitter(IUdpAgent udpAgent, ConcurrentObjectPool<FrameDataBuffer> frameDataBufferPool = null,
-            int retransmitHistory = 2)
+        public FrameDataSplitter(IUdpAgent udpAgent, bool reuseFrameDataBuffers = false, int retransmitHistory = 2)
         {
             if (retransmitHistory < 2)
             {
@@ -37,7 +35,8 @@ namespace Unity.ClusterDisplay
 
             UdpAgent = udpAgent;
             m_MaxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
-            FrameDataBufferPool = frameDataBufferPool;
+            FrameDataBufferPool = new ConcurrentObjectPool<FrameDataBuffer>(
+                () => new FrameDataBuffer(), null, null, buf => buf.Dispose());
             m_SentFramesInformation = new SentFrameInformation[retransmitHistory];
             for (int i = 0; i < retransmitHistory; ++i)
             {
@@ -76,6 +75,8 @@ namespace Unity.ClusterDisplay
                     sentFrameInformation.Dispose();
                 }
             }
+
+            FrameDataBufferPool?.Clear();
         }
 
         /// <summary>

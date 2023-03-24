@@ -4,7 +4,6 @@ using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Utils;
 using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
@@ -60,8 +59,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataSplitter = new FrameDataSplitter(sendAgent,
-                new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
+            using var frameDataSplitter = new FrameDataSplitter(sendAgent, true);
 
             // 1. Before testing re-transmit we need to first transmit something!
             // While at it, test that what we send to the repeaters is the expected content.
@@ -282,9 +280,9 @@ namespace Unity.ClusterDisplay.Tests
         static FrameDataBuffer AllocateRandomFrameDataBuffer(int length)
         {
             var ret = new FrameDataBuffer();
-            int frameDataBufferOvehead = 8; // A int for the id and another int for the length of each data
-            Assert.That(length, Is.GreaterThan(frameDataBufferOvehead));
-            int effectiveLength = length - frameDataBufferOvehead;
+            int frameDataBufferOverhead = 8; // A int for the id and another int for the length of each data
+            Assert.That(length, Is.GreaterThan(frameDataBufferOverhead));
+            int effectiveLength = length - frameDataBufferOverhead;
             ret.Store(0, nativeArray =>
             {
                 NativeArray<byte>.Copy(AllocRandomByteArray(effectiveLength), 0, nativeArray, 0, effectiveLength);
