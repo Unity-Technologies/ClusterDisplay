@@ -29,6 +29,7 @@ set( QUADROSYNC_WRAPPER_PROJECT_HEADERS
 	Includes/Logger.h
 	Includes/D3D11GraphicsDevice.h
 	Includes/D3D12GraphicsDevice.h
+	Includes/ComHelpers.h
 )
 
 set( QUADROSYNC_WRAPPER_PRIVATE_HEADERS
@@ -40,6 +41,7 @@ set( QUADROSYNC_WRAPPER_SOURCES
 	Sources/Logger.cpp
 	Sources/D3D11GraphicsDevice.cpp
 	Sources/D3D12GraphicsDevice.cpp
+	Sources/ComHelpers.cpp
 )
 
 INCLUDE_DIRECTORIES(

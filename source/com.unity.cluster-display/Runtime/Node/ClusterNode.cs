@@ -52,6 +52,16 @@ namespace Unity.ClusterDisplay
         public ClusterNodeConfig Config { get; }
 
         /// <summary>
+        /// Timeout to use for the different network communication after the initial handshake.
+        /// </summary>
+        /// <remarks>However, the initial handshake might a little bit more involved than actually shaking hands...
+        /// Repeaters will shake hands with the emitter and then move on on their first frame, but the emitter might
+        /// still be shaking hands with other repeaters that are a little bit longer to join the party.  So use the
+        /// handshake timeout for the first two frame and then move on to the normal communication timeout.</remarks>
+        public TimeSpan EffectiveCommunicationTimeout =>
+            FrameIndex > 1 ? Config.CommunicationTimeout : Config.HandshakeTimeout;
+
+        /// <summary>
         /// Object to use to perform network access (sending or receiving).
         /// </summary>
         public IUdpAgent UdpAgent { get; private set;  }

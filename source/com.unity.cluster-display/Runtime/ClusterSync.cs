@@ -451,7 +451,7 @@ namespace Unity.ClusterDisplay
 
         void OnException (Exception e)
         {
-            IsTerminated = true;
+            Terminate();
 
             InstanceLog($"Encountered exception.");
             ClusterDebug.LogException(e);

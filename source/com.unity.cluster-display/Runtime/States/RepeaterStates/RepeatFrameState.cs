@@ -52,7 +52,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
             // Why do we set the deadline for everything we do at CommunicationTimeout + 1 second?  So that if another
             // repeater is the one causing problem, the emitter will timeout after CommunicationTimeout and continue and
             // this way we will be able to continue correctly (assuming network based synchronization).
-            long doFrameDeadline = StopwatchUtils.TimestampIn(Node.Config.CommunicationTimeout + TimeSpan.FromSeconds(1));
+            long doFrameDeadline = StopwatchUtils.TimestampIn(Node.EffectiveCommunicationTimeout +
+                TimeSpan.FromSeconds(1));
 
             // We do not need to inform the emitter that we are ready to start the next frame on the first frame.
             ReceivedMessageBase receivedMessage = null;
@@ -101,7 +102,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
                 {
                     // The only this can happen is if we timed out waiting for the FrameData...
                     throw new TimeoutException($"Repeater failed to receive FrameData for frame " +
-                        $"{Node.FrameIndex} within the allocated {Node.Config.CommunicationTimeout.TotalSeconds} seconds.");
+                        $"{Node.FrameIndex} within the allocated {Node.EffectiveCommunicationTimeout.TotalSeconds} " +
+                        $"seconds.");
                 }
             }
 
@@ -216,7 +218,8 @@ namespace Unity.ClusterDisplay.RepeaterStateMachine
 
             // If we reach this point it is because we haven't got any feedback from the emitter in time -> timeout
             throw new TimeoutException("Repeater failed to perform network synchronization with emitter for " +
-                $"frame {Node.FrameIndex} within the allocated {Node.Config.CommunicationTimeout.TotalSeconds} seconds.");
+                $"frame {Node.FrameIndex} within the allocated {Node.EffectiveCommunicationTimeout.TotalSeconds} " +
+                $"seconds.");
         }
 
         /// <summary>

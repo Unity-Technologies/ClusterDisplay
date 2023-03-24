@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace Unity.ClusterDisplay
 {
+    // ReSharper disable once EnumUnderlyingTypeIsInt -> Just to be 100% sure and clear as this is critical to memory layout of structures sent over the network
     enum StateID : int
     {
         End = 0,
@@ -73,7 +74,9 @@ namespace Unity.ClusterDisplay
         RepeaterWaitingToStartFrame,
         EmitterWaitingToStartFrame,
         PropagateQuit,
-        QuitReceived
+        QuitReceived,
+        QuadroBarrierWarmupHeartbeat,
+        QuadroBarrierWarmupStatus
     }
 
     /// <summary>
@@ -320,5 +323,74 @@ namespace Unity.ClusterDisplay
         /// NodeId of the repeater node sending the message.
         /// </summary>
         public byte NodeId;
+    }
+
+    /// <summary>
+    /// Current stage of QuadroBarrierWarmup
+    /// </summary>
+    enum QuadroBarrierWarmupStage: byte
+    {
+        /// <summary>
+        /// Initial stage where repeaters present frames way faster than emitter so that we can detect when barriers are
+        /// up for everyone.
+        /// </summary>
+        RepeaterFastPresent,
+        /// <summary>
+        /// Second stage where repeaters stop presenting frames while emitter present a few until it blocks so that it
+        /// can establish the length of present queues (since some QuadroSync driver settings can cause the sync to
+        /// happen on present on before starting the next present (which is the equivalent of an additional 1 frames of
+        /// latency inside the present pipeline)).
+        /// </summary>
+        RepeatersPaused,
+        /// <summary>
+        /// Last stage where emitter is done and repeaters have to present a few additional frame as specified in the
+        /// message (so that everyone's present queue is empty, ready to go on the normal present pipeline).
+        /// </summary>
+        LastRepeatersBurst,
+    }
+
+    /// <summary>
+    /// Message sent periodically by the emitter to coordinate the barrier warmup process.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.QuadroBarrierWarmupHeartbeat)]
+    struct QuadroBarrierWarmupHeartbeat: IEquatable<QuadroBarrierWarmupHeartbeat>
+    {
+        /// <summary>
+        /// Current stage of the barrier warmup process.
+        /// </summary>
+        public QuadroBarrierWarmupStage Stage;
+        /// <summary>
+        /// Used when <see cref="Stage"/> is <see cref="QuadroBarrierWarmupStage.LastRepeatersBurst"/> to specify how
+        /// many frames the repeaters must present before concluding their initialization phase.
+        /// </summary>
+        public uint AdditionalPresentCount;
+
+        public bool Equals(QuadroBarrierWarmupHeartbeat other)
+        {
+            return Stage == other.Stage && AdditionalPresentCount == other.AdditionalPresentCount;
+        }
+    }
+
+    /// <summary>
+    /// Message sent by repeaters to inform the emitter of its status of the barrier warmup process.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [MessageType(MessageType.QuadroBarrierWarmupStatus)]
+    struct QuadroBarrierWarmupStatus
+    {
+        /// <summary>
+        /// NodeId of the repeater node sending the message.
+        /// </summary>
+        public byte NodeId;
+        /// <summary>
+        /// Current stage of the barrier warmup process.
+        /// </summary>
+        public QuadroBarrierWarmupStage Stage;
+        /// <summary>
+        /// Is the work to be done for that stage completed?
+        /// </summary>
+        [MarshalAs(UnmanagedType.I1)]
+        public bool Completed;
     }
 }

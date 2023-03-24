@@ -283,6 +283,90 @@ namespace Unity.ClusterDisplay.Tests
             Assert.That(received3, Is.Not.SameAs(received2));
         }
 
+        [Test]
+        public void PreprocessPriority()
+        {
+            using var sender =   new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+
+            ManualResetEvent process100ReceivedSomething = new(false);
+            PreProcessResult PreProcess100(ReceivedMessageBase message)
+            {
+                process100ReceivedSomething.Set();
+                return PreProcessResult.Stop();
+            }
+            receiver.AddPreProcess(100, PreProcess100);
+
+            ManualResetEvent process50ReceivedSomething = new(false);
+            PreProcessResult PreProcess50(ReceivedMessageBase message)
+            {
+                process50ReceivedSomething.Set();
+                return PreProcessResult.Stop();
+            }
+            receiver.AddPreProcess(50, PreProcess50);
+
+            // Send
+            RegisteringWithEmitter messageToSend;
+            messageToSend.NodeId = 42;
+            messageToSend.IPAddressBytes = BitConverter.ToUInt32(sender.AdapterAddress.GetAddressBytes());
+            sender.SendMessage(MessageType.RegisteringWithEmitter, messageToSend);
+
+            // Wait until pre-process
+            bool receivedByPreprocess100 = process100ReceivedSomething.WaitOne(TimeSpan.FromSeconds(5));
+            Assert.That(receivedByPreprocess100, Is.True);
+
+            // PreProcess50 shouldn't receive it
+            bool receivedByPreprocess50 = process50ReceivedSomething.WaitOne(TimeSpan.FromMilliseconds(250));
+            Assert.That(receivedByPreprocess50, Is.False);
+        }
+
+        [Test]
+        [TestCase(100)]
+        [TestCase(50)]
+        public void RemovePreprocess(int toRemove)
+        {
+            using var sender =   new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+            using var receiver = new UdpAgent(GetConfig(new [] {MessageType.RegisteringWithEmitter}));
+
+            ManualResetEvent process100ReceivedSomething = new(false);
+            PreProcessResult PreProcess100(ReceivedMessageBase message)
+            {
+                process100ReceivedSomething.Set();
+                return PreProcessResult.PassThrough();
+            }
+            receiver.AddPreProcess(100, PreProcess100);
+
+            ManualResetEvent process50ReceivedSomething = new(false);
+            PreProcessResult PreProcess50(ReceivedMessageBase message)
+            {
+                process50ReceivedSomething.Set();
+                return PreProcessResult.PassThrough();
+            }
+            receiver.AddPreProcess(50, PreProcess50);
+
+            // Send
+            RegisteringWithEmitter messageToSend;
+            messageToSend.NodeId = 42;
+            messageToSend.IPAddressBytes = BitConverter.ToUInt32(sender.AdapterAddress.GetAddressBytes());
+            sender.SendMessage(MessageType.RegisteringWithEmitter, messageToSend);
+
+            // Remove one of the two preprocess
+            receiver.RemovePreProcess(toRemove == 50 ? PreProcess50 : PreProcess100);
+
+            ManualResetEvent removedPreprocessEvent =
+                toRemove == 50 ? process50ReceivedSomething : process100ReceivedSomething;
+            ManualResetEvent notRemovedPreprocessEvent =
+                toRemove == 50 ? process100ReceivedSomething : process50ReceivedSomething;
+
+            // Wait until the non removed receives it
+            bool receivedByPreprocess100 = notRemovedPreprocessEvent.WaitOne(TimeSpan.FromSeconds(5));
+            Assert.That(receivedByPreprocess100, Is.True);
+
+            // Confirm the removed one will not receive it
+            bool receivedByPreprocess50 = removedPreprocessEvent.WaitOne(TimeSpan.FromMilliseconds(250));
+            Assert.That(receivedByPreprocess50, Is.False);
+        }
+
         static UdpAgentConfig GetConfig(MessageType[] receivedMessagesType)
         {
             return new UdpAgentConfig()

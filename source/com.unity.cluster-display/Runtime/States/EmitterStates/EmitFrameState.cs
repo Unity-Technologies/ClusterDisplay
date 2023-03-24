@@ -58,13 +58,14 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             {
                 using (s_MarkerNetworkSynchronization.Auto())
                 {
-                    var stillWaitingOn =
-                        m_StartHandler.TryWaitForAllRepeatersReady(effectiveFrameIndex, Node.Config.CommunicationTimeout);
+                    var stillWaitingOn = m_StartHandler.TryWaitForAllRepeatersReady(
+                        effectiveFrameIndex, Node.EffectiveCommunicationTimeout);
                     if (stillWaitingOn != null)
                     {
                         // Looks like some repeater nodes are not responding, drop them...
                         Debug.LogError($"Repeaters {stillWaitingOn} did not signaled they were ready within " +
-                            $"{Node.Config.CommunicationTimeout.TotalSeconds} seconds, they will be dropped from the cluster.");
+                            $"{Node.EffectiveCommunicationTimeout.TotalSeconds} seconds, they will be dropped from " +
+                            $"the cluster.");
 
                         m_StartHandler.DropRepeaters(stillWaitingOn);
 

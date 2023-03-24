@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../External/NvAPI/nvapi.h"
+#include "../Unity/IUnityInterface.h"
 
 #include <atomic>
 #include <cstdint>
@@ -10,6 +11,8 @@ class IDXGISwapChain;
 
 namespace GfxQuadroSync
 {
+    class IGraphicsDevice;
+
     class PluginCSwapGroupClient
     {
     public:
@@ -30,13 +33,12 @@ namespace GfxQuadroSync
 
         void Prepare();
         InitializeStatus Initialize(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
-        bool CanGetFrameCount(IUnknown* pDevice);
         void Dispose(IUnknown* pDevice, IDXGISwapChain* pSwapChain);
 
         void SetupWorkStation();
         void DisposeWorkStation();
 
-        bool Render(IUnknown* pDevice, IDXGISwapChain* pSwapChain, int pVsync = 1, int pFlags = 0);
+        bool Render(IGraphicsDevice* pGraphicsDevice);
         void ResetFrameCount(IUnknown* pDevice);
         NvU32 QueryFrameCount(IUnknown* pDevice);
 
@@ -50,7 +52,24 @@ namespace GfxQuadroSync
         uint64_t GetPresentSuccessCount() const { return m_PresentSuccessCount.load(std::memory_order_relaxed); }
         uint64_t GetPresentFailureCount() const { return m_PresentFailureCount.load(std::memory_order_relaxed); }
 
+        enum class BarrierWarmupAction
+        {
+            RepeatPresent,
+            ContinueToNextFrame,
+            BarrierWarmedUp,
+        };
+
+        // Type of callback to a managed function that is called after the first present when barrier is active.
+        typedef BarrierWarmupAction(UNITY_INTERFACE_API* BarrierWarmupCallback)();
+
+        void SetBarrierWarmupCallback(BarrierWarmupCallback callback)
+        {
+            m_BarrierWarmupCallback = callback ? callback : &EmptyBarrierWarmupCallback;
+        }
+
     private:
+        static BarrierWarmupAction EmptyBarrierWarmupCallback() { return BarrierWarmupAction::ContinueToNextFrame; }
+
         // Remarks: Some variables are atomic because they can be accessed from the rendering thread or the game loop
         // thread for the implementation of the GetState function.  There is no need for a strong correlation between
         // each of the variables since the GetState function is only for reporting the state, so using atomic is enough
@@ -63,8 +82,10 @@ namespace GfxQuadroSync
         bool m_GSyncMaster = true;
         bool m_GSyncCounter = false;
         bool m_IsActive = false;
+        bool m_NeedToWarmUpBarrier = false;
         std::atomic<uint64_t> m_PresentSuccessCount = 0;
         std::atomic<uint64_t> m_PresentFailureCount = 0;
+        BarrierWarmupCallback m_BarrierWarmupCallback = &EmptyBarrierWarmupCallback;
     };
 
 }
