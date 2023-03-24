@@ -227,7 +227,8 @@ namespace Unity.ClusterDisplay.Tests
                 // Transmit the first frame's data
                 // Remarks: Transmit "dummy data" as valid state data would cause confusion in the unit test runner
                 // system and "yield return null" would not return "soon enough" and the test would timeout.
-                var frameDataBuffer = new FrameDataBuffer();
+                // ReSharper disable once AccessToDisposedClosure
+                var frameDataBuffer = emitterFrameDataSplitter.GetNewFrameDataBuffer();
                 frameDataBuffer.Store(42, nativeArray =>
                 {
                     nativeArray.CopyTo(AllocRandomByteArray(nativeArray.Length));
