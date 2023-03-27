@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Unity.Profiling;
 using UnityEngine;
 using Utils;
@@ -17,7 +17,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         public EmitFrameState(EmitterNode node)
             : base(node)
         {
-            m_Splitter = new(Node.UdpAgent, new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
+            m_Splitter = new(Node.UdpAgent, true);
             m_StartHandler = new(Node.UdpAgent, Node.RepeatersStatus.RepeaterPresence, Node.UpdatedClusterTopology);
             m_Emitter = new(Node.Config.RepeatersDelayed);
             Node.UdpAgent.AddPreProcess(UdpAgentPreProcessPriorityTable.registeringWithEmitter, AnswerRegisteringWithEmitter);

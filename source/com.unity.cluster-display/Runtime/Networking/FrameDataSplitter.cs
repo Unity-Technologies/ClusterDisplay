@@ -18,13 +18,11 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <param name="udpAgent">Object responsible for network access on which we are sending individual fragments of
         /// the whole frame data.</param>
-        /// <param name="frameDataBufferPool">Object to which we return the <see cref="FrameDataBuffer"/> when we are
-        /// done of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will
-        /// instead be disposed of.</param>
+        /// <param name="reuseFrameDataBuffers">Does the <see cref="FrameDataSplitter"/> setup an internal pool to reuse
+        /// buffers used to store the frame data?</param>
         /// <param name="retransmitHistory">Number of frames we keep in history to be retransmitted (must be >= 2).</param>
         /// <exception cref="ArgumentException">If retransmitHistory &lt; 2.</exception>
-        public FrameDataSplitter(IUdpAgent udpAgent, ConcurrentObjectPool<FrameDataBuffer> frameDataBufferPool = null,
-            int retransmitHistory = 2)
+        public FrameDataSplitter(IUdpAgent udpAgent, bool reuseFrameDataBuffers = false, int retransmitHistory = 2)
         {
             if (retransmitHistory < 2)
             {
@@ -37,7 +35,11 @@ namespace Unity.ClusterDisplay
 
             UdpAgent = udpAgent;
             m_MaxDataPerMessage = UdpAgent.MaximumMessageSize - Marshal.SizeOf<FrameData>();
-            FrameDataBufferPool = frameDataBufferPool;
+            if (reuseFrameDataBuffers)
+            {
+                m_FrameDataBufferPool = new ConcurrentObjectPool<FrameDataBuffer>(
+                    () => new FrameDataBuffer(), null, null, buf => buf.Dispose());
+            }
             m_SentFramesInformation = new SentFrameInformation[retransmitHistory];
             for (int i = 0; i < retransmitHistory; ++i)
             {
@@ -76,6 +78,8 @@ namespace Unity.ClusterDisplay
                     sentFrameInformation.Dispose();
                 }
             }
+
+            m_FrameDataBufferPool?.Clear();
         }
 
         /// <summary>
@@ -93,8 +97,8 @@ namespace Unity.ClusterDisplay
         /// </param>
         /// <exception cref="ArgumentException">If <paramref name="frameIndex"/> is not equal to the
         /// <paramref name="frameIndex"/> of the previous call + 1.</exception>
-        /// <remarks><paramref name="frameData"/> should originate from <see cref="FrameDataBufferPool"/> if not
-        /// <c>null</c> (and will be returned to that pool once we are done of it).</remarks>
+        /// <remarks><paramref name="frameData"/> should originate from <see cref="GetNewFrameDataBuffer"/> if not
+        /// <c>null</c>.</remarks>
         public void SendFrameData(ulong frameIndex, ref FrameDataBuffer frameData)
         {
             lock (m_SentFramesInformation)
@@ -139,11 +143,20 @@ namespace Unity.ClusterDisplay
         }
 
         /// <summary>
-        /// <see cref="ConcurrentObjectPool{T}"/> to which we return the <see cref="FrameDataBuffer"/> when we are done
-        /// of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will instead be
-        /// disposed of.
+        /// Get a "new" <see cref="FrameDataBuffer"/> to be sent to <see cref="SendFrameData"/>.
         /// </summary>
-        public ConcurrentObjectPool<FrameDataBuffer> FrameDataBufferPool { get; }
+        /// <remarks>Might be a recycled one, but recycled ones are just as good as new ones, so this is ok :)</remarks>
+        public FrameDataBuffer GetNewFrameDataBuffer()
+        {
+            return m_FrameDataBufferPool?.Get() ?? new FrameDataBuffer();
+        }
+
+        /// <summary>
+        /// Number of recovered <see cref="FrameDataBuffer"/> that are waiting to be reused on the next
+        /// <see cref="GetNewFrameDataBuffer"/> call.
+        /// </summary>
+        /// <remarks>To be used for debugging more than anything else.</remarks>
+        public int InactiveFrameDataBufferCount => m_FrameDataBufferPool?.CountInactive ?? 0;
 
         /// <summary>
         /// Send the specified datagram.
@@ -263,9 +276,9 @@ namespace Unity.ClusterDisplay
         /// in re-using.</param>
         void DoneOfFrameDataBuffer(FrameDataBuffer doneOf)
         {
-            if (FrameDataBufferPool != null)
+            if (m_FrameDataBufferPool != null)
             {
-                FrameDataBufferPool.Release(doneOf);
+                m_FrameDataBufferPool.Release(doneOf);
             }
             else
             {
@@ -368,6 +381,12 @@ namespace Unity.ClusterDisplay
         /// </summary>
         /// <remarks>2 milliseconds</remarks>
         readonly long m_ShortRetransmissionDelayTicks = Stopwatch.Frequency * 2 / 1000;
+        /// <summary>
+        /// <see cref="ConcurrentObjectPool{T}"/> to which we return the <see cref="FrameDataBuffer"/> when we are done
+        /// of them (so they can be re-used).  A null one means that every <see cref="FrameDataBuffer"/> will instead be
+        /// disposed of.
+        /// </summary>
+        readonly ConcurrentObjectPool<FrameDataBuffer> m_FrameDataBufferPool;
 
         /// <summary>
         /// Frame kept in case we need to retransmit sections of.

@@ -4,7 +4,6 @@ using NUnit.Framework;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Utils;
 using static Unity.ClusterDisplay.Tests.Utilities;
 
 namespace Unity.ClusterDisplay.Tests
@@ -21,7 +20,7 @@ namespace Unity.ClusterDisplay.Tests
 
             const int frameDataLength = 500;
             Assert.That(frameDataLength, Is.LessThan(sendAgent.MaximumMessageSize));
-            var frame42Data = AllocateRandomFrameDataBuffer(frameDataLength);
+            var frame42Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frameDataLength);
             var frame42DataPayload = frame42Data.Data().ToArray();
             frameDataSplitter.SendFrameData(42, ref frame42Data);
             Assert.That(frame42Data, Is.Null);
@@ -42,7 +41,7 @@ namespace Unity.ClusterDisplay.Tests
             // All our message sizes of this test are based on that, will need to update the test if it changes...
             Assert.That(sendAgent.MaximumMessageSize, Is.EqualTo(1257));
             const int frameDataLength = 2000;
-            var frame42Data = AllocateRandomFrameDataBuffer(frameDataLength);
+            var frame42Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frameDataLength);
             var frame42DataPayload = frame42Data.Data().ToArray();
             frameDataSplitter.SendFrameData(42, ref frame42Data);
             Assert.That(frame42Data, Is.Null);
@@ -60,8 +59,7 @@ namespace Unity.ClusterDisplay.Tests
             var testNetwork = new TestUdpAgentNetwork();
             var sendAgent = new TestUdpAgent(testNetwork, new [] {MessageType.RetransmitFrameData});
             var recvAgent = new TestUdpAgent(testNetwork,new [] {MessageType.FrameData});
-            using var frameDataSplitter = new FrameDataSplitter(sendAgent,
-                new ConcurrentObjectPool<FrameDataBuffer>(() => new FrameDataBuffer()));
+            using var frameDataSplitter = new FrameDataSplitter(sendAgent, true);
 
             // 1. Before testing re-transmit we need to first transmit something!
             // While at it, test that what we send to the repeaters is the expected content.
@@ -72,7 +70,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Transmit frame 41
             const int frame41DataLength = 500;
-            var frame41Data = AllocateRandomFrameDataBuffer(frame41DataLength);
+            var frame41Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frame41DataLength);
             var frame41DataPayload = frame41Data.Data().ToArray();
             frameDataSplitter.SendFrameData(41, ref frame41Data);
             Assert.That(frame41Data, Is.Null);
@@ -84,7 +82,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // Transmit frame 42
             const int frame42DataLength = 3000;
-            var frame42Data = AllocateRandomFrameDataBuffer(frame42DataLength);
+            var frame42Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frame42DataLength);
             var frame42DataPayload = frame42Data.Data().ToArray();
             frameDataSplitter.SendFrameData(42, ref frame42Data);
             Assert.That(frame42Data, Is.Null);
@@ -103,15 +101,15 @@ namespace Unity.ClusterDisplay.Tests
 
             // So far, frameDataSplitter should still use every FrameData it has been pushed, so nothing should be
             // returned to the object pool.
-            Assert.That(frameDataSplitter.FrameDataBufferPool.CountInactive, Is.Zero);
+            Assert.That(frameDataSplitter.InactiveFrameDataBufferCount, Is.Zero);
 
             // Transmit frame 43
             const int frame43DataLength = 4000;
-            var frame43Data = AllocateRandomFrameDataBuffer(frame43DataLength);
+            var frame43Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frame43DataLength);
             var frame43DataPayload = frame43Data.Data().ToArray();
             frameDataSplitter.SendFrameData(43, ref frame43Data);
             Assert.That(frame43Data, Is.Null);
-            Assert.That(frameDataSplitter.FrameDataBufferPool.CountInactive, Is.EqualTo(1));
+            Assert.That(frameDataSplitter.InactiveFrameDataBufferCount, Is.EqualTo(1));
 
             // Check that we receive what we expect
             Assert.That(recvAgent.ReceivedMessagesCount, Is.EqualTo(4));
@@ -189,7 +187,7 @@ namespace Unity.ClusterDisplay.Tests
             // 1. Transmit frame 0
 
             int frame0DataLength = 2000;
-            var frame0Data = AllocateRandomFrameDataBuffer(frame0DataLength);
+            var frame0Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frame0DataLength);
             var frame0DataPayload = frame0Data.Data().ToArray();
             frameDataSplitter.SendFrameData(0, ref frame0Data);
             Assert.That(frame0Data, Is.Null);
@@ -218,7 +216,7 @@ namespace Unity.ClusterDisplay.Tests
 
             // 3. Transmit frame 1
             int frame1DataLength = 3000;
-            var frame1Data = AllocateRandomFrameDataBuffer(frame1DataLength);
+            var frame1Data = AllocateRandomFrameDataBuffer(frameDataSplitter, frame1DataLength);
             var frame1DataPayload = frame1Data.Data().ToArray();
             frameDataSplitter.SendFrameData(1, ref frame1Data);
             Assert.That(frame1Data, Is.Null);
@@ -258,9 +256,9 @@ namespace Unity.ClusterDisplay.Tests
             using var frameDataSplitter = new FrameDataSplitter(sendAgent);
 
             int frameDataLength = 500;
-            var frameData1 = AllocateRandomFrameDataBuffer(frameDataLength);
+            var frameData1 = AllocateRandomFrameDataBuffer(frameDataSplitter, frameDataLength);
             var frameData1Payload = frameData1.Data().ToArray();
-            var frameData2 = AllocateRandomFrameDataBuffer(frameDataLength);
+            var frameData2 = AllocateRandomFrameDataBuffer(frameDataSplitter, frameDataLength);
             var frameData2Payload = frameData2.Data().ToArray();
 
             frameDataSplitter.SendFrameData(42, ref frameData1);
@@ -279,12 +277,12 @@ namespace Unity.ClusterDisplay.Tests
             TestReceivedFrameData(frame43Message, 43, frameDataLength, 0, 0, frameData2Payload);
         }
 
-        static FrameDataBuffer AllocateRandomFrameDataBuffer(int length)
+        static FrameDataBuffer AllocateRandomFrameDataBuffer(FrameDataSplitter frameDataSplitter, int length)
         {
-            var ret = new FrameDataBuffer();
-            int frameDataBufferOvehead = 8; // A int for the id and another int for the length of each data
-            Assert.That(length, Is.GreaterThan(frameDataBufferOvehead));
-            int effectiveLength = length - frameDataBufferOvehead;
+            var ret = frameDataSplitter.GetNewFrameDataBuffer();
+            int frameDataBufferOverhead = 8; // A int for the id and another int for the length of each data
+            Assert.That(length, Is.GreaterThan(frameDataBufferOverhead));
+            int effectiveLength = length - frameDataBufferOverhead;
             ret.Store(0, nativeArray =>
             {
                 NativeArray<byte>.Copy(AllocRandomByteArray(effectiveLength), 0, nativeArray, 0, effectiveLength);

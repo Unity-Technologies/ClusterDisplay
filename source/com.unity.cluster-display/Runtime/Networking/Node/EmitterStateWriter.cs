@@ -115,9 +115,8 @@ namespace Unity.ClusterDisplay
             frameDataSplitter.SendFrameData(currentFrameId, ref m_StagedFrameData);
 
             // We must stop using m_StagedFrameData as frameDataSplitter is now "owning it" (so that he can re-use it
-            // to repeat lost datagrams).  So recycle an old one or if none are available allocate a new one.
-            m_StagedFrameData = frameDataSplitter.FrameDataBufferPool != null ?
-                frameDataSplitter.FrameDataBufferPool.Get() : new FrameDataBuffer();
+            // to repeat lost datagrams).  So ask frameDataSplitter for a "new" FrameDataBuffer.
+            m_StagedFrameData = frameDataSplitter.GetNewFrameDataBuffer();
 
             m_StagedFrameDataValid = false;
         }
