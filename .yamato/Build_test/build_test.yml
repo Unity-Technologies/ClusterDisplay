@@ -27,7 +27,6 @@ Build_test_{{package.short_name}} :
     - choco install unity-downloader-cli -y 
     - unity-downloader-cli -u {{default_editor}} -c editor --wait --published
     - choco install standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
-    - choco upgrade standaloneutr -s https://artifactory.prd.it.unity3d.com/artifactory/api/nuget/unity-choco-local -y
     - choco install unity-config -y
     #Moving the tests from the .yamato to the project to test in
     - move .yamato/Build_test/BuildTests {{package.project_path}}/Assets
