@@ -1,0 +1,133 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+@inject ComplexesService ComplexesService
+@inject LaunchPadsStatusService LaunchPadsStatusService
+@inject LaunchPadsHealthService LaunchPadsHealthService
+@implements IDisposable
+
+<RadzenText Text="LaunchPads" TextStyle="TextStyle.H5" />
+<RadzenDataGrid @ref=m_DataGrid TItem="CombinedLaunchPadStatus"
+                Data=@LaunchPadStatuses
+                ExpandMode="DataGridExpandMode.Multiple"
+                RowRender=@RowRender
+                RowExpand=@OnRowExpanded
+                RowCollapse=@OnRowCollapsed>
+    <Template Context="status">
+        @if (status.Status?.DynamicEntries is IEnumerable<LaunchPadReportDynamicEntry> entries)
+        {
+            <LaunchPadsDynamicStatus DynamicEntries="entries" />
+        }
+    </Template>
+    <Columns>
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Name" Property="Definition.Name" />
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Version" Property="Status.Version" />
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Started at" Property="Status.StartTime" />
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="State" Property="Status.State" />
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="CPU usage">
+            <Template Context="status">
+                @status.Health?.CpuUtilization.ToString("P2")
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Memory used (GiB)">
+            <Template Context="status">
+                @ToGibibytes(status.Health?.MemoryUsage ?? 0)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Memory installed (GiB)" Property="Health.MemoryInstalled">
+            <Template Context="status">
+                @ToGibibytes(status.Health?.MemoryInstalled ?? 0)
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    class CombinedLaunchPadStatus
+    {
+        public LaunchPad Definition { get; set; } = null!;
+        public LaunchPadHealth? Health { get; init; }
+        public LaunchPadStatus? Status { get; init; }
+    }
+
+    List<CombinedLaunchPadStatus> LaunchPadStatuses { get; set; } = default!;
+    IDisposable m_HealthUpdateToken = default!;
+    RadzenDataGrid<CombinedLaunchPadStatus> m_DataGrid = default!;
+
+    readonly HashSet<Guid> m_ExpandedRows = new();
+
+    protected override void OnInitialized()
+    {
+        ComplexesService.Collection.SomethingChanged += OnDataChanged;
+        LaunchPadsStatusService.Collection.SomethingChanged += OnDataChanged;
+        LaunchPadsHealthService.Collection.SomethingChanged += OnDataChanged;
+
+        m_HealthUpdateToken = LaunchPadsHealthService.InUse();
+        GatherLaunchPadMonitoringData();
+    }
+
+    void GatherLaunchPadMonitoringData()
+    {
+        var launchPads = ComplexesService.Collection.Values.SelectMany(c => c.LaunchPads);
+        var healths = LaunchPadsHealthService.Collection.Values;
+        var statuses = LaunchPadsStatusService.Collection.Values;
+
+        // Get the health and status entries associated with each launchpad
+        LaunchPadStatuses = launchPads.GroupJoin(
+                    healths,
+                    pad => pad.Identifier,
+                    health => health.Id,
+                    (pad, healths) => (pad: pad, health: healths.FirstOrDefault())
+            ).GroupJoin(
+                statuses,
+                tempJoin => tempJoin.pad.Identifier,
+                status => status.Id,
+                (tempJoin, statuses) => new CombinedLaunchPadStatus
+                    {
+                        Definition = tempJoin.pad,
+                        Health = tempJoin.health,
+                        Status = statuses.FirstOrDefault()
+                    }
+            ).
+            ToList();
+    }
+
+    public void Dispose()
+    {
+        ComplexesService.Collection.SomethingChanged -= OnDataChanged;
+        LaunchPadsStatusService.Collection.SomethingChanged -= OnDataChanged;
+        LaunchPadsHealthService.Collection.SomethingChanged -= OnDataChanged;
+        m_HealthUpdateToken.Dispose();
+    }
+
+    void OnDataChanged(IReadOnlyIncrementalCollection _)
+    {
+        GatherLaunchPadMonitoringData();
+        StateHasChanged();
+    }
+
+    void RowRender(RowRenderEventArgs<CombinedLaunchPadStatus> args)
+    {
+        args.Expandable = IsRowExpandable(args.Data);
+    }
+
+    void OnRowExpanded(CombinedLaunchPadStatus row)
+    {
+        m_ExpandedRows.Add(row.Definition.Identifier);
+    }
+
+    void OnRowCollapsed(CombinedLaunchPadStatus row)
+    {
+        m_ExpandedRows.Remove(row.Definition.Identifier);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        var expandableRowIds = LaunchPadStatuses.Where(IsRowExpandable).Select(entry => entry.Definition.Identifier);
+        m_ExpandedRows.RemoveWhere(entry => !expandableRowIds.Contains(entry));
+        m_DataGrid.ExpandRows(LaunchPadStatuses.Where(entry => m_ExpandedRows.Contains(entry.Definition.Identifier)));
+    }
+
+    static string ToGibibytes(long value) => (value / (double)(1024 * 1024 * 1024)).ToString("0.00");
+
+    static bool IsRowExpandable(CombinedLaunchPadStatus row) => row.Status?.DynamicEntries.Any() ?? false;
+}
