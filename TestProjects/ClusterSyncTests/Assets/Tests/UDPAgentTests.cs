@@ -346,12 +346,6 @@ namespace Unity.ClusterDisplay.Tests
             }
             receiver.AddPreProcess(50, PreProcess50);
 
-            // Send
-            RegisteringWithEmitter messageToSend;
-            messageToSend.NodeId = 42;
-            messageToSend.IPAddressBytes = BitConverter.ToUInt32(sender.AdapterAddress.GetAddressBytes());
-            sender.SendMessage(MessageType.RegisteringWithEmitter, messageToSend);
-
             // Remove one of the two preprocess
             receiver.RemovePreProcess(toRemove == 50 ? PreProcess50 : PreProcess100);
 
@@ -360,13 +354,19 @@ namespace Unity.ClusterDisplay.Tests
             ManualResetEvent notRemovedPreprocessEvent =
                 toRemove == 50 ? process100ReceivedSomething : process50ReceivedSomething;
 
+            // Send
+            RegisteringWithEmitter messageToSend;
+            messageToSend.NodeId = 42;
+            messageToSend.IPAddressBytes = BitConverter.ToUInt32(sender.AdapterAddress.GetAddressBytes());
+            sender.SendMessage(MessageType.RegisteringWithEmitter, messageToSend);
+
             // Wait until the non removed receives it
-            bool receivedByPreprocess100 = notRemovedPreprocessEvent.WaitOne(TimeSpan.FromSeconds(5));
-            Assert.That(receivedByPreprocess100, Is.True);
+            bool receivedByNotRemovedPreprocess = notRemovedPreprocessEvent.WaitOne(TimeSpan.FromSeconds(5));
+            Assert.That(receivedByNotRemovedPreprocess, Is.True);
 
             // Confirm the removed one will not receive it
-            bool receivedByPreprocess50 = removedPreprocessEvent.WaitOne(TimeSpan.FromMilliseconds(250));
-            Assert.That(receivedByPreprocess50, Is.False);
+            bool receivedByRemovedPreprocess = removedPreprocessEvent.WaitOne(TimeSpan.FromMilliseconds(250));
+            Assert.That(receivedByRemovedPreprocess, Is.False);
         }
 
         static UdpAgentConfig GetConfig(MessageType[] receivedMessagesType)

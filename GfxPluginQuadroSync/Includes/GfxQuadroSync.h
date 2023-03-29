@@ -14,7 +14,8 @@ namespace GfxQuadroSync {
         QuadroSyncEnableSystem,
         QuadroSyncEnableSwapGroup,
         QuadroSyncEnableSwapBarrier,
-        QuadroSyncEnableSyncCounter
+        QuadroSyncEnableSyncCounter,
+        QuadroSyncSkipSyncForNextFrame
     };
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -197,5 +198,22 @@ namespace GfxQuadroSync {
     //
     ///////////////////////////////////////////////////////////////////////////////
     void QuadroSyncEnableSyncCounter(bool value);
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //
+    // FUNCTION NAME:  QuadroSyncSkipSyncForNextFrame
+    //
+    //! DESCRIPTION:   Indicate that the next frame to be presented should be
+    //!                presented using the normal present as opposed to the Nvidia
+    //!                synchronized present call.
+    //!
+    //! WHEN TO USE:   When some exceptional circumstance require for a frame to be
+    //!                presented without waiting for the other nodes synchronized
+    //!                with this node.
+    //!
+    //  SUPPORTED GFX: D3D11 & D3D12
+    //!
+    ///////////////////////////////////////////////////////////////////////////////
+    void QuadroSyncSkipSyncForNextFrame();
 
 }

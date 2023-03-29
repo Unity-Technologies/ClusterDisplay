@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using Unity.Profiling;
 using UnityEngine;
 using Utils;
@@ -51,7 +52,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
             // Special case for delayed repeaters.  Gather game state for frame 0 and the custom data will be gathered
             // when starting frame 1.  Don't sync or anything, in fact let's try to finish ASAP so that we can move on
             // to frame 1 so that we can sent frame 0 and repeaters at last also receive frame 0.
-            if (Node.FrameIndex == 0 && Node.Config.RepeatersDelayed)
+            if (Node.FrameIndex == Node.Config.FirstFrameIndex && Node.Config.RepeatersDelayed)
             {
                 m_Emitter.GatherPreFrameState();
                 return (null, DoFrameResult.FrameDone);

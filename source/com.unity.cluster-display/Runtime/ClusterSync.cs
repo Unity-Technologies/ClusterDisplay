@@ -90,7 +90,26 @@ namespace Unity.ClusterDisplay
 
         bool m_NewFrame;
 
-        internal ClusterNode LocalNode { get; private set; }
+        ClusterNode m_LocalNode;
+
+        internal ClusterNode LocalNode
+        {
+            get => m_LocalNode;
+            private set
+            {
+                if (!ReferenceEquals(value, m_LocalNode))
+                {
+                    NodeRole? previousRole = m_LocalNode?.NodeRole;
+                    m_LocalNode = value;
+                    NodeRole? newRole = m_LocalNode?.NodeRole;
+                    if (previousRole.HasValue != newRole.HasValue ||
+                        (newRole.HasValue && newRole.Value != previousRole.Value))
+                    {
+                        OnNodeRoleChanged?.Invoke();
+                    }
+                }
+            }
+        }
 
         internal NetworkStatistics CurrentNetworkStats => LocalNode.UdpAgent.Stats;
 
@@ -222,8 +241,6 @@ namespace Unity.ClusterDisplay
                 udpConfig.ReceivedMessagesType = EmitterNode.ReceiveMessageTypes.ToArray();
                 LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, new UdpAgent(udpConfig));
 
-                RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
-
                 InitializeEmitterInputSync(clusterNodeConfig);
 
                 return true;
@@ -337,6 +354,8 @@ namespace Unity.ClusterDisplay
 
         bool TryInitialize(ClusterParams clusterParams)
         {
+            RepeatersDelayedOneFrame = clusterParams.DelayRepeaters;
+
             try
             {
                 var nodeConfig = new ClusterNodeConfig

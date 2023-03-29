@@ -398,7 +398,7 @@ namespace Unity.ClusterDisplay
                             continue;
                         }
                     }
-                    catch (ThreadAbortException e)
+                    catch (ThreadAbortException)
                     {
                         break;
                     }
@@ -781,6 +781,16 @@ namespace Unity.ClusterDisplay
                 break;
             }
         }
+
+        // FSTL: Remove
+        //public static void HackInMessage(string message)
+        //{
+        //    var stringBuilder = new StringBuilder();
+        //    var messageTime = (double)(Stopwatch.GetTimestamp() - k_StartTime) / Stopwatch.Frequency;
+        //    stringBuilder.AppendFormat("{0:0.0000}, ", messageTime);
+        //    stringBuilder.Append(message);
+        //    s_LogQueue?.Add(stringBuilder.ToString());
+        //}
 
         [Conditional("CLUSTER_DISPLAY_NETWORK_LOG")]
         static void LogMessage(object message, bool send, int extraDataLength, string loggingFilenameSuffix)

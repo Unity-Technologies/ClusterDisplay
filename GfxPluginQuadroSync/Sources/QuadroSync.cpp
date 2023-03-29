@@ -254,6 +254,12 @@ namespace GfxQuadroSync
 
     bool PluginCSwapGroupClient::Render(IGraphicsDevice* pGraphicsDevice)
     {
+        if (m_SkipSynchronizedPresentOfNextFrame)
+        {
+            m_SkipSynchronizedPresentOfNextFrame = false;
+            return false;
+        }
+
         const auto pDevice = pGraphicsDevice->GetDevice();
         const auto pSwapChain = pGraphicsDevice->GetSwapChain();
         const auto pVsync = pGraphicsDevice->GetSyncInterval();

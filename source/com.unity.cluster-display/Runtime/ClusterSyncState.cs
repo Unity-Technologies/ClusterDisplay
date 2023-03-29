@@ -48,6 +48,11 @@ namespace Unity.ClusterDisplay
         /// Terminate ClusterDisplay.
         /// </summary>
         void Terminate();
+
+        /// <summary>
+        /// Event triggered when <see cref="NodeRole"/> changes.
+        /// </summary>
+        event Action OnNodeRoleChanged;
     }
 
     public partial class ClusterSync : IClusterSyncState
@@ -102,5 +107,7 @@ namespace Unity.ClusterDisplay
             Application.Quit();
 #endif
         }
+
+        public event Action OnNodeRoleChanged;
     }
 }

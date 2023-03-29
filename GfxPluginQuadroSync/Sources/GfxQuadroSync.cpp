@@ -228,6 +228,9 @@ namespace GfxQuadroSync
         case EQuadroSyncRenderEvent::QuadroSyncEnableSyncCounter:
             QuadroSyncEnableSyncCounter(static_cast<bool>(data));
             break;
+        case EQuadroSyncRenderEvent::QuadroSyncSkipSyncForNextFrame:
+            QuadroSyncSkipSyncForNextFrame();
+            break;
         default:
             break;
         }
@@ -478,4 +481,12 @@ namespace GfxQuadroSync
         s_SwapGroupClient.EnableSyncCounter(value);
     }
 
+    // Indicate that the next frame to be presented should be presented using the normal present
+    void QuadroSyncSkipSyncForNextFrame()
+    {
+        if (!IsContextValid())
+            return;
+
+        s_SwapGroupClient.SkipSynchronizedPresentOfNextFrame();
+    }
 }

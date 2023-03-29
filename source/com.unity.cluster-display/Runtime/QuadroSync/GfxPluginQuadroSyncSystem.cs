@@ -60,7 +60,12 @@ namespace Unity.ClusterDisplay
             /// <summary>
             /// Enables or disables the use of the Emitter sync counter system (NvAPI).
             /// </summary>
-            QuadroSyncEnableSyncCounter
+            QuadroSyncEnableSyncCounter,
+
+            /// <summary>
+            /// Indicate to QuadroSync that the next frame should be presented without performing any synchronization.
+            /// </summary>
+            QuadroSyncSkipSyncForNextFrame
         }
 
         /// <summary>
