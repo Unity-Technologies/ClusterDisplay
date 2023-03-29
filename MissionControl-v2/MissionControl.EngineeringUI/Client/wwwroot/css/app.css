@@ -16,6 +16,8 @@
     --slider-range-color: #2196F3;
     --slider-handle-color: #2196F3;
     --switch-checked-color: #2196F3;
+    --warning-text-color: #D98616;
+    --error-text-color: #D30E08;
 }
 
 /************************* Site wide definitions *************************/

@@ -1,5 +1,6 @@
 @using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
 @using Unity.ClusterDisplay.MissionControl.MissionControl
+@using LaunchPadState=Unity.ClusterDisplay.MissionControl.LaunchPad.State
 @inject ComplexesService ComplexesService
 @inject LaunchPadsStatusService LaunchPadsStatusService
 @inject LaunchPadsHealthService LaunchPadsHealthService
@@ -13,7 +14,7 @@
                 RowExpand=@OnRowExpanded
                 RowCollapse=@OnRowCollapsed>
     <Template Context="status">
-        @if (status.Status?.DynamicEntries is IEnumerable<LaunchPadReportDynamicEntry> entries)
+        @if (status.Status?.DynamicEntries is { } entries)
         {
             <LaunchPadsDynamicStatus DynamicEntries="entries" />
         }
@@ -22,7 +23,25 @@
         <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Name" Property="Definition.Name" />
         <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Version" Property="Status.Version" />
         <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Started at" Property="Status.StartTime" />
-        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="State" Property="Status.State" />
+        <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="State">
+            <Template Context="status">
+                @switch(status.Status?.State)
+                {
+                    case LaunchPadState.Launched:
+                        <span style="color: green">Launched</span>
+                        break;
+                    case LaunchPadState.Over:
+                        <span style="color: var(--warning-text-color)">Over</span>
+                        break;
+                    case { } other:
+                        <span>@other.ToString()</span>
+                        break;
+                    default:
+                        <span>(unknown)</span>
+                        break;
+                }
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="CPU usage">
             <Template Context="status">
                 @status.Health?.CpuUtilization.ToString("P2")
