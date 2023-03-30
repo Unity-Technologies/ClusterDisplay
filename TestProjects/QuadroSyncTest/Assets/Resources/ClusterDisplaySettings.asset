@@ -23,10 +23,10 @@ MonoBehaviour:
     MulticastAddress: 224.0.1.0
     AdapterName: 
     TargetFps: -1
-    DelayRepeaters: 0
+    DelayRepeaters: 1
     HeadlessEmitter: 0
     ReplaceHeadlessEmitter: 0
-    InputSync: 0
+    InputSync: 1
     Fence: 1
     m_HandshakeTimeoutSec: 10
     m_CommTimeoutSec: 5
