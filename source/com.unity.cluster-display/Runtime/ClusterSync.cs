@@ -420,7 +420,7 @@ namespace Unity.ClusterDisplay
 
             // Create the replacing emitter node.
             LocalNode = new EmitterNode(clusterNodeConfig, emitterNodeConfig, udpAgent);
-            InitializeRepeaterInputSync(clusterNodeConfig);
+            InitializeEmitterInputSync(clusterNodeConfig);
         }
 
         public void CleanUp()
