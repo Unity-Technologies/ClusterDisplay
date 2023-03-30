@@ -59,8 +59,9 @@ namespace Unity.ClusterDisplay.Scripting
                 // have no data to send and then LoadInputData on the repeater nodes to fail because of 0 bytes of data
                 // is received.
                 //
-                // I guess an alternative would have been to improved LoadInputData to support 0 bytes of received data,
-                // but it wouldn't have fixed the problem that one frame of input data would have been lost at start.
+                // LoadInputData has also been improved to support 0 bytes of received data (as this can happen when not
+                // running with Delay Repeaters), but it is still a good thing to fix the problem that one frame of
+                // input data would have been lost at start when switching from backup to emitter.
                 Debug.Assert(s_InjectedReplicator == null);
                 s_InjectedReplicator = this;
 
@@ -195,6 +196,13 @@ namespace Unity.ClusterDisplay.Scripting
 
         bool LoadInputData(NativeArray<byte> stateData)
         {
+            // Skip loading if empty (it would cause problems to try to load that empty data and it can happen on the
+            // first frame when delayed repeaters is off).
+            if (stateData.Length == 0)
+            {
+                return true;
+            }
+
             // There's no API to copy unmanaged bytes directly into InputEventTrace, so we'll take a roundabout
             // approach using MemoryStream.
             // First, copy the bytes into a MemoryStream.
