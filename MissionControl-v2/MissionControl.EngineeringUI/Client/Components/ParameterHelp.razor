@@ -1,18 +1,22 @@
 @inject TooltipService TooltipService
 
-<span class="rzi help-icon" @ref="m_HelpIcon" @onclick=@(args => ShowTooltip(m_HelpIcon))>
-    @if (HelpText != null)
-    {
+@if (!string.IsNullOrEmpty(HelpText))
+{
+    <span class="rzi help-icon" @ref="m_HelpIcon" @onclick=@(args => ShowTooltip(m_HelpIcon))>
         @Icon
-    }
-</span>
+    </span>
+}
 
 @code {
+
     [Parameter]
     public string Icon { get; set; } = "help";
 
     [Parameter]
     public string? HelpText { get; set; }
+
+    [Parameter]
+    public TooltipPosition Position { get; set; } = TooltipPosition.Right;
 
     ElementReference m_HelpIcon;
 
@@ -23,7 +27,7 @@
                 @<div class="tooltip">@HelpText</div>
                 , new TooltipOptions
                 {
-                    Position = TooltipPosition.Right,
+                    Position = Position,
                     Duration = null
                 });
     }

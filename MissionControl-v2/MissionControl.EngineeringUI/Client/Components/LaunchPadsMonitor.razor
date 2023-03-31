@@ -12,12 +12,15 @@
                 ExpandMode="DataGridExpandMode.Multiple"
                 RowRender=@RowRender
                 RowExpand=@OnRowExpanded
-                RowCollapse=@OnRowCollapsed>
+                RowCollapse=@OnRowCollapsed
+                AllowColumnPicking="true" >
     <Template Context="status">
         @if (status.Status?.DynamicEntries is { } entries)
         {
-            <LaunchPadsDynamicStatus DynamicEntries="entries" />
+            <LaunchPadsDynamicStatus DynamicEntries="entries"/>
         }
+        <MissionParameters LaunchPadId="status.Definition.Identifier" />
+        <MissionCommands LaunchPadId="status.Definition.Identifier"/>
     </Template>
     <Columns>
         <RadzenDataGridColumn TItem="CombinedLaunchPadStatus" Title="Name" Property="Definition.Name" />

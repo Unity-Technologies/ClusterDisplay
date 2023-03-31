@@ -1,10 +1,8 @@
-using System.Reflection.Metadata;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 using Radzen.Blazor;
 using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services;
-using Unity.ClusterDisplay.MissionControl.LaunchCatalog;
 using Unity.ClusterDisplay.MissionControl.MissionControl;
 
 namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
@@ -12,15 +10,10 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
     public partial class MissionParameters: IDisposable
     {
         [Parameter]
-        public IEnumerable<MissionParameter> Parameters {
-            get => m_Parameters;
-            set
-            {
-                m_Parameters = value;
-                RefreshEntries();
-            }
-        }
-        IEnumerable<MissionParameter> m_Parameters = Enumerable.Empty<MissionParameter>();
+        public Guid LaunchPadId { get; set; }
+
+        [Inject]
+        MissionParametersService MissionParametersService { get; set; } = default!;
 
         [Inject]
         MissionParametersDesiredValuesService DesiredValuesService { get; set; } = default!;
@@ -210,51 +203,11 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
         List<Entry> Entries { get; } = new();
 
-        bool OnlyHasCommandEntries => Entries.All(e => e.Definition.Type == MissionParameterType.Command);
-
         RadzenDataGrid<Entry>? m_EntriesGrid;
-
-        async Task ExecuteCommand(string valueIdentifier)
-        {
-            var entry = Entries.FirstOrDefault(e => e.Definition.ValueIdentifier == valueIdentifier);
-            if (entry == null)
-            {
-                return;
-            }
-
-            if (entry.Definition.Constraint is ConfirmationConstraint confirmation)
-            {
-                ConfirmOptions options = new();
-                options.ShowTitle = confirmation.Title != null;
-                options.OkButtonText = confirmation.ConfirmText ?? "Yes";
-                options.CancelButtonText = confirmation.AbortText ?? "No";
-                var ret = await DialogService.Confirm(confirmation.FullText, confirmation.Title ?? "", options);
-                if (!ret.HasValue || !ret.Value)
-                {
-                    return;
-                }
-            }
-
-            var desiredValueId =
-                DesiredValuesService.Collection.Values.FirstOrDefault(v => v.ValueIdentifier == valueIdentifier)?.Id ??
-                Guid.NewGuid();
-            try
-            {
-                var ret = await DesiredValuesService.PutAsync(new(desiredValueId)
-                {
-                    ValueIdentifier = valueIdentifier,
-                    Value = JsonSerializer.SerializeToElement(Guid.NewGuid(), Json.SerializerOptions)
-                });
-                ret.EnsureSuccessStatusCode();
-            }
-            catch (Exception e)
-            {
-                await DialogService.Alert($"Failed to execute command: {e}", "Command failed");
-            }
-        }
 
         protected override void OnInitialized()
         {
+            MissionParametersService.Collection.SomethingChanged += DesiredValuesChanged;
             DesiredValuesService.Collection.SomethingChanged += DesiredValuesChanged;
             EffectiveValuesService.Collection.SomethingChanged += EffectiveValuesChanged;
 
@@ -265,6 +218,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
         public void Dispose()
         {
+            MissionParametersService.Collection.SomethingChanged -= DesiredValuesChanged;
             DesiredValuesService.Collection.SomethingChanged -= DesiredValuesChanged;
             EffectiveValuesService.Collection.SomethingChanged -= EffectiveValuesChanged;
             m_ProcessDirtyDesiredValuesTimer?.Dispose();
@@ -290,9 +244,12 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             }
 
             // Ensure all MissionParameter have a corresponding entry
+            // We don't show commands in the MissionParameters component. See MissionCommandComponent.
+            var parameters = MissionParametersService.Collection.Values.Where(p =>
+                p.Type != MissionParameterType.Command && p.Group == LaunchPadId.ToString());
             var desiredValues = IndexParameterValues(DesiredValuesService.Collection.Values);
             var effectiveValues = IndexParameterValues(EffectiveValuesService.Collection.Values);
-            foreach (var parameter in Parameters)
+            foreach (var parameter in parameters)
             {
                 if (!currentEntries.TryGetValue(parameter.ValueIdentifier, out var entry))
                 {
@@ -313,7 +270,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
 
             // Discard old entries
             HashSet<string> newParameters = new ();
-            foreach (var newParameter in Parameters)
+            foreach (var newParameter in parameters)
             {
                 newParameters.Add(newParameter.ValueIdentifier);
             }

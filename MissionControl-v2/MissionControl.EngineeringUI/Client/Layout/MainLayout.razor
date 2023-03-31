@@ -1,3 +1,4 @@
+@using Unity.ClusterDisplay.MissionControl.MissionControl
 @inherits LayoutComponentBase
 
 <RadzenContextMenu />
@@ -7,7 +8,7 @@
 
 <RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
     <RadzenHeader class="rz-shadow-1">
-        @if (MissionControlStatus.State is not MissionControl.State.Launched)
+        @if (MissionControlStatus.State is State.Idle)
         {
             <RadzenButton Text="Launch" ButtonStyle="ButtonStyle.Info" Icon="play_arrow"
                       Click="@MissionCommandsService.LaunchMissionAsync"

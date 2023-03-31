@@ -1,0 +1,105 @@
+@using System.Text.Json
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
+@inject MissionParametersService MissionParametersService;
+@inject MissionParametersDesiredValuesService DesiredValuesService;
+@inject NotificationService NotificationService;
+@inject DialogService DialogService;
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center">
+    @foreach (var parameter in m_CommandParameters)
+    {
+        <RadzenButton Text=@parameter.Name
+                      Variant="Variant.Outlined"
+                      ButtonStyle=@GetButtonStyle(parameter)
+                      Click="() => ExecuteCommand(parameter)"/>
+        <ParameterHelp HelpText="@parameter.Description" Position="TooltipPosition.Bottom"/>
+    }
+</RadzenStack>
+
+@code {
+
+    [Parameter]
+    public Guid LaunchPadId { get; set; }
+
+    IEnumerable<MissionParameter> m_CommandParameters = Enumerable.Empty<MissionParameter>();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        MissionParametersService.Collection.SomethingChanged += MissionParametersChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        RefreshEntries();
+    }
+
+    void MissionParametersChanged(IReadOnlyIncrementalCollection obj)
+    {
+        RefreshEntries();
+    }
+
+    void RefreshEntries()
+    {
+        m_CommandParameters = MissionParametersService.Collection.Values
+            .Where(p => p.Type == MissionParameterType.Command && p.Group == LaunchPadId.ToString());
+    }
+
+    static ButtonStyle GetButtonStyle(MissionParameter commandParameter)
+    {
+        if (commandParameter.Constraint is ConfirmationConstraint confirmation)
+        {
+            return confirmation.ConfirmationType switch
+            {
+                ConfirmationType.Warning => ButtonStyle.Warning,
+                ConfirmationType.Danger => ButtonStyle.Danger,
+                _ => ButtonStyle.Info
+                };
+        }
+
+        return ButtonStyle.Info;
+    }
+
+    async Task ExecuteCommand(MissionParameter commandParameter)
+    {
+        if (commandParameter.Constraint is ConfirmationConstraint confirmation &&
+            !await DialogService.CustomConfirm(
+                confirmation.FullText,
+                confirmation.Title ?? "",
+                new ConfirmOptions()
+                {
+                    ShowTitle = string.IsNullOrEmpty(confirmation.Title),
+                    OkButtonText = confirmation.ConfirmText ?? "Yes",
+                    CancelButtonText = confirmation.AbortText ?? "No"
+                }))
+        {
+            return;
+        }
+
+        var valueIdentifier = commandParameter.ValueIdentifier;
+        var desiredValueId = DesiredValuesService.Collection.Values
+            .FirstOrDefault(v => v.ValueIdentifier == valueIdentifier)?.Id ??
+            Guid.NewGuid();
+        try
+        {
+            var ret = await DesiredValuesService.PutAsync(new(desiredValueId)
+            {
+                ValueIdentifier = valueIdentifier,
+                Value = JsonSerializer.SerializeToElement(Guid.NewGuid(), Json.SerializerOptions)
+            });
+            ret.EnsureSuccessStatusCode();
+            NotificationService.Notify(NotificationSeverity.Info, summary: "Command succeeded",
+                detail: commandParameter.Name);
+        }
+        catch (Exception e)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, summary: "Command failed",
+                detail: e.Message);
+            Console.WriteLine(e.ToString());
+        }
+    }
+
+}

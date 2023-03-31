@@ -1,191 +1,172 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl;
 <RadzenDataGrid Data=@Entries @ref="m_EntriesGrid"
-                AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true">
+                AllowMultiColumnSorting="true"
+                ShowMultiColumnSortingIndex="true"
+                AllowSorting="true"
+                Visible="Entries.Any()">
     <Columns>
         <RadzenDataGridColumn TItem="Entry" Title="Name" Property="Definition.Name" SortOrder="SortOrder.Ascending">
             <Template Context="parameter">
-                @if (parameter.Definition.Type == MissionParameterType.Command)
-                {
-                    var buttonStyle = ButtonStyle.Info;
-                    if (parameter.Definition.Constraint is ConfirmationConstraint confirmation)
-                    {
-                        buttonStyle = confirmation.ConfirmationType switch
-                        {
-                            ConfirmationType.Warning => ButtonStyle.Warning,
-                            ConfirmationType.Danger => ButtonStyle.Danger,
-                            _ => ButtonStyle.Info
-                        };
-                    }
-                    <RadzenButton Variant="Variant.Outlined" ButtonStyle=@buttonStyle
-                                  Text=@parameter.Definition.Name
-                                  Click=@(() => ExecuteCommand(parameter.Definition.ValueIdentifier)) />
-                }
-                else
-                {
-                    <RadzenLabel Text=@parameter.Definition.Name />
-                }
+                <RadzenLabel Text=@parameter.Definition.Name/>
                 @if (parameter.Definition.Description.Length > 0)
                 {
                     <RadzenIcon Icon="help" Style="font-size:16px; vertical-align: middle;"
-                                title=@parameter.Definition.Description />
+                                title=@parameter.Definition.Description/>
                 }
             </Template>
         </RadzenDataGridColumn>
-        @if (!OnlyHasCommandEntries)
-        {
-            <RadzenDataGridColumn TItem="Entry" Title="Desired value" Sortable=false>
-                <Template Context="parameter">
-                    @{
-                        var rowClass = "row mx-0";
-                        if (!parameter.DesiredValueValid)
-                        {
-                            rowClass += " rz-border-danger";
-                        }
+        <RadzenDataGridColumn TItem="Entry" Title="Desired value" Sortable=false>
+            <Template Context="parameter">
+                @{
+                    var rowClass = "row mx-0";
+                    if (!parameter.DesiredValueValid)
+                    {
+                        rowClass += " rz-border-danger";
                     }
-                    <div class=@rowClass>
-                        @if (parameter.Definition.Type == MissionParameterType.Boolean)
+                }
+                <div class=@rowClass>
+                    @if (parameter.Definition.Type == MissionParameterType.Boolean)
+                    {
+                        <div class="col px-0">
+                            <RadzenSwitch @bind-Value=@parameter.DesiredValueAsBoolean />
+                            <RadzenLabel class="ms-3" Text=@(parameter.DesiredValueAsBoolean ? "True" : "False") />
+                        </div>
+                    }
+                    else if (parameter.Definition.Type == MissionParameterType.Integer)
+                    {
+                        int minValue = int.MinValue;
+                        int maxValue = int.MaxValue;
+                        if (parameter.Definition.Constraint is RangeConstraint rangeConstraint)
                         {
-                            <div class="col px-0">
-                                <RadzenSwitch @bind-Value=@parameter.DesiredValueAsBoolean />
-                                <RadzenLabel class="ms-3" Text=@(parameter.DesiredValueAsBoolean ? "True" : "False") />
+                            minValue = rangeConstraint.MinInt32Inclusive;
+                            maxValue = rangeConstraint.MaxInt32Inclusive;
+                        }
+                        if (minValue > int.MinValue && maxValue < int.MaxValue)
+                        {
+                            <div class="col px-0 align-items-center d-flex">
+                                <RadzenNumeric @bind-Value=@parameter.DesiredValueAsInt32
+                                               Min=@minValue Max=@maxValue />
+                                <RadzenSlider @bind-Value=@parameter.DesiredValueAsInt32
+                                              Min=@minValue Max=@maxValue Class="w-100 ms-3" />
                             </div>
                         }
-                        else if (parameter.Definition.Type == MissionParameterType.Integer)
+                        else
                         {
-                            int minValue = int.MinValue;
-                            int maxValue = int.MaxValue;
-                            if (parameter.Definition.Constraint is RangeConstraint rangeConstraint)
-                            {
-                                minValue = rangeConstraint.MinInt32Inclusive;
-                                maxValue = rangeConstraint.MaxInt32Inclusive;
-                            }
-                            if (minValue > int.MinValue && maxValue < int.MaxValue)
-                            {
-                                <div class="col px-0 align-items-center d-flex">
-                                    <RadzenNumeric @bind-Value=@parameter.DesiredValueAsInt32
-                                                   Min=@minValue Max=@maxValue />
-                                    <RadzenSlider @bind-Value=@parameter.DesiredValueAsInt32
-                                                  Min=@minValue Max=@maxValue Class="w-100 ms-3" />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="col px-0">
-                                    <RadzenNumeric @bind-Value=@parameter.DesiredValueAsInt32
-                                                   Min=@minValue Max=@maxValue />
-                                </div>
-                            }
+                            <div class="col px-0">
+                                <RadzenNumeric @bind-Value=@parameter.DesiredValueAsInt32
+                                               Min=@minValue Max=@maxValue />
+                            </div>
                         }
-                        else if (parameter.Definition.Type == MissionParameterType.Float)
+                    }
+                    else if (parameter.Definition.Type == MissionParameterType.Float)
+                    {
+                        decimal minValue = decimal.MinValue;
+                        decimal maxValue = decimal.MaxValue;
+                        if (parameter.Definition.Constraint is RangeConstraint rangeConstraint)
                         {
-                            decimal minValue = decimal.MinValue;
-                            decimal maxValue = decimal.MaxValue;
-                            if (parameter.Definition.Constraint is RangeConstraint rangeConstraint)
-                            {
-                                minValue = rangeConstraint.MinDecimalInclusive;
-                                maxValue = rangeConstraint.MaxDecimalInclusive;
-                            }
-                            if (minValue != decimal.MinValue && maxValue != decimal.MaxValue)
-                            {
-                                var step = Math.Round(maxValue - minValue, 0) / 1000;
-                                <div class="col px-0 align-items-center d-flex">
-                                    <RadzenNumeric TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
-                                                   Min=@minValue Max=@maxValue Step=@((step * 10).ToString()) />
-                                    <RadzenSlider TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
-                                                  Min=@minValue Max=@maxValue Class="w-100 ms-3" Step=@step.ToString() />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="col px-0">
-                                    <RadzenNumeric TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
-                                                   Min=@minValue Max=@maxValue />
-                                </div>
-                            }
+                            minValue = rangeConstraint.MinDecimalInclusive;
+                            maxValue = rangeConstraint.MaxDecimalInclusive;
                         }
-                        else if (parameter.Definition.Type == MissionParameterType.String)
+                        if (minValue != decimal.MinValue && maxValue != decimal.MaxValue)
                         {
-                            if (parameter.Definition.Constraint is LaunchCatalog.ListConstraint listConstraint)
-                            {
-                                <div class="col px-0">
-                                    <RadzenDropDown @bind-Value=@parameter.DesiredValueAsString Class="w-100"
-                                                    Data=@listConstraint.Choices />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="col px-0">
-                                    <RadzenTextBox @bind-Value=@parameter.DesiredValueAsString Class="w-100"
-                                                   @oninput=@(args => parameter.DesiredValueAsString = (args.Value?.ToString() ?? "")) />
-                                </div>
-                            }
+                            var step = Math.Round(maxValue - minValue, 0) / 1000;
+                            <div class="col px-0 align-items-center d-flex">
+                                <RadzenNumeric TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
+                                               Min=@minValue Max=@maxValue Step=@((step * 10).ToString()) />
+                                <RadzenSlider TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
+                                              Min=@minValue Max=@maxValue Class="w-100 ms-3" Step=@step.ToString() />
+                            </div>
                         }
-                    </div>
-                </Template>
+                        else
+                        {
+                            <div class="col px-0">
+                                <RadzenNumeric TValue="float" @bind-Value=@parameter.DesiredValueAsSingle
+                                               Min=@minValue Max=@maxValue />
+                            </div>
+                        }
+                    }
+                    else if (parameter.Definition.Type == MissionParameterType.String)
+                    {
+                        if (parameter.Definition.Constraint is LaunchCatalog.ListConstraint listConstraint)
+                        {
+                            <div class="col px-0">
+                                <RadzenDropDown @bind-Value=@parameter.DesiredValueAsString Class="w-100"
+                                                Data=@listConstraint.Choices />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col px-0">
+                                <RadzenTextBox @bind-Value=@parameter.DesiredValueAsString Class="w-100"
+                                               @oninput=@(args => parameter.DesiredValueAsString = (args.Value?.ToString() ?? "")) />
+                            </div>
+                        }
+                    }
+                </div>
+            </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Entry" Title="Actual value" Sortable=false>
-                <Template Context="parameter">
-                    @{
-                        bool isUnexpectedValue = false;
-                    }
-                    @if (parameter.EffectiveValue == null)
+        <RadzenDataGridColumn TItem="Entry" Title="Actual value" Sortable=false>
+            <Template Context="parameter">
+                @{
+                    bool isUnexpectedValue = false;
+                }
+                @if (parameter.EffectiveValue == null)
+                {
+                    <RadzenLabel Text="(unknown)" />
+                }
+                else if (parameter.Definition.Type == MissionParameterType.Boolean)
+                {
+                    var effectiveBoolean = parameter.EffectiveAsBoolean;
+                    if (effectiveBoolean != null)
                     {
-                        <RadzenLabel Text="(unknown)" />
+                        <RadzenLabel Text=@(effectiveBoolean.Value ? "True" : "False") />
                     }
-                    else if (parameter.Definition.Type == MissionParameterType.Boolean)
+                    else
                     {
-                        var effectiveBoolean = parameter.EffectiveAsBoolean;
-                        if (effectiveBoolean != null)
-                        {
-                            <RadzenLabel Text=@(effectiveBoolean.Value ? "True" : "False") />
-                        }
-                        else
-                        {
-                            isUnexpectedValue = true;
-                        }
+                        isUnexpectedValue = true;
                     }
-                    else if (parameter.Definition.Type is MissionParameterType.Integer)
+                }
+                else if (parameter.Definition.Type is MissionParameterType.Integer)
+                {
+                    var effectiveInt32 = parameter.EffectiveAsInt32;
+                    if (effectiveInt32 != null)
                     {
-                        var effectiveInt32 = parameter.EffectiveAsInt32;
-                        if (effectiveInt32 != null)
-                        {
-                            <RadzenLabel Text=@effectiveInt32.ToString() />
-                        }
-                        else
-                        {
-                            isUnexpectedValue = true;
-                        }
+                        <RadzenLabel Text=@effectiveInt32.ToString() />
                     }
-                    else if (parameter.Definition.Type is MissionParameterType.Float)
+                    else
                     {
-                        var effectiveSingle = parameter.EffectiveAsSingle;
-                        if (effectiveSingle != null)
-                        {
-                            <RadzenLabel Text=@effectiveSingle.ToString() />
-                        }
-                        else
-                        {
-                            isUnexpectedValue = true;
-                        }
+                        isUnexpectedValue = true;
                     }
-                    else if (parameter.Definition.Type is MissionParameterType.String)
+                }
+                else if (parameter.Definition.Type is MissionParameterType.Float)
+                {
+                    var effectiveSingle = parameter.EffectiveAsSingle;
+                    if (effectiveSingle != null)
                     {
-                        var effectiveString = parameter.EffectiveAsString;
-                        if (effectiveString != null)
-                        {
-                            <RadzenLabel Text=@effectiveString />
-                        }
-                        else
-                        {
-                            isUnexpectedValue = true;
-                        }
+                        <RadzenLabel Text=@effectiveSingle.ToString() />
                     }
-                    @if (isUnexpectedValue)
+                    else
                     {
-                        <RadzenLabel Text="(unexpected)" />
+                        isUnexpectedValue = true;
                     }
-                </Template>
-            </RadzenDataGridColumn>
-        }
+                }
+                else if (parameter.Definition.Type is MissionParameterType.String)
+                {
+                    var effectiveString = parameter.EffectiveAsString;
+                    if (effectiveString != null)
+                    {
+                        <RadzenLabel Text=@effectiveString />
+                    }
+                    else
+                    {
+                        isUnexpectedValue = true;
+                    }
+                }
+                @if (isUnexpectedValue)
+                {
+                    <RadzenLabel Text="(unexpected)" />
+                }
+            </Template>
+        </RadzenDataGridColumn>
     </Columns>
 </RadzenDataGrid>

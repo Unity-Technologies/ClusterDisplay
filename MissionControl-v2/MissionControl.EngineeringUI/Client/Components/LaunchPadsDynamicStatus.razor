@@ -1,19 +1,17 @@
 @using Unity.ClusterDisplay.MissionControl.MissionControl
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
 
 @foreach (var entry in DynamicEntries)
 {
     <RadzenRow>
         <RadzenColumn Size="3">
-            <RadzenLabel Text="@entry.Name" />
+            <RadzenLabel Text="@entry.Name" Style="font-weight: bold"/>
         </RadzenColumn>
         <RadzenColumn>
             <RadzenLabel Text=@entry.Value.ToString() />
         </RadzenColumn>
     </RadzenRow>
 }
-<RadzenRow JustifyContent="JustifyContent.Right">
-    <RadzenButton Text="Failover"/>
-</RadzenRow>
 
 @code {
     [Parameter, EditorRequired]
