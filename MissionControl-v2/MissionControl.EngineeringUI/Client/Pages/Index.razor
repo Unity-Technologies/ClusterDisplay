@@ -1,7 +1,4 @@
 @page "/"
-@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Dialogs
-@inject DialogService DialogService
-@inject Microsoft.Extensions.Logging.ILogger<Index> logger
 
 <style>
     .nav-button-look {
@@ -18,10 +15,10 @@
 
 <h1>Welcome to Mission Control</h1>
 
-If you are working on a brand new cluster, the first step will be to configure your devices using the
+If you are working on a brand new cluster, the first step will be to configure your devices (e.g. render nodes) using the
 <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
     <div class="col align-items-center d-flex px-0">
-        <RadzenIcon Icon="hub" class="me-3"/> Devices
+        <RadzenIcon Icon="view_cozy" class="me-3"/> Devices
     </div>
 </div>
 section in the menu on the left.
@@ -29,10 +26,10 @@ section in the menu on the left.
 Then you can:
 <ul>
     <li>
-        Manage your assets (scenes) using the
+        Manage your assets (executable projects) using the
         <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
             <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="landscape" class="me-3" /> Assets
+                <RadzenIcon Icon="view_in_ar" class="me-3" /> Assets
             </div>
         </div>
         section
@@ -41,7 +38,7 @@ Then you can:
         Select the asset to launch, how to launch it and launch it using the
         <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
             <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="rocket_launch" class="me-3" /> Launch
+                <RadzenIcon Icon="rocket_launch" class="me-3" /> Configuration
             </div>
         </div>
         section
@@ -50,7 +47,7 @@ Then you can:
         Save and load back launch configurations using the
         <div class="row p-2 mx-0 my-1 rz-border-base-300 nav-button-look">
             <div class="col align-items-center d-flex px-0">
-                <RadzenIcon Icon="list" class="me-3" /> Missions
+                <RadzenIcon Icon="photo_camera" class="me-3" /> Snapshots
             </div>
         </div>
         section
@@ -65,22 +62,3 @@ Then you can:
         section
     </li>
 </ul>
-
-<RadzenButton Text="Click me" Click="@Test" />
-<RadzenButton Text="Click me 2" Click="@Test2" />
-
-@code
-{
-    async Task Test()
-    {
-        var result = await DialogService.CustomConfirm("Do it?", "Are you sure?", new ConfirmOptions {OkButtonText="Sure", CancelButtonText="Nah"});
-        logger.LogInformation($"Custom dialog result: {result}");
-
-        
-    }
-
-    async Task Test2()
-    {
-        var result = await DialogService.Confirm();
-    }
-}

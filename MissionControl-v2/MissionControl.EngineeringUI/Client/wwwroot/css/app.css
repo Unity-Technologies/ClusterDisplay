@@ -22,7 +22,7 @@
 
 /************************* Site wide definitions *************************/
 html, body {
-    font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif; 
+    font-family: 'Inter', Helvetica Neue, Helvetica, Arial, sans-serif;
     background-color: var(--rz-base-100);
     margin: 0px;
 }
@@ -167,7 +167,7 @@ h1:focus {
 }
 
 .rz-navigation-item-link:hover {
-    color: aliceblue !important; 
+    color: aliceblue !important;
 }
 
 .rz-state-highlight {
@@ -213,6 +213,7 @@ input {
     padding: 0px 32px 0px 32px;
     height: 56px;
     display: flex;
+    justify-content: end;
     align-items: center;
 }
 

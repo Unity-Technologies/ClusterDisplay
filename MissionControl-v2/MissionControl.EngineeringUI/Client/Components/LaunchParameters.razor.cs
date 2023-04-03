@@ -91,22 +91,19 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
             }
         }
 
-        protected List<Entry> Entries { get; } = new();
+        List<Entry> Entries { get; } = new();
 
-        protected ParameterEntry? SelectedEntry => m_SelectedEntries?.FirstOrDefault() as ParameterEntry;
-
-        protected RadzenDataGrid<Entry> m_EntriesGrid = default!;
-        protected IList<Entry>? m_SelectedEntries;
+        RadzenDataGrid<Entry>? m_EntriesGrid = default;
+        IList<Entry>? m_SelectedEntries;
 
         protected override void OnParametersSet()
         {
             base.OnParametersSet();
             FillEntries();
-            // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
             m_EntriesGrid?.Reload();
         }
 
-        protected void RowRender(RowRenderEventArgs<Entry> args)
+        static void RowRender(RowRenderEventArgs<Entry> args)
         {
             args.Expandable = args.Data is NestedEntry;
         }
@@ -139,65 +136,6 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Components
                 }
                 await OnValuesUpdated.InvokeAsync(Values);
             });
-        }
-
-        async Task OnSetValue()
-        {
-            var entry = SelectedEntry;
-            if (entry == null || entry.Definition == null)
-            {
-                return;
-            }
-
-            var toEdit = entry.ParameterValue;
-            toEdit ??= new() { Id = entry.Id, Value = entry.Definition.DefaultValue! };
-
-            var ret = await DialogService.OpenAsync<EditLaunchParameter>($"Set {entry.Name}",
-               new Dictionary<string, object> { { "Parameter", entry.Definition }, { "ToEdit", toEdit } },
-               new DialogOptions() { Width = "40%", Height = "40%", Resizable = true, Draggable = true });
-            if (ret == null)
-            {
-                return;
-            }
-
-            entry.ParameterValue = (LaunchParameterValue)ret;
-            int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
-            if (valueIndex >= 0)
-            {
-                Values[valueIndex] = entry.ParameterValue;
-            }
-            else
-            {
-                Values.Add(entry.ParameterValue);
-            }
-
-            await OnValuesUpdated.InvokeAsync(Values);
-        }
-
-        async Task OnClearValue()
-        {
-            var entry = SelectedEntry;
-            if (entry == null)
-            {
-                return;
-            }
-
-            int valueIndex = Values.FindIndex(0, v => v.Id == entry.Id);
-            if (valueIndex >= 0)
-            {
-                Values.RemoveAt(valueIndex);
-            }
-
-            if (entry.Definition == null)
-            {
-                Entries.Remove(entry);
-            }
-            else
-            {
-                entry.ParameterValue = null;
-            }
-
-            await OnValuesUpdated.InvokeAsync(Values);
         }
 
         async Task OnNestedValuesChanged(List<LaunchParameterValue> nestedValues)

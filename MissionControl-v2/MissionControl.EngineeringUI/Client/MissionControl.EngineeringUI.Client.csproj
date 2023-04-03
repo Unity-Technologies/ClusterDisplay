@@ -18,8 +18,4 @@
     <ProjectReference Include="..\..\MissionControl.Shared\MissionControl.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\NewFolder\" />
-  </ItemGroup>
-
 </Project>

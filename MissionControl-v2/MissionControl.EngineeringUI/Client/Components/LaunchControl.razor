@@ -1,0 +1,55 @@
+@using Unity.ClusterDisplay.MissionControl.EngineeringUI.Services
+@using Unity.ClusterDisplay.MissionControl.MissionControl
+
+@inject MissionControlStatusService MissionControlStatusService
+@inject MissionCommandsService MissionCommandsService
+@inject LaunchConfigurationService LaunchConfigurationService
+@inject AssetsService AssetsService;
+
+@implements IDisposable
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Orientation="Orientation.Horizontal">
+    <RadzenText Text="@m_SelectedAsset" Style="font-weight: bold"/>
+
+    @if (MissionControlStatusService.State is State.Idle)
+    {
+        <RadzenButton Text="Launch" ButtonStyle="ButtonStyle.Info" Icon="play_arrow"
+                      Click="@MissionCommandsService.LaunchMissionAsync"
+                      Disabled=@(LaunchConfigurationService.WorkValue.AssetId == Guid.Empty)/>
+    }
+    else
+    {
+        <RadzenButton Text="Stop" ButtonStyle="ButtonStyle.Light" Icon="stop"
+                      Click="@(MissionCommandsService.StopCurrentMissionAsync)"/>
+    }
+
+</RadzenStack>
+
+@code {
+    string? m_SelectedAsset;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LaunchConfigurationService.WorkValue.ObjectChanged += OnAssetChanged;
+        UpdateAssetText();
+    }
+
+    void UpdateAssetText() =>
+        m_SelectedAsset = AssetsService.Collection.TryGetValue(
+            LaunchConfigurationService.WorkValue.AssetId, out var asset)
+            ? $"Selected asset: {asset.Name}"
+            : null;
+
+    void OnAssetChanged(ObservableObject obj)
+    {
+        UpdateAssetText();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        LaunchConfigurationService.WorkValue.ObjectChanged -= OnAssetChanged;
+    }
+
+}

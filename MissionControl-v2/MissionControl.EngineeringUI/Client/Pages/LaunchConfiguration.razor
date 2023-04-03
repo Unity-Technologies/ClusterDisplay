@@ -9,11 +9,6 @@
         LaunchConfigurationService.WorkValue.LaunchComplexes.Any(c => c.Parameters.Any() || c.LaunchPads.Any(p => p.Parameters.Any()));
     var applyAndSaveEnabled = !isRunning || !hasChanges;
     var applyAndSaveTitle = applyAndSaveEnabled ? "" : "Cannot apply changes while running.";
-    var needsPush = LaunchConfigurationService.WorkValueNeedsPush;
-    var hasAsset = LaunchConfigurationService.WorkValue.AssetId != Guid.Empty;
-
-    void ShowTooltip(ElementReference elementReference, string message, TooltipOptions? options = null) =>
-        tooltipService.Open(elementReference, message, options);
 }
 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="page-title-row">
     <RadzenText Text="Configuration" TextStyle="TextStyle.H4" />
@@ -28,7 +23,7 @@
             </RadzenSplitButton>
         }
         else
-        {            
+        {
             <RadzenButton Click=@(_ => SaveAs()) Text=@("Save Snapshot")
                            ButtonStyle="ButtonStyle.Info" Disabled=@(!applyAndSaveEnabled) title=@applyAndSaveTitle />
         }
@@ -72,4 +67,4 @@
 </RadzenDataGrid>
 
 <RadzenText Text="Global Parameters" Class="data-grid-header height-78 rz-border-base-300" TextStyle="TextStyle.DisplayH6" />
-<LaunchParameters Parameters=@LaunchParameters Values=@LaunchParametersValue OnValuesUpdated=LaunchParametersValueUpdate />
+<LaunchParameters Parameters="@LaunchParameters" Values="@LaunchParametersValue" OnValuesUpdated="LaunchParametersValueUpdate" />
