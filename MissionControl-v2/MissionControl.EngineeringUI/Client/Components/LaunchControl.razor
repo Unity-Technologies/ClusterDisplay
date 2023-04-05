@@ -31,6 +31,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
+        MissionControlStatusService.ObjectChanged += OnAssetChanged;
         LaunchConfigurationService.WorkValue.ObjectChanged += OnAssetChanged;
         UpdateAssetText();
     }
