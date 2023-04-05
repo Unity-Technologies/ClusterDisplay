@@ -31,9 +31,21 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        MissionControlStatusService.ObjectChanged += OnAssetChanged;
-        LaunchConfigurationService.WorkValue.ObjectChanged += OnAssetChanged;
+        MissionControlStatusService.ObjectChanged += MissionStatusChanged;
+        LaunchConfigurationService.WorkValue.ObjectChanged += OnSelectedAssetChanged;
+        AssetsService.Collection.SomethingChanged += OnAssetCollectionChanged;
         UpdateAssetText();
+    }
+
+    void MissionStatusChanged(ObservableObject obj)
+    {
+        StateHasChanged();
+    }
+
+    void OnAssetCollectionChanged(IReadOnlyIncrementalCollection obj)
+    {
+        UpdateAssetText();
+        StateHasChanged();
     }
 
     void UpdateAssetText() =>
@@ -42,7 +54,7 @@
             ? $"Selected asset: {asset.Name}"
             : null;
 
-    void OnAssetChanged(ObservableObject obj)
+    void OnSelectedAssetChanged(ObservableObject _)
     {
         UpdateAssetText();
         StateHasChanged();
@@ -50,7 +62,9 @@
 
     public void Dispose()
     {
-        LaunchConfigurationService.WorkValue.ObjectChanged -= OnAssetChanged;
+        MissionControlStatusService.ObjectChanged -= MissionStatusChanged;
+        LaunchConfigurationService.WorkValue.ObjectChanged -= OnSelectedAssetChanged;
+        AssetsService.Collection.SomethingChanged -= OnAssetCollectionChanged;
     }
 
 }

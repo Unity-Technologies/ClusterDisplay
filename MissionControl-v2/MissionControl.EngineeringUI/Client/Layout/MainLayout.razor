@@ -3,40 +3,38 @@
 @inherits LayoutComponentBase
 @inject UiGlobal UiGlobal;
 
-<RadzenContextMenu />
-<RadzenDialog />
-<RadzenContextMenu />
-<RadzenTooltip />
+<RadzenContextMenu/>
+<RadzenDialog/>
+<RadzenContextMenu/>
+<RadzenTooltip/>
 
 <RadzenLayout class="rz-shadow-3" Style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body'">
     <RadzenHeader class="rz-shadow-1">
-        <LaunchControl />
+        <LaunchControl/>
     </RadzenHeader>
+
     <RadzenSidebar @bind-Expanded="@UiGlobal.SideBarExpanded">
-        <div class="sidebar-header">
-            @if (UiGlobal.SideBarExpanded)
-            {
-                <RadzenImage Path="images/MCunitylogo.png" />
-            }
-            else
-            {
-                <RadzenImage Path="images/unity-logo.svg" />
-            }
-        </div>
-        <div class="sidebar-contents">
-            <NavPanel />
-        </div>
-        <div class="sidebar-spacer" />
-        <div class="sidebar-footer">
-            <RadzenButton id="sidebar-collapse-button" Icon="arrow_back_ios"
-                          Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded) />
-        </div>
+        <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween"
+                     Style="height: 100%" >
+            <RadzenStack class="sidebar-top" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Start"
+                         AlignItems="AlignItems.Stretch">
+                <RadzenImage
+                    Style="@(UiGlobal.SideBarExpanded ? "margin-left: 14px" : "margin-left: 0")"
+                    Path=@(UiGlobal.SideBarExpanded ? "images/MCunitylogo.png" : "images/unity-logo.svg")/>
+                <NavPanel/>
+            </RadzenStack>
+            <RadzenStack class="sidebar-footer " Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center">
+                <RadzenButton id="sidebar-collapse-button"
+                              Click=@(() => UiGlobal.SideBarExpanded = !UiGlobal.SideBarExpanded)>
+                    <span class="rzi @(UiGlobal.SideBarExpanded ? "": "collapsed")">arrow_back_ios</span>
+                </RadzenButton>
+            </RadzenStack>
+        </RadzenStack>
     </RadzenSidebar>
     <RadzenBody class="rz-px-8">
         <div class="p-2">
             @Body
         </div>
     </RadzenBody>
-    <RadzenNotification />
+    <RadzenNotification/>
 </RadzenLayout>
-
