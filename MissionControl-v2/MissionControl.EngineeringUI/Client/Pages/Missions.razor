@@ -16,7 +16,7 @@
 
 <RadzenDataGrid @ref="m_MissionsGrid" Data=@MissionsService.Collection.Values
                 AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true" AllowSorting="true"
-                AllowRowSelectOnRowClick="false" SelectionMode="DataGridSelectionMode.Multiple" @bind-Value=@m_SelectedSnapshots>
+                AllowRowSelectOnRowClick="false" SelectionMode="DataGridSelectionMode.Multiple" @bind-Value="@m_SelectedSnapshots">
     <Columns>
         <RadzenDataGridColumn TItem="SavedMissionSummary" Width="60px" Sortable="false" Filterable="false">
             <HeaderTemplate>
@@ -25,7 +25,7 @@
                                 Change=@SelectAllOrNone />
             </HeaderTemplate>
             <Template Context="mission">
-                <RadzenCheckBox TriState="false" Value="@(m_SelectedSnapshots != null && m_SelectedSnapshots.Contains(mission))"
+                <RadzenCheckBox TriState="false" Value="@(m_SelectedSnapshots.Contains(mission))"
                                 TValue="bool" Change=@(args => m_MissionsGrid.SelectRow(mission)) />
             </Template>
         </RadzenDataGridColumn>

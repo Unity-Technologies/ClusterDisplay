@@ -27,19 +27,19 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         NotificationService NotificationService { get; set; } = default!;
 
         RadzenDataGrid<SavedMissionSummary> m_MissionsGrid = default!;
-        IList<SavedMissionSummary>? m_SelectedSnapshots;
+        IList<SavedMissionSummary> m_SelectedSnapshots = new List<SavedMissionSummary>();
 
-        bool HasSelection => MissionsService.Collection.Values.Any(i => m_SelectedSnapshots?.Contains(i) ?? false);
+        bool HasSelection => MissionsService.Collection.Values.Any(i => m_SelectedSnapshots.Contains(i));
 
         void SelectAllOrNone(bool all)
         {
+            m_SelectedSnapshots.Clear();
             if (all)
             {
-                m_SelectedSnapshots = MissionsService.Collection.Values.ToList();
-            }
-            else
-            {
-                m_SelectedSnapshots = null;
+                foreach (var snapshot in MissionsService.Collection.Values)
+                {
+                    m_SelectedSnapshots.Add(snapshot);
+                }
             }
         }
 
@@ -82,7 +82,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 return;
             }
 
-            await Task.WhenAll(m_SelectedSnapshots!.Select(i => MissionsService.DeleteAsync(i.Id)));
+            await Task.WhenAll(m_SelectedSnapshots.Select(i => MissionsService.DeleteAsync(i.Id)));
             SelectAllOrNone(all: false);
             NotificationService.Notify(severity: NotificationSeverity.Info, summary: $"Snapshots deleted");
         }

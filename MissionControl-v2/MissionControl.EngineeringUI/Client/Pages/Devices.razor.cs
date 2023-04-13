@@ -21,19 +21,19 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         MissionControlStatusService MissionControlStatus { get; set; } = default!;
         protected RadzenDataGrid<LaunchComplex> m_ComplexesGrid = default!;
 
-        IList<LaunchComplex>? m_SelectedComplexes;
+        IList<LaunchComplex> m_SelectedComplexes = new List<LaunchComplex>();
 
-        bool HasSelection => Complexes.Collection.Values.Any(i => m_SelectedComplexes?.Contains(i) ?? false);
+        bool HasSelection => Complexes.Collection.Values.Any(i => m_SelectedComplexes.Contains(i));
 
         void SelectAllOrNone(bool all)
         {
+            m_SelectedComplexes.Clear();
             if (all)
             {
-                m_SelectedComplexes = Complexes.Collection.Values.ToList();                
-            }
-            else
-            {
-                m_SelectedComplexes = null;
+                foreach (var complex in Complexes.Collection.Values)
+                {
+                    m_SelectedComplexes.Add(complex);
+                }
             }
         }
 
@@ -77,7 +77,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
         protected async Task DeleteSelectedLaunchComplex()
         {
             if (!HasSelection) return;
-            string names = String.Join(", ", m_SelectedComplexes!.Select(i => $"\"{i.Name}\"") ?? Enumerable.Empty<string>());
+            string names = String.Join(", ", m_SelectedComplexes.Select(i => $"\"{i.Name}\"") ?? Enumerable.Empty<string>());
 
             var ret = await DialogService.CustomConfirm($"Do you want to delete {names}?",
     "Confirm deletion", new() { OkButtonText = "Yes", CancelButtonText = "No" });
@@ -86,7 +86,7 @@ namespace Unity.ClusterDisplay.MissionControl.EngineeringUI.Pages
                 return;
             }
 
-            await Task.WhenAll(m_SelectedComplexes!.Select(i => Complexes.DeleteAsync(i.Id)));
+            await Task.WhenAll(m_SelectedComplexes.Select(i => Complexes.DeleteAsync(i.Id)));
             SelectAllOrNone(all: false);
             NotificationService.Notify(severity: NotificationSeverity.Info, summary: "Nodes deleted");
         }
