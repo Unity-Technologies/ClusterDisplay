@@ -73,7 +73,7 @@
 
     List<CombinedLaunchPadStatus> LaunchPadStatuses { get; set; } = default!;
     IDisposable m_HealthUpdateToken = default!;
-    RadzenDataGrid<CombinedLaunchPadStatus> m_DataGrid = default!;
+    RadzenDataGrid<CombinedLaunchPadStatus>? m_DataGrid;
 
     readonly HashSet<Guid> m_ExpandedRows = new();
 
@@ -146,7 +146,7 @@
     {
         var expandableRowIds = LaunchPadStatuses.Where(IsRowExpandable).Select(entry => entry.Definition.Identifier);
         m_ExpandedRows.RemoveWhere(entry => !expandableRowIds.Contains(entry));
-        m_DataGrid.ExpandRows(LaunchPadStatuses.Where(entry => m_ExpandedRows.Contains(entry.Definition.Identifier)));
+        m_DataGrid?.ExpandRows(LaunchPadStatuses.Where(entry => m_ExpandedRows.Contains(entry.Definition.Identifier)));
     }
 
     static string ToGibibytes(long value) => (value / (double)(1024 * 1024 * 1024)).ToString("0.00");

@@ -2,7 +2,7 @@
 
 @if (Entry.Definition?.Constraint is LaunchCatalog.ListConstraint listConstraint)
 {
-    <RadzenDropDown @bind-Value=@StringValue Data="@listConstraint.Choices" />
+    <RadzenDropDown @bind-Value=@StringValue Data="@listConstraint.Choices"/>
 }
 else
 {
@@ -13,28 +13,38 @@ else
         @switch (Entry.Definition?.Type)
         {
             case LaunchCatalog.LaunchParameterType.Boolean:
-                <RadzenSwitch @bind-Value=@BoolValue />
+                <RadzenSwitch @bind-Value=@BoolValue/>
                 break;
             case LaunchCatalog.LaunchParameterType.Integer:
-                <RadzenNumeric @bind-Value=@IntValue Min="@(rangeConstraint?.MinInt32Inclusive)" Max="@(rangeConstraint?.MaxInt32Inclusive)" />
+                <RadzenNumeric @bind-Value=@IntValue
+                               Min="@(rangeConstraint?.MinInt32Inclusive)"
+                               Max="@(rangeConstraint?.MaxInt32Inclusive)"/>
                 @if (rangeConstraint is { Max: not null, Min: not null })
                 {
-                    <RadzenSlider @bind-Value=@IntValue Min="@rangeConstraint.MinInt32Inclusive" Max="@rangeConstraint.MaxInt32Inclusive" />
+                    <RadzenSlider @bind-Value=@IntValue
+                                  Min="@rangeConstraint.MinInt32Inclusive"
+                                  Max="@rangeConstraint.MaxInt32Inclusive"/>
                 }
                 break;
             case LaunchCatalog.LaunchParameterType.Float:
-                <RadzenNumeric @bind-Value=@FloatValue Min="@(rangeConstraint?.MinDecimalInclusive)" Max="@(rangeConstraint?.MaxDecimalInclusive)" />
+                <RadzenNumeric @bind-Value=@FloatValue
+                               Min="@(rangeConstraint?.MinDecimalInclusive)"
+                               Max="@(rangeConstraint?.MaxDecimalInclusive)"/>
                 @if (rangeConstraint is { Max: not null, Min: not null })
                 {
-                    <RadzenSlider @bind-Value=@FloatValue Min="@rangeConstraint.MinDecimalInclusive" Max="@rangeConstraint.MaxDecimalInclusive" />
+                    <RadzenSlider @bind-Value=@FloatValue Min="@rangeConstraint.MinDecimalInclusive" Max="@rangeConstraint.MaxDecimalInclusive"/>
                 }
                 break;
             case LaunchCatalog.LaunchParameterType.String:
-                // Currently this is the only input field that could allow for an invalid input, so we may need to display a validation error
-                // underneath
+
+                // Currently this is the only input field that could allow for an invalid input,
+                // so we may need to display a validation error underneath
                 <RadzenStack Orientation="Orientation.Vertical" Gap="0">
-                    <RadzenTextBox @bind-Value=@StringValue />
-                    <div Class="rz-message rz-messages-error">@Entry.ValidationError</div>
+                    <RadzenTextBox @bind-Value=@StringValue/>
+                    @if (!string.IsNullOrEmpty(Entry.ValidationError))
+                    {
+                        <div Class="rz-message rz-messages-error">@Entry.ValidationError</div>
+                    }
                 </RadzenStack>
                 break;
             default:
@@ -77,29 +87,20 @@ else
 
     T GetValue<T>() => (T)Entry.Value;
 
-    void ResetToDefault()
-    {
-
-    }
-
-    void SetValue<T>(T? maybeValue)
+    void SetValue(object value)
     {
         Entry.ValidationError = null;
-        if (maybeValue is T value)
-        {
-            // Setting a non-default value for the parameter
-            Entry.ParameterValue ??= new() { Id = Entry.Id };
-            Entry.ParameterValue.Value = value;
+        Entry.ParameterValue ??= new() { Id = Entry.Id };
+        Entry.ParameterValue.Value = value;
 
-            Entry.ValidationError = GetValidationErrorMessage(Entry.Definition?.Constraint, maybeValue);
-        }
+        Entry.ValidationError = GetValidationErrorMessage(Entry.Definition?.Constraint, value);
 
         OnValueChanged.InvokeAsync(Entry);
     }
 
     static string? GetValidationErrorMessage<T>(Constraint? maybeConstraint, T? maybeValue)
     {
-        if (maybeConstraint is not Constraint constraint || maybeValue is not T value)
+        if (maybeConstraint is not  { } constraint || maybeValue is not T value)
         {
             return null;
         }
@@ -113,9 +114,10 @@ else
                 RangeConstraint range when range is { Min: null, Max: not null } => $"Value must be less than {range.Max}",
                 RangeConstraint range => $"Value must be between {range.Min} and {range.Max}",
                 _ => throw new ArgumentOutOfRangeException(nameof(constraint))
-            };
+                };
         }
 
         return null;
     }
+
 }
