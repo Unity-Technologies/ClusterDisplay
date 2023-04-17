@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Net.Mime;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -260,21 +262,106 @@ namespace Unity.ClusterDisplay.Graphics
         // Convention, consistent with blit scale-bias for example.
         internal static Vector4 AsScaleBias(Rect rect) => new(rect.width, rect.height, rect.x, rect.y);
 
-        public static void SaveCubemapToFile(RenderTexture rt, string path)
+        public static void SaveCubemapToEquirectFile(RenderTexture rt, string path)
         {
             var equirect = new RenderTexture(rt.width * 4, rt.height * 3, rt.depth);
-            rt.ConvertToEquirect(equirect, Camera.MonoOrStereoscopicEye.Mono);
+            rt.ConvertToEquirect(equirect);
 
             RenderTexture.active = equirect;
             Texture2D tex = new Texture2D(equirect.width, equirect.height, TextureFormat.RGB24, false);
             tex.ReadPixels(new Rect(0, 0, equirect.width, equirect.height), 0, 0);
             RenderTexture.active = null;
 
-            byte[] bytes;
-            bytes = tex.EncodeToPNG();
+            byte[] bytes = tex.EncodeToPNG();
 
-            System.IO.File.WriteAllBytes(path, bytes);
+            File.WriteAllBytes(path, bytes);
             Debug.Log("Saved to " + path);
+        }
+
+        public static Cubemap RenderTextureCubemapToCubemap(RenderTexture cubemapRt)
+        {
+            Debug.Assert(cubemapRt.width == cubemapRt.height);
+            var size = cubemapRt.width;
+
+            var textureFormat = RenderTextureFormatToTextureFormat(cubemapRt.format);
+            Cubemap cubemap = new Cubemap(size, textureFormat, true);
+            Texture2D tempTexture = new Texture2D(size, size, textureFormat, false);
+
+            for (int i = 0; i < 6; i++)
+            {
+                CubemapFace currentFace = (CubemapFace)i;
+                UnityEngine.Graphics.SetRenderTarget(cubemapRt, 0, currentFace);
+                tempTexture.ReadPixels(new Rect(0, 0, cubemap.width, cubemap.height), 0, 0, false);
+                cubemap.SetPixels(tempTexture.GetPixels(0), currentFace);
+            }
+            cubemap.Apply();
+            RenderTexture.active = null;
+
+            return cubemap;
+        }
+
+        public static void SaveCubemapToFile(RenderTexture cubemap, string path)
+        {
+            Debug.Assert(cubemap.width == cubemap.height);
+            var size = cubemap.width;
+
+            // Extract the 6 sides of the cubemap to a Texture2D
+            Texture2D tex = new Texture2D(size * 6, size, RenderTextureFormatToTextureFormat(cubemap.format), false);
+
+            for (int i = 0; i < 6; i++)
+            {
+                UnityEngine.Graphics.SetRenderTarget(cubemap, 0, (CubemapFace)i);
+                tex.ReadPixels(new Rect(0, 0, cubemap.width, cubemap.height), i * size, 0, false);
+            }
+
+            RenderTexture.active = null;
+
+            // Flip it up side down
+            var pixels = tex.GetPixels();
+            for (int y = 0; y < tex.height / 2; y++)
+            {
+                int fromOffset = y * tex.width;
+                int toOffset = (tex.height - y - 1) * tex.width;
+                for (int x = 0; x < tex.width; ++x)
+                {
+                    (pixels[fromOffset + x], pixels[toOffset + x]) = (pixels[toOffset + x], pixels[fromOffset + x]);
+                }
+            }
+            tex.SetPixels(pixels);
+
+            // Save it
+            byte[] bytes = Path.GetExtension(path).ToLower() switch
+            {
+                ".png" => tex.EncodeToPNG(),
+                ".jpg" or ".jpeg" => tex.EncodeToJPG(),
+                ".exr" => tex.EncodeToEXR(),
+                ".tga" => tex.EncodeToTGA(),
+                _ => throw new ArgumentException("Unsupported extension")
+            };
+            File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath, path), bytes);
+        }
+
+        static TextureFormat RenderTextureFormatToTextureFormat(RenderTextureFormat renderTextureFormat)
+        {
+            return renderTextureFormat switch
+            {
+                RenderTextureFormat.ARGB32 => TextureFormat.RGBA32,
+                RenderTextureFormat.ARGBHalf => TextureFormat.RGBAHalf,
+                RenderTextureFormat.RGB565 => TextureFormat.RGB565,
+                RenderTextureFormat.ARGB4444 => TextureFormat.ARGB4444,
+                RenderTextureFormat.ARGB64 => TextureFormat.RGBA64,
+                RenderTextureFormat.ARGBFloat => TextureFormat.RGBAFloat,
+                RenderTextureFormat.RGFloat => TextureFormat.RGFloat,
+                RenderTextureFormat.RGHalf => TextureFormat.RGHalf,
+                RenderTextureFormat.RFloat => TextureFormat.RFloat,
+                RenderTextureFormat.RHalf => TextureFormat.RHalf,
+                RenderTextureFormat.R8 => TextureFormat.R8,
+                RenderTextureFormat.BGRA32 => TextureFormat.RGBA32,
+                RenderTextureFormat.RG32 => TextureFormat.RG32,
+                RenderTextureFormat.RG16 => TextureFormat.RG16,
+                RenderTextureFormat.R16 => TextureFormat.R16,
+                _ => TextureFormat.RGBA32
+            };
         }
     }
 }

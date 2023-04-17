@@ -238,7 +238,7 @@ namespace Unity.ClusterDisplay.Graphics
             cameraScope.RenderToCubemap(renderTarget, cubeMapCenter);
 
             // Enable code below to dump the cubemap to disk and make debugging easier
-            // GraphicsUtil.SaveCubemapToFile(m_OuterFrustumTarget, "c:\\temp\\cubemap.png");
+            // GraphicsUtil.SaveCubemapToEquirectFile(renderTarget, "c:\\temp\\cubemap.png");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
