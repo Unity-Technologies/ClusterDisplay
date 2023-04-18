@@ -204,12 +204,14 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Use the given NativeArray as our storage (and assumes every bit of data in it contains valid data).
         /// </summary>
-        /// <param name="toAdopt"><see cref="NativeArray{T}"/> to use as our own.</param>
-        public void AdoptNativeArray(NativeArray<byte> toAdopt)
+        /// <param name="toAdopt"><see cref="NativeArray{T}"/> to use as our own.  Caller should stop using it after
+        /// this method is called.</param>
+        public void AdoptNativeArray(ref NativeArray<byte> toAdopt)
         {
             m_Data.Dispose();
             m_Data = toAdopt;
             Length = m_Data.Length;
+            toAdopt = new();
         }
 
         /// <summary>

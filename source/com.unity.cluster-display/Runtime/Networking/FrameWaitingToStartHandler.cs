@@ -101,8 +101,15 @@ namespace Unity.ClusterDisplay
                         // First thing to check, is this node still the emitter, if no then stop right away and don't
                         // claim we are done waiting for the repeater (return the last list we knew we were still
                         // waiting on).
-                        if (!m_ClusterTopology.Entries.Any(
-                                e => e.NodeId == m_EmitterNodeId && e.NodeRole == NodeRole.Emitter))
+                        bool stillEmitter = false;
+                        foreach (var entry in m_ClusterTopology.Entries)
+                        {
+                            if (entry.NodeId == m_EmitterNodeId && entry.NodeRole == NodeRole.Emitter)
+                            {
+                                stillEmitter = true;
+                            }
+                        }
+                        if (!stillEmitter)
                         {
                             return new NodeIdBitVectorReadOnly(m_StillWaitingOn);
                         }
@@ -167,7 +174,7 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and track the state of repeaters that are ready to proceed to the next frame.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // We are only interested in FrameData we receive, everything else should simply pass through

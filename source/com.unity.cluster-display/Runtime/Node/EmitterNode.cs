@@ -202,7 +202,7 @@ namespace Unity.ClusterDisplay
         /// <summary>
         /// Process cluster topology changes
         /// </summary>
-        /// <remarks>Should this node continue to do its work?</remarks>
+        /// <returns>Should this node continue to do its work?</returns>
         bool ProcessTopologyChanges()
         {
             if (UpdatedClusterTopology.Entries != null &&

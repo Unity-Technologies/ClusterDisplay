@@ -276,7 +276,7 @@ namespace Unity.ClusterDisplay
             if (dataBufferStorage.IsCreated && receivedBytes >= dataBufferStorage.Length)
             {
                 FrameDataBuffer ret = new();
-                ret.AdoptNativeArray(dataBufferStorage);
+                ret.AdoptNativeArray(ref dataBufferStorage);
                 return ret;
             }
             if (dataBufferStorage.IsCreated)
@@ -290,7 +290,7 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message and assemble complete FrameData from them.
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessMessage(ReceivedMessageBase received)
         {
             return received switch
@@ -309,7 +309,7 @@ namespace Unity.ClusterDisplay
         /// Process a received <see cref="RetransmitFrameData"/>.
         /// </summary>
         /// <param name="retransmitRequest">Received <see cref="RetransmitFrameData"/>.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessRetransmitFrameData(ReceivedMessage<RetransmitFrameData> retransmitRequest)
         {
             Dictionary<int, NativeArray<byte>.ReadOnly> datagramsData = new();
@@ -364,7 +364,7 @@ namespace Unity.ClusterDisplay
         /// Process a received <see cref="RepeaterWaitingToStartFrame"/>.
         /// </summary>
         /// <param name="repeaterWaitingToStartFrame">Received <see cref="RepeaterWaitingToStartFrame"/>.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessRepeaterWaitingToStartFrame(ReceivedMessage<RepeaterWaitingToStartFrame>
             repeaterWaitingToStartFrame)
         {
@@ -399,7 +399,7 @@ namespace Unity.ClusterDisplay
         /// Process a received <see cref="RepeatersSurveyAnswer"/>.
         /// </summary>
         /// <param name="surveyAnswer">Received <see cref="RepeatersSurveyAnswer"/>.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessRepeatersSurveyAnswer(ReceivedMessage<RepeatersSurveyAnswer> surveyAnswer)
         {
             lock (m_Lock)

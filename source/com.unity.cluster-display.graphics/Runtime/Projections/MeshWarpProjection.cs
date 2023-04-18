@@ -133,6 +133,8 @@ namespace Unity.ClusterDisplay.Graphics
         // The node indices to render. Typically this is an array of 1 determined
         // by the cluster's ID assignment.
         int[] m_NodesToRender;
+        // GetEffectiveNodeIndex when m_NodesToRender was set
+        int m_NodesToRenderEffectiveNodeIndex = -1;
 
         /// <summary>
         /// Scope object to disable and restore renderers on the projection surface objects.
@@ -174,7 +176,9 @@ namespace Unity.ClusterDisplay.Graphics
 
         void OnValidate()
         {
-            m_NodesToRender = IsDebug ? Enumerable.Range(0, ProjectionSurfaces.Count).ToArray() : new[] { GetEffectiveNodeIndex() };
+            int effectiveNodeIndex = GetEffectiveNodeIndex();
+            m_NodesToRenderEffectiveNodeIndex = effectiveNodeIndex;
+            m_NodesToRender = IsDebug ? Enumerable.Range(0, ProjectionSurfaces.Count).ToArray() : new[] { effectiveNodeIndex };
             m_FrustumGizmos.Clear();
             OnAfterDeserialize();
         }
@@ -247,7 +251,11 @@ namespace Unity.ClusterDisplay.Graphics
 
             if (!Application.isEditor)
             {
-                m_NodesToRender ??= new[] { nodeIndex };
+                if (m_NodesToRenderEffectiveNodeIndex != nodeIndex || m_NodesToRender == null)
+                {
+                    m_NodesToRender = new[] { nodeIndex };
+                    m_NodesToRenderEffectiveNodeIndex = nodeIndex;
+                }
             }
 
             // Hide the projection surfaces for performing the main render.

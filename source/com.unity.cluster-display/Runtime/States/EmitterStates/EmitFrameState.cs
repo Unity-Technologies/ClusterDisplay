@@ -126,7 +126,7 @@ namespace Unity.ClusterDisplay.EmitterStateMachine
         /// <remarks>Necessary to deal with the case where the <see cref="RepeaterRegistered"/> sent during
         /// <see cref="WelcomeRepeatersState"/> was lost.  Repeater will repeat the <see cref="RepeaterRegistered"/>
         /// and so we have to also repeat the answer.  We however do not accept new repeaters, it is too late.</remarks>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult AnswerRegisteringWithEmitter(ReceivedMessageBase message)
         {
             if (message.Type != MessageType.RegisteringWithEmitter)

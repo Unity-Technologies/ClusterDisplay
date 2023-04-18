@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -6,11 +7,17 @@ public class CycleMaterialOnKey : MonoBehaviour
     public Material[] materials = { };
     public int materialIndex;
     int m_MaterialSet = -1;
+    Renderer m_Renderer;
 
     // Start is called before the first frame update
     void Start()
     {
         UpdateMaterial();
+    }
+
+    void Awake()
+    {
+        m_Renderer = GetComponent<Renderer>();
     }
 
     // Update is called once per frame
@@ -30,7 +37,7 @@ public class CycleMaterialOnKey : MonoBehaviour
     {
         if (materialIndex != m_MaterialSet && materialIndex < materials.Length)
         {
-            GetComponent<Renderer>().material = materials[materialIndex];
+            m_Renderer.material = materials[materialIndex];
             m_MaterialSet = materialIndex;
         }
     }

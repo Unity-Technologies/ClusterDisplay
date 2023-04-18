@@ -144,7 +144,7 @@ namespace Unity.ClusterDisplay
         /// Preprocess a received message to detect request for survey (and to answer them as a good citizen).
         /// </summary>
         /// <param name="received">Received <see cref="ReceivedMessageBase"/> to preprocess.</param>
-        /// <returns>What to do of the received message.</returns>
+        /// <returns>What to do with the received message.</returns>
         PreProcessResult PreProcessReceivedMessage(ReceivedMessageBase received)
         {
             // Answer repeaters surveys.
@@ -167,7 +167,7 @@ namespace Unity.ClusterDisplay
         /// </summary>
         static MessageType[] s_ReceiveMessageTypes = {MessageType.RepeaterRegistered,
             MessageType.FrameData, MessageType.EmitterWaitingToStartFrame, MessageType.PropagateQuit,
-            MessageType.QuadroBarrierWarmupHeartbeat, MessageType.SurveyRepeaters, 
+            MessageType.QuadroBarrierWarmupHeartbeat, MessageType.SurveyRepeaters,
             MessageType.RetransmitReceivedFrameData
         };
 
