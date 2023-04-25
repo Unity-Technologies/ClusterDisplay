@@ -233,7 +233,12 @@ namespace Unity.ClusterDisplay.Graphics.Editor
 
             // Create the cubemap asset
             var cubemapAsset = GraphicsUtil.RenderTextureCubemapToCubemap(cubemap);
-            var assetPath = AssetDatabase.GenerateUniqueAssetPath("Assets/MeshWarpStaticCubemap/snapshot.asset");
+            string snapshotFolder = "MeshWarpStaticCubemap";
+            if (!AssetDatabase.IsValidFolder($"Assets/{snapshotFolder}"))
+            {
+                AssetDatabase.CreateFolder("Assets", snapshotFolder);
+            }
+            var assetPath = AssetDatabase.GenerateUniqueAssetPath($"Assets/{snapshotFolder}/snapshot.asset");
             AssetDatabase.CreateAsset(cubemapAsset, assetPath);
             AssetDatabase.SaveAssets();
 
