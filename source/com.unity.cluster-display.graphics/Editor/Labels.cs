@@ -30,7 +30,7 @@ namespace Unity.ClusterDisplay.Graphics
             ForceClearHistory
         }
 
-        static string GetName(Field field)
+        public static string GetName(Field field)
         {
             switch (field)
             {
@@ -58,7 +58,7 @@ namespace Unity.ClusterDisplay.Graphics
             return string.Empty;
         }
 
-        static string GetTooltip(Field field)
+        public static string GetTooltip(Field field)
         {
             switch (field)
             {

@@ -78,6 +78,12 @@ namespace Unity.ClusterDisplay.Graphics
             {
                 baseSettings.PhysicalScreenSize = physicalSizeValue;
             }
+
+            var positionWindows = launchData?.Value<bool?>(TiledProjection.PositionWindowsParameterId);
+            if (positionWindows.HasValue)
+            {
+                baseSettings.PositionNonFullscreenWindow = positionWindows.Value;
+            }
         }
 
         static bool TryGetVector2Int(JObject rawLaunchData, string parameterName, out Vector2Int value)

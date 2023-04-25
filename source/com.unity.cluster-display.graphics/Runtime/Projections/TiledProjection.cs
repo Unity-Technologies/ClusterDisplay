@@ -28,6 +28,12 @@ namespace Unity.ClusterDisplay.Graphics
         /// Physical size of the screen in mm. Used to compute bezel.
         /// </summary>
         public Vector2 PhysicalScreenSize;
+
+        /// <summary>
+        /// Do we position the windows on the screen according to the physical screen layouts.
+        /// </summary>
+        /// <remarks>Mostly useful when debugging and running multiple nodes on the same computer.</remarks>
+        public bool PositionNonFullscreenWindow;
     }
 
     /// <summary>
@@ -91,9 +97,6 @@ namespace Unity.ClusterDisplay.Graphics
 
         [SerializeField]
         TiledProjectionDebugSettings m_DebugSettings = new() { ViewportSubsection = new Rect(0, 0, 0.5f, 0.5f) };
-
-        [SerializeField]
-        bool m_PositionNonFullscreenWindow;
 
         readonly SlicedFrustumGizmo m_Gizmo = new SlicedFrustumGizmo();
         readonly List<BlitCommand> m_BlitCommands = new List<BlitCommand>();
@@ -267,6 +270,7 @@ namespace Unity.ClusterDisplay.Graphics
         public const string GridSizeParameterId = "GridSize";
         public const string BezelParameterId = "Bezel";
         public const string PhysicalScreenSizeParameterId = "PhysicalScreenSize";
+        public const string PositionWindowsParameterId = "PositionWindows";
 
         void RenderStitcher(
             IReadOnlyList<RenderTexture> targets,
@@ -347,7 +351,7 @@ namespace Unity.ClusterDisplay.Graphics
 #if UNITY_EDITOR
             return false;
 #else
-            return m_PositionNonFullscreenWindow && !Screen.fullScreen;
+            return Settings.PositionNonFullscreenWindow && !Screen.fullScreen;
 #endif
         }
 

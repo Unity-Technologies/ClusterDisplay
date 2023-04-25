@@ -10,9 +10,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
         SerializedProperty m_GridProp;
         SerializedProperty m_ScreenSizeProp;
         SerializedProperty m_BezelProp;
+        SerializedProperty m_PositionNonFullscreenWindowProp;
         SerializedProperty m_IsDebugProp;
         SerializedProperty m_TileIndexProp;
-        SerializedProperty m_PositionNonFullscreenWindowProp;
         SerializedProperty m_LayoutProp;
         SerializedProperty m_KeywordProp;
         SerializedProperty m_DebugViewportProp;
@@ -28,9 +28,9 @@ namespace Unity.ClusterDisplay.Graphics.Editor
             m_GridProp = serializedObject.FindProperty("m_Settings.GridSize");
             m_ScreenSizeProp = serializedObject.FindProperty("m_Settings.PhysicalScreenSize");
             m_BezelProp = serializedObject.FindProperty("m_Settings.Bezel");
+            m_PositionNonFullscreenWindowProp = serializedObject.FindProperty("m_Settings.PositionNonFullscreenWindow");
             m_IsDebugProp = serializedObject.FindProperty("m_IsDebug");
             m_TileIndexProp = serializedObject.FindProperty("m_NodeIndexOverride");
-            m_PositionNonFullscreenWindowProp = serializedObject.FindProperty("m_PositionNonFullscreenWindow");
             m_LayoutProp = serializedObject.FindProperty("m_DebugSettings.LayoutMode");
             m_KeywordProp = serializedObject.FindProperty("m_DebugSettings.EnableKeyword");
             m_PresentClearColorProp = serializedObject.FindProperty("m_DebugSettings.PresentClearColor");
@@ -51,8 +51,8 @@ namespace Unity.ClusterDisplay.Graphics.Editor
                 EditorGUILayout.PropertyField(m_GridProp, Labels.GetGUIContent(Labels.Field.GridSize));
                 EditorGUILayout.PropertyField(m_ScreenSizeProp, Labels.GetGUIContent(Labels.Field.PhysicalScreenSize));
                 EditorGUILayout.PropertyField(m_BezelProp, Labels.GetGUIContent(Labels.Field.Bezel));
-                EditorGUILayout.PropertyField(m_TileIndexProp);
                 EditorGUILayout.PropertyField(m_PositionNonFullscreenWindowProp, Labels.GetGUIContent(Labels.Field.PositionNonFullscreenWindows));
+                EditorGUILayout.PropertyField(m_TileIndexProp);
                 EditorGUILayout.PropertyField(m_IsDebugProp, Labels.GetGUIContent(Labels.Field.Debug));
                 if (m_IsDebugProp.boolValue)
                 {
